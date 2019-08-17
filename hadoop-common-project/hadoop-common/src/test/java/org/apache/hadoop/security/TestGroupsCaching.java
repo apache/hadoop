@@ -561,23 +561,28 @@ public class TestGroupsCaching {
 
     // Then expire that entry
     timer.advance(4 * 1000);
+    // Pause the getGroups operation and this will delay the cache refresh
+    FakeGroupMapping.pause();
 
     // Now get the cache entry - it should return immediately
     // with the old value and the cache will not have completed
     // a request to getGroups yet.
     assertEquals(groups.getGroups("me").size(), 2);
     assertEquals(startingRequestCount, FakeGroupMapping.getRequestCount());
+    // Resume the getGroups operation and the cache can get refreshed
+    FakeGroupMapping.resume();
 
-    // Now sleep for a short time and re-check the request count. It should have
-    // increased, but the exception means the cache will not have updated
-    Thread.sleep(50);
+    // Now wait for the refresh done, because of the exception, we expect
+    // a onFailure callback gets called and the counter for failure is 1
+    waitForGroupCounters(groups, 0, 0, 0, 1);
     FakeGroupMapping.setThrowException(false);
     assertEquals(startingRequestCount + 1, FakeGroupMapping.getRequestCount());
     assertEquals(groups.getGroups("me").size(), 2);
 
-    // Now sleep another short time - the 3rd call to getGroups above
-    // will have kicked off another refresh that updates the cache
-    Thread.sleep(50);
+    // Now the 3rd call to getGroups above will have kicked off
+    // another refresh that updates the cache, since it no longer gives
+    // exception, we now expect the counter for success is 1.
+    waitForGroupCounters(groups, 0, 0, 1, 1);
     assertEquals(startingRequestCount + 2, FakeGroupMapping.getRequestCount());
     assertEquals(groups.getGroups("me").size(), 3);
   }

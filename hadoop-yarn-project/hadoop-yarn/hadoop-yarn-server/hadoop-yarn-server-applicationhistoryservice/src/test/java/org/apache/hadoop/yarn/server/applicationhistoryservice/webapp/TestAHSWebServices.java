@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
@@ -35,7 +37,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
@@ -406,12 +409,17 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals("test app", app.get("name"));
     assertEquals(round == 0 ? "test diagnostics info" : "",
         app.get("diagnosticsInfo"));
+    assertEquals(Integer.MAX_VALUE + 1L, app.get("submittedTime"));
     assertEquals("test queue", app.get("queue"));
     assertEquals("user1", app.get("user"));
     assertEquals("test app type", app.get("type"));
     assertEquals(FinalApplicationStatus.UNDEFINED.toString(),
       app.get("finalAppStatus"));
     assertEquals(YarnApplicationState.FINISHED.toString(), app.get("appState"));
+    assertNotNull("Aggregate resource allocation is null",
+        app.get("aggregateResourceAllocation"));
+    assertNotNull("Aggregate Preempted Resource Allocation is null",
+        app.get("aggregatePreemptedResourceAllocation"));
   }
 
   @Test
@@ -674,7 +682,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
 
     r = resource();
     response = r.path("ws").path("v1")
@@ -685,7 +693,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
   }
 
   @Test(timeout = 10000)
@@ -774,7 +782,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     // the warning message.
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If we can not container information from ATS, and we specify the NM id,
     // but we can not get nm web address, we would still try to
@@ -790,7 +799,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains(content));
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If this is the redirect request, we would not re-direct the request
     // back and get the aggregated logs.
@@ -874,8 +884,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
         assertEquals(logInfo.getLogType(),
@@ -902,11 +912,11 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(),
+        assertThat(logInfo.getLogType()).isEqualTo(
             ContainerLogAggregationType.LOCAL.toString());
       }
     }
@@ -940,8 +950,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), fileName);
-    assertEquals(logMeta.get(0).getFileSize(),
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+    assertThat(logMeta.get(0).getFileSize()).isEqualTo(
         String.valueOf(content.length()));
   }
 

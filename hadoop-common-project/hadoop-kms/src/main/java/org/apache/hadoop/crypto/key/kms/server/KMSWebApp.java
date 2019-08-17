@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -28,6 +26,7 @@ import javax.servlet.ServletContextListener;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.CachingKeyProvider;
@@ -36,14 +35,13 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class KMSWebApp implements ServletContextListener {
 
-  private static final String LOG4J_PROPERTIES = "kms-log4j.properties";
+  private static final Logger LOG = LoggerFactory.getLogger(KMSWebApp.class);
 
   private static final String METRICS_PREFIX = "hadoop.kms.";
   private static final String ADMIN_CALLS_METER = METRICS_PREFIX +
@@ -65,7 +63,6 @@ public class KMSWebApp implements ServletContextListener {
   private static final String REENCRYPT_EEK_BATCH_METER = METRICS_PREFIX +
       "reencrypt_eek_batch.calls.meter";
 
-  private static Logger LOG;
   private static MetricRegistry metricRegistry;
 
   private JmxReporter jmxReporter;
@@ -83,42 +80,10 @@ public class KMSWebApp implements ServletContextListener {
   private static KMSAudit kmsAudit;
   private static KeyProviderCryptoExtension keyProviderCryptoExtension;
 
-  private void initLogging(String confDir) {
-    if (System.getProperty("log4j.configuration") == null) {
-      System.setProperty("log4j.defaultInitOverride", "true");
-      boolean fromClasspath = true;
-      File log4jConf = new File(confDir, LOG4J_PROPERTIES).getAbsoluteFile();
-      if (log4jConf.exists()) {
-        PropertyConfigurator.configureAndWatch(log4jConf.getPath(), 1000);
-        fromClasspath = false;
-      } else {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        URL log4jUrl = cl.getResource(LOG4J_PROPERTIES);
-        if (log4jUrl != null) {
-          PropertyConfigurator.configure(log4jUrl);
-        }
-      }
-      LOG = LoggerFactory.getLogger(KMSWebApp.class);
-      LOG.debug("KMS log starting");
-      if (fromClasspath) {
-        LOG.warn("Log4j configuration file '{}' not found", LOG4J_PROPERTIES);
-        LOG.warn("Logging with INFO level to standard output");
-      }
-    } else {
-      LOG = LoggerFactory.getLogger(KMSWebApp.class);
-    }
-  }
-
   @Override
   public void contextInitialized(ServletContextEvent sce) {
     try {
-      String confDir = System.getProperty(KMSConfiguration.KMS_CONFIG_DIR);
-      if (confDir == null) {
-        throw new RuntimeException("System property '" +
-            KMSConfiguration.KMS_CONFIG_DIR + "' not defined");
-      }
       kmsConf = KMSConfiguration.getKMSConf();
-      initLogging(confDir);
       UserGroupInformation.setConfiguration(kmsConf);
       LOG.info("-------------------------------------------------------------");
       LOG.info("  Java runtime version : {}", System.getProperty(
@@ -152,13 +117,18 @@ public class KMSWebApp implements ServletContextListener {
 
       kmsAudit = new KMSAudit(kmsConf);
 
-      // intializing the KeyProvider
+      // initializing the KeyProvider
       String providerString = kmsConf.get(KMSConfiguration.KEY_PROVIDER_URI);
       if (providerString == null) {
         throw new IllegalStateException("No KeyProvider has been defined");
       }
       KeyProvider keyProvider =
           KeyProviderFactory.get(new URI(providerString), kmsConf);
+      Preconditions.checkNotNull(keyProvider, String.format("No" +
+              " KeyProvider has been initialized, please" +
+              " check whether %s '%s' is configured correctly in" +
+              " kms-site.xml.", KMSConfiguration.KEY_PROVIDER_URI,
+          providerString));
       if (kmsConf.getBoolean(KMSConfiguration.KEY_CACHE_ENABLE,
           KMSConfiguration.KEY_CACHE_ENABLE_DEFAULT)) {
         long keyTimeOutMillis =

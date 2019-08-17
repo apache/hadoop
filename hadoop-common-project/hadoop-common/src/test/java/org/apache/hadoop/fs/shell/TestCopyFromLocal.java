@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,11 +56,11 @@ public class TestCopyFromLocal {
     fs.mkdirs(toDirPath);
 
     int numTotalFiles = 0;
-    int numDirs = RandomUtils.nextInt(5);
+    int numDirs = RandomUtils.nextInt(0, 5);
     for (int dirCount = 0; dirCount < numDirs; ++dirCount) {
       Path subDirPath = new Path(fromDirPath, "subdir" + dirCount);
       fs.mkdirs(subDirPath);
-      int numFiles = RandomUtils.nextInt(10);
+      int numFiles = RandomUtils.nextInt(0, 10);
       for (int fileCount = 0; fileCount < numFiles; ++fileCount) {
         numTotalFiles++;
         Path subFile = new Path(subDirPath, "file" + fileCount);
@@ -115,7 +115,7 @@ public class TestCopyFromLocal {
     Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     int numFiles = TestCopyFromLocal.initialize(dir);
     int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    int randThreads = RandomUtils.nextInt(maxThreads - 1) + 1;
+    int randThreads = RandomUtils.nextInt(0, maxThreads - 1) + 1;
     String numThreads = Integer.toString(randThreads);
     run(new TestMultiThreadedCopy(randThreads,
         randThreads == 1 ? 0 : numFiles), "-t", numThreads,

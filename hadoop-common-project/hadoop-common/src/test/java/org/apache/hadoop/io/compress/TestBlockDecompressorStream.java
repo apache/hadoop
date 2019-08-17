@@ -18,11 +18,15 @@
 package org.apache.hadoop.io.compress;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.junit.Test;
@@ -72,6 +76,31 @@ public class TestBlockDecompressorStream {
           -1 , blockDecompressorStream.read());
     } catch (IOException e) {
       fail("unexpected IOException : " + e);
+    }
+  }
+
+  @Test
+  public void testReadWhenIoExceptionOccure() throws IOException {
+    File file = new File("testReadWhenIOException");
+    try {
+      file.createNewFile();
+      InputStream io = new FileInputStream(file) {
+        @Override
+        public int read() throws IOException {
+          throw new IOException("File blocks missing");
+        }
+      };
+
+      try (BlockDecompressorStream blockDecompressorStream =
+          new BlockDecompressorStream(io, new FakeDecompressor(), 1024)) {
+        int byteRead = blockDecompressorStream.read();
+        fail("Should not return -1 in case of IOException. Byte read "
+            + byteRead);
+      } catch (IOException e) {
+        assertTrue(e.getMessage().contains("File blocks missing"));
+      }
+    } finally {
+      file.delete();
     }
   }
 }

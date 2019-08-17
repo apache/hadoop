@@ -109,6 +109,9 @@ public class WeightedRoundRobinMultiplexer implements RpcMultiplexer {
     // Finally, reset requestsLeft. This will enable moveToNextQueue to be
     // called again, for the new currentQueueIndex
     this.requestsLeft.set(this.queueWeights[nextIdx]);
+    LOG.debug("Moving to next queue from queue index {} to index {}, " +
+        "number of requests left for current queue: {}.",
+        thisIdx, nextIdx, requestsLeft);
   }
 
   /**

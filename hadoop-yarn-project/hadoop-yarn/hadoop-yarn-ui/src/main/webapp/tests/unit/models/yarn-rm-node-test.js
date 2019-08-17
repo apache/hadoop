@@ -20,7 +20,6 @@ import { moduleForModel, test } from 'ember-qunit';
 import Ember from 'ember';
 
 moduleForModel('yarn-rm-node', 'Unit | Model | RMNode', {
-  // Specify the other units that are required for this test.
   needs: []
 });
 
@@ -64,17 +63,7 @@ test('test fields', function(assert) {
     model.set("usedVirtualCores", 1);
     model.set("availableVirtualCores", 7);
     model.set("nodeLabels", ["x"]);
-    assert.equal(model.get("rack"), "/default-rack");
-    assert.equal(model.get("state"), "RUNNING");
-    assert.equal(model.get("nodeHostName"), "localhost");
-    assert.equal(model.get("id"), "localhost:64318");
-    assert.equal(model.get("nodeHTTPAddress"), "localhost:8042");
-    assert.equal(model.get("usedMemoryMB"), 1024);
-    assert.equal(model.get("availMemoryMB"), 7168);
-    assert.equal(model.get("usedVirtualCores"), 1);
-    assert.equal(model.get("availableVirtualCores"), 7);
-    assert.equal(model.get("isDummyNode"), false);
-    assert.deepEqual(model.get("nodeLabels"), ["x"]);
+
     assert.equal(model.get("nodeLabelsAsString"), "x");
     assert.deepEqual(model.get("nodeStateStyle"), "label label-success");
     assert.deepEqual(model.get("getMemoryDataForDonutChart"),
@@ -93,4 +82,3 @@ test('test fields', function(assert) {
     assert.equal(model.get("nodeLabelsAsString"), "");
   });
 });
-

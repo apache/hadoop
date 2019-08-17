@@ -127,9 +127,9 @@ public class MetricsInvariantChecker extends InvariantsChecker {
         }
 
         invariants.put(inv, scriptEngine.compile(inv));
-        sb.append(" (");
-        sb.append(inv);
-        sb.append(") ");
+        sb.append(" (")
+            .append(inv)
+            .append(") ");
       }
 
       // create a single large combined invariant for speed of checking

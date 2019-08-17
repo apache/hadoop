@@ -15,15 +15,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-common</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Common</name>
 
   <properties>
@@ -39,6 +39,10 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
     </dependency>
 
 
@@ -60,10 +64,6 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -90,10 +90,6 @@
       <artifactId>guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-    </dependency>
-    <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
     </dependency>
@@ -108,10 +104,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
     </dependency>
-    <!--
-    junit must be before mockito-all on the classpath.  mockito-all bundles its
-    own copy of the hamcrest classes, but they don't match our junit version.
-    -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -119,7 +111,12 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -139,7 +136,7 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk16</artifactId>
+      <artifactId>bcprov-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -237,18 +234,24 @@
             <exclude>src/main/resources/webapps/test/.keep</exclude>
             <exclude>src/main/resources/webapps/proxy/.keep</exclude>
             <exclude>src/main/resources/webapps/node/.keep</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/js/jquery.dataTables.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/css/jquery.dataTables.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/css/custom_datatable.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/css/jui-dt.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/images/Sorting icons.psd</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.18/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.9.1.custom.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-1.8.2.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.12.1.custom.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-3.3.1.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_masterindex</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_SUCCESS</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_index</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/part-0</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_masterindex</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_SUCCESS</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -358,7 +361,7 @@
     <profile>
       <id>java9</id>
       <activation>
-        <jdk>9</jdk>
+        <jdk>[9,)</jdk>
       </activation>
       <build>
         <plugins>
@@ -366,9 +369,17 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <configuration>
               <excludes>
-                <exclude>src/main/java/org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-                <exclude>src/main/test/org/apache/haodop/yarn/webapp/hamlet/**</exclude>
+                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
               </excludes>
+              <testExcludes>
+                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <excludePackageNames>org.apache.hadoop.yarn.webapp.hamlet</excludePackageNames>
             </configuration>
           </plugin>
         </plugins>

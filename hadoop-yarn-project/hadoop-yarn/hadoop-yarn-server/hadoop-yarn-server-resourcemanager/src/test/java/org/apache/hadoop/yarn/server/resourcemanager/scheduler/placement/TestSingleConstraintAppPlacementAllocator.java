@@ -18,14 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceSizing;
-import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -44,10 +38,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.LongBinaryOperator;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -71,7 +67,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         TestUtils.getMockApplicationId(1));
     when(appSchedulingInfo.getApplicationAttemptId()).thenReturn(
         TestUtils.getMockApplicationAttemptId(1, 1));
-
+    when(appSchedulingInfo.getDefaultNodeLabelExpression()).thenReturn("y");
     // stub RMContext
     rmContext = TestUtils.getMockRMContext();
 
@@ -125,13 +121,11 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
+                    .allocationTag("mapper", "reducer"),
                 PlacementConstraints.PlacementTargets.nodePartition(""))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals(ImmutableSet.of("mapper", "reducer"),
-        allocator.getTargetAllocationTags());
     Assert.assertEquals("", allocator.getTargetNodePartition());
 
     // Valid (with partition)
@@ -141,13 +135,11 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
+                    .allocationTag("mapper", "reducer"),
                 PlacementConstraints.PlacementTargets.nodePartition("x"))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals(ImmutableSet.of("mapper", "reducer"),
-        allocator.getTargetAllocationTags());
     Assert.assertEquals("x", allocator.getTargetNodePartition());
 
     // Valid (without specifying node partition)
@@ -157,13 +149,12 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer")).build())
+                    .allocationTag("mapper", "reducer")).build())
         .resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals(ImmutableSet.of("mapper", "reducer"),
-        allocator.getTargetAllocationTags());
-    Assert.assertEquals("", allocator.getTargetNodePartition());
+    // Node partition is unspecified, use the default node label expression y
+    Assert.assertEquals("y", allocator.getTargetNodePartition());
 
     // Valid (with application Id target)
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -172,14 +163,12 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer")).build())
+                    .allocationTag("mapper", "reducer")).build())
         .resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
     // Allocation tags should not include application Id
-    Assert.assertEquals(ImmutableSet.of("mapper", "reducer"),
-        allocator.getTargetAllocationTags());
-    Assert.assertEquals("", allocator.getTargetNodePartition());
+    Assert.assertEquals("y", allocator.getTargetNodePartition());
 
     // Invalid (without sizing)
     assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -188,7 +177,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer")).build())
+                    .allocationTag("mapper", "reducer")).build())
         .build(), true);
 
     // Invalid (without target tags)
@@ -199,75 +188,6 @@ public class TestSingleConstraintAppPlacementAllocator {
             .targetNotIn(PlacementConstraints.NODE).build())
         .build(), true);
 
-    // Invalid (with multiple allocation tags expression specified)
-    assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
-        .allocationRequestId(10L).priority(Priority.newInstance(1))
-        .placementConstraintExpression(PlacementConstraints
-            .targetNotIn(PlacementConstraints.NODE,
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper"),
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("reducer"),
-                PlacementConstraints.PlacementTargets.nodePartition(""))
-            .build()).resourceSizing(
-            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
-        .build(), true);
-
-    // Invalid (with multiple node partition target expression specified)
-    assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
-        .allocationRequestId(10L).priority(Priority.newInstance(1))
-        .placementConstraintExpression(PlacementConstraints
-            .targetNotIn(PlacementConstraints.NODE,
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper"),
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp(""),
-                PlacementConstraints.PlacementTargets.nodePartition("x"))
-            .build()).resourceSizing(
-            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
-        .build(), true);
-
-    // Invalid (not anti-affinity cardinality)
-    assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
-        .allocationRequestId(10L).priority(Priority.newInstance(1))
-        .placementConstraintExpression(PlacementConstraints
-            .targetCardinality(PlacementConstraints.NODE, 1, 2,
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper"),
-                PlacementConstraints.PlacementTargets.nodePartition(""))
-            .build()).resourceSizing(
-            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
-        .build(), true);
-
-    // Invalid (not anti-affinity cardinality)
-    assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
-        .allocationRequestId(10L).priority(Priority.newInstance(1))
-        .placementConstraintExpression(PlacementConstraints
-            .targetCardinality(PlacementConstraints.NODE, 0, 2,
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper"),
-                PlacementConstraints.PlacementTargets.nodePartition(""))
-            .build()).resourceSizing(
-            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
-        .build(), true);
-
-    // Invalid (not NODE scope)
-    assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
-        .allocationRequestId(10L).priority(Priority.newInstance(1))
-        .placementConstraintExpression(PlacementConstraints
-            .targetNotIn(PlacementConstraints.RACK,
-                PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
-                PlacementConstraints.PlacementTargets.nodePartition(""))
-            .build()).resourceSizing(
-            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
-        .build(), true);
-
     // Invalid (not GUARANTEED)
     assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
         ExecutionTypeRequest.newInstance(ExecutionType.OPPORTUNISTIC))
@@ -275,7 +195,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
+                    .allocationTag("mapper", "reducer"),
                 PlacementConstraints.PlacementTargets.nodePartition(""))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -291,7 +211,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             .placementConstraintExpression(PlacementConstraints
                 .targetNotIn(PlacementConstraints.NODE,
                     PlacementConstraints.PlacementTargets
-                        .allocationTagToIntraApp("mapper", "reducer"),
+                        .allocationTag("mapper", "reducer"),
                     PlacementConstraints.PlacementTargets.nodePartition(""))
                 .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -320,7 +240,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetCardinality(PlacementConstraints.NODE, 0, 1,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper"),
+                    .allocationTag("mapper"),
                 PlacementConstraints.PlacementTargets.nodePartition(""))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -337,7 +257,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
+                    .allocationTag("mapper", "reducer"),
                 PlacementConstraints.PlacementTargets.nodePartition(""))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -357,7 +277,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             .placementConstraintExpression(PlacementConstraints
                 .targetNotIn(PlacementConstraints.NODE,
                     PlacementConstraints.PlacementTargets
-                        .allocationTagToIntraApp("mapper", "reducer"),
+                        .allocationTag("mapper", "reducer"),
                     PlacementConstraints.PlacementTargets.nodePartition(""))
                 .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -366,8 +286,7 @@ public class TestSingleConstraintAppPlacementAllocator {
     allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNode("host1", "/rack1", 123, 1024));
     verify(spyAllocationTagsManager, Mockito.times(1)).getNodeCardinalityByOp(
-        eq(NodeId.fromString("host1:123")), eq(TestUtils.getMockApplicationId(1)),
-        eq(ImmutableSet.of("mapper", "reducer")),
+        eq(NodeId.fromString("host1:123")), any(AllocationTags.class),
         any(LongBinaryOperator.class));
 
     allocator = new SingleConstraintAppPlacementAllocator();
@@ -379,7 +298,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         .placementConstraintExpression(PlacementConstraints
             .targetNotIn(PlacementConstraints.NODE,
                 PlacementConstraints.PlacementTargets
-                    .allocationTagToIntraApp("mapper", "reducer"),
+                    .allocationTag("mapper", "reducer"),
                 PlacementConstraints.PlacementTargets.nodePartition("x"))
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
@@ -388,9 +307,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNode("host1", "/rack1", 123, 1024));
     verify(spyAllocationTagsManager, Mockito.atLeast(1)).getNodeCardinalityByOp(
-        eq(NodeId.fromString("host1:123")),
-        eq(TestUtils.getMockApplicationId(1)), eq(ImmutableSet
-            .of("mapper", "reducer")), any(LongBinaryOperator.class));
+        eq(NodeId.fromString("host1:123")), any(AllocationTags.class),
+        any(LongBinaryOperator.class));
 
     SchedulerNode node1 = mock(SchedulerNode.class);
     when(node1.getPartition()).thenReturn("x");
@@ -404,5 +322,187 @@ public class TestSingleConstraintAppPlacementAllocator {
     when(node1.getNodeID()).thenReturn(NodeId.fromString("host2:123"));
     Assert.assertFalse(allocator
         .precheckNode(node2, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
+  }
+
+  @Test
+  public void testNodeAttributesFunctionality() {
+    // 1. Simple java=1.8 validation
+    SchedulingRequest schedulingRequest =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(PlacementConstraints
+                .targetNodeAttribute(PlacementConstraints.NODE,
+                    NodeAttributeOpCode.EQ,
+                    PlacementConstraints.PlacementTargets
+                        .nodeAttribute("java", "1.8"),
+                    PlacementConstraints.PlacementTargets.nodePartition(""))
+                .build()).resourceSizing(
+            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
+            .build();
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
+    Set<NodeAttribute> attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.8"));
+    boolean result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertTrue("Allocation should be success for java=1.8", result);
+
+    // 2. verify python!=3 validation
+    SchedulingRequest schedulingRequest2 =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(PlacementConstraints
+                .targetNodeAttribute(PlacementConstraints.NODE,
+                    NodeAttributeOpCode.NE,
+                    PlacementConstraints.PlacementTargets
+                        .nodeAttribute("python", "3"),
+                    PlacementConstraints.PlacementTargets.nodePartition(""))
+                .build()).resourceSizing(
+            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
+            .build();
+    // Create allocator
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
+    attributes = new HashSet<>();
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertTrue("Allocation should be success as python doesn't exist",
+        result);
+
+    // 3. verify python!=3 validation when node has python=2
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
+    attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "2"));
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertTrue(
+        "Allocation should be success as python=3 doesn't exist in node",
+        result);
+
+    // 4. verify python!=3 validation when node has python=3
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
+    attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "3"));
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertFalse("Allocation should fail as python=3 exist in node",
+        result);
+  }
+
+  @Test
+  public void testConjunctionNodeAttributesFunctionality() {
+    // 1. verify and(python!=3:java=1.8) validation when node has python=3
+    SchedulingRequest schedulingRequest1 =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(
+                PlacementConstraints.and(
+                    PlacementConstraints
+                        .targetNodeAttribute(PlacementConstraints.NODE,
+                            NodeAttributeOpCode.NE,
+                            PlacementConstraints.PlacementTargets
+                                .nodeAttribute("python", "3")),
+                    PlacementConstraints
+                        .targetNodeAttribute(PlacementConstraints.NODE,
+                            NodeAttributeOpCode.EQ,
+                            PlacementConstraints.PlacementTargets
+                                .nodeAttribute("java", "1.8")))
+                    .build()).resourceSizing(
+            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
+            .build();
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest1, false);
+    Set<NodeAttribute> attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "3"));
+    attributes.add(
+        NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.8"));
+    boolean result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertFalse("Allocation should fail as python=3 exists in node",
+        result);
+
+    // 2. verify and(python!=3:java=1.8) validation when node has python=2
+    // and java=1.8
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest1, false);
+    attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "2"));
+    attributes.add(
+        NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.8"));
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertTrue("Allocation should be success as python=2 exists in node",
+        result);
+
+    // 3. verify or(python!=3:java=1.8) validation when node has python=3
+    SchedulingRequest schedulingRequest2 =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(
+                PlacementConstraints.or(
+                    PlacementConstraints
+                        .targetNodeAttribute(PlacementConstraints.NODE,
+                            NodeAttributeOpCode.NE,
+                            PlacementConstraints.PlacementTargets
+                                .nodeAttribute("python", "3")),
+                    PlacementConstraints
+                        .targetNodeAttribute(PlacementConstraints.NODE,
+                            NodeAttributeOpCode.EQ,
+                            PlacementConstraints.PlacementTargets
+                                .nodeAttribute("java", "1.8")))
+                    .build()).resourceSizing(
+            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
+            .build();
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
+    attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "3"));
+    attributes.add(
+        NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.8"));
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert.assertTrue("Allocation should be success as java=1.8 exists in node",
+        result);
+
+    // 4. verify or(python!=3:java=1.8) validation when node has python=3
+    // and java=1.7.
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest2, false);
+    attributes = new HashSet<>();
+    attributes.add(
+        NodeAttribute.newInstance("python", NodeAttributeType.STRING, "3"));
+    attributes.add(
+        NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.7"));
+    result = allocator.canAllocate(NodeType.NODE_LOCAL,
+        TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
+            attributes));
+    Assert
+        .assertFalse("Allocation should fail as java=1.8 doesnt exist in node",
+            result);
   }
 }

@@ -26,8 +26,8 @@ import com.google.common.collect.Lists;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.text.StrBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -54,12 +54,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -274,7 +274,7 @@ public abstract class Command extends Configured implements Closeable {
       try {
         HostsFileReader.readFileToSet("include",
             Paths.get(listURL.getPath()).toString(), resultSet);
-      } catch (FileNotFoundException e) {
+      } catch (NoSuchFileException e) {
         String warnMsg = String
             .format("The input host file path '%s' is not a valid path. "
                 + "Please make sure the host file exists.", listArg);
@@ -491,7 +491,7 @@ public abstract class Command extends Configured implements Closeable {
   /**
    * Put output line to log and string buffer.
    * */
-  protected void recordOutput(final StrBuilder result,
+  protected void recordOutput(final TextStringBuilder result,
       final String outputLine) {
     LOG.info(outputLine);
     result.appendln(outputLine);
@@ -501,7 +501,7 @@ public abstract class Command extends Configured implements Closeable {
    * Parse top number of nodes to be processed.
    * @return top number of nodes to be processed.
    */
-  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result)
+  protected int parseTopNodes(final CommandLine cmd, final TextStringBuilder result)
       throws IllegalArgumentException {
     String outputLine = "";
     int nodes = 0;

@@ -92,6 +92,10 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private final LongAdder corruptReplicationOneBlocks = new LongAdder();
   private final LongAdder lowRedundancyECBlockGroups = new LongAdder();
   private final LongAdder corruptECBlockGroups = new LongAdder();
+  private final LongAdder highestPriorityLowRedundancyReplicatedBlocks
+      = new LongAdder();
+  private final LongAdder highestPriorityLowRedundancyECBlocks
+      = new LongAdder();
 
   /** Create an object. */
   LowRedundancyBlocks() {
@@ -160,6 +164,18 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   long getCorruptReplicationOneBlocks() {
     return corruptReplicationOneBlocks.longValue();
+  }
+
+  /** Return the number of under replicated blocks
+   * with the highest priority to recover */
+  long getHighestPriorityReplicatedBlockCount() {
+    return highestPriorityLowRedundancyReplicatedBlocks.longValue();
+  }
+
+  /** Return the number of under replicated EC blocks
+   * with the highest priority to recover */
+  long getHighestPriorityECBlockCount() {
+    return highestPriorityLowRedundancyECBlocks.longValue();
   }
 
   /**
@@ -300,6 +316,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
         corruptECBlockGroups.increment();
       }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyECBlocks.increment();
+      }
     } else {
       lowRedundancyBlocks.increment();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -307,6 +326,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
         if (expectedReplicas == 1) {
           corruptReplicationOneBlocks.increment();
         }
+      }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyReplicatedBlocks.increment();
       }
     }
   }
@@ -380,6 +402,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
         corruptECBlockGroups.decrement();
       }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyECBlocks.decrement();
+      }
     } else {
       lowRedundancyBlocks.decrement();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -390,6 +415,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
               "Number of corrupt blocks with replication factor 1 " +
                   "should be non-negative";
         }
+      }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyReplicatedBlocks.decrement();
       }
     }
   }

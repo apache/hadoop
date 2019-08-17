@@ -128,6 +128,12 @@ public class NetworkPacketTaggingHandlerImpl
     return null;
   }
 
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
   /**
    * Cleanup operation once container is completed - deletes cgroup.
    *
@@ -147,9 +153,7 @@ public class NetworkPacketTaggingHandlerImpl
   @Override
   public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("teardown(): Nothing to do");
-    }
+    LOG.debug("teardown(): Nothing to do");
 
     return null;
   }
@@ -159,5 +163,10 @@ public class NetworkPacketTaggingHandlerImpl
   public NetworkTagMappingManager createNetworkTagMappingManager(
       Configuration conf) {
     return NetworkTagMappingManagerFactory.getManager(conf);
+  }
+
+  @Override
+  public String toString() {
+    return NetworkPacketTaggingHandlerImpl.class.getName();
   }
 }

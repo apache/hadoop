@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -78,25 +79,33 @@ public final class Compression {
   public enum Algorithm {
     LZO(TFile.COMPRESSION_LZO) {
       private transient boolean checked = false;
+      private transient ClassNotFoundException cnf;
+      private transient boolean reinitCodecInTests;
       private static final String defaultClazz =
           "org.apache.hadoop.io.compress.LzoCodec";
+      private transient String clazz;
       private transient CompressionCodec codec = null;
+
+      private String getLzoCodecClass() {
+        String extClazzConf = conf.get(CONF_LZO_CLASS);
+        String extClazz = (extClazzConf != null) ?
+            extClazzConf : System.getProperty(CONF_LZO_CLASS);
+        return (extClazz != null) ? extClazz : defaultClazz;
+      }
 
       @Override
       public synchronized boolean isSupported() {
-        if (!checked) {
+        if (!checked || reinitCodecInTests) {
           checked = true;
-          String extClazzConf = conf.get(CONF_LZO_CLASS);
-          String extClazz = (extClazzConf != null) ?
-              extClazzConf : System.getProperty(CONF_LZO_CLASS);
-          String clazz = (extClazz != null) ? extClazz : defaultClazz;
+          reinitCodecInTests = conf.getBoolean("test.reload.lzo.codec", false);
+          clazz = getLzoCodecClass();
           try {
             LOG.info("Trying to load Lzo codec class: " + clazz);
             codec =
                 (CompressionCodec) ReflectionUtils.newInstance(Class
                     .forName(clazz), conf);
           } catch (ClassNotFoundException e) {
-            // that is okay
+            cnf = e;
           }
         }
         return codec != null;
@@ -105,9 +114,9 @@ public final class Compression {
       @Override
       CompressionCodec getCodec() throws IOException {
         if (!isSupported()) {
-          throw new IOException(
-              "LZO codec class not specified. Did you forget to set property "
-                  + CONF_LZO_CLASS + "?");
+          throw new IOException(String.format(
+              "LZO codec %s=%s could not be loaded", CONF_LZO_CLASS, clazz),
+                  cnf);
         }
 
         return codec;

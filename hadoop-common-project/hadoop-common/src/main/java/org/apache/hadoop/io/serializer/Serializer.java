@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * <p>
- * Provides a facility for serializing objects of type <T> to an
+ * Provides a facility for serializing objects of type &lt;T&gt; to an
  * {@link OutputStream}.
  * </p>
  * 

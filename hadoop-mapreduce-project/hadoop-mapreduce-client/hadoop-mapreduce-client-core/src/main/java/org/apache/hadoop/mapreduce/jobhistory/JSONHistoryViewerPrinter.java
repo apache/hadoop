@@ -104,7 +104,8 @@ class JSONHistoryViewerPrinter implements HistoryViewerPrinter {
     // Killed jobs might not have counters
     if (totalCounters != null) {
       JSONObject jGroups = new JSONObject();
-      for (String groupName : totalCounters.getGroupNames()) {
+      for (CounterGroup counterGroup : totalCounters) {
+        String groupName = counterGroup.getName();
         CounterGroup totalGroup = totalCounters.getGroup(groupName);
         CounterGroup mapGroup = mapCounters.getGroup(groupName);
         CounterGroup reduceGroup = reduceCounters.getGroup(groupName);

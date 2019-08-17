@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Caches frequently used names to facilitate reuse.
@@ -62,7 +62,7 @@ class NameCache<K> {
     }
   }
 
-  static final Log LOG = LogFactory.getLog(NameCache.class.getName());
+  static final Logger LOG = LoggerFactory.getLogger(NameCache.class.getName());
 
   /** indicates initialization is in progress */
   private boolean initialized = false;

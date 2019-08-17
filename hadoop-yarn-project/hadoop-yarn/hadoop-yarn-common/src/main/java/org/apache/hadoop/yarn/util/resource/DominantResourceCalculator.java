@@ -17,18 +17,20 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * A {@link ResourceCalculator} which uses the concept of
@@ -54,7 +56,8 @@ import java.util.Arrays;
 @Private
 @Unstable
 public class DominantResourceCalculator extends ResourceCalculator {
-  static final Log LOG = LogFactory.getLog(DominantResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DominantResourceCalculator.class);
 
   public DominantResourceCalculator() {
   }
@@ -73,7 +76,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     boolean rhsGreater = false;
     int ret = 0;
 
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation lhsResourceInformation = lhs
           .getResourceInformation(i);
@@ -111,7 +114,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     // resources and then look for which resource has the biggest
     // share overall.
     ResourceInformation[] clusterRes = clusterResource.getResources();
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
 
     // If array creation shows up as a time sink, these arrays could be cached
     // because they're always the same length.
@@ -184,7 +187,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     ResourceInformation[] firstRes = first.getResources();
     ResourceInformation[] secondRes = second.getResources();
 
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       firstShares[i] = calculateShare(clusterRes[i], firstRes[i]);
       secondShares[i] = calculateShare(clusterRes[i], secondRes[i]);
@@ -275,7 +278,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     max[0] = 0.0;
     max[1] = 0.0;
 
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       firstShares[i] = calculateShare(clusterRes[i], firstRes[i]);
       secondShares[i] = calculateShare(clusterRes[i], secondRes[i]);
@@ -298,11 +301,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
    */
   private double calculateShare(ResourceInformation clusterRes,
       ResourceInformation res) {
-      // Convert the resources' units into the cluster resource's units
-    long value = UnitsConversionUtil.convert(res.getUnits(),
-          clusterRes.getUnits(), res.getValue());
-
-    return (double) value / clusterRes.getValue();
+    return (double) res.getValue() / clusterRes.getValue();
   }
 
   /**
@@ -335,16 +334,13 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public long computeAvailableContainers(Resource available,
       Resource required) {
     long min = Long.MAX_VALUE;
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation availableResource = available
           .getResourceInformation(i);
       ResourceInformation requiredResource = required.getResourceInformation(i);
-      long requiredResourceValue = UnitsConversionUtil.convert(
-          requiredResource.getUnits(), availableResource.getUnits(),
-          requiredResource.getValue());
-      if (requiredResourceValue != 0) {
-        long tmp = availableResource.getValue() / requiredResourceValue;
+      if (requiredResource.getValue() != 0) {
+        long tmp = availableResource.getValue() / requiredResource.getValue();
         min = min < tmp ? min : tmp;
       }
     }
@@ -354,7 +350,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public float divide(Resource clusterResource,
       Resource numerator, Resource denominator) {
-    int nKnownResourceTypes = ResourceUtils.getNumberOfKnownResourceTypes();
+    int nKnownResourceTypes = ResourceUtils.getNumberOfCountableResourceTypes();
     ResourceInformation[] clusterRes = clusterResource.getResources();
     // We have to provide the calculateShares() method with somewhere to store
     // the shares. We don't actually need these shares afterwards.
@@ -383,15 +379,12 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public float ratio(Resource a, Resource b) {
     float ratio = 0.0f;
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation aResourceInformation = a.getResourceInformation(i);
       ResourceInformation bResourceInformation = b.getResourceInformation(i);
-      long bResourceValue = UnitsConversionUtil.convert(
-          bResourceInformation.getUnits(), aResourceInformation.getUnits(),
+      final float tmp = divideSafelyAsFloat(aResourceInformation.getValue(),
           bResourceInformation.getValue());
-      float tmp = (float) aResourceInformation.getValue()
-          / (float) bResourceValue;
       ratio = ratio > tmp ? ratio : tmp;
     }
     return ratio;
@@ -404,7 +397,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   public Resource divideAndCeil(Resource numerator, long denominator) {
     Resource ret = Resource.newInstance(numerator);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation resourceInformation = ret.getResourceInformation(i);
       resourceInformation
@@ -425,7 +418,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
     Resource ret = Resource.newInstance(r);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation rResourceInformation = r.getResourceInformation(i);
       ResourceInformation minimumResourceInformation = minimumResource
@@ -437,23 +430,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long minimumValue = UnitsConversionUtil.convert(
-          minimumResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          minimumResourceInformation.getValue());
-      long maximumValue = UnitsConversionUtil.convert(
-          maximumResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          maximumResourceInformation.getValue());
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
-      long value = Math.max(rValue, minimumValue);
-      if (stepFactorValue != 0) {
-        value = roundUp(value, stepFactorValue);
+      long value = Math.max(rValue, minimumResourceInformation.getValue());
+      if (stepFactorResourceInformation.getValue() != 0) {
+        value = roundUp(value, stepFactorResourceInformation.getValue());
       }
-      tmp.setValue(Math.min(value, maximumValue));
+      tmp.setValue(Math.min(value, maximumResourceInformation.getValue()));
       ret.setResourceInformation(i, tmp);
     }
     return ret;
@@ -471,17 +452,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   private Resource rounding(Resource r, Resource stepFactor, boolean roundUp) {
     Resource ret = Resource.newInstance(r);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation rResourceInformation = r.getResourceInformation(i);
       ResourceInformation stepFactorResourceInformation = stepFactor
           .getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value = rValue;
       if (stepFactorValue != 0) {
         value = roundUp
@@ -499,17 +477,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public Resource multiplyAndNormalizeUp(Resource r, double[] by,
       Resource stepFactor) {
     Resource ret = Resource.newInstance(r);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation rResourceInformation = r.getResourceInformation(i);
       ResourceInformation stepFactorResourceInformation = stepFactor
           .getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       ret.setResourceValue(i, ResourceCalculator
           .roundUp((long) Math.ceil(rValue * by[i]), stepFactorValue));
     }
@@ -531,7 +506,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   private Resource multiplyAndNormalize(Resource r, double by,
       Resource stepFactor, boolean roundUp) {
     Resource ret = Resource.newInstance(r);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation rResourceInformation = r.getResourceInformation(i);
       ResourceInformation stepFactorResourceInformation = stepFactor
@@ -539,10 +514,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value;
       if (stepFactorValue != 0) {
         value = roundUp
@@ -560,16 +532,13 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public boolean fitsIn(Resource smaller, Resource bigger) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation sResourceInformation = smaller
           .getResourceInformation(i);
       ResourceInformation bResourceInformation = bigger
           .getResourceInformation(i);
-      long sResourceValue = UnitsConversionUtil.convert(
-          sResourceInformation.getUnits(), bResourceInformation.getUnits(),
-          sResourceInformation.getValue());
-      if (sResourceValue > bResourceInformation.getValue()) {
+      if (sResourceInformation.getValue() > bResourceInformation.getValue()) {
         return false;
       }
     }
@@ -577,22 +546,9 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean isAnyMajorResourceZero(Resource resource) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
-    for (int i = 0; i < maxLength; i++) {
-      ResourceInformation resourceInformation = resource
-          .getResourceInformation(i);
-      if (resourceInformation.getValue() == 0L) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
   public Resource normalizeDown(Resource r, Resource stepFactor) {
     Resource ret = Resource.newInstance(r);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation rResourceInformation = r.getResourceInformation(i);
       ResourceInformation stepFactorResourceInformation = stepFactor
@@ -600,11 +556,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
-
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value = rValue;
       if (stepFactorValue != 0) {
         value = roundDown(rValue, stepFactorValue);
@@ -612,5 +564,42 @@ public class DominantResourceCalculator extends ResourceCalculator {
       tmp.setValue(value);
     }
     return ret;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceZeroOrNegative(Resource resource) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = resource.getResourceInformation(
+          i);
+      if (resourceInformation.getValue() <= 0L) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceAboveZero(Resource resource) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = resource.getResourceInformation(
+          i);
+      if (resourceInformation.getValue() > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public Set<String> getInsufficientResourceNames(Resource required,
+      Resource available) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    return IntStream.range(0, maxLength).filter(
+        i -> required.getResourceInformation(i).getValue() > available
+            .getResourceInformation(i).getValue())
+        .mapToObj(i -> ResourceUtils.getResourceTypesArray()[i].getName())
+        .collect(Collectors.toSet());
   }
 }

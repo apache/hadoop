@@ -57,6 +57,11 @@ public class TestINodeAttributeProvider {
   public static class MyAuthorizationProvider extends INodeAttributeProvider {
 
     public static class MyAccessControlEnforcer implements AccessControlEnforcer {
+      AccessControlEnforcer ace;
+
+      public MyAccessControlEnforcer(AccessControlEnforcer defaultEnforcer) {
+        this.ace = defaultEnforcer;
+      }
 
       @Override
       public void checkPermission(String fsOwner, String supergroup,
@@ -65,6 +70,13 @@ public class TestINodeAttributeProvider {
           int ancestorIndex, boolean doCheckOwner, FsAction ancestorAccess,
           FsAction parentAccess, FsAction access, FsAction subAccess,
           boolean ignoreEmptyDir) throws AccessControlException {
+        if (ancestorIndex > 1
+            && inodes[1].getLocalName().equals("user")
+            && inodes[2].getLocalName().equals("acl")) {
+          this.ace.checkPermission(fsOwner, supergroup, ugi, inodeAttrs, inodes,
+              pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
+              ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
+        }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
       }
     }
@@ -84,6 +96,7 @@ public class TestINodeAttributeProvider {
         final INodeAttributes inode) {
       CALLED.add("getAttributes");
       final boolean useDefault = useDefault(pathElements);
+      final boolean useNullAcl = useNullAclFeature(pathElements);
       return new INodeAttributes() {
         @Override
         public boolean isDirectory() {
@@ -126,7 +139,10 @@ public class TestINodeAttributeProvider {
         @Override
         public AclFeature getAclFeature() {
           AclFeature f;
-          if (useDefault) {
+          if (useNullAcl) {
+            int[] entries = new int[0];
+            f = new AclFeature(entries);
+          } else if (useDefault) {
             f = inode.getAclFeature();
           } else {
             AclEntry acl = new AclEntry.Builder().setType(AclEntryType.GROUP).
@@ -167,8 +183,8 @@ public class TestINodeAttributeProvider {
 
     @Override
     public AccessControlEnforcer getExternalAccessControlEnforcer(
-        AccessControlEnforcer deafultEnforcer) {
-      return new MyAccessControlEnforcer();
+        AccessControlEnforcer defaultEnforcer) {
+      return new MyAccessControlEnforcer(defaultEnforcer);
     }
 
     private boolean useDefault(String[] pathElements) {
@@ -176,6 +192,11 @@ public class TestINodeAttributeProvider {
           !(pathElements[0].equals("user") && pathElements[1].equals("authz"));
     }
 
+    private boolean useNullAclFeature(String[] pathElements) {
+      return (pathElements.length > 2)
+          && pathElements[1].equals("user")
+          && pathElements[2].equals("acl");
+    }
   }
 
   @Before
@@ -367,5 +388,54 @@ public class TestINodeAttributeProvider {
         return null;
       });
     }
+  }
+
+  @Test
+  public void testAclFeature() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+            "testuser", new String[]{"testgroup"});
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+      FileSystem fs = miniDFS.getFileSystem();
+      Path aclDir = new Path("/user/acl");
+      fs.mkdirs(aclDir);
+      Path aclChildDir = new Path(aclDir, "subdir");
+      fs.mkdirs(aclChildDir);
+      AclStatus aclStatus = fs.getAclStatus(aclDir);
+      Assert.assertEquals(0, aclStatus.getEntries().size());
+      return null;
+    });
+  }
+
+  @Test
+  // HDFS-14389 - Ensure getAclStatus returns the owner, group and permissions
+  // from the Attribute Provider, and not from HDFS.
+  public void testGetAclStatusReturnsProviderOwnerPerms() throws Exception {
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("u1",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        Assert.assertEquals(PROVIDER_PERMISSION,
+            fs.getFileStatus(authzChild).getPermission().toShort());
+
+        Assert.assertEquals("foo", fs.getAclStatus(authzChild).getOwner());
+        Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
+        Assert.assertEquals(PROVIDER_PERMISSION,
+            fs.getAclStatus(authzChild).getPermission().toShort());
+        return null;
+      }
+    });
   }
 }

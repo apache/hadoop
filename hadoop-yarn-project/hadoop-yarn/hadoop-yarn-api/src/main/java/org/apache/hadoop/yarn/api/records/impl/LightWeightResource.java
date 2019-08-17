@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -58,7 +57,7 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.*;
  *
  * @see Resource
  */
-@InterfaceAudience.Private
+@Private
 @Unstable
 public class LightWeightResource extends Resource {
 
@@ -91,7 +90,7 @@ public class LightWeightResource extends Resource {
     }
   }
 
-  private void initResourceInformations(long memory, int vcores,
+  private void initResourceInformations(long memory, long vcores,
       int numberOfKnownResourceTypes) {
     this.memoryResInfo = newDefaultInformation(MEMORY_URI, MEMORY_MB.getUnits(),
         memory);

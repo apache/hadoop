@@ -18,19 +18,23 @@
 
 package org.apache.hadoop.yarn.security;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
@@ -42,7 +46,8 @@ import com.google.protobuf.TextFormat;
 @Evolving
 public class NMTokenIdentifier extends TokenIdentifier {
 
-  private static Log LOG = LogFactory.getLog(NMTokenIdentifier.class);
+  private final static Logger LOG =
+      LoggerFactory.getLogger(NMTokenIdentifier.class);
 
   public static final Text KIND = new Text("NMToken");
   
@@ -93,13 +98,39 @@ public class NMTokenIdentifier extends TokenIdentifier {
   
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing NMTokenIdentifier to RPC layer: " + this);
+    LOG.debug("Writing NMTokenIdentifier to RPC layer: {}", this);
     out.write(proto.toByteArray());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    proto = NMTokenIdentifierProto.parseFrom((DataInputStream)in);
+    byte[] data = IOUtils.readFullyToByteArray(in);
+    try {
+      proto = NMTokenIdentifierProto.parseFrom(data);
+    } catch (InvalidProtocolBufferException e) {
+      LOG.warn("Recovering old formatted token");
+      readFieldsInOldFormat(
+          new DataInputStream(new ByteArrayInputStream(data)));
+    }
+  }
+
+  private void readFieldsInOldFormat(DataInputStream in) throws IOException {
+    NMTokenIdentifierProto.Builder builder =
+        NMTokenIdentifierProto.newBuilder();
+
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(
+            ApplicationId.newInstance(in.readLong(), in.readInt()),
+            in.readInt());
+    builder.setAppAttemptId(((ApplicationAttemptIdPBImpl)appAttemptId)
+        .getProto());
+    String[] hostAddr = in.readUTF().split(":");
+    NodeId nodeId = NodeId.newInstance(hostAddr[0],
+        Integer.parseInt(hostAddr[1]));
+    builder.setNodeId(((NodeIdPBImpl)nodeId).getProto());
+    builder.setAppSubmitter(in.readUTF());
+    builder.setKeyId(in.readInt());
+    proto = builder.build();
   }
 
   @Override

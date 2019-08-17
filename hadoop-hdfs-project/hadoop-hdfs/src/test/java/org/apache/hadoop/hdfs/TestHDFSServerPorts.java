@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -50,7 +50,8 @@ import static org.junit.Assert.assertTrue;
  * a free port and start on it.
  */
 public class TestHDFSServerPorts {
-  public static final Log LOG = LogFactory.getLog(TestHDFSServerPorts.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestHDFSServerPorts.class);
   
   // reset default 0.0.0.0 addresses in order to avoid IPv6 problem
   static final String THIS_HOST = getFullHostName() + ":0";
@@ -380,6 +381,11 @@ public class TestHDFSServerPorts {
 
         assertFalse("Backup started on same port as Namenode", 
                            canStartBackupNode(backup_config)); // should fail
+
+        // reset namenode backup address because Windows does not release
+        // port used previously properly.
+        backup_config.set(
+            DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
 
         // bind http server to a different port
         backup_config.set(

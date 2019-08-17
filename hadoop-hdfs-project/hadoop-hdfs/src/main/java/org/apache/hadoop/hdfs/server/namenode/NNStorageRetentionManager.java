@@ -28,8 +28,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
@@ -56,7 +56,7 @@ public class NNStorageRetentionManager {
   private final int numCheckpointsToRetain;
   private final long numExtraEditsToRetain;
   private final int maxExtraEditsSegmentsToRetain;
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       NNStorageRetentionManager.class);
   private final NNStorage storage;
   private final StoragePurger purger;

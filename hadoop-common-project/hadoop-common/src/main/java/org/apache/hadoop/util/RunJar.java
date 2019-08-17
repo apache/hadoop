@@ -19,7 +19,6 @@
 package org.apache.hadoop.util;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,6 +27,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -76,7 +76,11 @@ public class RunJar {
    */
   public static final String HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES =
       "HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES";
-
+  /**
+   * Environment key for disabling unjar in client code.
+   */
+  public static final String HADOOP_CLIENT_SKIP_UNJAR =
+      "HADOOP_CLIENT_SKIP_UNJAR";
   /**
    * Buffer size for copy the content of compressed file to new file.
    */
@@ -93,7 +97,7 @@ public class RunJar {
    * @throws IOException if an I/O error has occurred or toDir
    * cannot be created and does not already exist
    */
-  public static void unJar(File jarFile, File toDir) throws IOException {
+  public void unJar(File jarFile, File toDir) throws IOException {
     unJar(jarFile, toDir, MATCH_ANY);
   }
 
@@ -113,14 +117,19 @@ public class RunJar {
       throws IOException {
     try (JarInputStream jar = new JarInputStream(inputStream)) {
       int numOfFailedLastModifiedSet = 0;
+      String targetDirPath = toDir.getCanonicalPath() + File.separator;
       for (JarEntry entry = jar.getNextJarEntry();
            entry != null;
            entry = jar.getNextJarEntry()) {
         if (!entry.isDirectory() &&
             unpackRegex.matcher(entry.getName()).matches()) {
           File file = new File(toDir, entry.getName());
+          if (!file.getCanonicalPath().startsWith(targetDirPath)) {
+            throw new IOException("expanding " + entry.getName()
+                + " would create file outside of " + toDir);
+          }
           ensureDirectory(file.getParentFile());
-          try (OutputStream out = new FileOutputStream(file)) {
+          try (OutputStream out = Files.newOutputStream(file.toPath())) {
             IOUtils.copyBytes(jar, out, BUFFER_SIZE);
           }
           if (!file.setLastModified(entry.getTime())) {
@@ -157,7 +166,7 @@ public class RunJar {
       throws IOException{
     File file = new File(toDir, name);
     ensureDirectory(toDir);
-    try (OutputStream jar = new FileOutputStream(file);
+    try (OutputStream jar = Files.newOutputStream(file.toPath());
          TeeInputStream teeInputStream = new TeeInputStream(inputStream, jar)) {
       unJar(teeInputStream, toDir, unpackRegex);
     }
@@ -178,6 +187,7 @@ public class RunJar {
       throws IOException {
     try (JarFile jar = new JarFile(jarFile)) {
       int numOfFailedLastModifiedSet = 0;
+      String targetDirPath = toDir.getCanonicalPath() + File.separator;
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
         final JarEntry entry = entries.nextElement();
@@ -185,8 +195,12 @@ public class RunJar {
             unpackRegex.matcher(entry.getName()).matches()) {
           try (InputStream in = jar.getInputStream(entry)) {
             File file = new File(toDir, entry.getName());
+            if (!file.getCanonicalPath().startsWith(targetDirPath)) {
+              throw new IOException("expanding " + entry.getName()
+                  + " would create file outside of " + toDir);
+            }
             ensureDirectory(file.getParentFile());
-            try (OutputStream out = new FileOutputStream(file)) {
+            try (OutputStream out = Files.newOutputStream(file.toPath())) {
               IOUtils.copyBytes(in, out, BUFFER_SIZE);
             }
             if (!file.setLastModified(entry.getTime())) {
@@ -292,8 +306,9 @@ public class RunJar {
           }
         }, SHUTDOWN_HOOK_PRIORITY);
 
-
-    unJar(file, workDir);
+    if (!skipUnjar()) {
+      unJar(file, workDir);
+    }
 
     ClassLoader loader = createClassLoader(file, workDir);
 
@@ -362,6 +377,10 @@ public class RunJar {
 
   boolean useClientClassLoader() {
     return Boolean.parseBoolean(System.getenv(HADOOP_USE_CLIENT_CLASSLOADER));
+  }
+
+  boolean skipUnjar() {
+    return Boolean.parseBoolean(System.getenv(HADOOP_CLIENT_SKIP_UNJAR));
   }
 
   String getHadoopClasspath() {

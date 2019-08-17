@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -36,8 +37,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -74,7 +75,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableMap;
@@ -83,7 +84,8 @@ import com.google.common.collect.Sets;
 
 public class TestApplicationLimits {
   
-  private static final Log LOG = LogFactory.getLog(TestApplicationLimits.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationLimits.class);
   final static int GB = 1024;
 
   LeafQueue queue;
@@ -307,14 +309,15 @@ public class TestApplicationLimits {
     		queue.getUserAMResourceLimit());
     
     Resource amResourceLimit = Resource.newInstance(160 * GB, 1);
-    assertEquals(queue.calculateAndGetAMResourceLimit(), amResourceLimit);
-    assertEquals(queue.getUserAMResourceLimit(), 
+    assertThat(queue.calculateAndGetAMResourceLimit()).
+        isEqualTo(amResourceLimit);
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
       Resource.newInstance(80*GB, 1));
     
     // Assert in metrics
-    assertEquals(queue.getMetrics().getAMResourceLimitMB(),
+    assertThat(queue.getMetrics().getAMResourceLimitMB()).isEqualTo(
         amResourceLimit.getMemorySize());
-    assertEquals(queue.getMetrics().getAMResourceLimitVCores(),
+    assertThat(queue.getMetrics().getAMResourceLimitVCores()).isEqualTo(
         amResourceLimit.getVirtualCores());
 
     assertEquals(
@@ -326,11 +329,11 @@ public class TestApplicationLimits {
     clusterResource = Resources.createResource(120 * 16 * GB);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
-    
-    assertEquals(queue.calculateAndGetAMResourceLimit(),
+
+    assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(192 * GB, 1));
-    assertEquals(queue.getUserAMResourceLimit(), 
-      Resource.newInstance(96*GB, 1));
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
+        Resource.newInstance(96*GB, 1));
     
     assertEquals(
         (int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
@@ -377,11 +380,11 @@ public class TestApplicationLimits {
         (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(
           queue.getQueuePath())
         );
-    
-    assertEquals(queue.calculateAndGetAMResourceLimit(),
+
+    assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
-    assertEquals(queue.getUserAMResourceLimit(), 
-      Resource.newInstance(400*GB, 1));
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
+        Resource.newInstance(400*GB, 1));
 
     // Change the per-queue max applications.
     csConf.setInt(PREFIX + queue.getQueuePath() + ".maximum-applications",
@@ -634,15 +637,17 @@ public class TestApplicationLimits {
     when(amResourceRequest.getCapability()).thenReturn(amResource);
     when(rmApp.getAMResourceRequests()).thenReturn(
         Collections.singletonList(amResourceRequest));
-    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
+    Mockito.doReturn(rmApp)
+        .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
-    when(rmApp.getRMAppAttempt((ApplicationAttemptId) Matchers.any()))
+    when(rmApp.getRMAppAttempt(any()))
         .thenReturn(rmAppAttempt);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
-    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
+    Mockito.doReturn(rmApp)
+        .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     Mockito.doReturn(true).when(spyApps)
-        .containsKey((ApplicationId) Matchers.any());
+        .containsKey(ArgumentMatchers.<ApplicationId>any());
 
     Priority priority_1 = TestUtils.createMockPriority(1);
 

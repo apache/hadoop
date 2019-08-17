@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.htrace.core.SpanId;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -62,12 +63,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
@@ -212,7 +212,7 @@ public class TestDFSOutputStream {
       dfsCluster.waitActive();
 
       final FSDataOutputStream os = dfsCluster.getFileSystem()
-          .create(new Path(baseDir.getAbsolutePath(), "testPreventOverflow"));
+          .create(new Path(baseDir.getPath(), "testPreventOverflow"));
       final DFSOutputStream dos = (DFSOutputStream) Whitebox
           .getInternalState(os, "wrappedStream");
 

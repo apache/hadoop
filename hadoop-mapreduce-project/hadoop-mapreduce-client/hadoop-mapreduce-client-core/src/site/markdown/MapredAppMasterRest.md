@@ -1875,7 +1875,7 @@ Response Body:
 
     <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <taskAttempts>
-      <taskAttempt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="reduceTaskAttemptInfo">
+      <taskAttempt>
         <startTime>1326238777460</startTime>
         <finishTime>0</finishTime>
         <elapsedTime>0</elapsedTime>

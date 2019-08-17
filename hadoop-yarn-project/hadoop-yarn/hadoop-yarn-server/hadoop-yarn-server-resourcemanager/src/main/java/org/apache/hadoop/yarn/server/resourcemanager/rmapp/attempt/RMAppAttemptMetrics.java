@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,9 +28,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -41,7 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class RMAppAttemptMetrics {
-  private static final Log LOG = LogFactory.getLog(RMAppAttemptMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMAppAttemptMetrics.class);
 
   private ApplicationAttemptId attemptId = null;
   // preemption info
@@ -53,8 +55,8 @@ public class RMAppAttemptMetrics {
   
   private ReadLock readLock;
   private WriteLock writeLock;
-  private Map<String, AtomicLong> resourceUsageMap = new HashMap<>();
-  private Map<String, AtomicLong> preemptedResourceMap = new HashMap<>();
+  private Map<String, AtomicLong> resourceUsageMap = new ConcurrentHashMap<>();
+  private Map<String, AtomicLong> preemptedResourceMap = new ConcurrentHashMap<>();
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -71,8 +73,8 @@ public class RMAppAttemptMetrics {
   }
 
   public void updatePreemptionInfo(Resource resource, RMContainer container) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       resourcePreempted = Resources.addTo(resourcePreempted, resource);
     } finally {
       writeLock.unlock();
@@ -95,9 +97,9 @@ public class RMAppAttemptMetrics {
   }
   
   public Resource getResourcePreempted() {
+    readLock.lock();
     try {
-      readLock.lock();
-      return resourcePreempted;
+      return Resource.newInstance(resourcePreempted);
     } finally {
       readLock.unlock();
     }
@@ -230,7 +232,7 @@ public class RMAppAttemptMetrics {
   }
 
   public Resource getApplicationAttemptHeadroom() {
-    return applicationHeadroom;
+    return Resource.newInstance(applicationHeadroom);
   }
 
   public void setApplicationAttemptHeadRoom(Resource headRoom) {

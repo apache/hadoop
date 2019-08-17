@@ -83,6 +83,8 @@ char* get_cgroups_path_to_write(
   }
 
 cleanup:
+  free((void *) cgroups_root);
+  free((void *) yarn_hierarchy_name);
   if (failed) {
     if (buffer) {
       free(buffer);
@@ -130,7 +132,7 @@ int update_cgroups_parameters(
     goto cleanup;
   }
 
-  fprintf(ERRORFILE, "CGroups: Updating cgroups, path=%s, value=%s",
+  fprintf(ERRORFILE, "CGroups: Updating cgroups, path=%s, value=%s\n",
     full_path, value);
 
   // Write values to file

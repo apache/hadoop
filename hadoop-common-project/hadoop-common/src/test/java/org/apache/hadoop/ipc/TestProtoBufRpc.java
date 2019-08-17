@@ -20,7 +20,7 @@ package org.apache.hadoop.ipc;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
@@ -34,6 +34,7 @@ import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpc2Proto
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,6 +42,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -215,7 +217,8 @@ public class TestProtoBufRpc extends TestRpcBase {
   }
 
   @Test(timeout = 12000)
-  public void testLogSlowRPC() throws IOException, ServiceException {
+  public void testLogSlowRPC() throws IOException, ServiceException,
+      TimeoutException, InterruptedException {
     TestRpcService2 client = getClient2();
     // make 10 K fast calls
     for (int x = 0; x < 10000; x++) {
@@ -234,9 +237,9 @@ public class TestProtoBufRpc extends TestRpcBase {
     // make a really slow call. Sleep sleeps for 1000ms
     client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
 
-    long after = rpcMetrics.getRpcSlowCalls();
     // Ensure slow call is logged.
-    Assert.assertEquals(before + 1L, after);
+    GenericTestUtils.waitFor(()
+        -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
   }
 
   @Test(timeout = 12000)

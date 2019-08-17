@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -58,8 +58,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestZKConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestZKConfigurationStore.class);
 
   private static final int ZK_TIMEOUT_MS = 10000;
   private TestingServer curatorTestingServer;

@@ -36,8 +36,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -72,12 +72,14 @@ import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
+import static org.apache.hadoop.util.RunJar.MATCH_ANY;
+
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
  */
 public class StreamJob implements Tool {
 
-  protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(StreamJob.class.getName());
   final static String REDUCE_NONE = "NONE";
 
   /** -----------Streaming CLI Implementation  **/
@@ -154,7 +156,7 @@ public class StreamJob implements Tool {
 
   /**
    * This is the method that actually
-   * intializes the job conf and submits the job
+   * initializes the job conf and submits the job
    * to the jobtracker
    * @throws IOException
    * @deprecated use {@link #run(String[])} instead.
@@ -1006,7 +1008,7 @@ public class StreamJob implements Tool {
     if (jar_ != null && isLocalHadoop()) {
       // getAbs became required when shell and subvm have different working dirs...
       File wd = new File(".").getAbsoluteFile();
-      RunJar.unJar(new File(jar_), wd);
+      RunJar.unJar(new File(jar_), wd, MATCH_ANY);
     }
 
     // if jobConf_ changes must recreate a JobClient

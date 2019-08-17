@@ -19,8 +19,12 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -128,10 +132,8 @@ public class NonAggregatingLogHandler extends AbstractService implements
         ApplicationId appId = entry.getKey();
         LogDeleterProto proto = entry.getValue();
         long deleteDelayMsec = proto.getDeletionTime() - now;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Scheduling deletion of " + appId + " logs in "
-              + deleteDelayMsec + " msec");
-        }
+        LOG.debug("Scheduling deletion of {} logs in {} msec", appId,
+            deleteDelayMsec);
         LogDeleterRunnable logDeleter =
             new LogDeleterRunnable(proto.getUser(), appId);
         try {
@@ -202,6 +204,11 @@ public class NonAggregatingLogHandler extends AbstractService implements
       default:
         ; // Ignore
     }
+  }
+
+  @Override
+  public Set<ApplicationId> getInvalidTokenApps() {
+    return Collections.emptySet();
   }
 
   ScheduledThreadPoolExecutor createScheduledThreadPoolExecutor(

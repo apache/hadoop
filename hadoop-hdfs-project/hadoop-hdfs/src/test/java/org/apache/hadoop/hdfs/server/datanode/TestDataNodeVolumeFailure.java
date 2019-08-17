@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,16 +32,19 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.ClientContext;
@@ -65,6 +69,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.AddBlockPoolException;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -168,7 +173,7 @@ public class TestDataNodeVolumeFailure {
    
     // fail the volume
     // delete/make non-writable one of the directories (failed volume)
-    data_fail = new File(dataDir, "data3");
+    data_fail = cluster.getInstanceStorageDir(1, 0);
     failedDir = MiniDFSCluster.getFinalizedDir(data_fail,
         cluster.getNamesystem().getBlockPoolId());
     if (failedDir.exists() &&
@@ -220,6 +225,50 @@ public class TestDataNodeVolumeFailure {
         " is created and replicated");
   }
 
+  /*
+   * If one of the sub-folders under the finalized directory is unreadable,
+   * either due to permissions or a filesystem corruption, the DN will fail
+   * to read it when scanning it for blocks to load into the replica map. This
+   * test ensures the DN does not exit and reports the failed volume to the
+   * NN (HDFS-14333). This is done by using a simulated FsDataset that throws
+   * an exception for a failed volume when the block pool is initialized.
+   */
+  @Test(timeout=15000)
+  public void testDnStartsAfterDiskErrorScanningBlockPool() throws Exception {
+    // Don't use the cluster configured in the setup() method for this test.
+    cluster.shutdown(true);
+    cluster.close();
+
+    conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
+        BadDiskFSDataset.Factory.class.getName());
+
+    final MiniDFSCluster localCluster = new MiniDFSCluster
+        .Builder(conf).numDataNodes(1).build();
+
+    try {
+      localCluster.waitActive();
+      DataNode dn = localCluster.getDataNodes().get(0);
+
+      try {
+        localCluster.waitDatanodeFullyStarted(dn, 3000);
+      } catch (TimeoutException e) {
+        fail("Datanode did not get fully started");
+      }
+      assertTrue(dn.isDatanodeUp());
+
+      // trigger DN to send heartbeat
+      DataNodeTestUtils.triggerHeartbeat(dn);
+      final BlockManager bm = localCluster.getNamesystem().getBlockManager();
+      // trigger NN handle heartbeat
+      BlockManagerTestUtil.checkHeartbeat(bm);
+
+      // NN now should have the failed volume
+      assertEquals(1, localCluster.getNamesystem().getVolumeFailuresTotal());
+    } finally {
+      localCluster.close();
+    }
+  }
+
   /**
    * Test that DataStorage and BlockPoolSliceStorage remove the failed volume
    * after failure.
@@ -235,7 +284,7 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.createFile(fs, file1, 1024, (short) 2, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short) 2);
 
-    File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
     DataNode dn0 = cluster.getDataNodes().get(0);
     DataNodeTestUtils.waitForDiskError(dn0,
@@ -293,9 +342,13 @@ public class TestDataNodeVolumeFailure {
   @Test(timeout=10000)
   public void testDataNodeShutdownAfterNumFailedVolumeExceedsTolerated()
       throws Exception {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
     // make both data directories to fail on dn0
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1, dn0Vol2);
     DataNode dn0 = cluster.getDataNodes().get(0);
     DataNodeTestUtils.waitForDiskError(dn0,
@@ -305,6 +358,7 @@ public class TestDataNodeVolumeFailure {
 
     // DN0 should stop after the number of failure disks exceed tolerated
     // value (1).
+    dn0.checkDiskError();
     assertFalse(dn0.shouldRun());
   }
 
@@ -314,8 +368,12 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testVolumeFailureRecoveredByHotSwappingVolume()
       throws Exception {
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     final DataNode dn0 = cluster.getDataNodes().get(0);
     final String oldDataDirs = dn0.getConf().get(
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
@@ -354,8 +412,12 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testTolerateVolumeFailuresAfterAddingMoreVolumes()
       throws Exception {
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     final File dn0VolNew = new File(dataDir, "data_new");
     final DataNode dn0 = cluster.getDataNodes().get(0);
     final String oldDataDirs = dn0.getConf().get(
@@ -378,6 +440,7 @@ public class TestDataNodeVolumeFailure {
     DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
+    dn0.checkDiskError();
     assertFalse(dn0.shouldRun());
   }
 
@@ -401,8 +464,8 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.waitReplication(fs, file1, (short)3);
 
     // Fail the first volume on both datanodes
-    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
 
     Path file2 = new Path("/test2");
@@ -413,10 +476,8 @@ public class TestDataNodeVolumeFailure {
       @Override
       public Boolean get() {
         // underReplicatedBlocks are due to failed volumes
-        int underReplicatedBlocks = BlockManagerTestUtil
-            .checkHeartbeatAndGetUnderReplicatedBlocksCount(
-                cluster.getNamesystem(), bm);
-
+        long underReplicatedBlocks = bm.getLowRedundancyBlocksCount()
+            + bm.getPendingReconstructionBlocksCount();
         if (underReplicatedBlocks > 0) {
           return true;
         }
@@ -643,7 +704,6 @@ public class TestDataNodeVolumeFailure {
       setCachingStrategy(CachingStrategy.newDefaultStrategy()).
       setClientCacheContext(ClientContext.getFromConf(conf)).
       setConfiguration(conf).
-      setTracer(FsTracer.get(conf)).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
         public Peer newConnectedPeer(InetSocketAddress addr,
@@ -749,5 +809,65 @@ public class TestDataNodeVolumeFailure {
       }
     }
     return total;
+  }
+
+  private static class BadDiskFSDataset extends SimulatedFSDataset {
+
+    BadDiskFSDataset(DataStorage storage, Configuration conf) {
+      super(storage, conf);
+    }
+
+    private String[] failedStorageLocations = null;
+
+    @Override
+    public void addBlockPool(String bpid, Configuration conf) {
+      super.addBlockPool(bpid, conf);
+      Map<FsVolumeSpi, IOException>
+          unhealthyDataDirs = new HashMap<>();
+      unhealthyDataDirs.put(this.getStorages().get(0).getVolume(),
+          new IOException());
+      throw new AddBlockPoolException(unhealthyDataDirs);
+    }
+
+    @Override
+    public synchronized void removeVolumes(Collection<StorageLocation> volumes,
+        boolean clearFailure) {
+      Iterator<StorageLocation> itr = volumes.iterator();
+      String[] failedLocations = new String[volumes.size()];
+      int index = 0;
+      while(itr.hasNext()) {
+        StorageLocation s = itr.next();
+        failedLocations[index] = s.getUri().getPath();
+        index += 1;
+      }
+      failedStorageLocations = failedLocations;
+    }
+
+    @Override
+    public void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
+      // do nothing
+    }
+
+    @Override
+    public VolumeFailureSummary getVolumeFailureSummary() {
+      if (failedStorageLocations != null) {
+        return new VolumeFailureSummary(failedStorageLocations, 0, 0);
+      } else {
+        return new VolumeFailureSummary(ArrayUtils.EMPTY_STRING_ARRAY, 0, 0);
+      }
+    }
+
+    static class Factory extends FsDatasetSpi.Factory<BadDiskFSDataset> {
+      @Override
+      public BadDiskFSDataset newInstance(DataNode datanode,
+          DataStorage storage, Configuration conf) throws IOException {
+        return new BadDiskFSDataset(storage, conf);
+      }
+
+      @Override
+      public boolean isSimulated() {
+        return true;
+      }
+    }
   }
 }

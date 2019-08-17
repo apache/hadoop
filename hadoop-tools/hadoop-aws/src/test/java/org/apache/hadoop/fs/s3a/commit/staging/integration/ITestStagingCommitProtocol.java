@@ -118,6 +118,19 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   /**
+   * The staging committers always have the local FS for their work.
+   * @param committer committer instance
+   * @param context task attempt context
+   * @throws IOException IO failure
+   */
+  @Override
+  protected void validateTaskAttemptWorkingDirectory(final AbstractS3ACommitter committer,
+      final TaskAttemptContext context) throws IOException {
+    Path wd = context.getWorkingDirectory();
+    assertEquals("file", wd.toUri().getScheme());
+  }
+
+  /**
    * The class provides a overridden implementation of commitJobInternal which
    * causes the commit failed for the first time then succeed.
    */

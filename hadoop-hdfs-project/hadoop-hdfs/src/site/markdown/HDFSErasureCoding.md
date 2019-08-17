@@ -65,11 +65,11 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k` and `REPLICATION`.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k`.
 
-    `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
+    The default `REPLICATION` scheme is also supported. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
 
-    `REPLICATION` policy is always enabled. For other built-in policies, they are disabled by default.
+    `REPLICATION` is always enabled. Out of all the EC policies, RS(6,3) is enabled by default.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -107,10 +107,10 @@ Deployment
   This means that when reading and writing striped files, most operations are off-rack.
   Network bisection bandwidth is thus very important.
 
-  For rack fault-tolerance, it is also important to have at least as many racks as the configured EC stripe width.
-  For EC policy RS (6,3), this means minimally 9 racks, and ideally 10 or 11 to handle planned and unplanned outages.
-  For clusters with fewer racks than the stripe width, HDFS cannot maintain rack fault-tolerance, but will still attempt
-  to spread a striped file across multiple nodes to preserve node-level fault-tolerance.
+  For rack fault-tolerance, it is also important to have enough number of racks, so that on average, each rack holds number of blocks no more than the number of EC parity blocks. A formula to calculate this would be (data blocks + parity blocks) / parity blocks, rounding up.
+  For EC policy RS (6,3), this means minimally 3 racks (calculated by (6 + 3) / 3 = 3), and ideally 9 or more to handle planned and unplanned outages.
+  For clusters with fewer racks than the number of the parity cells, HDFS cannot maintain rack fault-tolerance, but will still attempt
+  to spread a striped file across multiple nodes to preserve node-level fault-tolerance. For this reason, it is recommended to setup racks with similar number of DataNodes.
 
 ### Configuration keys
 
@@ -170,6 +170,8 @@ Deployment
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
+         [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 
 Below are the details about each command.
@@ -184,7 +186,7 @@ Below are the details about each command.
       This parameter can be omitted if a 'dfs.namenode.ec.system.default.policy' configuration is set.
       The EC policy of the path will be set with the default value in configuration.
 
-      `-replicate` apply the special `REPLICATION` policy on the directory, force the directory to adopt 3x replication scheme.
+      `-replicate` apply the default `REPLICATION` scheme on the directory, force the directory to adopt 3x replication scheme.
 
       `-replicate` and `-policy <policyName>` are optional arguments. They cannot be specified at the same time.
 
@@ -203,7 +205,7 @@ Below are the details about each command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
+     Add a list of user defined erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
 
  *  `[-listCodecs]`
 
@@ -211,7 +213,7 @@ Below are the details about each command.
 
 *  `[-removePolicy -policy <policyName>]`
 
-     Remove an erasure coding policy.
+     Remove an user defined erasure coding policy.
 
 *  `[-enablePolicy -policy <policyName>]`
 
@@ -220,6 +222,10 @@ Below are the details about each command.
 *  `[-disablePolicy -policy <policyName>]`
 
      Disable an erasure coding policy.
+
+*  `[-verifyClusterSetup -policy <policyName>...<policyName>]`
+
+     Verify if the cluster setup can support all enabled erasure coding policies. If optional parameter -policy is specified, verify if the cluster setup can support the given policy or policies.
 
 Limitations
 -----------

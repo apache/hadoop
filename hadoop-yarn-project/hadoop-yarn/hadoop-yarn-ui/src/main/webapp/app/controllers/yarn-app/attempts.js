@@ -19,6 +19,13 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
-  queryParams: ["service"],
-  service: undefined
+  queryParams: ["service", "viewType"],
+  service: undefined,
+  viewType: "graph",
+
+  actions: {
+    changeViewType(param) {
+      this.set("viewType", param);
+    }
+  },
 });

@@ -107,19 +107,30 @@ public abstract class HAServiceTarget {
    */
   public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
       int timeoutMs) throws IOException {
+    return getHealthMonitorProxy(conf, timeoutMs, 1);
+  }
+
+  public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
+      int timeoutMs, int retries) throws IOException {
     InetSocketAddress addr = getHealthMonitorAddress();
     if (addr == null) {
       addr = getAddress();
     }
-    return getProxyForAddress(conf, timeoutMs, addr);
+    return getProxyForAddress(conf, timeoutMs, retries, addr);
   }
 
   private HAServiceProtocol getProxyForAddress(Configuration conf,
       int timeoutMs, InetSocketAddress addr) throws IOException {
+    // Lower the timeout by setting retries to 1, so we quickly fail to connect
+    return getProxyForAddress(conf, timeoutMs, 1, addr);
+  }
+
+  private HAServiceProtocol getProxyForAddress(Configuration conf,
+      int timeoutMs, int retries, InetSocketAddress addr) throws IOException {
     Configuration confCopy = new Configuration(conf);
-    // Lower the timeout so we quickly fail to connect
     confCopy.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+        retries);
     SocketFactory factory = NetUtils.getDefaultSocketFactory(confCopy);
     return new HAServiceProtocolClientSideTranslatorPB(
         addr,
@@ -168,6 +179,13 @@ public abstract class HAServiceTarget {
    * @return true if auto failover should be considered enabled
    */
   public boolean isAutoFailoverEnabled() {
+    return false;
+  }
+
+  /**
+   * @return true if this target supports the Observer state, false otherwise.
+   */
+  public boolean supportObserver() {
     return false;
   }
 }

@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -205,6 +207,59 @@ public class PrivilegedOperationExecutor {
       boolean grabOutput) throws PrivilegedOperationException {
     return executePrivilegedOperation(null, operation, null, null, grabOutput,
         false);
+  }
+
+  /**
+   *
+   * @param prefixCommands
+   * @param operation
+   * @return stdin and stdout of container exec
+   * @throws PrivilegedOperationException
+   */
+  public IOStreamPair executePrivilegedInteractiveOperation(
+      List<String> prefixCommands, PrivilegedOperation operation)
+      throws PrivilegedOperationException, InterruptedException {
+    String[] fullCommandArray = getPrivilegedOperationExecutionCommand(
+        prefixCommands, operation);
+    ProcessBuilder pb = new ProcessBuilder(fullCommandArray);
+    OutputStream stdin;
+    InputStream stdout;
+    try {
+      pb.redirectErrorStream(true);
+      Process p = pb.start();
+      stdin = p.getOutputStream();
+      stdout = p.getInputStream();
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("command array:");
+        LOG.debug(Arrays.toString(fullCommandArray));
+      }
+    } catch (ExitCodeException e) {
+      if (operation.isFailureLoggingEnabled()) {
+        StringBuilder logBuilder = new StringBuilder(
+            "Interactive Shell execution returned exit code: ")
+            .append(e.getExitCode())
+            .append(". Privileged Interactive Operation Stderr: ")
+            .append(System.lineSeparator())
+            .append(e.getMessage())
+            .append(System.lineSeparator());
+        logBuilder.append("Full command array for failed execution: ")
+            .append(System.lineSeparator());
+        logBuilder.append(Arrays.toString(fullCommandArray));
+
+        LOG.warn(logBuilder.toString());
+      }
+
+      //stderr from shell executor seems to be stuffed into the exception
+      //'message' - so, we have to extract it and set it as the error out
+      throw new PrivilegedOperationException(e, e.getExitCode(),
+          pb.redirectError().toString(), e.getMessage());
+    } catch (IOException e) {
+      LOG.warn("IOException executing command: ", e);
+      throw new PrivilegedOperationException(e);
+    }
+
+    return new IOStreamPair(stdout, stdin);
   }
 
   //Utility functions for squashing together operations in supported ways

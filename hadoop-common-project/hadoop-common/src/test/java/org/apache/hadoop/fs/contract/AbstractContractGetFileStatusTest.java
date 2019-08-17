@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.contract;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,6 +34,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test getFileStatus and related listing operations.
@@ -275,35 +278,22 @@ public abstract class AbstractContractGetFileStatusTest extends
   @Test
   public void testLocatedStatusNoDir() throws Throwable {
     describe("test the LocatedStatus call on a path which is not present");
-    try {
-      RemoteIterator<LocatedFileStatus> iterator
-          = getFileSystem().listLocatedStatus(path("missing"));
-      fail("Expected an exception, got an iterator: " + iterator);
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listLocatedStatus(path("missing")));
   }
 
   @Test
   public void testListStatusNoDir() throws Throwable {
     describe("test the listStatus(path) call on a path which is not present");
-    try {
-      getFileSystem().listStatus(path("missing"));
-      fail("Expected an exception");
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listStatus(path("missing")));
   }
 
   @Test
   public void testListStatusFilteredNoDir() throws Throwable {
     describe("test the listStatus(path, filter) call on a missing path");
-    try {
-      getFileSystem().listStatus(path("missing"), ALL_PATHS);
-      fail("Expected an exception");
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listStatus(path("missing"), ALL_PATHS));
   }
 
   @Test
@@ -406,7 +396,8 @@ public abstract class AbstractContractGetFileStatusTest extends
     Path path = getContract().getTestPath();
     fs.delete(path, true);
     // create a - non-qualified - Path for a subdir
-    Path subfolder = path.suffix('/' + this.methodName.getMethodName());
+    Path subfolder = path.suffix('/' + this.methodName.getMethodName()
+        + "-" + UUID.randomUUID());
     mkdirs(subfolder);
     return subfolder;
   }
@@ -531,7 +522,8 @@ public abstract class AbstractContractGetFileStatusTest extends
       Path path,
       PathFilter filter) throws IOException {
     FileStatus[] result = getFileSystem().listStatus(path, filter);
-    assertEquals("length of listStatus(" + path + ", " + filter + " )",
+    assertEquals("length of listStatus(" + path + ", " + filter + " ) " +
+        Arrays.toString(result),
         expected, result.length);
     return result;
   }

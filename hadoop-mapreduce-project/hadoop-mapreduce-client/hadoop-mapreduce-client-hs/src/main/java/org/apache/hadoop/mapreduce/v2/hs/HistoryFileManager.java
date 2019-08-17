@@ -324,7 +324,13 @@ public class HistoryFileManager extends AbstractService {
       // so we need to have additional check.
       // Note: modTime (X second Y millisecond) could be casted to X second or
       // X+1 second.
-      if (modTime != newModTime
+      // MAPREDUCE-7101: Some Cloud FileSystems do not currently update the
+      // modification time of directories. For these, we scan every time if
+      // the 'alwaysScan' is true.
+      boolean alwaysScan = conf.getBoolean(
+          JHAdminConfig.MR_HISTORY_ALWAYS_SCAN_USER_DIR,
+          JHAdminConfig.DEFAULT_MR_HISTORY_ALWAYS_SCAN_USER_DIR);
+      if (alwaysScan || modTime != newModTime
           || (scanTime/1000) == (modTime/1000)
           || (scanTime/1000 + 1) == (modTime/1000)) {
         // reset scanTime before scanning happens
@@ -1083,7 +1089,17 @@ public class HistoryFileManager extends AbstractService {
   private void moveToDoneNow(final Path src, final Path target)
       throws IOException {
     LOG.info("Moving " + src.toString() + " to " + target.toString());
-    intermediateDoneDirFc.rename(src, target, Options.Rename.NONE);
+    try {
+      intermediateDoneDirFc.rename(src, target, Options.Rename.NONE);
+    } catch (FileNotFoundException e) {
+      if (doneDirFc.util().exists(target)) {
+        LOG.info("Source file " + src.toString() + " not found, but target "
+            + "file " + target.toString() + " already exists. Move already "
+            + "happened.");
+      } else {
+        throw e;
+      }
+    }
   }
 
   private String getJobSummary(FileContext fc, Path path) throws IOException {

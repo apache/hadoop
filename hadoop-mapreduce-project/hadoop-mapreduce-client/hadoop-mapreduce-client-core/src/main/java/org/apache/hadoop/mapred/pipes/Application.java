@@ -45,7 +45,6 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
@@ -104,8 +103,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     // This password is used as shared secret key between this application and
     // child pipes process
     byte[]  password = jobToken.getPassword();
-    String localPasswordFile = new File(conf.get(MRConfig.LOCAL_DIR))
-        + Path.SEPARATOR + "jobTokenPassword";
+    String localPasswordFile = new File(".") + Path.SEPARATOR
+        + "jobTokenPassword";
     writePasswordToLocalFile(localPasswordFile, password, conf);
     env.put("hadoop.pipes.shared.secret.location", localPasswordFile);
  

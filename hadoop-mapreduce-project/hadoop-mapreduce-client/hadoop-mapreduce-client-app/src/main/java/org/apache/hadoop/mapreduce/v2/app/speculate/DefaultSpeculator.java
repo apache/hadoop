@@ -100,8 +100,6 @@ public class DefaultSpeculator extends AbstractService implements
   private AppContext context;
   private Thread speculationBackgroundThread = null;
   private volatile boolean stopped = false;
-  private BlockingQueue<SpeculatorEvent> eventQueue
-      = new LinkedBlockingQueue<SpeculatorEvent>();
   private TaskRuntimeEstimator estimator;
 
   private BlockingQueue<Object> scanControl = new LinkedBlockingQueue<Object>();
@@ -247,7 +245,7 @@ public class DefaultSpeculator extends AbstractService implements
   // This section is not part of the Speculator interface; it's used only for
   //  testing
   public boolean eventQueueEmpty() {
-    return eventQueue.isEmpty();
+    return scanControl.isEmpty();
   }
 
   // This interface is intended to be used only for test cases.

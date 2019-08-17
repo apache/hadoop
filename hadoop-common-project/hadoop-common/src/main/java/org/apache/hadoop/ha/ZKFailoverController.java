@@ -63,7 +63,7 @@ public abstract class ZKFailoverController {
   
   public static final String ZK_QUORUM_KEY = "ha.zookeeper.quorum";
   private static final String ZK_SESSION_TIMEOUT_KEY = "ha.zookeeper.session-timeout.ms";
-  private static final int ZK_SESSION_TIMEOUT_DEFAULT = 5*1000;
+  private static final int ZK_SESSION_TIMEOUT_DEFAULT = 10*1000;
   private static final String ZK_PARENT_ZNODE_KEY = "ha.zookeeper.parent-znode";
   public static final String ZK_ACL_KEY = "ha.zookeeper.acl";
   private static final String ZK_ACL_DEFAULT = "world:anyone:rwcda";
@@ -269,7 +269,7 @@ public abstract class ZKFailoverController {
   }
 
   private int formatZK(boolean force, boolean interactive)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, KeeperException {
     if (elector.parentZNodeExists()) {
       if (!force && (!interactive || !confirmFormat())) {
         return ERR_CODE_FORMAT_DENIED;
@@ -728,9 +728,9 @@ public abstract class ZKFailoverController {
   }
 
   /**
-   * Ensure that the local node is in a healthy state, and thus
-   * eligible for graceful failover.
-   * @throws ServiceFailedException if the node is unhealthy
+   * If the local node is an observer or is unhealthy it
+   * is not eligible for graceful failover.
+   * @throws ServiceFailedException if the node is an observer or unhealthy
    */
   private synchronized void checkEligibleForFailover()
       throws ServiceFailedException {
@@ -738,6 +738,11 @@ public abstract class ZKFailoverController {
     if (this.getLastHealthState() != State.SERVICE_HEALTHY) {
       throw new ServiceFailedException(
           localTarget + " is not currently healthy. " +
+          "Cannot be failover target");
+    }
+    if (serviceState == HAServiceState.OBSERVER) {
+      throw new ServiceFailedException(
+          localTarget + " is in observer state. " +
           "Cannot be failover target");
     }
   }
@@ -854,6 +859,11 @@ public abstract class ZKFailoverController {
             LOG.debug("rechecking for electability from bad state");
             recheckElectability();
           }
+          return;
+        }
+        if (changedState == HAServiceState.OBSERVER) {
+          elector.quitElection(true);
+          serviceState = HAServiceState.OBSERVER;
           return;
         }
         if (changedState == serviceState) {

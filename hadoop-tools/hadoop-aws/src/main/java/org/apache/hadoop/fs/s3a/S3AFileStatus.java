@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Evolving
 public class S3AFileStatus extends FileStatus {
   private Tristate isEmptyDirectory;
+  private String eTag;
+  private String versionId;
 
   /**
    * Create a directory status.
@@ -54,7 +56,9 @@ public class S3AFileStatus extends FileStatus {
   public S3AFileStatus(Tristate isemptydir,
       Path path,
       String owner) {
-    super(0, true, 1, 0, 0, path);
+    super(0, true, 1, 0, 0, 0,
+        null, null, null, null,
+        path, false, true, false);
     isEmptyDirectory = isemptydir;
     setOwner(owner);
     setGroup(owner);
@@ -67,13 +71,17 @@ public class S3AFileStatus extends FileStatus {
    * @param path path
    * @param blockSize block size
    * @param owner owner
+   * @param eTag eTag of the S3 object if available, else null
+   * @param versionId versionId of the S3 object if available, else null
    */
   public S3AFileStatus(long length, long modification_time, Path path,
-      long blockSize, String owner) {
-    super(length, false, 1, blockSize, modification_time, path);
+      long blockSize, String owner, String eTag, String versionId) {
+    super(length, false, 1, blockSize, modification_time,
+        0, null, owner, owner, null,
+        path, false, true, false);
     isEmptyDirectory = Tristate.FALSE;
-    setOwner(owner);
-    setGroup(owner);
+    this.eTag = eTag;
+    this.versionId = versionId;
   }
 
   /**
@@ -82,16 +90,19 @@ public class S3AFileStatus extends FileStatus {
    * @param source FileStatus to convert to S3AFileStatus
    * @param isEmptyDirectory TRUE/FALSE if known to be / not be an empty
    *     directory, UNKNOWN if that information was not computed.
+   * @param eTag eTag of the S3 object if available, else null
+   * @param versionId versionId of the S3 object if available, else null
    * @return a new S3AFileStatus
    */
   public static S3AFileStatus fromFileStatus(FileStatus source,
-      Tristate isEmptyDirectory) {
+      Tristate isEmptyDirectory, String eTag, String versionId) {
     if (source.isDirectory()) {
       return new S3AFileStatus(isEmptyDirectory, source.getPath(),
           source.getOwner());
     } else {
       return new S3AFileStatus(source.getLen(), source.getModificationTime(),
-          source.getPath(), source.getBlockSize(), source.getOwner());
+          source.getPath(), source.getBlockSize(), source.getOwner(),
+          eTag, versionId);
     }
   }
 
@@ -103,6 +114,28 @@ public class S3AFileStatus extends FileStatus {
    */
   public Tristate isEmptyDirectory() {
     return isEmptyDirectory;
+  }
+
+  /**
+   * Update isEmptyDirectory attribute.
+   * @param isEmptyDirectory new isEmptyDirectory value
+   */
+  public void setIsEmptyDirectory(Tristate isEmptyDirectory) {
+    this.isEmptyDirectory = isEmptyDirectory;
+  }
+
+  /**
+   * @return the S3 object eTag when available, else null.
+   */
+  public String getETag() {
+    return eTag;
+  }
+
+  /**
+   * @return the S3 object versionId when available, else null.
+   */
+  public String getVersionId() {
+    return versionId;
   }
 
   /** Compare if this object is equal to another object.
@@ -146,8 +179,10 @@ public class S3AFileStatus extends FileStatus {
 
   @Override
   public String toString() {
-    return super.toString() +
-        String.format(" isEmptyDirectory=%s", isEmptyDirectory().name());
+    return super.toString()
+        + String.format(" isEmptyDirectory=%s", isEmptyDirectory().name()
+        + String.format(" eTag=%s", eTag)
+        + String.format(" versionId=%s", versionId));
   }
 
 }

@@ -120,6 +120,19 @@ public class ApplicationStateDataPBImpl extends ApplicationStateData {
     builder.setStartTime(startTime);
   }
 
+
+  @Override
+  public long getLaunchTime() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getLaunchTime();
+  }
+
+  @Override
+  public void setLaunchTime(long launchTime) {
+    maybeInitBuilder();
+    builder.setLaunchTime(launchTime);
+  }
+
   @Override
   public String getUser() {
     ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;

@@ -37,7 +37,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -413,6 +413,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       EnumSet<Field> fields) throws IOException {
     Long revStartTime = getStartTimeLong(entityId, entityType);
     if (revStartTime == null) {
+      LOG.debug("Could not find start time for {} {} ", entityType, entityId);
       return null;
     }
     byte[] prefix = KeyBuilder.newInstance().add(entityType)
@@ -421,6 +422,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
     DB db = entitydb.getDBForStartTime(revStartTime);
     if (db == null) {
+      LOG.debug("Could not find db for {} {} ", entityType, entityId);
       return null;
     }
     try (DBIterator iterator = db.iterator()) {
@@ -791,39 +793,42 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
             entity = getEntity(entityId, entityType, startTime, queryFields,
                 iterator, key, kp.getOffset());
           }
-          // determine if the retrieved entity matches the provided secondary
-          // filters, and if so add it to the list of entities to return
-          boolean filterPassed = true;
-          if (secondaryFilters != null) {
-            for (NameValuePair filter : secondaryFilters) {
-              Object v = entity.getOtherInfo().get(filter.getName());
-              if (v == null) {
-                Set<Object> vs = entity.getPrimaryFilters()
-                    .get(filter.getName());
-                if (vs == null || !vs.contains(filter.getValue())) {
+
+          if (entity != null) {
+            // determine if the retrieved entity matches the provided secondary
+            // filters, and if so add it to the list of entities to return
+            boolean filterPassed = true;
+            if (secondaryFilters != null) {
+              for (NameValuePair filter : secondaryFilters) {
+                Object v = entity.getOtherInfo().get(filter.getName());
+                if (v == null) {
+                  Set<Object> vs = entity.getPrimaryFilters()
+                          .get(filter.getName());
+                  if (vs == null || !vs.contains(filter.getValue())) {
+                    filterPassed = false;
+                    break;
+                  }
+                } else if (!v.equals(filter.getValue())) {
                   filterPassed = false;
                   break;
                 }
-              } else if (!v.equals(filter.getValue())) {
-                filterPassed = false;
-                break;
               }
             }
-          }
-          if (filterPassed) {
-            if (entity.getDomainId() == null) {
-              entity.setDomainId(DEFAULT_DOMAIN_ID);
-            }
-            if (checkAcl == null || checkAcl.check(entity)) {
-              // Remove primary filter and other info if they are added for
-              // matching secondary filters
-              if (addPrimaryFilters) {
-                entity.setPrimaryFilters(null);
+            if (filterPassed) {
+              if (entity.getDomainId() == null) {
+                entity.setDomainId(DEFAULT_DOMAIN_ID);
               }
-              if (addOtherInfo) {
-                entity.setOtherInfo(null);
+              if (checkAcl == null || checkAcl.check(entity)) {
+                // Remove primary filter and other info if they are added for
+                // matching secondary filters
+                if (addPrimaryFilters) {
+                  entity.setPrimaryFilters(null);
+                }
+                if (addOtherInfo) {
+                  entity.setOtherInfo(null);
+                }
+                entities.addEntity(entity);
               }
-              entities.addEntity(entity);
             }
           }
         }
@@ -1157,9 +1162,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
   @Override
   public TimelinePutResponse put(TimelineEntities entities) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Starting put");
-    }
+    LOG.debug("Starting put");
     TimelinePutResponse response = new TimelinePutResponse();
     TreeMap<Long, RollingWriteBatch> entityUpdates =
         new TreeMap<Long, RollingWriteBatch>();
@@ -1193,11 +1196,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         indexRollingWriteBatch.close();
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Put " + entityCount + " new leveldb entity entries and "
-          + indexCount + " new leveldb index entries from "
-          + entities.getEntities().size() + " timeline entities");
-    }
+    LOG.debug("Put {} new leveldb entity entries and {} new leveldb index"
+        + " entries from {} timeline entities", entityCount, indexCount,
+        entities.getEntities().size());
     return response;
   }
 
@@ -1515,16 +1516,11 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
           // a large delete will hold the lock for too long
           if (batchSize >= writeBatchSize) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Preparing to delete a batch of " + batchSize
-                  + " old start times");
-            }
+            LOG.debug("Preparing to delete a batch of {} old start times",
+                batchSize);
             starttimedb.write(writeBatch);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Deleted batch of " + batchSize
-                  + ". Total start times deleted so far this cycle: "
-                  + startTimesCount);
-            }
+            LOG.debug("Deleted batch of {}. Total start times deleted"
+                + " so far this cycle: {}", batchSize, startTimesCount);
             IOUtils.cleanupWithLogger(LOG, writeBatch);
             writeBatch = starttimedb.createWriteBatch();
             batchSize = 0;
@@ -1532,16 +1528,11 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         }
         ++totalCount;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Preparing to delete a batch of " + batchSize
-            + " old start times");
-      }
+      LOG.debug("Preparing to delete a batch of {} old start times",
+          batchSize);
       starttimedb.write(writeBatch);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleted batch of " + batchSize
-            + ". Total start times deleted so far this cycle: "
-            + startTimesCount);
-      }
+      LOG.debug("Deleted batch of {}. Total start times deleted so far"
+          + " this cycle: {}", batchSize, startTimesCount);
       LOG.info("Deleted " + startTimesCount + "/" + totalCount
           + " start time entities earlier than " + minStartTime);
     } finally {

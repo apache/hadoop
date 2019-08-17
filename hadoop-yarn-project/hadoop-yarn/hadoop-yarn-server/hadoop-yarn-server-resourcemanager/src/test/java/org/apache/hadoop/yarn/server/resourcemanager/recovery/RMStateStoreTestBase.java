@@ -36,8 +36,8 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -82,6 +83,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -89,9 +91,12 @@ import org.junit.Assert;
 
 public class RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RMStateStoreTestBase.class);
 
   protected final long epoch = 10L;
+
+  private final long epochRange = 10L;
 
   static class TestDispatcher implements Dispatcher, EventHandler<Event> {
 
@@ -140,6 +145,10 @@ public class RMStateStoreTestBase {
     boolean attemptExists(RMAppAttempt attempt) throws Exception;
   }
 
+  public long getEpochRange() {
+    return epochRange;
+  }
+
   void waitNotify(TestDispatcher dispatcher) {
     long startTime = System.currentTimeMillis();
     while(!dispatcher.notified) {
@@ -162,6 +171,7 @@ public class RMStateStoreTestBase {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
+    context.setAMContainerSpec(new ContainerLaunchContextPBImpl());
 
     RMApp mockApp = mock(RMApp.class);
     when(mockApp.getApplicationId()).thenReturn(appId);
@@ -356,7 +366,7 @@ public class RMStateStoreTestBase {
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(),
             appState.getApplicationSubmissionContext(), RMAppState.FINISHED,
-            "appDiagnostics", 1234, appState.getCallerContext());
+            "appDiagnostics", 123, 1234, appState.getCallerContext());
     appState2.attempts.putAll(appState.attempts);
     store.updateApplicationState(appState2);
 
@@ -378,10 +388,11 @@ public class RMStateStoreTestBase {
     ApplicationSubmissionContext dummyContext =
         new ApplicationSubmissionContextPBImpl();
     dummyContext.setApplicationId(dummyAppId);
+    dummyContext.setAMContainerSpec(new ContainerLaunchContextPBImpl());
     ApplicationStateData dummyApp =
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(), dummyContext,
-            RMAppState.FINISHED, "appDiagnostics", 1234, null);
+            RMAppState.FINISHED, "appDiagnostics", 123, 1234, null);
     store.updateApplicationState(dummyApp);
 
     ApplicationAttemptId dummyAttemptId =
@@ -573,6 +584,14 @@ public class RMStateStoreTestBase {
     
     long thirdTimeEpoch = store.getAndIncrementEpoch();
     Assert.assertEquals(epoch + 2, thirdTimeEpoch);
+
+    for (int i = 0; i < epochRange; ++i) {
+      store.getAndIncrementEpoch();
+    }
+    long wrappedEpoch = store.getAndIncrementEpoch();
+    // Epoch should have wrapped around and then incremented once for a total
+    // of + 3
+    Assert.assertEquals(epoch + 3, wrappedEpoch);
   }
 
   public void testAppDeletion(RMStateStoreHelper stateStoreHelper)
@@ -873,6 +892,38 @@ public class RMStateStoreTestBase {
     Assert.assertNotNull(reservationState);
     reservations = reservationState.get(planName);
     Assert.assertNull(reservations);
+  }
+
+  public void testProxyCA(
+      RMStateStoreHelper stateStoreHelper) throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
+
+    ProxyCA originalProxyCA = new ProxyCA();
+    originalProxyCA.init();
+    store.storeProxyCACert(originalProxyCA.getCaCert(),
+        originalProxyCA.getCaKeyPair().getPrivate());
+
+    RMStateStore.ProxyCAState proxyCAState =
+        store.loadState().getProxyCAState();
+    Assert.assertEquals(originalProxyCA.getCaCert(), proxyCAState.getCaCert());
+    Assert.assertEquals(originalProxyCA.getCaKeyPair().getPrivate(),
+        proxyCAState.getCaPrivateKey());
+
+    // Try replacing with a different ProxyCA
+    ProxyCA newProxyCA = new ProxyCA();
+    newProxyCA.init();
+    Assert.assertNotEquals(originalProxyCA.getCaCert(), newProxyCA.getCaCert());
+    Assert.assertNotEquals(originalProxyCA.getCaKeyPair().getPrivate(),
+        newProxyCA.getCaKeyPair().getPrivate());
+    store.storeProxyCACert(newProxyCA.getCaCert(),
+        newProxyCA.getCaKeyPair().getPrivate());
+
+    proxyCAState = store.loadState().getProxyCAState();
+    Assert.assertEquals(newProxyCA.getCaCert(), proxyCAState.getCaCert());
+    Assert.assertEquals(newProxyCA.getCaKeyPair().getPrivate(),
+        proxyCAState.getCaPrivateKey());
   }
 
   private void validateStoredReservation(

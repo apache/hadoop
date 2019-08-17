@@ -21,9 +21,14 @@ cd "$(dirname "$0")" # connect to root
 
 docker build -t hadoop-build dev-support/docker
 
+USER_NAME=${SUDO_USER:=$USER}
+USER_ID=$(id -u "${USER_NAME}")
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  GROUP_ID=100
+fi
+
 if [ "$(uname -s)" = "Linux" ]; then
-  USER_NAME=${SUDO_USER:=$USER}
-  USER_ID=$(id -u "${USER_NAME}")
   GROUP_ID=$(id -g "${USER_NAME}")
   # man docker-run
   # When using SELinux, mounted directories may not be accessible
@@ -51,28 +56,29 @@ if [ "$(uname -s)" = "Linux" ]; then
       done
     fi
   fi
-else # boot2docker uid and gid
-  USER_NAME=$USER
-  USER_ID=1000
-  GROUP_ID=50
 fi
 
 docker build -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
+RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
 RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME}
-RUN echo "${USER_NAME}\tALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
+RUN echo "${USER_NAME} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
 ENV HOME /home/${USER_NAME}
 
 UserSpecificDocker
+
+#If this env varible is empty, docker will be started
+# in non interactive mode
+DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 
 # By mapping the .m2 directory you can do an mvn install from
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
-docker run --rm=true -t -i \
+docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${PWD}:/home/${USER_NAME}/hadoop${V_OPTS:-}" \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
   -u "${USER_NAME}" \
-  "hadoop-build-${USER_ID}"
+  "hadoop-build-${USER_ID}" "$@"

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.security.token.block;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -55,6 +56,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private StorageType[] storageTypes;
   private String[] storageIds;
   private boolean useProto;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
 
@@ -76,6 +78,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     this.storageIds = Optional.ofNullable(storageIds)
                               .orElse(new String[0]);
     this.useProto = useProto;
+    this.handshakeMsg = new byte[0];
   }
 
   @Override
@@ -134,6 +137,14 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return storageIds;
   }
 
+  public byte[] getHandshakeMsg() {
+    return handshakeMsg;
+  }
+
+  public void setHandshakeMsg(byte[] bytes) {
+    handshakeMsg = bytes;
+  }
+
   @Override
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
@@ -182,13 +193,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
    * because we know the first field is the Expiry date.
    *
    * In the case of the legacy buffer, the expiry date is a VInt, so the size
-   * (which should always be >1) is encoded in the first byte - which is
+   * (which should always be &gt;1) is encoded in the first byte - which is
    * always negative due to this encoding. However, there are sometimes null
    * BlockTokenIdentifier written so we also need to handle the case there
    * the first byte is also 0.
    *
    * In the case of protobuf, the first byte is a type tag for the expiry date
-   * which is written as <code>(field_number << 3 |  wire_type</code>.
+   * which is written as <code>field_number &lt;&lt; 3 | wire_type</code>.
    * So as long as the field_number  is less than 16, but also positive, then
    * we know we have a Protobuf.
    *
@@ -241,6 +252,16 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = readStorageIds;
 
     useProto = false;
+
+    try {
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+
+    }
   }
 
   @VisibleForTesting
@@ -271,6 +292,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = blockTokenSecretProto.getStorageIdsList().stream()
         .toArray(String[]::new);
     useProto = true;
+
+    if(blockTokenSecretProto.hasHandshakeSecret()) {
+      handshakeMsg = blockTokenSecretProto
+          .getHandshakeSecret().toByteArray();
+    } else {
+      handshakeMsg = new byte[0];
+    }
   }
 
   @Override
@@ -300,6 +328,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, storageIds.length);
     for (String id: storageIds) {
       WritableUtils.writeString(out, id);
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
     }
   }
 

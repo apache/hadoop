@@ -20,7 +20,7 @@
 
   var filters = {
     'fmt_bytes': function (v) {
-      var UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'ZB'];
+      var UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB'];
       var prev = 0, i = 0;
       while (Math.floor(v) > 0 && i < UNITS.length) {
         prev = v;
@@ -28,7 +28,7 @@
         i += 1;
       }
 
-      if (i > 0 && i < UNITS.length) {
+      if (i > 0) {
         v = prev;
         i -= 1;
       }
@@ -96,6 +96,22 @@
 
     'fmt_number': function (v) {
       return v.toLocaleString();
+    },
+
+    'fmt_human_number': function (v) {
+      var UNITS = ['', 'K', 'M'];
+      var prev = 0, i = 0;
+      while (Math.floor(v) > 0 && i < UNITS.length) {
+        prev = v;
+        v /= 1000;
+        i += 1;
+      }
+
+      if (i > 0) {
+        v = prev;
+        i -= 1;
+      }
+      return Math.round(v * 100) / 100 + UNITS[i];
     }
   };
   $.extend(dust.filters, filters);
@@ -118,7 +134,7 @@
         if (to_be_completed === 0) {
           success_cb(data);
         }
-      }).error(function (jqxhr, text, err) {
+      }).fail(function (jqxhr, text, err) {
         error = true;
         error_cb(b.url, jqxhr, text, err);
       });

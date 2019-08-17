@@ -21,7 +21,7 @@ import static org.apache.hadoop.security.token.delegation.web.DelegationTokenAut
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;

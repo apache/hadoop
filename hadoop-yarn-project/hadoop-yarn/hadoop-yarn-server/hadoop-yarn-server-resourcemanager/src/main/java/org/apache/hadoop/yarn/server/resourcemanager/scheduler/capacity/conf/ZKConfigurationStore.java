@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -45,8 +45,8 @@ import java.util.Map;
  */
 public class ZKConfigurationStore extends YarnConfigurationStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(ZKConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(ZKConfigurationStore.class);
 
   private long maxLogs;
 
@@ -90,7 +90,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     this.confStorePath = getNodePath(znodeParentPath, CONF_STORE_PATH);
     this.fencingNodePath = getNodePath(znodeParentPath, FENCING_PATH);
 
-    zkManager.createRootDirRecursively(znodeParentPath);
+    zkManager.createRootDirRecursively(znodeParentPath, zkAcl);
     zkManager.delete(fencingNodePath);
 
     if (!zkManager.exists(logsPath)) {

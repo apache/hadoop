@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,7 +50,6 @@ public class TestDataNodeVolumeFailureToleration {
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Configuration conf;
-  private String dataDir;
 
   // Sleep at least 3 seconds (a 1s heartbeat plus padding) to allow
   // for heartbeats to propagate from the datanodes to the namenode.
@@ -80,7 +79,6 @@ public class TestDataNodeVolumeFailureToleration {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    dataDir = cluster.getDataDirectory();
   }
 
   @After
@@ -161,7 +159,7 @@ public class TestDataNodeVolumeFailureToleration {
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     // Fail a volume on the 2nd DN
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn2Vol1);
 
     // Should only get two replicas (the first DN and the 3rd)
@@ -203,7 +201,11 @@ public class TestDataNodeVolumeFailureToleration {
   @Test
   public void testVolumeAndTolerableConfiguration() throws Exception {
     // Check if Block Pool Service exit for an invalid conf value.
-    testVolumeConfig(-1, 0, false, true);
+    testVolumeConfig(-2, 0, false, true);
+    // Test for one good volume at least
+    testVolumeConfig(-1, 0, true, true);
+    testVolumeConfig(-1, 1, true, true);
+    testVolumeConfig(-1, 2, false, true);
 
     // Ditto if the value is too big.
     testVolumeConfig(100, 0, false, true);
@@ -240,7 +242,7 @@ public class TestDataNodeVolumeFailureToleration {
         prepareDirToFail(dirs[i]);
       }
       restartDatanodes(volumesTolerated, manageDfsDirs);
-    } catch (DiskErrorException e) {
+    } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated", e);
     } finally {

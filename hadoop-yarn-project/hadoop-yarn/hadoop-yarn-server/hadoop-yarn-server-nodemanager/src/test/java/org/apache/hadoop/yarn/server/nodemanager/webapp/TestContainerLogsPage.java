@@ -259,6 +259,7 @@ public class TestContainerLogsPage {
           new ConcurrentHashMap<ContainerId, Container>();
       when(context.getContainers()).thenReturn(containers);
       when(context.getLocalDirsHandler()).thenReturn(dirsHandler);
+      when(context.getConf()).thenReturn(conf);
 
       MockContainer container = new MockContainer(appAttemptId,
         new AsyncDispatcher(), conf, user, appId, 1);

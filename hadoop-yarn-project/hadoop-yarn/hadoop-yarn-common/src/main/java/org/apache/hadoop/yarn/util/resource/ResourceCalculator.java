@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.Set;
+
 /**
  * A set of {@link Resource} comparison and manipulation interfaces.
  */
@@ -85,6 +87,24 @@ public abstract class ResourceCalculator {
       return 0;
     }
     return (long) Math.ceil(a/b);
+  }
+
+  /**
+   * Divides lhs by rhs.
+   * If both lhs and rhs are having a value of 0, then we return 0.
+   * This is to avoid division by zero and return NaN as a result.
+   * If lhs is zero but rhs is not, Float.infinity will be returned
+   * as the result.
+   * @param lhs
+   * @param rhs
+   * @return
+   */
+  public static float divideSafelyAsFloat(long lhs, long rhs) {
+    if (lhs == 0 && rhs == 0) {
+      return 0;
+    } else {
+      return (float) lhs / (float) rhs;
+    }
   }
 
   public static int roundUp(int a, int b) {
@@ -239,12 +259,12 @@ public abstract class ResourceCalculator {
 
   /**
    * Check if resource has any major resource types (which are all NodeManagers
-   * included) a zero value.
+   * included) a zero value or negative value.
    *
    * @param resource resource
    * @return returns true if any resource is zero.
    */
-  public abstract boolean isAnyMajorResourceZero(Resource resource);
+  public abstract boolean isAnyMajorResourceZeroOrNegative(Resource resource);
 
   /**
    * Get resource <code>r</code>and normalize down using step-factor
@@ -257,4 +277,24 @@ public abstract class ResourceCalculator {
    * @return resulting normalized resource
    */
   public abstract Resource normalizeDown(Resource r, Resource stepFactor);
+
+  /**
+   * Check if resource has any major resource types (which are all NodeManagers
+   * included) has a {@literal >} 0 value.
+   *
+   * @param resource resource
+   * @return returns true if any resource is {@literal >} 0
+   */
+  public abstract boolean isAnyMajorResourceAboveZero(Resource resource);
+
+  /**
+   * Get insufficient resource names via comparing required resource and
+   * capacity resource.
+   *
+   * @param required - required resource
+   * @param available - available resource
+   * @return insufficient resource names
+   */
+  public abstract Set<String> getInsufficientResourceNames(Resource required,
+      Resource available);
 }

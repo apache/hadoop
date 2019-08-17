@@ -42,19 +42,19 @@ export default Ember.Controller.extend({
             id: 'label',
             headerTitle: 'Node Label',
             contentPath: 'nodeLabelsAsString',
-            minWidth: "100px"
+            minWidth: "125px"
         }, {
             id: 'rack',
             headerTitle: 'Rack',
             contentPath: 'rack',
             facetType: null,
-            minWidth: "100px"
+            minWidth: "250px"
         }, {
             id: 'state',
             headerTitle: 'Node State',
             contentPath: 'state',
             cellComponentName: 'em-table-status-cell',
-            minWidth: "100px"
+            minWidth: "125px"
         }, {
             id: 'address',
             headerTitle: 'Node Address',
@@ -69,7 +69,7 @@ export default Ember.Controller.extend({
             facetType: null,
             getCellContent: function(row) {
               var node_id = row.get("id"),
-                  node_addr = row.get("nodeHTTPAddress"),
+                  node_addr = encodeURIComponent(row.get("nodeHTTPAddress")),
                   href = `#/yarn-node/${node_id}/${node_addr}/info`;
                 switch(row.get("nodeState")) {
                 case "SHUTDOWN":
@@ -118,11 +118,13 @@ export default Ember.Controller.extend({
             headerTitle: 'Last Health Update',
             contentPath: 'lastHealthUpdate',
             facetType: null,
+            minWidth: "250px"
         }, {
             id: 'healthReport',
             headerTitle: 'Health-Report',
             contentPath: 'healthReport',
             facetType: null,
+            minWidth: "200px"
         }, {
             id: 'version',
             headerTitle: 'Version',

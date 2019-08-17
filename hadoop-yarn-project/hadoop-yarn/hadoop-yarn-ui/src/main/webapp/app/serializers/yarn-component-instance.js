@@ -34,8 +34,8 @@ export default DS.JSONAPISerializer.extend({
         startedTimestamp: info.LAUNCH_TIME,
         host: info.HOSTNAME,
         node: info.BARE_HOST,
-        hostUrl: 'N/A',
         ipAddr: info.IP,
+        exposedPorts: info.EXPOSED_PORTS,
         exitStatusCode: info.EXIT_STATUS_CODE
       }
     };

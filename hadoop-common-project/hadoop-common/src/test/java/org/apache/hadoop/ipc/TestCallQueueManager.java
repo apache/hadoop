@@ -434,5 +434,18 @@ public class TestCallQueueManager {
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);
+
+    // backoff is enabled, add + scheduler backoff = overflow exception.
+    reset(queue);
+    cqm.setClientBackoffEnabled(true);
+    doReturn(Boolean.TRUE).when(cqm).shouldBackOff(call);
+    try {
+      cqm.add(call);
+      fail("didn't fail");
+    } catch (Exception ex) {
+      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+    }
+    verify(queue, times(0)).put(call);
+    verify(queue, times(0)).add(call);
   }
 }

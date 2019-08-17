@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
@@ -45,6 +46,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -104,6 +108,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String REPLICATION_PARAM = "replication";
   public static final String BLOCKSIZE_PARAM = "blocksize";
   public static final String PERMISSION_PARAM = "permission";
+  public static final String UNMASKED_PERMISSION_PARAM = "unmaskedpermission";
   public static final String ACLSPEC_PARAM = "aclspec";
   public static final String DESTINATION_PARAM = "destination";
   public static final String RECURSIVE_PARAM = "recursive";
@@ -172,7 +177,10 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACCESS_TIME_JSON = "accessTime";
   public static final String MODIFICATION_TIME_JSON = "modificationTime";
   public static final String BLOCK_SIZE_JSON = "blockSize";
+  public static final String CHILDREN_NUM_JSON = "childrenNum";
+  public static final String FILE_ID_JSON = "fileId";
   public static final String REPLICATION_JSON = "replication";
+  public static final String STORAGEPOLICY_JSON = "storagePolicy";
   public static final String XATTRS_JSON = "XAttrs";
   public static final String XATTR_NAME_JSON = "name";
   public static final String XATTR_VALUE_JSON = "value";
@@ -185,11 +193,19 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String CONTENT_SUMMARY_JSON = "ContentSummary";
   public static final String CONTENT_SUMMARY_DIRECTORY_COUNT_JSON = "directoryCount";
+  public static final String CONTENT_SUMMARY_ECPOLICY_JSON = "ecPolicy";
   public static final String CONTENT_SUMMARY_FILE_COUNT_JSON = "fileCount";
   public static final String CONTENT_SUMMARY_LENGTH_JSON = "length";
-  public static final String CONTENT_SUMMARY_QUOTA_JSON = "quota";
-  public static final String CONTENT_SUMMARY_SPACE_CONSUMED_JSON = "spaceConsumed";
-  public static final String CONTENT_SUMMARY_SPACE_QUOTA_JSON = "spaceQuota";
+
+  public static final String QUOTA_USAGE_JSON = "QuotaUsage";
+  public static final String QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON =
+      "fileAndDirectoryCount";
+  public static final String QUOTA_USAGE_QUOTA_JSON = "quota";
+  public static final String QUOTA_USAGE_SPACE_CONSUMED_JSON = "spaceConsumed";
+  public static final String QUOTA_USAGE_SPACE_QUOTA_JSON = "spaceQuota";
+  public static final String QUOTA_USAGE_CONSUMED_JSON = "consumed";
+  public static final String QUOTA_USAGE_TYPE_QUOTA_JSON = "typeQuota";
+
 
   public static final String ACL_STATUS_JSON = "AclStatus";
   public static final String ACL_STICKY_BIT_JSON = "stickyBit";
@@ -198,7 +214,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
-  public static final String SNAPSHOT_BIT_JSON = "seBit";
+  public static final String SNAPSHOT_BIT_JSON = "snapshotEnabled";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -218,8 +234,9 @@ public class HttpFSFileSystem extends FileSystem
   public enum Operation {
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
-    GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
+    GETQUOTAUSAGE(HTTP_GET), GETFILECHECKSUM(HTTP_GET),
+    GETFILEBLOCKLOCATIONS(HTTP_GET), INSTRUMENTATION(HTTP_GET),
+    GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
@@ -229,8 +246,10 @@ public class HttpFSFileSystem extends FileSystem
     REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
     GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
     SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
+    ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
-    RENAMESNAPSHOT(HTTP_PUT);
+    RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET);
 
     private String httpMethod;
 
@@ -1118,14 +1137,66 @@ public class HttpFSFileSystem extends FileSystem
       getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
-      HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
-    return new ContentSummary.Builder().
-        length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON)).
-        fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON)).
-        directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON)).
-        quota((Long) json.get(CONTENT_SUMMARY_QUOTA_JSON)).
-        spaceConsumed((Long) json.get(CONTENT_SUMMARY_SPACE_CONSUMED_JSON)).
-        spaceQuota((Long) json.get(CONTENT_SUMMARY_SPACE_QUOTA_JSON)).build();
+        HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
+    ContentSummary.Builder builder = new ContentSummary.Builder()
+        .length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON))
+        .fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON))
+        .directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON))
+        .erasureCodingPolicy((String) json.get(CONTENT_SUMMARY_ECPOLICY_JSON));
+    builder = buildQuotaUsage(builder, json, ContentSummary.Builder.class);
+    return builder.build();
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETQUOTAUSAGE.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETQUOTAUSAGE.getMethod(), params, f, true);
+    JSONObject json = (JSONObject) ((JSONObject)
+        HttpFSUtils.jsonParse(conn)).get(QUOTA_USAGE_JSON);
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder = buildQuotaUsage(builder, json, QuotaUsage.Builder.class);
+    return builder.build();
+  }
+
+  /**
+   * Given a builder for QuotaUsage, parse the provided JSON object and
+   * construct the relevant fields. Return the updated builder.
+   */
+  private static <T extends QuotaUsage.Builder> T buildQuotaUsage(
+      T builder, JSONObject json, Class<T> type) {
+    long quota = (Long) json.get(QUOTA_USAGE_QUOTA_JSON);
+    long spaceConsumed = (Long) json.get(QUOTA_USAGE_SPACE_CONSUMED_JSON);
+    long spaceQuota = (Long) json.get(QUOTA_USAGE_SPACE_QUOTA_JSON);
+    JSONObject typeJson = (JSONObject) json.get(QUOTA_USAGE_TYPE_QUOTA_JSON);
+
+    builder = type.cast(builder
+        .quota(quota)
+        .spaceConsumed(spaceConsumed)
+        .spaceQuota(spaceQuota)
+    );
+
+    // ContentSummary doesn't set this so check before using it
+    if (json.get(QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON) != null) {
+      long fileAndDirectoryCount = (Long)
+          json.get(QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON);
+      builder = type.cast(builder.fileAndDirectoryCount(fileAndDirectoryCount));
+    }
+
+    if (typeJson != null) {
+      for (StorageType t : StorageType.getTypesSupportingQuota()) {
+        JSONObject typeQuota = (JSONObject) typeJson.get(t.toString());
+        if (typeQuota != null) {
+          builder = type.cast(builder
+              .typeQuota(t, ((Long) typeQuota.get(QUOTA_USAGE_QUOTA_JSON)))
+              .typeConsumed(t, ((Long) typeQuota.get(QUOTA_USAGE_CONSUMED_JSON))
+          ));
+        }
+      }
+    }
+
+    return builder;
   }
 
   @Override
@@ -1411,6 +1482,22 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
+  public void allowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.ALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.ALLOWSNAPSHOT.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void disallowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.DISALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.DISALLOWSNAPSHOT.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
   @Override
   public final Path createSnapshot(Path path, String snapshotName)
       throws IOException {
@@ -1447,6 +1534,31 @@ public class HttpFSFileSystem extends FileSystem
     HttpURLConnection conn = getConnection(Operation.DELETESNAPSHOT.getMethod(),
         params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public SnapshotDiffReport getSnapshotDiffReport(Path path,
+      String snapshotOldName, String snapshotNewName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTDIFF.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTDIFF.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshotDiffReport(json);
+  }
+
+  public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTTABLEDIRECTORYLIST.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTTABLEDIRECTORYLIST.getMethod(),
+        params, new Path(getUri().toString(), "/"), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshottableDirectoryList(json);
   }
 
 }

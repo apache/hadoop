@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
@@ -40,8 +40,8 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
   private final boolean fixTxIds;
   private final boolean recoveryMode;
   private long nextTxId;
-  public static final Log LOG =
-      LogFactory.getLog(OfflineEditsBinaryLoader.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OfflineEditsBinaryLoader.class.getName());
   
   /**
    * Constructor
@@ -102,7 +102,7 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
       }
       visitor.close(null);
     } finally {
-      IOUtils.cleanup(LOG, inputStream);
+      IOUtils.cleanupWithLogger(LOG, inputStream);
     }
   }
 }

@@ -28,9 +28,9 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 
 import com.google.common.base.Preconditions;
@@ -41,7 +41,7 @@ import com.google.common.base.Preconditions;
  */
 public class OptionsParser {
 
-  static final Log LOG = LogFactory.getLog(OptionsParser.class);
+  static final Logger LOG = LoggerFactory.getLogger(OptionsParser.class);
 
   private static final Options cliOptions = new Options();
 
@@ -113,7 +113,9 @@ public class OptionsParser {
         .withBlocking(
             !command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch()))
         .withVerboseLog(
-            command.hasOption(DistCpOptionSwitch.VERBOSE_LOG.getSwitch()));
+            command.hasOption(DistCpOptionSwitch.VERBOSE_LOG.getSwitch()))
+        .withDirectWrite(
+            command.hasOption(DistCpOptionSwitch.DIRECT_WRITE.getSwitch()));
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
       String[] snapshots = getVals(command,
@@ -144,6 +146,12 @@ public class OptionsParser {
       if (workPath != null && !workPath.isEmpty()) {
         builder.withAtomicWorkPath(new Path(workPath));
       }
+    }
+    if (command.hasOption(DistCpOptionSwitch.TRACK_MISSING.getSwitch())) {
+      builder.withTrackMissing(
+          new Path(getVal(
+              command,
+              DistCpOptionSwitch.TRACK_MISSING.getSwitch())));
     }
 
     if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {

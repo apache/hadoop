@@ -986,8 +986,8 @@ public class LeveldbTimelineStore extends AbstractService
 
   @Override
   public TimelinePutResponse put(TimelineEntities entities) {
+    deleteLock.readLock().lock();
     try {
-      deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
         put(entity, response, false);
@@ -1001,8 +1001,8 @@ public class LeveldbTimelineStore extends AbstractService
   @Private
   @VisibleForTesting
   public TimelinePutResponse putWithNoDomainId(TimelineEntities entities) {
+    deleteLock.readLock().lock();
     try {
-      deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
         put(entity, response, true);
@@ -1424,9 +1424,7 @@ public class LeveldbTimelineStore extends AbstractService
 
       writeBatch = db.createWriteBatch();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleting entity type:" + entityType + " id:" + entityId);
-      }
+      LOG.debug("Deleting entity type:{} id:{}", entityType, entityId);
       // remove start time from cache and db
       writeBatch.delete(createStartTimeLookupKey(entityId, entityType));
       EntityIdentifier entityIdentifier =
@@ -1452,11 +1450,8 @@ public class LeveldbTimelineStore extends AbstractService
           Object value = GenericObjectMapper.read(key, kp.getOffset());
           deleteKeysWithPrefix(writeBatch, addPrimaryFilterToKey(name, value,
               deletePrefix), pfIterator);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Deleting entity type:" + entityType + " id:" +
-                entityId + " primary filter entry " + name + " " +
-                value);
-          }
+          LOG.debug("Deleting entity type:{} id:{} primary filter entry {} {}",
+              entityType, entityId, name, value);
         } else if (key[prefixlen] == RELATED_ENTITIES_COLUMN[0]) {
           kp = new KeyParser(key,
               prefixlen + RELATED_ENTITIES_COLUMN.length);
@@ -1471,11 +1466,9 @@ public class LeveldbTimelineStore extends AbstractService
           }
           writeBatch.delete(createReverseRelatedEntityKey(id, type,
               relatedEntityStartTime, entityId, entityType));
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Deleting entity type:" + entityType + " id:" +
-                entityId + " from invisible reverse related entity " +
-                "entry of type:" + type + " id:" + id);
-          }
+          LOG.debug("Deleting entity type:{} id:{} from invisible reverse"
+              + " related entity entry of type:{} id:{}", entityType,
+              entityId, type, id);
         } else if (key[prefixlen] ==
             INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN[0]) {
           kp = new KeyParser(key, prefixlen +
@@ -1491,11 +1484,8 @@ public class LeveldbTimelineStore extends AbstractService
           }
           writeBatch.delete(createRelatedEntityKey(id, type,
               relatedEntityStartTime, entityId, entityType));
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Deleting entity type:" + entityType + " id:" +
-                entityId + " from related entity entry of type:" +
-                type + " id:" + id);
-          }
+          LOG.debug("Deleting entity type:{} id:{} from related entity entry"
+              +" of type:{} id:{}", entityType, entityId, type, id);
         }
       }
       WriteOptions writeOptions = new WriteOptions();
@@ -1525,8 +1515,8 @@ public class LeveldbTimelineStore extends AbstractService
         LeveldbIterator iterator = null;
         LeveldbIterator pfIterator = null;
         long typeCount = 0;
+        deleteLock.writeLock().lock();
         try {
-          deleteLock.writeLock().lock();
           iterator = getDbIterator(false);
           pfIterator = getDbIterator(false);
 

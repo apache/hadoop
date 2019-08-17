@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -79,6 +82,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.eclipse.jetty.util.log.Log;
@@ -470,19 +474,16 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       amClient.addContainerRequest(storedContainer1);
       amClient.addContainerRequest(storedContainer2);
       amClient.addContainerRequest(storedContainer3);
-
-      ProfileCapability profileCapability =
-          ProfileCapability.newInstance(capability);
       
       // test addition and storage
       RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
           amClient.getTable(0);
       int containersRequestedAny = remoteRequestsTable.get(priority,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
           .remoteRequest.getNumContainers();
       assertEquals(2, containersRequestedAny);
       containersRequestedAny = remoteRequestsTable.get(priority1,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
           .remoteRequest.getNumContainers();
          assertEquals(1, containersRequestedAny);
       List<? extends Collection<ContainerRequest>> matches = 
@@ -1185,11 +1186,9 @@ public class TestAMRMClient extends BaseAMRMClientTest{
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.OPPORTUNISTIC, true)));
 
-    ProfileCapability profileCapability =
-          ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1326,11 +1325,9 @@ public class TestAMRMClient extends BaseAMRMClientTest{
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.GUARANTEED, true)));
 
-    ProfileCapability profileCapability =
-        ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.GUARANTEED, profileCapability).remoteRequest
+            ExecutionType.GUARANTEED, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1620,7 +1617,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         for(ContainerStatus cStatus :allocResponse
             .getCompletedContainersStatuses()) {
           if(releases.contains(cStatus.getContainerId())) {
-            assertEquals(cStatus.getState(), ContainerState.COMPLETE);
+            assertThat(cStatus.getState()).isEqualTo(ContainerState.COMPLETE);
             assertEquals(-100, cStatus.getExitStatus());
             releases.remove(cStatus.getContainerId());
           }
@@ -1710,16 +1707,14 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       int expAsks, int expRelease) {
     RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
         amClient.getTable(allocationReqId);
-    ProfileCapability profileCapability =
-        ProfileCapability.newInstance(capability);
     int containersRequestedNode = remoteRequestsTable.get(priority,
-        node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        node, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedRack = remoteRequestsTable.get(priority,
-        rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        rack, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedAny = remoteRequestsTable.get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
 
     assertEquals(expNode, containersRequestedNode);
@@ -1931,31 +1926,20 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
 
-      ProfileCapability capability1 = ProfileCapability.newInstance("minimum");
-      ProfileCapability capability2 = ProfileCapability.newInstance("default");
-      ProfileCapability capability3 = ProfileCapability.newInstance("maximum");
-      ProfileCapability capability4 = ProfileCapability
-          .newInstance("minimum", Resource.newInstance(2048, 1));
-      ProfileCapability capability5 = ProfileCapability.newInstance("default");
-      ProfileCapability capability6 = ProfileCapability
-          .newInstance("default", Resource.newInstance(2048, 1));
-      // http has the same capabilities as default
-      ProfileCapability capability7 = ProfileCapability.newInstance("http");
-
-      ContainerRequest storedContainer1 =
-          new ContainerRequest(capability1, nodes, racks, priority);
-      ContainerRequest storedContainer2 =
-          new ContainerRequest(capability2, nodes, racks, priority);
-      ContainerRequest storedContainer3 =
-          new ContainerRequest(capability3, nodes, racks, priority);
-      ContainerRequest storedContainer4 =
-          new ContainerRequest(capability4, nodes, racks, priority);
-      ContainerRequest storedContainer5 =
-          new ContainerRequest(capability5, nodes, racks, priority2);
-      ContainerRequest storedContainer6 =
-          new ContainerRequest(capability6, nodes, racks, priority);
-      ContainerRequest storedContainer7 =
-          new ContainerRequest(capability7, nodes, racks, priority);
+      ContainerRequest storedContainer1 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "minimum");
+      ContainerRequest storedContainer2 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "default");
+      ContainerRequest storedContainer3 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "maximum");
+      ContainerRequest storedContainer4 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority, "minimum");
+      ContainerRequest storedContainer5 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority2, "default");
+      ContainerRequest storedContainer6 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority, "default");
+      ContainerRequest storedContainer7 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "http");
 
 
       amClient.addContainerRequest(storedContainer1);
@@ -1970,11 +1954,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       List<? extends Collection<ContainerRequest>> matches;
       ContainerRequest storedRequest;
       // exact match
-      ProfileCapability testCapability1 =
-          ProfileCapability.newInstance("minimum");
-      matches = amClient
-          .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
-              testCapability1);
+      matches = amClient.getMatchingRequests(priority, node,
+          ExecutionType.GUARANTEED, Resource.newInstance(0, 0), "minimum");
       verifyMatches(matches, 1);
       storedRequest = matches.get(0).iterator().next();
       assertEquals(storedContainer1, storedRequest);
@@ -1983,11 +1964,9 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       // exact matching with order maintained
       // we should get back 3 matches - default + http because they have the
       // same capability
-      ProfileCapability testCapability2 =
-          ProfileCapability.newInstance("default");
       matches = amClient
           .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
-              testCapability2);
+              Resource.newInstance(0, 0), "default");
       verifyMatches(matches, 2);
       // must be returned in the order they were made
       int i = 0;
@@ -2017,6 +1996,80 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testNoUpdateTrackingUrl()  {
+    try {
+      AMRMClientImpl<ContainerRequest> amClient = null;
+      amClient = new AMRMClientImpl<>();
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      assertEquals("", amClient.appTrackingUrl);
+
+      ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol.class);
+      AllocateResponse mockResponse = mock(AllocateResponse.class);
+      when(mockRM.allocate(any(AllocateRequest.class)))
+          .thenReturn(mockResponse);
+      ApplicationMasterProtocol realRM = amClient.rmClient;
+      amClient.rmClient = mockRM;
+      // Do allocate without updated tracking url
+      amClient.allocate(0.1f);
+      ArgumentCaptor<AllocateRequest> argument =
+          ArgumentCaptor.forClass(AllocateRequest.class);
+      verify(mockRM).allocate(argument.capture());
+      assertNull(argument.getValue().getTrackingUrl());
+
+      amClient.rmClient = realRM;
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
+    } catch (IOException | YarnException e) {
+      throw new AssertionError(
+          "testNoUpdateTrackingUrl unexpectedly threw exception: " + e);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testUpdateTrackingUrl() {
+    try {
+      AMRMClientImpl<ContainerRequest> amClient = null;
+      amClient = new AMRMClientImpl<>();
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      String trackingUrl = "hadoop.apache.org";
+      assertEquals("", amClient.appTrackingUrl);
+
+      ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol.class);
+      AllocateResponse mockResponse = mock(AllocateResponse.class);
+      when(mockRM.allocate(any(AllocateRequest.class)))
+          .thenReturn(mockResponse);
+      ApplicationMasterProtocol realRM = amClient.rmClient;
+      amClient.rmClient = mockRM;
+      // Do allocate with updated tracking url
+      amClient.updateTrackingUrl(trackingUrl);
+      assertEquals(trackingUrl, amClient.newTrackingUrl);
+      assertEquals("", amClient.appTrackingUrl);
+      amClient.allocate(0.1f);
+      assertNull(amClient.newTrackingUrl);
+      assertEquals(trackingUrl, amClient.appTrackingUrl);
+      ArgumentCaptor<AllocateRequest> argument
+          = ArgumentCaptor.forClass(AllocateRequest.class);
+      verify(mockRM).allocate(argument.capture());
+      assertEquals(trackingUrl, argument.getValue().getTrackingUrl());
+
+      amClient.rmClient = realRM;
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
+    } catch (IOException | YarnException e) {
+      throw new AssertionError(
+          "testUpdateTrackingUrl unexpectedly threw exception: " + e);
     }
   }
 }

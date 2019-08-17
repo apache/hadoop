@@ -42,12 +42,13 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -139,7 +140,7 @@ public class TestJobHistory {
         .getHistoryStorage());
 
     assertTrue(storage.getUseLoadedTasksCache());
-    assertEquals(storage.getLoadedTasksCacheSize(), 50);
+    assertThat(storage.getLoadedTasksCacheSize()).isEqualTo(50);
 
     // Create a bunch of smaller jobs (<< 50 tasks)
     Job[] jobs = new Job[10];
@@ -202,7 +203,7 @@ public class TestJobHistory {
         .getHistoryStorage());
 
     assertTrue(storage.getUseLoadedTasksCache());
-    assertEquals(storage.getLoadedTasksCacheSize(), 500);
+    assertThat(storage.getLoadedTasksCacheSize()).isEqualTo(500);
 
     // Create a bunch of large jobs (>> 50 tasks)
     Job[] lgJobs = new Job[10];
@@ -263,7 +264,7 @@ public class TestJobHistory {
         .getHistoryStorage());
 
     assertTrue(storage.getUseLoadedTasksCache());
-    assertEquals(storage.getLoadedTasksCacheSize(), 1);
+    assertThat(storage.getLoadedTasksCacheSize()).isOne();
   }
 
   @Test
@@ -281,7 +282,7 @@ public class TestJobHistory {
         .getHistoryStorage());
 
     assertTrue(storage.getUseLoadedTasksCache());
-    assertEquals(storage.getLoadedTasksCacheSize(), 1);
+    assertThat(storage.getLoadedTasksCacheSize()).isOne();
   }
 
   @Test
@@ -300,7 +301,7 @@ public class TestJobHistory {
         .getHistoryStorage());
 
     assertTrue(storage.getUseLoadedTasksCache());
-    assertEquals(storage.getLoadedTasksCacheSize(), 50);
+    assertThat(storage.getLoadedTasksCacheSize()).isEqualTo(50);
 
     // Create jobs for bad fileInfo results
     Job[] jobs = new Job[4];

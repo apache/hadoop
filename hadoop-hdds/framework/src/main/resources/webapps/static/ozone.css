@@ -1,0 +1,60 @@
+/**
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+*/
+body {
+    padding: 40px;
+    padding-top: 60px;
+}
+.starter-template {
+    padding: 40px 15px;
+    text-align: center;
+}
+
+
+.btn {
+    border: 0 none;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.btn:focus, .btn:active:focus, .btn.active:focus {
+    outline: 0 none;
+}
+
+.table-striped > tbody > tr:nth-child(2n+1).selectedtag > td:hover {
+    background-color: #3276b1;
+}
+.table-striped > tbody > tr:nth-child(2n+1).selectedtag > td {
+    background-color: #3276b1;
+}
+.tagPanel tr.selectedtag td {
+    background-color: #3276b1;
+}
+.top-buffer { margin-top:4px; }
+
+
+.sortorder:after {
+    content: '\25b2';   // BLACK UP-POINTING TRIANGLE
+}
+.sortorder.reverse:after {
+    content: '\25bc';   // BLACK DOWN-POINTING TRIANGLE
+}
+
+.wrap-table{
+    word-wrap: break-word;
+    table-layout: fixed;
+}

@@ -80,6 +80,13 @@ The `rollNewVersion` semantics of the KMS has been improved so that after a key'
 
 ---
 
+* [HADOOP-13119](https://issues.apache.org/jira/browse/HADOOP-13119) | *Major* | **Add ability to secure log servlet using proxy users**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
 * [HADOOP-13075](https://issues.apache.org/jira/browse/HADOOP-13075) | *Major* | **Add support for SSE-KMS and SSE-C in s3a filesystem**
 
 The new encryption options SSE-KMS and especially SSE-C must be considered experimental at present. If you are using SSE-C, problems may arise if the bucket mixes encrypted and unencrypted files. For SSE-KMS, there may be extra throttling of IO, especially with the fadvise=random option. You may wish to request an increase in your KMS IOPs limits.
@@ -498,9 +505,4 @@ The WASB FileSystem now uses version 5.3.0 of the Azure Storage SDK.
 Fix to wasb:// (Azure) file system that allows the concurrent I/O feature to be used with the secure mode feature.
 
 
----
-
-* [YARN-6959](https://issues.apache.org/jira/browse/YARN-6959) | *Major* | **RM may allocate wrong AM Container for new attempt**
-
-ResourceManager will now record ResourceRequests from different attempts into different objects.
 

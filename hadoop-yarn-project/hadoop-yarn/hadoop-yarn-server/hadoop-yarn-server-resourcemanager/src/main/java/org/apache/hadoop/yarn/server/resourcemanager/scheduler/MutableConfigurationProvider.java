@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
@@ -57,6 +58,12 @@ public interface MutableConfigurationProvider {
    * @throws Exception if confirming mutation fails
    */
   void confirmPendingMutation(boolean isValid) throws Exception;
+
+  /**
+   * Returns scheduler configuration cached in this provider.
+   * @return scheduler configuration.
+   */
+  Configuration getConfiguration();
 
   /**
    * Closes the configuration provider, releasing any required resources.

@@ -35,12 +35,15 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import mockit.Mock;
+import mockit.MockUp;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -49,8 +52,9 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
+import org.apache.hadoop.yarn.server.timelineservice.metrics.TimelineReaderMetrics;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -70,11 +74,19 @@ public class TestTimelineReaderWebServicesHBaseStorage
     extends AbstractTimelineReaderHBaseTestBase {
   private static long ts = System.currentTimeMillis();
   private static long dayTs =
-      HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
+      HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
   private static String doAsUser = "remoteuser";
+  private static final DummyTimelineReaderMetrics METRICS
+      = new DummyTimelineReaderMetrics();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
+    new MockUp<TimelineReaderMetrics>() {
+      @Mock
+      public TimelineReaderMetrics getInstance() {
+        return METRICS;
+      }
+    };
     setup();
     loadData();
     initialize();
@@ -265,7 +277,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     relatesTo1.put("type3",
         Sets.newHashSet("entity31", "entity35", "entity32", "entity33"));
     entity5.addRelatesToEntities(relatesTo1);
-    userEntities.addEntity(entity5);
+    userEntities.addEntity(new SubApplicationEntity(entity5));
 
     TimelineEntity entity6 = new TimelineEntity();
     entity6.setId("entity2");
@@ -324,7 +336,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     relatesTo2.put("type6", Sets.newHashSet("entity61", "entity66"));
     relatesTo2.put("type3", Sets.newHashSet("entity31"));
     entity6.addRelatesToEntities(relatesTo2);
-    userEntities.addEntity(entity6);
+    userEntities.addEntity(new SubApplicationEntity(entity6));
 
     for (long i = 1; i <= 10; i++) {
       TimelineEntity userEntity = new TimelineEntity();
@@ -332,7 +344,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       userEntity.setId("entityid-" + i);
       userEntity.setIdPrefix(11 - i);
       userEntity.setCreatedTime(ts);
-      userEntities.addEntity(userEntity);
+      userEntities.addEntity(new SubApplicationEntity(userEntity));
     }
 
     HBaseTimelineWriterImpl hbi = null;
@@ -371,7 +383,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
             BuilderUtils.newApplicationId(timestamp, count++);
         ApplicationEntity appEntity = new ApplicationEntity();
         appEntity.setId(
-            HBaseTimelineStorageUtils.convertApplicationIdToString(appId));
+            HBaseTimelineSchemaUtils.convertApplicationIdToString(appId));
         appEntity.setCreatedTime(timestamp);
 
         TimelineEvent created = new TimelineEvent();
@@ -929,7 +941,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
           new String[] {"flow1"});
 
       long firstFlowActivity =
-          HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
+          HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(1425016501000L);
 
       DateFormat fmt = TimelineReaderWebServices.DATE_FORMAT.get();
       uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -99,7 +99,7 @@ class ClientThrottlingAnalyzer {
     this.blobMetrics = new AtomicReference<BlobOperationMetrics>(
         new BlobOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(
-        String.format("wasb-timer-client-throttling-analyzer-%s", name));
+        String.format("wasb-timer-client-throttling-analyzer-%s", name), true);
     this.timer.schedule(new TimerTaskImpl(),
         analysisPeriodMs,
         analysisPeriodMs);

@@ -32,7 +32,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServlet;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -83,6 +83,7 @@ public class WebApps {
       public String name;
       public String spec;
       public Map<String, String> params;
+      public boolean loadExistingFilters = true;
     }
     
     final String name;
@@ -94,6 +95,7 @@ public class WebApps {
     boolean findPort = false;
     Configuration conf;
     Policy httpPolicy = null;
+    boolean needsClientAuth = false;
     String portRangeConfigKey = null;
     boolean devMode = false;
     private String spnegoPrincipalKey;
@@ -151,12 +153,13 @@ public class WebApps {
 
     public Builder<T> withServlet(String name, String pathSpec,
         Class<? extends HttpServlet> servlet,
-        Map<String, String> params) {
+        Map<String, String> params,boolean loadExistingFilters) {
       ServletStruct struct = new ServletStruct();
       struct.clazz = servlet;
       struct.name = name;
       struct.spec = pathSpec;
       struct.params = params;
+      struct.loadExistingFilters = loadExistingFilters;
       servlets.add(struct);
       return this;
     }
@@ -169,6 +172,11 @@ public class WebApps {
     public Builder<T> withHttpPolicy(Configuration conf, Policy httpPolicy) {
       this.conf = conf;
       this.httpPolicy = httpPolicy;
+      return this;
+    }
+
+    public Builder<T> needsClientAuth(boolean needsClientAuth) {
+      this.needsClientAuth = needsClientAuth;
       return this;
     }
 
@@ -256,9 +264,15 @@ public class WebApps {
           pathList.add("/" + wsName + "/*");
         }
       }
+
       for (ServletStruct s : servlets) {
         if (!pathList.contains(s.spec)) {
-          pathList.add(s.spec);
+          // The servlet told us to not load-existing filters, but we still want
+          // to add the default authentication filter always, so add it to the
+          // pathList
+          if (!s.loadExistingFilters) {
+            pathList.add(s.spec);
+          }
         }
       }
       if (conf == null) {
@@ -327,13 +341,30 @@ public class WebApps {
         }
 
         if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
-          WebAppUtils.loadSslConfiguration(builder, conf);
+          String amKeystoreLoc = System.getenv("KEYSTORE_FILE_LOCATION");
+          if (amKeystoreLoc != null) {
+            LOG.info("Setting keystore location to " + amKeystoreLoc);
+            String password = System.getenv("KEYSTORE_PASSWORD");
+            builder.keyStore(amKeystoreLoc, password, "jks");
+          } else {
+            LOG.info("Loading standard ssl config");
+            WebAppUtils.loadSslConfiguration(builder, conf);
+          }
+          builder.needsClientAuth(needsClientAuth);
+          if (needsClientAuth) {
+            String amTruststoreLoc = System.getenv("TRUSTSTORE_FILE_LOCATION");
+            if (amTruststoreLoc != null) {
+              LOG.info("Setting truststore location to " + amTruststoreLoc);
+              String password = System.getenv("TRUSTSTORE_PASSWORD");
+              builder.trustStore(amTruststoreLoc, password, "jks");
+            }
+          }
         }
 
         HttpServer2 server = builder.build();
 
         for(ServletStruct struct: servlets) {
-          if (struct.params != null) {
+          if (!struct.loadExistingFilters) {
             server.addInternalServlet(struct.name, struct.spec,
                 struct.clazz, struct.params);
           } else {

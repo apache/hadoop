@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,8 +40,8 @@ import java.util.Properties;
  */
 public class SwiftTestUtils extends org.junit.Assert {
 
-  private static final Log LOG =
-    LogFactory.getLog(SwiftTestUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftTestUtils.class);
 
   public static final String TEST_FS_SWIFT = "test.fs.swift.name";
   public static final String IO_FILE_BUFFER_SIZE = "io.file.buffer.size";

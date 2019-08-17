@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -46,8 +47,8 @@ import com.google.inject.Inject;
 public class HsAttemptsPage extends HsTaskPage {
   static class FewAttemptsBlock extends HsTaskPage.AttemptsBlock {
     @Inject
-    FewAttemptsBlock(App ctx) {
-      super(ctx);
+    FewAttemptsBlock(App ctx, Configuration conf) {
+      super(ctx, conf);
     }
 
     /*

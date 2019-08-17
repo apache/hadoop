@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.IOException;
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -32,9 +35,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import java.io.IOException;
-
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.hamcrest.CoreMatchers.containsString;
 
 /**
  * Test the magic committer's commit protocol.
@@ -113,6 +115,25 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     assertEquals("file length in " + st, 0, st.getLen());
     Path pendingFile = new Path(p.toString() + PENDING_SUFFIX);
     assertPathExists("pending file", pendingFile);
+  }
+
+  /**
+   * The magic committer paths are always on S3, and always have
+   * "__magic" in the path.
+   * @param committer committer instance
+   * @param context task attempt context
+   * @throws IOException IO failure
+   */
+  @Override
+  protected void validateTaskAttemptWorkingDirectory(
+      final AbstractS3ACommitter committer,
+      final TaskAttemptContext context) throws IOException {
+    URI wd = committer.getWorkPath().toUri();
+    assertEquals("Wrong schema for working dir " + wd
+        + " with committer " + committer,
+        "s3a", wd.getScheme());
+    assertThat(wd.getPath(),
+        containsString('/' + CommitConstants.MAGIC + '/'));
   }
 
   /**

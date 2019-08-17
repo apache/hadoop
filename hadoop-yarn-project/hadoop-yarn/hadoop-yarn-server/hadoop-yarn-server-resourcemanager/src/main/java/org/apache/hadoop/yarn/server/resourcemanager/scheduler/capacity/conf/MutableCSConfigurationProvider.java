@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -49,8 +49,8 @@ import java.util.Map;
 public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     MutableConfigurationProvider {
 
-  public static final Log LOG =
-      LogFactory.getLog(MutableCSConfigurationProvider.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(MutableCSConfigurationProvider.class);
 
   private Configuration schedConf;
   private Configuration oldConf;
@@ -76,6 +76,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       break;
     case YarnConfiguration.ZK_CONFIGURATION_STORE:
       this.confStore = new ZKConfigurationStore();
+      break;
+    case YarnConfiguration.FS_CONFIGURATION_STORE:
+      this.confStore = new FSSchedulerConfigurationStore();
       break;
     default:
       this.confStore = YarnConfigurationStoreFactory.getStore(config);
@@ -120,6 +123,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     Configuration loadedConf = new Configuration(schedConf);
     loadedConf.addResource(configuration);
     return new CapacitySchedulerConfiguration(loadedConf, false);
+  }
+
+  @Override
+  public Configuration getConfiguration() {
+    return new Configuration(schedConf);
   }
 
   @Override

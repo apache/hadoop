@@ -85,6 +85,15 @@
 </property>
 
 <property>
+  <name>mapreduce.job.dfs.storage.capacity.kill-limit-exceed</name>
+  <value>false</value>
+  <description>Whether to fast fail the task when exceeds allocated storage
+    capacity in the cluster filesystem(ClusterStorageCapacityExceededException
+    happens), for example, exceeds the dfs quota limitation. If true, the
+    task will fast fail. If false, the task will get retried.</description>
+</property>
+
+<property>
   <name>mapreduce.job.maps</name>
   <value>2</value>
   <description>The default number of map tasks per job.
@@ -149,7 +158,7 @@
 
   <property>
     <name>mapreduce.job.max.split.locations</name>
-    <value>10</value>
+    <value>15</value>
     <description>The max number of block locations to store for each split for
     locality calculation.
     </description>
@@ -268,6 +277,16 @@
 </property>
 
 <property>
+  <name>mapreduce.task.stuck.timeout-ms</name>
+  <value>600000</value>
+  <description>The max timeout before receiving remote task's first heartbeat.
+    This parameter is in order to avoid waiting for the container
+    to start indefinitely, which made task stuck in the NEW state.
+    A value of 0 disables the timeout.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
@@ -350,11 +369,22 @@
 <property>
   <name>mapred.child.env</name>
   <value></value>
-  <description>User added environment variables for the task processes.
+  <description>User added environment variables for the task processes,
+  specified as a comma separated list.
   Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit nodemanager's B env variable on Unix.
   3) B=%B%;c This is inherit nodemanager's B env variable on Windows.
+
+  To specify a comma separated list of environment variables specifically for
+  map or reduce tasks, use the mapreduce.map.env or mapreduce.reduce.env
+  properties.
+
+  To define environment variables individually for map or reduce tasks,
+  you can specify multiple properties of the form mapreduce.map.env.VARNAME
+  or mapreduce.reduce.env.VARNAME, where VARNAME is the name of the
+  environment variable. This is the only way to add a variable when its value
+  contains commas.
   </description>
 </property>
 
@@ -362,7 +392,15 @@
 <property>
   <name>mapreduce.map.env</name>
   <value></value>
-  <description>User added environment variables for the map task processes.
+  <description>User added environment variables for the map task processes,
+  specified as a comma separated list.
+  Example:
+    VAR1=value1,VAR2=value2
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.map.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 -->
@@ -371,7 +409,16 @@
 <property>
   <name>mapreduce.reduce.env</name>
   <value></value>
-  <description>User added environment variables for the reduce task processes.
+  <description>User added environment variables for the reduce task processes,
+  specified as a comma separated list.
+  Example:
+    VAR1=value1,VAR2=value2
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.reduce.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
+  contains commas.
   </description>
 </property>
 -->
@@ -385,9 +432,14 @@
   You must preserve the original value if you want your map and
   reduce tasks to have access to native libraries (compression, etc).
   When this value is empty, the command to set execution
-  envrionment will be OS dependent:
+  environment will be OS dependent:
   For linux, use LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native.
   For windows, use PATH = %PATH%;%HADOOP_COMMON_HOME%\\bin.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.admin.user.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 
@@ -418,22 +470,6 @@
   OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
   The setting here could be overridden if "mapreduce.job.log4j-properties-file"
   is set.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.map.cpu.vcores</name>
-  <value>1</value>
-  <description>
-      The number of virtual cores required for each map task.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.reduce.cpu.vcores</name>
-  <value>1</value>
-  <description>
-      The number of virtual cores required for each reduce task.
   </description>
 </property>
 
@@ -1061,6 +1097,12 @@
     <value></value>
     <description> Tags for the job that will be passed to YARN at submission
       time. Queries to YARN for applications can filter on these tags.
+      If these tags are intended to be used with The YARN Timeline Service v.2,
+      prefix them with the appropriate tag names for flow name, flow version and
+      flow run id. Example:
+      timeline_flow_name_tag:foo,
+      timeline_flow_version_tag:3df8b0d6100530080d2e0decf9e528e57c42a90a,
+      timeline_flow_run_id_tag:1465246348599
     </description>
   </property>
 
@@ -1272,9 +1314,9 @@
 </property>
 
 <property>
- <name>mapreduce.job.counters.limit</name>
+ <name>mapreduce.job.counters.max</name>
   <value>120</value>
-  <description>Limit on the number of user counters allowed per job.
+  <description>The max number of user counters allowed per job.
   </description>
 </property>
 
@@ -1375,20 +1417,32 @@
   <name>yarn.app.mapreduce.am.env</name>
   <value></value>
   <description>User added environment variables for the MR App Master
-  processes. Example :
+  processes, specified as a comma separated list.
+  Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit tasktracker's B env variable.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form yarn.app.mapreduce.am.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.admin.user.env</name>
   <value></value>
-  <description> Environment variables for the MR App Master
-  processes for admin purposes. These values are set first and can be
-  overridden by the user env (yarn.app.mapreduce.am.env) Example :
+  <description>Environment variables for the MR App Master
+  processes for admin purposes, specified as a comma separated list
+  These values are set first and can be overridden by the user env
+  (yarn.app.mapreduce.am.env). Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit app master's B env variable.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form yarn.app.mapreduce.am.admin.user.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 
@@ -1444,6 +1498,27 @@
   <description>Range of ports that the MapReduce AM can use for its webapp when binding.
     Leave blank if you want all possible ports.
     For example 50000-50050,50100-50200</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.webapp.https.enabled</name>
+  <value>false</value>
+  <description>True if the MR AM should use HTTPS for its webapp.  If
+    yarn.resourcemanager.application-https.policy is set to LENIENT or STRICT,
+    the MR AM will automatically use the keystore provided by YARN with a
+    certificate for the MR AM webapp, unless provided by the user.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.webapp.https.client.auth</name>
+  <value>false</value>
+  <description>True if the MR AM webapp should require client HTTPS
+    authentication (i.e. the proxy server (RM) should present a certificate to
+    the MR AM webapp). If yarn.resourcemanager.application-https.policy is set
+    to LENIENT or STRICT, the MR AM will automatically use the truststore
+    provided by YARN with the RMs certificate, unless provided by the user.
+  </description>
 </property>
 
 <property>
@@ -1728,6 +1803,24 @@
   <name>mapreduce.jobhistory.intermediate-done-dir</name>
   <value>${yarn.app.mapreduce.am.staging-dir}/history/done_intermediate</value>
   <description></description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.intermediate-user-done-dir.permissions</name>
+  <value>770</value>
+  <description>The permissions of the user directories in
+  ${mapreduce.jobhistory.intermediate-done-dir}. The user and the group
+  permission must be 7, this is enforced.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.always-scan-user-dir</name>
+  <value>false</value>
+  <description>Some Cloud FileSystems do not currently update the
+  modification time of directories. To support these filesystems, this
+  configuration value should be set to 'true'.
+  </description>
 </property>
 
 <property>

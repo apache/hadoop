@@ -1,0 +1,212 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdds.protocol.proto";
+option java_outer_classname = "ScmBlockLocationProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdds;
+
+import "hdds.proto";
+
+
+// SCM Block protocol
+
+enum Type {
+  AllocateScmBlock   = 11;
+  DeleteScmKeyBlocks = 12;
+  GetScmInfo         = 13;
+  SortDatanodes      = 14;
+}
+
+message SCMBlockLocationRequest {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  optional UserInfo userInfo = 3;
+
+  optional AllocateScmBlockRequestProto       allocateScmBlockRequest   = 11;
+  optional DeleteScmKeyBlocksRequestProto     deleteScmKeyBlocksRequest = 12;
+  optional hadoop.hdds.GetScmInfoRequestProto getScmInfoRequest         = 13;
+  optional SortDatanodesRequestProto          sortDatanodesRequest      = 14;
+}
+
+message SCMBlockLocationResponse {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  optional bool success = 3 [default=true];
+
+  optional string message = 4;
+
+  required Status status = 5;
+
+  optional string leaderOMNodeId = 6;
+
+  optional AllocateScmBlockResponseProto       allocateScmBlockResponse   = 11;
+  optional DeleteScmKeyBlocksResponseProto     deleteScmKeyBlocksResponse = 12;
+  optional hadoop.hdds.GetScmInfoResponseProto getScmInfoResponse         = 13;
+  optional SortDatanodesResponseProto          sortDatanodesResponse      = 14;
+}
+
+/**
+    User information which will be extracted during RPC context and used
+    during validating Acl.
+*/
+message UserInfo {
+  optional string userName = 1;
+  optional string remoteAddress = 3;
+}
+
+enum Status {
+  OK = 1;
+  FAILED_TO_LOAD_NODEPOOL = 2;
+  FAILED_TO_FIND_NODE_IN_POOL = 3;
+  FAILED_TO_FIND_HEALTHY_NODES = 4;
+  FAILED_TO_FIND_NODES_WITH_SPACE = 5;
+  FAILED_TO_FIND_SUITABLE_NODE = 6;
+  INVALID_CAPACITY = 7;
+  INVALID_BLOCK_SIZE = 8;
+  SAFE_MODE_EXCEPTION = 9;
+  FAILED_TO_LOAD_OPEN_CONTAINER = 10;
+  FAILED_TO_ALLOCATE_CONTAINER = 11;
+  FAILED_TO_CHANGE_CONTAINER_STATE = 12;
+  FAILED_TO_CHANGE_PIPELINE_STATE = 13;
+  CONTAINER_EXISTS = 14;
+  FAILED_TO_FIND_CONTAINER = 15;
+  FAILED_TO_FIND_CONTAINER_WITH_SPACE = 16;
+  BLOCK_EXISTS = 17;
+  FAILED_TO_FIND_BLOCK = 18;
+  IO_EXCEPTION = 19;
+  UNEXPECTED_CONTAINER_STATE = 20;
+  SCM_NOT_INITIALIZED = 21;
+  DUPLICATE_DATANODE = 22;
+  NO_SUCH_DATANODE = 23;
+  NO_REPLICA_FOUND = 24;
+  FAILED_TO_FIND_ACTIVE_PIPELINE = 25;
+  FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY = 26;
+  FAILED_TO_ALLOCATE_ENOUGH_BLOCKS = 27;
+  INTERNAL_ERROR = 29;
+}
+
+/**
+* Request send to SCM asking allocate block of specified size.
+*/
+message AllocateScmBlockRequestProto {
+  required uint64 size = 1;
+  required uint32 numBlocks = 2;
+  required ReplicationType type = 3;
+  required hadoop.hdds.ReplicationFactor factor = 4;
+  required string owner = 5;
+  optional ExcludeListProto excludeList = 7;
+}
+
+/**
+ * A delete key request sent by OM to SCM, it contains
+ * multiple number of keys (and their blocks).
+ */
+message DeleteScmKeyBlocksRequestProto {
+  repeated KeyBlocks keyBlocks = 1;
+}
+
+/**
+ * A object key and all its associated blocks.
+ * We need to encapsulate object key name plus the blocks in this potocol
+ * because SCM needs to response OM with the keys it has deleted.
+ * If the response only contains blocks, it will be very expensive for
+ * OM to figure out what keys have been deleted.
+ */
+message KeyBlocks {
+  required string key = 1;
+  repeated BlockID blocks = 2;
+}
+
+/**
+ * A delete key response from SCM to OM, it contains multiple child-results.
+ * Each child-result represents a key deletion result, only if all blocks of
+ * a key are successfully deleted, this key result is considered as succeed.
+ */
+message DeleteScmKeyBlocksResponseProto {
+  repeated DeleteKeyBlocksResultProto results = 1;
+}
+
+/**
+ * A key deletion result. It contains all the block deletion results.
+ */
+message DeleteKeyBlocksResultProto {
+  required string objectKey = 1;
+  repeated DeleteScmBlockResult blockResults = 2;
+}
+
+message DeleteScmBlockResult {
+  enum Result {
+    success = 1;
+    safeMode = 2;
+    errorNotFound = 3;
+    unknownFailure = 4;
+  }
+  required Result result = 1;
+  required BlockID blockID = 2;
+}
+
+message AllocateBlockResponse {
+  optional ContainerBlockID containerBlockID = 1;
+  optional hadoop.hdds.Pipeline pipeline = 2;
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message AllocateScmBlockResponseProto {
+  repeated AllocateBlockResponse blocks = 3;
+}
+
+/**
+ * Datanode sort request sent by OM to SCM, it contains
+ * multiple number of datanodes.
+ */
+message SortDatanodesRequestProto{
+  required string client = 1;
+  repeated string nodeNetworkName = 2;
+}
+
+message SortDatanodesResponseProto{
+  repeated DatanodeDetailsProto node = 1;
+}
+
+/**
+ * Protocol used from OzoneManager to StorageContainerManager.
+ * See request and response messages for details of the RPC calls.
+ */
+service ScmBlockLocationProtocolService {
+
+  rpc send(SCMBlockLocationRequest)
+      returns (SCMBlockLocationResponse);
+}

@@ -22,8 +22,8 @@ import com.google.common.base.Throwables;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.text.StrBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -89,7 +89,7 @@ public class PlanCommand extends Command {
    */
   @Override
   public void execute(CommandLine cmd) throws Exception {
-    StrBuilder result = new StrBuilder();
+    TextStringBuilder result = new TextStringBuilder();
     String outputLine = "";
     LOG.debug("Processing Plan Command.");
     Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.PLAN));
@@ -124,6 +124,14 @@ public class PlanCommand extends Command {
       throw new IllegalArgumentException("Unable to find the specified node. " +
           cmd.getOptionValue(DiskBalancerCLI.PLAN));
     }
+
+    try (FSDataOutputStream beforeStream = create(String.format(
+        DiskBalancerCLI.BEFORE_TEMPLATE,
+        cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
+      beforeStream.write(getCluster().toJson()
+          .getBytes(StandardCharsets.UTF_8));
+    }
+
     this.thresholdPercentage = getThresholdPercentage(cmd);
 
     LOG.debug("threshold Percentage is {}", this.thresholdPercentage);
@@ -136,14 +144,6 @@ public class PlanCommand extends Command {
 
     if (plans.size() > 0) {
       plan = plans.get(0);
-    }
-
-
-    try (FSDataOutputStream beforeStream = create(String.format(
-        DiskBalancerCLI.BEFORE_TEMPLATE,
-        cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
-      beforeStream.write(getCluster().toJson()
-          .getBytes(StandardCharsets.UTF_8));
     }
 
     try {
@@ -176,8 +176,7 @@ public class PlanCommand extends Command {
       final String errMsg =
           "Errors while recording the output of plan command.";
       LOG.error(errMsg, e);
-      result.appendln(errMsg);
-      result.appendln(Throwables.getStackTraceAsString(e));
+      result.appendln(errMsg).appendln(Throwables.getStackTraceAsString(e));
     }
 
     getPrintStream().print(result.toString());

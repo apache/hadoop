@@ -25,15 +25,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CapacitySchedulerHealthInfo {
 
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class OperationInformation {
+    String operation;
     String nodeId;
     String containerId;
     String queue;
@@ -41,7 +40,9 @@ public class CapacitySchedulerHealthInfo {
     OperationInformation() {
     }
 
-    OperationInformation(SchedulerHealth.DetailedInformation di) {
+    OperationInformation(String operation,
+        SchedulerHealth.DetailedInformation di) {
+      this.operation = operation;
       this.nodeId = di.getNodeId() == null ? "N/A" : di.getNodeId().toString();
       this.containerId =
           di.getContainerId() == null ? "N/A" : di.getContainerId().toString();
@@ -58,6 +59,10 @@ public class CapacitySchedulerHealthInfo {
 
     public String getQueue() {
       return queue;
+    }
+
+    public String getOperation() {
+      return operation;
     }
   }
 
@@ -90,7 +95,7 @@ public class CapacitySchedulerHealthInfo {
   }
 
   long lastrun;
-  Map<String, OperationInformation> operationsInfo;
+  List<OperationInformation> operationsInfo;
   List<LastRunDetails> lastRunDetails;
 
   CapacitySchedulerHealthInfo() {
@@ -100,18 +105,22 @@ public class CapacitySchedulerHealthInfo {
     return lastrun;
   }
 
+  public List<OperationInformation> getOperationsInfo() {
+    return operationsInfo;
+  }
+
   CapacitySchedulerHealthInfo(CapacityScheduler cs) {
     SchedulerHealth ht = cs.getSchedulerHealth();
     lastrun = ht.getLastSchedulerRunTime();
-    operationsInfo = new HashMap<>();
-    operationsInfo.put("last-allocation",
-      new OperationInformation(ht.getLastAllocationDetails()));
-    operationsInfo.put("last-release",
-      new OperationInformation(ht.getLastReleaseDetails()));
-    operationsInfo.put("last-preemption",
-      new OperationInformation(ht.getLastPreemptionDetails()));
-    operationsInfo.put("last-reservation",
-      new OperationInformation(ht.getLastReservationDetails()));
+    operationsInfo = new ArrayList<>();
+    operationsInfo.add(new OperationInformation("last-allocation",
+        ht.getLastAllocationDetails()));
+    operationsInfo.add(
+        new OperationInformation("last-release", ht.getLastReleaseDetails()));
+    operationsInfo.add(new OperationInformation("last-preemption",
+        ht.getLastPreemptionDetails()));
+    operationsInfo.add(new OperationInformation("last-reservation",
+        ht.getLastReservationDetails()));
 
     lastRunDetails = new ArrayList<>();
     lastRunDetails.add(new LastRunDetails("releases", ht.getReleaseCount(), ht

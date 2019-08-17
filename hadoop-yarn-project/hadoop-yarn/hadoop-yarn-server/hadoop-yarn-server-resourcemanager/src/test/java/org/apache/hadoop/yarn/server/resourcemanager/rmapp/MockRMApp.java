@@ -57,6 +57,7 @@ public class MockRMApp implements RMApp {
   String name = MockApps.newAppName();
   String queue = MockApps.newQueue();
   long start = System.currentTimeMillis() - (int) (Math.random() * DT);
+  private long launch = start;
   long submit = start - (int) (Math.random() * DT);
   long finish = 0;
   RMAppState state = RMAppState.NEW;
@@ -68,6 +69,9 @@ public class MockRMApp implements RMApp {
   RMAppAttempt attempt;
   int maxAppAttempts = 1;
   List<ResourceRequest> amReqs;
+  private Set<String> applicationTags = null;
+  private boolean logAggregationEnabled;
+  private boolean logAggregationFinished;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
@@ -80,6 +84,12 @@ public class MockRMApp implements RMApp {
   public MockRMApp(int newid, long time, RMAppState newState, String userName) {
     this(newid, time, newState);
     user = userName;
+  }
+
+  public MockRMApp(int newid, long time, RMAppState newState,
+      String userName, Set<String> appTags) {
+    this(newid, time, newState, userName);
+    this.applicationTags = appTags;
   }
 
   public MockRMApp(int newid, long time, RMAppState newState, String userName, String diag) {
@@ -187,6 +197,11 @@ public class MockRMApp implements RMApp {
     return submit;
   }
 
+  @Override
+  public long getLaunchTime() {
+    return launch;
+  }
+
   public void setStartTime(long time) {
     this.start = time;
   }
@@ -223,6 +238,24 @@ public class MockRMApp implements RMApp {
     return maxAppAttempts;
   }
 
+  @Override
+  public boolean isLogAggregationEnabled() {
+    return logAggregationEnabled;
+  }
+
+  @Override
+  public boolean isLogAggregationFinished() {
+    return logAggregationFinished;
+  }
+
+  public void setLogAggregationEnabled(boolean enabled) {
+    this.logAggregationEnabled = enabled;
+  }
+
+  public void setLogAggregationFinished(boolean finished) {
+    this.logAggregationFinished = finished;
+  }
+
   public void setNumMaxRetries(int maxAppAttempts) {
     this.maxAppAttempts = maxAppAttempts;
   }
@@ -248,7 +281,7 @@ public class MockRMApp implements RMApp {
 
   @Override
   public Set<String> getApplicationTags() {
-    return null;
+    return this.applicationTags;
   }
 
   @Override

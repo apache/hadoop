@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
@@ -49,6 +50,20 @@ public interface TimelineWriter extends Service {
    */
   TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineEntities data, UserGroupInformation callerUgi) throws IOException;
+
+  /**
+   * Stores {@link TimelineDomain} object to the timeline
+   * store. Any errors occurring for individual write request objects will be
+   * reported in the response.
+   *
+   * @param context a {@link TimelineCollectorContext}
+   * @param domain a {@link TimelineDomain} object.
+   * @return a {@link TimelineWriteResponse} object.
+   * @throws IOException if there is any exception encountered while storing or
+   *           writing entities to the back end storage.
+   */
+  TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineDomain domain) throws IOException;
 
   /**
    * Aggregates the entity information to the timeline store based on which

@@ -57,6 +57,7 @@ class InvalidateBlocks {
   private final LongAdder numBlocks = new LongAdder();
   private final LongAdder numECBlocks = new LongAdder();
   private final int blockInvalidateLimit;
+  private final BlockIdManager blockIdManager;
 
   /**
    * The period of pending time for block invalidation since the NameNode
@@ -66,9 +67,11 @@ class InvalidateBlocks {
   /** the startup time */
   private final long startupTime = Time.monotonicNow();
 
-  InvalidateBlocks(final int blockInvalidateLimit, long pendingPeriodInMs) {
+  InvalidateBlocks(final int blockInvalidateLimit, long pendingPeriodInMs,
+                   final BlockIdManager blockIdManager) {
     this.blockInvalidateLimit = blockInvalidateLimit;
     this.pendingPeriodInMs = pendingPeriodInMs;
+    this.blockIdManager = blockIdManager;
     printBlockDeletionTime(BlockManager.LOG);
   }
 
@@ -124,7 +127,7 @@ class InvalidateBlocks {
 
   private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn,
       final Block block) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+    if (blockIdManager.isStripedBlock(block)) {
       return getECBlocksSet(dn);
     } else {
       return getBlocksSet(dn);
@@ -133,7 +136,7 @@ class InvalidateBlocks {
 
   private void putBlocksSet(final DatanodeInfo dn, final Block block,
       final LightWeightHashSet set) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+    if (blockIdManager.isStripedBlock(block)) {
       assert getECBlocksSet(dn) == null;
       nodeToECBlocks.put(dn, set);
     } else {
@@ -178,7 +181,7 @@ class InvalidateBlocks {
       putBlocksSet(datanode, block, set);
     }
     if (set.add(block)) {
-      if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      if (blockIdManager.isStripedBlock(block)) {
         numECBlocks.increment();
       } else {
         numBlocks.increment();
@@ -206,7 +209,7 @@ class InvalidateBlocks {
   synchronized void remove(final DatanodeInfo dn, final Block block) {
     final LightWeightHashSet<Block> v = getBlocksSet(dn, block);
     if (v != null && v.remove(block)) {
-      if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      if (blockIdManager.isStripedBlock(block)) {
         numECBlocks.decrement();
       } else {
         numBlocks.decrement();

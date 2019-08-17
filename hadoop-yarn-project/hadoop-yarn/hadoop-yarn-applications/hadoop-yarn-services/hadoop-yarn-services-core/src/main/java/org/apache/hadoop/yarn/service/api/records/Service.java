@@ -43,12 +43,11 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "An Service resource has the following attributes.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({ "name", "state", "resource", "number_of_containers",
-    "lifetime", "containers" })
+@JsonPropertyOrder({ "name", "version", "description", "state", "resource",
+    "number_of_containers", "lifetime", "containers" })
 public class Service extends BaseResource {
   private static final long serialVersionUID = -4491694636566094885L;
 
@@ -63,9 +62,6 @@ public class Service extends BaseResource {
   @XmlElement(name = "number_of_running_containers")
   private Long numberOfRunningContainers = null;
   private Long lifetime = null;
-  @JsonProperty("placement_policy")
-  @XmlElement(name = "placement_policy")
-  private PlacementPolicy placementPolicy = null;
   private List<Component> components = new ArrayList<>();
   private Configuration configuration = new Configuration();
   private ServiceState state = null;
@@ -74,6 +70,10 @@ public class Service extends BaseResource {
   @JsonProperty("kerberos_principal")
   @XmlElement(name = "kerberos_principal")
   private KerberosPrincipal kerberosPrincipal = new KerberosPrincipal();
+  private String version = null;
+  private String description = null;
+  private String dockerClientConfig = null;
+  private List<String> dependencies = new ArrayList<String>();
 
   /**
    * A unique service name.
@@ -109,6 +109,43 @@ public class Service extends BaseResource {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  @ApiModelProperty(example = "null", required = true,
+      value = "Version of the service.")
+  @JsonProperty("version")
+  public String getVersion() {
+    return version;
+  }
+
+  public void setVersion(String version) {
+    this.version = version;
+  }
+
+  /**
+   * Version of the service.
+   */
+  public Service version(String version) {
+    this.version = version;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "Description of the service.")
+  @JsonProperty("description")
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  /**
+   * Description of the service.
+   */
+  public Service description(String description) {
+    this.description = description;
+    return this;
   }
 
   /**
@@ -207,28 +244,6 @@ public class Service extends BaseResource {
 
   public void setLifetime(Long lifetime) {
     this.lifetime = lifetime;
-  }
-
-  /**
-   * Advanced scheduling and placement policies (optional). If not specified, it
-   * defaults to the default placement policy of the service owner. The design of
-   * placement policies are in the works. It is not very clear at this point,
-   * how policies in conjunction with labels be exposed to service owners.
-   * This is a placeholder for now. The advanced structure of this attribute
-   * will be determined by YARN-4902.
-   **/
-  public Service placementPolicy(PlacementPolicy placementPolicy) {
-    this.placementPolicy = placementPolicy;
-    return this;
-  }
-
-  @ApiModelProperty(example = "null", value = "Advanced scheduling and placement policies (optional). If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.")
-  public PlacementPolicy getPlacementPolicy() {
-    return placementPolicy;
-  }
-
-  public void setPlacementPolicy(PlacementPolicy placementPolicy) {
-    this.placementPolicy = placementPolicy;
   }
 
   /**
@@ -338,6 +353,18 @@ public class Service extends BaseResource {
     this.queue = queue;
   }
 
+  @ApiModelProperty(example = "null", value = "A list of dependent services.")
+  @XmlElement(name = "dependencies")
+  @JsonProperty("dependencies")
+  public List<String> getDependencies() {
+    return dependencies;
+  }
+
+  public void setDependencies(List<String>
+      dependencies) {
+    this.dependencies = dependencies;
+  }
+
   public Service kerberosPrincipal(KerberosPrincipal kerberosPrincipal) {
     this.kerberosPrincipal = kerberosPrincipal;
     return this;
@@ -354,6 +381,27 @@ public class Service extends BaseResource {
 
   public void setKerberosPrincipal(KerberosPrincipal kerberosPrincipal) {
     this.kerberosPrincipal = kerberosPrincipal;
+  }
+
+  @JsonProperty("docker_client_config")
+  @XmlElement(name = "docker_client_config")
+  @SuppressWarnings("checkstyle:hiddenfield")
+  public Service dockerClientConfig(String dockerClientConfig) {
+    this.dockerClientConfig = dockerClientConfig;
+    return this;
+  }
+
+  /**
+   * The Docker client config for the service.
+   * @return dockerClientConfig
+   */
+  @ApiModelProperty(value = "The Docker client config for the service")
+  public String getDockerClientConfig() {
+    return dockerClientConfig;
+  }
+
+  public void setDockerClientConfig(String dockerClientConfig) {
+    this.dockerClientConfig = dockerClientConfig;
   }
 
   @Override
@@ -376,30 +424,38 @@ public class Service extends BaseResource {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Service {\n");
+    sb.append("class Service {\n")
 
-    sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    launchTime: ").append(toIndentedString(launchTime))
-        .append("\n");
-    sb.append("    numberOfRunningContainers: ")
-        .append(toIndentedString(numberOfRunningContainers)).append("\n");
-    sb.append("    lifetime: ").append(toIndentedString(lifetime)).append("\n");
-    sb.append("    placementPolicy: ").append(toIndentedString(placementPolicy))
-        .append("\n");
-    sb.append("    components: ").append(toIndentedString(components))
-        .append("\n");
-    sb.append("    configuration: ").append(toIndentedString(configuration))
-        .append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    quicklinks: ").append(toIndentedString(quicklinks))
-        .append("\n");
-    sb.append("    queue: ").append(toIndentedString(queue)).append("\n");
-    sb.append("    kerberosPrincipal: ")
-        .append(toIndentedString(kerberosPrincipal)).append("\n");
-    sb.append("}");
+        .append("    name: ").append(toIndentedString(name)).append("\n")
+        .append("    id: ").append(toIndentedString(id)).append("\n")
+        .append("    version: ").append(toIndentedString(version)).append("\n")
+        .append("    description: ").append(toIndentedString(description))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("    resource: ").append(toIndentedString(resource))
+        .append("\n")
+        .append("    launchTime: ").append(toIndentedString(launchTime))
+        .append("\n")
+        .append("    numberOfRunningContainers: ")
+        .append(toIndentedString(numberOfRunningContainers)).append("\n")
+        .append("    lifetime: ").append(toIndentedString(lifetime))
+        .append("\n")
+        .append("    components: ").append(toIndentedString(components))
+        .append("\n")
+        .append("    configuration: ").append(toIndentedString(configuration))
+        .append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    quicklinks: ").append(toIndentedString(quicklinks))
+        .append("\n")
+        .append("    queue: ").append(toIndentedString(queue)).append("\n")
+        .append("    kerberosPrincipal: ")
+        .append(toIndentedString(kerberosPrincipal)).append("\n")
+        .append("    dockerClientConfig: ")
+        .append(toIndentedString(dockerClientConfig)).append("\n")
+        .append("    dependencies: ")
+        .append(toIndentedString(dependencies)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

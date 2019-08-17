@@ -86,6 +86,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
 
   public PrivilegedEntity getPrivilegedEntity();
 
+  Resource getMaximumAllocation();
+
+  Resource getMinimumAllocation();
+
   /**
    * Get the configured <em>capacity</em> of the queue.
    * @return configured queue capacity
@@ -171,6 +175,15 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName);
+
+  /**
+   * Submit an application attempt to the queue.
+   * @param application application whose attempt is being submitted
+   * @param userName user who submitted the application attempt
+   * @param isMoveApp is application being moved across the queue
+   */
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp);
 
   /**
    * An application submitted to this queue has finished.
@@ -430,4 +443,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective max queue capacity
    */
   Resource getEffectiveMaxCapacityDown(String label, Resource factor);
+
+  /**
+   * Get Multi Node scheduling policy name.
+   * @return policy name
+   */
+  String getMultiNodeSortingPolicyName();
 }

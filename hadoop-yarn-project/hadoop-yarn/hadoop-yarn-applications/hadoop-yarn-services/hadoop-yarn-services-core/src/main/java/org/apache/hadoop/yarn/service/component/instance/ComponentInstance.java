@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,13 +42,23 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
+import org.apache.hadoop.yarn.service.api.records.LocalizationStatus;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.component.ComponentEvent;
+import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
+import org.apache.hadoop.yarn.service.monitor.probe.DefaultProbe;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
+import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -53,14 +68,25 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import static org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes.*;
+
+import static org.apache.hadoop.yarn.api.records.ContainerExitStatus
+    .KILLED_AFTER_APP_COMPLETION;
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.KILLED_BY_APPMASTER;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState.*;
@@ -69,8 +95,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     Comparable<ComponentInstance> {
   private static final Logger LOG =
       LoggerFactory.getLogger(ComponentInstance.class);
+  private static final String FAILED_BEFORE_LAUNCH_DIAG =
+      "failed before launch";
+  private static final String UPGRADE_FAILED = "upgrade failed";
 
-  private  StateMachine<ComponentInstanceState, ComponentInstanceEventType,
+  private StateMachine<ComponentInstanceState, ComponentInstanceEventType,
       ComponentInstanceEvent> stateMachine;
   private Component component;
   private final ReadLock readLock;
@@ -90,9 +119,15 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   private long containerStartedTime = 0;
   // This container object is used for rest API query
   private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
+  private String serviceVersion;
+  private AtomicBoolean upgradeInProgress = new AtomicBoolean(false);
+  private boolean pendingCancelUpgrade = false;
+  private ProviderService.ResolvedLaunchParams resolvedParams;
+  private ScheduledFuture lclizationRetrieverFuture;
 
   private static final StateMachineFactory<ComponentInstance,
-      ComponentInstanceState, ComponentInstanceEventType, ComponentInstanceEvent>
+      ComponentInstanceState, ComponentInstanceEventType,
+      ComponentInstanceEvent>
       stateMachineFactory =
       new StateMachineFactory<ComponentInstance, ComponentInstanceState,
           ComponentInstanceEventType, ComponentInstanceEvent>(INIT)
@@ -108,15 +143,38 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       .addTransition(STARTED, INIT, STOP,
           new ContainerStoppedTransition())
       .addTransition(STARTED, READY, BECOME_READY,
-          new ContainerBecomeReadyTransition())
+          new ContainerBecomeReadyTransition(false))
 
       // FROM READY
       .addTransition(READY, STARTED, BECOME_NOT_READY,
           new ContainerBecomeNotReadyTransition())
       .addTransition(READY, INIT, STOP, new ContainerStoppedTransition())
+      .addTransition(READY, UPGRADING, UPGRADE, new UpgradeTransition())
+      .addTransition(READY, EnumSet.of(READY, CANCEL_UPGRADING), CANCEL_UPGRADE,
+          new CancelUpgradeTransition())
+
+      // FROM UPGRADING
+      .addTransition(UPGRADING, EnumSet.of(READY, CANCEL_UPGRADING),
+          CANCEL_UPGRADE, new CancelUpgradeTransition())
+      .addTransition(UPGRADING, EnumSet.of(REINITIALIZED), START,
+          new StartedAfterUpgradeTransition())
+      .addTransition(UPGRADING, UPGRADING, STOP,
+          new StoppedAfterUpgradeTransition())
+
+      // FROM CANCEL_UPGRADING
+      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING,
+          REINITIALIZED), START, new StartedAfterUpgradeTransition())
+      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, INIT),
+          STOP, new StoppedAfterCancelUpgradeTransition())
+
+      // FROM REINITIALIZED
+      .addTransition(REINITIALIZED, CANCEL_UPGRADING, CANCEL_UPGRADE,
+          new CancelledAfterReinitTransition())
+      .addTransition(REINITIALIZED, READY, BECOME_READY,
+           new ContainerBecomeReadyTransition(true))
+      .addTransition(REINITIALIZED, REINITIALIZED, STOP,
+          new StoppedAfterUpgradeTransition())
       .installTopology();
-
-
 
   public ComponentInstance(Component component,
       ComponentInstanceId compInstanceId) {
@@ -142,11 +200,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       // Query container status for ip and host
-      compInstance.containerStatusFuture =
-          compInstance.scheduler.executorService.scheduleAtFixedRate(
-              new ContainerStatusRetriever(compInstance.scheduler,
-                  event.getContainerId(), compInstance), 0, 1,
-              TimeUnit.SECONDS);
+      compInstance.initializeStatusRetriever(event, 0);
+      compInstance.initializeLocalizationStatusRetriever(
+          event.getContainerId());
+
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -171,6 +228,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       compInstance.getCompSpec().addContainer(container);
       compInstance.containerStartedTime = containerStartTime;
       compInstance.component.incRunningContainers();
+      compInstance.serviceVersion = compInstance.scheduler.getApp()
+          .getVersion();
 
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
@@ -180,15 +239,82 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   private static class ContainerBecomeReadyTransition extends BaseTransition {
+    private final boolean isReinitialized;
+
+    ContainerBecomeReadyTransition(boolean isReinitialized) {
+      this.isReinitialized = isReinitialized;
+    }
+
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.containerSpec.setState(ContainerState.READY);
-      compInstance.component.incContainersReady();
-      if (compInstance.timelineServiceEnabled) {
-        compInstance.serviceTimelinePublisher
-            .componentInstanceBecomeReady(compInstance.containerSpec);
+      compInstance.setContainerState(ContainerState.READY);
+      if (!isReinitialized) {
+        compInstance.component.incContainersReady(true);
+      } else {
+        compInstance.component.incContainersReady(false);
+        ComponentEvent checkState = new ComponentEvent(
+            compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
+        compInstance.scheduler.getDispatcher().getEventHandler().handle(
+            checkState);
       }
+      compInstance.postContainerReady();
+    }
+  }
+
+  private static class StartedAfterUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+
+      if (instance.pendingCancelUpgrade) {
+        // cancellation of upgrade was triggered before the upgrade was
+        // finished.
+        LOG.info("{} received started but cancellation pending",
+            event.getContainerId());
+        instance.upgradeInProgress.set(true);
+        instance.cancelUpgrade();
+        instance.pendingCancelUpgrade = false;
+        return instance.getState();
+      }
+
+      instance.upgradeInProgress.set(false);
+      instance.setContainerState(ContainerState.RUNNING_BUT_UNREADY);
+      if (instance.component.getProbe() != null &&
+          instance.component.getProbe() instanceof DefaultProbe) {
+        instance.initializeStatusRetriever(event, 30);
+      } else {
+        instance.initializeStatusRetriever(event, 0);
+      }
+      instance.initializeLocalizationStatusRetriever(event.getContainerId());
+
+      Component.UpgradeStatus status = instance.getState().equals(UPGRADING) ?
+          instance.component.getUpgradeStatus() :
+          instance.component.getCancelUpgradeStatus();
+      status.decContainersThatNeedUpgrade();
+
+      instance.serviceVersion = status.getTargetVersion();
+      return ComponentInstanceState.REINITIALIZED;
+    }
+  }
+
+  private void postContainerReady() {
+    if (timelineServiceEnabled) {
+      serviceTimelinePublisher.componentInstanceBecomeReady(containerSpec);
+    }
+    try {
+      List<org.apache.hadoop.yarn.api.records.LocalizationStatus>
+          statusesFromNM = scheduler.getNmClient().getClient()
+          .getLocalizationStatuses(container.getId(), container.getNodeId());
+      if (statusesFromNM != null && !statusesFromNM.isEmpty()) {
+        updateLocalizationStatuses(statusesFromNM);
+      }
+    } catch (YarnException | IOException e) {
+      LOG.warn("{} failure getting localization statuses", container.getId(),
+          e);
     }
   }
 
@@ -196,9 +322,94 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
-      compInstance.component.decContainersReady();
+      compInstance.setContainerState(ContainerState.RUNNING_BUT_UNREADY);
+      compInstance.component.decContainersReady(true);
     }
+  }
+
+  @VisibleForTesting
+  static void handleComponentInstanceRelaunch(ComponentInstance compInstance,
+      ComponentInstanceEvent event, boolean failureBeforeLaunch,
+      String containerDiag) {
+    Component comp = compInstance.getComponent();
+
+    // Do we need to relaunch the service?
+    boolean hasContainerFailed = failureBeforeLaunch || hasContainerFailed(
+        event.getStatus());
+
+    ComponentRestartPolicy restartPolicy = comp.getRestartPolicyHandler();
+    ContainerState containerState =
+        hasContainerFailed ? ContainerState.FAILED : ContainerState.SUCCEEDED;
+
+    if (compInstance.getContainerSpec() != null) {
+      compInstance.getContainerSpec().setState(containerState);
+    }
+
+    if (restartPolicy.shouldRelaunchInstance(compInstance, event.getStatus())) {
+      // re-ask the failed container.
+      comp.requestContainers(1);
+      comp.reInsertPendingInstance(compInstance);
+
+      StringBuilder builder = new StringBuilder();
+      builder.append(compInstance.getCompInstanceId()).append(": ")
+          .append(event.getContainerId()).append(
+              " completed. Reinsert back to pending list and requested ")
+          .append("a new container.").append(System.lineSeparator())
+          .append(" exitStatus=").append(
+              failureBeforeLaunch || event.getStatus() == null ? null :
+                  event.getStatus().getExitStatus())
+          .append(", diagnostics=")
+          .append(failureBeforeLaunch ?
+              FAILED_BEFORE_LAUNCH_DIAG :
+              (event.getStatus() != null ? event.getStatus().getDiagnostics() :
+                  UPGRADE_FAILED));
+
+      if (event.getStatus() != null && event.getStatus().getExitStatus() != 0) {
+        LOG.error(builder.toString());
+      } else{
+        LOG.info(builder.toString());
+      }
+
+      if (compInstance.timelineServiceEnabled) {
+        // record in ATS
+        LOG.info("Publishing component instance status {} {} ",
+            event.getContainerId(), containerState);
+        int exitStatus = failureBeforeLaunch || event.getStatus() == null ?
+            ContainerExitStatus.INVALID : event.getStatus().getExitStatus();
+        compInstance.serviceTimelinePublisher.componentInstanceFinished(
+            event.getContainerId(), exitStatus,
+            containerState, containerDiag);
+      }
+
+    } else{
+      // When no relaunch, update component's #succeeded/#failed
+      // instances.
+      if (hasContainerFailed) {
+        comp.markAsFailed(compInstance);
+      } else{
+        comp.markAsSucceeded(compInstance);
+      }
+
+      if (compInstance.timelineServiceEnabled) {
+        // record in ATS
+        int exitStatus = failureBeforeLaunch || event.getStatus() == null ?
+            ContainerExitStatus.INVALID : event.getStatus().getExitStatus();
+        compInstance.serviceTimelinePublisher.componentInstanceFinished(
+            event.getContainerId(), exitStatus,
+            containerState, containerDiag);
+      }
+
+      LOG.info(compInstance.getCompInstanceId() + (!hasContainerFailed ?
+          " succeeded" :
+          " failed") + " without retry, exitStatus=" + event.getStatus());
+      comp.getScheduler().terminateServiceIfNeeded(comp);
+    }
+  }
+
+  public static boolean hasContainerFailed(ContainerStatus containerStatus) {
+    //Mark conainer as failed if we cant get its exit status i.e null?
+    return containerStatus == null || containerStatus
+        .getExitStatus() != ContainerExitStatus.SUCCESS;
   }
 
   private static class ContainerStoppedTransition extends  BaseTransition {
@@ -215,74 +426,273 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      // re-ask the failed container.
+
       Component comp = compInstance.component;
-      comp.requestContainers(1);
-      String containerDiag =
-          compInstance.getCompInstanceId() + ": " + event.getStatus()
-              .getDiagnostics();
+      ContainerStatus status = event.getStatus();
+      // status is not available when upgrade fails
+      String containerDiag = compInstance.getCompInstanceId() + ": " + (
+          failedBeforeLaunching ? FAILED_BEFORE_LAUNCH_DIAG :
+              (status != null ? status.getDiagnostics() : UPGRADE_FAILED));
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
       compInstance.cancelContainerStatusRetriever();
+      compInstance.cancelLclRetriever();
 
       if (compInstance.getState().equals(READY)) {
-        compInstance.component.decContainersReady();
+        compInstance.component.decContainersReady(true);
       }
       compInstance.component.decRunningContainers();
-      boolean shouldExit = false;
-      // check if it exceeds the failure threshold
-      if (comp.currentContainerFailure.get() > comp.maxContainerFailurePerComp) {
+      // Should we fail (terminate) the service?
+      boolean shouldFailService = false;
+
+      final ServiceScheduler scheduler = comp.getScheduler();
+      scheduler.getAmRMClient().releaseAssignedContainer(
+          event.getContainerId());
+
+      // Check if it exceeds the failure threshold, but only if health threshold
+      // monitor is not enabled
+      if (!comp.isHealthThresholdMonitorEnabled()
+          && comp.currentContainerFailure.get()
+          > comp.maxContainerFailurePerComp) {
         String exitDiag = MessageFormat.format(
-            "[COMPONENT {0}]: Failed {1} times, exceeded the limit - {2}. Shutting down now... "
-                + System.lineSeparator(),
-            comp.getName(), comp.currentContainerFailure.get(), comp.maxContainerFailurePerComp);
+            "[COMPONENT {0}]: Failed {1} times, exceeded the limit - {2}. "
+                + "Shutting down now... "
+                + System.lineSeparator(), comp.getName(),
+            comp.currentContainerFailure.get(),
+            comp.maxContainerFailurePerComp);
         compInstance.diagnostics.append(exitDiag);
         // append to global diagnostics that will be reported to RM.
-        comp.getScheduler().getDiagnostics().append(containerDiag);
-        comp.getScheduler().getDiagnostics().append(exitDiag);
+        scheduler.getDiagnostics().append(containerDiag);
+        scheduler.getDiagnostics().append(exitDiag);
         LOG.warn(exitDiag);
-        shouldExit = true;
+
+        compInstance.getContainerSpec().setState(ContainerState.FAILED);
+        comp.getComponentSpec().setState(ComponentState.FAILED);
+        comp.getScheduler().getApp().setState(ServiceState.FAILED);
+
+        if (compInstance.timelineServiceEnabled) {
+          // record in ATS
+          compInstance.scheduler.getServiceTimelinePublisher()
+              .componentInstanceFinished(compInstance.getContainer().getId(),
+                  failedBeforeLaunching || status == null ? -1 :
+                      status.getExitStatus(),
+                  ContainerState.FAILED, containerDiag);
+
+          // mark other component-instances/containers as STOPPED
+          for (ContainerId containerId : scheduler.getLiveInstances()
+              .keySet()) {
+            if (!compInstance.container.getId().equals(containerId)
+                && !isFinalState(compInstance.getContainerSpec().getState())) {
+              compInstance.getContainerSpec().setState(ContainerState.STOPPED);
+              compInstance.scheduler.getServiceTimelinePublisher()
+                  .componentInstanceFinished(containerId,
+                      KILLED_AFTER_APP_COMPLETION, ContainerState.STOPPED,
+                      scheduler.getDiagnostics().toString());
+            }
+          }
+
+          compInstance.scheduler.getServiceTimelinePublisher()
+              .componentFinished(comp.getComponentSpec(), ComponentState.FAILED,
+                  scheduler.getSystemClock().getTime());
+
+          compInstance.scheduler.getServiceTimelinePublisher()
+              .serviceAttemptUnregistered(comp.getContext(),
+                  FinalApplicationStatus.FAILED,
+                  scheduler.getDiagnostics().toString());
+        }
+
+        shouldFailService = true;
       }
 
       if (!failedBeforeLaunching) {
         // clean up registry
-        // If the container failed before launching, no need to cleanup registry,
+        // If the container failed before launching, no need to cleanup
+        // registry,
         // because it was not registered before.
-        // hdfs dir content will be overwritten when a new container gets started,
+        // hdfs dir content will be overwritten when a new container gets
+        // started,
         // so no need remove.
-        compInstance.scheduler.executorService
-            .submit(() -> compInstance.cleanupRegistry(event.getContainerId()));
-
-        if (compInstance.timelineServiceEnabled) {
-          // record in ATS
-          compInstance.serviceTimelinePublisher
-              .componentInstanceFinished(event.getContainerId(),
-                  event.getStatus().getExitStatus(), containerDiag);
-        }
-        compInstance.containerSpec.setState(ContainerState.STOPPED);
+        compInstance.scheduler.executorService.submit(
+            () -> compInstance.cleanupRegistry(event.getContainerId()));
       }
 
       // remove the failed ContainerId -> CompInstance mapping
-      comp.getScheduler().removeLiveCompInstance(event.getContainerId());
+      scheduler.removeLiveCompInstance(event.getContainerId());
 
-      comp.reInsertPendingInstance(compInstance);
+      // According to component restart policy, handle container restart
+      // or finish the service (if all components finished)
+      handleComponentInstanceRelaunch(compInstance, event,
+          failedBeforeLaunching, containerDiag);
 
-      LOG.info(compInstance.getCompInstanceId()
-              + ": {} completed. Reinsert back to pending list and requested " +
-              "a new container." + System.lineSeparator() +
-              " exitStatus={}, diagnostics={}.",
-          event.getContainerId(), event.getStatus().getExitStatus(),
-          event.getStatus().getDiagnostics());
-      if (shouldExit) {
-        // Sleep for 5 seconds in hope that the state can be recorded in ATS.
-        // in case there's a client polling the comp state, it can be notified.
-        try {
-          Thread.sleep(5000);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted on sleep while exiting.", e);
-        }
-        ExitUtil.terminate(-1);
+      if (shouldFailService) {
+        scheduler.getTerminationHandler().terminate(-1);
       }
     }
+  }
+
+  public static boolean isFinalState(ContainerState state) {
+    return ContainerState.FAILED.equals(state) || ContainerState.STOPPED
+        .equals(state) || ContainerState.SUCCEEDED.equals(state);
+  }
+
+  private static class StoppedAfterUpgradeTransition extends
+      BaseTransition {
+
+    @Override
+    public void transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      instance.component.getUpgradeStatus().decContainersThatNeedUpgrade();
+      instance.component.decRunningContainers();
+
+      final ServiceScheduler scheduler = instance.component.getScheduler();
+      scheduler.getAmRMClient().releaseAssignedContainer(
+          event.getContainerId());
+      instance.scheduler.executorService.submit(
+          () -> instance.cleanupRegistry(event.getContainerId()));
+      scheduler.removeLiveCompInstance(event.getContainerId());
+      instance.component.getUpgradeStatus().containerFailedUpgrade();
+      instance.setContainerState(ContainerState.FAILED_UPGRADE);
+      instance.upgradeInProgress.set(false);
+    }
+  }
+
+  private static class StoppedAfterCancelUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    private ContainerStoppedTransition stoppedTransition =
+        new ContainerStoppedTransition();
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.pendingCancelUpgrade) {
+        // cancellation of upgrade was triggered before the upgrade was
+        // finished.
+        LOG.info("{} received stopped but cancellation pending",
+            event.getContainerId());
+        instance.upgradeInProgress.set(true);
+        instance.cancelUpgrade();
+        instance.pendingCancelUpgrade = false;
+        return instance.getState();
+      }
+
+      // When upgrade is cancelled, and container re-init fails
+      instance.component.getCancelUpgradeStatus()
+          .decContainersThatNeedUpgrade();
+      instance.upgradeInProgress.set(false);
+      stoppedTransition.transition(instance, event);
+      return ComponentInstanceState.INIT;
+    }
+  }
+
+  private static class UpgradeTransition extends BaseTransition {
+
+    @Override
+    public void transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (!instance.component.getCancelUpgradeStatus().isCompleted()) {
+        // last check to see if cancellation was triggered. The component may
+        // have processed the cancel upgrade event but the instance doesn't know
+        // it yet. If cancellation has been triggered then no point in
+        // upgrading.
+        return;
+      }
+      instance.upgradeInProgress.set(true);
+      instance.setContainerState(ContainerState.UPGRADING);
+      instance.component.decContainersReady(false);
+
+      Component.UpgradeStatus upgradeStatus = instance.component.
+          getUpgradeStatus();
+      instance.reInitHelper(upgradeStatus);
+    }
+  }
+
+  private static class CancelledAfterReinitTransition extends BaseTransition {
+    @Override
+    public void transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.upgradeInProgress.compareAndSet(false, true)) {
+        instance.cancelUpgrade();
+      } else {
+        LOG.info("{} pending cancellation", event.getContainerId());
+        instance.pendingCancelUpgrade = true;
+      }
+    }
+  }
+
+  private static class CancelUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.upgradeInProgress.compareAndSet(false, true)) {
+
+        Component.UpgradeStatus cancelStatus = instance.component
+            .getCancelUpgradeStatus();
+
+        if (instance.getServiceVersion().equals(
+            cancelStatus.getTargetVersion())) {
+          // previous upgrade didn't happen so just go back to READY
+          LOG.info("{} nothing to cancel", event.getContainerId());
+          cancelStatus.decContainersThatNeedUpgrade();
+          instance.setContainerState(ContainerState.READY);
+          ComponentEvent checkState = new ComponentEvent(
+              instance.component.getName(), ComponentEventType.CHECK_STABLE);
+          instance.scheduler.getDispatcher().getEventHandler()
+              .handle(checkState);
+          return ComponentInstanceState.READY;
+        } else {
+          instance.component.decContainersReady(false);
+          instance.cancelUpgrade();
+        }
+      } else {
+        LOG.info("{} pending cancellation", event.getContainerId());
+        instance.pendingCancelUpgrade = true;
+      }
+      return ComponentInstanceState.CANCEL_UPGRADING;
+    }
+  }
+
+  private void cancelUpgrade() {
+    LOG.info("{} cancelling upgrade", container.getId());
+    setContainerState(ContainerState.UPGRADING);
+    Component.UpgradeStatus cancelStatus = component.getCancelUpgradeStatus();
+    reInitHelper(cancelStatus);
+  }
+
+  private void reInitHelper(Component.UpgradeStatus upgradeStatus) {
+    cancelContainerStatusRetriever();
+    cancelLclRetriever();
+    setContainerStatus(container.getId(), null);
+    scheduler.executorService.submit(() -> cleanupRegistry(container.getId()));
+    Future<ProviderService.ResolvedLaunchParams> launchParamsFuture =
+        scheduler.getContainerLaunchService()
+        .reInitCompInstance(scheduler.getApp(), this,
+            this.container, this.component.createLaunchContext(
+                upgradeStatus.getTargetSpec(),
+                upgradeStatus.getTargetVersion()));
+    updateResolvedLaunchParams(launchParamsFuture);
+  }
+
+  private void initializeStatusRetriever(ComponentInstanceEvent event,
+      long initialDelay) {
+    boolean cancelOnSuccess = true;
+    if (getCompSpec().getArtifact() != null &&
+        getCompSpec().getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
+      // A docker container might get a different IP if the container is
+      // relaunched by the NM, so we need to keep checking the status.
+      // This is a temporary fix until the NM provides a callback for
+      // container relaunch (see YARN-8265).
+      cancelOnSuccess = false;
+    }
+    LOG.info("{} retrieve status after {}", compInstanceId, initialDelay);
+    containerStatusFuture =
+        scheduler.executorService.scheduleAtFixedRate(
+            new ContainerStatusRetriever(scheduler, event.getContainerId(),
+                this, cancelOnSuccess), initialDelay, 1,
+            TimeUnit.SECONDS);
   }
 
   public ComponentInstanceState getState() {
@@ -295,10 +705,54 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     }
   }
 
+  /**
+   * Returns the version of service at which the instance is at.
+   */
+  public String getServiceVersion() {
+    this.readLock.lock();
+    try {
+      return this.serviceVersion;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  /**
+   * Returns the state of the container in the container spec.
+   */
+  public ContainerState getContainerState() {
+    this.readLock.lock();
+    try {
+      return this.containerSpec.getState();
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  /**
+   * Sets the state of the container in the container spec. It is write
+   * protected.
+   *
+   * @param state container state
+   */
+  public void setContainerState(ContainerState state) {
+    this.writeLock.lock();
+    try {
+      ContainerState curState = containerSpec.getState();
+      if (!curState.equals(state)) {
+        containerSpec.setState(state);
+        LOG.info("{} spec state state changed from {} -> {}",
+            getCompInstanceId(), curState, state);
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
   @Override
   public void handle(ComponentInstanceEvent event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       ComponentInstanceState oldState = getState();
       try {
         stateMachine.doTransition(event.getType(), event);
@@ -324,22 +778,124 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     return compInstanceId.getCompInstanceName();
   }
 
+  @VisibleForTesting
+  void updateLocalizationStatuses(
+      List<org.apache.hadoop.yarn.api.records.LocalizationStatus> statuses) {
+    Map<String, String> resourcesCpy = new HashMap<>();
+    readLock.lock();
+    try {
+      if (resolvedParams == null || resolvedParams.didLaunchFail() ||
+          resolvedParams.getResolvedRsrcPaths() == null ||
+          resolvedParams.getResolvedRsrcPaths().isEmpty()) {
+        cancelLclRetriever();
+        return;
+      }
+      resourcesCpy.putAll(resolvedParams.getResolvedRsrcPaths());
+    } finally {
+      readLock.unlock();
+    }
+    boolean allCompleted = true;
+    Map<String, LocalizationStatus> fromNM = new HashMap<>();
+    statuses.forEach(statusFromNM -> {
+      LocalizationStatus lstatus = new LocalizationStatus()
+          .destFile(statusFromNM.getResourceKey())
+          .diagnostics(statusFromNM.getDiagnostics())
+          .state(statusFromNM.getLocalizationState());
+      fromNM.put(statusFromNM.getResourceKey(), lstatus);
+    });
+
+    for (String resourceKey : resourcesCpy.keySet()) {
+      LocalizationStatus lstatus = fromNM.get(resourceKey);
+      if (lstatus == null ||
+          lstatus.getState().equals(LocalizationState.PENDING)) {
+        allCompleted = false;
+        break;
+      }
+    }
+
+    List<LocalizationStatus> statusList = new ArrayList<>();
+    statusList.addAll(fromNM.values());
+    this.containerSpec.setLocalizationStatuses(statusList);
+    if (allCompleted) {
+      cancelLclRetriever();
+    }
+  }
+
+  public void updateResolvedLaunchParams(
+      Future<ProviderService.ResolvedLaunchParams> future) {
+    writeLock.lock();
+    try {
+      this.resolvedParams = future.get();
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("{} updating resolved params", getCompInstanceId(), e);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   public ContainerStatus getContainerStatus() {
-    return status;
+    readLock.lock();
+    try {
+      return status;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  private void setContainerStatus(ContainerId containerId,
+      ContainerStatus latestStatus) {
+    writeLock.lock();
+    try {
+      this.status = latestStatus;
+      org.apache.hadoop.yarn.service.api.records.Container containerRec =
+          getCompSpec().getContainer(containerId.toString());
+
+      if (containerRec != null) {
+        if (latestStatus != null) {
+          containerRec.setIp(StringUtils.join(",", latestStatus.getIPs()));
+          containerRec.setHostname(latestStatus.getHost());
+        } else {
+          containerRec.setIp(null);
+          containerRec.setHostname(null);
+        }
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   public void updateContainerStatus(ContainerStatus status) {
-    this.status = status;
-    org.apache.hadoop.yarn.service.api.records.Container container =
+    org.apache.hadoop.yarn.service.api.records.Container containerRec =
         getCompSpec().getContainer(status.getContainerId().toString());
-    if (container != null) {
-      container.setIp(StringUtils.join(",", status.getIPs()));
-      container.setHostname(status.getHost());
-      if (timelineServiceEnabled) {
-        serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
+    boolean doRegistryUpdate = true;
+    if (containerRec != null) {
+      String existingIP = containerRec.getIp();
+      String newIP = StringUtils.join(",", status.getIPs());
+      if (existingIP != null && newIP.equals(existingIP)) {
+        doRegistryUpdate = false;
       }
     }
-    updateServiceRecord(yarnRegistryOperations, status);
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      Map<String, List<Map<String, String>>> ports = null;
+      ports = mapper.readValue(status.getExposedPorts(),
+          new TypeReference<Map<String, List<Map<String, String>>>>(){});
+      container.setExposedPorts(ports);
+    } catch (IOException e) {
+      LOG.warn("Unable to process container ports mapping: {}", e);
+    }
+    setContainerStatus(status.getContainerId(), status);
+    if (containerRec != null && timelineServiceEnabled && doRegistryUpdate) {
+      serviceTimelinePublisher.componentInstanceIPHostUpdated(containerRec);
+    }
+
+    if (doRegistryUpdate) {
+      cleanupRegistry(status.getContainerId());
+      LOG.info(
+          getCompInstanceId() + " new IP = " + status.getIPs() + ", host = "
+              + status.getHost() + ", updating registry");
+      updateServiceRecord(yarnRegistryOperations, status);
+    }
   }
 
   public String getCompName() {
@@ -366,7 +922,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     return this.container.getNodeId();
   }
 
-  public org.apache.hadoop.yarn.service.api.records.Component getCompSpec() {
+  private org.apache.hadoop.yarn.service.api.records.Component getCompSpec() {
     return component.getComponentSpec();
   }
 
@@ -420,7 +976,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       component.decRunningContainers();
     }
     if (getState() == READY) {
-      component.decContainersReady();
+      component.decContainersReady(true);
       component.decRunningContainers();
     }
     getCompSpec().removeContainer(containerSpec);
@@ -438,11 +994,12 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
     if (timelineServiceEnabled) {
       serviceTimelinePublisher.componentInstanceFinished(containerId,
-          KILLED_BY_APPMASTER, diagnostics.toString());
+          KILLED_BY_APPMASTER, ContainerState.STOPPED, diagnostics.toString());
     }
     cancelContainerStatusRetriever();
     scheduler.executorService.submit(() ->
         cleanupRegistryAndCompHdfsDir(containerId));
+    cancelLclRetriever();
   }
 
   private void cleanupRegistry(ContainerId containerId) {
@@ -481,12 +1038,15 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     private NodeId nodeId;
     private NMClient nmClient;
     private ComponentInstance instance;
+    private boolean cancelOnSuccess;
     ContainerStatusRetriever(ServiceScheduler scheduler,
-        ContainerId containerId, ComponentInstance instance) {
+        ContainerId containerId, ComponentInstance instance, boolean
+        cancelOnSuccess) {
       this.containerId = containerId;
       this.nodeId = instance.getNodeId();
       this.nmClient = scheduler.getNmClient().getClient();
       this.instance = instance;
+      this.cancelOnSuccess = cancelOnSuccess;
     }
     @Override public void run() {
       ContainerStatus status = null;
@@ -507,10 +1067,12 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         return;
       }
       instance.updateContainerStatus(status);
-      LOG.info(
-          instance.compInstanceId + " IP = " + status.getIPs() + ", host = "
-              + status.getHost() + ", cancel container status retriever");
-      instance.containerStatusFuture.cancel(false);
+      if (cancelOnSuccess) {
+        LOG.info(
+            instance.compInstanceId + " IP = " + status.getIPs() + ", host = "
+                + status.getHost() + ", cancel container status retriever");
+        instance.containerStatusFuture.cancel(false);
+      }
     }
   }
 
@@ -520,16 +1082,68 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     }
   }
 
+  private static class LocalizationStatusRetriever implements Runnable {
+    private ContainerId containerId;
+    private NodeId nodeId;
+    private NMClient nmClient;
+    private ComponentInstance instance;
+
+    LocalizationStatusRetriever(ServiceScheduler scheduler,
+        ContainerId containerId, ComponentInstance instance) {
+      this.nmClient = scheduler.getNmClient().getClient();
+      this.containerId = containerId;
+      this.instance = instance;
+      this.nodeId = instance.getNodeId();
+    }
+
+    @Override
+    public void run() {
+      List<org.apache.hadoop.yarn.api.records.LocalizationStatus>
+          statusesFromNM = null;
+      try {
+        statusesFromNM = nmClient.getLocalizationStatuses(containerId,
+            nodeId);
+      } catch (YarnException | IOException e) {
+        LOG.error("{} Failed to get localization statuses for {} {} ",
+            instance.compInstanceId, nodeId, containerId, e);
+      }
+      if (statusesFromNM != null && !statusesFromNM.isEmpty()) {
+        instance.updateLocalizationStatuses(statusesFromNM);
+      }
+    }
+  }
+
+  private void initializeLocalizationStatusRetriever(
+      ContainerId containerId) {
+    LOG.info("{} retrieve localization statuses", compInstanceId);
+    lclizationRetrieverFuture = scheduler.executorService.scheduleAtFixedRate(
+        new LocalizationStatusRetriever(scheduler, containerId, this),
+        0, 1, TimeUnit.SECONDS
+    );
+  }
+
+  private void cancelLclRetriever() {
+    if (lclizationRetrieverFuture != null &&
+        !lclizationRetrieverFuture.isDone()) {
+      LOG.info("{} cancelling localization retriever", compInstanceId);
+      lclizationRetrieverFuture.cancel(true);
+    }
+  }
+
+  @VisibleForTesting
+  boolean isLclRetrieverActive() {
+    return lclizationRetrieverFuture != null &&
+        !lclizationRetrieverFuture.isCancelled()
+         && !lclizationRetrieverFuture.isDone();
+  }
+
+  public String getHostname() {
+    return getCompInstanceName() + getComponent().getHostnameSuffix();
+  }
+
   @Override
   public int compareTo(ComponentInstance to) {
-    long delta = containerStartedTime - to.containerStartedTime;
-    if (delta == 0) {
-      return getCompInstanceId().compareTo(to.getCompInstanceId());
-    } else if (delta < 0) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return getCompInstanceId().compareTo(to.getCompInstanceId());
   }
 
   @Override public boolean equals(Object o) {
@@ -550,5 +1164,18 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     result = 31 * result + (int) (containerStartedTime ^ (containerStartedTime
         >>> 32));
     return result;
+  }
+
+  /**
+   * Returns container spec.
+   */
+  public org.apache.hadoop.yarn.service.api.records
+      .Container getContainerSpec() {
+    readLock.lock();
+    try {
+      return containerSpec;
+    } finally {
+      readLock.unlock();
+    }
   }
 }

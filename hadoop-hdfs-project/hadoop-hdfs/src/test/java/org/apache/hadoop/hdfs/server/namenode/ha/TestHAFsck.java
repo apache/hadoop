@@ -32,13 +32,13 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Test;
 
 public class TestHAFsck {
   
   static {
-    GenericTestUtils.setLogLevel(DFSUtil.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSUtil.LOG, Level.TRACE);
   }
   
   /**

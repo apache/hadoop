@@ -32,9 +32,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
-import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +58,6 @@ public class ContainerRelaunch extends ContainerLaunch {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Integer call() {
     if (!validateContainerState()) {
       return 0;
@@ -71,7 +69,8 @@ public class ContainerRelaunch extends ContainerLaunch {
     Path containerLogDir;
     try {
       Path containerWorkDir = getContainerWorkDir();
-      cleanupPreviousContainerFiles(containerWorkDir);
+      // Clean up container's previous files for container relaunch.
+      cleanupContainerFiles(containerWorkDir);
 
       containerLogDir = getContainerLogDir();
 
@@ -82,7 +81,20 @@ public class ContainerRelaunch extends ContainerLaunch {
           getNmPrivateContainerScriptPath(appIdStr, containerIdStr);
       Path nmPrivateTokensPath =
           getNmPrivateTokensPath(appIdStr, containerIdStr);
-      pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      Path nmPrivateKeystorePath = (container.getCredentials().getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE) == null) ? null :
+          getNmPrivateKeystorePath(appIdStr, containerIdStr);
+      Path nmPrivateTruststorePath = (container.getCredentials().getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE) == null) ? null :
+          getNmPrivateTruststorePath(appIdStr, containerIdStr);
+      try {
+        // try to locate existing pid file.
+        pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      } catch (IOException e) {
+        // reset pid file path if it did not exist.
+        String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
+        pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
+      }
 
       LOG.info("Relaunch container with "
           + "workDir = " + containerWorkDir.toString()
@@ -108,11 +120,13 @@ public class ContainerRelaunch extends ContainerLaunch {
             + dirsHandler.getDisksHealthReport(false));
       }
 
-      ret = launchContainer(new ContainerStartContext.Builder()
+      ret = relaunchContainer(new ContainerStartContext.Builder()
           .setContainer(container)
           .setLocalizedResources(localResources)
           .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
           .setNmPrivateTokensPath(nmPrivateTokensPath)
+          .setNmPrivateKeystorePath(nmPrivateKeystorePath)
+          .setNmPrivateTruststorePath(nmPrivateTruststorePath)
           .setUser(container.getUser())
           .setAppId(appIdStr)
           .setContainerWorkDir(containerWorkDir)
@@ -148,17 +162,6 @@ public class ContainerRelaunch extends ContainerLaunch {
     return ret;
   }
 
-  private Path getContainerWorkDir() throws IOException {
-    String containerWorkDir = container.getWorkDir();
-    if (containerWorkDir == null
-        || !dirsHandler.isGoodLocalDir(containerWorkDir)) {
-      throw new IOException(
-          "Could not find a good work dir " + containerWorkDir
-          + " for container " + container);
-    }
-
-    return new Path(containerWorkDir);
-  }
 
   private Path getContainerLogDir() throws IOException {
     String containerLogDir = container.getLogDir();
@@ -181,34 +184,27 @@ public class ContainerRelaunch extends ContainerLaunch {
        String containerIdStr) throws IOException {
     return dirsHandler.getLocalPathForRead(
         getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-            + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+            + String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
             containerIdStr));
+  }
+
+  private Path getNmPrivateKeystorePath(String appIdStr,
+      String containerIdStr) throws IOException {
+    return dirsHandler.getLocalPathForRead(
+        getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+            + ContainerLaunch.KEYSTORE_FILE);
+  }
+
+  private Path getNmPrivateTruststorePath(String appIdStr,
+      String containerIdStr) throws IOException {
+    return dirsHandler.getLocalPathForRead(
+        getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+            + ContainerLaunch.TRUSTSTORE_FILE);
   }
 
   private Path getPidFilePath(String appIdStr,
       String containerIdStr) throws IOException {
     return dirsHandler.getLocalPathForRead(
         getPidFileSubpath(appIdStr, containerIdStr));
-  }
-
-  /**
-   * Clean up container's previous files for container relaunch.
-   */
-  private void cleanupPreviousContainerFiles(Path containerWorkDir) {
-    // delete ContainerScriptPath
-    deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
-    // delete TokensPath
-    deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
-  }
-
-  private void deleteAsUser(Path path) {
-    try {
-      exec.deleteAsUser(new DeletionAsUserContext.Builder()
-          .setUser(container.getUser())
-          .setSubDir(path)
-          .build());
-    } catch (Exception e) {
-      LOG.warn("Failed to delete " + path, e);
-    }
   }
 }

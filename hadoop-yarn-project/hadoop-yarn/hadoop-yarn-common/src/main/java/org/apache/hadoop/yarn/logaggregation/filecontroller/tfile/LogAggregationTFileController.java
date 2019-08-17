@@ -27,8 +27,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -38,14 +38,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationDFSException;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
@@ -65,7 +66,7 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 public class LogAggregationTFileController
     extends LogAggregationFileController {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       LogAggregationTFileController.class);
 
   private LogWriter writer;
@@ -75,12 +76,7 @@ public class LogAggregationTFileController
 
   @Override
   public void initInternal(Configuration conf) {
-    this.remoteRootLogDir = new Path(
-        conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    this.remoteRootLogDirSuffix =
-        conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+    // do nothing
   }
 
   @Override
@@ -95,10 +91,15 @@ public class LogAggregationTFileController
   }
 
   @Override
-  public void closeWriter() {
+  public void closeWriter() throws LogAggregationDFSException {
     if (this.writer != null) {
-      this.writer.close();
-      this.writer = null;
+      try {
+        this.writer.close();
+      } catch (DSQuotaExceededException e) {
+        throw new LogAggregationDFSException(e);
+      } finally {
+        this.writer = null;
+      }
     }
   }
 
@@ -172,7 +173,8 @@ public class LogAggregationTFileController
         || containerIdStr.isEmpty());
     long size = logRequest.getBytes();
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileDir(conf, appId, logRequest.getAppOwner());
+        .getRemoteNodeFileDir(conf, appId, logRequest.getAppOwner(),
+        remoteRootLogDir, remoteRootLogDirSuffix);
     byte[] buf = new byte[65535];
     while (nodeFiles != null && nodeFiles.hasNext()) {
       final FileStatus thisNodeFile = nodeFiles.next();
@@ -266,9 +268,10 @@ public class LogAggregationTFileController
     String nodeIdStr = (nodeId == null) ? null
         : LogAggregationUtils.getNodeString(nodeId);
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileDir(conf, appId, appOwner);
+        .getRemoteNodeFileDir(conf, appId, appOwner,
+        remoteRootLogDir, remoteRootLogDirSuffix);
     if (nodeFiles == null) {
-      throw new IOException("There is no available log fils for "
+      throw new IOException("There is no available log file for "
           + "application:" + appId);
     }
     while (nodeFiles.hasNext()) {
@@ -330,7 +333,7 @@ public class LogAggregationTFileController
   @Override
   public void renderAggregatedLogsBlock(Block html, ViewContext context) {
     TFileAggregatedLogsBlock block = new TFileAggregatedLogsBlock(
-        context, conf);
+        context, conf, remoteRootLogDir, remoteRootLogDirSuffix);
     block.render(html);
   }
 

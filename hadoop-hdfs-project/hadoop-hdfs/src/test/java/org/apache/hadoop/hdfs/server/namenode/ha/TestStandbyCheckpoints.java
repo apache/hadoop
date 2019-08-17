@@ -21,8 +21,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
 
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
@@ -72,7 +73,7 @@ public class TestStandbyCheckpoints {
   private final Random random = new Random();
   protected File tmpOivImgDir;
   
-  private static final Log LOG = LogFactory.getLog(TestStandbyCheckpoints.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
   @Before
@@ -252,7 +253,40 @@ public class TestStandbyCheckpoints {
     dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
     FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.<String>of());
   }
-  
+
+  /**
+   * Test for the case of when there are observer NameNodes, Standby node is
+   * able to upload fsImage to Observer node as well.
+   */
+  @Test(timeout = 300000)
+  public void testStandbyAndObserverState() throws Exception {
+    // Transition 2 to observer
+    cluster.transitionToObserver(2);
+    doEdits(0, 10);
+    // After a rollEditLog, Standby(nn1) 's next checkpoint would be
+    // ahead of observer(nn2).
+    nns[0].getRpcServer().rollEditLog();
+
+    // After standby creating a checkpoint, it will try to push the image to
+    // active and all observer, updating it's own txid to the most recent.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
+    HATestUtil.waitForCheckpoint(cluster, 2, ImmutableList.of(12));
+
+    assertEquals(12, nns[2].getNamesystem().getFSImage()
+        .getMostRecentCheckpointTxId());
+    assertEquals(12, nns[1].getNamesystem().getFSImage()
+        .getMostRecentCheckpointTxId());
+
+    List<File> dirs = Lists.newArrayList();
+    // observer and standby both have this same image.
+    dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 2));
+    dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
+    FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.of());
+    // Restore 2 back to standby
+    cluster.transitionToStandby(2);
+  }
+
   /**
    * Test for the case when the SBN is configured to checkpoint based
    * on a time period, but no transactions are happening on the
@@ -274,7 +308,7 @@ public class TestStandbyCheckpoints {
     // We shouldn't save any checkpoints at txid=0
     Thread.sleep(1000);
     Mockito.verify(spyImage1, Mockito.never())
-      .saveNamespace((FSNamesystem) Mockito.anyObject());
+      .saveNamespace(any());
  
     // Roll the primary and wait for the standby to catch up
     HATestUtil.waitForStandbyToCatchUp(nns[0], nns[1]);
@@ -282,8 +316,7 @@ public class TestStandbyCheckpoints {
     
     // We should make exactly one checkpoint at this new txid. 
     Mockito.verify(spyImage1, Mockito.times(1)).saveNamespace(
-        (FSNamesystem) Mockito.anyObject(), Mockito.eq(NameNodeFile.IMAGE),
-        (Canceler) Mockito.anyObject());
+        any(), Mockito.eq(NameNodeFile.IMAGE), any());
   }
   
   /**
@@ -409,8 +442,8 @@ public class TestStandbyCheckpoints {
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
-        .saveNamespace(Mockito.any(FSNamesystem.class),
-            Mockito.eq(NameNodeFile.IMAGE), Mockito.any(Canceler.class));
+        .saveNamespace(any(FSNamesystem.class),
+            Mockito.eq(NameNodeFile.IMAGE), any(Canceler.class));
 
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);
@@ -454,9 +487,9 @@ public class TestStandbyCheckpoints {
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
-        .saveNamespace(Mockito.any(FSNamesystem.class),
-            Mockito.any(NameNodeFile.class),
-            Mockito.any(Canceler.class));
+        .saveNamespace(any(FSNamesystem.class),
+            any(NameNodeFile.class),
+            any(Canceler.class));
     
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);

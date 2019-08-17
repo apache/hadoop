@@ -18,6 +18,16 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler;
+import org.apache.hadoop.yarn.nodelabels.store.StoreOp;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -25,21 +35,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOnNodeRequestPBImpl;
-
+/**
+ * Store implementation for Non Appendable File Store.
+ */
 public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
-  protected static final Log
-      LOG = LogFactory.getLog(NonAppendableFSNodeLabelStore.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(NonAppendableFSNodeLabelStore.class);
 
   @Override
   public void close() throws IOException {
@@ -52,7 +53,7 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
     Path newMirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new");
     Path oldMirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME);
     loadFromMirror(newMirrorPath, oldMirrorPath);
-    
+
     // if new mirror exists, remove old mirror and rename new mirror
     if (fs.exists(newMirrorPath)) {
       // remove old mirror
@@ -60,9 +61,7 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
         fs.delete(oldMirrorPath, false);
       } catch (IOException e) {
         // do nothing
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Exception while removing old mirror", e);
-        }
+        LOG.debug("Exception while removing old mirror", e);
       }
       
       // rename new to old
@@ -91,28 +90,17 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
   }
 
   private void writeNewMirror() throws IOException {
-    ReentrantReadWriteLock.ReadLock readLock = mgr.readLock;
+    ReentrantReadWriteLock.ReadLock readLock = manager.readLock;
+    // Acquire readlock to make sure we get cluster node labels and
+    // node-to-labels mapping atomically.
+    readLock.lock();
     try {
-      // Acquire readlock to make sure we get cluster node labels and
-      // node-to-labels mapping atomically.
-      readLock.lock();
-      List<NodeLabel> nodeLabels = mgr.getClusterNodeLabels();
-      Map<NodeId, Set<String>> nodeToLabels = mgr.getNodeLabels();
-      
       // Write mirror to mirror.new.tmp file
-      Path newTmpPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new.tmp"); 
-      FSDataOutputStream os = fs
-          .create(newTmpPath, true);
-      ((AddToClusterNodeLabelsRequestPBImpl) AddToClusterNodeLabelsRequest
-          .newInstance(nodeLabels)).getProto().writeDelimitedTo(os);
-
-      if (mgr.isCentralizedConfiguration()) {
-        // Only save node-to-labels mapping while using centralized configuration
-        ((ReplaceLabelsOnNodeRequestPBImpl) ReplaceLabelsOnNodeRequest
-            .newInstance(nodeToLabels)).getProto().writeDelimitedTo(os);
+      Path newTmpPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new.tmp");
+      try (FSDataOutputStream os = fs.create(newTmpPath, true)) {
+        StoreOp op = FSStoreOpHandler.getMirrorOp(getStoreType());
+        op.write(os, manager);
       }
-      
-      os.close();
       
       // Rename mirror.new.tmp to mirror.new (will remove .new if it's existed)
       Path newPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new"); 

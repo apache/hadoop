@@ -24,12 +24,19 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneDirPermissions;
+
 
 public class TestJobHistoryUtils {
 
@@ -139,5 +146,22 @@ public class TestJobHistoryUtils {
             day + Path.SEPARATOR + id);
     fc.mkdir(path, FsPermission.getDirDefault(), true);
     return path;
+  }
+
+  @Test
+  public void testGetConfiguredHistoryIntermediateUserDoneDirPermissions() {
+    Configuration conf = new Configuration();
+    Map<String, FsPermission> parameters = ImmutableMap.of(
+      "775", new FsPermission(0775),
+      "123", new FsPermission(0773),
+      "-rwx", new FsPermission(0770) ,
+      "+rwx", new FsPermission(0777)
+    );
+    for (Map.Entry<String, FsPermission> entry : parameters.entrySet()) {
+      conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS,
+          entry.getKey());
+      Assert.assertEquals(entry.getValue(),
+          getConfiguredHistoryIntermediateUserDoneDirPermissions(conf));
+    }
   }
 }

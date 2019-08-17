@@ -80,7 +80,7 @@ public class ReadaheadPool {
    * @param readaheadLength the configured length to read ahead
    * @param maxOffsetToRead the maximum offset that will be readahead
    *        (useful if, for example, only some segment of the file is
-   *        requested by the user). Pass {@link Long.MAX_VALUE} to allow
+   *        requested by the user). Pass {@link Long#MAX_VALUE} to allow
    *        readahead to the end of the file.
    * @param lastReadahead the result returned by the previous invocation
    *        of this function on this file descriptor, or null if this is
@@ -205,8 +205,10 @@ public class ReadaheadPool {
       // It's also possible that we'll end up requesting readahead on some
       // other FD, which may be wasted work, but won't cause a problem.
       try {
-        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
-            fd, off, len, POSIX_FADV_WILLNEED);
+        if (fd.valid()) {
+          NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+              identifier, fd, off, len, POSIX_FADV_WILLNEED);
+        }
       } catch (IOException ioe) {
         if (canceled) {
           // no big deal - the reader canceled the request and closed

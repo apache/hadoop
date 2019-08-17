@@ -22,11 +22,13 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,8 +46,12 @@ public class DFSNetworkTopology extends NetworkTopology {
   private static final Random RANDOM = new Random();
 
   public static DFSNetworkTopology getInstance(Configuration conf) {
-    DFSNetworkTopology nt = new DFSNetworkTopology();
-    return (DFSNetworkTopology)nt.init(DFSTopologyNodeImpl.FACTORY);
+
+    DFSNetworkTopology nt = ReflectionUtils.newInstance(conf.getClass(
+        DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_KEY,
+        DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_DEFAULT,
+        DFSNetworkTopology.class), conf);
+    return (DFSNetworkTopology) nt.init(DFSTopologyNodeImpl.FACTORY);
   }
 
   /**

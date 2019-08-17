@@ -42,7 +42,6 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,6 +49,7 @@ import java.util.Set;
 import java.util.SortedSet;
 
 import static org.apache.hadoop.yarn.server.timeline.TimelineDataManager.DEFAULT_DOMAIN_ID;
+import static org.apache.hadoop.yarn.server.timeline.TimelineStoreMapAdapter.CloseableIterator;
 
 /**
  * Map based implementation of {@link TimelineStore}. A hash map
@@ -114,66 +114,67 @@ abstract class KeyValueBasedTimelineStore
       fields = EnumSet.allOf(Field.class);
     }
 
-    Iterator<TimelineEntity> entityIterator = null;
+    TimelineEntity firstEntity = null;
     if (fromId != null) {
-      TimelineEntity firstEntity = entities.get(new EntityIdentifier(fromId,
+      firstEntity = entities.get(new EntityIdentifier(fromId,
           entityType));
       if (firstEntity == null) {
         return new TimelineEntities();
-      } else {
-        entityIterator = entities.valueSetIterator(firstEntity);
       }
-    }
-    if (entityIterator == null) {
-      entityIterator = entities.valueSetIterator();
     }
 
     List<TimelineEntity> entitiesSelected = new ArrayList<TimelineEntity>();
-    while (entityIterator.hasNext()) {
-      TimelineEntity entity = entityIterator.next();
-      if (entitiesSelected.size() >= limit) {
-        break;
-      }
-      if (!entity.getEntityType().equals(entityType)) {
-        continue;
-      }
-      if (entity.getStartTime() <= windowStart) {
-        continue;
-      }
-      if (entity.getStartTime() > windowEnd) {
-        continue;
-      }
-      if (fromTs != null && entityInsertTimes.get(new EntityIdentifier(
-          entity.getEntityId(), entity.getEntityType())) > fromTs) {
-        continue;
-      }
-      if (primaryFilter != null &&
-          !KeyValueBasedTimelineStoreUtils.matchPrimaryFilter(
-              entity.getPrimaryFilters(), primaryFilter)) {
-        continue;
-      }
-      if (secondaryFilters != null) { // AND logic
-        boolean flag = true;
-        for (NameValuePair secondaryFilter : secondaryFilters) {
-          if (secondaryFilter != null && !KeyValueBasedTimelineStoreUtils
-              .matchPrimaryFilter(entity.getPrimaryFilters(), secondaryFilter)
-              && !KeyValueBasedTimelineStoreUtils.matchFilter(
-              entity.getOtherInfo(), secondaryFilter)) {
-            flag = false;
-            break;
-          }
+
+    try(CloseableIterator<TimelineEntity> entityIterator =
+        firstEntity == null ? entities.valueSetIterator() :
+            entities.valueSetIterator(firstEntity)) {
+      while (entityIterator.hasNext()) {
+        TimelineEntity entity = entityIterator.next();
+        if (entitiesSelected.size() >= limit) {
+          break;
         }
-        if (!flag) {
+        if (!entity.getEntityType().equals(entityType)) {
           continue;
         }
-      }
-      if (entity.getDomainId() == null) {
-        entity.setDomainId(DEFAULT_DOMAIN_ID);
-      }
-      if (checkAcl == null || checkAcl.check(entity)) {
-        entitiesSelected.add(entity);
+        if (entity.getStartTime() <= windowStart) {
+          continue;
+        }
+        if (entity.getStartTime() > windowEnd) {
+          continue;
+        }
+        if (fromTs != null && entityInsertTimes.get(
+            new EntityIdentifier(entity.getEntityId(), entity.getEntityType()))
+            > fromTs) {
+          continue;
+        }
+        if (primaryFilter != null && !KeyValueBasedTimelineStoreUtils
+            .matchPrimaryFilter(entity.getPrimaryFilters(), primaryFilter)) {
+          continue;
+        }
+        if (secondaryFilters != null) { // AND logic
+          boolean flag = true;
+          for (NameValuePair secondaryFilter : secondaryFilters) {
+            if (secondaryFilter != null && !KeyValueBasedTimelineStoreUtils
+                .matchPrimaryFilter(entity.getPrimaryFilters(), secondaryFilter)
+                && !KeyValueBasedTimelineStoreUtils
+                .matchFilter(entity.getOtherInfo(), secondaryFilter)) {
+              flag = false;
+              break;
+            }
+          }
+          if (!flag) {
+            continue;
+          }
+        }
+        if (entity.getDomainId() == null) {
+          entity.setDomainId(DEFAULT_DOMAIN_ID);
+        }
+        if (checkAcl == null || checkAcl.check(entity)) {
+          entitiesSelected.add(entity);
+        }
       }
     }
+
     List<TimelineEntity> entitiesToReturn = new ArrayList<TimelineEntity>();
     for (TimelineEntity entitySelected : entitiesSelected) {
       entitiesToReturn.add(KeyValueBasedTimelineStoreUtils.maskFields(
@@ -569,6 +570,7 @@ abstract class KeyValueBasedTimelineStore
       }
       return o;
     }
+
   }
 
 }

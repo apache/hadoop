@@ -103,9 +103,9 @@ public abstract class ReservationId implements Comparable<ReservationId> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(64);
-    sb.append(reserveIdStrPrefix);
-    sb.append(getClusterTimestamp());
-    sb.append('_');
+    sb.append(reserveIdStrPrefix)
+        .append(getClusterTimestamp())
+        .append('_');
     FastNumberFormat.format(sb, getId(), RESERVATION_ID_MIN_DIGITS);
     return sb.toString();
   }

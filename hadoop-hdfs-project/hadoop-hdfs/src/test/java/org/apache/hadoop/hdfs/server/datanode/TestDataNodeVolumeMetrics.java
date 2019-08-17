@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,8 +50,8 @@ import org.junit.rules.Timeout;
  * Test class for DataNodeVolumeMetrics.
  */
 public class TestDataNodeVolumeMetrics {
-  private static final Log LOG =
-      LogFactory.getLog(TestDataNodeVolumeMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeVolumeMetrics.class);
 
   private static final int BLOCK_SIZE = 1024;
   private static final short REPL = 1;
@@ -102,9 +102,7 @@ public class TestDataNodeVolumeMetrics {
 
       ArrayList<DataNode> dns = cluster.getDataNodes();
       assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
-
-      final String dataDir = cluster.getDataDirectory();
-      final File dn1Vol2 = new File(dataDir, "data2");
+      final File dn1Vol2 = cluster.getInstanceStorageDir(0, 1);
 
       DataNodeTestUtils.injectDataDirFailure(dn1Vol2);
       verifyDataNodeVolumeMetrics(fs, cluster, fileName);

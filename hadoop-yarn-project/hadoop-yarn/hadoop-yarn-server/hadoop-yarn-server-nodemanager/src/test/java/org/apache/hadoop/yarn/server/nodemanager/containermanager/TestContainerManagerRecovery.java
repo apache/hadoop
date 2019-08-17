@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -46,6 +48,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -67,12 +70,14 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
@@ -91,6 +96,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
@@ -102,6 +108,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.TestNodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -203,7 +210,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
           "includePatternInRollingAggregation",
           "excludePatternInRollingAggregation");
    StartContainersResponse startResponse = startContainer(context, cm, cid,
-        clc, logAggregationContext);
+        clc, logAggregationContext, ContainerType.TASK);
     assertTrue(startResponse.getFailedRequests().isEmpty());
     assertEquals(1, context.getApplications().size());
     Application app = context.getApplications().get(appId);
@@ -296,7 +303,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // simulate log aggregation completion
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
 
@@ -340,7 +347,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         null, null);
 
     StartContainersResponse startResponse = startContainer(context, cm, cid,
-        clc, null);
+        clc, null, ContainerType.TASK);
     assertTrue(startResponse.getFailedRequests().isEmpty());
     assertEquals(1, context.getApplications().size());
     Application app = context.getApplications().get(appId);
@@ -356,7 +363,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
     // application is still in NM context.
     assertEquals(1, context.getApplications().size());
 
@@ -380,7 +387,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // is needed.
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
 
     // simulate log aggregation failed.
     app.handle(new ApplicationEvent(app.getAppId(),
@@ -393,6 +400,61 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.init(conf);
     cm.start();
     assertTrue(context.getApplications().isEmpty());
+    cm.stop();
+  }
+
+  @Test
+  public void testNodeManagerMetricsRecovery() throws Exception {
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED, true);
+
+    NMStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    Context context = createContext(conf, stateStore);
+    ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    cm.init(conf);
+    cm.start();
+    metrics.addResource(Resource.newInstance(10240, 8));
+
+    // add an application by starting a container
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
+    Map<String, String> containerEnv = Collections.emptyMap();
+    Map<String, ByteBuffer> serviceData = Collections.emptyMap();
+    Map<String, LocalResource> localResources = Collections.emptyMap();
+    List<String> commands = Arrays.asList("sleep 60s".split(" "));
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        localResources, containerEnv, commands, serviceData,
+        null, null);
+    StartContainersResponse startResponse = startContainer(context, cm, cid,
+        clc, null, ContainerType.TASK);
+    assertTrue(startResponse.getFailedRequests().isEmpty());
+    assertEquals(1, context.getApplications().size());
+    Application app = context.getApplications().get(appId);
+    assertNotNull(app);
+
+    // make sure the container reaches RUNNING state
+    waitForNMContainerState(cm, cid,
+        org.apache.hadoop.yarn.server.nodemanager
+            .containermanager.container.ContainerState.RUNNING);
+    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0, 1, 1, 1, 9, 1, 7);
+
+    // restart and verify metrics could be recovered
+    cm.stop();
+    DefaultMetricsSystem.shutdown();
+    metrics = NodeManagerMetrics.create();
+    metrics.addResource(Resource.newInstance(10240, 8));
+    TestNodeManagerMetrics.checkMetrics(0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 8);
+    context = createContext(conf, stateStore);
+    cm = createContainerManager(context, delSrvc);
+    cm.init(conf);
+    cm.start();
+    assertEquals(1, context.getApplications().size());
+    app = context.getApplications().get(appId);
+    assertNotNull(app);
+    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0, 1, 1, 1, 9, 1, 7);
     cm.stop();
   }
 
@@ -439,6 +501,56 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
     containerStatus = getContainerStatus(context, cm, cid);
     assertEquals(targetResource, containerStatus.getCapability());
+    cm.stop();
+  }
+
+  @Test
+  public void testContainerSchedulerRecovery() throws Exception {
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED, true);
+    NMStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    context = createContext(conf, stateStore);
+    ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    ((NMContext) context).setContainerManager(cm);
+    cm.init(conf);
+    cm.start();
+    // add an application by starting a container
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
+
+    commonLaunchContainer(appId, cid, cm);
+
+    Application app = context.getApplications().get(appId);
+    assertNotNull(app);
+
+    ResourceUtilization utilization =
+        ResourceUtilization.newInstance(1024, 2048, 1.0F);
+    assertThat(cm.getContainerScheduler().getNumRunningContainers()).
+        isEqualTo(1);
+    assertEquals(utilization,
+        cm.getContainerScheduler().getCurrentUtilization());
+
+    // restart and verify container scheduler has recovered correctly
+    cm.stop();
+    context = createContext(conf, stateStore);
+    cm = createContainerManager(context, delSrvc);
+    ((NMContext) context).setContainerManager(cm);
+    cm.init(conf);
+    cm.start();
+    assertEquals(1, context.getApplications().size());
+    app = context.getApplications().get(appId);
+    assertNotNull(app);
+    waitForNMContainerState(cm, cid, ContainerState.RUNNING);
+
+    assertThat(cm.getContainerScheduler().getNumRunningContainers()).
+        isEqualTo(1);
+    assertEquals(utilization,
+        cm.getContainerScheduler().getCurrentUtilization());
+    cm.stop();
   }
 
   @Test
@@ -494,6 +606,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         resourceMappings.getAssignedResources("numa").equals(numaResources));
     Assert.assertTrue(
         resourceMappings.getAssignedResources("fpga").equals(fpgaResources));
+    cm.stop();
   }
 
   @Test
@@ -528,7 +641,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.init(conf);
     cm.start();
     StartContainersResponse startResponse = startContainer(context, cm, cid,
-        clc, logAggregationContext);
+        clc, logAggregationContext, ContainerType.TASK);
     assertEquals(1, startResponse.getSuccessfullyStartedContainers().size());
     cm.stop();
     verify(cm).handle(isA(CMgrCompletedAppsEvent.class));
@@ -544,7 +657,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.init(conf);
     cm.start();
     startResponse = startContainer(context, cm, cid,
-        clc, logAggregationContext);
+        clc, logAggregationContext, ContainerType.TASK);
     assertEquals(1, startResponse.getSuccessfullyStartedContainers().size());
     cm.stop();
     memStore.close();
@@ -561,7 +674,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.init(conf);
     cm.start();
     startResponse = startContainer(context, cm, cid,
-        clc, logAggregationContext);
+        clc, logAggregationContext, ContainerType.TASK);
     assertEquals(1, startResponse.getSuccessfullyStartedContainers().size());
     cm.stop();
     memStore.close();
@@ -610,7 +723,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         localResources, containerEnv, commands, serviceData,
         containerTokens, acls);
     StartContainersResponse startResponse = startContainer(
-        context, cm, cid, clc, null);
+        context, cm, cid, clc, null, ContainerType.TASK);
     assertTrue(startResponse.getFailedRequests().isEmpty());
     assertEquals(1, context.getApplications().size());
     // make sure the container reaches RUNNING state
@@ -626,7 +739,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       @Override
       protected void authorizeGetAndStopContainerRequest(
           ContainerId containerId, Container container,
-          boolean stopRequest, NMTokenIdentifier identifier)
+          boolean stopRequest, NMTokenIdentifier identifier,
+          String remoteUser)
           throws YarnException {
         if(container == null || container.getUser().equals("Fail")){
           throw new YarnException("Reject this container");
@@ -685,14 +799,15 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
   private StartContainersResponse startContainer(Context context,
       final ContainerManagerImpl cm, ContainerId cid,
-      ContainerLaunchContext clc, LogAggregationContext logAggregationContext)
+      ContainerLaunchContext clc, LogAggregationContext logAggregationContext,
+      ContainerType containerType)
           throws Exception {
     UserGroupInformation user = UserGroupInformation.createRemoteUser(
         cid.getApplicationAttemptId().toString());
     StartContainerRequest scReq = StartContainerRequest.newInstance(
         clc, TestContainerManager.createContainerToken(cid, 0,
             context.getNodeId(), user.getShortUserName(),
-            context.getContainerTokenSecretManager(), logAggregationContext));
+            context.getContainerTokenSecretManager(), logAggregationContext, containerType));
     final List<StartContainerRequest> scReqList =
         new ArrayList<StartContainerRequest>();
     scReqList.add(scReq);
@@ -859,4 +974,91 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     }
   }
 
+  @Test
+  public void testApplicationRecoveryAfterFlowContextUpdated()
+      throws Exception {
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED, true);
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "yarn_admin_user");
+    NMStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    Context context = createContext(conf, stateStore);
+    ContainerManagerImpl cm = createContainerManager(context);
+    cm.init(conf);
+    cm.start();
+
+    // add an application by starting a container
+    String appName = "app_name1";
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+
+    // create 1nd attempt container with containerId 2
+    ContainerId cid = ContainerId.newContainerId(attemptId, 2);
+    Map<String, LocalResource> localResources = Collections.emptyMap();
+    Map<String, String> containerEnv = new HashMap<>();
+
+    List<String> containerCmds = Collections.emptyList();
+    Map<String, ByteBuffer> serviceData = Collections.emptyMap();
+    Credentials containerCreds = new Credentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    containerCreds.writeTokenStorageToStream(dob);
+    ByteBuffer containerTokens =
+        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>();
+    ContainerLaunchContext clc = ContainerLaunchContext
+        .newInstance(localResources, containerEnv, containerCmds, serviceData,
+            containerTokens, acls);
+    // create the logAggregationContext
+    LogAggregationContext logAggregationContext = LogAggregationContext
+        .newInstance("includePattern", "excludePattern",
+            "includePatternInRollingAggregation",
+            "excludePatternInRollingAggregation");
+
+    StartContainersResponse startResponse =
+        startContainer(context, cm, cid, clc, logAggregationContext,
+            ContainerType.TASK);
+    assertTrue(startResponse.getFailedRequests().isEmpty());
+    assertEquals(1, context.getApplications().size());
+    ApplicationImpl app =
+        (ApplicationImpl) context.getApplications().get(appId);
+    assertNotNull(app);
+    waitForAppState(app, ApplicationState.INITING);
+    assertNull(app.getFlowName());
+
+    // 2nd attempt
+    ApplicationAttemptId attemptId2 =
+        ApplicationAttemptId.newInstance(appId, 2);
+    // create 2nd attempt master container
+    ContainerId cid2 = ContainerId.newContainerId(attemptId, 1);
+    setFlowContext(containerEnv, appName, appId);
+    // once again create for updating launch context
+    clc = ContainerLaunchContext
+        .newInstance(localResources, containerEnv, containerCmds, serviceData,
+            containerTokens, acls);
+    // start container with container type AM.
+    startResponse =
+        startContainer(context, cm, cid2, clc, logAggregationContext,
+            ContainerType.APPLICATION_MASTER);
+    assertTrue(startResponse.getFailedRequests().isEmpty());
+    assertEquals(1, context.getApplications().size());
+    waitForAppState(app, ApplicationState.INITING);
+    assertEquals(appName, app.getFlowName());
+
+    // reset container manager and verify flow context information
+    cm.stop();
+    context = createContext(conf, stateStore);
+    cm = createContainerManager(context);
+    cm.init(conf);
+    cm.start();
+    assertEquals(1, context.getApplications().size());
+    app = (ApplicationImpl) context.getApplications().get(appId);
+    assertNotNull(app);
+    assertEquals(appName, app.getFlowName());
+    waitForAppState(app, ApplicationState.INITING);
+
+    cm.stop();
+  }
 }

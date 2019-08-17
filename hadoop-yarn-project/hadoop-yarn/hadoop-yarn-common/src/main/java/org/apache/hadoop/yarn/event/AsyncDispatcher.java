@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.service.AbstractService;
@@ -46,7 +48,10 @@ import com.google.common.annotations.VisibleForTesting;
 @Evolving
 public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
-  private static final Log LOG = LogFactory.getLog(AsyncDispatcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AsyncDispatcher.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
 
   private final BlockingQueue<Event> eventQueue;
   private volatile int lastEventQueueSizeLogged = 0;
@@ -184,10 +189,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @SuppressWarnings("unchecked")
   protected void dispatch(Event event) {
     //all events go thru this loop
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Dispatching the event " + event.getClass().getName() + "."
-          + event.toString());
-    }
+    LOG.debug("Dispatching the event {}.{}", event.getClass().getName(),
+        event);
 
     Class<? extends Enum> type = event.getType().getDeclaringClass();
 
@@ -200,7 +203,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       }
     } catch (Throwable t) {
       //TODO Maybe log the state of the queue
-      LOG.fatal("Error in dispatcher thread", t);
+      LOG.error(FATAL, "Error in dispatcher thread", t);
       // If serviceStop is called, we should exit this thread gracefully.
       if (exitOnDispatchException
           && (ShutdownHookManager.get().isShutdownInProgress()) == false

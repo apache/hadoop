@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
@@ -34,36 +34,47 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInforma
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 
 import java.util.List;
-import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GpuResourcePlugin implements ResourcePlugin {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GpuResourcePlugin.class);
+
+  private final GpuNodeResourceUpdateHandler resourceDiscoverHandler;
+  private final GpuDiscoverer gpuDiscoverer;
   private GpuResourceHandlerImpl gpuResourceHandler = null;
-  private GpuNodeResourceUpdateHandler resourceDiscoverHandler = null;
   private DockerCommandPlugin dockerCommandPlugin = null;
 
+  public GpuResourcePlugin(GpuNodeResourceUpdateHandler resourceDiscoverHandler,
+      GpuDiscoverer gpuDiscoverer) {
+    this.resourceDiscoverHandler = resourceDiscoverHandler;
+    this.gpuDiscoverer = gpuDiscoverer;
+  }
+
   @Override
-  public synchronized void initialize(Context context) throws YarnException {
-    resourceDiscoverHandler = new GpuNodeResourceUpdateHandler();
-    GpuDiscoverer.getInstance().initialize(context.getConf());
-    dockerCommandPlugin =
+  public void initialize(Context context) throws YarnException {
+    this.gpuDiscoverer.initialize(context.getConf());
+    this.dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
             context.getConf());
   }
 
   @Override
-  public synchronized ResourceHandler createResourceHandler(
+  public ResourceHandler createResourceHandler(
       Context context, CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (gpuResourceHandler == null) {
       gpuResourceHandler = new GpuResourceHandlerImpl(context, cGroupsHandler,
-          privilegedOperationExecutor);
+          privilegedOperationExecutor, gpuDiscoverer);
     }
 
     return gpuResourceHandler;
   }
 
   @Override
-  public synchronized NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
+  public NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
     return resourceDiscoverHandler;
   }
 
@@ -77,16 +88,36 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public NMResourceInfo getNMResourceInfo() throws YarnException {
+  public synchronized NMResourceInfo getNMResourceInfo() throws YarnException {
     GpuDeviceInformation gpuDeviceInformation =
-        GpuDiscoverer.getInstance().getGpuDeviceInformation();
+        gpuDiscoverer.getGpuDeviceInformation();
+
+    //At this point the gpu plugin is already enabled
+    checkGpuResourceHandler();
+
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
-    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
+    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpus();
     List<AssignedGpuDevice> assignedGpuDevices =
-        gpuResourceAllocator.getAssignedGpusCopy();
+        gpuResourceAllocator.getAssignedGpus();
 
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
+  }
+
+  private void checkGpuResourceHandler() throws YarnException {
+    if(gpuResourceHandler == null) {
+      String errorMsg =
+          "Linux Container Executor is not configured for the NodeManager. "
+              + "To fully enable GPU feature on the node also set "
+              + YarnConfiguration.NM_CONTAINER_EXECUTOR + " properly.";
+      LOG.warn(errorMsg);
+      throw new YarnException(errorMsg);
+    }
+  }
+
+  @Override
+  public String toString() {
+    return GpuResourcePlugin.class.getName();
   }
 }

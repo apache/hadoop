@@ -30,10 +30,11 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAFairOrderingComparator;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAPriorityComparator;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -41,6 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -55,8 +58,8 @@ public class FifoIntraQueuePreemptionPlugin
   protected final CapacitySchedulerPreemptionContext context;
   protected final ResourceCalculator rc;
 
-  private static final Log LOG =
-      LogFactory.getLog(FifoIntraQueuePreemptionPlugin.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoIntraQueuePreemptionPlugin.class);
 
   public FifoIntraQueuePreemptionPlugin(ResourceCalculator rc,
       CapacitySchedulerPreemptionContext preemptionContext) {
@@ -105,10 +108,8 @@ public class FifoIntraQueuePreemptionPlugin
       Resources.addTo(actualPreemptNeeded, a1.getActuallyToBePreempted());
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Selected to preempt " + actualPreemptNeeded
-          + " resource from partition:" + partition);
-    }
+    LOG.debug("Selected to preempt {} resource from partition:{}",
+        actualPreemptNeeded, partition);
     return resToObtainByPartition;
   }
 
@@ -182,7 +183,7 @@ public class FifoIntraQueuePreemptionPlugin
     if (LOG.isDebugEnabled()) {
       LOG.debug("Queue Name:" + tq.queueName + ", partition:" + tq.partition);
       for (TempAppPerPartition tmpApp : tq.getApps()) {
-        LOG.debug(tmpApp);
+        LOG.debug(tmpApp.toString());
       }
     }
   }
@@ -263,8 +264,17 @@ public class FifoIntraQueuePreemptionPlugin
       Resource queueReassignableResource,
       PriorityQueue<TempAppPerPartition> orderedByPriority) {
 
-    Comparator<TempAppPerPartition> reverseComp = Collections
-        .reverseOrder(new TAPriorityComparator());
+    Comparator<TempAppPerPartition> reverseComp;
+    OrderingPolicy<FiCaSchedulerApp> queueOrderingPolicy =
+        tq.leafQueue.getOrderingPolicy();
+    if (queueOrderingPolicy instanceof FairOrderingPolicy
+        && (context.getIntraQueuePreemptionOrderPolicy()
+            == IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
+      reverseComp = Collections.reverseOrder(
+          new TAFairOrderingComparator(this.rc, clusterResource));
+    } else {
+      reverseComp = Collections.reverseOrder(new TAPriorityComparator());
+    }
     TreeSet<TempAppPerPartition> orderedApps = new TreeSet<>(reverseComp);
 
     String partition = tq.partition;
@@ -278,8 +288,8 @@ public class FifoIntraQueuePreemptionPlugin
 
       // Once unallocated resource is 0, we can stop assigning ideal per app.
       if (Resources.lessThanOrEqual(rc, clusterResource,
-          queueReassignableResource, Resources.none())
-          || Resources.isAnyMajorResourceZero(rc, queueReassignableResource)) {
+          queueReassignableResource, Resources.none()) || rc
+          .isAnyMajorResourceZeroOrNegative(queueReassignableResource)) {
         continue;
       }
 
@@ -355,7 +365,16 @@ public class FifoIntraQueuePreemptionPlugin
       TempQueuePerPartition tq, Collection<FiCaSchedulerApp> apps,
       Resource clusterResource,
       Map<String, Resource> perUserAMUsed) {
-    TAPriorityComparator taComparator = new TAPriorityComparator();
+    Comparator<TempAppPerPartition> taComparator;
+    OrderingPolicy<FiCaSchedulerApp> orderingPolicy =
+        tq.leafQueue.getOrderingPolicy();
+    if (orderingPolicy instanceof FairOrderingPolicy
+        && (context.getIntraQueuePreemptionOrderPolicy()
+            == IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
+      taComparator = new TAFairOrderingComparator(this.rc, clusterResource);
+    } else {
+       taComparator = new TAPriorityComparator();
+    }
     PriorityQueue<TempAppPerPartition> orderedByPriority = new PriorityQueue<>(
         100, taComparator);
 
@@ -393,13 +412,12 @@ public class FifoIntraQueuePreemptionPlugin
       // Set ideal allocation of app as 0.
       tmpApp.idealAssigned = Resources.createResource(0, 0);
 
-      orderedByPriority.add(tmpApp);
-
       // Create a TempUserPerPartition structure to hold more information
       // regarding each user's entities such as UserLimit etc. This could
       // be kept in a user to TempUserPerPartition map for further reference.
       String userName = app.getUser();
-      if (!usersPerPartition.containsKey(userName)) {
+      TempUserPerPartition tmpUser = usersPerPartition.get(userName);
+      if (tmpUser == null) {
         ResourceUsage userResourceUsage = tq.leafQueue.getUser(userName)
             .getResourceUsage();
 
@@ -409,10 +427,10 @@ public class FifoIntraQueuePreemptionPlugin
         amUsed = (userSpecificAmUsed == null)
             ? Resources.none() : userSpecificAmUsed;
 
-        TempUserPerPartition tmpUser = new TempUserPerPartition(
+        tmpUser = new TempUserPerPartition(
             tq.leafQueue.getUser(userName), tq.queueName,
             Resources.clone(userResourceUsage.getUsed(partition)),
-            Resources.clone(userSpecificAmUsed),
+            Resources.clone(amUsed),
             Resources.clone(userResourceUsage.getReserved(partition)),
             Resources.none());
 
@@ -425,14 +443,15 @@ public class FifoIntraQueuePreemptionPlugin
             tmpUser.amUsed);
         tmpUser.setUserLimit(userLimitResource);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("TempUser:" + tmpUser);
-        }
+        LOG.debug("TempUser:{}", tmpUser);
 
         tmpUser.idealAssigned = Resources.createResource(0, 0);
         tq.addUserPerPartition(userName, tmpUser);
       }
+      tmpApp.setTempUserPerPartition(tmpUser);
+      orderedByPriority.add(tmpApp);
     }
+
     return orderedByPriority;
   }
 

@@ -30,8 +30,8 @@ import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -54,7 +55,7 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public class JournalSet implements JournalManager {
 
-  static final Log LOG = LogFactory.getLog(FSEditLog.class);
+  static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
 
   // we want local logs to be ordered earlier in the collection, and true
   // is considered larger than false, so reverse the comparator
@@ -76,7 +77,7 @@ public class JournalSet implements JournalManager {
    * stream, then the stream will be aborted and set to null.
    */
   static class JournalAndStream implements CheckableNameNodeResource {
-    private final JournalManager journal;
+    private JournalManager journal;
     private boolean disabled = false;
     private EditLogOutputStream stream;
     private final boolean required;
@@ -146,7 +147,12 @@ public class JournalSet implements JournalManager {
     void setCurrentStreamForTests(EditLogOutputStream stream) {
       this.stream = stream;
     }
-    
+
+    @VisibleForTesting
+    void setJournalForTests(JournalManager jm) {
+      this.journal = jm;
+    }
+
     JournalManager getManager() {
       return journal;
     }
@@ -188,7 +194,7 @@ public class JournalSet implements JournalManager {
   }
   
   @Override
-  public void format(NamespaceInfo nsInfo) throws IOException {
+  public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
     // The operation is done by FSEditLog itself
     throw new UnsupportedOperationException();
   }
@@ -387,7 +393,7 @@ public class JournalSet implements JournalManager {
         if (jas.isRequired()) {
           final String msg = "Error: " + status + " failed for required journal ("
             + jas + ")";
-          LOG.fatal(msg, t);
+          LOG.error(msg, t);
           // If we fail on *any* of the required journals, then we must not
           // continue on any of the other journals. Abort them to ensure that
           // retry behavior doesn't allow them to keep going in any way.
@@ -691,8 +697,8 @@ public class JournalSet implements JournalManager {
     StringBuilder buf = new StringBuilder();
     for (JournalAndStream jas : journals) {
       if (jas.isActive()) {
-        buf.append(jas.getCurrentStream().getTotalSyncTime());
-        buf.append(" ");
+        buf.append(jas.getCurrentStream().getTotalSyncTime())
+            .append(" ");
       }
     }
     return buf.toString();

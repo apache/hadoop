@@ -61,4 +61,9 @@ public interface ECBlockGroupsMBean {
    * Return total number of erasure coded block groups.
    */
   long getTotalECBlockGroups();
+
+  /**
+   * @return the enabled erasure coding policies separated with comma.
+   */
+  String getEnabledEcPolicies();
 }

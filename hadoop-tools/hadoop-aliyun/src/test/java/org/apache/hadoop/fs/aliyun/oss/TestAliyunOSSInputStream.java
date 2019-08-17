@@ -123,15 +123,15 @@ public class TestAliyunOSSInputStream {
         + fsDataInputStream.getPos(), fsDataInputStream.getPos() == 0);
 
     assertTrue("expected position at:"
-            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
-            + in.getExpectNextPos(),
+        + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
+        + in.getExpectNextPos(),
         in.getExpectNextPos() == Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
     fsDataInputStream.seek(4 * 1024 * 1024);
     assertTrue("expected position at:" + 4 * 1024 * 1024
-            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
-            + in.getExpectNextPos(),
+        + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
+        + in.getExpectNextPos(),
         in.getExpectNextPos() == 4 * 1024 * 1024
-            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+        + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
     IOUtils.closeStream(fsDataInputStream);
   }
 

@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -36,16 +37,24 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Matchers;
+
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.junit.Assert.assertEquals;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.Lists;
 
@@ -96,6 +105,80 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
+  }
+
+  @Test
+  public void testRequestNNAfterOneSuccess() throws Exception {
+    final AtomicInteger goodCount = new AtomicInteger(0);
+    final AtomicInteger badCount = new AtomicInteger(0);
+    final ClientProtocol goodMock = mock(ClientProtocol.class);
+    when(goodMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        goodCount.incrementAndGet();
+        Thread.sleep(1000);
+        return new long[]{1};
+      }
+    });
+    final ClientProtocol badMock = mock(ClientProtocol.class);
+    when(badMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        badCount.incrementAndGet();
+        throw new IOException("Bad mock !!");
+      }
+    });
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
+            createFactory(badMock, goodMock));
+    ClientProtocol proxy = provider.getProxy().proxy;
+    proxy.getStats();
+    assertEquals(1, goodCount.get());
+    assertEquals(1, badCount.get());
+    // We will only use the successful proxy after a successful invocation.
+    proxy.getStats();
+    assertEquals(2, goodCount.get());
+    assertEquals(1, badCount.get());
+  }
+
+  @Test
+  public void testExceptionInfo() throws Exception {
+    final ClientProtocol goodMock = mock(ClientProtocol.class);
+    when(goodMock.getStats()).thenAnswer(new Answer<long[]>() {
+      private boolean first = true;
+      @Override
+      public long[] answer(InvocationOnMock invocation)
+          throws Throwable {
+        if (first) {
+          Thread.sleep(1000);
+          first = false;
+          return new long[] {1};
+        } else {
+          throw new IOException("Expected Exception Info");
+        }
+      }
+    });
+    final ClientProtocol badMock = mock(ClientProtocol.class);
+    when(badMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation)
+          throws Throwable {
+        throw new IOException("Bad Mock! This is Standby!");
+      }
+    });
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
+            createFactory(badMock, goodMock));
+    ClientProtocol proxy = provider.getProxy().proxy;
+    proxy.getStats();
+    // Test getting the exception when the successful proxy encounters one.
+    try {
+      proxy.getStats();
+    } catch (IOException e) {
+      assertExceptionContains("Expected Exception Info", e);
+    }
   }
 
   @Test
@@ -235,15 +318,13 @@ public class TestRequestHedgingProxyProvider {
   public void testFileNotFoundExceptionWithSingleProxy() throws Exception {
     ClientProtocol active = Mockito.mock(ClientProtocol.class);
     Mockito
-        .when(active.getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong()))
+        .when(active.getBlockLocations(anyString(), anyLong(), anyLong()))
         .thenThrow(new RemoteException("java.io.FileNotFoundException",
             "File does not exist!"));
 
     ClientProtocol standby = Mockito.mock(ClientProtocol.class);
     Mockito
-        .when(standby.getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong()))
+        .when(standby.getBlockLocations(anyString(), anyLong(), anyLong()))
         .thenThrow(
             new RemoteException("org.apache.hadoop.ipc.StandbyException",
                 "Standby NameNode"));
@@ -273,19 +354,60 @@ public class TestRequestHedgingProxyProvider {
     } catch (RemoteException ex) {
       Exception rEx = ex.unwrapRemoteException();
       if (rEx instanceof StandbyException) {
-        Mockito.verify(active).getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong());
+        Mockito.verify(active).getBlockLocations(anyString(), anyLong(),
+            anyLong());
         Mockito.verify(standby, Mockito.times(2))
-            .getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong());
+            .getBlockLocations(anyString(), anyLong(), anyLong());
       } else {
         Assert.assertTrue(rEx instanceof FileNotFoundException);
         Mockito.verify(active, Mockito.times(2))
-            .getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong());
-        Mockito.verify(standby).getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong());
+            .getBlockLocations(anyString(), anyLong(), anyLong());
+        Mockito.verify(standby).getBlockLocations(anyString(), anyLong(),
+            anyLong());
       }
+    }
+  }
+
+  @Test
+  public void testSingleProxyFailover() throws Exception {
+    String singleNS = "mycluster-" + Time.monotonicNow();
+    URI singleNNUri = new URI("hdfs://" + singleNS);
+    Configuration singleConf = new Configuration();
+    singleConf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, singleNS);
+    singleConf.set(HdfsClientConfigKeys.
+        DFS_HA_NAMENODES_KEY_PREFIX + "." + singleNS, "nn1");
+
+    singleConf.set(HdfsClientConfigKeys.
+            DFS_NAMENODE_RPC_ADDRESS_KEY + "." + singleNS + ".nn1",
+        RandomStringUtils.randomAlphabetic(8) + ".foo.bar:9820");
+    ClientProtocol active = Mockito.mock(ClientProtocol.class);
+    Mockito
+        .when(active.getBlockLocations(anyString(), anyLong(), anyLong()))
+        .thenThrow(new RemoteException("java.io.FileNotFoundException",
+            "File does not exist!"));
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(singleConf, singleNNUri,
+            ClientProtocol.class, createFactory(active));
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (RemoteException ex) {
+      Exception rEx = ex.unwrapRemoteException();
+      Assert.assertTrue(rEx instanceof FileNotFoundException);
+    }
+    //Perform failover now, there will be no active proxies now
+    provider.performFailover(active);
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (RemoteException ex) {
+      Exception rEx = ex.unwrapRemoteException();
+      Assert.assertTrue(rEx instanceof IOException);
+      Assert.assertTrue(rEx.getMessage().equals("No valid proxies left."
+          + " All NameNode proxies have failed over."));
     }
   }
 
@@ -414,15 +536,15 @@ public class TestRequestHedgingProxyProvider {
   public void testHedgingWhenFileNotFoundException() throws Exception {
     ClientProtocol active = Mockito.mock(ClientProtocol.class);
     Mockito
-        .when(active.getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong()))
+        .when(active.getBlockLocations(anyString(),
+            anyLong(), anyLong()))
         .thenThrow(new RemoteException("java.io.FileNotFoundException",
             "File does not exist!"));
 
     ClientProtocol standby = Mockito.mock(ClientProtocol.class);
     Mockito
-        .when(standby.getBlockLocations(Matchers.anyString(),
-            Matchers.anyLong(), Matchers.anyLong()))
+        .when(standby.getBlockLocations(anyString(),
+            anyLong(), anyLong()))
         .thenThrow(
             new RemoteException("org.apache.hadoop.ipc.StandbyException",
             "Standby NameNode"));
@@ -443,10 +565,10 @@ public class TestRequestHedgingProxyProvider {
         Assert.assertTrue(rEx instanceof FileNotFoundException);
       }
     }
-    Mockito.verify(active).getBlockLocations(Matchers.anyString(),
-        Matchers.anyLong(), Matchers.anyLong());
-    Mockito.verify(standby).getBlockLocations(Matchers.anyString(),
-        Matchers.anyLong(), Matchers.anyLong());
+    Mockito.verify(active).getBlockLocations(anyString(),
+        anyLong(), anyLong());
+    Mockito.verify(standby).getBlockLocations(anyString(),
+        anyLong(), anyLong());
   }
 
   @Test
@@ -508,6 +630,65 @@ public class TestRequestHedgingProxyProvider {
     }
     Mockito.verify(active).getStats();
     Mockito.verify(standby).getStats();
+  }
+
+  /**
+   * HDFS-14088, we first make a successful RPC call, so
+   * RequestHedgingInvocationHandler#currentUsedProxy will be assigned to the
+   * delayMock. Then: <br/>
+   * 1. We start a thread which sleep for 1 sec and call
+   * RequestHedgingProxyProvider#performFailover() <br/>
+   * 2. We make an RPC call again, the call will sleep for 2 sec and throw an
+   * exception for test.<br/>
+   * 3. RequestHedgingInvocationHandler#invoke() will catch the exception and
+   * log RequestHedgingInvocationHandler#currentUsedProxy. Before patch, there
+   * will throw NullPointException.
+   * @throws Exception
+   */
+  @Test
+  public void testHedgingMultiThreads() throws Exception {
+    final AtomicInteger counter = new AtomicInteger(0);
+    final ClientProtocol delayMock = Mockito.mock(ClientProtocol.class);
+    Mockito.when(delayMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        int flag = counter.incrementAndGet();
+        Thread.sleep(2000);
+        if (flag == 1) {
+          return new long[]{1};
+        } else {
+          throw new IOException("Exception for test.");
+        }
+      }
+    });
+    final ClientProtocol badMock = Mockito.mock(ClientProtocol.class);
+    Mockito.when(badMock.getStats()).thenThrow(new IOException("Bad mock !!"));
+    final RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
+            createFactory(delayMock, badMock));
+    final ClientProtocol delayProxy = provider.getProxy().proxy;
+    long[] stats = delayProxy.getStats();
+    Assert.assertTrue(stats.length == 1);
+    Assert.assertEquals(1, stats[0]);
+    Assert.assertEquals(1, counter.get());
+
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          // Fail over between calling delayProxy.getStats() and throw
+          // exception.
+          Thread.sleep(1000);
+          provider.performFailover(delayProxy);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    };
+    t.start();
+    LambdaTestUtils.intercept(IOException.class, "Exception for test.",
+        delayProxy::getStats);
+    t.join();
   }
 
   private HAProxyFactory<ClientProtocol> createFactory(

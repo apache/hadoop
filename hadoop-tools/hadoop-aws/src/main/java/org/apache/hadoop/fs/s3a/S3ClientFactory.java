@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,14 +35,18 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface S3ClientFactory {
 
   /**
-   * Creates a new {@link AmazonS3} client.  This method accepts the S3A file
-   * system URI both in raw input form and validated form as separate arguments,
-   * because both values may be useful in logging.
+   * Creates a new {@link AmazonS3} client.
    *
    * @param name raw input S3A file system URI
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param credentialSet credentials to use
+   * @param userAgentSuffix optional suffix for the UA field.
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI name) throws IOException;
+  AmazonS3 createS3Client(URI name,
+      String bucket,
+      AWSCredentialsProvider credentialSet,
+      String userAgentSuffix) throws IOException;
 
 }

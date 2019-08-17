@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<!--
+This is the default for network topology configuration. It defines
+level prefix key name, level default cost and max levels.
+-->
+<configuration>
+    <!-- The version of network topology configuration file format, it must be an integer -->
+    <layoutversion>1</layoutversion>
+    <layers>
+        <layer id="datacenter">
+            <prefix></prefix>
+            <cost>1</cost>
+            <type>Root</type>
+        </layer>
+        <!-- layer id is only used as the reference internally in this document -->
+        <layer id="rack">
+            <!-- prefix of the name of this layer. For example, if the prefix is "dc", then every
+            name in this layer should start with "dc", such as "dc1", "dc2", otherwise NetworkTopology
+            class should report error when add a node path which does't follow this rule. This field
+            is case insensitive. It is optional and can have empty or "" value, in all these cases
+            prefix check will not be enforced.
+            -->
+            <prefix>rack</prefix>
+            <!-- The default cost of this layer, an positive integer or 0. Can be override by the
+            "${cost}" value in specific path. This field is also optional. When it's not defined,
+            it's value is default "1".
+            -->
+            <cost>1</cost>
+            <!-- Layer type, optional field, case insensitive, default value InnerNode.
+            Current value range : {Root, InnerNode, Leaf}
+            Leaf node can only appear in the end of the "path" field of the "topology" section.
+            Root node is a special node. It doesn't have name. It's represented by "/" at the beginning of the path.
+            -->
+            <type>InnerNode</type>
+            <!-- default name if this layer is missed. Only apply to InnerNode. Ignored for Leaf node and Root. -->
+            <default>/default-rack</default>
+        </layer>
+        <layer id="node">
+            <prefix></prefix>
+            <cost>0</cost>
+            <type>Leaf</type>
+        </layer>
+    </layers>
+    <topology>
+        <path>/datacenter/rack/node</path>
+        <!-- When this field is true, each InnerNode layer should has its prefix defined with not empty value,
+         otherwise the content is not valid. Default value is false.
+         -->
+        <enforceprefix>false</enforceprefix>
+    </topology>
+</configuration>

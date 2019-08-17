@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +29,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -71,8 +71,8 @@ public class TestBroadcastAMRMProxyFederationPolicy
         .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
     Assert.assertTrue(response.size() == 2);
     for (Map.Entry<SubClusterId, List<ResourceRequest>> entry : response
         .entrySet()) {
@@ -89,21 +89,16 @@ public class TestBroadcastAMRMProxyFederationPolicy
   }
 
   @Test
-  public void testNotifyOfResponse() throws Exception {
+  public void testNotifyOfResponseFromUnknownSubCluster() throws Exception {
     String[] hosts = new String[] {"host1", "host2" };
     List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
         .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
-    try {
-      ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
-          SubClusterId.newInstance("sc3"), mock(AllocateResponse.class));
-      Assert.fail();
-    } catch (FederationPolicyException f) {
-      System.out.println("Expected: " + f.getMessage());
-    }
+    ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
+        SubClusterId.newInstance("sc3"), mock(AllocateResponse.class));
 
     ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
         SubClusterId.newInstance("sc1"), mock(AllocateResponse.class));

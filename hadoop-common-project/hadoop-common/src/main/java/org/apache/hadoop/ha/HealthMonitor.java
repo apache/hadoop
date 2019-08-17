@@ -55,6 +55,7 @@ public class HealthMonitor {
   private long checkIntervalMillis;
   private long sleepAfterDisconnectMillis;
 
+  private int rpcConnectRetries;
   private int rpcTimeout;
 
   private volatile boolean shouldRun = true;
@@ -124,6 +125,8 @@ public class HealthMonitor {
     this.connectRetryInterval = conf.getLong(
         HA_HM_CONNECT_RETRY_INTERVAL_KEY,
         HA_HM_CONNECT_RETRY_INTERVAL_DEFAULT);
+    this.rpcConnectRetries = conf.getInt(HA_HM_RPC_CONNECT_MAX_RETRIES_KEY,
+        HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT);
     this.rpcTimeout = conf.getInt(
         HA_HM_RPC_TIMEOUT_KEY,
         HA_HM_RPC_TIMEOUT_DEFAULT);
@@ -191,7 +194,7 @@ public class HealthMonitor {
    * Connect to the service to be monitored. Stubbed out for easier testing.
    */
   protected HAServiceProtocol createProxy() throws IOException {
-    return targetToMonitor.getHealthMonitorProxy(conf, rpcTimeout);
+    return targetToMonitor.getHealthMonitorProxy(conf, rpcTimeout, rpcConnectRetries);
   }
 
   private void doHealthChecks() throws InterruptedException {
@@ -204,12 +207,11 @@ public class HealthMonitor {
         healthy = true;
       } catch (Throwable t) {
         if (isHealthCheckFailedException(t)) {
-          LOG.warn("Service health check failed for " + targetToMonitor
-              + ": " + t.getMessage());
+          LOG.warn("Service health check failed for {}", targetToMonitor, t);
           enterState(State.SERVICE_UNHEALTHY);
         } else {
-          LOG.warn("Transport-level exception trying to monitor health of " +
-              targetToMonitor + ": " + t.getCause() + " " + t.getLocalizedMessage());
+          LOG.warn("Transport-level exception trying to monitor health of {}",
+              targetToMonitor, t);
           RPC.stopProxy(proxy);
           proxy = null;
           enterState(State.SERVICE_NOT_RESPONDING);
@@ -246,7 +248,7 @@ public class HealthMonitor {
 
   private synchronized void enterState(State newState) {
     if (newState != state) {
-      LOG.info("Entering state " + newState);
+      LOG.info("Entering state {}", newState);
       state = newState;
       synchronized (callbacks) {
         for (Callback cb : callbacks) {

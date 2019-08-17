@@ -28,11 +28,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -85,7 +85,8 @@ public class AppBlock extends HtmlBlock {
     this.conf = conf;
     // check if UI is unsecured.
     String httpAuth = conf.get(CommonConfigurationKeys.HADOOP_HTTP_AUTHENTICATION_TYPE);
-    this.unsecuredUI = (httpAuth != null) && httpAuth.equals("simple");
+    this.unsecuredUI = (httpAuth != null) && (httpAuth.equals("simple") ||
+         httpAuth.equals(PseudoAuthenticationHandler.class.getName()));
   }
 
   @Override
@@ -110,8 +111,7 @@ public class AppBlock extends HtmlBlock {
       final GetApplicationReportRequest request =
           GetApplicationReportRequest.newInstance(appID);
       if (callerUGI == null) {
-        throw new AuthenticationException(
-            "Failed to get user name from request");
+        appReport = getApplicationReport(request);
       } else {
         appReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ApplicationReport> () {
@@ -144,14 +144,19 @@ public class AppBlock extends HtmlBlock {
     try {
       final GetApplicationAttemptsRequest request =
           GetApplicationAttemptsRequest.newInstance(appID);
-      attempts = callerUGI.doAs(
+      if (callerUGI == null) {
+        attempts = getApplicationAttemptsReport(request);
+      } else {
+        attempts = callerUGI.doAs(
           new PrivilegedExceptionAction<Collection<
               ApplicationAttemptReport>>() {
             @Override
-            public Collection<ApplicationAttemptReport> run() throws Exception {
+            public Collection<ApplicationAttemptReport> run()
+                throws Exception {
               return getApplicationAttemptsReport(request);
             }
           });
+      }
     } catch (Exception e) {
       String message =
           "Failed to read the attempts of the application " + appID + ".";
@@ -239,10 +244,9 @@ public class AppBlock extends HtmlBlock {
         .__("FinalStatus Reported by AM:",
             clairfyAppFinalStatus(app.getFinalAppStatus()))
         .__("Started:", Times.format(app.getStartedTime()))
-        .__(
-            "Elapsed:",
-            StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
-                app.getFinishedTime())))
+        .__("Launched:", Times.format(app.getLaunchTime()))
+        .__("Finished:", Times.format(app.getFinishedTime()))
+        .__("Elapsed:", StringUtils.formatTime(app.getElapsedTime()))
         .__(
             "Tracking URL:",
             app.getTrackingUrl() == null
@@ -352,7 +356,7 @@ public class AppBlock extends HtmlBlock {
         .append(nodeLink == null ? "#" : "href='" + nodeLink)
         .append("'>")
         .append(nodeLink == null ? "N/A" : StringEscapeUtils
-            .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
+            .escapeEcmaScript(StringEscapeUtils.escapeHtml4(nodeLink)))
         .append("</a>\",\"<a ")
         .append(logsLink == null ? "#" : "href='" + logsLink).append("'>")
         .append(logsLink == null ? "N/A" : "Logs").append("</a>\"],\n");

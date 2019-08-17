@@ -34,4 +34,14 @@ int validate_container_id(const char* input);
  */
 int get_numbers_split_by_comma(const char* input, int** numbers, size_t* n_numbers);
 
+/*
+ * String format utility
+ */
+char *make_string(const char *fmt, ...);
+
+/*
+ * Compare string end with a suffix.
+ * return 1 if succeeded
+ */
+int str_ends_with(const char *s, const char *suffix);
 #endif

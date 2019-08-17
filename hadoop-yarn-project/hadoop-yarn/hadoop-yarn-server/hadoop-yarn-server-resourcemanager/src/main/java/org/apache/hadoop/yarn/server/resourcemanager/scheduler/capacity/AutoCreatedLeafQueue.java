@@ -49,9 +49,8 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   @Override
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
       throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       validate(newlyParsedQueue);
 
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
@@ -72,8 +71,8 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig
       leafQueueTemplate) throws SchedulerDynamicEditException, IOException {
 
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // TODO:
       // reinitialize only capacities for now since 0 capacity updates
@@ -148,11 +147,10 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     try {
       for( String nodeLabel : parent.getQueueCapacities().getExistingNodeLabels
           ()) {
-        //TODO - update to use getMaximumCapacity(nodeLabel) in YARN-7574
         setEntitlement(nodeLabel, new QueueEntitlement(0.0f,
             parent.getLeafQueueTemplate()
                 .getQueueCapacities()
-                .getMaximumCapacity()));
+                .getMaximumCapacity(nodeLabel)));
       }
     } catch (SchedulerDynamicEditException e) {
       throw new IOException(e);

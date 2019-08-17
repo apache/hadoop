@@ -11,21 +11,24 @@
       "container.start.ms": 6664,
       "container.end.ms": 23707,
       "container.priority": 20,
-      "container.type": "map"
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
     },
     {
       "container.host": "/default-rack/node3",
       "container.start.ms": 6665,
       "container.end.ms": 21593,
       "container.priority": 20,
-      "container.type": "map"
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
     },
     {
       "container.host": "/default-rack/node2",
       "container.start.ms": 68770,
       "container.end.ms": 86613,
       "container.priority": 20,
-      "container.type": "map"
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
     }
   ]
 }
@@ -42,14 +45,16 @@
       "container.start.ms": 111822,
       "container.end.ms": 133985,
       "container.priority": 20,
-      "container.type": "map"
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
     },
     {
       "container.host": "/default-rack/node2",
       "container.start.ms": 111788,
       "container.end.ms": 131377,
       "container.priority": 20,
-      "container.type": "map"
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
     }
   ]
 }

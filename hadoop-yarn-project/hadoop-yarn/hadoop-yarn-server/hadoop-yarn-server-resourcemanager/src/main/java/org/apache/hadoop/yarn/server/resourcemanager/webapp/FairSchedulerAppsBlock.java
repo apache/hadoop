@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -89,6 +89,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".fairshare", "Fair Share").
             th(".starttime", "StartTime").
+            th(".launchTime", "LaunchTime").
             th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
@@ -125,16 +126,17 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getUser()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getApplicationType()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         appInfo.getQueue()))).append("\",\"")
       .append(fairShare).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")
+      .append(appInfo.getLaunchTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")

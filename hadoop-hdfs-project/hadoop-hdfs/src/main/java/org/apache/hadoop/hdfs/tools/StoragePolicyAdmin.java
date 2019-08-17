@@ -32,6 +32,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.FileNotFoundException;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -245,6 +246,51 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     }
   }
 
+  /** Command to schedule blocks to move based on specified policy. */
+  private static class SatisfyStoragePolicyCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-satisfyStoragePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -path <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<path>", "The path of the file/directory to satisfy"
+          + " storage policy");
+      return getShortUsage() + "\n" +
+          "Schedule blocks to move based on file/directory policy.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+      if (path == null) {
+        System.err.println("Please specify the path for setting the storage " +
+            "policy.\nUsage: " + getLongUsage());
+        return 1;
+      }
+      Path p = new Path(path);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
+      try {
+        fs.satisfyStoragePolicy(p);
+        System.out.println("Scheduled blocks to move based on the current"
+            + " storage policy on " + path);
+      } catch (Exception e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
   /* Command to unset the storage policy set for a file/directory */
   private static class UnsetStoragePolicyCommand
       implements AdminHelper.Command {
@@ -295,6 +341,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       new ListStoragePoliciesCommand(),
       new SetStoragePolicyCommand(),
       new GetStoragePolicyCommand(),
-      new UnsetStoragePolicyCommand()
+      new UnsetStoragePolicyCommand(),
+      new SatisfyStoragePolicyCommand()
   };
 }

@@ -19,8 +19,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,12 +37,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 
 public class FpgaResourcePlugin implements ResourcePlugin {
-  private static final Log LOG = LogFactory.getLog(FpgaResourcePlugin.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FpgaResourcePlugin.class);
 
   private ResourceHandler fpgaResourceHandler = null;
 
   private AbstractFpgaVendorPlugin vendorPlugin = null;
   private FpgaNodeResourceUpdateHandler fpgaNodeResourceUpdateHandler = null;
+  private FpgaDiscoverer fpgaDiscoverer;
 
   private AbstractFpgaVendorPlugin createFpgaVendorPlugin(Configuration conf) {
     String vendorPluginClass = conf.get(YarnConfiguration.NM_FPGA_VENDOR_PLUGIN,
@@ -67,9 +69,11 @@ public class FpgaResourcePlugin implements ResourcePlugin {
   public void initialize(Context context) throws YarnException {
     // Get vendor plugin from configuration
     this.vendorPlugin = createFpgaVendorPlugin(context.getConf());
-    FpgaDiscoverer.getInstance().setResourceHanderPlugin(vendorPlugin);
-    FpgaDiscoverer.getInstance().initialize(context.getConf());
-    fpgaNodeResourceUpdateHandler = new FpgaNodeResourceUpdateHandler();
+    fpgaDiscoverer = new FpgaDiscoverer();
+    fpgaDiscoverer.setResourceHanderPlugin(vendorPlugin);
+    fpgaDiscoverer.initialize(context.getConf());
+    fpgaNodeResourceUpdateHandler =
+        new FpgaNodeResourceUpdateHandler(fpgaDiscoverer);
   }
 
   @Override
@@ -78,7 +82,8 @@ public class FpgaResourcePlugin implements ResourcePlugin {
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (fpgaResourceHandler == null) {
       fpgaResourceHandler = new FpgaResourceHandlerImpl(nmContext,
-          cGroupsHandler, privilegedOperationExecutor, vendorPlugin);
+          cGroupsHandler, privilegedOperationExecutor, vendorPlugin,
+          fpgaDiscoverer);
     }
     return fpgaResourceHandler;
   }
@@ -101,5 +106,10 @@ public class FpgaResourcePlugin implements ResourcePlugin {
   @Override
   public NMResourceInfo getNMResourceInfo() throws YarnException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return FpgaResourcePlugin.class.getName();
   }
 }

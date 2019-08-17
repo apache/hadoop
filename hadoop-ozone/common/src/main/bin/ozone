@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="ozone"
+MYNAME="${BASH_SOURCE-$0}"
+JVM_PID="$$"
+## @description  build up the hdfs command's usage text.
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function hadoop_usage
+{
+  hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
+  hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in worker mode"
+  hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
+  hadoop_add_option "--loglevel level" "set the log4j level for this command"
+  hadoop_add_option "--workers" "turn on worker mode"
+
+  hadoop_add_subcommand "auditparser" client "runs audit parser tool"
+  hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "freon" client "runs an ozone data generator"
+  hadoop_add_subcommand "fs" client "run a filesystem command on Ozone file system. Equivalent to 'hadoop fs'"
+  hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
+  hadoop_add_subcommand "genesis" client "runs a collection of ozone benchmarks to help with tuning."
+  hadoop_add_subcommand "getconf" client "get ozone config values from configuration"
+  hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
+  hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
+  hadoop_add_subcommand "om" daemon "Ozone Manager"
+  hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
+  hadoop_add_subcommand "s3g" daemon "run the S3 compatible REST gateway"
+  hadoop_add_subcommand "csi" daemon "run the standalone CSI daemon"
+  hadoop_add_subcommand "recon" daemon "run the Recon service"
+  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
+  hadoop_add_subcommand "sh" client "command line interface for object store operations"
+  hadoop_add_subcommand "s3" client "command line interface for s3 related operations"
+  hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
+  hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
+
+  hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
+}
+
+## @description  Default command handler for hadoop command
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        CLI arguments
+function ozonecmd_case
+{
+  subcmd=$1
+  shift
+
+  case ${subcmd} in
+    auditparser)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.audit.parser.AuditParser
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    classpath)
+      if [[ "$#" -gt 0 ]]; then
+        OZONE_RUN_ARTIFACT_NAME="$1"
+        HADOOP_CLASSNAME="org.apache.hadoop.util.Classpath"
+        #remove the artifact name and replace it with glob
+        # (We need at least one argument to execute the Classpath helper class)
+        HADOOP_SUBCMD_ARGS[0]="--glob"
+      else
+        hadoop_finalize
+        echo "Usage: ozone classpath <ARTIFACTNAME>"
+        echo "Where the artifact name is one of:"
+        echo ""
+        ls -1 ${HADOOP_HDFS_HOME}/share/ozone/classpath/ | sed 's/.classpath//'
+        exit -1
+      fi
+    ;;
+    datanode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      # Add JVM parameter (org.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false)
+      # for disabling netty PooledByteBufAllocator thread caches for non-netty threads.
+      # This parameter significantly reduces GC pressure for Datanode.
+      # Corresponding Ratis issue https://issues.apache.org/jira/browse/RATIS-534.
+      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties -Dorg.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDDS_DN_OPTS}"
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.HddsDatanodeService
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-datanode"
+    ;;
+    envvars)
+      echo "JAVA_HOME='${JAVA_HOME}'"
+      echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
+      echo "HDFS_DIR='${HDFS_DIR}'"
+      echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
+      echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+      echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+      echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+      echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      if [[ -n "${QATESTMODE}" ]]; then
+        echo "MYNAME=${MYNAME}"
+        echo "HADOOP_SHELL_EXECNAME=${HADOOP_SHELL_EXECNAME}"
+      fi
+      exit 0
+    ;;
+    freon)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.Freon
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    genesis)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.genesis.Genesis
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    getconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.OzoneGetConf;
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    om)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.om.OzoneManagerStarter
+      HDFS_OM_OPTS="${HDFS_OM_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/om-audit-log4j2.properties"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_OPTS}"
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
+    ;;
+    sh | shell)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_SH_OPTS}"
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
+    ;;
+    s3)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.s3.S3Shell
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
+    ;;
+    scm)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdds.scm.server.StorageContainerManagerStarter'
+      hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
+      HDFS_STORAGECONTAINERMANAGER_OPTS="${HDFS_STORAGECONTAINERMANAGER_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/scm-audit-log4j2.properties"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
+      OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-server-scm"
+    ;;
+    s3g)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.s3.Gateway'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-s3gateway"
+    ;;
+    csi)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.csi.CsiServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-csi"
+    ;;
+    recon)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.recon.ReconServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-recon"
+    ;;
+    fs)
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    scmcli)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdds.scm.cli.SCMCLI
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_SCM_CLI_OPTS}"
+      OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-tools"
+    ;;
+    version)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.util.OzoneVersionInfo
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-common"
+    ;;
+    genconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.genconf.GenerateOzoneRequiredConfigurations
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    dtutil)
+      HADOOP_CLASSNAME=org.apache.hadoop.security.token.DtUtilShell
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    upgrade)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.upgrade.InPlaceUpgrade
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-upgrade"
+    ;;
+    *)
+      HADOOP_CLASSNAME="${subcmd}"
+      if ! hadoop_validate_classname "${HADOOP_CLASSNAME}"; then
+        hadoop_exit_with_usage 1
+      fi
+    ;;
+  esac
+}
+
+# let's locate libexec...
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
+else
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/ozone-config.sh" ]]; then
+  # shellcheck source=./hadoop-ozone/common/src/main/bin/ozone-config.sh
+  . "${HADOOP_LIBEXEC_DIR}/ozone-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/ozone-config.sh." 2>&1
+  exit 1
+fi
+
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
+
+if [[ $# = 0 ]]; then
+  hadoop_exit_with_usage 1
+fi
+
+HADOOP_SUBCMD=$1
+shift
+
+
+if hadoop_need_reexec ozone "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su ozone "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_verify_user_perm "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
+HADOOP_SUBCMD_ARGS=("$@")
+
+if declare -f ozone_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: ozone_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[*]}"
+  "ozone_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+else
+  ozonecmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+fi
+
+
+#
+# Setting up classpath based on the generate classpath descriptors
+#
+if [ ! "$OZONE_RUN_ARTIFACT_NAME" ]; then
+   echo "ERROR: Ozone components require to set OZONE_RUN_ARTIFACT_NAME to set the classpath"
+   exit -1
+fi
+export HDDS_LIB_JARS_DIR="${HADOOP_HDFS_HOME}/share/ozone/lib"
+CLASSPATH_FILE="${HADOOP_HDFS_HOME}/share/ozone/classpath/${OZONE_RUN_ARTIFACT_NAME}.classpath"
+if [ ! "$CLASSPATH_FILE" ]; then
+   echo "ERROR: Classpath file descriptor $CLASSPATH_FILE is missing"
+   exit -1
+fi
+# shellcheck disable=SC1090,SC2086
+source $CLASSPATH_FILE
+OIFS=$IFS
+IFS=':'
+# shellcheck disable=SC2154
+for jar in $classpath; do
+   hadoop_add_classpath "$jar"
+done
+hadoop_add_classpath "${HADOOP_HDFS_HOME}/share/ozone/web"
+
+#We need to add the artifact manually as it's not part the generated classpath desciptor
+ARTIFACT_LIB_DIR="${HADOOP_HDFS_HOME}/share/ozone/lib"
+MAIN_ARTIFACT=$(find "$ARTIFACT_LIB_DIR" -name "${OZONE_RUN_ARTIFACT_NAME}-*.jar")
+if [ ! "$MAIN_ARTIFACT" ]; then
+   echo "ERROR: Component jar file $MAIN_ARTIFACT is missing from ${HADOOP_HDFS_HOME}/share/ozone/lib"
+fi
+hadoop_add_classpath "${MAIN_ARTIFACT}"
+IFS=$OIFS
+
+
+hadoop_add_client_opts
+
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_HDFS_HOME}/bin/ozone" "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
+# everything is in globals at this point, so call the generic handler
+hadoop_generic_java_subcmd_handler

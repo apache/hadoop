@@ -36,8 +36,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -139,7 +139,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
   private Histogram successfulNthReducerAttempts;
   private Histogram mapperLocality;
 
-  static final private Log LOG = LogFactory.getLog(HadoopLogsAnalyzer.class);
+  static final private Logger LOG = LoggerFactory.getLogger(HadoopLogsAnalyzer.class);
 
   private int[] attemptTimesPercentiles;
 

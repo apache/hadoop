@@ -29,7 +29,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -436,10 +436,8 @@ public class SQLFederationStateStore implements FederationStateStore {
             "SubCluster " + subClusterId.toString() + " does not exist";
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got the information about the specified SubCluster "
-            + subClusterInfo.toString());
-      }
+      LOG.debug("Got the information about the specified SubCluster {}",
+          subClusterInfo);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(LOG,
@@ -564,13 +562,13 @@ public class SQLFederationStateStore implements FederationStateStore {
         // Check the ROWCOUNT value, if it is equal to 0 it means the call
         // did not add a new application into FederationStateStore
         if (cstmt.getInt(4) == 0) {
-          String errMsg = "The application " + appId
-              + " was not insert into the StateStore";
-          FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
-        }
-        // Check the ROWCOUNT value, if it is different from 1 it means the call
-        // had a wrong behavior. Maybe the database is not set correctly.
-        if (cstmt.getInt(4) != 1) {
+          LOG.info(
+              "The application {} was not inserted in the StateStore because it"
+                  + " was already present in SubCluster {}",
+              appId, subClusterHome);
+        } else if (cstmt.getInt(4) != 1) {
+          // Check the ROWCOUNT value, if it is different from 1 it means the
+          // call had a wrong behavior. Maybe the database is not set correctly.
           String errMsg = "Wrong behavior during the insertion of SubCluster "
               + subClusterId;
           FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -700,10 +698,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got the information about the specified application  "
-            + request.getApplicationId() + ". The AM is running in " + homeRM);
-      }
+      LOG.debug("Got the information about the specified application {}."
+          + " The AM is running in {}", request.getApplicationId(), homeRM);
 
       FederationStateStoreClientMetrics
           .succeededStateStoreCall(stopTime - startTime);
@@ -852,10 +848,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         subClusterPolicyConfiguration =
             SubClusterPolicyConfiguration.newInstance(request.getQueue(),
                 cstmt.getString(2), ByteBuffer.wrap(cstmt.getBytes(3)));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Selected from StateStore the policy for the queue: "
-              + subClusterPolicyConfiguration.toString());
-        }
+        LOG.debug("Selected from StateStore the policy for the queue: {}",
+            subClusterPolicyConfiguration);
       } else {
         LOG.warn("Policy for queue: {} does not exist.", request.getQueue());
         return null;
@@ -987,12 +981,12 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Version loadVersion() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override

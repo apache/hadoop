@@ -71,8 +71,8 @@ public class SharedCacheUtil {
     // SHARED_CACHE_ROOT/3/c/4/3c4f
     StringBuilder sb = new StringBuilder(cacheRoot);
     for (int i = 0; i < cacheDepth; i++) {
-      sb.append(Path.SEPARATOR_CHAR);
-      sb.append(checksum.charAt(i));
+      sb.append(Path.SEPARATOR_CHAR)
+          .append(checksum.charAt(i));
     }
     sb.append(Path.SEPARATOR_CHAR).append(checksum);
 

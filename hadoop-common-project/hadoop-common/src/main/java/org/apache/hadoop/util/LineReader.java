@@ -62,7 +62,6 @@ public class LineReader implements Closeable {
    * Create a line reader that reads from the given stream using the
    * default buffer-size (64k).
    * @param in The input stream
-   * @throws IOException
    */
   public LineReader(InputStream in) {
     this(in, DEFAULT_BUFFER_SIZE);
@@ -73,7 +72,6 @@ public class LineReader implements Closeable {
    * given buffer-size.
    * @param in The input stream
    * @param bufferSize Size of the read buffer
-   * @throws IOException
    */
   public LineReader(InputStream in, int bufferSize) {
     this.in = in;
@@ -115,7 +113,6 @@ public class LineReader implements Closeable {
    * @param in The input stream
    * @param bufferSize Size of the read buffer
    * @param recordDelimiterBytes The delimiter
-   * @throws IOException
    */
   public LineReader(InputStream in, int bufferSize,
       byte[] recordDelimiterBytes) {

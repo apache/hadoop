@@ -56,11 +56,11 @@ export default Ember.Helper.helper(function(params,hash) {
     html = html + ' class="active"';
   }
   html = html + '><a href="#/yarn-node-apps/' + hash.nodeId + '/' + hash.nodeAddr +
-      '">List of Applications</a></li><li';
+      '">List of Applications on this Node</a></li><li';
   if (hash.path === 'yarn-node-containers') {
     html = html + ' class="active"';
   }
   html = html + '><a href="#/yarn-node-containers/' +hash.nodeId + '/' + hash.nodeAddr +
-      '">List of Containers</a></li></ul></ul></div>';
+      '">List of Containers on this Node</a></li></ul></ul></div>';
   return Ember.String.htmlSafe(html);
 });

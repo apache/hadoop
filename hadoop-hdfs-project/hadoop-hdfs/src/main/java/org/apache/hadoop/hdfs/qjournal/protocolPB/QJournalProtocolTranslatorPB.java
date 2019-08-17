@@ -40,6 +40,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FinalizeL
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
@@ -136,11 +138,13 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   @Override
   public void format(String jid,
                      String nameServiceId,
-                     NamespaceInfo nsInfo) throws IOException {
+                     NamespaceInfo nsInfo,
+                     boolean force) throws IOException {
     try {
       FormatRequestProto.Builder req = FormatRequestProto.newBuilder()
           .setJid(convertJournalId(jid))
-          .setNsInfo(PBHelper.convert(nsInfo));
+          .setNsInfo(PBHelper.convert(nsInfo))
+          .setForce(force);
       if(nameServiceId != null) {
         req.setNameServiceId(nameServiceId);
       }
@@ -278,6 +282,24 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
           );
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public GetJournaledEditsResponseProto getJournaledEdits(String jid,
+      String nameServiceId, long sinceTxId, int maxTxns) throws IOException {
+    try {
+      GetJournaledEditsRequestProto.Builder req =
+          GetJournaledEditsRequestProto.newBuilder()
+              .setJid(convertJournalId(jid))
+              .setSinceTxId(sinceTxId)
+              .setMaxTxns(maxTxns);
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+      return rpcProxy.getJournaledEdits(NULL_CONTROLLER, req.build());
+    } catch (ServiceException se) {
+      throw ProtobufHelper.getRemoteException(se);
     }
   }
 

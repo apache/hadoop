@@ -30,8 +30,8 @@ import java.util.List;
 
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -50,8 +50,8 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 public class TestTimelineClientV2Impl {
-  private static final Log LOG =
-      LogFactory.getLog(TestTimelineClientV2Impl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTimelineClientV2Impl.class);
   private TestV2TimelineClient client;
   private static final long TIME_TO_SLEEP = 150L;
   private static final String EXCEPTION_MSG = "Exception in the content";

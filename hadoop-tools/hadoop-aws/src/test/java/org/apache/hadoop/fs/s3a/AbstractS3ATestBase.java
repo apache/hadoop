@@ -29,13 +29,11 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -52,7 +50,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   @Override
+  public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
+    super.setup();
+  }
+
+  @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     super.teardown();
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());
@@ -78,23 +83,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    // set hadoop temp dir to a default value
-    String testUniqueForkId =
-        System.getProperty(TEST_UNIQUE_FORK_ID);
-    String tmpDir = conf.get(Constants.HADOOP_TMP_DIR, "target/build/test");
-    if (testUniqueForkId != null) {
-      // patch temp dir for the specific branch
-      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
-      conf.set(Constants.HADOOP_TMP_DIR, tmpDir);
-    }
-    conf.set(Constants.BUFFER_DIR, tmpDir);
-    // add this so that even on tests where the FS is shared,
-    // the FS is always "magic"
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
+    return S3ATestUtils.prepareTestConfiguration(super.createConfiguration());
   }
 
   protected Configuration getConfiguration() {
@@ -148,14 +137,18 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
   }
 
+  protected String getTestTableName(String suffix) {
+    return getTestDynamoTablePrefix(getConfiguration()) + suffix;
+  }
+
   /**
    * Assert that an exception failed with a specific status code.
    * @param e exception
    * @param code expected status code
-   * @throws AWSS3IOException rethrown if the status code does not match.
+   * @throws AWSServiceIOException rethrown if the status code does not match.
    */
-  protected void assertStatusCode(AWSS3IOException e, int code)
-      throws AWSS3IOException {
+  protected void assertStatusCode(AWSServiceIOException e, int code)
+      throws AWSServiceIOException {
     if (e.getStatusCode() != code) {
       throw e;
     }

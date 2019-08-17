@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +45,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceStability.Unstable
 public class OfflineEditsViewerHelper {
 
-  private static final Log LOG = 
-    LogFactory.getLog(OfflineEditsViewerHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OfflineEditsViewerHelper.class);
 
     final long           blockSize = 512;
     MiniDFSCluster cluster   = null;

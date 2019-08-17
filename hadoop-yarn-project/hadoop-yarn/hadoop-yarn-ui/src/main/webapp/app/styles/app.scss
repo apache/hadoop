@@ -472,7 +472,8 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 }
 .yarn-cluster-info {
   display: flex;
-  margin-left: auto
+  margin-left: auto;
+  margin-top: -7px;
 }
 
 .yarn-ui-footer {
@@ -727,4 +728,48 @@ div.service-action-mask img {
   white-space: pre-wrap;
   word-wrap: nowrap;
   overflow: scroll;
+}
+
+div.loggedin-user {
+  float: right;
+  padding: 15px 5px;
+  color: #555;
+  .username {
+    font-weight: bold;
+  }
+}
+
+.no-border-bottom {
+  border-bottom: none;
+}
+
+.margin-bottom-20 {
+  margin-bottom: 20px;
+}
+
+.diagnostic-info {
+  pre {
+    margin-bottom: 0;
+    white-space: pre-wrap;
+    border: none;
+    border-radius: 2px;
+  }
+}
+
+/**
+ * Active User Info table styles
+ */
+.active-user-panel {
+  margin-top: 10px;
+}
+
+table.active-user-table {
+  border: 1px solid #ddd;
+  > thead > tr > th {
+    background-color: #f7f7f7;
+  }
+  &.table-bordered > thead > tr > th,
+  &.table-bordered > tbody > tr > td {
+    border: 1px solid #dcdcdc !important;
+  }
 }

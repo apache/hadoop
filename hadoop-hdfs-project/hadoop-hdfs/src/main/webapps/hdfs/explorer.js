@@ -93,8 +93,8 @@
         { type: 'DELETE'
         }).done(function(data) {
           browse_directory(current_directory);
-        }).error(network_error_handler(url)
-         ).complete(function() {
+        }).fail(network_error_handler(url)
+         ).always(function() {
            $('#delete-modal').modal('hide');
            $('#delete-button').button('reset');
         });
@@ -140,8 +140,8 @@
     $.ajax(url, { type: 'PUT'
       }).done(function(data) {
         browse_directory(current_directory);
-      }).error(network_error_handler(url))
-      .complete(function() {
+      }).fail(network_error_handler(url))
+      .always(function() {
         $('.explorer-perm-links').popover('destroy');
       });
   }
@@ -195,35 +195,48 @@
 
       var processPreview = function(url) {
         url += "&noredirect=true";
-        $.ajax({
+        if(request && request.readyState != 4){
+         request.abort();
+        }
+      request =  $.ajax({
+           cache: false,
           type: 'GET',
           url: url,
+          async: false,
           processData: false,
           crossDomain: true
-        }).done(function(data) {
+        }).done(function(data, textStatus, jqXHR) {
+
           url = data.Location;
           $.ajax({
+            cache: false,
             type: 'GET',
             url: url,
+            async: false,
             processData: false,
             crossDomain: true
-          }).complete(function(data) {
-            $('#file-info-preview-body').val(data.responseText);
+          }).always(function(data, textStatus, jqXHR) {
+            $('#file-info-preview-body').val(jqXHR.responseText);
             $('#file-info-tail').show();
-          }).error(function(jqXHR, textStatus, errorThrown) {
+          }).fail(function(jqXHR, textStatus, errorThrown) {
             show_err_msg("Couldn't preview the file. " + errorThrown);
           });
-        }).error(function(jqXHR, textStatus, errorThrown) {
+        }).fail(function(jqXHR, textStatus, errorThrown) {
           show_err_msg("Couldn't find datanode to read file from. " + errorThrown);
         });
       }
 
-      $('#file-info-preview-tail').click(function() {
+      var request = null;
+      $('#file-info-preview-tail')
+	   .off('click')
+	   .on('click', function() {
         var offset = d.fileLength - TAIL_CHUNK_SIZE;
         var url = offset > 0 ? download_url + '&offset=' + offset : download_url;
         processPreview(url);
       });
-      $('#file-info-preview-head').click(function() {
+      $('#file-info-preview-head')
+	   .off('click')
+	   .on('click', function() {
         var url = d.fileLength > TAIL_CHUNK_SIZE ? download_url + '&length=' + TAIL_CHUNK_SIZE : download_url;
         processPreview(url);
       });
@@ -235,7 +248,7 @@
         $('#file-info-blockinfo-panel').hide();
       }
       $('#file-info').modal();
-    }).error(network_error_handler(url));
+    }).fail(network_error_handler(url));
   }
 
   /**Use X-editable to make fields editable with a nice UI.
@@ -254,8 +267,8 @@
             op + '&' + parameter + '=' + encodeURIComponent(params.value);
 
           return $.ajax(url, { type: 'PUT', })
-            .error(network_error_handler(url))
-            .success(function() {
+            .fail(network_error_handler(url))
+            .done(function() {
                 browse_directory(current_directory);
              });
         },
@@ -360,7 +373,7 @@
           "deferRender": true
         });
       });
-    }).error(network_error_handler(url));
+    }).fail(network_error_handler(url));
   }
 
 
@@ -398,12 +411,40 @@
     $.ajax(url, { type: 'PUT' }
     ).done(function(data) {
       browse_directory(current_directory);
-    }).error(network_error_handler(url)
-     ).complete(function() {
+    }).fail(network_error_handler(url)
+     ).always(function() {
        $('#btn-create-directory').modal('hide');
        $('#btn-create-directory-send').button('reset');
     });
   })
+
+  $('#btn-upload-files').click(function() {
+        $('#modal-upload-file-button').prop('disabled', true).button('reset');
+        $('#modal-upload-file-input').val(null);
+      });
+
+  $('#btn-create-dir').click(function() {
+        $('#btn-create-directory-send').prop('disabled', true).button('reset');
+        $('#new_directory').val(null);
+      });
+
+  $('#modal-upload-file-input').change(function() {
+      if($('#modal-upload-file-input').prop('files').length >0) {
+         $('#modal-upload-file-button').prop('disabled', false);
+        }
+      else {
+        $('#modal-upload-file-button').prop('disabled', true);
+        }
+      });
+
+  $('#new_directory').on('keyup keypress blur change',function() {
+      if($('#new_directory').val() == '' ||  $('#new_directory').val() == null) {
+         $('#btn-create-directory-send').prop('disabled', true);
+        }
+      else {
+         $('#btn-create-directory-send').prop('disabled', false);
+        }
+      });
 
   $('#modal-upload-file-button').click(function() {
     $(this).prop('disabled', true);
@@ -414,8 +455,7 @@
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       (function() {
         var file = $('#modal-upload-file-input').prop('files')[i];
-        var url = '/webhdfs/v1' + current_directory;
-        url = encode_path(append_path(url, file.name));
+        var url = '/webhdfs/v1' + encode_path(append_path(current_directory, file.name));
         url += '?op=CREATE&noredirect=true';
         files.push( { file: file } )
         files[i].request = $.ajax({
@@ -437,18 +477,18 @@
             data: file.file,
             processData: false,
             crossDomain: true
-          }).complete(function(data) {
+          }).always(function(data) {
             numCompleted++;
             if(numCompleted == files.length) {
               reset_upload_button();
               browse_directory(current_directory);
             }
-          }).error(function(jqXHR, textStatus, errorThrown) {
+          }).fail(function(jqXHR, textStatus, errorThrown) {
             numCompleted++;
             reset_upload_button();
             show_err_msg("Couldn't upload the file " + file.file.name + ". "+ errorThrown);
           });
-        }).error(function(jqXHR, textStatus, errorThrown) {
+        }).fail(function(jqXHR, textStatus, errorThrown) {
           numCompleted++;
           reset_upload_button();
           show_err_msg("Couldn't find datanode to write file. " + errorThrown);
@@ -492,7 +532,7 @@
         if(index == files.length - 1) {
           browse_directory(current_directory);
         }
-      }).error(function(jqXHR, textStatus, errorThrown) {
+      }).fail(function(jqXHR, textStatus, errorThrown) {
         show_err_msg("Couldn't move file " + value + ". " + errorThrown);
       });
 

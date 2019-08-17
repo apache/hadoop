@@ -65,6 +65,10 @@ public class TestPlacementConstraintTransformations {
 
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
     TargetConstraint target = (TargetConstraint) tConstraintExpr;
+
+    // Make sure the expression string is consistent
+    // before and after transforming
+    Assert.assertEquals(single.toString(), target.toString());
     Assert.assertEquals(single.getScope(), target.getScope());
     Assert.assertEquals(TargetOperator.IN, target.getOp());
     Assert.assertEquals(single.getTargetExpressions(),
@@ -101,6 +105,9 @@ public class TestPlacementConstraintTransformations {
     Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
 
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
+    // Make sure the consistent expression string is consistent
+    // before and after transforming
+    Assert.assertEquals(single.toString(), cardinality.toString());
     Assert.assertEquals(cardinality.getScope(), single.getScope());
     Assert.assertEquals(cardinality.getMinCardinality(),
         single.getMinCardinality());

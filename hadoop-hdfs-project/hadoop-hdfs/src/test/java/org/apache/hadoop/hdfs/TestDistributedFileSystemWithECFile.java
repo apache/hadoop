@@ -21,16 +21,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +65,9 @@ public class TestDistributedFileSystemWithECFile {
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
+
+  @Rule
+  public final Timeout globalTimeout = new Timeout(60000 * 3);
 
   @Before
   public void setup() throws IOException {
@@ -248,5 +256,41 @@ public class TestDistributedFileSystemWithECFile {
     assertNull(fs.getErasureCodingPolicy(replicatedFile));
     assertEquals(rs63, fs.getErasureCodingPolicy(ecFile));
     assertEquals(rs32, fs.getErasureCodingPolicy(ecFile2));
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testStatistics() throws Exception {
+    final String fileName = "/ec/file";
+    final int size = 3200;
+    createFile(fileName, size);
+    InputStream in = null;
+    try {
+      in = fs.open(new Path(fileName));
+      IOUtils.copyBytes(in, System.out, 4096, false);
+    } finally {
+      IOUtils.closeStream(in);
+    }
+
+    // verify stats are correct
+    Long totalBytesRead = 0L;
+    Long ecBytesRead = 0L;
+    for (FileSystem.Statistics stat : FileSystem.getAllStatistics()) {
+      totalBytesRead += stat.getBytesRead();
+      ecBytesRead += stat.getBytesReadErasureCoded();
+    }
+    assertEquals(Long.valueOf(size), totalBytesRead);
+    assertEquals(Long.valueOf(size), ecBytesRead);
+
+    // verify thread local stats are correct
+    Long totalBytesReadThread = 0L;
+    Long ecBytesReadThread = 0L;
+    for (FileSystem.Statistics stat : FileSystem.getAllStatistics()) {
+      FileSystem.Statistics.StatisticsData data = stat.getThreadStatistics();
+      totalBytesReadThread += data.getBytesRead();
+      ecBytesReadThread += data.getBytesReadErasureCoded();
+    }
+    assertEquals(Long.valueOf(size), totalBytesReadThread);
+    assertEquals(Long.valueOf(size), ecBytesReadThread);
   }
 }

@@ -19,8 +19,12 @@
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+
+import java.io.IOException;
 
 /**
  * The contract of Aliyun OSS: only enabled if the test bucket is provided.
@@ -38,6 +42,11 @@ public class AliyunOSSContract extends AbstractBondedFSContract {
   @Override
   public String getScheme() {
     return "oss";
+  }
+
+  @Override
+  public FileSystem getTestFileSystem() throws IOException {
+    return AliyunOSSTestUtils.createTestFileSystem(new Configuration());
   }
 
   @Override

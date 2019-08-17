@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -30,11 +30,13 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,12 +53,17 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 public class TestDFSStripedInputStream {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestDFSStripedInputStream.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSStripedInputStream.class);
 
   private MiniDFSCluster cluster;
   private Configuration conf = new Configuration();
@@ -98,7 +105,13 @@ public class TestDFSStripedInputStream {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
+        GenericTestUtils.getRandomizedTempPath());
     SimulatedFSDataset.setFactory(conf);
+    startUp();
+  }
+
+  private void startUp() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
@@ -319,7 +332,7 @@ public class TestDFSStripedInputStream {
     if (cellMisalignPacket) {
       conf.setInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT + 1);
       tearDown();
-      setup();
+      startUp();
     }
     DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
         stripesPerBlock, false, ecPolicy);
@@ -502,6 +515,69 @@ public class TestDFSStripedInputStream {
       assertTrue(in instanceof DFSStripedInputStream);
       // Close twice
       in.close();
+    }
+  }
+
+  @Test
+  public void testReadFailToGetCurrentBlock() throws Exception {
+    DFSTestUtil.writeFile(cluster.getFileSystem(), filePath, "test");
+    try (DFSStripedInputStream in = (DFSStripedInputStream) fs.getClient()
+        .open(filePath.toString())) {
+      final DFSStripedInputStream spy = spy(in);
+      final String msg = "Injected exception for testReadNPE";
+      doThrow(new IOException(msg)).when(spy).blockSeekTo(anyLong());
+      assertNull(in.getCurrentBlock());
+      try {
+        spy.read();
+        fail("read should have failed");
+      } catch (IOException expected) {
+        LOG.info("Exception caught", expected);
+        GenericTestUtils.assertExceptionContains(msg, expected);
+      }
+    }
+  }
+
+  @Test
+  public void testCloseDoesNotAllocateNewBuffer() throws Exception {
+    final int numBlocks = 2;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+    try (DFSInputStream in = fs.getClient().open(filePath.toString())) {
+      assertTrue(in instanceof DFSStripedInputStream);
+      final DFSStripedInputStream stream = (DFSStripedInputStream) in;
+      final ElasticByteBufferPool ebbp =
+          (ElasticByteBufferPool) stream.getBufferPool();
+      // first clear existing pool
+      LOG.info("Current pool size: direct: " + ebbp.size(true) + ", indirect: "
+          + ebbp.size(false));
+      emptyBufferPoolForCurrentPolicy(ebbp, true);
+      emptyBufferPoolForCurrentPolicy(ebbp, false);
+      final int startSizeDirect = ebbp.size(true);
+      final int startSizeIndirect = ebbp.size(false);
+      // close should not allocate new buffers in the pool.
+      stream.close();
+      assertEquals(startSizeDirect, ebbp.size(true));
+      assertEquals(startSizeIndirect, ebbp.size(false));
+    }
+  }
+
+  /**
+   * Empties the pool for the specified buffer type, for the current ecPolicy.
+   * <p>
+   * Note that {@link #ecPolicy} may change for difference test cases in
+   * {@link TestDFSStripedInputStreamWithRandomECPolicy}.
+   */
+  private void emptyBufferPoolForCurrentPolicy(ElasticByteBufferPool ebbp,
+      boolean direct) {
+    int size;
+    while ((size = ebbp.size(direct)) != 0) {
+      ebbp.getBuffer(direct,
+          ecPolicy.getCellSize() * ecPolicy.getNumDataUnits());
+      if (size == ebbp.size(direct)) {
+        // if getBuffer didn't decrease size, it means the pool for the buffer
+        // corresponding to current ecPolicy is empty
+        break;
+      }
     }
   }
 }

@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -61,8 +61,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Private
 public class DFSZKFailoverController extends ZKFailoverController {
 
-  private static final Log LOG =
-    LogFactory.getLog(DFSZKFailoverController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DFSZKFailoverController.class);
   private final AccessControlList adminAcl;
   /* the same as superclass's localTarget, but with the more specfic NN type */
   private final NNHAServiceTarget localNNTarget;
@@ -189,12 +189,12 @@ public class DFSZKFailoverController extends ZKFailoverController {
     
     GenericOptionsParser parser = new GenericOptionsParser(
         new HdfsConfiguration(), args);
-    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
-        parser.getConfiguration());
     try {
+      DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+          parser.getConfiguration());
       System.exit(zkfc.run(parser.getRemainingArgs()));
     } catch (Throwable t) {
-      LOG.fatal("DFSZKFailOverController exiting due to earlier exception "
+      LOG.error("DFSZKFailOverController exiting due to earlier exception "
           + t);
       terminate(1, t);
     }
@@ -241,9 +241,9 @@ public class DFSZKFailoverController extends ZKFailoverController {
       IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
       StringBuilder localNNThreadDumpContent =
           new StringBuilder("-- Local NN thread dump -- \n");
-      localNNThreadDumpContent.append(out);
-      localNNThreadDumpContent.append("\n -- Local NN thread dump -- ");
-      LOG.info(localNNThreadDumpContent);
+      localNNThreadDumpContent.append(out)
+          .append("\n -- Local NN thread dump -- ");
+      LOG.info("{}", localNNThreadDumpContent.toString());
       isThreadDumpCaptured = true;
     } catch (IOException e) {
       LOG.warn("Can't get local NN thread dump due to " + e.getMessage());

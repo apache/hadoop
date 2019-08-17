@@ -39,9 +39,14 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
@@ -54,11 +59,14 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test scheduler configuration mutation via REST API.
  */
 public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
+  private static final Logger LOG = LoggerFactory
+          .getLogger(TestRMWebServicesConfigurationMutation.class);
 
   private static final File CONF_FILE = new File(new File("target",
       "test-classes"), YarnConfiguration.CS_CONFIGURATION_FILE);
@@ -153,8 +161,40 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
+  private CapacitySchedulerConfiguration getSchedulerConf()
+      throws JSONException {
+    WebResource r = resource();
+    ClientResponse response =
+        r.path("ws").path("v1").path("cluster")
+            .queryParam("user.name", userName).path("scheduler-conf")
+            .accept(MediaType.APPLICATION_JSON)
+            .get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    JSONObject json = response.getEntity(JSONObject.class);
+    JSONArray items = (JSONArray) json.get("property");
+    CapacitySchedulerConfiguration parsedConf =
+        new CapacitySchedulerConfiguration();
+    for (int i=0; i<items.length(); i++) {
+      JSONObject obj = (JSONObject) items.get(i);
+      parsedConf.set(obj.get("name").toString(),
+          obj.get("value").toString());
+    }
+    return parsedConf;
+  }
+
+  @Test
+  public void testGetSchedulerConf() throws Exception {
+    CapacitySchedulerConfiguration orgConf = getSchedulerConf();
+    assertNotNull(orgConf);
+    assertEquals(3, orgConf.getQueues("root").length);
+  }
+
   @Test
   public void testAddNestedQueue() throws Exception {
+    CapacitySchedulerConfiguration orgConf = getSchedulerConf();
+    assertNotNull(orgConf);
+    assertEquals(3, orgConf.getQueues("root").length);
+
     WebResource r = resource();
 
     ClientResponse response;
@@ -194,6 +234,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         0.01f);
     assertEquals(75.0f, newCSConf.getNonLabeledQueueCapacity("root.d.d2"),
         0.01f);
+
+    CapacitySchedulerConfiguration newConf = getSchedulerConf();
+    assertNotNull(newConf);
+    assertEquals(4, newConf.getQueues("root").length);
   }
 
   @Test
@@ -396,6 +440,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
+    LOG.debug("Response headers: " + response.getHeaders());
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf = cs.getConfiguration();
     assertEquals(0.2f, newCSConf

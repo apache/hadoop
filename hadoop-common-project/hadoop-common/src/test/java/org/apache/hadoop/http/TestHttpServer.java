@@ -28,6 +28,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.test.Whitebox;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
@@ -37,7 +38,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -68,9 +69,6 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
@@ -147,7 +145,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
@@ -194,6 +192,27 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // Start the client threads when they are all ready
     ready.await();
     start.countDown();
+  }
+
+  /**
+   * Test that the number of acceptors and selectors can be configured by
+   * trying to configure more of them than would be allowed based on the
+   * maximum thread count.
+   */
+  @Test
+  public void testAcceptorSelectorConfigurability() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, MAX_THREADS - 2);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, MAX_THREADS - 2);
+    HttpServer2 badserver = createTestServer(conf);
+    try {
+      badserver.start();
+      // Should not succeed
+      fail();
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof IllegalStateException);
+    }
   }
   
   @Test public void testEcho() throws Exception {
@@ -464,7 +483,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     String serverURL = "http://"
         + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
-        "logLevel", "jmx" }) {
+        "logLevel" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
@@ -472,18 +491,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       assertEquals(HttpURLConnection.HTTP_FORBIDDEN, getHttpStatusCode(
           serverURL + servlet, "userE"));
     }
-
-    // hadoop.security.authorization is set as true while
-    // hadoop.http.authentication.type's value is `simple`(default value)
-    // in this case, static user has administrator access
-    final String staticUser = conf.get(HADOOP_HTTP_STATIC_USER,
-        DEFAULT_HADOOP_HTTP_STATIC_USER);
-    for (String servlet : new String[] {"conf", "logs", "stacks",
-        "logLevel", "jmx"}) {
-      assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
-          serverURL + servlet, staticUser));
-    }
-
     myServer.stop();
   }
   
@@ -695,4 +702,78 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(backlogSize, listener.getAcceptQueueSize());
   }
+
+  @Test
+  public void testIdleTimeout() throws Exception {
+    final int idleTimeout = 1000;
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_IDLE_TIMEOUT_MS_KEY, idleTimeout);
+    HttpServer2 srv = createServer("test", conf);
+    Field f = HttpServer2.class.getDeclaredField("listeners");
+    f.setAccessible(true);
+    List<?> listeners = (List<?>) f.get(srv);
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(idleTimeout, listener.getIdleTimeout());
+  }
+
+  @Test
+  public void testHttpResponseDefaultHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals(HttpServer2.X_XSS_PROTECTION.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0]));
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0]));
+    } finally {
+      httpServer.stop();
+    }
+  }
+
+  @Test
+  public void testHttpResponseOverrideDefaultHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_HEADER_PREFIX+
+            HttpServer2.X_XSS_PROTECTION.split(":")[0], "customXssValue");
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals("customXssValue",
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0])
+      );
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0])
+      );
+    } finally {
+      httpServer.stop();
+    }
+  }
+
+  @Test
+  public void testHttpResponseCustomHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    String key = "customKey";
+    String value = "customValue";
+    conf.set(HttpServer2.HTTP_HEADER_PREFIX+key, value);
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals(HttpServer2.X_XSS_PROTECTION.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0]));
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0]));
+      assertEquals(value, conn.getHeaderField(
+              key));
+    } finally {
+      httpServer.stop();
+    }
+  }
+
 }

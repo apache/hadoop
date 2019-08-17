@@ -25,6 +25,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.junit.Test;
@@ -474,6 +475,41 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
 
     executorService.shutdown();
     executorService.awaitTermination(50, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void testFormatTimeSortable() {
+    long timeDiff = 523452311;
+    String timeDiffStr = "99hrs, 59mins, 59sec";
+
+    assertEquals("Incorrect time diff string returned", timeDiffStr,
+        StringUtils.formatTimeSortable(timeDiff));
+  }
+
+  @Test
+  public void testIsAlpha() {
+    assertTrue("Reported hello as non-alpha string",
+        StringUtils.isAlpha("hello"));
+    assertFalse("Reported hello1 as alpha string",
+        StringUtils.isAlpha("hello1"));
+  }
+
+  @Test
+  public void testEscapeHTML() {
+    String htmlStr = "<p>Hello. How are you?</p>";
+    String escapedStr = "&lt;p&gt;Hello. How are you?&lt;/p&gt;";
+
+    assertEquals("Incorrect escaped HTML string returned",
+        escapedStr, StringUtils.escapeHTML(htmlStr));
+  }
+
+  @Test
+  public void testCreateStartupShutdownMessage() {
+    //pass null args and method must still return a string beginning with
+    // "STARTUP_MSG"
+    String msg = StringUtils.createStartupShutdownMessage(
+        this.getClass().getName(), "test.host", null);
+    assertTrue(msg.startsWith("STARTUP_MSG:"));
   }
 
   // Benchmark for StringUtils split

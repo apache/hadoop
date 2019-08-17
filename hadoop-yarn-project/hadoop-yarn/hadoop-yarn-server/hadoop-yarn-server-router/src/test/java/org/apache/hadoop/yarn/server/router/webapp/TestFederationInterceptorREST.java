@@ -25,6 +25,8 @@ import java.util.List;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -40,6 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -424,6 +428,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   /**
+   * This test validates the correctness of updateNodeResource().
+   */
+  @Test
+  public void testUpdateNodeResource() {
+    List<NodeInfo> nodes = interceptor.getNodes(null).getNodes();
+    Assert.assertFalse(nodes.isEmpty());
+    final String nodeId = nodes.get(0).getNodeId();
+    ResourceOptionInfo resourceOption = new ResourceOptionInfo(
+        ResourceOption.newInstance(
+            Resource.newInstance(2048, 3), 1000));
+    ResourceInfo resource = interceptor.updateNodeResource(
+        null, nodeId, resourceOption);
+    Assert.assertNotNull(resource);
+    Assert.assertEquals(2048, resource.getMemorySize());
+    Assert.assertEquals(3, resource.getvCores());
+  }
+
+  /**
    * This test validates the correctness of getClusterMetricsInfo in case each
    * SubCluster provided a ClusterMetricsInfo with appsSubmitted set to the
    * SubClusterId. The expected result would be appSubmitted equals to the sum
@@ -441,6 +463,62 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     }
     Assert.assertEquals(expectedAppSubmitted, responseGet.getAppsSubmitted());
     // The merge operations is tested in TestRouterWebServiceUtil
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationState in case the
+   * application exists in the cluster.
+   */
+  @Test
+  public void testGetApplicationState()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationSubmissionContextInfo context =
+        new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Submit the application we want the report later
+    Response response = interceptor.submitApplication(context, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    AppState responseGet = interceptor.getAppState(null, appId.toString());
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertEquals(MockDefaultRequestInterceptorREST.APP_STATE_RUNNING,
+        responseGet.getState());
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationState in case the
+   * application does not exist in StateStore.
+   */
+  @Test
+  public void testGetApplicationStateNotExists()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    AppState response = interceptor.getAppState(null, appId.toString());
+
+    Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationState in case of
+   * application in wrong format.
+   */
+  @Test
+  public void testGetApplicationStateWrongFormat()
+      throws YarnException, IOException, InterruptedException {
+
+    AppState response = interceptor.getAppState(null, "Application_wrong_id");
+
+    Assert.assertNull(response);
   }
 
 }

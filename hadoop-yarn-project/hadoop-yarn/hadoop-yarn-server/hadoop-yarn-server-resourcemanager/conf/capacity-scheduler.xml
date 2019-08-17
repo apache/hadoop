@@ -149,6 +149,8 @@
       attempts to schedule rack-local containers.
       When setting this parameter, the size of the cluster should be taken into account.
       We use 40 as the default value, which is approximately the number of nodes in one rack.
+      Note, if this value is -1, the locality constraint in the container request
+      will be ignored, which disables the delay scheduling.
     </description>
   </property>
 
@@ -202,6 +204,16 @@
       scheduling rate for OFF_SWITCH containers. Lower values reduce
       "clumping" of applications on particular nodes. The default is 1.
       Legal values are 1-MAX_INT. This config is refreshable.
+    </description>
+  </property>
+
+
+  <property>
+    <name>yarn.scheduler.capacity.application.fail-fast</name>
+    <value>false</value>
+    <description>
+      Whether RM should fail during recovery if previous applications'
+      queue is no longer valid.
     </description>
   </property>
 

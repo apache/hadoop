@@ -39,7 +39,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
     extends AbstractWasbTestBase {
 
   private static final int THREAD_COUNT = 102;
-  private static final int TEST_EXECUTION_TIMEOUT = 5000;
+  private static final int TEST_EXECUTION_TIMEOUT = 30000;
 
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {

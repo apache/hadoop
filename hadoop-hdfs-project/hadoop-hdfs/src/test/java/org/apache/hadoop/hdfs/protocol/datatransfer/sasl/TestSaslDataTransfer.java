@@ -34,7 +34,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -138,7 +139,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "");
 
     LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(DataNode.class));
+        LoggerFactory.getLogger(DataNode.class));
     try {
       doTest(clientConf);
       Assert.fail("Should fail if SASL data transfer protection is not " +
@@ -167,9 +168,17 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   public void testDataNodeAbortsIfNotHttpsOnly() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig("authentication");
     clusterConf.set(DFS_HTTP_POLICY_KEY,
-      HttpConfig.Policy.HTTP_AND_HTTPS.name());
+        HttpConfig.Policy.HTTP_AND_HTTPS.name());
     exception.expect(RuntimeException.class);
     exception.expectMessage("Cannot start secure DataNode");
+    startCluster(clusterConf);
+  }
+
+  @Test
+  public void testDataNodeStartIfHttpsQopPrivacy() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("privacy");
+    clusterConf.set(DFS_HTTP_POLICY_KEY,
+        Policy.HTTPS_ONLY.name());
     startCluster(clusterConf);
   }
 

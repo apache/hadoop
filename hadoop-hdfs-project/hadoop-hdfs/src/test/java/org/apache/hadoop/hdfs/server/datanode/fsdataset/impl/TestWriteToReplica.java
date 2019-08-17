@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -64,7 +65,8 @@ public class TestWriteToReplica {
   // test close
   @Test
   public void testClose() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     
     try {
       cluster.waitActive();
@@ -86,7 +88,8 @@ public class TestWriteToReplica {
   // test append
   @Test
   public void testAppend() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -106,7 +109,8 @@ public class TestWriteToReplica {
   // test writeToRbw
   @Test
   public void testWriteToRbw() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -126,7 +130,8 @@ public class TestWriteToReplica {
   // test writeToTemporary
   @Test
   public void testWriteToTemporary() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -512,7 +517,8 @@ public class TestWriteToReplica {
   @Test
   public  void testReplicaMapAfterDatanodeRestart() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        new File(GenericTestUtils.getRandomizedTempPath()))
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
         .build();
     try {
@@ -566,7 +572,8 @@ public class TestWriteToReplica {
   @Test
   public void testRecoverInconsistentRbw() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        new File(GenericTestUtils.getRandomizedTempPath())).build();
     cluster.waitActive();
     DataNode dn = cluster.getDataNodes().get(0);
     FsDatasetImpl fsDataset = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);

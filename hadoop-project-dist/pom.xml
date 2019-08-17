@@ -15,16 +15,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-project-dist</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <description>Apache Hadoop Project Dist POM</description>
   <name>Apache Hadoop Project Dist POM</name>
   <packaging>pom</packaging>
@@ -115,15 +115,6 @@
               <packages>org.apache.hadoop*</packages>
             </group>
           </groups>
-          <doclet>org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet</doclet>
-          <docletArtifacts>
-            <docletArtifact>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-annotations</artifactId>
-              <version>${project.version}</version>
-            </docletArtifact>
-          </docletArtifacts>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
 
           <!-- switch on dependency-driven aggregation -->
           <includeDependencySources>false</includeDependencySources>
@@ -145,7 +136,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>3.0.0</jdiff.stable.api>
+        <jdiff.stable.api>3.2.0</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -280,7 +271,7 @@
                         <param name="-oldapidir" value="${basedir}/dev-support/jdiff"/>
                         <param name="-newapidir" value="${project.build.directory}/site/jdiff/xml"/>
                         <param name="-javadocold"
-                               value="http://hadoop.apache.org/docs/r${jdiff.stable.api}/api/"/>
+                               value="https://hadoop.apache.org/docs/r${jdiff.stable.api}/api/"/>
                         <param name="-javadocnew" value="${project.build.directory}/site/api"/>
                         <param name="-stats"/>
                         <param name="${jdiff.stability}"/>
@@ -393,7 +384,7 @@
               <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
+                <version>${hadoop.version}</version>
               </dependency>
             </dependencies>
             <executions>
@@ -413,6 +404,31 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>doclet</id>
+      <activation>
+        <jdk>(,10)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <doclet>org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet</doclet>
+              <docletArtifacts>
+                <docletArtifact>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-annotations</artifactId>
+                  <version>${hadoop.version}</version>
+                </docletArtifact>
+              </docletArtifacts>
+              <useStandardDocletOptions>true</useStandardDocletOptions>
+            </configuration>
           </plugin>
         </plugins>
       </build>

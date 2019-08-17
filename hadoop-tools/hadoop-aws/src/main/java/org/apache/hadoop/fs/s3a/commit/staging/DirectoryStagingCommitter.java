@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -25,15 +26,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
 /**
  * This commits to a directory.
@@ -67,13 +69,31 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     super.setupJob(context);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
-    if (getConflictResolutionMode(context, fs.getConf())
-        == ConflictResolution.FAIL
-        && fs.exists(outputPath)) {
-      LOG.debug("Failing commit by task attempt {} to write"
-              + " to existing output path {}",
-          context.getJobID(), getOutputPath());
-      throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
+    ConflictResolution conflictResolution = getConflictResolutionMode(
+        context, fs.getConf());
+    LOG.info("Conflict Resolution mode is {}", conflictResolution);
+    try {
+      final FileStatus status = fs.getFileStatus(outputPath);
+
+      // if it is not a directory, fail fast for all conflict options.
+      if (!status.isDirectory()) {
+        throw new PathExistsException(outputPath.toString(),
+            "output path is not a directory: "
+                + InternalCommitterConstants.E_DEST_EXISTS);
+      }
+      switch(conflictResolution) {
+      case FAIL:
+        throw failDestinationExists(outputPath,
+            "Setting job as " + getRole());
+      case APPEND:
+      case REPLACE:
+        LOG.debug("Destination directory exists; conflict policy permits this");
+      }
+    } catch (FileNotFoundException ignored) {
+      // there is no destination path, hence, no conflict.
+      // make the parent directory, which also triggers a recursive directory
+      // creation operation
+      fs.mkdirs(outputPath);
     }
   }
 
@@ -93,11 +113,8 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     Configuration fsConf = fs.getConf();
     switch (getConflictResolutionMode(context, fsConf)) {
     case FAIL:
-      // this was checked in setupJob, but this avoids some cases where
-      // output was created while the job was processing
-      if (fs.exists(outputPath)) {
-        throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
-      }
+      // this was checked in setupJob; temporary files may have been
+      // created, so do not check again.
       break;
     case APPEND:
       // do nothing

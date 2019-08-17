@@ -86,7 +86,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     int earlierDiffIndex = diffIndexPair[0];
     int laterDiffIndex = diffIndexPair[1];
 
-    final List<FileDiff> diffList = diffs.asList();
+    final DiffList<FileDiff> diffList = diffs.asList();
     final long earlierLength = diffList.get(earlierDiffIndex).getFileSize();
     final long laterLength = laterDiffIndex == diffList.size() ? file
         .computeFileSize(true, false) : diffList.get(laterDiffIndex)
@@ -224,5 +224,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
     else
       file.collectBlocksBeyondSnapshot(snapshotBlocks,
                                        reclaimContext.collectedBlocks());
+  }
+
+  @Override
+  public String toString() {
+    return "" + diffs;
   }
 }

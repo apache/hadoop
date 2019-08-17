@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
@@ -42,7 +42,6 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "Set of configuration properties that can be injected into the service components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Configuration implements Serializable {
   private static final long serialVersionUID = -4330788704981074466L;
@@ -174,13 +173,13 @@ public class Configuration implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Configuration {\n");
+    sb.append("class Configuration {\n")
 
-    sb.append("    properties: ").append(toIndentedString(properties))
-        .append("\n");
-    sb.append("    env: ").append(toIndentedString(env)).append("\n");
-    sb.append("    files: ").append(toIndentedString(files)).append("\n");
-    sb.append("}");
+        .append("    properties: ").append(toIndentedString(properties))
+        .append("\n")
+        .append("    env: ").append(toIndentedString(env)).append("\n")
+        .append("    files: ").append(toIndentedString(files)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -1,0 +1,16 @@
+{
+  "name": "example-app2",
+  "version": "1.0.0",
+  "components" :
+  [
+    {
+      "name": "simple",
+      "number_of_containers": 1,
+      "launch_command": "sleep 2",
+      "resource": {
+        "cpus": 1,
+        "memory": "128"
+      }
+    }
+  ]
+}

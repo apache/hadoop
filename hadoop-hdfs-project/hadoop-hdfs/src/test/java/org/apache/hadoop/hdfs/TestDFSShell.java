@@ -37,9 +37,9 @@ import java.util.zip.GZIPOutputStream;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +71,7 @@ import org.junit.rules.Timeout;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.Assert;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
@@ -87,7 +88,7 @@ import static org.hamcrest.core.StringContains.containsString;
  * This class tests commands from DFSShell.
  */
 public class TestDFSShell {
-  private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSShell.class);
   private static final AtomicInteger counter = new AtomicInteger();
   private final int SUCCESS = 0;
   private final int ERROR = 1;
@@ -721,6 +722,14 @@ public class TestDFSShell {
       assertTrue(" -mkdir returned this is a file ",
           (returned.lastIndexOf("not a directory") != -1));
       out.reset();
+      argv[0] = "-mkdir";
+      argv[1] = "/testParent/testChild";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertEquals(" -mkdir returned 1", 1, ret);
+      assertTrue(" -mkdir returned there is No file or directory but has testChild in the path",
+          (returned.lastIndexOf("testChild") == -1));
+      out.reset();
       argv = new String[3];
       argv[0] = "-mv";
       argv[1] = "/testfile";
@@ -1114,6 +1123,31 @@ public class TestDFSShell {
   }
 
   @Test (timeout = 30000)
+  public void testChecksum() throws Exception {
+    PrintStream printStream = System.out;
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      FsShell shell = new FsShell(dfs.getConf());
+      final Path filePath = new Path("/testChecksum/file1");
+      writeFile(dfs, filePath);
+      FileStatus fileStatus = dfs.getFileStatus(filePath);
+      FileChecksum checksum = dfs.getFileChecksum(filePath);
+      String[] args = {"-checksum", "-v", filePath.toString()};
+      assertEquals(0, shell.run(args));
+      // verify block size is printed in the output
+      assertTrue(out.toString()
+          .contains(String.format("BlockSize=%s", fileStatus.getBlockSize())));
+      // verify checksum is printed in the output
+      assertTrue(out.toString().contains(StringUtils
+          .byteToHexString(checksum.getBytes(), 0, checksum.getLength())));
+    } finally {
+      Assert.assertNotNull(printStream);
+      System.setOut(printStream);
+    }
+  }
+
+  @Test (timeout = 30000)
   public void testCopyToLocal() throws IOException {
     FsShell shell = new FsShell(dfs.getConf());
 
@@ -1268,9 +1302,6 @@ public class TestDFSShell {
       exitCode = shell.run(args);
       LOG.info("RUN: "+args[0]+" exit=" + exitCode);
       return exitCode;
-    } catch (IOException e) {
-      LOG.error("RUN: "+args[0]+" IOException="+e.getMessage());
-      throw e;
     } catch (RuntimeException e) {
       LOG.error("RUN: "+args[0]+" RuntimeException="+e.getMessage());
       throw e;
@@ -2829,11 +2860,11 @@ public class TestDFSShell {
         System.setErr(origErr);
       }
 
-      assertEquals("Error message is not the expected error message",
-          "setrep: Requested replication factor of 1 is less than "
-              + "the required minimum of 2 for /tmp/TestDFSShell-"
-              + "testSetrepLow/testFileForSetrepLow\n",
-          bao.toString());
+      assertTrue("Error message is not the expected error message"
+          + bao.toString(), bao.toString().startsWith(
+              "setrep: Requested replication factor of 1 is less than "
+                  + "the required minimum of 2 for /tmp/TestDFSShell-"
+                  + "testSetrepLow/testFileForSetrepLow"));
     } finally {
       shell.close();
       cluster.shutdown();

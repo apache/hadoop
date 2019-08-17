@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.event;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -46,7 +48,10 @@ public class EventDispatcher<T extends Event> extends
   private volatile boolean stopped = false;
   private boolean shouldExitOnError = true;
 
-  private static final Log LOG = LogFactory.getLog(EventDispatcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(EventDispatcher.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
 
   private final class EventProcessor implements Runnable {
     @Override
@@ -72,7 +77,7 @@ public class EventDispatcher<T extends Event> extends
             LOG.warn("Exception during shutdown: ", t);
             break;
           }
-          LOG.fatal("Error in handling event type " + event.getType()
+          LOG.error(FATAL, "Error in handling event type " + event.getType()
               + " to the Event Dispatcher", t);
           if (shouldExitOnError
               && !ShutdownHookManager.get().isShutdownInProgress()) {

@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Set;
 import java.util.HashMap;
@@ -74,7 +75,7 @@ public class HostsFileReader {
   public static void readFileToSet(String type,
       String filename, Set<String> set) throws IOException {
     File file = new File(filename);
-    FileInputStream fis = new FileInputStream(file);
+    InputStream fis = Files.newInputStream(file.toPath());
     readFileToSetWithFileInputStream(type, filename, fis, set);
   }
 
@@ -120,7 +121,7 @@ public class HostsFileReader {
   public static void readFileToMap(String type,
       String filename, Map<String, Integer> map) throws IOException {
     File file = new File(filename);
-    FileInputStream fis = new FileInputStream(file);
+    InputStream fis = Files.newInputStream(file.toPath());
     readFileToMapWithFileInputStream(type, filename, fis, map);
   }
 

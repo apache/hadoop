@@ -26,6 +26,18 @@ service ClientAMProtocolService {
   rpc flexComponents(FlexComponentsRequestProto) returns (FlexComponentsResponseProto);
   rpc getStatus(GetStatusRequestProto) returns (GetStatusResponseProto);
   rpc stop(StopRequestProto) returns (StopResponseProto);
+  rpc upgradeService(UpgradeServiceRequestProto)
+    returns (UpgradeServiceResponseProto);
+  rpc cancelUpgrade(CancelUpgradeRequestProto)
+    returns (CancelUpgradeResponseProto);
+  rpc restartService(RestartServiceRequestProto)
+    returns (RestartServiceResponseProto);
+  rpc upgrade(CompInstancesUpgradeRequestProto) returns
+    (CompInstancesUpgradeResponseProto);
+  rpc getCompInstances(GetCompInstancesRequestProto) returns
+    (GetCompInstancesResponseProto);
+  rpc decommissionCompInstances(DecommissionCompInstancesRequestProto)
+    returns (DecommissionCompInstancesResponseProto);
 }
 
 message FlexComponentsRequestProto {
@@ -37,7 +49,7 @@ message ComponentCountProto {
   optional int64 numberOfContainers = 2;
 }
 
-message FlexComponentsResponseProto{
+message FlexComponentsResponseProto {
 }
 
 message GetStatusRequestProto {
@@ -53,4 +65,50 @@ message StopRequestProto {
 
 message StopResponseProto {
 
+}
+
+message UpgradeServiceRequestProto {
+  optional string version = 1;
+  optional bool autoFinalize = 2;
+  optional bool expressUpgrade = 3;
+}
+
+message UpgradeServiceResponseProto {
+  optional string error = 1;
+}
+
+message CancelUpgradeRequestProto {
+}
+
+message CancelUpgradeResponseProto {
+}
+
+message RestartServiceRequestProto {
+}
+
+message RestartServiceResponseProto {
+}
+
+message CompInstancesUpgradeRequestProto {
+    repeated string containerIds = 1;
+}
+
+message CompInstancesUpgradeResponseProto {
+}
+
+message GetCompInstancesRequestProto {
+  repeated string componentNames = 1;
+  optional string version = 2;
+  repeated string containerStates = 3;
+}
+
+message GetCompInstancesResponseProto {
+  optional string compInstances = 1;
+}
+
+message DecommissionCompInstancesRequestProto {
+  repeated string compInstances = 1;
+}
+
+message DecommissionCompInstancesResponseProto {
 }

@@ -70,6 +70,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.scheduler.DistributedScheduler;
+import org.apache.hadoop.yarn.server.nodemanager.security.authorize
+    .NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
@@ -169,6 +171,12 @@ public class AMRMProxyService extends CompositeService implements
             listenerEndpoint, serverConf, this.secretManager,
             numWorkerThreads);
 
+    if (conf
+        .getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+            false)) {
+        this.server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
+    }
+
     this.server.start();
     LOG.info("AMRMProxyService listening on address: "
         + this.server.getListenerAddress());
@@ -239,11 +247,11 @@ public class AMRMProxyService extends CompositeService implements
         // Retrieve the AM container credentials from NM context
         Credentials amCred = null;
         for (Container container : this.nmContext.getContainers().values()) {
-          LOG.debug("From NM Context container " + container.getContainerId());
+          LOG.debug("From NM Context container {}", container.getContainerId());
           if (container.getContainerId().getApplicationAttemptId().equals(
               attemptId) && container.getContainerTokenIdentifier() != null) {
-            LOG.debug("Container type "
-                + container.getContainerTokenIdentifier().getContainerType());
+            LOG.debug("Container type {}",
+                container.getContainerTokenIdentifier().getContainerType());
             if (container.getContainerTokenIdentifier()
                 .getContainerType() == ContainerType.APPLICATION_MASTER) {
               LOG.info("AM container {} found in context, has credentials: {}",
@@ -261,7 +269,7 @@ public class AMRMProxyService extends CompositeService implements
         // Create the intercepter pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
             entry.getValue(), true, amCred);
-      } catch (IOException e) {
+      } catch (Throwable e) {
         LOG.error("Exception when recovering " + attemptId
             + ", removing it from NMStateStore and move on", e);
         this.nmContext.getNMStateStore().removeAMRMProxyAppContext(attemptId);
@@ -756,9 +764,7 @@ public class AMRMProxyService extends CompositeService implements
           AMRMProxyService.this.stopApplication(event.getApplicationID());
           break;
         default:
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("AMRMProxy is ignoring event: " + event.getType());
-          }
+          LOG.debug("AMRMProxy is ignoring event: {}", event.getType());
           break;
         }
       } else {

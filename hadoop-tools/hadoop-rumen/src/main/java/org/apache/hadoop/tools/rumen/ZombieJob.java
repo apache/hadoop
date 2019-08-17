@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskStatus.State;
@@ -49,7 +49,7 @@ import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
  */
 @SuppressWarnings("deprecation")
 public class ZombieJob implements JobStory {
-  static final Log LOG = LogFactory.getLog(ZombieJob.class);
+  static final Logger LOG = LoggerFactory.getLogger(ZombieJob.class);
   private final LoggedJob job;
   private Map<TaskID, LoggedTask> loggedTaskMap;
   private Map<TaskAttemptID, LoggedTaskAttempt> loggedTaskAttemptMap;

@@ -61,11 +61,11 @@ test('Test getting a node', function(assert) {
   // Create store which returns appropriate responses.
   var store = {
     findRecord: function(type) {
-      if (type === 'yarnNode') {
+      if (type === 'yarn-node') {
         return new Ember.RSVP.Promise(function(resolve) {
           resolve(nodeResponse);
         });
-      } else if (type === 'yarnRmNode') {
+      } else if (type === 'yarn-rm-node') {
         return new Ember.RSVP.Promise(function(resolve) {
           resolve(rmNodeResponse);
         });
@@ -75,10 +75,13 @@ test('Test getting a node', function(assert) {
   var route = this.subject();
   assert.expect(4);
   route.set('store', store);
-  var model = route.model(
-      {node_addr:"localhost:8042", node_id:"localhost:64318"})._result;
-  assert.ok(model.node);
-  assert.deepEqual(model.node, nodeResponse);
-  assert.ok(model.rmNode);
-  assert.deepEqual(model.rmNode, rmNodeResponse);
+  route.model({
+    node_addr:"localhost:8042",
+    node_id:"localhost:64318"
+  }).then(function(model) {
+    assert.ok(model.node);
+    assert.deepEqual(model.node, nodeResponse);
+    assert.ok(model.rmNode);
+    assert.deepEqual(model.rmNode, rmNodeResponse);
+  });
 });

@@ -21,8 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -36,9 +36,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -65,7 +68,7 @@ import java.util.Map;
  */
 @InterfaceAudience.Private
 public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
-  public static final Log LOG = LogFactory.getLog(JournalNode.class);
+  public static final Logger LOG = LoggerFactory.getLogger(JournalNode.class);
   private Configuration conf;
   private JournalNodeRpcServer rpcServer;
   private JournalNodeHttpServer httpServer;
@@ -226,7 +229,8 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
       registerJNMXBean();
 
-      httpServer = new JournalNodeHttpServer(conf, this);
+      httpServer = new JournalNodeHttpServer(conf, this,
+          getHttpServerBindAddress(conf));
       httpServer.start();
 
       httpServerURI = httpServer.getServerURI().toString();
@@ -250,11 +254,6 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   public InetSocketAddress getBoundIpcAddress() {
     return rpcServer.getAddress();
-  }
-  
-  @Deprecated
-  public InetSocketAddress getBoundHttpAddress() {
-    return httpServer.getAddress();
   }
 
   public String getHttpServerURI() {
@@ -286,7 +285,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     }
     
     for (Journal j : journalsById.values()) {
-      IOUtils.cleanup(LOG, j);
+      IOUtils.cleanupWithLogger(LOG, j);
     }
 
     DefaultMetricsSystem.shutdown();
@@ -400,11 +399,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private void registerJNMXBean() {
     journalNodeInfoBeanName = MBeans.register("JournalNode", "JournalNodeInfo", this);
   }
-  
+
   private class ErrorReporter implements StorageErrorReporter {
     @Override
     public void reportErrorOnFile(File f) {
-      LOG.fatal("Error reported on file " + f + "... exiting",
+      LOG.error("Error reported on file " + f + "... exiting",
           new Exception());
       stop(1);
     }
@@ -464,4 +463,53 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     return journalsById.get(jid);
   }
 
+  public static InetSocketAddress getHttpAddress(Configuration conf) {
+    String addr = conf.get(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_DEFAULT);
+    return NetUtils.createSocketAddr(addr,
+        DFSConfigKeys.DFS_JOURNALNODE_HTTP_PORT_DEFAULT,
+        DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY);
+  }
+
+  protected InetSocketAddress getHttpServerBindAddress(
+      Configuration configuration) {
+    InetSocketAddress bindAddress = getHttpAddress(configuration);
+
+    // If DFS_JOURNALNODE_HTTP_BIND_HOST_KEY exists then it overrides the
+    // host name portion of DFS_JOURNALNODE_HTTP_ADDRESS_KEY.
+    final String bindHost = configuration.getTrimmed(
+        DFS_JOURNALNODE_HTTP_BIND_HOST_KEY);
+    if (bindHost != null && !bindHost.isEmpty()) {
+      bindAddress = new InetSocketAddress(bindHost, bindAddress.getPort());
+    }
+
+    return bindAddress;
+  }
+
+  @VisibleForTesting
+  public JournalNodeRpcServer getRpcServer() {
+    return rpcServer;
+  }
+
+
+  /**
+   * @return the actual JournalNode HTTP/HTTPS address.
+   */
+  public InetSocketAddress getBoundHttpAddress() {
+    return httpServer.getAddress();
+  }
+
+  /**
+   * @return JournalNode HTTP address
+   */
+  public InetSocketAddress getHttpAddress() {
+    return httpServer.getHttpAddress();
+  }
+
+  /**
+   * @return JournalNode HTTPS address
+   */
+  public InetSocketAddress getHttpsAddress() {
+    return httpServer.getHttpsAddress();
+  }
 }

@@ -31,14 +31,13 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import org.apache.hadoop.util.FakeTimer;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -81,7 +80,7 @@ public class TestBlockReaderLocalMetrics {
         TimeUnit.MILLISECONDS);
 
     FileChannel dataIn = Mockito.mock(FileChannel.class);
-    Mockito.when(dataIn.read(any(ByteBuffer.class), anyLong())).thenAnswer(
+    Mockito.when(dataIn.read(any(), anyLong())).thenAnswer(
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -93,8 +92,8 @@ public class TestBlockReaderLocalMetrics {
     BlockReaderIoProvider blockReaderIoProvider = new BlockReaderIoProvider(
         clientConf.getShortCircuitConf(), metrics, TIMER);
 
-    blockReaderIoProvider.read(dataIn, any(ByteBuffer.class), anyLong());
-    blockReaderIoProvider.read(dataIn, any(ByteBuffer.class), anyLong());
+    blockReaderIoProvider.read(dataIn, any(), anyLong());
+    blockReaderIoProvider.read(dataIn, any(), anyLong());
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -127,7 +126,7 @@ public class TestBlockReaderLocalMetrics {
     FileChannel dataIn1 = Mockito.mock(FileChannel.class);
     FileChannel dataIn2 = Mockito.mock(FileChannel.class);
 
-    Mockito.when(dataIn1.read(any(ByteBuffer.class), anyLong())).thenAnswer(
+    Mockito.when(dataIn1.read(any(), anyLong())).thenAnswer(
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -136,7 +135,7 @@ public class TestBlockReaderLocalMetrics {
           }
         });
 
-    Mockito.when(dataIn2.read(any(ByteBuffer.class), anyLong())).thenAnswer(
+    Mockito.when(dataIn2.read(any(), anyLong())).thenAnswer(
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -150,8 +149,8 @@ public class TestBlockReaderLocalMetrics {
     BlockReaderIoProvider blockReaderIoProvider2 = new BlockReaderIoProvider(
         clientConf.getShortCircuitConf(), metrics, TIMER);
 
-    blockReaderIoProvider1.read(dataIn1, any(ByteBuffer.class), anyLong());
-    blockReaderIoProvider2.read(dataIn2, any(ByteBuffer.class), anyLong());
+    blockReaderIoProvider1.read(dataIn1, any(), anyLong());
+    blockReaderIoProvider2.read(dataIn2, any(), anyLong());
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -189,7 +188,7 @@ public class TestBlockReaderLocalMetrics {
     for (int i = 0; i < 5; i++) {
       dataIns[i] = Mockito.mock(FileChannel.class);
       long delay = SLOW_READ_DELAY * random.nextInt(5);
-      Mockito.when(dataIns[i].read(any(ByteBuffer.class), anyLong()))
+      Mockito.when(dataIns[i].read(any(), anyLong()))
           .thenAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -205,7 +204,7 @@ public class TestBlockReaderLocalMetrics {
         clientConf.getShortCircuitConf(), metrics, TIMER);
 
     for (int i = 0; i < 5; i++) {
-      blockReaderIoProvider.read(dataIns[i], any(ByteBuffer.class), anyLong());
+      blockReaderIoProvider.read(dataIns[i], any(), anyLong());
     }
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

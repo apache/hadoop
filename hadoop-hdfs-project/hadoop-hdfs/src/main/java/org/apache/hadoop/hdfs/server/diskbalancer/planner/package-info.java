@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 /**
  * Planner takes a DiskBalancerVolumeSet, threshold and
  * computes a series of steps that lead to an even data
@@ -30,7 +29,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
  *
  * while(current.isBalancingNeeded(thresholdValue)) {
  *
- *   // Creates a plan , like move 20 GB data from v1 -> v2
+ *   // Creates a plan , like move 20 GB data from v1 {@literal ->} v2
  *   Step step = planner.plan(current, thresholdValue);
  *
  *   // we add that to our plan
@@ -44,3 +43,4 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
  * //when we are done , return the list of steps
  * return planner;
  */
+package org.apache.hadoop.hdfs.server.diskbalancer.planner;

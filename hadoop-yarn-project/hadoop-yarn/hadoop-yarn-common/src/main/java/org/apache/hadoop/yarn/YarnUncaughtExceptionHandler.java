@@ -20,8 +20,10 @@ package org.apache.hadoop.yarn;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ExitUtil;
@@ -39,7 +41,10 @@ import org.apache.hadoop.util.ShutdownHookManager;
 @Public
 @Evolving
 public class YarnUncaughtExceptionHandler implements UncaughtExceptionHandler {
-  private static final Log LOG = LogFactory.getLog(YarnUncaughtExceptionHandler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnUncaughtExceptionHandler.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
   
   @Override
   public void uncaughtException(Thread t, Throwable e) {
@@ -48,7 +53,8 @@ public class YarnUncaughtExceptionHandler implements UncaughtExceptionHandler {
       		"down, so ignoring this", e);
     } else if(e instanceof Error) {
       try {
-        LOG.fatal("Thread " + t + " threw an Error.  Shutting down now...", e);
+        LOG.error(FATAL,
+            "Thread " + t + " threw an Error.  Shutting down now...", e);
       } catch (Throwable err) {
         //We don't want to not exit because of an issue with logging
       }

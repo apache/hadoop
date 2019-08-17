@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -144,10 +143,9 @@ class LocalResourceBuilder {
 
         LocalResource orig = localResources.get(linkName);
         if(orig != null && !orig.getResource().equals(URL.fromURI(p.toUri()))) {
-          throw new InvalidJobConfException(
-              getResourceDescription(orig.getType()) + orig.getResource()
-                  +
-              " conflicts with " + getResourceDescription(type) + u);
+          LOG.warn(getResourceDescription(orig.getType()) + orig.getResource()
+              + " conflicts with " + getResourceDescription(type) + u);
+          continue;
         }
         Boolean sharedCachePolicy = sharedCacheUploadPolicies.get(u.toString());
         sharedCachePolicy =

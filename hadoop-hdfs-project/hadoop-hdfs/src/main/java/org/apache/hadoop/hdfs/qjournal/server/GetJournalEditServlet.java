@@ -31,9 +31,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.text.StringEscapeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -67,7 +67,8 @@ import org.apache.hadoop.util.StringUtils;
 public class GetJournalEditServlet extends HttpServlet {
 
   private static final long serialVersionUID = -4635891628211723009L;
-  private static final Log LOG = LogFactory.getLog(GetJournalEditServlet.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GetJournalEditServlet.class);
 
   static final String STORAGEINFO_PARAM = "storageInfo";
   static final String JOURNAL_ID_PARAM = "jid";
@@ -157,7 +158,7 @@ public class GetJournalEditServlet extends HttpServlet {
     int myNsId = storage.getNamespaceID();
     String myClusterId = storage.getClusterID();
     
-    String theirStorageInfoString = StringEscapeUtils.escapeHtml(
+    String theirStorageInfoString = StringEscapeUtils.escapeHtml4(
         request.getParameter(STORAGEINFO_PARAM));
 
     if (theirStorageInfoString != null) {

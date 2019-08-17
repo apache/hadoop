@@ -22,14 +22,15 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Context data for an ongoing NameNode metadata recovery process. */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class MetaRecoveryContext  {
-  public static final Log LOG = LogFactory.getLog(MetaRecoveryContext.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(MetaRecoveryContext.class.getName());
   public final static int FORCE_NONE = 0;
   public final static int FORCE_FIRST_CHOICE = 1;
   public final static int FORCE_ALL = 2;
@@ -51,7 +52,7 @@ public final class MetaRecoveryContext  {
    * Display a prompt to the user and get his or her choice.
    *  
    * @param prompt      The prompt to display
-   * @param default     First choice (will be taken if autoChooseDefault is
+   * @param firstChoice First choice (will be taken if autoChooseDefault is
    *                    true)
    * @param choices     Other choies
    *

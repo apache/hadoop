@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class TestTimelineMetric {
+class TestTimelineMetric {
 
   @Test
-  public void testTimelineMetricAggregation() {
+  void testTimelineMetricAggregation() {
     long ts = System.currentTimeMillis();
     // single_value metric add against null metric
     TimelineMetric m1 = getSingleValueMetric("MEGA_BYTES_MILLIS",

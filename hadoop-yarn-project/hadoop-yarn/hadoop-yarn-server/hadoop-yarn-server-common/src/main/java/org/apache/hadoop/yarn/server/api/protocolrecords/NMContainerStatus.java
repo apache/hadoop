@@ -169,7 +169,7 @@ public abstract class NMContainerStatus {
    * Get and set the Allocation tags associated with the container.
    */
   public Set<String> getAllocationTags() {
-    return Collections.EMPTY_SET;
+    return Collections.emptySet();
   }
 
   public void setAllocationTags(Set<String> allocationTags) {

@@ -43,7 +43,7 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * Format the underlying storage, removing any previously
    * stored data.
    */
-  void format(NamespaceInfo ns) throws IOException;
+  void format(NamespaceInfo ns, boolean force) throws IOException;
 
   /**
    * Begin writing to a new segment of the log stream, which starts at
@@ -112,7 +112,7 @@ public interface JournalManager extends Closeable, FormatConfirmable,
   void doRollback() throws IOException;
 
   /**
-   * Discard the segments whose first txid is >= the given txid.
+   * Discard the segments whose first txid is {@literal >=} the given txid.
    * @param startTxId The given txid should be right at the segment boundary, 
    * i.e., it should be the first txid of some segment, if segment corresponding
    * to the txid exists.

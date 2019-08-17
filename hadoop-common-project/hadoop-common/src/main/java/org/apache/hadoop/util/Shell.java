@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -148,9 +147,9 @@ public abstract class Shell {
    */
   static String bashQuote(String arg) {
     StringBuilder buffer = new StringBuilder(arg.length() + 2);
-    buffer.append('\'');
-    buffer.append(arg.replace("'", "'\\''"));
-    buffer.append('\'');
+    buffer.append('\'')
+        .append(arg.replace("'", "'\\''"))
+        .append('\'');
     return buffer.toString();
   }
 
@@ -965,8 +964,8 @@ public abstract class Shell {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {
-            errMsg.append(line);
-            errMsg.append(System.getProperty("line.separator"));
+            errMsg.append(line)
+                .append(System.getProperty("line.separator"));
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
@@ -1018,17 +1017,7 @@ public abstract class Shell {
       }
       // close the input stream
       try {
-        // JDK 7 tries to automatically drain the input streams for us
-        // when the process exits, but since close is not synchronized,
-        // it creates a race if we close the stream first and the same
-        // fd is recycled.  the stream draining thread will attempt to
-        // drain that fd!!  it may block, OOM, or cause bizarre behavior
-        // see: https://bugs.openjdk.java.net/browse/JDK-8024521
-        //      issue is fixed in build 7u60
-        InputStream stdout = process.getInputStream();
-        synchronized (stdout) {
-          inReader.close();
-        }
+        inReader.close();
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
@@ -1037,10 +1026,7 @@ public abstract class Shell {
         joinThread(errThread);
       }
       try {
-        InputStream stderr = process.getErrorStream();
-        synchronized (stderr) {
-          errReader.close();
-        }
+        errReader.close();
       } catch (IOException ioe) {
         LOG.warn("Error while closing the error stream", ioe);
       }
@@ -1123,8 +1109,8 @@ public abstract class Shell {
       final StringBuilder sb =
           new StringBuilder("ExitCodeException ");
       sb.append("exitCode=").append(exitCode)
-        .append(": ");
-      sb.append(super.getMessage());
+          .append(": ")
+          .append(super.getMessage());
       return sb.toString();
     }
   }
@@ -1205,7 +1191,7 @@ public abstract class Shell {
 
     /**
      * Returns the timeout value set for the executor's sub-commands.
-     * @return The timeout value in seconds
+     * @return The timeout value in milliseconds
      */
     @VisibleForTesting
     public long getTimeoutInterval() {
@@ -1387,5 +1373,20 @@ public abstract class Shell {
     synchronized (CHILD_SHELLS) {
       return new HashSet<>(CHILD_SHELLS.keySet());
     }
+  }
+
+  /**
+   * Static method to return the memory lock limit for datanode.
+   * @param ulimit max value at which memory locked should be capped.
+   * @return long value specifying the memory lock limit.
+   */
+  public static Long getMemlockLimit(Long ulimit) {
+    if (WINDOWS) {
+      // HDFS-13560: if ulimit is too large on Windows, Windows will complain
+      // "1450: Insufficient system resources exist to complete the requested
+      // service". Thus, cap Windows memory lock limit at Integer.MAX_VALUE.
+      return Math.min(Integer.MAX_VALUE, ulimit);
+    }
+    return ulimit;
   }
 }

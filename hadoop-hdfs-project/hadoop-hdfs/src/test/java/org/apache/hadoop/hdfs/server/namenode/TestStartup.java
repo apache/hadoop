@@ -38,8 +38,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -88,8 +87,8 @@ import javax.management.ObjectName;
 public class TestStartup {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
-  private static final Log LOG =
-    LogFactory.getLog(TestStartup.class.getName());
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestStartup.class.getName());
   private Configuration config;
   private File hdfsDir=null;
   static final long seed = 0xAAAAEEFL;
@@ -728,8 +727,8 @@ public class TestStartup {
       assertTrue(nnDirs.iterator().hasNext());
       assertEquals(
           "NN dir should be created after NN startup.",
-          nnDirStr,
-          nnDirs.iterator().next().getPath());
+          new File(nnDirStr),
+          new File(nnDirs.iterator().next().getPath()));
       final File nnDir = new File(nnDirStr);
       assertTrue(nnDir.exists());
       assertTrue(nnDir.isDirectory());
@@ -738,7 +737,7 @@ public class TestStartup {
         /* set read only */
         assertTrue(
             "Setting NN dir read only should succeed.",
-            nnDir.setReadOnly());
+            FileUtil.setWritable(nnDir, false));
         cluster.restartNameNodes();
         fail("Restarting NN should fail on read only NN dir.");
       } catch (InconsistentFSStateException e) {
@@ -750,7 +749,8 @@ public class TestStartup {
                 "storage directory does not exist or is not accessible."))));
       } finally {
         /* set back to writable in order to clean it */
-        assertTrue("Setting NN dir should succeed.", nnDir.setWritable(true));
+        assertTrue("Setting NN dir should succeed.",
+            FileUtil.setWritable(nnDir, true));
       }
     }
   }

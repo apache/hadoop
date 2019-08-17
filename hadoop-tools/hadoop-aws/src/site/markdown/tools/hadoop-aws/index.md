@@ -25,14 +25,17 @@ Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 See also:
 
 * [Encryption](./encryption.html)
+* [Performance](./performance.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
 * [Working with IAM Assumed Roles](./assumed_roles.html)
+* [S3A Delegation Token Support](./delegation_tokens.html)
+* [S3A Delegation Token Architecture](delegation_token_architecture.html).
 * [Testing](./testing.html)
 
-##<a name="overview"></a> Overview
+## <a name="overview"></a> Overview
 
 Apache Hadoop's `hadoop-aws` module provides support for AWS integration.
 applications to easily use this support.
@@ -87,7 +90,7 @@ maintain it.
    This connector is no longer available: users must migrate to the newer `s3a:` client.
 
 
-##<a name="getting_started"></a> Getting Started
+## <a name="getting_started"></a> Getting Started
 
 S3A depends upon two JARs, alongside `hadoop-common` and its dependencies.
 
@@ -196,7 +199,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have differerent authorization models
+### Warning #3: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -221,13 +224,12 @@ Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
 —they can delete them.
 
-Do not inadvertently share these credentials through means such as
+Do not inadvertently share these credentials through means such as:
 
 1. Checking in to SCM any configuration files containing the secrets.
 1. Logging them to a console, as they invariably end up being seen.
-1. Defining filesystem URIs with the credentials in the URL, such as
-`s3a://AK0010:secret@landsat-pds/`. They will end up in logs and error messages.
 1. Including the secrets in bug reports.
+1. Logging the `AWS_` environment variables.
 
 If you do any of these: change your credentials immediately!
 
@@ -240,6 +242,11 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+
+*Important*: The S3A connector no longer supports username and secrets
+in URLs of the form `s3a://key:secret@bucket/`.
+It is near-impossible to stop those secrets being logged —which is why
+a warning has been printed since Hadoop 2.8 whenever such a URL was used.
 
 ### Authentication properties
 
@@ -280,9 +287,8 @@ of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports
-        static configuration of AWS access key ID and secret access key.
-        See also fs.s3a.access.key and fs.s3a.secret.key.
+    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
@@ -334,17 +340,20 @@ on the hosts/processes where the work is executed.
 
 ### <a name="auth_providers"></a> Changing Authentication Providers
 
-The standard way to authenticate is with an access key and secret key using the
-properties in the configuration file.
+The standard way to authenticate is with an access key and secret key set in
+the Hadoop configuration files.
 
-The S3A client follows the following authentication chain:
+By default, the S3A client follows the following authentication chain:
 
-1. If login details were provided in the filesystem URI, a warning is printed
-and then the username and password extracted for the AWS key and secret respectively.
+1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key
+are looked for in the Hadoop XML configuration/Hadoop credential providers,
+returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
-XML configuration.
+XML configuration//Hadoop credential providers, returning a set of long-lived
+credentials if they are defined.
 1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
-are then looked for.
+are then looked for: these will return session or full credentials depending
+on which values are set.
 1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
  retrieve credentials published to EC2 VMs.
 
@@ -360,13 +369,19 @@ AWS Credential Providers are classes which can be used by the Amazon AWS SDK to
 obtain an AWS login from a different source in the system, including environment
 variables, JVM properties and configuration files.
 
-There are three AWS Credential Providers inside the `hadoop-aws` JAR:
+All Hadoop `fs.s3a.` options used to store login details can all be secured
+in [Hadoop credential providers](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html);
+this is advised as a more secure way to store valuable secrets.
+
+There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
 
 | classname | description |
 |-----------|-------------|
 | `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
 | `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
 | `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
+| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider<`| [Assumed Role credentials](assumed_roles.html) |
+
 
 There are also many in the Amazon SDKs, in particular two which are automatically
 set up in the authentication chain:
@@ -460,12 +475,11 @@ security and therefore is unsuitable for most use cases.
 then the Anonymous Credential provider *must* come last. If not, credential
 providers listed after it will be ignored.
 
-*Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
+### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which
-supports the secret key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
-values. It does not support authentication with logins credentials declared
-in the URLs.
+This is is the standard credential provider, which supports the secret
+key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
+values.
 
 ```xml
 <property>
@@ -474,9 +488,7 @@ in the URLs.
 </property>
 ```
 
-Apart from its lack of support of user:password details being included in filesystem
-URLs (a dangerous practise that is strongly discouraged), this provider acts
-exactly at the basic authenticator used in the default authentication chain.
+This is the basic authenticator used in the default authentication chain.
 
 This means that the default S3A authentication chain can be defined as
 
@@ -484,10 +496,52 @@ This means that the default S3A authentication chain can be defined as
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
   <value>
-  org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-  com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
-  com.amazonaws.auth.InstanceProfileCredentialsProvider
+    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
+    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
+  <description>
+    Comma-separated class names of credential provider classes which implement
+    com.amazonaws.auth.AWSCredentialsProvider.
+
+    When S3A delegation tokens are not enabled, this list will be used
+    to directly authenticate with S3 and DynamoDB services.
+    When S3A Delegation tokens are enabled, depending upon the delegation
+    token binding it may be used
+    to communicate wih the STS endpoint to request session/role
+    credentials.
+
+    These are loaded and queried in sequence for a valid set of credentials.
+    Each listed class must implement one of the following means of
+    construction, which are attempted in order:
+    * a public constructor accepting java.net.URI and
+        org.apache.hadoop.conf.Configuration,
+    * a public constructor accepting org.apache.hadoop.conf.Configuration,
+    * a public static method named getInstance that accepts no
+       arguments and returns an instance of
+       com.amazonaws.auth.AWSCredentialsProvider, or
+    * a public default constructor.
+
+    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
+    anonymous access to a publicly accessible S3 bucket without any credentials.
+    Please note that allowing anonymous access to an S3 bucket compromises
+    security and therefore is unsuitable for most use cases. It can be useful
+    for accessing public data sets without requiring AWS credentials.
+
+    If unspecified, then the default list of credential provider classes,
+    queried in sequence, is:
+    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
+       for session login secrets in the Hadoop configuration.
+    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
+    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+        configuration of AWS access key ID and secret access key in
+        environment variables named AWS_ACCESS_KEY_ID and
+        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
+    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+        of instance profile credentials if running in an EC2 VM.
+  </description>
 </property>
 ```
 
@@ -501,9 +555,6 @@ and significantly damage your organisation.
 
 1. Never commit your secrets into an SCM repository.
 The [git secrets](https://github.com/awslabs/git-secrets) can help here.
-
-1. Avoid using s3a URLs which have key and secret in the URL. This
-is dangerous as the secrets leak into the logs.
 
 1. Never include AWS credentials in bug reports, files attached to them,
 or similar.
@@ -525,20 +576,23 @@ The command line of any launched program is visible to all users on a Unix syste
 management: a specific S3A connection can be made with a different assumed role
 and permissions from the primary user account.
 
-1. Consider a workflow in which usera and applications are issued with short-lived
+1. Consider a workflow in which users and applications are issued with short-lived
 session credentials, configuring S3A to use these through
 the `TemporaryAWSCredentialsProvider`.
 
 1. Have a secure process in place for cancelling and re-issuing credentials for
 users and applications. Test it regularly by using it to refresh credentials.
 
+1. In installations where Kerberos is enabled, [S3A Delegation Tokens](delegation_tokens.html)
+can be used to acquire short-lived session/role credentials and then pass them
+into the shared application. This can ensure that the long-lived secrets stay
+on the local system.
+
 When running in EC2, the IAM EC2 instance credential provider will automatically
 obtain the credentials needed to access AWS services in the role the EC2 VM
 was deployed as.
-This credential provider is enabled in S3A by default.
+This AWS credential provider is enabled in S3A by default.
 
-The safest way to keep the AWS login keys a secret within Hadoop is to use
-Hadoop Credentials.
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
@@ -547,14 +601,32 @@ to keep secrets outside Hadoop configuration files, storing them in encrypted
 files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
-(`fs.s3a.secret.key`, `fs.s3a.access.key` and `fs.s3a.session.token`) can
+(`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
+and `fs.s3a.server-side-encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
-credential provider is all that is passed as a direct configuration option.
+credential provider then declareed in the hadoop configuration.
 
 For additional reading on the Hadoop Credential Provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
+
+The following configuration options can be storeed in Hadoop Credential Provider
+stores.
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.session.token
+fs.s3a.server-side-encryption.key
+fs.s3a.server-side-encryption-algorithm
+```
+
+The first three are for authentication; the final two for
+[encryption](./encryption.html). Of the latter, only the encryption key can
+be considered "sensitive". However, being able to include the algorithm in
+the credentials allows for a JCECKS file to contain all the options needed
+to encrypt new data written to S3.
 
 ### Step 1: Create a credential file
 
@@ -563,7 +635,6 @@ a Unix filesystem the permissions are automatically set to keep the file
 private to the reader —though as directory permissions are not touched,
 users should verify that the directory containing the file is readable only by
 the current user.
-
 
 ```bash
 hadoop credential create fs.s3a.access.key -value 123 \
@@ -620,9 +691,12 @@ over that of the `hadoop.security` list (i.e. they are prepended to the common l
 </property>
 ```
 
-Supporting a separate list in an `fs.s3a.` prefix permits per-bucket configuration
-of credential files.
-
+This was added to support binding different credential providers on a per
+bucket basis, without adding alternative secrets in the credential list.
+However, some applications (e.g Hive) prevent the list of credential providers
+from being dynamically updated by users. As per-bucket secrets are now supported,
+it is better to include per-bucket keys in JCEKS files and other sources
+of credentials.
 
 ### Using secrets from credential providers
 
@@ -786,7 +860,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -794,7 +868,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128MB</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -917,7 +991,7 @@ The S3A client makes a best-effort attempt at recovering from network failures;
 this section covers the details of what it does.
 
 The S3A divides exceptions returned by the AWS SDK into different categories,
-and chooses a differnt retry policy based on their type and whether or
+and chooses a different retry policy based on their type and whether or
 not the failing operation is idempotent.
 
 
@@ -944,11 +1018,11 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
-### Only retrible on idempotent operations
+### Only retriable on idempotent operations
 
 Some network failures are considered to be retriable if they occur on
 idempotent operations; there's no way to know if they happened
@@ -959,7 +1033,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
@@ -976,11 +1050,11 @@ it's a no-op if reprocessed. As indeed, is `Filesystem.delete()`.
 1. Any filesystem supporting an atomic `FileSystem.create(path, overwrite=false)`
 operation to reject file creation if the path exists MUST NOT consider
 delete to be idempotent, because a `create(path, false)` operation will
-only succeed if the first `delete()` call has already succeded.
+only succeed if the first `delete()` call has already succeeded.
 1. And a second, retried `delete()` call could delete the new data.
 
-Because S3 is eventially consistent *and* doesn't support an
-atomic create-no-overwrite operation, the choice is more ambigious.
+Because S3 is eventually consistent *and* doesn't support an
+atomic create-no-overwrite operation, the choice is more ambiguous.
 
 Currently S3A considers delete to be
 idempotent because it is convenient for many workflows, including the
@@ -1024,11 +1098,11 @@ Notes
 1. There is also throttling taking place inside the AWS SDK; this is managed
 by the value `fs.s3a.attempts.maximum`.
 1. Throttling events are tracked in the S3A filesystem metrics and statistics.
-1. Amazon KMS may thottle a customer based on the total rate of uses of
+1. Amazon KMS may throttle a customer based on the total rate of uses of
 KMS *across all user accounts and applications*.
 
 Throttling of S3 requests is all too common; it is caused by too many clients
-trying to access the same shard of S3 Storage. This generatlly
+trying to access the same shard of S3 Storage. This generally
 happen if there are too many reads, those being the most common in Hadoop
 applications. This problem is exacerbated by Hive's partitioning
 strategy used when storing data, such as partitioning by year and then month.
@@ -1066,9 +1140,134 @@ of data asked for in every GET request, as well as how much data is
 skipped in the existing stream before aborting it and creating a new stream.
 1. If the DynamoDB tables used by S3Guard are being throttled, increase
 the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
-1. KMS: "consult AWS about increating your capacity".
+1. KMS: "consult AWS about increasing your capacity".
 
 
+
+## Handling Read-During-Overwrite
+
+Read-during-overwrite is the condition where a writer overwrites a file while
+a reader has an open input stream on the file.  Depending on configuration,
+the S3AFileSystem may detect this and throw a `RemoteFileChangedException` in
+conditions where the reader's input stream might otherwise silently switch over
+from reading bytes from the original version of the file to reading bytes from
+the new version.
+
+The configurations items controlling this behavior are:
+
+```xml
+<property>
+  <name>fs.s3a.change.detection.source</name>
+  <value>etag</value>
+  <description>
+    Select which S3 object attribute to use for change detection.
+    Currently support 'etag' for S3 object eTags and 'versionid' for
+    S3 object version IDs.  Use of version IDs requires object versioning to be
+    enabled for each S3 bucket utilized.  Object versioning is disabled on
+    buckets by default. When version ID is used, the buckets utilized should
+    have versioning enabled before any data is written.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>server</value>
+  <description>
+    Determines how change detection is applied to alert to S3 objects
+    rewritten while being read. Value 'server' indicates to apply the attribute
+    constraint directly on GetObject requests to S3. Value 'client' means to do a
+    client-side comparison of the attribute value returned in the response.  Value
+    'server' would not work with third-party S3 implementations that do not
+    support these constraints on GetObject. Values 'server' and 'client' generate
+    RemoteObjectChangedException when a mismatch is detected.  Value 'warn' works
+    like 'client' but generates only a warning.  Value 'none' will ignore change
+    detection completely.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.change.detection.version.required</name>
+  <value>true</value>
+  <description>
+    Determines if S3 object version attribute defined by
+    fs.s3.change.detection.source should be treated as required.  If true and the
+    referred attribute is unavailable in an S3 GetObject response,
+    NoVersionAttributeException is thrown.  Setting to 'true' is encouraged to
+    avoid potential for inconsistent reads with third-party S3 implementations or
+    against S3 buckets that have object versioning disabled.
+  </description>
+</property>
+```
+
+In the default configuration, S3 object eTags are used to detect changes.  When
+the filesystem retrieves a file from S3 using
+[Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
+it captures the eTag and uses that eTag in an 'If-Match' condition on each
+subsequent request.  If a concurrent writer has overwritten the file, the
+'If-Match' condition will fail and a RemoteFileChangedException will be thrown.
+
+Even in this default configuration, a new write may not trigger this exception
+on an open reader.  For example, if the reader only reads forward in the file
+then only a single S3 'Get Object' request is made and the full contents of the
+file are streamed from a single response.  An overwrite of the file after the
+'Get Object' request would not be seen at all by a reader with an input stream
+that had already read the first byte.  Seeks backward on the other hand can
+result in new 'Get Object' requests that can trigger the
+`RemoteFileChangedException`.
+
+Additionally, due to the eventual consistency of S3 in a read-after-overwrite
+scenario, visibility of a new write may be delayed, avoiding the
+`RemoteFileChangedException` for some readers.  That said, if a reader does not
+see `RemoteFileChangedException`, they will have at least read a consistent view
+of a single version of the file (the version available when they started
+reading).
+
+### Change detection with S3 Versions.
+
+It is possible to switch to using the
+[S3 object version id](https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectVersioning.html)
+instead of eTag as the change detection mechanism.  Use of this option requires
+object versioning to be enabled on any S3 buckets used by the filesystem.  The
+benefit of using version id instead of eTag is potentially reduced frequency
+of RemoteFileChangedException. With object versioning enabled, old versions
+of objects remain available after they have been overwritten.
+This means an open input stream will still be able to seek backwards after a
+concurrent writer has overwritten the file.
+The reader will retain their consistent view of the version of the file from
+which they read the first byte.
+Because the version ID is null for objects written prior to enablement of
+object versioning, **this option should only be used when the S3 buckets
+have object versioning enabled from the beginning.**
+
+Note: when you rename files the copied files may have a different version number.
+
+### Change Detection Modes.
+
+Configurable change detection mode is the next option.  Different modes are
+available primarily for compatibility with third-party S3 implementations which
+may not support all change detection mechanisms.
+
+* `server`: the version/etag check is performed on the server by adding
+extra headers to the `GET` request. This is the default.
+* `client` : check on the client by comparing the eTag/version ID of a
+reopened file with the previous version.
+This is useful when the implementation doesn't support the `If-Match` header.
+* `warn`: check on the client, but only warn on a mismatch, rather than fail.
+* `none` do not check. Useful if the implementation doesn't provide eTag
+or version ID support at all or you would like to retain previous behavior
+where the reader's input stream silently switches over to the new object version
+(not recommended).
+
+The final option (`fs.s3a.change.detection.version.required`) is present
+primarily to ensure the filesystem doesn't silently ignore the condition
+where it is configured to use version ID on a bucket that doesn't have
+object versioning enabled or alternatively it is configured to use eTag on
+an S3 implementation that doesn't return eTags.
+
+When `true` (default) and 'Get Object' doesn't return eTag or
+version ID (depending on configured 'source'), a `NoVersionAttributeException`
+will be thrown.  When `false` and and eTag or version ID is not returned,
+the stream can be read, but without any version checking.
 
 
 ## <a name="per_bucket_configuration"></a>Configuring different S3 buckets with Per-Bucket Configuration
@@ -1132,22 +1331,34 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 
 ### Customizing S3A secrets held in credential files
 
-Although most properties are automatically propagated from their
-`fs.s3a.bucket.`-prefixed custom entry to that of the base `fs.s3a.` option
-supporting secrets kept in Hadoop credential files is slightly more complex.
-This is because the property values are kept in these files, and cannot be
-dynamically patched.
 
-Instead, callers need to create different configuration files for each
-bucket, setting the base secrets (`fs.s3a.access.key`, etc),
-then declare the path to the appropriate credential file in
-a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
+Secrets in JCEKS files or provided by other Hadoop credential providers
+can also be configured on a per bucket basis. The S3A client will
+look for the per-bucket secrets be
+
+
+Consider a JCEKS file with six keys:
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.server-side-encryption-algorithm
+fs.s3a.bucket.nightly.access.key
+fs.s3a.bucket.nightly.secret.key
+fs.s3a.bucket.nightly.session.token
+fs.s3a.bucket.nightly.server-side-encryption.key
+fs.s3a.bucket.nightly.server-side-encryption-algorithm
+```
+
+When accessing the bucket `s3a://nightly/`, the per-bucket configuration
+options for that bucket will be used, here the access keys and token,
+and including the encryption algorithm and key.
 
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 
 S3 Buckets are hosted in different "regions", the default being "US-East".
-The S3A client talks to this region by default, issing HTTP requests
+The S3A client talks to this region by default, issuing HTTP requests
 to the server `s3.amazonaws.com`.
 
 S3A can work with buckets from any region. Each region has its own
@@ -1298,12 +1509,12 @@ The "fast" output stream
     to the available disk space.
 1.  Generates output statistics as metrics on the filesystem, including
     statistics of active and pending block uploads.
-1.  Has the time to `close()` set by the amount of remaning data to upload, rather
+1.  Has the time to `close()` set by the amount of remaining data to upload, rather
     than the total size of the file.
 
 Because it starts uploading while data is still being written, it offers
 significant benefits when very large amounts of data are generated.
-The in memory buffering mechanims may also offer speedup when running adjacent to
+The in memory buffering mechanisms may also offer speedup when running adjacent to
 S3 endpoints, as disks are not used for intermediate data storage.
 
 
@@ -1367,7 +1578,7 @@ upload operation counts, so identifying when there is a backlog of work/
 a mismatch between data generation rates and network bandwidth. Per-stream
 statistics can also be logged by calling `toString()` on the current stream.
 
-* Files being written are still invisible untl the write
+* Files being written are still invisible until the write
 completes in the `close()` call, which will block until the upload is completed.
 
 
@@ -1493,7 +1704,7 @@ compete with other filesystem operations.
 
 We recommend a low value of `fs.s3a.fast.upload.active.blocks`; enough
 to start background upload without overloading other parts of the system,
-then experiment to see if higher values deliver more throughtput —especially
+then experiment to see if higher values deliver more throughput —especially
 from VMs running on EC2.
 
 ```xml
@@ -1536,10 +1747,10 @@ from VMs running on EC2.
 There are two mechanisms for cleaning up after leftover multipart
 uploads:
 - Hadoop s3guard CLI commands for listing and deleting uploads by their
-age. Doumented in the [S3Guard](./s3guard.html) section.
+age. Documented in the [S3Guard](./s3guard.html) section.
 - The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
-If an large stream writeoperation is interrupted, there may be
+If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
@@ -1580,80 +1791,8 @@ The S3A Filesystem client supports the notion of input policies, similar
 to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
 client to optimise HTTP GET requests for the different use cases.
 
-*"sequential"*
-
-Read through the file, possibly with some short forward seeks.
-
-The whole document is requested in a single HTTP request; forward seeks
-within the readahead range are supported by skipping over the intermediate
-data.
-
-This is leads to maximum read throughput —but with very expensive
-backward seeks.
-
-
-*"normal" (default)*
-
-The "Normal" policy starts off reading a file  in "sequential" mode,
-but if the caller seeks backwards in the stream, it switches from
-sequential to "random".
-
-This policy effectively recognizes the initial read pattern of columnar
-storage formats (e.g. Apache ORC and Apache Parquet), which seek to the end
-of a file, read in index data and then seek backwards to selectively read
-columns. The first seeks may be be expensive compared to the random policy,
-however the overall process is much less expensive than either sequentially
-reading through a file with the "random" policy, or reading columnar data
-with the "sequential" policy. When the exact format/recommended
-seek policy of data are known in advance, this policy
-
-*"random"*
-
-Optimised for random IO, specifically the Hadoop `PositionedReadable`
-operations —though `seek(offset); read(byte_buffer)` also benefits.
-
-Rather than ask for the whole file, the range of the HTTP request is
-set to that that of the length of data desired in the `read` operation
-(Rounded up to the readahead value set in `setReadahead()` if necessary).
-
-By reducing the cost of closing existing HTTP requests, this is
-highly efficient for file IO accessing a binary file
-through a series of `PositionedReadable.read()` and `PositionedReadable.readFully()`
-calls. Sequential reading of a file is expensive, as now many HTTP requests must
-be made to read through the file.
-
-For operations simply reading through a file: copying, distCp, reading
-Gzipped or other compressed formats, parsing .csv files, etc, the `sequential`
-policy is appropriate. This is the default: S3A does not need to be configured.
-
-For the specific case of high-performance random access IO, the `random` policy
-may be considered. The requirements are:
-
-* Data is read using the `PositionedReadable` API.
-* Long distance (many MB) forward seeks
-* Backward seeks as likely as forward seeks.
-* Little or no use of single character `read()` calls or small `read(buffer)`
-calls.
-* Applications running close to the S3 data store. That is: in EC2 VMs in
-the same datacenter as the S3 instance.
-
-The desired fadvise policy must be set in the configuration option
-`fs.s3a.experimental.input.fadvise` when the filesystem instance is created.
-That is: it can only be set on a per-filesystem basis, not on a per-file-read
-basis.
-
-    <property>
-      <name>fs.s3a.experimental.input.fadvise</name>
-      <value>random</value>
-      <description>Policy for reading files.
-       Values: 'random', 'sequential' or 'normal'
-       </description>
-    </property>
-
-[HDFS-2744](https://issues.apache.org/jira/browse/HDFS-2744),
-*Extend FSDataInputStream to allow fadvise* proposes adding a public API
-to set fadvise policies on input streams. Once implemented,
-this will become the supported mechanism used for configuring the input IO policy.
+See [Improving data input performance through fadvise](./performance.html#fadvise)
+for the details.
 
 ##<a name="metrics"></a>Metrics
 
@@ -1695,11 +1834,48 @@ in these metrics.
 
 ##<a name="further_reading"></a> Other Topics
 
-### Copying Data with distcp
+### <a name="distcp"></a> Copying Data with distcp
 
-Hadoop's `distcp` application can be used to copy data between a Hadoop
+Hadoop's `distcp` tool is often used to copy data between a Hadoop
 cluster and Amazon S3.
 See [Copying Data Between a Cluster and Amazon S3](https://hortonworks.github.io/hdp-aws/s3-copy-data/index.html)
 for details on S3 copying specifically.
 
+The `distcp update` command tries to do incremental updates of data.
+It is straightforward to verify when files do not match when they are of
+different length, but not when they are the same size.
+
+Distcp addresses this by comparing file checksums on the source and destination
+filesystems, which it tries to do *even if the filesystems have incompatible
+checksum algorithms*.
+
+The S3A connector can provide the HTTP etag header to the caller as the
+checksum of the uploaded file. Doing so will break distcp operations
+between hdfs and s3a.
+
+For this reason, the etag-as-checksum feature is disabled by default.
+
+```xml
+<property>
+  <name>fs.s3a.etag.checksum.enabled</name>
+  <value>false</value>
+  <description>
+    Should calls to getFileChecksum() return the etag value of the remote
+    object.
+    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
+    -skipcrccheck is set.
+  </description>
+</property>
+```
+
+If enabled, `distcp` between two S3 buckets can use the checksum to compare
+objects. Their checksums should be identical if they were either each uploaded
+as a single file PUT, or, if in a multipart PUT, in blocks of the same size,
+as configured by the value `fs.s3a.multipart.size`.
+
+To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
+
+```bash
+hadoop distcp -update -skipcrccheck -numListstatusThreads 40 /user/alice/datasets s3a://alice-backup/datasets
+```
 

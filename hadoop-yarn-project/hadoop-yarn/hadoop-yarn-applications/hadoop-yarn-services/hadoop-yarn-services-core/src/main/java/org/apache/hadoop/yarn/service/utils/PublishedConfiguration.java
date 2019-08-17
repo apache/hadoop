@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.io.IOException;
 import java.util.Date;
@@ -39,7 +38,7 @@ import java.util.Properties;
  * to be served up by the far end
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
+@JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PublishedConfiguration {
 
   public String description;
@@ -156,7 +155,7 @@ public class PublishedConfiguration {
    */
   public String asJson() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     String json = mapper.writeValueAsString(entries);
     return json;
   }
@@ -179,18 +178,10 @@ public class PublishedConfiguration {
   public String toString() {
     final StringBuilder sb =
         new StringBuilder("PublishedConfiguration{");
-    sb.append("description='").append(description).append('\'');
-    sb.append(" entries = ").append(entries.size());
-    sb.append('}');
+    sb.append("description='").append(description).append('\'')
+        .append(" entries = ").append(entries.size())
+        .append('}');
     return sb.toString();
   }
 
-  /**
-   * Create an outputter for a given format
-   * @param format format to use
-   * @return an instance of output
-   */
-  public PublishedConfigurationOutputter createOutputter(ConfigFormat format) {
-    return PublishedConfigurationOutputter.createOutputter(format, this);
-  }
 }

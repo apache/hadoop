@@ -25,10 +25,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -39,9 +40,11 @@ import org.eclipse.jetty.util.ajax.JSON;
  * JMX bean listing statuses of all node managers.
  */
 public class RMNMInfo implements RMNMInfoBeans {
-  private static final Log LOG = LogFactory.getLog(RMNMInfo.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMNMInfo.class);
   private RMContext rmContext;
   private ResourceScheduler scheduler;
+  private ObjectName mbeanObjectName;
 
   /**
    * Constructor for RMNMInfo registers the bean with JMX.
@@ -55,14 +58,17 @@ public class RMNMInfo implements RMNMInfoBeans {
 
     StandardMBean bean;
     try {
-        bean = new StandardMBean(this,RMNMInfoBeans.class);
-        MBeans.register("ResourceManager", "RMNMInfo", bean);
+      bean = new StandardMBean(this, RMNMInfoBeans.class);
+      mbeanObjectName = MBeans.register("ResourceManager", "RMNMInfo", bean);
     } catch (NotCompliantMBeanException e) {
-        LOG.warn("Error registering RMNMInfo MBean", e);
+      LOG.warn("Error registering RMNMInfo MBean", e);
     }
     LOG.info("Registered RMNMInfo MBean");
   }
 
+  public void unregister() {
+    MBeans.unregister(mbeanObjectName);
+  }
 
   static class InfoMap extends LinkedHashMap<String, Object> {
     private static final long serialVersionUID = 1L;

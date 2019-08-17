@@ -137,6 +137,25 @@ public class RemoteNodePBImpl extends RemoteNode {
   }
 
   @Override
+  public String getNodePartition() {
+    RemoteNodeProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodePartition()) {
+      return null;
+    }
+    return (p.getNodePartition());
+  }
+
+  @Override
+  public void setNodePartition(String nodePartition) {
+    maybeInitBuilder();
+    if (nodePartition == null) {
+      builder.clearNodePartition();
+      return;
+    }
+    builder.setNodePartition(nodePartition);
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }

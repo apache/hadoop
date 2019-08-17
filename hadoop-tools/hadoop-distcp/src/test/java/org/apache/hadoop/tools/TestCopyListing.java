@@ -20,8 +20,8 @@ package org.apache.hadoop.tools;
 
 import static org.mockito.Mockito.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +51,7 @@ import java.util.Random;
 
 @RunWith(value = Parameterized.class)
 public class TestCopyListing extends SimpleCopyListing {
-  private static final Log LOG = LogFactory.getLog(TestCopyListing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCopyListing.class);
 
   private static final Credentials CREDENTIALS = new Credentials();
 

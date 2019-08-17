@@ -21,8 +21,11 @@ package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,7 +68,7 @@ import com.google.common.base.Preconditions;
  * <p>
  * Rack localized {@link ResourceRequest}s are forwarded to the RMs that owns
  * the corresponding rack. Note that in some deployments each rack could be
- * striped across multiple RMs. Thsi policy respects that. If the
+ * striped across multiple RMs. This policy respects that. If the
  * {@link SubClusterResolver} cannot resolve this rack we default to forwarding
  * the {@link ResourceRequest} to the home sub-cluster.
  * </p>
@@ -122,13 +125,14 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   public static final Logger LOG =
       LoggerFactory.getLogger(LocalityMulticastAMRMProxyPolicy.class);
 
+  private static Random rand = new Random();
+
   private Map<SubClusterId, Float> weights;
   private SubClusterResolver resolver;
 
   private Map<SubClusterId, Resource> headroom;
   private float hrAlpha;
   private FederationStateStoreFacade federationFacade;
-  private AllocationBookkeeper bookkeeper;
   private SubClusterId homeSubcluster;
 
   @Override
@@ -184,25 +188,28 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     this.federationFacade =
         policyContext.getFederationStateStoreFacade();
     this.homeSubcluster = policyContext.getHomeSubcluster();
-
   }
 
   @Override
   public void notifyOfResponse(SubClusterId subClusterId,
       AllocateResponse response) throws YarnException {
-    // stateless policy does not care about responses except tracking headroom
-    headroom.put(subClusterId, response.getAvailableResources());
+    if (response.getAvailableResources() != null) {
+      headroom.put(subClusterId, response.getAvailableResources());
+      LOG.info("Subcluster {} updated with {} memory headroom", subClusterId,
+          response.getAvailableResources().getMemorySize());
+    }
   }
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
 
     // object used to accumulate statistics about the answer, initialize with
     // active subclusters. Create a new instance per call because this method
     // can be called concurrently.
-    bookkeeper = new AllocationBookkeeper();
-    bookkeeper.reinitialize(federationFacade.getSubClusters(true));
+    AllocationBookkeeper bookkeeper = new AllocationBookkeeper();
+    bookkeeper.reinitialize(getActiveSubclusters(), timedOutSubClusters);
 
     List<ResourceRequest> nonLocalizedRequests =
         new ArrayList<ResourceRequest>();
@@ -255,26 +262,15 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       // Handle node/rack requests that the SubClusterResolver cannot map to
-      // any cluster. Defaulting to home subcluster.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("ERROR resolving sub-cluster for resourceName: "
-            + rr.getResourceName() + " we are falling back to homeSubCluster:"
-            + homeSubcluster);
-      }
-
-      // If home-subcluster is not active, ignore node/rack request
-      if (bookkeeper.isActiveAndEnabled(homeSubcluster)) {
-        if (targetIds != null && targetIds.size() > 0) {
-          bookkeeper.addRackRR(homeSubcluster, rr);
-        } else {
-          bookkeeper.addLocalizedNodeRR(homeSubcluster, rr);
-        }
+      // any cluster. Pick a random sub-cluster from active and enabled ones.
+      targetId = getSubClusterForUnResolvedRequest(bookkeeper,
+          rr.getAllocationRequestId());
+      LOG.debug("ERROR resolving sub-cluster for resourceName: {}, picked a "
+          + "random subcluster to forward:{}", rr.getResourceName(), targetId);
+      if (targetIds != null && targetIds.size() > 0) {
+        bookkeeper.addRackRR(targetId, rr);
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("The homeSubCluster (" + homeSubcluster + ") we are "
-              + "defaulting to is not active, the ResourceRequest "
-              + "will be ignored.");
-        }
+        bookkeeper.addLocalizedNodeRR(targetId, rr);
       }
     }
 
@@ -282,6 +278,14 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     splitAnyRequests(nonLocalizedRequests, bookkeeper);
 
     return bookkeeper.getAnswer();
+  }
+
+  /**
+   * For unit test to override.
+   */
+  protected SubClusterId getSubClusterForUnResolvedRequest(
+      AllocationBookkeeper bookKeeper, long allocationId) {
+    return bookKeeper.getSubClusterForUnResolvedRequest(allocationId);
   }
 
   /**
@@ -361,15 +365,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     for (SubClusterId targetId : targetSCs) {
       // if the calculated request is non-empty add it to the answer
       if (containerNums.get(i) > 0) {
-        ResourceRequest out =
-            ResourceRequest.newInstance(originalResourceRequest.getPriority(),
-                originalResourceRequest.getResourceName(),
-                originalResourceRequest.getCapability(),
-                originalResourceRequest.getNumContainers(),
-                originalResourceRequest.getRelaxLocality(),
-                originalResourceRequest.getNodeLabelExpression(),
-                originalResourceRequest.getExecutionTypeRequest());
-        out.setAllocationRequestId(allocationId);
+        ResourceRequest out = ResourceRequest.clone(originalResourceRequest);
         out.setNumContainers(containerNums.get(i));
         if (ResourceRequest.isAnyLocation(out.getResourceName())) {
           allocationBookkeeper.addAnyRR(targetId, out);
@@ -467,7 +463,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     float headroomWeighting =
         1 / (float) allocationBookkeeper.getActiveAndEnabledSC().size();
 
-    // if we have headroom infomration for this sub-cluster (and we are safe
+    // if we have headroom information for this sub-cluster (and we are safe
     // from /0 issues)
     if (headroom.containsKey(targetId)
         && allocationBookkeeper.totHeadroomMemory > 0) {
@@ -491,16 +487,21 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * This helper class is used to book-keep the requests made to each
    * subcluster, and maintain useful statistics to split ANY requests.
    */
-  private final class AllocationBookkeeper {
+  protected final class AllocationBookkeeper {
 
     // the answer being accumulated
     private Map<SubClusterId, List<ResourceRequest>> answer = new TreeMap<>();
+    private Map<SubClusterId, Set<Long>> maskForRackDeletion = new HashMap<>();
 
     // stores how many containers we have allocated in each RM for localized
     // asks, used to correctly "spread" the corresponding ANY
     private Map<Long, Map<SubClusterId, AtomicLong>> countContainersPerRM =
         new HashMap<>();
     private Map<Long, AtomicLong> totNumLocalizedContainers = new HashMap<>();
+
+    // Store the randomly selected subClusterId for unresolved resource requests
+    // keyed by requestId
+    private Map<Long, SubClusterId> unResolvedRequestLocation = new HashMap<>();
 
     private Set<SubClusterId> activeAndEnabledSC = new HashSet<>();
     private float totHeadroomMemory = 0;
@@ -509,14 +510,15 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     private float totPolicyWeight = 0;
 
     private void reinitialize(
-        Map<SubClusterId, SubClusterInfo> activeSubclusters)
-        throws YarnException {
+        Map<SubClusterId, SubClusterInfo> activeSubclusters,
+        Set<SubClusterId> timedOutSubClusters) throws YarnException {
       if (activeSubclusters == null) {
         throw new YarnRuntimeException("null activeSubclusters received");
       }
 
       // reset data structures
       answer.clear();
+      maskForRackDeletion.clear();
       countContainersPerRM.clear();
       totNumLocalizedContainers.clear();
       activeAndEnabledSC.clear();
@@ -527,13 +529,10 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       policyWeights = weights;
       totPolicyWeight = 0;
 
-      // pre-compute the set of subclusters that are both active and enabled by
-      // the policy weights, and accumulate their total weight
       for (Map.Entry<SubClusterId, Float> entry : policyWeights.entrySet()) {
         if (entry.getValue() > 0
             && activeSubclusters.containsKey(entry.getKey())) {
           activeAndEnabledSC.add(entry.getKey());
-          totPolicyWeight += entry.getValue();
         }
       }
 
@@ -541,6 +540,25 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         throw new NoActiveSubclustersException(
             "None of the subclusters enabled in this policy (weight>0) are "
                 + "currently active we cannot forward the ResourceRequest(s)");
+      }
+
+      Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
+      tmpSCSet.removeAll(timedOutSubClusters);
+
+      if (tmpSCSet.size() < 1) {
+        LOG.warn("All active and enabled subclusters have expired last "
+            + "heartbeat time. Ignore the expiry check for this request");
+      } else {
+        activeAndEnabledSC = tmpSCSet;
+      }
+
+      LOG.info("{} subcluster active, {} subclusters active and enabled",
+          activeSubclusters.size(), activeAndEnabledSC.size());
+
+      // pre-compute the set of subclusters that are both active and enabled by
+      // the policy weights, and accumulate their total weight
+      for (SubClusterId sc : activeAndEnabledSC) {
+        totPolicyWeight += policyWeights.get(sc);
       }
 
       // pre-compute headroom-based weights for active/enabled subclusters
@@ -582,16 +600,16 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
             .addAndGet(rr.getNumContainers());
       }
 
-      internalAddToAnswer(targetId, rr);
+      internalAddToAnswer(targetId, rr, false);
     }
 
     /**
-     * Add a rack-local request to the final asnwer.
+     * Add a rack-local request to the final answer.
      */
-    public void addRackRR(SubClusterId targetId, ResourceRequest rr) {
+    private void addRackRR(SubClusterId targetId, ResourceRequest rr) {
       Preconditions
           .checkArgument(!ResourceRequest.isAnyLocation(rr.getResourceName()));
-      internalAddToAnswer(targetId, rr);
+      internalAddToAnswer(targetId, rr, true);
     }
 
     /**
@@ -600,15 +618,43 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     private void addAnyRR(SubClusterId targetId, ResourceRequest rr) {
       Preconditions
           .checkArgument(ResourceRequest.isAnyLocation(rr.getResourceName()));
-      internalAddToAnswer(targetId, rr);
+      internalAddToAnswer(targetId, rr, false);
     }
 
     private void internalAddToAnswer(SubClusterId targetId,
-        ResourceRequest partialRR) {
+        ResourceRequest partialRR, boolean isRack) {
+      if (!isRack) {
+        if (!maskForRackDeletion.containsKey(targetId)) {
+          maskForRackDeletion.put(targetId, new HashSet<Long>());
+        }
+        maskForRackDeletion.get(targetId)
+            .add(partialRR.getAllocationRequestId());
+      }
       if (!answer.containsKey(targetId)) {
         answer.put(targetId, new ArrayList<ResourceRequest>());
       }
       answer.get(targetId).add(partialRR);
+    }
+
+    /**
+     * For requests whose location cannot be resolved, choose an active and
+     * enabled sub-cluster to forward this requestId to.
+     */
+    private SubClusterId getSubClusterForUnResolvedRequest(long allocationId) {
+      if (unResolvedRequestLocation.containsKey(allocationId)) {
+        return unResolvedRequestLocation.get(allocationId);
+      }
+      int id = rand.nextInt(activeAndEnabledSC.size());
+      for (SubClusterId subclusterId : activeAndEnabledSC) {
+        if (id == 0) {
+          unResolvedRequestLocation.put(allocationId, subclusterId);
+          return subclusterId;
+        }
+        id--;
+      }
+      throw new RuntimeException(
+          "Should not be here. activeAndEnabledSC size = "
+              + activeAndEnabledSC.size() + " id = " + id);
     }
 
     /**
@@ -632,6 +678,28 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
      * @return the answer
      */
     private Map<SubClusterId, List<ResourceRequest>> getAnswer() {
+      Iterator<Entry<SubClusterId, List<ResourceRequest>>> answerIter =
+          answer.entrySet().iterator();
+      // Remove redundant rack RR before returning the answer
+      while (answerIter.hasNext()) {
+        Entry<SubClusterId, List<ResourceRequest>> entry = answerIter.next();
+        SubClusterId scId = entry.getKey();
+        Set<Long> mask = maskForRackDeletion.get(scId);
+        if (mask != null) {
+          Iterator<ResourceRequest> rrIter = entry.getValue().iterator();
+          while (rrIter.hasNext()) {
+            ResourceRequest rr = rrIter.next();
+            if (!mask.contains(rr.getAllocationRequestId())) {
+              rrIter.remove();
+            }
+          }
+        }
+        if (mask == null || entry.getValue().size() == 0) {
+          answerIter.remove();
+          LOG.info("removing {} from output because it has only rack RR",
+              scId);
+        }
+      }
       return answer;
     }
 

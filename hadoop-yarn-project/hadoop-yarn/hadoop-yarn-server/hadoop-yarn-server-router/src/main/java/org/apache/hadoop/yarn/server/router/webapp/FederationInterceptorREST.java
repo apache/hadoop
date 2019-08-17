@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -39,7 +41,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -72,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -79,9 +82,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -323,19 +329,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Base scenarios:
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into
-   * StateStore with the selected SubCluster (e.g. SC1) and the appId. • The
-   * State Store replies with the selected SubCluster (e.g. SC1). • The Router
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into
+   * StateStore with the selected SubCluster (e.g. SC1) and the appId. The
+   * State Store replies with the selected SubCluster (e.g. SC1). The Router
    * submits the request to the selected SubCluster.
    * <p>
    * In case of State Store failure:
    * <p>
-   * The client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • Due to the
+   * The client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. Due to the
    * State Store down the Router times out and it will retry depending on the
-   * FederationFacade settings. • The Router replies to the client with an error
+   * FederationFacade settings. The Router replies to the client with an error
    * message.
    * <p>
    * If State Store fails after inserting the tuple: identical behavior as
@@ -345,26 +351,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Scenario 1 – Crash before submission to the ResourceManager
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * crashes. • The Client timeouts and resubmits the application. • The Router
-   * selects one SubCluster to forward the request. • The Router inserts a tuple
-   * into State Store with the selected SubCluster (e.g. SC2) and the appId. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * crashes. The Client timeouts and resubmits the application. The Router
+   * selects one SubCluster to forward the request. The Router inserts a tuple
+   * into State Store with the selected SubCluster (e.g. SC2) and the appId.
    * Because the tuple is already inserted in the State Store, it returns the
-   * previous selected SubCluster (e.g. SC1). • The Router submits the request
+   * previous selected SubCluster (e.g. SC1). The Router submits the request
    * to the selected SubCluster (e.g. SC1).
    * <p>
    * Scenario 2 – Crash after submission to the ResourceManager
    * <p>
-   * • The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The Router crashes. • The
-   * Client timeouts and resubmit the application. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC2) and the appId. • The State
-   * Store replies with the selected SubCluster (e.g. SC1). • The Router submits
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The Router crashes. The
+   * Client timeouts and resubmit the application. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC2) and the appId. The State
+   * Store replies with the selected SubCluster (e.g. SC1). The Router submits
    * the request to the selected SubCluster (e.g. SC1). When a client re-submits
    * the same application to the same RM, it does not raise an exception and
    * replies with operation successful message.
@@ -373,14 +379,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * In case of ResourceManager failure:
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The entire SubCluster is
-   * down – all the RMs in HA or the master RM is not reachable. • The Router
-   * times out. • The Router selects a new SubCluster to forward the request. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The entire SubCluster is
+   * down – all the RMs in HA or the master RM is not reachable. The Router
+   * times out. The Router selects a new SubCluster to forward the request.
    * The Router update a tuple into State Store with the selected SubCluster
-   * (e.g. SC2) and the appId. • The State Store replies with OK answer. • The
+   * (e.g. SC2) and the appId. The State Store replies with OK answer. The
    * Router submits the request to the selected SubCluster (e.g. SC2).
    */
   @Override
@@ -777,6 +783,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
+   * Get the active subclusters in the federation.
+   * @return Map from subcluster id to its info.
+   * @throws NotFoundException If the subclusters cannot be found.
+   */
+  private Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
+      throws NotFoundException {
+    try {
+      return federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  /**
    * The YARN Router will forward to the request to all the SubClusters to find
    * where the node is running.
    * <p>
@@ -794,65 +814,113 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    */
   @Override
   public NodeInfo getNode(String nodeId) {
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
-    try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      throw new NotFoundException(e.getMessage());
-    }
-
+    final Map<SubClusterId, SubClusterInfo> subClustersActive =
+        getActiveSubclusters();
     if (subClustersActive.isEmpty()) {
       throw new NotFoundException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
+    final Map<SubClusterInfo, NodeInfo> results =
+        getNode(subClustersActive.values(), nodeId);
 
-    // Send the requests in parallel
-    CompletionService<NodeInfo> compSvc =
-        new ExecutorCompletionService<NodeInfo>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<NodeInfo>() {
-        @Override
-        public NodeInfo call() {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
-          try {
-            NodeInfo nodeInfo = interceptor.getNode(nodeId);
-            return nodeInfo;
-          } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodeInfo.",
-                info.getSubClusterId());
-            return null;
-          }
-        }
-      });
-    }
-
-    // Collect all the responses in parallel
+    // Collect the responses
     NodeInfo nodeInfo = null;
-    for (int i = 0; i < subClustersActive.size(); i++) {
+    for (NodeInfo nodeResponse : results.values()) {
       try {
-        Future<NodeInfo> future = compSvc.take();
-        NodeInfo nodeResponse = future.get();
-
-        // Check if the node was found in this SubCluster
-        if (nodeResponse != null) {
-          // Check if the node was already found in a different SubCluster and
-          // it has an old health report
-          if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
-              nodeResponse.getLastHealthUpdate()) {
-            nodeInfo = nodeResponse;
-          }
+        // Check if the node was already found in a different SubCluster and
+        // it has an old health report
+        if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
+            nodeResponse.getLastHealthUpdate()) {
+          nodeInfo = nodeResponse;
         }
       } catch (Throwable e) {
         LOG.warn("Failed to get node report ", e);
       }
     }
+
     if (nodeInfo == null) {
       throw new NotFoundException("nodeId, " + nodeId + ", is not found");
     }
     return nodeInfo;
+  }
+
+  /**
+   * Get a node and the subcluster where it is.
+   * @param subClusters Subclusters where to search.
+   * @param nodeId Identifier of the node we are looking for.
+   * @return Map between subcluster and node.
+   */
+  private Map<SubClusterInfo, NodeInfo> getNode(
+      Collection<SubClusterInfo> subClusters, String nodeId) {
+
+    // Send the requests in parallel
+    CompletionService<NodeInfo> compSvc =
+        new ExecutorCompletionService<NodeInfo>(this.threadpool);
+    final Map<SubClusterInfo, Future<NodeInfo>> futures = new HashMap<>();
+    for (final SubClusterInfo subcluster : subClusters) {
+      final SubClusterId subclusterId = subcluster.getSubClusterId();
+      Future<NodeInfo> result = compSvc.submit(() -> {
+        try {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(
+                  subclusterId, subcluster.getRMWebServiceAddress());
+          return interceptor.getNode(nodeId);
+        } catch (Exception e) {
+          LOG.error("Subcluster {} failed to return nodeInfo.",
+              subclusterId);
+          return null;
+        }
+      });
+      futures.put(subcluster, result);
+    }
+
+    // Collect the results
+    final Map<SubClusterInfo, NodeInfo> results = new HashMap<>();
+    for (Entry<SubClusterInfo, Future<NodeInfo>> entry : futures.entrySet()) {
+      try {
+        final Future<NodeInfo> future = entry.getValue();
+        final NodeInfo nodeInfo = future.get();
+        // Check if the node was found in this SubCluster
+        if (nodeInfo != null) {
+          SubClusterInfo subcluster = entry.getKey();
+          results.put(subcluster, nodeInfo);
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get node report ", e);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get the subcluster a node belongs to.
+   * @param nodeId Identifier of the node we are looking for.
+   * @return The subcluster containing the node.
+   * @throws NotFoundException If the node cannot be found.
+   */
+  private SubClusterInfo getNodeSubcluster(String nodeId)
+      throws NotFoundException {
+
+    final Collection<SubClusterInfo> subClusters =
+        getActiveSubclusters().values();
+    final Map<SubClusterInfo, NodeInfo> results =
+        getNode(subClusters, nodeId);
+    SubClusterInfo subcluster = null;
+    NodeInfo nodeInfo = null;
+    for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
+      NodeInfo nodeResponse = entry.getValue();
+      if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
+          nodeResponse.getLastHealthUpdate()) {
+        subcluster = entry.getKey();
+        nodeInfo = nodeResponse;
+      }
+    }
+    if (subcluster == null) {
+      throw new NotFoundException(
+          "Cannot find " + nodeId + " in any subcluster");
+    }
+    return subcluster;
   }
 
   /**
@@ -879,10 +947,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     NodesInfo nodes = new NodesInfo();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
+      subClustersActive = getActiveSubclusters();
+    } catch (Exception e) {
       LOG.error("Cannot get nodes: {}", e.getMessage());
       return new NodesInfo();
     }
@@ -934,13 +1002,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr,
+      String nodeId, ResourceOptionInfo resourceOption) {
+    SubClusterInfo subcluster = getNodeSubcluster(nodeId);
+    DefaultRequestInterceptorREST interceptor =
+        getOrCreateInterceptorForSubCluster(
+            subcluster.getSubClusterId(),
+            subcluster.getRMWebServiceAddress());
+    return interceptor.updateNodeResource(hsr, nodeId, resourceOption);
+  }
+
+  @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     ClusterMetricsInfo metrics = new ClusterMetricsInfo();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
+      subClustersActive = getActiveSubclusters();
+    } catch (Exception e) {
       LOG.error(e.getLocalizedMessage());
       return metrics;
     }
@@ -986,6 +1065,52 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return metrics;
   }
 
+  /**
+   * The YARN Router will forward to the respective YARN RM in which the AM is
+   * running.
+   * <p>
+   * Possible failure:
+   * <p>
+   * Client: identical behavior as {@code RMWebServices}.
+   * <p>
+   * Router: the Client will timeout and resubmit the request.
+   * <p>
+   * ResourceManager: the Router will timeout and the call will fail.
+   * <p>
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
+  @Override
+  public AppState getAppState(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+
+    ApplicationId applicationId = null;
+    try {
+      applicationId = ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+
+    SubClusterInfo subClusterInfo = null;
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId =
+          federationFacade.getApplicationHomeSubCluster(applicationId);
+      if (subClusterId == null) {
+        return null;
+      }
+      subClusterInfo = federationFacade.getSubCluster(subClusterId);
+    } catch (YarnException e) {
+      return null;
+    }
+
+    DefaultRequestInterceptorREST interceptor =
+        getOrCreateInterceptorForSubCluster(subClusterId,
+            subClusterInfo.getRMWebServiceAddress());
+    return interceptor.getAppState(hsr, appId);
+  }
+
   @Override
   public ClusterInfo get() {
     return getClusterInfo();
@@ -993,213 +1118,221 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public ClusterInfo getClusterInfo() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
-    throw new NotImplementedException();
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
-    throw new NotImplementedException();
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public AppState getAppState(HttpServletRequest hsr, String appId)
-      throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateApplicationPriority(AppPriority targetPriority,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response postDelegationToken(DelegationToken tokenData,
       HttpServletRequest hsr) throws AuthorizationException, IOException,
       InterruptedException, Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response postDelegationTokenExpiration(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response cancelDelegationToken(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response listReservation(String queue, String reservationId,
       long startTime, long endTime, boolean includeResourceAllocations,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr, String appId,
       String type) throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ContainerInfo getContainer(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
@@ -1208,6 +1341,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         + "FederationInterceptorREST, which should be the last one "
         + "in the chain. Check if the interceptor pipeline configuration "
         + "is correct");
+  }
+
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override

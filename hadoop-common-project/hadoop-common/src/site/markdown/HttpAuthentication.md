@@ -28,7 +28,7 @@ Hadoop HTTP web-consoles can be configured to require Kerberos authentication us
 
 In addition, Hadoop HTTP web-consoles support the equivalent of Hadoop's Pseudo/Simple authentication. If this option is enabled, the user name must be specified in the first browser interaction using the user.name query string parameter. e.g. `http://localhost:8088/cluster?user.name=babu`.
 
-If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticatorHandler`).
+If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticationHandler`).
 
 The next section describes how to configure Hadoop HTTP web-consoles to require user authentication.
 
@@ -64,3 +64,13 @@ Add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.f
 | hadoop.http.cross-origin.allowed-methods | `GET,POST,HEAD`                               | Comma separated list of methods that are allowed                                       |
 | hadoop.http.cross-origin.allowed-headers | `X-Requested-With,Content-Type,Accept,Origin` | Comma separated list of headers that are allowed                                       |
 | hadoop.http.cross-origin.max-age         | `1800`                                        | Number of seconds a pre-flighted request can be cached                                 |
+
+
+Trusted Proxy
+-------------
+Trusted Proxy adds support to perform operations using end user instead of proxy user. It fetches the end user from
+doAs query parameter. To enable Trusted Proxy, please set the following configuration parameter:
+
+Add org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer to hadoop.http.filter.initializers in core-site.xml
+instead of org.apache.hadoop.security.AuthenticationFilterInitializer.
+

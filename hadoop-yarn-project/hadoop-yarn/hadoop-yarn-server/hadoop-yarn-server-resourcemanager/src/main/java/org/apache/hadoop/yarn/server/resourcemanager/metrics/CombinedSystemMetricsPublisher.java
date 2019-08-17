@@ -45,6 +45,12 @@ public class CombinedSystemMetricsPublisher implements SystemMetricsPublisher {
     }
   }
 
+  @Override public void appLaunched(RMApp app, long launchTime) {
+    for (SystemMetricsPublisher publisher : this.publishers) {
+      publisher.appLaunched(app, launchTime);
+    }
+  }
+
   @Override
   public void appACLsUpdated(RMApp app, String appViewACLs, long updatedTime) {
     for (SystemMetricsPublisher publisher : this.publishers) {

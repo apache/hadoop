@@ -116,8 +116,8 @@ public class TestDockerClientConfigHandler {
     Credentials credentials =
         DockerClientConfigHandler.readCredentialsFromConfigFile(
             new Path(file.toURI()), conf, APPLICATION_ID);
-    DockerClientConfigHandler.writeDockerCredentialsToPath(outFile,
-        credentials);
+    assertTrue(DockerClientConfigHandler.writeDockerCredentialsToPath(outFile,
+        credentials));
     assertTrue(outFile.exists());
     String fileContents = FileUtils.readFileToString(outFile);
     assertTrue(fileContents.contains("auths"));

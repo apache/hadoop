@@ -244,12 +244,12 @@ public abstract class AbstractContractCreateTest extends
       out.write('a');
       out.flush();
       if (!fs.exists(path)) {
-
-        if (isSupported(IS_BLOBSTORE)) {
-          // object store: downgrade to a skip so that the failure is visible
-          // in test results
-          skip("Filesystem is an object store and newly created files are not "
-              + "immediately visible");
+        if (isSupported(IS_BLOBSTORE) ||
+            isSupported(CREATE_VISIBILITY_DELAYED)) {
+          // object store or some file systems: downgrade to a skip so that the
+          // failure is visible in test results
+          skip("For object store or some file systems, newly created files are"
+              + " not immediately visible");
         }
         assertPathExists("expected path to be visible before file closed",
             path);

@@ -23,7 +23,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
 
@@ -37,7 +37,7 @@ class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
   private final DFSClient client;
   private final OutputStream out;
   private final DefaultHttpResponse response;
-  private static final Log LOG = WebHdfsHandler.LOG;
+  private static final Logger LOG = WebHdfsHandler.LOG;
 
   HdfsWriter(DFSClient client, OutputStream out, DefaultHttpResponse response) {
     this.client = client;
@@ -82,8 +82,8 @@ class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
   }
 
   private void releaseDfsResources() {
-    IOUtils.cleanup(LOG, out);
-    IOUtils.cleanup(LOG, client);
+    IOUtils.cleanupWithLogger(LOG, out);
+    IOUtils.cleanupWithLogger(LOG, client);
   }
 
   private void releaseDfsResourcesAndThrow() throws Exception {

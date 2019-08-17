@@ -39,4 +39,6 @@ public interface ErrorStrings {
     "Too many arguments";
   String ERROR_DUPLICATE_ENTRY = "Duplicate entry for ";
 
+  String SERVICE_UPGRADE_DISABLED = "Service upgrade is disabled.";
+
 }

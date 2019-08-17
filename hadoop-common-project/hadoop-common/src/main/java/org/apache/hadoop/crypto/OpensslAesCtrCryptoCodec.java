@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.crypto.random.OsSecureRandom;
+import org.apache.hadoop.crypto.random.OpensslSecureRandom;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +57,7 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   public void setConf(Configuration conf) {
     this.conf = conf;
     final Class<? extends Random> klass = conf.getClass(
-        HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY, OsSecureRandom.class, 
+        HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY, OpensslSecureRandom.class,
         Random.class);
     try {
       random = ReflectionUtils.newInstance(klass, conf);

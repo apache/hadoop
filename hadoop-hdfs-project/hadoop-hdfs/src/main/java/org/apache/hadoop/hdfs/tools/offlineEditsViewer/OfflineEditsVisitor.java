@@ -52,7 +52,7 @@ abstract public interface OfflineEditsVisitor {
    * Begin visiting an element that encloses another element, such as
    * the beginning of the list of blocks that comprise a file.
    *
-   * @param value Token being visited
+   * @param op Token being visited
    */
   abstract void visitOp(FSEditLogOp op)
      throws IOException;

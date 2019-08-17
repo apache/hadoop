@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -38,8 +36,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  */
 public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
-  private Set<SubClusterId> knownClusterIds = new HashSet<>();
-
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
@@ -52,16 +48,10 @@ public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
     throw new FederationPolicyException("The policy configured for this queue "
         + "rejects all routing requests by construction.");
-  }
-
-  @Override
-  public void notifyOfResponse(SubClusterId subClusterId,
-      AllocateResponse response) throws YarnException {
-    // This might be invoked for applications started with a previous policy,
-    // do nothing for this policy.
   }
 
 }

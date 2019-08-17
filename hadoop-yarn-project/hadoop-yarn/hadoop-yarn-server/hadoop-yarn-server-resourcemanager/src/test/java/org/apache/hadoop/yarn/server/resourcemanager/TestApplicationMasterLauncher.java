@@ -24,18 +24,26 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -60,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -73,24 +82,28 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.utils.AMRMClientUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.mockito.Matchers.any;
+import com.google.common.base.Supplier;
+
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestApplicationMasterLauncher {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestApplicationMasterLauncher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestApplicationMasterLauncher.class);
 
   private static final class MyContainerManagerImpl implements
       ContainerManagementProtocol {
@@ -199,12 +212,18 @@ public class TestApplicationMasterLauncher {
         request) throws YarnException, IOException {
       return null;
     }
+
+    @Override
+    public GetLocalizationStatusesResponse getLocalizationStatuses(
+        GetLocalizationStatusesRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
   }
 
   @Test
   public void testAMLaunchAndCleanup() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MyContainerManagerImpl containerManager = new MyContainerManagerImpl();
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
         containerManager);
@@ -216,10 +235,14 @@ public class TestApplicationMasterLauncher {
     // kick the scheduling
     nm1.nodeHeartbeat(true);
 
-    int waitCount = 0;
-    while (containerManager.launched == false && waitCount++ < 20) {
-      LOG.info("Waiting for AM Launch to happen..");
-      Thread.sleep(1000);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override public Boolean get() {
+          return containerManager.launched;
+        }
+      }, 100, 200 * 100);
+    } catch (TimeoutException e) {
+      fail("timed out while waiting for AM Launch to happen.");
     }
     Assert.assertTrue(containerManager.launched);
 
@@ -233,7 +256,7 @@ public class TestApplicationMasterLauncher {
         .getMasterContainer().getId()
         .toString(), containerManager.containerIdAtContainerManager);
     Assert.assertEquals(nm1.getNodeId().toString(),
-      containerManager.nmHostAtContainerManager);
+        containerManager.nmHostAtContainerManager);
     Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
         containerManager.maxAppAttempts);
 
@@ -246,14 +269,60 @@ public class TestApplicationMasterLauncher {
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
-    waitCount = 0;
-    while (containerManager.cleanedup == false && waitCount++ < 20) {
-      LOG.info("Waiting for AM Cleanup to happen..");
-      Thread.sleep(1000);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override public Boolean get() {
+          return containerManager.cleanedup;
+        }
+      }, 100, 200 * 100);
+    } catch (TimeoutException e) {
+      fail("timed out while waiting for AM cleanup to happen.");
     }
     Assert.assertTrue(containerManager.cleanedup);
 
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
+    rm.stop();
+  }
+
+  @Test
+  public void testAMCleanupBeforeLaunch() throws Exception {
+    MockRM rm = new MockRM();
+    rm.start();
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
+    RMApp app = rm.submitApp(2000);
+    // kick the scheduling
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override public Boolean get() {
+          return attempt.getMasterContainer() != null;
+        }
+      }, 10, 200 * 100);
+    } catch (TimeoutException e) {
+      fail("timed out while waiting for AM Launch to happen.");
+    }
+
+    //send kill before launch
+    rm.killApp(app.getApplicationId());
+    rm.waitForState(app.getApplicationId(), RMAppState.KILLED);
+    //Launch after kill
+    AMLauncher launcher = new AMLauncher(rm.getRMContext(),
+            attempt, AMLauncherEventType.LAUNCH, rm.getConfig()) {
+        @Override
+        public void onAMLaunchFailed(ContainerId containerId, Exception e) {
+          Assert.assertFalse("NullPointerException happens "
+                 + " while launching " + containerId,
+                   e instanceof NullPointerException);
+        }
+        @Override
+        protected ContainerManagementProtocol getContainerMgrProxy(
+            ContainerId containerId) {
+          return new MyContainerManagerImpl();
+        }
+    };
+    launcher.run();
     rm.stop();
   }
 
@@ -303,7 +372,7 @@ public class TestApplicationMasterLauncher {
     rm.drainEvents();
 
     MockRM.waitForState(app.getCurrentAppAttempt(),
-      RMAppAttemptState.LAUNCHED, 500);
+        RMAppAttemptState.LAUNCHED, 500);
   }
 
 
@@ -311,9 +380,8 @@ public class TestApplicationMasterLauncher {
   @SuppressWarnings("unused")
   @Test(timeout = 100000)
   public void testallocateBeforeAMRegistration() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
     boolean thrown = false;
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
@@ -337,9 +405,9 @@ public class TestApplicationMasterLauncher {
 
     AllocateResponse amrs = null;
     try {
-        amrs = am.allocate(new ArrayList<ResourceRequest>(),
+      amrs = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>());
-        Assert.fail();
+      Assert.fail();
     } catch (ApplicationMasterNotRegisteredException e) {
     }
 
@@ -368,16 +436,47 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testSetupTokens() throws Exception {
-    MockRM rm = new MockRM();
+  public void testSetupTokensWithoutHTTPS() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    // default conf
+    testSetupTokens(false, conf);
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "NONE");
+    testSetupTokens(false, conf);
+  }
+
+  @Test
+  public void testSetupTokensWithHTTPS() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "LENIENT");
+    testSetupTokens(true, conf);
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "STRICT");
+    testSetupTokens(true, conf);
+  }
+
+  private void testSetupTokens(boolean https, YarnConfiguration conf)
+      throws Exception {
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
     RMApp app = rm.submitApp(2000);
     /// kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
-    MyAMLauncher launcher = new MyAMLauncher(rm.getRMContext(),
-        attempt, AMLauncherEventType.LAUNCH, rm.getConfig());
+    AMRMTokenIdentifier tokenIdentifier =
+        new AMRMTokenIdentifier(attempt.getAppAttemptId(), 1);
+    ProxyCA proxyCA = mock(ProxyCA.class);
+    when(proxyCA.generateKeyStorePassword())
+        .thenReturn("kPassword").thenReturn("tPassword");
+    when(proxyCA.createChildKeyStore(any(), any()))
+        .thenReturn("keystore".getBytes());
+    when(proxyCA.getChildTrustStore(any()))
+        .thenReturn("truststore".getBytes());
+    RMContext rmContext = spy(rm.getRMContext());
+    ProxyCAManager proxyCAManager = mock(ProxyCAManager.class);
+    when(proxyCAManager.getProxyCA()).thenReturn(proxyCA);
+    when(rmContext.getProxyCAManager()).thenReturn(proxyCAManager);
+    MyAMLauncher launcher = new MyAMLauncher(rmContext,
+        attempt, AMLauncherEventType.LAUNCH, rm.getConfig(), tokenIdentifier);
     DataOutputBuffer dob = new DataOutputBuffer();
     Credentials ts = new Credentials();
     ts.writeTokenStorageToStream(dob);
@@ -399,14 +498,48 @@ public class TestApplicationMasterLauncher {
     } catch (java.io.EOFException e) {
       Assert.fail("EOFException should not happen.");
     }
+
+    // verify token
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    dibb.reset(amContainer.getTokens());
+    Credentials credentials = new Credentials();
+    credentials.readTokenStorageStream(dibb);
+    Assert.assertEquals(1, credentials.numberOfTokens());
+    org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token =
+        credentials.getAllTokens().iterator().next();
+    Assert.assertEquals(tokenIdentifier.getKind(), token.getKind());
+    Assert.assertArrayEquals(tokenIdentifier.getBytes(), token.getIdentifier());
+    Assert.assertArrayEquals("password".getBytes(), token.getPassword());
+
+    // verify keystore and truststore
+    if (https) {
+      Assert.assertEquals(4, credentials.numberOfSecretKeys());
+      Assert.assertArrayEquals("keystore".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE));
+      Assert.assertArrayEquals("kPassword".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD));
+      Assert.assertArrayEquals("truststore".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE));
+      Assert.assertArrayEquals("tPassword".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD));
+    } else {
+      Assert.assertEquals(0, credentials.numberOfSecretKeys());
+    }
   }
 
   static class MyAMLauncher extends AMLauncher {
     int count;
+    AMRMTokenIdentifier tokenIdentifier;
     public MyAMLauncher(RMContext rmContext, RMAppAttempt application,
-        AMLauncherEventType eventType, Configuration conf) {
+        AMLauncherEventType eventType, Configuration conf,
+        AMRMTokenIdentifier tokenIdentifier) {
       super(rmContext, application, eventType, conf);
       count = 0;
+      this.tokenIdentifier = tokenIdentifier;
     }
 
     protected org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
@@ -415,7 +548,9 @@ public class TestApplicationMasterLauncher {
       if (count == 1) {
         throw new RuntimeException("createAndSetAMRMToken failure");
       }
-      return null;
+      return new org.apache.hadoop.security.token.Token<>(
+          tokenIdentifier.getBytes(), "password".getBytes(),
+          tokenIdentifier.getKind(), new Text());
     }
 
     protected void setupTokens(ContainerLaunchContext container,

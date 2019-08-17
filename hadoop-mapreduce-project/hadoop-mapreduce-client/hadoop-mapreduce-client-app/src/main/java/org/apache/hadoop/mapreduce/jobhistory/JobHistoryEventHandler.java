@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -119,7 +120,11 @@ public class JobHistoryEventHandler extends AbstractService
 
   protected BlockingQueue<JobHistoryEvent> eventQueue =
     new LinkedBlockingQueue<JobHistoryEvent>();
+
+  protected boolean handleTimelineEvent = false;
+  protected AsyncDispatcher atsEventDispatcher = null;
   protected Thread eventHandlingThread;
+
   private volatile boolean stopped;
   private final Object lock = new Object();
 
@@ -231,8 +236,8 @@ public class JobHistoryEventHandler extends AbstractService
     try {
       doneDirPrefixPath =
           FileContext.getFileContext(conf).makeQualified(new Path(userDoneDirStr));
-      mkdir(doneDirFS, doneDirPrefixPath, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_USER_DIR_PERMISSIONS));
+      mkdir(doneDirFS, doneDirPrefixPath, JobHistoryUtils.
+          getConfiguredHistoryIntermediateUserDoneDirPermissions(conf));
     } catch (IOException e) {
       LOG.error("Error creating user intermediate history done directory: [ "
           + doneDirPrefixPath + "]", e);
@@ -269,7 +274,7 @@ public class JobHistoryEventHandler extends AbstractService
       LOG.info("Emitting job history data to the timeline service is enabled");
       if (YarnConfiguration.timelineServiceEnabled(conf)) {
         boolean timelineServiceV2Enabled =
-            ((int) YarnConfiguration.getTimelineServiceVersion(conf) == 2);
+            YarnConfiguration.timelineServiceV2Enabled(conf);
         if(timelineServiceV2Enabled) {
           timelineV2Client =
               ((MRAppMaster.RunningAppContext)context).getTimelineV2Client();
@@ -279,6 +284,7 @@ public class JobHistoryEventHandler extends AbstractService
               ((MRAppMaster.RunningAppContext) context).getTimelineClient();
           timelineClient.init(conf);
         }
+        handleTimelineEvent = true;
         LOG.info("Timeline service is enabled; version: " +
             YarnConfiguration.getTimelineServiceVersion(conf));
       } else {
@@ -302,8 +308,21 @@ public class JobHistoryEventHandler extends AbstractService
           "'json' or 'binary'.  Falling back to default value '" +
           JHAdminConfig.DEFAULT_MR_HS_JHIST_FORMAT + "'.");
     }
-
+    // initiate the atsEventDispatcher for timeline event
+    // if timeline service is enabled.
+    if (handleTimelineEvent) {
+      atsEventDispatcher = createDispatcher();
+      EventHandler<JobHistoryEvent> timelineEventHandler =
+          new ForwardingEventHandler();
+      atsEventDispatcher.register(EventType.class, timelineEventHandler);
+      atsEventDispatcher.setDrainEventsOnStop();
+      atsEventDispatcher.init(conf);
+    }
     super.serviceInit(conf);
+  }
+
+  protected AsyncDispatcher createDispatcher() {
+    return new AsyncDispatcher("Job ATS Event Dispatcher");
   }
 
   private void mkdir(FileSystem fs, Path path, FsPermission fsp)
@@ -371,6 +390,10 @@ public class JobHistoryEventHandler extends AbstractService
         }
     }, "eventHandlingThread");
     eventHandlingThread.start();
+
+    if (handleTimelineEvent) {
+      atsEventDispatcher.start();
+    }
     super.serviceStart();
   }
 
@@ -461,6 +484,11 @@ public class JobHistoryEventHandler extends AbstractService
         LOG.info("Exception while closing file " + e.getMessage());
       }
     }
+
+    if (handleTimelineEvent && atsEventDispatcher != null) {
+      atsEventDispatcher.stop();
+    }
+
     if (timelineClient != null) {
       timelineClient.stop();
     } else if (timelineV2Client != null) {
@@ -580,6 +608,10 @@ public class JobHistoryEventHandler extends AbstractService
       }
 
       eventQueue.put(event);
+      // Process it for ATS (if enabled)
+      if (handleTimelineEvent) {
+        atsEventDispatcher.getEventHandler().handle(event);
+      }
     } catch (InterruptedException e) {
       throw new YarnRuntimeException(e);
     }
@@ -622,13 +654,6 @@ public class JobHistoryEventHandler extends AbstractService
         }
         processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
             event.getJobID());
-        if (timelineV2Client != null) {
-          processEventForNewTimelineService(historyEvent, event.getJobID(),
-              event.getTimestamp());
-        } else if (timelineClient != null) {
-          processEventForTimelineServer(historyEvent, event.getJobID(),
-              event.getTimestamp());
-        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("In HistoryEventHandler "
               + event.getHistoryEvent().getEventType());
@@ -707,6 +732,23 @@ public class JobHistoryEventHandler extends AbstractService
           throw new YarnRuntimeException(e);
         }
       }
+    }
+  }
+
+  private void handleTimelineEvent(JobHistoryEvent event) {
+    HistoryEvent historyEvent = event.getHistoryEvent();
+    if (handleTimelineEvent) {
+      if (timelineV2Client != null) {
+        processEventForNewTimelineService(historyEvent, event.getJobID(),
+            event.getTimestamp());
+      } else if (timelineClient != null) {
+        processEventForTimelineServer(historyEvent, event.getJobID(),
+            event.getTimestamp());
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("In HistoryEventHandler, handle timelineEvent:"
+          + event.getHistoryEvent().getEventType());
     }
   }
 
@@ -1744,5 +1786,13 @@ public class JobHistoryEventHandler extends AbstractService
   @VisibleForTesting
   boolean getFlushTimerStatus() {
     return isTimerActive;
+  }
+
+  private final class ForwardingEventHandler
+      implements EventHandler<JobHistoryEvent> {
+    @Override
+    public void handle(JobHistoryEvent event) {
+      handleTimelineEvent(event);
+    }
   }
 }

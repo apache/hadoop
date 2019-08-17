@@ -24,8 +24,8 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -55,7 +55,8 @@ import org.junit.rules.ExpectedException;
  * Test WebHDFS which provides data locality using HTTP redirection.
  */
 public class TestWebHdfsDataLocality {
-  static final Log LOG = LogFactory.getLog(TestWebHdfsDataLocality.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestWebHdfsDataLocality.class);
   {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
   }
@@ -239,11 +240,34 @@ public class TestWebHdfsDataLocality {
   }
 
   @Test
+  public void testExcludeWrongDataNode() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final String[] racks = {RACK0};
+    final String[] hosts = {"DataNode1"};
+    final int nDataNodes = hosts.length;
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .hosts(hosts).numDataNodes(nDataNodes).racks(racks).build();
+    try {
+      cluster.waitActive();
+      final NameNode namenode = cluster.getNameNode();
+      NamenodeWebHdfsMethods.chooseDatanode(
+          namenode, "/path", PutOpParam.Op.CREATE, 0,
+          DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT,
+          "DataNode2", LOCALHOST, null);
+    } catch (Exception e) {
+      Assert.fail("Failed to exclude DataNode2" + e.getMessage());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
   public void testChooseDatanodeBeforeNamesystemInit() throws Exception {
     NameNode nn = mock(NameNode.class);
     when(nn.getNamesystem()).thenReturn(null);
     exception.expect(IOException.class);
-    exception.expectMessage("Namesystem has not been intialized yet.");
+    exception.expectMessage("Namesystem has not been initialized yet.");
     NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null, LOCALHOST, null);
   }

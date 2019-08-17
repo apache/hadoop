@@ -31,7 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.StringUtils;
@@ -151,7 +151,7 @@ public class WebServices {
     final GetApplicationsRequest request =
         GetApplicationsRequest.newInstance();
     request.setLimit(countNum);
-    request.setStartRange(new LongRange(sBegin, sEnd));
+    request.setStartRange(Range.between(sBegin, sEnd));
     try {
       if (callerUGI == null) {
         // TODO: the request should take the params like what RMWebServices does
@@ -387,12 +387,12 @@ public class WebServices {
     return new ContainerInfo(container);
   }
 
-  protected void init(HttpServletResponse response) {
+  protected void initForReadableEndpoints(HttpServletResponse response) {
     // clear content type
     response.setContentType(null);
   }
 
-  protected static Set<String>
+  public static Set<String>
       parseQueries(Set<String> queries, boolean isState) {
     Set<String> params = new HashSet<String>();
     if (!queries.isEmpty()) {

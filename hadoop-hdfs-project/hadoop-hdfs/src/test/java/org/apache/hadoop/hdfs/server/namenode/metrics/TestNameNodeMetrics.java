@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -48,8 +49,8 @@ import java.util.List;
 import java.util.Random;
 import com.google.common.collect.ImmutableList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -86,7 +88,7 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -106,7 +108,8 @@ public class TestNameNodeMetrics {
       SystemErasureCodingPolicies.getByID(
           SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
 
-  public static final Log LOG = LogFactory.getLog(TestNameNodeMetrics.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestNameNodeMetrics.class);
   
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = EC_POLICY.getNumDataUnits() +
@@ -137,7 +140,7 @@ public class TestNameNodeMetrics {
     // Enable stale DataNodes checking
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
-    GenericTestUtils.setLogLevel(LogFactory.getLog(MetricsAsserts.class),
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(MetricsAsserts.class),
         Level.DEBUG);
   }
   
@@ -270,7 +273,8 @@ public class TestNameNodeMetrics {
     File dataDir = new File(fsVolume.getBaseURI());
     long capacity = fsVolume.getCapacity();
     volumeReferences.close();
-    DataNodeTestUtils.injectDataDirFailure(dataDir);
+    File storageDir = new File(dataDir, Storage.STORAGE_DIR_CURRENT);
+    DataNodeTestUtils.injectDataDirFailure(storageDir);
     DataNodeTestUtils.waitForDiskError(dn, fsVolume);
     DataNodeTestUtils.triggerHeartbeat(dn);
     BlockManagerTestUtil.checkHeartbeat(bm);
@@ -409,10 +413,12 @@ public class TestNameNodeMetrics {
     // Verify replica metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
 
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
   }
 
   /**
@@ -467,7 +473,7 @@ public class TestNameNodeMetrics {
 
     verifyZeroMetrics();
     verifyAggregatedMetricsTally();
-
+    BlockManagerTestUtil.stopRedundancyThread(bm);
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
@@ -489,9 +495,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 1L, rb);
     assertGauge("CorruptReplicatedBlocks", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 1L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -514,9 +522,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -552,7 +562,7 @@ public class TestNameNodeMetrics {
 
     verifyZeroMetrics();
     verifyAggregatedMetricsTally();
-
+    BlockManagerTestUtil.stopRedundancyThread(bm);
     // Corrupt first replica of the block
     LocatedBlocks lbs = fs.getClient().getNamenode().getBlockLocations(
         ecFile.toString(), 0, fileLen);
@@ -577,9 +587,11 @@ public class TestNameNodeMetrics {
     // Verify replica metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 1L, rb);
     assertGauge("CorruptECBlockGroups", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 1L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -599,9 +611,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -663,6 +677,8 @@ public class TestNameNodeMetrics {
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
     assertGauge("MissingReplOneBlocks", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
     fs.delete(file, true);
     waitForDnMetricValue(NS_METRICS, "UnderReplicatedBlocks", 0L);
   }
@@ -992,8 +1008,10 @@ public class TestNameNodeMetrics {
         .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         2);
+    File basedir = new File(MiniDFSCluster.getBaseDirectory(),
+        GenericTestUtils.getMethodName());
 
-    try (MiniDFSCluster clusterEDEK = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster clusterEDEK = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(1).build()) {
 
       DistributedFileSystem fsEDEK =
@@ -1029,7 +1047,9 @@ public class TestNameNodeMetrics {
   @Test
   public void testResourceCheck() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(MiniDFSCluster.getBaseDirectory(),
+        GenericTestUtils.getMethodName());
+    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(0)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .build();
@@ -1054,5 +1074,45 @@ public class TestNameNodeMetrics {
         tmpCluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testEditLogTailing() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 60);
+    MiniDFSCluster dfsCluster = null;
+    try {
+      dfsCluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .nnTopology(MiniDFSNNTopology.simpleHATopology())
+          .build();
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+      dfsCluster.transitionToActive(0);
+      dfsCluster.waitActive();
+
+      Path testDir = new Path("/testdir");
+      dfs.mkdir(testDir, FsPermission.getDefault());
+
+      dfsCluster.getNameNodeRpc(0).rollEditLog();
+      Thread.sleep(2 * 1000);
+
+      // We need to get the metrics for the SBN (excluding the NN from dfs
+      // cluster created in setUp() and the ANN).
+      MetricsRecordBuilder rb = getMetrics(NN_METRICS+"-2");
+      assertQuantileGauges("EditLogTailTime60s", rb);
+      assertQuantileGauges("EditLogFetchTime60s", rb);
+      assertQuantileGauges("NumEditLogLoaded60s", rb, "Count");
+      assertQuantileGauges("EditLogTailInterval60s", rb);
+      assertCounterGt("EditLogTailTimeNumOps", 0L, rb);
+      assertCounterGt("EditLogFetchTimeNumOps", 0L, rb);
+      assertCounterGt("NumEditLogLoadedNumOps", 0L, rb);
+      assertCounterGt("EditLogTailIntervalNumOps", 0L, rb);
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+
   }
 }

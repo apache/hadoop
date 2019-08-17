@@ -190,7 +190,12 @@ The following instructions assume that 1. ~ 4. steps of [the above instructions]
                 <name>mapreduce.framework.name</name>
                 <value>yarn</value>
             </property>
+            <property>
+                <name>mapreduce.application.classpath</name>
+                <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+            </property>
         </configuration>
+
 
     `etc/hadoop/yarn-site.xml`:
 

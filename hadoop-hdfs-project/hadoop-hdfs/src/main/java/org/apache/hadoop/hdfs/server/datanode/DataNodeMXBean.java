@@ -146,4 +146,11 @@ public interface DataNodeMXBean {
    * @return list of slow disks
    */
   String getSlowDisks();
+
+  /**
+   * Gets if security is enabled.
+   *
+   * @return true, if security is enabled.
+   */
+  boolean isSecurityEnabled();
 }

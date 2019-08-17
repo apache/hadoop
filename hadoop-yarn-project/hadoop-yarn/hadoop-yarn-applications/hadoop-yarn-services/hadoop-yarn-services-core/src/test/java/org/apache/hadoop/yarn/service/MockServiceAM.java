@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -60,16 +62,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -96,9 +100,19 @@ public class MockServiceAM extends ServiceMaster {
   private Map<ContainerId, ContainerStatus> containerStatuses =
       new ConcurrentHashMap<>();
 
+  private Set<ContainerId> releasedContainers = ConcurrentHashMap.newKeySet();
+
+  private Credentials amCreds;
+
   public MockServiceAM(Service service) {
     super(service.getName());
     this.service = service;
+  }
+
+  public MockServiceAM(Service service, Credentials amCreds) {
+    super(service.getName());
+    this.service = service;
+    this.amCreds = amCreds;
   }
 
   @Override
@@ -196,12 +210,27 @@ public class MockServiceAM extends ServiceMaster {
 
           @Override
           public RegisterApplicationMasterResponse registerApplicationMaster(
-              String appHostName, int appHostPort, String appTrackingUrl) {
+              String appHostName, int appHostPort, String appTrackingUrl,
+              Map placementConstraintsMap) throws YarnException, IOException {
+            return this.registerApplicationMaster(appHostName, appHostPort,
+                appTrackingUrl);
+          }
+
+          @Override
+            public RegisterApplicationMasterResponse registerApplicationMaster(
+                String appHostName, int appHostPort, String appTrackingUrl) {
             RegisterApplicationMasterResponse response = mock(
                 RegisterApplicationMasterResponse.class);
             when(response.getResourceTypes()).thenReturn(
                 ResourceUtils.getResourcesTypeInfo());
             return response;
+          }
+
+          @Override
+          public synchronized void releaseAssignedContainer(
+              ContainerId containerId) {
+            releasedContainers.add(containerId);
+            super.releaseAssignedContainer(containerId);
           }
 
           @Override public void unregisterApplicationMaster(
@@ -224,7 +253,7 @@ public class MockServiceAM extends ServiceMaster {
         NMClientAsync nmClientAsync = super.createNMClient();
         NMClient nmClient = mock(NMClient.class);
         try {
-          when(nmClient.getContainerStatus(anyObject(), anyObject()))
+          when(nmClient.getContainerStatus(any(), any()))
               .thenAnswer(invocation ->
                   containerStatuses.get(invocation.getArguments()[0]));
         } catch (YarnException | IOException e) {
@@ -269,7 +298,7 @@ public class MockServiceAM extends ServiceMaster {
   }
 
   /**
-   *
+   * Creates a mock container and container ID and feeds to the component.
    * @param service The service for the component
    * @param id The id for the container
    * @param compName The component to which the container is fed
@@ -278,6 +307,18 @@ public class MockServiceAM extends ServiceMaster {
   public Container feedContainerToComp(Service service, int id,
       String compName) {
     ContainerId containerId = createContainerId(id);
+    return feedContainerToComp(service, containerId, compName);
+  }
+
+  /**
+   * Feeds the container to the component.
+   * @param service The service for the component
+   * @param containerId container id
+   * @param compName The component to which the container is fed
+   * @return
+   */
+  public Container feedContainerToComp(Service service, ContainerId containerId,
+      String compName) {
     Container container = createContainer(containerId, compName);
     synchronized (feedContainers) {
       feedContainers.add(container);
@@ -296,6 +337,14 @@ public class MockServiceAM extends ServiceMaster {
     synchronized (failedContainers) {
       failedContainers.add(status);
     }
+  }
+
+  public Container updateContainerStatus(Service service, int id,
+      String compName, String host) {
+    ContainerId containerId = createContainerId(id);
+    Container container = createContainer(containerId, compName);
+    addContainerStatus(container, ContainerState.RUNNING, host);
+    return container;
   }
 
   public ContainerId createContainerId(int id) {
@@ -370,11 +419,40 @@ public class MockServiceAM extends ServiceMaster {
   }
 
   private void addContainerStatus(Container container, ContainerState state) {
+    addContainerStatus(container, state, container.getNodeId().getHost());
+  }
+
+  private void addContainerStatus(Container container, ContainerState state,
+      String host) {
     ContainerStatus status = ContainerStatus.newInstance(container.getId(),
         state, "", 0);
-    status.setHost(container.getNodeId().getHost());
-    status.setIPs(Lists.newArrayList(container.getNodeId().getHost()));
+    status.setHost(host);
+    status.setIPs(Lists.newArrayList(host));
     containerStatuses.put(container.getId(), status);
   }
 
+  @Override
+  protected ByteBuffer recordTokensForContainers()
+      throws IOException {
+    DataOutputBuffer dob = new DataOutputBuffer();
+    if (amCreds == null) {
+      return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    }
+    try {
+      amCreds.writeTokenStorageToStream(dob);
+    } finally {
+      dob.close();
+    }
+    return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
+
+  /**
+   * Waits for the container to get released
+   * @param containerId           ContainerId
+   */
+  public void waitForContainerToRelease(ContainerId containerId)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> releasedContainers.contains(containerId),
+        1000, 30000);
+  }
 }

@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyObject;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -251,7 +254,7 @@ public class TestFairCallQueue {
     // put should offer to all but last subqueue, only put to last subqueue.
     Mockito.reset(fcq);
     try {
-      doThrow(stopPuts).when(fcq).putQueue(anyInt(), anyObject());
+      doThrow(stopPuts).when(fcq).putQueue(anyInt(), any());
       fcq.put(p0);
       fail("didn't fail");
     } catch (Exception e) {
@@ -265,7 +268,7 @@ public class TestFairCallQueue {
     // put with lowest priority should not offer, just put.
     Mockito.reset(fcq);
     try {
-      doThrow(stopPuts).when(fcq).putQueue(anyInt(), anyObject());
+      doThrow(stopPuts).when(fcq).putQueue(anyInt(), any());
       fcq.put(p2);
       fail("didn't fail");
     } catch (Exception e) {
@@ -636,5 +639,38 @@ public class TestFairCallQueue {
     queueSizes = (int[]) mbs.getAttribute(mxbeanName, "QueueSizes");
     assertEquals(0, queueSizes[0]);
     assertEquals(0, queueSizes[1]);
+  }
+
+  @Test
+  public void testFairCallQueueMetrics() throws Exception {
+    final String fcqMetrics = "ns.FairCallQueue";
+    Schedulable p0 = mockCall("a", 0);
+    Schedulable p1 = mockCall("b", 1);
+
+    assertGauge("FairCallQueueSize_p0", 0, getMetrics(fcqMetrics));
+    assertGauge("FairCallQueueSize_p1", 0, getMetrics(fcqMetrics));
+    assertCounter("FairCallQueueOverflowedCalls_p0", 0L,
+        getMetrics(fcqMetrics));
+    assertCounter("FairCallQueueOverflowedCalls_p1", 0L,
+        getMetrics(fcqMetrics));
+
+    for (int i = 0; i < 5; i++) {
+      fcq.add(p0);
+      fcq.add(p1);
+    }
+
+    try {
+      fcq.add(p1);
+      fail("didn't overflow");
+    } catch (IllegalStateException ise) {
+      // Expected exception
+    }
+
+    assertGauge("FairCallQueueSize_p0", 5, getMetrics(fcqMetrics));
+    assertGauge("FairCallQueueSize_p1", 5, getMetrics(fcqMetrics));
+    assertCounter("FairCallQueueOverflowedCalls_p0", 0L,
+        getMetrics(fcqMetrics));
+    assertCounter("FairCallQueueOverflowedCalls_p1", 1L,
+        getMetrics(fcqMetrics));
   }
 }

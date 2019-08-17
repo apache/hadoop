@@ -97,8 +97,8 @@ public class CoreFileSystem {
   public String toString() {
     final StringBuilder sb =
       new StringBuilder("CoreFileSystem{");
-    sb.append("fileSystem=").append(fileSystem.getUri());
-    sb.append('}');
+    sb.append("fileSystem=").append(fileSystem.getUri())
+        .append('}');
     return sb.toString();
   }
 
@@ -112,10 +112,38 @@ public class CoreFileSystem {
   public Path buildClusterDirPath(String clustername) {
     Preconditions.checkNotNull(clustername);
     Path path = getBaseApplicationPath();
-    return new Path(path, YarnServiceConstants.SERVICES_DIRECTORY + "/" + clustername);
+    return new Path(path, YarnServiceConstants.SERVICES_DIRECTORY + "/"
+        + clustername);
   }
 
+  /**
+   * Build up the upgrade path string for a cluster. No attempt to
+   * create the directory is made.
+   *
+   * @param clusterName name of the cluster
+   * @param version version of the cluster
+   * @return the upgrade path to the cluster
+   */
+  public Path buildClusterUpgradeDirPath(String clusterName, String version) {
+    Preconditions.checkNotNull(clusterName);
+    Preconditions.checkNotNull(version);
+    return new Path(buildClusterDirPath(clusterName),
+        YarnServiceConstants.UPGRADE_DIR + "/" + version);
+  }
 
+  /**
+   * Delete the upgrade cluster directory.
+   * @param clusterName name of the cluster
+   * @param version     version of the cluster
+   * @throws IOException
+   */
+  public void deleteClusterUpgradeDir(String clusterName, String version)
+      throws IOException {
+    Preconditions.checkNotNull(clusterName);
+    Preconditions.checkNotNull(version);
+    Path upgradeCluster = buildClusterUpgradeDirPath(clusterName, version);
+    fileSystem.delete(upgradeCluster, true);
+  }
   /**
    * Build up the path string for keytab install location -no attempt to
    * create the directory is made
@@ -335,6 +363,12 @@ public class CoreFileSystem {
         .get(YarnServiceConf.DEPENDENCY_TARBALL_PATH);
     if (configuredDependencyTarballPath != null) {
       dependencyLibTarGzip = new Path(configuredDependencyTarballPath);
+    }
+    if (dependencyLibTarGzip == null) {
+      dependencyLibTarGzip = new Path(String.format(YarnServiceConstants
+          .DEPENDENCY_DIR, VersionInfo.getVersion()),
+          YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
+              + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
     }
     return dependencyLibTarGzip;
   }

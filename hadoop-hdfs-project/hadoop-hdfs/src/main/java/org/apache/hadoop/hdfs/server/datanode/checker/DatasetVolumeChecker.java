@@ -19,15 +19,18 @@
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -43,9 +46,11 @@ import javax.annotation.Nullable;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -103,6 +108,8 @@ public class DatasetVolumeChecker {
   private static final VolumeCheckContext IGNORED_CONTEXT =
       new VolumeCheckContext();
 
+  private final ExecutorService checkVolumeResultHandlerExecutorService;
+
   /**
    * @param conf Configuration object.
    * @param timer {@link Timer} object used for throttling checks.
@@ -115,7 +122,7 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (maxAllowedTimeForCheckMs <= 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
           + maxAllowedTimeForCheckMs + " (should be > 0)");
     }
@@ -132,7 +139,7 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (minDiskCheckGapMs < 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY + " - "
           + minDiskCheckGapMs + " (should be >= 0)");
     }
@@ -143,17 +150,18 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (diskCheckTimeout < 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
           + diskCheckTimeout + " (should be >= 0)");
     }
 
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
-    if (maxVolumeFailuresTolerated < 0) {
-      throw new DiskErrorException("Invalid value configured for "
+    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " (should be non-negative)");
+          + maxVolumeFailuresTolerated + " "
+          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
     }
 
     delegateChecker = new ThrottledAsyncChecker<>(
@@ -163,6 +171,12 @@ public class DatasetVolumeChecker {
                 .setNameFormat("DataNode DiskChecker thread %d")
                 .setDaemon(true)
                 .build()));
+
+    checkVolumeResultHandlerExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+            .setNameFormat("VolumeCheck ResultHandler thread %d")
+            .setDaemon(true)
+            .build());
   }
 
   /**
@@ -213,12 +227,12 @@ public class DatasetVolumeChecker {
         Futures.addCallback(olf.get(),
             new ResultHandler(reference, healthyVolumes, failedVolumes,
                 numVolumes, new Callback() {
-              @Override
-              public void call(Set<FsVolumeSpi> ignored1,
-                               Set<FsVolumeSpi> ignored2) {
-                latch.countDown();
-              }
-            }));
+                  @Override
+                  public void call(Set<FsVolumeSpi> ignored1,
+                                   Set<FsVolumeSpi> ignored2) {
+                    latch.countDown();
+                  }
+                }), MoreExecutors.directExecutor());
       } else {
         IOUtils.cleanup(null, reference);
         if (numVolumes.decrementAndGet() == 0) {
@@ -230,7 +244,7 @@ public class DatasetVolumeChecker {
     // Wait until our timeout elapses, after which we give up on
     // the remaining volumes.
     if (!latch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
-      LOG.warn("checkAllVolumes timed out after {} ms" +
+      LOG.warn("checkAllVolumes timed out after {} ms",
           maxAllowedTimeForCheckMs);
     }
 
@@ -292,7 +306,9 @@ public class DatasetVolumeChecker {
       numVolumeChecks.incrementAndGet();
       Futures.addCallback(olf.get(),
           new ResultHandler(volumeReference, new HashSet<>(), new HashSet<>(),
-          new AtomicLong(1), callback));
+              new AtomicLong(1), callback),
+          checkVolumeResultHandlerExecutorService
+      );
       return true;
     } else {
       IOUtils.cleanup(null, volumeReference);

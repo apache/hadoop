@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.io.IOUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Get a listing of all files in that match the file patterns.
  */
@@ -40,20 +42,37 @@ class Tail extends FsCommand {
   }
   
   public static final String NAME = "tail";
-  public static final String USAGE = "[-f] <file>";
+  public static final String USAGE = "[-f] [-s <sleep interval>] <file>";
   public static final String DESCRIPTION =
-    "Show the last 1KB of the file.\n" +
-    "-f: Shows appended data as the file grows.\n";
+      "Show the last 1KB of the file.\n"
+          + "-f: Shows appended data as the file grows.\n"
+          + "-s: With -f , "
+          + "defines the sleep interval between iterations in milliseconds.\n";
 
   private long startingOffset = -1024;
   private boolean follow = false;
   private long followDelay = 5000; // milliseconds
   
+  @VisibleForTesting
+  public long getFollowDelay() {
+    return followDelay;
+  }
+
   @Override
   protected void processOptions(LinkedList<String> args) throws IOException {
     CommandFormat cf = new CommandFormat(1, 1, "f");
+    cf.addOptionWithValue("s");
     cf.parse(args);
     follow = cf.getOpt("f");
+    if (follow) {
+      String sleep = cf.getOptValue("s");
+      if (sleep != null && !sleep.isEmpty()) {
+        long sleepInterval = Long.parseLong(sleep);
+        if (sleepInterval > 0) {
+          followDelay = sleepInterval;
+        }
+      }
+    }
   }
 
   // TODO: HADOOP-7234 will add glob support; for now, be backwards compat

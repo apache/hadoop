@@ -113,8 +113,8 @@ public class TestNodeManagerMetrics {
     assertGauge("AvailableVCores", 19, rb);
   }
 
-  private void checkMetrics(int launched, int completed, int failed, int killed,
-      int initing, int running, int allocatedGB,
+  public static void checkMetrics(int launched, int completed, int failed,
+      int killed, int initing, int running, int allocatedGB,
       int allocatedContainers, int availableGB, int allocatedVCores,
       int availableVCores) {
     MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");

@@ -22,6 +22,8 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.protocol.DataNodeUsageReport;
+import org.apache.hadoop.hdfs.server.protocol.DataNodeUsageReportUtil;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -32,6 +34,7 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -159,9 +162,14 @@ public class DataNodeMetrics {
   private MutableCounterLong ecReconstructionWriteTimeMillis;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
+  @Metric("Milliseconds spent on calling NN rpc")
+  private MutableRatesWithAggregation
+      nnRpcLatency = registry.newRatesWithAggregation("nnRpcLatency");
+
   final String name;
   JvmMetrics jvmMetrics = null;
-  
+  private DataNodeUsageReportUtil dnUsageReportUtil;
+
   public DataNodeMetrics(String name, String sessionId, int[] intervals,
       final JvmMetrics jvmMetrics) {
     this.name = name;
@@ -169,6 +177,7 @@ public class DataNodeMetrics {
     registry.tag(SessionId, sessionId);
     
     final int len = intervals.length;
+    dnUsageReportUtil = new DataNodeUsageReportUtil();
     packetAckRoundTripTimeNanosQuantiles = new MutableQuantiles[len];
     flushNanosQuantiles = new MutableQuantiles[len];
     fsyncNanosQuantiles = new MutableQuantiles[len];
@@ -228,25 +237,41 @@ public class DataNodeMetrics {
   public JvmMetrics getJvmMetrics() {
     return jvmMetrics;
   }
-  
-  public void addHeartbeat(long latency) {
+
+  public void addHeartbeat(long latency, String rpcMetricSuffix) {
     heartbeats.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addHeartbeatTotal(long latency) {
+  public void addHeartbeatTotal(long latency, String rpcMetricSuffix) {
     heartbeatsTotal.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsTotalFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addLifeline(long latency) {
+  public void addLifeline(long latency, String rpcMetricSuffix) {
     lifelines.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("LifelinesFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addBlockReport(long latency) {
+  public void addBlockReport(long latency, String rpcMetricSuffix) {
     blockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addIncrementalBlockReport(long latency) {
+  public void addIncrementalBlockReport(long latency,
+      String rpcMetricSuffix) {
     incrementalBlockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("IncrementalBlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
   public void addCacheReport(long latency) {
@@ -520,5 +545,11 @@ public class DataNodeMetrics {
 
   public void incrECReconstructionDecodingTime(long millis) {
     ecReconstructionDecodingTimeMillis.incr(millis);
+  }
+
+  public DataNodeUsageReport getDNUsageReport(long timeSinceLastReport) {
+    return dnUsageReportUtil.getUsageReport(bytesWritten.value(), bytesRead
+            .value(), totalWriteTime.value(), totalReadTime.value(),
+        blocksWritten.value(), blocksRead.value(), timeSinceLastReport);
   }
 }

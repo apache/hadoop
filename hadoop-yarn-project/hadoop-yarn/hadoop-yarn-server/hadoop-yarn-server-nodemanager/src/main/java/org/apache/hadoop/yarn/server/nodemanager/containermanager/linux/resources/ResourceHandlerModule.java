@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceHandlerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
@@ -83,6 +84,7 @@ public class ResourceHandlerModule {
         if (cGroupsHandler == null) {
           cGroupsHandler = new CGroupsHandlerImpl(conf,
               PrivilegedOperationExecutor.getInstance(conf));
+          LOG.debug("Value of CGroupsHandler is: {}", cGroupsHandler);
         }
       }
     }
@@ -98,6 +100,21 @@ public class ResourceHandlerModule {
 
   public static CGroupsHandler getCGroupsHandler() {
     return cGroupsHandler;
+  }
+
+  /**
+   * Returns relative root for cgroups.  Returns null if cGroupsHandler is
+   * not initialized, or if the path is empty.
+   */
+  public static String getCgroupsRelativeRoot() {
+    if (cGroupsHandler == null) {
+      return null;
+    }
+    String cGroupPath = cGroupsHandler.getRelativePathForCGroup("");
+    if (cGroupPath == null || cGroupPath.isEmpty()) {
+      return null;
+    }
+    return cGroupPath.replaceAll("/$", "");
   }
 
   public static NetworkPacketTaggingHandlerImpl
@@ -253,6 +270,14 @@ public class ResourceHandlerModule {
     return cGroupsMemoryResourceHandler;
   }
 
+  private static ResourceHandler getNumaResourceHandler(Configuration conf,
+      Context nmContext) {
+    if (YarnConfiguration.numaAwarenessEnabled(conf)) {
+      return new NumaResourceHandlerImpl(conf, nmContext);
+    }
+    return null;
+  }
+
   private static void addHandlerIfNotNull(List<ResourceHandler> handlerList,
       ResourceHandler handler) {
     if (handler != null) {
@@ -273,6 +298,7 @@ public class ResourceHandlerModule {
         initMemoryResourceHandler(conf));
     addHandlerIfNotNull(handlerList,
         initCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getNumaResourceHandler(conf, nmContext));
     addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
@@ -281,16 +307,28 @@ public class ResourceHandlerModule {
       List<ResourceHandler> handlerList, Configuration conf,
       Context nmContext) throws ResourceHandlerException {
     ResourcePluginManager pluginManager = nmContext.getResourcePluginManager();
-    if (pluginManager != null) {
-       Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
-       if (pluginMap != null) {
-        for (ResourcePlugin plugin : pluginMap.values()) {
-          addHandlerIfNotNull(handlerList, plugin
-              .createResourceHandler(nmContext,
-                  getInitializedCGroupsHandler(conf),
-                  PrivilegedOperationExecutor.getInstance(conf)));
-        }
-      }
+
+    if (pluginManager == null) {
+      LOG.warn("Plugin manager was null while trying to add " +
+          "ResourceHandlers from configuration!");
+      return;
+    }
+
+    Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
+    if (pluginMap == null) {
+      LOG.debug("List of plugins of ResourcePluginManager was empty " +
+          "while trying to add ResourceHandlers from configuration!");
+      return;
+    } else {
+      LOG.debug("List of plugins of ResourcePluginManager: {}",
+          pluginManager.getNameToPlugins());
+    }
+
+    for (ResourcePlugin plugin : pluginMap.values()) {
+      addHandlerIfNotNull(handlerList,
+          plugin.createResourceHandler(nmContext,
+              getInitializedCGroupsHandler(conf),
+              PrivilegedOperationExecutor.getInstance(conf)));
     }
   }
 

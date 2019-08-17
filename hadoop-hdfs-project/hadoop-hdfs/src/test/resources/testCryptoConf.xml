@@ -114,6 +114,25 @@
     </test>
 
     <test>
+      <description>Test failure of creating EZ on an existing EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /foo is already an encryption zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>Test success of creating an EZ as a subdir of an existing EZ.</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathIOException;
@@ -218,35 +219,57 @@ class Delete {
   // delete files from the trash that are older
   // than the retention threshold.
   static class Expunge extends FsCommand {
+    private static final String OPTION_FILESYSTEM = "fs";
+
     public static final String NAME = "expunge";
-    public static final String USAGE = "";
+    public static final String USAGE =
+        "[-immediate] [-" + OPTION_FILESYSTEM + " <path>]";
     public static final String DESCRIPTION =
         "Delete files from the trash that are older " +
             "than the retention threshold";
 
-    // TODO: should probably allow path arguments for the filesystems
+    private boolean emptyImmediately = false;
+    private String fsArgument;
+
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(0, 0);
+      CommandFormat cf = new CommandFormat(0, 2, "immediate");
+      cf.addOptionWithValue(OPTION_FILESYSTEM);
       cf.parse(args);
+      emptyImmediately = cf.getOpt("immediate");
+      fsArgument = cf.getOptValue(OPTION_FILESYSTEM);
     }
 
     @Override
     protected void processArguments(LinkedList<PathData> args)
     throws IOException {
+      if (fsArgument != null && fsArgument.length() != 0) {
+        getConf().set(
+            CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsArgument);
+      }
+
       FileSystem[] childFileSystems =
           FileSystem.get(getConf()).getChildFileSystems();
       if (null != childFileSystems) {
         for (FileSystem fs : childFileSystems) {
           Trash trash = new Trash(fs, getConf());
-          trash.expunge();
-          trash.checkpoint();
+          if (emptyImmediately) {
+            trash.expungeImmediately();
+          } else {
+            trash.expunge();
+            trash.checkpoint();
+          }
         }
       } else {
         Trash trash = new Trash(getConf());
-        trash.expunge();
-        trash.checkpoint();
+        if (emptyImmediately) {
+          trash.expungeImmediately();
+        } else {
+          trash.expunge();
+          trash.checkpoint();
+        }
       }
     }
   }
+
 }

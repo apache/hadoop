@@ -143,12 +143,10 @@ public interface AzureTestConstants {
 
 
 
-  String ACCOUNT_KEY_PROPERTY_NAME
-      = "fs.azure.account.key.";
+  String ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key.";
+  String ACCOUNT_NAME_PROPERTY_NAME = "fs.azure.account.name";
   String SAS_PROPERTY_NAME = "fs.azure.sas.";
   String TEST_CONFIGURATION_FILE_NAME = "azure-test.xml";
-  String TEST_ACCOUNT_NAME_PROPERTY_NAME
-      = "fs.azure.test.account.name";
   String MOCK_ACCOUNT_NAME
       = "mockAccount.blob.core.windows.net";
   String MOCK_CONTAINER_NAME = "mockContainer";

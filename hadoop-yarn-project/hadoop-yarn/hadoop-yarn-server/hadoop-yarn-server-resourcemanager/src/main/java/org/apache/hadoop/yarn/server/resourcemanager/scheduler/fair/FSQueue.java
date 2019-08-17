@@ -23,8 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.ipc.Server;
@@ -51,7 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       FSQueue.class.getName());
 
   private Resource fairShare = Resources.createResource(0, 0);
@@ -83,6 +83,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   private long minSharePreemptionTimeout = Long.MAX_VALUE;
   private float fairSharePreemptionThreshold = 0.5f;
   private boolean preemptable = true;
+  private boolean isDynamic = true;
+  protected Resource maxContainerAllocation;
 
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
@@ -161,6 +163,12 @@ public abstract class FSQueue implements Queue, Schedulable {
   public void setMaxShare(ConfigurableResource maxShare){
     this.maxShare = maxShare;
   }
+
+  public void setMaxContainerAllocation(Resource maxContainerAllocation){
+    this.maxContainerAllocation = maxContainerAllocation;
+  }
+
+  public abstract Resource getMaximumContainerAllocation();
 
   @Override
   public Resource getMaxShare() {
@@ -289,9 +297,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   public void setFairShare(Resource fairShare) {
     this.fairShare = fairShare;
     metrics.setFairShare(fairShare);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("The updated fairShare for " + getName() + " is " + fairShare);
-    }
+    LOG.debug("The updated fairShare for {} is {}", getName(), fairShare);
   }
 
   /** Get the steady fair share assigned to this Schedulable. */
@@ -420,10 +426,8 @@ public abstract class FSQueue implements Queue, Schedulable {
    */
   boolean assignContainerPreCheck(FSSchedulerNode node) {
     if (node.getReservedContainer() != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Assigning container failed on node '" + node.getNodeName()
-            + " because it has reserved containers.");
-      }
+      LOG.debug("Assigning container failed on node '{}' because it has"
+          + " reserved containers.", node.getNodeName());
       return false;
     } else if (!Resources.fitsIn(getResourceUsage(), getMaxShare())) {
       if (LOG.isDebugEnabled()) {
@@ -585,4 +589,14 @@ public abstract class FSQueue implements Queue, Schedulable {
    * @param sb the {code StringBuilder} which holds queue states
    */
   protected abstract void dumpStateInternal(StringBuilder sb);
+
+  public boolean isDynamic() {
+    return isDynamic;
+  }
+
+  public void setDynamic(boolean dynamic) {
+    this.isDynamic = dynamic;
+  }
+
+  public abstract boolean isEmpty();
 }

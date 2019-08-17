@@ -28,8 +28,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +58,8 @@ import com.sun.jersey.api.client.Client;
 @Evolving
 public class TimelineClientImpl extends TimelineClient {
 
-  private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineClientImpl.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
 
@@ -82,7 +83,7 @@ public class TimelineClientImpl extends TimelineClient {
   @VisibleForTesting
   protected String doAsUser;
 
-  private float timelineServiceVersion;
+  private boolean timelineServiceV15Enabled;
   private TimelineWriter timelineWriter;
 
   private String timelineServiceAddress;
@@ -96,15 +97,15 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
-    timelineServiceVersion =
-        conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
     if (!YarnConfiguration.timelineServiceV1Enabled(conf)) {
       throw new IOException("Timeline V1 client is not properly configured. "
           + "Either timeline service is not enabled or version is not set to"
           + " 1.x");
     }
-    LOG.info("Timeline service address: " + getTimelineServiceAddress());
+
+    timelineServiceV15Enabled =
+        YarnConfiguration.timelineServiceV15Enabled(conf);
+
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation realUgi = ugi.getRealUser();
     if (realUgi != null) {
@@ -126,6 +127,7 @@ public class TimelineClientImpl extends TimelineClient {
           conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
     }
+    LOG.info("Timeline service address: " + getTimelineServiceAddress());
     super.serviceInit(conf);
   }
 
@@ -147,7 +149,7 @@ public class TimelineClientImpl extends TimelineClient {
   protected TimelineWriter createTimelineWriter(Configuration conf,
       UserGroupInformation ugi, Client webClient, URI uri)
       throws IOException {
-    if (Float.compare(this.timelineServiceVersion, 1.5f) == 0) {
+    if (timelineServiceV15Enabled) {
       return new FileSystemTimelineWriter(
           conf, ugi, webClient, uri);
     } else {
@@ -406,10 +408,9 @@ public class TimelineClientImpl extends TimelineClient {
   public TimelinePutResponse putEntities(ApplicationAttemptId appAttemptId,
       TimelineEntityGroupId groupId, TimelineEntity... entities)
       throws IOException, YarnException {
-    if (Float.compare(this.timelineServiceVersion, 1.5f) != 0) {
+    if (!timelineServiceV15Enabled) {
       throw new YarnException(
-        "This API is not supported under current Timeline Service Version: "
-            + timelineServiceVersion);
+        "This API is not supported under current Timeline Service Version:");
     }
 
     return timelineWriter.putEntities(appAttemptId, groupId, entities);
@@ -418,10 +419,9 @@ public class TimelineClientImpl extends TimelineClient {
   @Override
   public void putDomain(ApplicationAttemptId appAttemptId,
       TimelineDomain domain) throws IOException, YarnException {
-    if (Float.compare(this.timelineServiceVersion, 1.5f) != 0) {
+    if (!timelineServiceV15Enabled) {
       throw new YarnException(
-        "This API is not supported under current Timeline Service Version: "
-            + timelineServiceVersion);
+        "This API is not supported under current Timeline Service Version:");
     }
     timelineWriter.putDomain(appAttemptId, domain);
   }

@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -40,8 +42,11 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
@@ -66,9 +71,48 @@ public class TestJsonUtil {
   }
 
   @Test
-  public void testHdfsFileStatus() throws IOException {
+  public void testHdfsFileStatusWithEcPolicy() throws IOException {
     final long now = Time.now();
     final String parent = "/dir";
+    ErasureCodingPolicy dummyEcPolicy = new ErasureCodingPolicy("ecPolicy1",
+        new ECSchema("EcSchema", 1, 1), 1024 * 2, (byte) 1);
+    final HdfsFileStatus status = new HdfsFileStatus.Builder()
+        .length(1001L)
+        .replication(3)
+        .blocksize(1L << 26)
+        .mtime(now)
+        .atime(now + 10)
+        .perm(new FsPermission((short) 0644))
+        .owner("user")
+        .group("group")
+        .symlink(DFSUtil.string2Bytes("bar"))
+        .path(DFSUtil.string2Bytes("foo"))
+        .fileId(HdfsConstants.GRANDFATHER_INODE_ID)
+        .ecPolicy(dummyEcPolicy)
+        .flags(EnumSet.allOf(Flags.class))
+        .build();
+
+    final FileStatus fstatus = toFileStatus(status, parent);
+    System.out.println("status  = " + status);
+    System.out.println("fstatus = " + fstatus);
+    final String json = JsonUtil.toJsonString(status, true);
+    System.out.println("json    = " + json.replace(",", ",\n  "));
+    final HdfsFileStatus s2 =
+        JsonUtilClient.toFileStatus((Map<?, ?>) READER.readValue(json), true);
+    final FileStatus fs2 = toFileStatus(s2, parent);
+    System.out.println("s2      = " + s2);
+    System.out.println("fs2     = " + fs2);
+    Assert.assertEquals(status.getErasureCodingPolicy(),
+        s2.getErasureCodingPolicy());
+    Assert.assertEquals(fstatus, fs2);
+  }
+
+  @Test
+  public void testHdfsFileStatusWithoutEcPolicy() throws IOException {
+    final long now = Time.now();
+    final String parent = "/dir";
+    ErasureCodingPolicy dummyEcPolicy = new ErasureCodingPolicy("ecPolicy1",
+        new ECSchema("EcSchema", 1, 1), 1024 * 2, (byte) 1);
     final HdfsFileStatus status = new HdfsFileStatus.Builder()
         .length(1001L)
         .replication(3)
@@ -82,6 +126,8 @@ public class TestJsonUtil {
         .path(DFSUtil.string2Bytes("foo"))
         .fileId(HdfsConstants.GRANDFATHER_INODE_ID)
         .build();
+    Assert.assertTrue(status.getErasureCodingPolicy() == null);
+
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
     System.out.println("fstatus = " + fstatus);
@@ -92,6 +138,7 @@ public class TestJsonUtil {
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
+
     Assert.assertEquals(fstatus, fs2);
   }
   
@@ -209,6 +256,26 @@ public class TestJsonUtil {
     Assert.assertEquals(jsonString,
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
+  }
+
+  @Test
+  public void testToJsonFromContentSummary() {
+    String jsonString =
+        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,\"quota\":44444,\"spaceConsumed\":55555,\"spaceQuota\":66666,\"typeQuota\":{}}}";
+    long length = 11111;
+    long fileCount = 22222;
+    long directoryCount = 33333;
+    long quota = 44444;
+    long spaceConsumed = 55555;
+    long spaceQuota = 66666;
+    String ecPolicy = "RS-6-3-1024k";
+
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).
+        erasureCodingPolicy(ecPolicy).build();
+
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
   }
   
   @Test

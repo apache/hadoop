@@ -18,7 +18,7 @@
 package org.apache.hadoop.io;
 
 import com.google.common.collect.ComparisonChain;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -115,5 +115,17 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
       // unlikely that we'll loop even once, unless the system clock has a
       // poor granularity.
     }
+  }
+
+  /**
+   * Get the size of the buffer pool, for the specified buffer type.
+   *
+   * @param direct Whether the size is returned for direct buffers
+   * @return The size
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public int size(boolean direct) {
+    return getBufferTree(direct).size();
   }
 }

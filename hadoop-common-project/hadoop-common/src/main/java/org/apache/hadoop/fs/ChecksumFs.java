@@ -27,10 +27,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 
+import java.util.NoSuchElementException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -40,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * Abstract Checksumed Fs.
  * It provide a basic implementation of a Checksumed Fs,
  * which creates a checksum file for each raw file.
- * It generates & verifies checksums at the client side.
+ * It generates &amp; verifies checksums at the client side.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
@@ -527,4 +529,39 @@ public abstract class ChecksumFs extends FilterFs {
     }
     return results.toArray(new FileStatus[results.size()]);
   }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+             UnresolvedLinkException, IOException {
+    final RemoteIterator<LocatedFileStatus> iter =
+        getMyFs().listLocatedStatus(f);
+    return new RemoteIterator<LocatedFileStatus>() {
+
+      private LocatedFileStatus next = null;
+
+      @Override
+      public boolean hasNext() throws IOException {
+        while (next == null && iter.hasNext()) {
+          LocatedFileStatus unfilteredNext = iter.next();
+          if (!isChecksumFile(unfilteredNext.getPath())) {
+            next = unfilteredNext;
+          }
+        }
+        return next != null;
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        LocatedFileStatus tmp = next;
+        next = null;
+        return tmp;
+      }
+
+    };
+  }
+
 }

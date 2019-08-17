@@ -20,16 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.SchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -47,13 +46,13 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.APPLICATION_LABEL_INTRA_APPLICATION;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType.NODE_ATTRIBUTE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PARTITION;
 
 /**
@@ -62,15 +61,14 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PART
  */
 public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     extends AppPlacementAllocator<N> {
-  private static final Log LOG =
-      LogFactory.getLog(SingleConstraintAppPlacementAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SingleConstraintAppPlacementAllocator.class);
 
   private ReentrantReadWriteLock.ReadLock readLock;
   private ReentrantReadWriteLock.WriteLock writeLock;
 
   private SchedulingRequest schedulingRequest = null;
   private String targetNodePartition;
-  private Set<String> targetAllocationTags;
   private AllocationTagsManager allocationTagsManager;
   private PlacementConstraintManager placementConstraintManager;
 
@@ -220,7 +218,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     throw new SchedulerInvalidResoureRequestException(sb.toString());
   }
 
-  private void validateAndSetSchedulingRequest(SchedulingRequest newSchedulingRequest)
+  private void validateAndSetSchedulingRequest(SchedulingRequest
+      newSchedulingRequest)
       throws SchedulerInvalidResoureRequestException {
     // Check sizing exists
     if (newSchedulingRequest.getResourceSizing() == null
@@ -238,144 +237,63 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
           "Only GUARANTEED execution type is supported.");
     }
 
-    PlacementConstraint constraint =
-        newSchedulingRequest.getPlacementConstraint();
-
-    // We only accept SingleConstraint
-    PlacementConstraint.AbstractConstraint ac = constraint.getConstraintExpr();
-    if (!(ac instanceof PlacementConstraint.SingleConstraint)) {
-      throwExceptionWithMetaInfo(
-          "Only accepts " + PlacementConstraint.SingleConstraint.class.getName()
-              + " as constraint-expression. Rejecting the new added "
-              + "constraint-expression.class=" + ac.getClass().getName());
-    }
-
-    PlacementConstraint.SingleConstraint singleConstraint =
-        (PlacementConstraint.SingleConstraint) ac;
-
-    // Make sure it is an anti-affinity request (actually this implementation
-    // should be able to support both affinity / anti-affinity without much
-    // effort. Considering potential test effort required. Limit to
-    // anti-affinity to intra-app and scope is node.
-    if (!singleConstraint.getScope().equals(PlacementConstraints.NODE)) {
-      throwExceptionWithMetaInfo(
-          "Only support scope=" + PlacementConstraints.NODE
-              + "now. PlacementConstraint=" + singleConstraint);
-    }
-
-    if (singleConstraint.getMinCardinality() != 0
-        || singleConstraint.getMaxCardinality() != 0) {
-      throwExceptionWithMetaInfo(
-          "Only support anti-affinity, which is: minCardinality=0, "
-              + "maxCardinality=1");
-    }
-
-    Set<PlacementConstraint.TargetExpression> targetExpressionSet =
-        singleConstraint.getTargetExpressions();
-    if (targetExpressionSet == null || targetExpressionSet.isEmpty()) {
-      throwExceptionWithMetaInfo(
-          "TargetExpression should not be null or empty");
-    }
-
-    // Set node partition
-    String nodePartition = null;
-
-    // Target allocation tags
-    Set<String> targetAllocationTags = null;
-
-    for (PlacementConstraint.TargetExpression targetExpression : targetExpressionSet) {
-      // Handle node partition
-      if (targetExpression.getTargetType().equals(
-          PlacementConstraint.TargetExpression.TargetType.NODE_ATTRIBUTE)) {
-        // For node attribute target, we only support Partition now. And once
-        // YARN-3409 is merged, we will support node attribute.
-        if (!targetExpression.getTargetKey().equals(NODE_PARTITION)) {
-          throwExceptionWithMetaInfo("When TargetType="
-              + PlacementConstraint.TargetExpression.TargetType.NODE_ATTRIBUTE
-              + " only " + NODE_PARTITION + " is accepted as TargetKey.");
-        }
-
-        if (nodePartition != null) {
-          // This means we have duplicated node partition entry inside placement
-          // constraint, which might be set by mistake.
-          throwExceptionWithMetaInfo(
-              "Only one node partition targetExpression is allowed");
-        }
-
-        Set<String> values = targetExpression.getTargetValues();
-        if (values == null || values.isEmpty()) {
-          nodePartition = RMNodeLabelsManager.NO_LABEL;
-          continue;
-        }
-
-        if (values.size() > 1) {
-          throwExceptionWithMetaInfo("Inside one targetExpression, we only "
-              + "support affinity to at most one node partition now");
-        }
-
-        nodePartition = values.iterator().next();
-      } else if (targetExpression.getTargetType().equals(
-          PlacementConstraint.TargetExpression.TargetType.ALLOCATION_TAG)) {
-        // Handle allocation tags
-        if (targetAllocationTags != null) {
-          // This means we have duplicated AllocationTag expressions entries
-          // inside placement constraint, which might be set by mistake.
-          throwExceptionWithMetaInfo(
-              "Only one AllocationTag targetExpression is allowed");
-        }
-
-        if (targetExpression.getTargetValues() == null || targetExpression
-            .getTargetValues().isEmpty()) {
-          throwExceptionWithMetaInfo("Failed to find allocation tags from "
-              + "TargetExpressions or couldn't find self-app target.");
-        }
-
-        targetAllocationTags = new HashSet<>(
-            targetExpression.getTargetValues());
-
-        if (targetExpression.getTargetKey() != null && !targetExpression
-            .getTargetKey().equals(APPLICATION_LABEL_INTRA_APPLICATION)) {
-          throwExceptionWithMetaInfo(
-              "As of now, the only accepted target key for targetKey of "
-                  + "allocation_tag target expression is: ["
-                  + APPLICATION_LABEL_INTRA_APPLICATION
-                  + "]. Please make changes to placement constraints "
-                  + "accordingly. If this is null, it will be set to "
-                  + APPLICATION_LABEL_INTRA_APPLICATION + " by default.");
-        }
-      }
-    }
-
-    if (targetAllocationTags == null) {
-      // That means we don't have ALLOCATION_TAG specified
-      throwExceptionWithMetaInfo(
-          "Couldn't find target expression with type == ALLOCATION_TAG, it is "
-              + "required to include one and only one target expression with "
-              + "type == ALLOCATION_TAG");
-
-    }
-
-    if (nodePartition == null) {
-      nodePartition = RMNodeLabelsManager.NO_LABEL;
-    }
-
-    // Validation is done. set local results:
-    this.targetNodePartition = nodePartition;
-    this.targetAllocationTags = targetAllocationTags;
-
+    this.targetNodePartition = validateAndGetTargetNodePartition(
+        newSchedulingRequest.getPlacementConstraint());
     this.schedulingRequest = new SchedulingRequestPBImpl(
         ((SchedulingRequestPBImpl) newSchedulingRequest).getProto());
 
-    LOG.info("Successfully added SchedulingRequest to app=" + appSchedulingInfo
-        .getApplicationAttemptId() + " targetAllocationTags=[" + StringUtils
-        .join(",", targetAllocationTags) + "]. nodePartition="
-        + targetNodePartition);
+
+    LOG.info("Successfully added SchedulingRequest to app="
+        + appSchedulingInfo.getApplicationAttemptId()
+        + " placementConstraint=["
+        + schedulingRequest.getPlacementConstraint()
+        + "]. nodePartition=" + targetNodePartition);
+  }
+
+  // Tentatively find out potential exist node-partition in the placement
+  // constraint and set as the app's primary node-partition.
+  // Currently only single constraint is handled.
+  private String validateAndGetTargetNodePartition(
+      PlacementConstraint placementConstraint) {
+    String defaultNodeLabelExpression =
+        appSchedulingInfo.getDefaultNodeLabelExpression();
+    String nodePartition = defaultNodeLabelExpression == null ?
+        RMNodeLabelsManager.NO_LABEL : defaultNodeLabelExpression;
+    if (placementConstraint != null &&
+        placementConstraint.getConstraintExpr() != null) {
+      PlacementConstraint.AbstractConstraint ac =
+          placementConstraint.getConstraintExpr();
+      if (ac != null && ac instanceof PlacementConstraint.SingleConstraint) {
+        PlacementConstraint.SingleConstraint singleConstraint =
+            (PlacementConstraint.SingleConstraint) ac;
+        for (PlacementConstraint.TargetExpression targetExpression :
+            singleConstraint.getTargetExpressions()) {
+          // Handle node partition
+          if (targetExpression.getTargetType().equals(NODE_ATTRIBUTE) &&
+              targetExpression.getTargetKey().equals(NODE_PARTITION)) {
+            Set<String> values = targetExpression.getTargetValues();
+            if (values == null || values.isEmpty()) {
+              continue;
+            }
+            if (values.size() > 1) {
+              throwExceptionWithMetaInfo(
+                  "Inside one targetExpression, we only support"
+                      + " affinity to at most one node partition now");
+            }
+            nodePartition = values.iterator().next();
+            if (nodePartition != null) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    return nodePartition;
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Map<String, ResourceRequest> getResourceRequests() {
-    return Collections.EMPTY_MAP;
+    return Collections.emptyMap();
   }
 
   @Override
@@ -431,7 +349,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     }
   }
 
-  private boolean checkCardinalityAndPending(SchedulerNode node) {
+  private boolean checkCardinalityAndPending(SchedulerNode node,
+      Optional<DiagnosticsCollector> dcOpt) {
     // Do we still have pending resource?
     if (schedulingRequest.getResourceSizing().getNumAllocations() <= 0) {
       return false;
@@ -441,7 +360,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     try {
       return PlacementConstraintsUtil.canSatisfyConstraints(
           appSchedulingInfo.getApplicationId(), schedulingRequest, node,
-          placementConstraintManager, allocationTagsManager);
+          placementConstraintManager, allocationTagsManager, dcOpt);
     } catch (InvalidAllocationTagsQueryException e) {
       LOG.warn("Failed to query node cardinality:", e);
       return false;
@@ -450,9 +369,9 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
   @Override
   public boolean canAllocate(NodeType type, SchedulerNode node) {
+    readLock.lock();
     try {
-      readLock.lock();
-      return checkCardinalityAndPending(node);
+      return checkCardinalityAndPending(node, Optional.empty());
     } finally {
       readLock.unlock();
     }
@@ -466,6 +385,13 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
   @Override
   public boolean precheckNode(SchedulerNode schedulerNode,
       SchedulingMode schedulingMode) {
+    return precheckNode(schedulerNode, schedulingMode, Optional.empty());
+  }
+
+  @Override
+  public boolean precheckNode(SchedulerNode schedulerNode,
+      SchedulingMode schedulingMode,
+      Optional<DiagnosticsCollector> dcOpt) {
     // We will only look at node label = nodeLabelToLookAt according to
     // schedulingMode and partition of node.
     String nodePartitionToLookAt;
@@ -478,8 +404,15 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     readLock.lock();
     try {
       // Check node partition as well as cardinality/pending resources.
-      return this.targetNodePartition.equals(nodePartitionToLookAt)
-          && checkCardinalityAndPending(schedulerNode);
+      boolean rst = this.targetNodePartition.equals(nodePartitionToLookAt);
+      if (!rst) {
+        if (dcOpt.isPresent()) {
+          dcOpt.get().collectPartitionDiagnostics(targetNodePartition,
+              nodePartitionToLookAt);
+        }
+        return rst;
+      }
+      return checkCardinalityAndPending(schedulerNode, dcOpt);
     } finally {
       readLock.unlock();
     }
@@ -498,8 +431,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
   @Override
   public void showRequests() {
+    readLock.lock();
     try {
-      readLock.lock();
       if (schedulingRequest != null) {
         LOG.info(schedulingRequest.toString());
       }
@@ -508,19 +441,14 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     }
   }
 
-  @VisibleForTesting
-  SchedulingRequest getSchedulingRequest() {
+  @Override
+  public SchedulingRequest getSchedulingRequest() {
     return schedulingRequest;
   }
 
   @VisibleForTesting
   String getTargetNodePartition() {
     return targetNodePartition;
-  }
-
-  @VisibleForTesting
-  Set<String> getTargetAllocationTags() {
-    return targetAllocationTags;
   }
 
   @Override

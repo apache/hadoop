@@ -23,15 +23,25 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.DefaultPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PrimaryGroupPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.Before;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,13 +53,23 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+/**
+ * Test loading the allocation file for the FairScheduler.
+ */
 public class TestAllocationFileLoaderService {
+
+  private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
 
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "/tmp")).getAbsolutePath();
@@ -58,10 +78,28 @@ public class TestAllocationFileLoaderService {
       "test-queues").getAbsolutePath();
   private static final String TEST_FAIRSCHED_XML = "test-fair-scheduler.xml";
 
+  private FairScheduler scheduler;
+  private Configuration conf;
+
+  @Before
+  public void setup() {
+    SystemClock clock = SystemClock.getInstance();
+    PlacementManager placementManager = new PlacementManager();
+    FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration();
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
+
+    scheduler = mock(FairScheduler.class);
+    conf = new YarnConfiguration();
+    when(scheduler.getClock()).thenReturn(clock);
+    when(scheduler.getConf()).thenReturn(fsConf);
+    when(scheduler.getConfig()).thenReturn(conf);
+    when(scheduler.getRMContext()).thenReturn(rmContext);
+  }
+
   @Test
   public void testGetAllocationFileFromFileSystem()
       throws IOException, URISyntaxException {
-    Configuration conf = new YarnConfiguration();
     File baseDir =
         new File(TEST_DIR + Path.SEPARATOR + "getAllocHDFS").getAbsoluteFile();
     FileUtil.fullyDelete(baseDir);
@@ -77,7 +115,8 @@ public class TestAllocationFileLoaderService {
     fs.copyFromLocalFile(new Path(fschedURL.toURI()), new Path(fsAllocPath));
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, fsAllocPath);
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     Path allocationFile = allocLoader.getAllocationFile(conf);
     assertEquals(fsAllocPath, allocationFile.toString());
     assertTrue(fs.exists(allocationFile));
@@ -88,9 +127,9 @@ public class TestAllocationFileLoaderService {
   @Test (expected = UnsupportedFileSystemException.class)
   public void testDenyGetAllocationFileFromUnsupportedFileSystem()
       throws UnsupportedFileSystemException {
-    Configuration conf = new YarnConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, "badfs:///badfile");
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
 
     allocLoader.getAllocationFile(conf);
   }
@@ -98,12 +137,11 @@ public class TestAllocationFileLoaderService {
   @Test
   public void testGetAllocationFileFromClasspath() {
     try {
-      Configuration conf = new Configuration();
       FileSystem fs = FileSystem.get(conf);
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
           TEST_FAIRSCHED_XML);
       AllocationFileLoaderService allocLoader =
-          new AllocationFileLoaderService();
+          new AllocationFileLoaderService(scheduler);
       Path allocationFile = allocLoader.getAllocationFile(conf);
       assertEquals(TEST_FAIRSCHED_XML, allocationFile.getName());
       assertTrue(fs.exists(allocationFile));
@@ -129,11 +167,10 @@ public class TestAllocationFileLoaderService {
 
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService(
-        clock);
+        clock, scheduler);
     allocLoader.reloadIntervalMs = 5;
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
@@ -142,10 +179,10 @@ public class TestAllocationFileLoaderService {
     AllocationConfiguration allocConf = confHolder.allocConf;
 
     // Verify conf
-    QueuePlacementPolicy policy = allocConf.getPlacementPolicy();
-    List<QueuePlacementRule> rules = policy.getRules();
+    List<PlacementRule> rules = scheduler.getRMContext()
+        .getQueuePlacementManager().getPlacementRules();
     assertEquals(1, rules.size());
-    assertEquals(QueuePlacementRule.Default.class, rules.get(0).getClass());
+    assertEquals(DefaultPlacementRule.class, rules.get(0).getClass());
     assertEquals(1, allocConf.getQueueMaxApps("root.queueA"));
     assertEquals(2, allocConf.getConfiguredQueues().get(FSQueueType.LEAF)
         .size());
@@ -154,6 +191,7 @@ public class TestAllocationFileLoaderService {
     assertTrue(allocConf.getConfiguredQueues().get(FSQueueType.LEAF)
         .contains("root.queueB"));
 
+    // reset the conf so we can detect the reload
     confHolder.allocConf = null;
 
     // Modify file and advance the clock
@@ -168,7 +206,6 @@ public class TestAllocationFileLoaderService {
     out.println("    <rule name='nestedUserQueue' >");
     out.println("         <rule name='primaryGroup' />");
     out.println("    </rule>");
-    out.println("    <rule name='default' />");
     out.println("  </queuePlacementPolicy>");
     out.println("</allocations>");
     out.close();
@@ -183,15 +220,13 @@ public class TestAllocationFileLoaderService {
 
     // Verify conf
     allocConf = confHolder.allocConf;
-    policy = allocConf.getPlacementPolicy();
-    rules = policy.getRules();
-    assertEquals(3, rules.size());
-    assertEquals(QueuePlacementRule.Specified.class, rules.get(0).getClass());
-    assertEquals(QueuePlacementRule.NestedUserQueue.class, rules.get(1)
-        .getClass());
-    assertEquals(QueuePlacementRule.PrimaryGroup.class,
-        ((NestedUserQueue) (rules.get(1))).nestedRule.getClass());
-    assertEquals(QueuePlacementRule.Default.class, rules.get(2).getClass());
+    rules = scheduler.getRMContext().getQueuePlacementManager()
+        .getPlacementRules();
+    assertEquals(2, rules.size());
+    assertEquals(SpecifiedPlacementRule.class, rules.get(0).getClass());
+    assertEquals(UserPlacementRule.class, rules.get(1).getClass());
+    assertEquals(PrimaryGroupPlacementRule.class,
+        ((FSPlacementRule)(rules.get(1))).getParentRule().getClass());
     assertEquals(3, allocConf.getQueueMaxApps("root.queueB"));
     assertEquals(1, allocConf.getConfiguredQueues().get(FSQueueType.LEAF)
         .size());
@@ -201,9 +236,11 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(A_CUSTOM_RESOURCE);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
 
     AllocationFileWriter
             .create()
@@ -244,6 +281,8 @@ public class TestAllocationFileLoaderService {
               .fairSharePreemptionTimeout(120)
               .minSharePreemptionTimeout(50)
               .fairSharePreemptionThreshold(0.6)
+              .maxContainerAllocation(
+                      "vcores=16, memory-mb=512, " + A_CUSTOM_RESOURCE + "=10")
             // Create hierarchical queues G,H, with different min/fair
             // share preemption timeouts and preemption thresholds.
             // Also add a child default to make sure it doesn't impact queue H.
@@ -251,6 +290,7 @@ public class TestAllocationFileLoaderService {
                 .fairSharePreemptionTimeout(180)
                 .minSharePreemptionTimeout(40)
                 .fairSharePreemptionThreshold(0.7)
+                .maxContainerAllocation("1024mb,8vcores")
               .buildSubQueue()
             .buildQueue()
             // Set default limit of apps per queue to 15
@@ -282,8 +322,6 @@ public class TestAllocationFileLoaderService {
     AllocationConfiguration queueConf = confHolder.allocConf;
 
     assertEquals(6, queueConf.getConfiguredQueues().get(FSQueueType.LEAF).size());
-    assertEquals(Resources.createResource(0),
-        queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
@@ -356,25 +394,28 @@ public class TestAllocationFileLoaderService {
     assertEquals(.4f, queueConf.getQueueMaxAMShare("root.queueD"), 0.01);
     assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueE"), 0.01);
 
-    // Root should get * ACL
-    assertEquals("*", queueConf.getQueueAcl("root",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals("*", queueConf.getQueueAcl("root",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
+    Resource expectedResourceWithCustomType = Resources.createResource(512, 16);
+    expectedResourceWithCustomType.setResourceValue(A_CUSTOM_RESOURCE, 10);
 
-    // Unspecified queues should get default ACL
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation(
+            "root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueA"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueB"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueC"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueD"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueE"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueF"));
+    assertEquals(expectedResourceWithCustomType,
+        queueConf.getQueueMaxContainerAllocation("root.queueG"));
+    assertEquals(Resources.createResource(1024, 8),
+        queueConf.getQueueMaxContainerAllocation("root.queueG.queueH"));
 
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
@@ -443,9 +484,9 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -522,20 +563,6 @@ public class TestAllocationFileLoaderService {
     assertEquals(10, queueConf.getUserMaxApps("user1"));
     assertEquals(5, queueConf.getUserMaxApps("user2"));
 
-    // Unspecified queues should get default ACL
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
         YarnConfiguration.DEFAULT_QUEUE_NAME));
@@ -571,7 +598,6 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testSimplePlacementPolicyFromConf() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, false);
@@ -582,19 +608,20 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
     allocLoader.reloadAllocations();
-    AllocationConfiguration allocConf = confHolder.allocConf;
 
-    QueuePlacementPolicy placementPolicy = allocConf.getPlacementPolicy();
-    List<QueuePlacementRule> rules = placementPolicy.getRules();
+    List<PlacementRule> rules = scheduler.getRMContext()
+        .getQueuePlacementManager().getPlacementRules();
     assertEquals(2, rules.size());
-    assertEquals(QueuePlacementRule.Specified.class, rules.get(0).getClass());
-    assertEquals(false, rules.get(0).create);
-    assertEquals(QueuePlacementRule.Default.class, rules.get(1).getClass());
+    assertEquals(SpecifiedPlacementRule.class, rules.get(0).getClass());
+    assertFalse("Create flag was not set to false",
+        ((FSPlacementRule)rules.get(0)).getCreateFlag());
+    assertEquals(DefaultPlacementRule.class, rules.get(1).getClass());
   }
 
   /**
@@ -603,7 +630,6 @@ public class TestAllocationFileLoaderService {
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testQueueAlongsideRoot() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -616,7 +642,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -629,7 +656,6 @@ public class TestAllocationFileLoaderService {
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testQueueNameContainingPeriods() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -640,7 +666,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -653,7 +680,6 @@ public class TestAllocationFileLoaderService {
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testQueueNameContainingOnlyWhitespace() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -664,7 +690,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -673,7 +700,6 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testParentTagWithReservation() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -686,7 +712,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -702,7 +729,6 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testParentWithReservation() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -717,7 +743,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -733,7 +760,6 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testParentTagWithChild() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -746,7 +772,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -765,7 +792,6 @@ public class TestAllocationFileLoaderService {
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testQueueNameContainingNBWhitespace() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new OutputStreamWriter(
@@ -777,7 +803,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -789,17 +816,18 @@ public class TestAllocationFileLoaderService {
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testDefaultQueueSchedulingModeIsFIFO() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
-    out.println("<defaultQueueSchedulingPolicy>fifo</defaultQueueSchedulingPolicy>");
+    out.println("<defaultQueueSchedulingPolicy>fifo" +
+        "</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -808,7 +836,6 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testReservableQueue() throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -825,7 +852,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -836,15 +864,20 @@ public class TestAllocationFileLoaderService {
     String nonreservableQueueName = "root.other";
     assertFalse(allocConf.isReservable(nonreservableQueueName));
     assertTrue(allocConf.isReservable(reservableQueueName));
+    Map<FSQueueType, Set<String>> configuredQueues =
+        allocConf.getConfiguredQueues();
+    assertTrue("reservable queue is expected be to a parent queue",
+        configuredQueues.get(FSQueueType.PARENT).contains(reservableQueueName));
+    assertFalse("reservable queue should not be a leaf queue",
+        configuredQueues.get(FSQueueType.LEAF)
+          .contains(reservableQueueName));
 
     assertTrue(allocConf.getMoveOnExpiry(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration.DEFAULT_RESERVATION_WINDOW,
         allocConf.getReservationWindow(reservableQueueName));
-    assertEquals(100, allocConf.getInstantaneousMaxCapacity
-            (reservableQueueName),
-        0.0001);
-    assertEquals(
-        "DummyAgentName",
+    assertEquals(100,
+        allocConf.getInstantaneousMaxCapacity(reservableQueueName), 0.0001);
+    assertEquals("DummyAgentName",
         allocConf.getReservationAgent(reservableQueueName));
     assertEquals(100, allocConf.getAverageCapacity(reservableQueueName), 0.001);
     assertFalse(allocConf.getShowReservationAsQueues(reservableQueueName));
@@ -860,12 +893,11 @@ public class TestAllocationFileLoaderService {
 
   /**
    * Verify that you can't have dynamic user queue and reservable queue on
-   * the same queue
+   * the same queue.
    */
   @Test (expected = AllocationConfigurationException.class)
   public void testReservableCannotBeCombinedWithDynamicUserQueue()
       throws Exception {
-    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -878,7 +910,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
 
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    AllocationFileLoaderService allocLoader =
+        new AllocationFileLoaderService(scheduler);
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -886,11 +919,15 @@ public class TestAllocationFileLoaderService {
   }
 
   private class ReloadListener implements AllocationFileLoaderService.Listener {
-    public AllocationConfiguration allocConf;
+    private AllocationConfiguration allocConf;
 
     @Override
     public void onReload(AllocationConfiguration info) {
       allocConf = info;
+    }
+
+    @Override
+    public void onCheck() {
     }
   }
 }

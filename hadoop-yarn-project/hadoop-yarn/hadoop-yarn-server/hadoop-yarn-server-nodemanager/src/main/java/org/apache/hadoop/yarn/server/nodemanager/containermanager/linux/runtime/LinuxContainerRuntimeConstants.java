@@ -58,6 +58,10 @@ public final class LinuxContainerRuntimeConstants {
       Attribute.attribute(Path.class, "nm_private_container_script_path");
   public static final Attribute<Path> NM_PRIVATE_TOKENS_PATH = Attribute
       .attribute(Path.class, "nm_private_tokens_path");
+  public static final Attribute<Path> NM_PRIVATE_KEYSTORE_PATH = Attribute
+      .attribute(Path.class, "nm_private_keystore_path");
+  public static final Attribute<Path> NM_PRIVATE_TRUSTSTORE_PATH = Attribute
+      .attribute(Path.class, "nm_private_truststore_path");
   public static final Attribute<Path> PID_FILE_PATH = Attribute.attribute(
       Path.class, "pid_file_path");
   public static final Attribute<List> LOCAL_DIRS = Attribute.attribute(
@@ -89,4 +93,6 @@ public final class LinuxContainerRuntimeConstants {
       String.class, "pid");
   public static final Attribute<ContainerExecutor.Signal> SIGNAL = Attribute
       .attribute(ContainerExecutor.Signal.class, "signal");
+  public static final Attribute<String> PROCFS = Attribute.attribute(
+      String.class, "procfs");
 }

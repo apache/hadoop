@@ -23,8 +23,8 @@ import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.mockito.AdditionalMatchers.eq;
 import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.AdditionalMatchers.leq;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.junit.Assert.*;
@@ -272,6 +272,23 @@ public class TestMutableMetrics {
       double avgTime = getDoubleGauge("Metric" + i + "AvgTime", rb);
       opTotalTime[i] += avgTime * (newOpCount - prevOpCount);
     }
+  }
+
+  @Test
+  public void testDuplicateMetrics() {
+    MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
+    MutableRatesWithAggregation deferredRpcRates =
+        new MutableRatesWithAggregation();
+    Class<?> protocol = Long.class;
+    rates.init(protocol);
+    deferredRpcRates.init(protocol, "Deferred");
+    MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+    rates.snapshot(rb, true);
+    deferredRpcRates.snapshot(rb, true);
+    verify(rb, times(1))
+        .addCounter(info("GetLongNumOps", "Number of ops for getLong"), 0L);
+    verify(rb, times(1)).addCounter(
+        info("GetLongDeferredNumOps", "Number of ops for getLongDeferred"), 0L);
   }
 
   /**

@@ -425,8 +425,8 @@ public abstract class CombineFileInputFormat<K, V>
       if (completedNodes.size() == totalNodes || totalLength == 0) {
         // All nodes have been walked over and marked as completed or all blocks
         // have been assigned. The rest should be handled via rackLock assignment.
-        LOG.info("DEBUG: Terminated node allocation with : CompletedNodes: "
-            + completedNodes.size() + ", size left: " + totalLength);
+        LOG.debug("Terminated node allocation with : CompletedNodes: {}, size left: {}",
+            completedNodes.size(), totalLength);
         break;
       }
     }

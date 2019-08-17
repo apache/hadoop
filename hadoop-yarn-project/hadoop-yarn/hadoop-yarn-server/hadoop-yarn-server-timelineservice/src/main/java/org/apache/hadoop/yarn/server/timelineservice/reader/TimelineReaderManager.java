@@ -24,12 +24,15 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 
 /**
@@ -42,10 +45,17 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 public class TimelineReaderManager extends AbstractService {
 
   private TimelineReader reader;
+  private AdminACLsManager adminACLsManager;
 
   public TimelineReaderManager(TimelineReader timelineReader) {
     super(TimelineReaderManager.class.getName());
     this.reader = timelineReader;
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    // TODO Once ACLS story is played, this need to be removed or modified.
+    this.adminACLsManager = new AdminACLsManager(conf);
   }
 
   /**
@@ -197,5 +207,26 @@ public class TimelineReaderManager extends AbstractService {
       throws IOException{
     context.setClusterId(getClusterID(context.getClusterId(), getConfig()));
     return reader.getEntityTypes(new TimelineReaderContext(context));
+  }
+
+  /**
+   * The API to confirm is a User is allowed to read this data.
+   * @param callerUGI UserGroupInformation of the user
+   */
+  public boolean checkAccess(UserGroupInformation callerUGI) {
+    // TODO to be removed or modified once ACL story is played
+    if (!adminACLsManager.areACLsEnabled()) {
+      return true;
+    }
+    return callerUGI != null && adminACLsManager.isAdmin(callerUGI);
+  }
+
+  /**
+   * Check if reader connection is alive.
+   *
+   * @return boolean True if reader connection is alive, false otherwise.
+   */
+  public TimelineHealth getHealthStatus() {
+    return reader.getHealthStatus();
   }
 }

@@ -19,8 +19,8 @@ package org.apache.hadoop.fs;
 
 import java.util.Arrays;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -49,7 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  *   not visible to the user except when getXAttr/getXAttrs is called on a file
  *   or directory in the /.reserved/raw HDFS directory hierarchy.  These
  *   attributes can only be accessed by the superuser.
- * <p/>
+ * <p>
  * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
  * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
  *

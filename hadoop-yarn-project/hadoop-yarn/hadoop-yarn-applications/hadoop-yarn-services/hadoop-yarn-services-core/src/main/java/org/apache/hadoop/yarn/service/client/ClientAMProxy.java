@@ -48,8 +48,9 @@ public class ClientAMProxy extends ServerProxy{
     } else {
       retryPolicy =
           createRetryPolicy(conf, YarnServiceConf.CLIENT_AM_RETRY_MAX_WAIT_MS,
-              15 * 60 * 1000, YarnServiceConf.CLIENT_AM_RETRY_MAX_INTERVAL_MS,
-              2 * 1000);
+              YarnServiceConf.DEFAULT_CLIENT_AM_RETRY_MAX_WAIT_MS,
+              YarnServiceConf.CLIENT_AM_RETRY_MAX_INTERVAL_MS,
+              YarnServiceConf.DEFAULT_CLIENT_AM_RETRY_MAX_INTERVAL_MS);
     }
     return createRetriableProxy(confClone, protocol, ugi, rpc, serverAddress,
         retryPolicy);

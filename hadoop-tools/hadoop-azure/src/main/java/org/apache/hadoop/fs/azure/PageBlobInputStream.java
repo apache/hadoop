@@ -25,12 +25,14 @@ import static org.apache.hadoop.fs.azure.PageBlobFormatHelpers.toShort;
 import static org.apache.hadoop.fs.azure.PageBlobFormatHelpers.withMD5Checking;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudPageBlobWrapper;
 
 import com.microsoft.azure.storage.OperationContext;
@@ -58,7 +60,9 @@ final class PageBlobInputStream extends InputStream {
   // The buffer holding the current data we last read from the server.
   private byte[] currentBuffer;
   // The current byte offset we're at in the buffer.
-  private int currentOffsetInBuffer;
+  private int currentBufferOffset;
+  // The current buffer length
+  private int currentBufferLength;
   // Maximum number of pages to get per any one request.
   private static final int MAX_PAGES_PER_DOWNLOAD =
       4 * 1024 * 1024 / PAGE_SIZE;
@@ -174,7 +178,7 @@ final class PageBlobInputStream extends InputStream {
 
   private boolean dataAvailableInBuffer() {
     return currentBuffer != null 
-        && currentOffsetInBuffer < currentBuffer.length;
+        && currentBufferOffset < currentBufferLength;
   }
 
   /**
@@ -194,6 +198,8 @@ final class PageBlobInputStream extends InputStream {
       return true;
     }
     currentBuffer = null;
+    currentBufferOffset = 0;
+    currentBufferLength = 0;
     if (numberOfPagesRemaining == 0) {
       // No more data to read.
       return false;
@@ -209,43 +215,48 @@ final class PageBlobInputStream extends InputStream {
       ByteArrayOutputStream baos = new ByteArrayOutputStream(bufferSize);
       blob.downloadRange(currentOffsetInBlob, bufferSize, baos,
           withMD5Checking(), opContext);
-      currentBuffer = baos.toByteArray();
+      validateDataIntegrity(baos.toByteArray());
     } catch (StorageException e) {
       throw new IOException(e);
     }
     numberOfPagesRemaining -= pagesToRead;
     currentOffsetInBlob += bufferSize;
-    currentOffsetInBuffer = PAGE_HEADER_SIZE;
-
-    // Since we just downloaded a new buffer, validate its consistency.
-    validateCurrentBufferConsistency();
 
     return true;
   }
 
-  private void validateCurrentBufferConsistency()
+  private void validateDataIntegrity(byte[] buffer)
       throws IOException {
-    if (currentBuffer.length % PAGE_SIZE != 0) {
+
+    if (buffer.length % PAGE_SIZE != 0) {
       throw new AssertionError("Unexpected buffer size: " 
-      + currentBuffer.length);
+      + buffer.length);
     }
-    int numberOfPages = currentBuffer.length / PAGE_SIZE;
+
+    int bufferLength = 0;
+    int numberOfPages = buffer.length / PAGE_SIZE;
+    long totalPagesAfterCurrent = numberOfPagesRemaining;
+
     for (int page = 0; page < numberOfPages; page++) {
-      short currentPageSize = getPageSize(blob, currentBuffer,
-          page * PAGE_SIZE);
-      // Calculate the number of pages that exist after this one
-      // in the blob.
-      long totalPagesAfterCurrent =
-          (numberOfPages - page - 1) + numberOfPagesRemaining;
-      // Only the last page is allowed to be not filled completely.
-      if (currentPageSize < PAGE_DATA_SIZE 
+      // Calculate the number of pages that exist in the blob after this one
+      totalPagesAfterCurrent--;
+
+      short currentPageSize = getPageSize(blob, buffer, page * PAGE_SIZE);
+
+      // Only the last page can be partially filled.
+      if (currentPageSize < PAGE_DATA_SIZE
           && totalPagesAfterCurrent > 0) {
         throw fileCorruptException(blob, String.format(
-            "Page with partial data found in the middle (%d pages from the" 
-            + " end) that only has %d bytes of data.",
-            totalPagesAfterCurrent, currentPageSize));
+            "Page with partial data found in the middle (%d pages from the"
+             + " end) that only has %d bytes of data.",
+             totalPagesAfterCurrent, currentPageSize));
       }
+      bufferLength += currentPageSize + PAGE_HEADER_SIZE;
     }
+
+    currentBufferOffset = PAGE_HEADER_SIZE;
+    currentBufferLength = bufferLength;
+    currentBuffer = buffer;
   }
 
   // Reads the page size from the page header at the given offset.
@@ -275,7 +286,7 @@ final class PageBlobInputStream extends InputStream {
       }
       int bytesRemainingInCurrentPage = getBytesRemainingInCurrentPage();
       int numBytesToRead = Math.min(len, bytesRemainingInCurrentPage);
-      System.arraycopy(currentBuffer, currentOffsetInBuffer, outputBuffer,
+      System.arraycopy(currentBuffer, currentBufferOffset, outputBuffer,
           offset, numBytesToRead);
       numberOfBytesRead += numBytesToRead;
       offset += numBytesToRead;
@@ -284,7 +295,7 @@ final class PageBlobInputStream extends InputStream {
         // We've finished this page, move on to the next.
         advancePagesInBuffer(1);
       } else {
-        currentOffsetInBuffer += numBytesToRead;
+        currentBufferOffset += numBytesToRead;
       }
     }
 
@@ -309,9 +320,26 @@ final class PageBlobInputStream extends InputStream {
   }
 
   /**
-   * Skips over and discards n bytes of data from this input stream.
-   * @param n the number of bytes to be skipped.
-   * @return the actual number of bytes skipped.
+   * Skips over and discards <code>n</code> bytes of data from this input
+   * stream. The <code>skip</code> method may, for a variety of reasons, end
+   * up skipping over some smaller number of bytes, possibly <code>0</code>.
+   * This may result from any of a number of conditions; reaching end of file
+   * before <code>n</code> bytes have been skipped is only one possibility.
+   * The actual number of bytes skipped is returned. If {@code n} is
+   * negative, the {@code skip} method for class {@code InputStream} always
+   * returns 0, and no bytes are skipped. Subclasses may handle the negative
+   * value differently.
+   *
+   * <p> The <code>skip</code> method of this class creates a
+   * byte array and then repeatedly reads into it until <code>n</code> bytes
+   * have been read or the end of the stream has been reached. Subclasses are
+   * encouraged to provide a more efficient implementation of this method.
+   * For instance, the implementation may depend on the ability to seek.
+   *
+   * @param      n   the number of bytes to be skipped.
+   * @return     the actual number of bytes skipped.
+   * @exception  IOException  if the stream does not support seek,
+   *                          or if some other I/O error occurs.
    */
   @Override
   public synchronized long skip(long n) throws IOException {
@@ -338,18 +366,23 @@ final class PageBlobInputStream extends InputStream {
     n -= skippedWithinBuffer;
     long skipped = skippedWithinBuffer;
 
-    // Empty the current buffer, we're going beyond it.
-    currentBuffer = null;
+    if (n == 0) {
+      return skipped;
+    }
 
-    // Skip over whole pages as necessary without retrieving them from the
-    // server.
-    long pagesToSkipOver = Math.max(0, Math.min(
-        n / PAGE_DATA_SIZE,
-        numberOfPagesRemaining - 1));
-    numberOfPagesRemaining -= pagesToSkipOver;
-    currentOffsetInBlob += pagesToSkipOver * PAGE_SIZE;
-    skipped += pagesToSkipOver * PAGE_DATA_SIZE;
-    n -= pagesToSkipOver * PAGE_DATA_SIZE;
+    if (numberOfPagesRemaining == 0) {
+      throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
+    } else if (numberOfPagesRemaining > 1) {
+      // skip over as many pages as we can, but we must read the last
+      // page as it may not be full
+      long pagesToSkipOver = Math.min(n / PAGE_DATA_SIZE,
+          numberOfPagesRemaining - 1);
+      numberOfPagesRemaining -= pagesToSkipOver;
+      currentOffsetInBlob += pagesToSkipOver * PAGE_SIZE;
+      skipped += pagesToSkipOver * PAGE_DATA_SIZE;
+      n -= pagesToSkipOver * PAGE_DATA_SIZE;
+    }
+
     if (n == 0) {
       return skipped;
     }
@@ -387,14 +420,14 @@ final class PageBlobInputStream extends InputStream {
 
     // Calculate how many whole pages (pages before the possibly partially
     // filled last page) remain.
-    int currentPageIndex = currentOffsetInBuffer / PAGE_SIZE;
+    int currentPageIndex = currentBufferOffset / PAGE_SIZE;
     int numberOfPagesInBuffer = currentBuffer.length / PAGE_SIZE;
     int wholePagesRemaining = numberOfPagesInBuffer - currentPageIndex - 1;
 
     if (n < (PAGE_DATA_SIZE * wholePagesRemaining)) {
       // I'm within one of the whole pages remaining, skip in there.
       advancePagesInBuffer((int) (n / PAGE_DATA_SIZE));
-      currentOffsetInBuffer += n % PAGE_DATA_SIZE;
+      currentBufferOffset += n % PAGE_DATA_SIZE;
       return n + skipped;
     }
 
@@ -417,8 +450,8 @@ final class PageBlobInputStream extends InputStream {
    */
   private long skipWithinCurrentPage(long n) throws IOException {
     int remainingBytesInCurrentPage = getBytesRemainingInCurrentPage();
-    if (n < remainingBytesInCurrentPage) {
-      currentOffsetInBuffer += n;
+    if (n <= remainingBytesInCurrentPage) {
+      currentBufferOffset += n;
       return n;
     } else {
       advancePagesInBuffer(1);
@@ -438,7 +471,7 @@ final class PageBlobInputStream extends InputStream {
     // Calculate our current position relative to the start of the current
     // page.
     int currentDataOffsetInPage =
-        (currentOffsetInBuffer % PAGE_SIZE) - PAGE_HEADER_SIZE;
+        (currentBufferOffset % PAGE_SIZE) - PAGE_HEADER_SIZE;
     int pageBoundary = getCurrentPageStartInBuffer();
     // Get the data size of the current page from the header.
     short sizeOfCurrentPage = getPageSize(blob, currentBuffer, pageBoundary);
@@ -454,14 +487,14 @@ final class PageBlobInputStream extends InputStream {
   }
 
   private void advancePagesInBuffer(int numberOfPages) {
-    currentOffsetInBuffer =
+    currentBufferOffset =
         getCurrentPageStartInBuffer() 
         + (numberOfPages * PAGE_SIZE) 
         + PAGE_HEADER_SIZE;
   }
 
   private int getCurrentPageStartInBuffer() {
-    return PAGE_SIZE * (currentOffsetInBuffer / PAGE_SIZE);
+    return PAGE_SIZE * (currentBufferOffset / PAGE_SIZE);
   }
 
   private static IOException fileCorruptException(CloudPageBlobWrapper blob,

@@ -24,13 +24,15 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -84,7 +86,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class FileSystemRMStateStore extends RMStateStore {
 
-  public static final Log LOG = LogFactory.getLog(FileSystemRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemRMStateStore.class);
 
   protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
@@ -114,6 +117,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   Path amrmTokenSecretManagerRoot;
   private Path reservationRoot;
+  private Path proxyCARoot;
 
   @Override
   public synchronized void initInternal(Configuration conf)
@@ -125,6 +129,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         new Path(rootDirPath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = new Path(rootDirPath, RESERVATION_SYSTEM_ROOT);
+    proxyCARoot = new Path(rootDirPath, PROXY_CA_ROOT);
     fsNumRetries =
         conf.getInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES,
             YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_NUM_RETRIES);
@@ -157,6 +162,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     mkdirsWithRetries(rmAppRoot);
     mkdirsWithRetries(amrmTokenSecretManagerRoot);
     mkdirsWithRetries(reservationRoot);
+    mkdirsWithRetries(proxyCARoot);
   }
 
   @Override
@@ -205,12 +211,12 @@ public class FileSystemRMStateStore extends RMStateStore {
       Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
       currentEpoch = epoch.getEpoch();
       // increment epoch and store it
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       updateFile(epochNodePath, storeData, false);
     } else {
       // initialize epoch file with 1 for the next time.
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       writeFileWithRetries(epochNodePath, storeData, false);
     }
@@ -228,6 +234,8 @@ public class FileSystemRMStateStore extends RMStateStore {
     loadAMRMTokenSecretManagerState(rmState);
     // recover reservation state
     loadReservationSystemState(rmState);
+    // recover ProxyCAManager state
+    loadProxyCAManagerState(rmState);
     return rmState;
   }
 
@@ -372,10 +380,8 @@ public class FileSystemRMStateStore extends RMStateStore {
           DelegationKey key = new DelegationKey();
           key.readFields(fsIn);
           rmState.rmSecretManagerState.masterKeyState.add(key);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded delegation key: keyId=" + key.getKeyId()
-                + ", expirationDate=" + key.getExpiryDate());
-          }
+          LOG.debug("Loaded delegation key: keyId={}, expirationDate={}",
+              key.getKeyId(), key.getExpiryDate());
         } else if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
           RMDelegationTokenIdentifierData identifierData =
               RMStateStoreUtils.readRMDelegationTokenIdentifierData(fsIn);
@@ -384,15 +390,37 @@ public class FileSystemRMStateStore extends RMStateStore {
           long renewDate = identifierData.getRenewDate();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
             renewDate);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
-                + " renewDate=" + renewDate);
-          }
+          LOG.debug("Loaded RMDelegationTokenIdentifier: {} renewDate={}",
+              identifier, renewDate);
         } else {
           LOG.warn("Unknown file for recovering RMDelegationTokenSecretManager");
         }
       }
     }
+  }
+
+  private void loadProxyCAManagerState(RMState rmState) throws Exception {
+    checkAndResumeUpdateOperation(proxyCARoot);
+
+    Path caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    Path caPrivateKeyPath = getNodePath(proxyCARoot, PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (!existsWithRetries(caCertPath)
+        || !existsWithRetries(caPrivateKeyPath)) {
+      LOG.warn("Couldn't find Proxy CA data");
+      return;
+    }
+
+    FileStatus caCertFileStatus = getFileStatus(caCertPath);
+    byte[] caCertData = readFileWithRetries(caCertPath,
+        caCertFileStatus.getLen());
+
+    FileStatus caPrivateKeyFileStatus = getFileStatus(caPrivateKeyPath);
+    byte[] caPrivateKeyData = readFileWithRetries(caPrivateKeyPath,
+        caPrivateKeyFileStatus.getLen());
+
+    rmState.getProxyCAState().setCaCert(caCertData);
+    rmState.getProxyCAState().setCaPrivateKey(caPrivateKeyData);
   }
 
   @Override
@@ -593,6 +621,28 @@ public class FileSystemRMStateStore extends RMStateStore {
     }
   }
 
+  @Override
+  synchronized protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    byte[] caCertData = caCert.getEncoded();
+    byte[] caPrivateKeyData = caPrivateKey.getEncoded();
+
+    Path caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    Path caPrivateKeyPath = getNodePath(proxyCARoot, PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (existsWithRetries(caCertPath)) {
+      updateFile(caCertPath, caCertData, true);
+    } else {
+      writeFileWithRetries(caCertPath, caCertData, true);
+    }
+
+    if (existsWithRetries(caPrivateKeyPath)) {
+      updateFile(caPrivateKeyPath, caPrivateKeyData, true);
+    } else {
+      writeFileWithRetries(caPrivateKeyPath, caPrivateKeyData, true);
+    }
+  }
+
   private Path getAppDir(Path root, ApplicationId appId) {
     return getNodePath(root, appId.toString());
   }
@@ -765,7 +815,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       fsIn.readFully(data);
       return data;
     } finally {
-      IOUtils.cleanup(LOG, fsIn);
+      IOUtils.cleanupWithLogger(LOG, fsIn);
     }
   }
 
@@ -799,7 +849,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       fsOut = null;
       fs.rename(tempPath, outputPath);
     } finally {
-      IOUtils.cleanup(LOG, fsOut);
+      IOUtils.cleanupWithLogger(LOG, fsOut);
     }
   }
 
@@ -938,9 +988,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         throws com.google.protobuf.InvalidProtocolBufferException {
       if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
         // application
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loading application from node: " + childNodeName);
-        }
+        LOG.debug("Loading application from node: {}", childNodeName);
         ApplicationStateDataPBImpl appState =
             new ApplicationStateDataPBImpl(
                 ApplicationStateDataProto.parseFrom(childData));
@@ -950,10 +998,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       } else if (childNodeName.startsWith(
           ApplicationAttemptId.appAttemptIdStrPrefix)) {
         // attempt
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loading application attempt from node: "
-              + childNodeName);
-        }
+        LOG.debug("Loading application attempt from node: {}", childNodeName);
         ApplicationAttemptStateDataPBImpl attemptState =
             new ApplicationAttemptStateDataPBImpl(
                 ApplicationAttemptStateDataProto.parseFrom(childData));

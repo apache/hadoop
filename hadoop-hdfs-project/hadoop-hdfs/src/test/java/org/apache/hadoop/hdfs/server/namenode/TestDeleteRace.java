@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
@@ -57,12 +56,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
@@ -74,7 +73,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_IN
  */
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
-  private static final Log LOG = LogFactory.getLog(TestDeleteRace.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);
   private static final Configuration conf = new HdfsConfiguration();
   private MiniDFSCluster cluster;
 
@@ -171,7 +170,7 @@ public class TestDeleteRace {
         inodeMap.put(fileINode);
         LOG.info("Deleted" + path);
       } catch (Exception e) {
-        LOG.info(e);
+        LOG.info(e.toString());
       }
     }
   }
@@ -196,7 +195,7 @@ public class TestDeleteRace {
         fs.rename(from, to);
         LOG.info("Renamed " + from + " to " + to);
       } catch (Exception e) {
-        LOG.info(e);
+        LOG.info(e.toString());
       }
     }
   }
@@ -317,12 +316,12 @@ public class TestDeleteRace {
         DelayAnswer delayer = new DelayAnswer(LOG);
         Mockito.doAnswer(delayer).when(nnSpy).commitBlockSynchronization(
             Mockito.eq(blk),
-            Mockito.anyInt(),  // new genstamp
+            Mockito.anyLong(), // new genstamp
             Mockito.anyLong(), // new length
             Mockito.eq(true),  // close file
             Mockito.eq(false), // delete block
-            (DatanodeID[]) Mockito.anyObject(), // new targets
-            (String[]) Mockito.anyObject());    // new target storages
+            Mockito.any(),     // new targets
+            Mockito.any());    // new target storages
 
         fs.recoverLease(fPath);
 

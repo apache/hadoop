@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -47,8 +47,8 @@ import org.junit.Test;
  * if a replacement could not be found.
  */
 public class TestReplaceDatanodeFailureReplication {
-  static final Log LOG = LogFactory
-      .getLog(TestReplaceDatanodeFailureReplication.class);
+  static final Logger LOG = LoggerFactory
+      .getLogger(TestReplaceDatanodeFailureReplication.class);
 
   static final String DIR =
       "/" + TestReplaceDatanodeFailureReplication.class.getSimpleName() + "/";

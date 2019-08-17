@@ -21,6 +21,8 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DNSDomainNameResolver;
 
 /** 
  * This class contains constants for configuration keys used
@@ -80,7 +82,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_MAXIMUM_DATA_LENGTH =
       "ipc.maximum.data.length";
   /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
-  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
+  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 128 * 1024 * 1024;
 
   /** Max response size a client will accept. */
   public static final String IPC_MAXIMUM_RESPONSE_LENGTH =
@@ -104,6 +106,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";
   public static final String IPC_SCHEDULER_IMPL_KEY = "scheduler.impl";
   public static final String IPC_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
+  public static final String IPC_COST_PROVIDER_KEY = "cost-provider.impl";
   public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
   public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
 
@@ -216,6 +219,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   SECURITY_CLIENT_PROTOCOL_ACL = "security.client.protocol.acl";
   public static final String SECURITY_CLIENT_DATANODE_PROTOCOL_ACL =
       "security.client.datanode.protocol.acl";
+  public static final String SECURITY_ROUTER_ADMIN_PROTOCOL_ACL =
+      "security.router.admin.protocol.acl";
   public static final String
   SECURITY_DATANODE_PROTOCOL_ACL = "security.datanode.protocol.acl";
   public static final String
@@ -254,8 +259,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /**
    * HA health monitor and failover controller.
    */
- 
-  /** How often to retry connecting to the service. */
   public static final String HA_HM_CONNECT_RETRY_INTERVAL_KEY =
     "ha.health-monitor.connect-retry-interval.ms";
   public static final long HA_HM_CONNECT_RETRY_INTERVAL_DEFAULT = 1000;
@@ -269,7 +272,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HA_HM_SLEEP_AFTER_DISCONNECT_KEY =
     "ha.health-monitor.sleep-after-disconnect.ms";
   public static final long HA_HM_SLEEP_AFTER_DISCONNECT_DEFAULT = 1000;
- 
+
+  /** How many time to retry connecting to the service. */
+  public static final String HA_HM_RPC_CONNECT_MAX_RETRIES_KEY =
+    "ha.health-monitor.rpc.connect.max.retries";
+  public static final int HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT = 1;
+
+  /** How often to retry connecting to the service. */
   /* Timeout for the actual monitorHealth() calls. */
   public static final String HA_HM_RPC_TIMEOUT_KEY =
     "ha.health-monitor.rpc-timeout.ms";
@@ -309,7 +318,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "dr.who";
 
   /**
-   * User->groups static mapping to override the groups lookup
+   * User{@literal ->}groups static mapping to override the groups lookup
    */
   public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES = 
       "hadoop.user.group.static.mapping.overrides";
@@ -341,6 +350,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
+  public static final String  IPC_CLIENT_BIND_WILDCARD_ADDR_KEY = "ipc.client"
+      + ".bind.wildcard.addr";
+  public static final boolean IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT = false;
+
   public static final String IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY =
     "ipc.client.connect.max.retries.on.sasl";
   public static final int    IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT = 5;
@@ -354,17 +367,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
 
   public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
     "hadoop.user.group.metrics.percentiles.intervals";
-
-  /* When creating UGI with UserGroupInformation(Subject), treat the passed
-   * subject external if set to true, and assume the owner of the subject
-   * should do the credential renewal.
-   *
-   * This is a temporary config to solve the compatibility issue with
-   * HADOOP-13558 and HADOOP-13805 fix, see the jiras for discussions.
-   */
-  public static final String HADOOP_TREAT_SUBJECT_EXTERNAL_KEY =
-      "hadoop.treat.subject.external";
-  public static final boolean HADOOP_TREAT_SUBJECT_EXTERNAL_DEFAULT = false;
 
   public static final String RPC_METRICS_QUANTILE_ENABLE =
       "rpc.metrics.quantile.enable";
@@ -400,4 +402,23 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_RETRY_INTERVAL_MS =
       ZK_PREFIX + "retry-interval-ms";
   public static final int    ZK_RETRY_INTERVAL_MS_DEFAULT = 1000;
+  /** Default domain name resolver for hadoop to use. */
+  public static final String HADOOP_DOMAINNAME_RESOLVER_IMPL =
+      "hadoop.domainname.resolver.impl";
+  public static final Class<? extends DomainNameResolver>
+      HADOOP_DOMAINNAME_RESOLVER_IMPL_DEFAULT =
+      DNSDomainNameResolver.class;
+  /*
+   *  Ignore KMS default URI returned from NameNode.
+   *  When set to true, kms uri is searched in the following order:
+   *  1. If there is a mapping in Credential's secrets map for namenode uri.
+   *  2. Fallback to local conf.
+   *  If client choose to ignore KMS uri provided by NameNode then client
+   *  should set KMS URI using 'hadoop.security.key.provider.path' to access
+   *  the right KMS for encrypted files.
+   * */
+  public static final String DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI =
+      "dfs.client.ignore.namenode.default.kms.uri";
+  public static final boolean
+      DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT = false;
 }

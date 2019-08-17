@@ -33,11 +33,6 @@ public final class DiskBalancerConstants {
   public static final int DISKBALANCER_MIN_VERSION = 1;
   public static final int DISKBALANCER_MAX_VERSION = 1;
 
-  /**
-   * We treat a plan as stale if it was generated before the hours
-   * defined by the constant below. Defaults to 24 hours.
-   */
-  public static final int DISKBALANCER_VALID_PLAN_HOURS = 24;
   // never constructed.
   private DiskBalancerConstants() {
   }

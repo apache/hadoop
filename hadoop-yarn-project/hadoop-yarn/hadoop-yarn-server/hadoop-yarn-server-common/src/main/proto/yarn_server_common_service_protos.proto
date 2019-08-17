@@ -31,6 +31,7 @@ message RemoteNodeProto {
   optional NodeIdProto node_id = 1;
   optional string http_address = 2;
   optional string rack_name = 3;
+  optional string node_partition = 4;
 }
 
 message RegisterDistributedSchedulingAMResponseProto {
@@ -57,6 +58,10 @@ message NodeLabelsProto {
   repeated NodeLabelProto nodeLabels = 1;
 }
 
+message NodeAttributesProto {
+  repeated NodeAttributeProto nodeAttributes = 1;
+}
+
 message RegisterNodeManagerRequestProto {
   optional NodeIdProto node_id = 1;
   optional int32 http_port = 3;
@@ -66,6 +71,8 @@ message RegisterNodeManagerRequestProto {
   repeated ApplicationIdProto runningApplications = 7;
   optional NodeLabelsProto nodeLabels = 8;
   optional ResourceProto physicalResource = 9;
+  repeated LogAggregationReportProto log_aggregation_reports_for_apps = 10;
+  optional NodeAttributesProto nodeAttributes = 11;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -77,6 +84,7 @@ message RegisterNodeManagerResponseProto {
   optional string rm_version = 6;
   optional bool areNodeLabelsAcceptedByRM = 7 [default = false];
   optional ResourceProto resource = 8;
+  optional bool areNodeAttributesAcceptedByRM = 9 [default = false];
 }
 
 message UnRegisterNodeManagerRequestProto {
@@ -93,6 +101,8 @@ message NodeHeartbeatRequestProto {
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
   repeated AppCollectorDataProto registering_collectors = 6;
+  optional NodeAttributesProto nodeAttributes = 7;
+  optional int64 tokenSequenceNo = 8;
 }
 
 message LogAggregationReportProto {
@@ -121,6 +131,8 @@ message NodeHeartbeatResponseProto {
   repeated AppCollectorDataProto app_collectors = 16;
   // to be used in place of containers_to_decrease
   repeated ContainerProto containers_to_update = 17;
+  optional bool areNodeAttributesAcceptedByRM = 18 [default = false];
+  optional int64 tokenSequenceNo = 19;
 }
 
 message ContainerQueuingLimitProto {

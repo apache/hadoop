@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -292,7 +293,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     final StringBuilder sb = new StringBuilder(
         "AbstractS3ACommitter{");
     sb.append("role=").append(role);
-    sb.append(", name").append(getName());
+    sb.append(", name=").append(getName());
     sb.append(", outputPath=").append(getOutputPath());
     sb.append(", workPath=").append(workPath);
     sb.append('}');
@@ -441,14 +442,27 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     }
     LOG.debug("{}: committing the output of {} task(s)",
         getRole(), pending.size());
-    Tasks.foreach(pending)
-        .stopOnFailure()
-        .executeWith(buildThreadPool(context))
-        .onFailure((commit, exception) ->
-                getCommitOperations().abortSingleCommit(commit))
-        .abortWith(commit -> getCommitOperations().abortSingleCommit(commit))
-        .revertWith(commit -> getCommitOperations().revertCommit(commit))
-        .run(commit -> getCommitOperations().commitOrFail(commit));
+    try(CommitOperations.CommitContext commitContext
+            = initiateCommitOperation()) {
+      Tasks.foreach(pending)
+          .stopOnFailure()
+          .executeWith(buildThreadPool(context))
+          .onFailure((commit, exception) ->
+              commitContext.abortSingleCommit(commit))
+          .abortWith(commitContext::abortSingleCommit)
+          .revertWith(commitContext::revertCommit)
+          .run(commitContext::commitOrFail);
+    }
+  }
+
+  /**
+   * Start the final commit/abort commit operations.
+   * @return a commit context through which the operations can be invoked.
+   * @throws IOException failure.
+   */
+  protected CommitOperations.CommitContext initiateCommitOperation()
+      throws IOException {
+    return getCommitOperations().initiateCommitOperation(getOutputPath());
   }
 
   /**
@@ -530,14 +544,23 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     Path dest = getOutputPath();
     try (DurationInfo d =
              new DurationInfo(LOG, "Aborting all pending commits under %s",
-                 dest)) {
+                 dest);
+         CommitOperations.CommitContext commitContext
+             = initiateCommitOperation()) {
       CommitOperations ops = getCommitOperations();
-      List<MultipartUpload> pending = ops
-          .listPendingUploadsUnderPath(dest);
+      List<MultipartUpload> pending;
+      try {
+        pending = ops.listPendingUploadsUnderPath(dest);
+      } catch (IOException e) {
+        // raised if the listPendingUploads call failed.
+        maybeIgnore(suppressExceptions, "aborting pending uploads", e);
+        return;
+      }
       Tasks.foreach(pending)
           .executeWith(buildThreadPool(getJobContext()))
           .suppressExceptions(suppressExceptions)
-          .run(u -> ops.abortMultipartCommit(u.getKey(), u.getUploadId()));
+          .run(u -> commitContext.abortMultipartCommit(
+              u.getKey(), u.getUploadId()));
     }
   }
 
@@ -656,7 +679,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Execute an operation; maybe suppress any raised IOException.
+   * Log or rethrow a caught IOException.
    * @param suppress should raised IOEs be suppressed?
    * @param action action (for logging when the IOE is suppressed.
    * @param ex  exception
@@ -667,7 +690,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       String action,
       IOException ex) throws IOException {
     if (suppress) {
-      LOG.info(action, ex);
+      LOG.debug(action, ex);
     } else {
       throw ex;
     }
@@ -745,11 +768,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       try (DurationInfo d = new DurationInfo(LOG,
-          "Aborting %s uploads", pending.size())) {
+          "Aborting %s uploads", pending.size());
+           CommitOperations.CommitContext commitContext
+               = initiateCommitOperation()) {
         Tasks.foreach(pending)
             .executeWith(buildThreadPool(context))
             .suppressExceptions(suppressExceptions)
-            .run(commit -> getCommitOperations().abortSingleCommit(commit));
+            .run(commitContext::abortSingleCommit);
       }
     }
   }

@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
@@ -65,7 +64,7 @@ public final class TestContainerLogsUtils {
   public static void createContainerLogFileInRemoteFS(Configuration conf,
       FileSystem fs, String rootLogDir, ContainerId containerId, NodeId nodeId,
       String fileName, String user, String content,
-      boolean deleteRemoteLogDir) throws IOException {
+      boolean deleteRemoteLogDir) throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     //prepare the logs for remote directory
     ApplicationId appId = containerId.getApplicationAttemptId()
@@ -87,8 +86,14 @@ public final class TestContainerLogsUtils {
     createContainerLogInLocalDir(appLogsDir, containerId, fs, fileName,
         content);
     // upload container logs to remote log dir
-    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR),
-        user + "/logs/" + appId.toString());
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(conf);
+    LogAggregationFileController fileController =
+        factory.getFileControllerForWrite();
+
+    Path path = fileController.getRemoteAppLogDir(appId, user);
+
     if (fs.exists(path) && deleteRemoteLogDir) {
       fs.delete(path, true);
     }
@@ -113,7 +118,7 @@ public final class TestContainerLogsUtils {
 
   private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,
       Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
-      ContainerId containerId, Path appDir, FileSystem fs) throws IOException {
+      ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
     LogAggregationFileControllerFactory factory

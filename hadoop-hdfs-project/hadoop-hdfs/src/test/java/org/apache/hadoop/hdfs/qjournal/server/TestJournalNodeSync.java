@@ -341,7 +341,7 @@ public class TestJournalNodeSync {
     }
 
     // Format the JN
-    journal1.format(nsInfo);
+    journal1.format(nsInfo, false);
 
     // Roll some more edits
     for (int i = 4; i < 10; i++) {

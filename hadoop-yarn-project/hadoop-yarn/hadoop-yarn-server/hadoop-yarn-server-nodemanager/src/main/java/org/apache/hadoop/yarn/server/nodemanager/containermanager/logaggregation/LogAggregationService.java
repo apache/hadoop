@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.security.token.SecretManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +62,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -66,7 +71,6 @@ public class LogAggregationService extends AbstractService implements
 
   private static final Logger LOG =
        LoggerFactory.getLogger(LogAggregationService.class);
-  private static final long MIN_LOG_ROLLING_INTERVAL = 3600;
   // This configuration is for debug and test purpose. By setting
   // this configuration as true. We can break the lower bound of
   // NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS.
@@ -83,6 +87,9 @@ public class LogAggregationService extends AbstractService implements
 
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
 
+  // Holds applications whose aggregation is disable due to invalid Token
+  private final Set<ApplicationId> invalidTokenApps;
+
   @VisibleForTesting
   ExecutorService threadPool;
   
@@ -95,6 +102,50 @@ public class LogAggregationService extends AbstractService implements
     this.dirsHandler = dirsHandler;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
+    this.invalidTokenApps = ConcurrentHashMap.newKeySet();
+  }
+
+  private static long calculateRollingMonitorInterval(Configuration conf) {
+    long interval = conf.getLong(
+        YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+        YarnConfiguration.
+            DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS);
+
+    if (interval <= 0) {
+      LOG.info("rollingMonitorInterval is set as " + interval
+          + ". The log rolling monitoring interval is disabled. "
+          + "The logs will be aggregated after this application is finished.");
+    } else {
+      boolean logAggregationDebugMode =
+          conf.getBoolean(NM_LOG_AGGREGATION_DEBUG_ENABLED, false);
+      long minRollingMonitorInterval = conf.getLong(
+          YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS,
+          YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS_DEFAULT);
+
+      boolean warnHardMinLimitLowerThanDefault = minRollingMonitorInterval <
+          YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS_DEFAULT &&
+          !logAggregationDebugMode;
+      if (warnHardMinLimitLowerThanDefault) {
+        LOG.warn("{} has been set to {}, which is less than the default "
+            + "minimum value {}. This may impact NodeManager's performance.",
+            YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS,
+            minRollingMonitorInterval,
+            YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS_DEFAULT);
+      }
+      boolean lowerThanHardLimit = interval < minRollingMonitorInterval;
+      if (lowerThanHardLimit) {
+        if (logAggregationDebugMode) {
+          LOG.info("Log aggregation debug mode enabled. " +
+              "Skipped checking minimum limit.");
+        } else {
+          LOG.warn("rollingMonitorInterval should be more than " +
+              "or equal to {} seconds. Using {} seconds instead.",
+              minRollingMonitorInterval, minRollingMonitorInterval);
+          interval = minRollingMonitorInterval;
+        }
+      }
+    }
+    return interval;
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
@@ -104,33 +155,10 @@ public class LogAggregationService extends AbstractService implements
             .setNameFormat("LogAggregationService #%d")
             .build());
 
-    rollingMonitorInterval = conf.getLong(
-        YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
-        YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS);
-
-    boolean logAggregationDebugMode =
-        conf.getBoolean(NM_LOG_AGGREGATION_DEBUG_ENABLED, false);
-
-    if (rollingMonitorInterval > 0
-        && rollingMonitorInterval < MIN_LOG_ROLLING_INTERVAL) {
-      if (logAggregationDebugMode) {
-        LOG.info("Log aggregation debug mode enabled. rollingMonitorInterval = "
-            + rollingMonitorInterval);
-      } else {
-        LOG.warn("rollingMonitorIntervall should be more than or equal to "
-            + MIN_LOG_ROLLING_INTERVAL + " seconds. Using "
-            + MIN_LOG_ROLLING_INTERVAL + " seconds instead.");
-        this.rollingMonitorInterval = MIN_LOG_ROLLING_INTERVAL;
-      }
-    } else if (rollingMonitorInterval <= 0) {
-      LOG.info("rollingMonitorInterval is set as " + rollingMonitorInterval
-          + ". The log rolling monitoring interval is disabled. "
-          + "The logs will be aggregated after this application is finished.");
-    } else {
-      LOG.info("rollingMonitorInterval is set as " + rollingMonitorInterval
-          + ". The logs will be aggregated every " + rollingMonitorInterval
-          + " seconds");
-    }
+    rollingMonitorInterval = calculateRollingMonitorInterval(conf);
+    LOG.info("rollingMonitorInterval is set as {}. The logs will be " +
+        "aggregated every {} seconds", rollingMonitorInterval,
+        rollingMonitorInterval);
 
     super.serviceInit(conf);
   }
@@ -224,8 +252,8 @@ public class LogAggregationService extends AbstractService implements
       userUgi.addCredentials(credentials);
     }
 
-    LogAggregationFileController logAggregationFileController
-        = getLogAggregationFileController(getConfig());
+    LogAggregationFileController logAggregationFileController =
+        getLogAggregationFileController(getConfig());
     logAggregationFileController.verifyAndCreateRemoteLogDir();
     // New application
     final AppLogAggregator appLogAggregator =
@@ -245,14 +273,16 @@ public class LogAggregationService extends AbstractService implements
       logAggregationFileController.createAppDir(user, appId, userUgi);
     } catch (Exception e) {
       appLogAggregator.disableLogAggregation();
+
+      // add to disabled aggregators if due to InvalidToken
+      if (e.getCause() instanceof SecretManager.InvalidToken) {
+        invalidTokenApps.add(appId);
+      }
       if (!(e instanceof YarnRuntimeException)) {
         appDirException = new YarnRuntimeException(e);
       } else {
         appDirException = (YarnRuntimeException)e;
       }
-      appLogAggregators.remove(appId);
-      closeFileSystems(userUgi);
-      throw appDirException;
     }
 
     // TODO Get the user configuration for the list of containers that need log
@@ -270,6 +300,10 @@ public class LogAggregationService extends AbstractService implements
       }
     };
     this.threadPool.execute(aggregatorWrapper);
+
+    if (appDirException != null) {
+      throw appDirException;
+    }
   }
 
   protected void closeFileSystems(final UserGroupInformation userUgi) {
@@ -307,17 +341,20 @@ public class LogAggregationService extends AbstractService implements
 
     // App is complete. Finish up any containers' pending log aggregation and
     // close the application specific logFile.
-
-    AppLogAggregator aggregator = this.appLogAggregators.get(appId);
-    if (aggregator == null) {
-      LOG.warn("Log aggregation is not initialized for " + appId
-          + ", did it fail to start?");
-      this.dispatcher.getEventHandler().handle(
-          new ApplicationEvent(appId,
-              ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
-      return;
+    try {
+      AppLogAggregator aggregator = this.appLogAggregators.get(appId);
+      if (aggregator == null) {
+        LOG.warn("Log aggregation is not initialized for " + appId
+            + ", did it fail to start?");
+        this.dispatcher.getEventHandler().handle(new ApplicationEvent(appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
+        return;
+      }
+      aggregator.finishLogAggregation();
+    } finally {
+      // Remove invalid Token Apps
+      invalidTokenApps.remove(appId);
     }
-    aggregator.finishLogAggregation();
   }
 
   @Override
@@ -344,10 +381,45 @@ public class LogAggregationService extends AbstractService implements
             (LogHandlerAppFinishedEvent) event;
         stopApp(appFinishedEvent.getApplicationId());
         break;
+      case LOG_AGG_TOKEN_UPDATE:
+        checkAndEnableAppAggregators();
+        break;
       default:
         ; // Ignore
     }
 
+  }
+
+  private void checkAndEnableAppAggregators() {
+    for (ApplicationId appId : invalidTokenApps) {
+      try {
+        AppLogAggregator aggregator = appLogAggregators.get(appId);
+        if (aggregator != null) {
+          Credentials credentials =
+              context.getSystemCredentialsForApps().get(appId);
+          if (credentials != null) {
+            // Create the app dir again with
+            LogAggregationFileController logAggregationFileController =
+                getLogAggregationFileController(getConfig());
+            UserGroupInformation userUgi =
+                aggregator.updateCredentials(credentials);
+            logAggregationFileController
+                .createAppDir(userUgi.getShortUserName(), appId, userUgi);
+            aggregator.enableLogAggregation();
+          }
+          invalidTokenApps.remove(appId);
+          LOG.info("LogAggregation enabled for application {}", appId);
+        }
+      } catch (Exception e) {
+        //Ignore exception
+        LOG.warn("Enable aggregators failed {}", appId);
+      }
+    }
+  }
+
+  @Override
+  public Set<ApplicationId> getInvalidTokenApps() {
+    return invalidTokenApps;
   }
 
   @VisibleForTesting
@@ -360,6 +432,10 @@ public class LogAggregationService extends AbstractService implements
     return this.nodeId;
   }
 
+  @VisibleForTesting
+  public long getRollingMonitorInterval() {
+    return rollingMonitorInterval;
+  }
 
   private int getAggregatorThreadPoolSize(Configuration conf) {
     int threadPoolSize;

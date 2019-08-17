@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -75,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.util.Shell.getMemlockLimit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -103,8 +105,10 @@ public class TestNameNodeMXBean {
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
+    Long maxLockedMemory = getMemlockLimit(
+        NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
-      NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
+        maxLockedMemory);
     MiniDFSCluster cluster = null;
 
     try {
@@ -218,6 +222,11 @@ public class TestNameNodeMXBean {
           "CorruptFiles"));
       assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(),
           corruptFiles);
+      // get attribute CorruptFilesCount
+      int corruptFilesCount = (int) (mbs.getAttribute(mxbeanName,
+          "CorruptFilesCount"));
+      assertEquals("Bad value for CorruptFilesCount",
+          fsn.getCorruptFilesCount(), corruptFilesCount);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
@@ -256,7 +265,7 @@ public class TestNameNodeMXBean {
       assertEquals(1, statusMap.get("active").size());
       assertEquals(1, statusMap.get("failed").size());
       assertEquals(0L, mbs.getAttribute(mxbeanName, "CacheUsed"));
-      assertEquals(NativeIO.POSIX.getCacheManipulator().getMemlockLimit() *
+      assertEquals(maxLockedMemory *
           cluster.getDataNodes().size(),
               mbs.getAttribute(mxbeanName, "CacheCapacity"));
       assertNull("RollingUpgradeInfo should be null when there is no rolling"
@@ -726,6 +735,46 @@ public class TestNameNodeMXBean {
   }
 
   @Test
+  public void testEnabledEcPoliciesMetric() throws Exception {
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem fs = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+
+      ErasureCodingPolicy defaultPolicy =
+          StripedFileTestUtil.getDefaultECPolicy();
+      int dataBlocks = defaultPolicy.getNumDataUnits();
+      int parityBlocks = defaultPolicy.getNumParityUnits();
+      int totalSize = dataBlocks + parityBlocks;
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(totalSize).build();
+      fs = cluster.getFileSystem();
+
+      final String defaultPolicyName = defaultPolicy.getName();
+      final String rs104PolicyName = "RS-10-4-1024k";
+
+      assertEquals("Enabled EC policies metric should return with " +
+          "the default EC policy", defaultPolicyName,
+          getEnabledEcPoliciesMetric());
+
+      fs.enableErasureCodingPolicy(rs104PolicyName);
+      assertEquals("Enabled EC policies metric should return with " +
+              "both enabled policies separated by a comma",
+          rs104PolicyName + ", " + defaultPolicyName,
+          getEnabledEcPoliciesMetric());
+
+      fs.disableErasureCodingPolicy(defaultPolicyName);
+      fs.disableErasureCodingPolicy(rs104PolicyName);
+      assertEquals("Enabled EC policies metric should return with " +
+          "an empty string if there is no enabled policy",
+          "", getEnabledEcPoliciesMetric());
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
+  @Test
   public void testVerifyMissingBlockGroupsMetrics() throws Exception {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
@@ -964,5 +1013,32 @@ public class TestNameNodeMXBean {
         expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
     assertEquals("Unexpected total ec block groups!",
         expectedTotalECBlockGroups, totalECBlockGroups.longValue());
+    verifyEcClusterSetupVerifyResult(mbs);
+  }
+
+  private String getEnabledEcPoliciesMetric() throws Exception {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=ECBlockGroupsState");
+    return (String) (mbs.getAttribute(mxbeanName,
+        "EnabledEcPolicies"));
+  }
+
+  private void verifyEcClusterSetupVerifyResult(MBeanServer mbs)
+      throws Exception{
+    ObjectName namenodeMXBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=NameNodeInfo");
+    String result = (String) mbs.getAttribute(namenodeMXBeanName,
+        "VerifyECWithTopologyResult");
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, String> resultMap = mapper.readValue(result, Map.class);
+    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    String resultMessage = resultMap.get("resultMessage");
+
+    assertFalse("Test cluster does not support all enabled " +
+        "erasure coding policies.", isSupported);
+    assertTrue(resultMessage.contains("3 racks are required for " +
+        "the erasure coding policies: RS-6-3-1024k. " +
+        "The number of racks is only 1."));
   }
 }

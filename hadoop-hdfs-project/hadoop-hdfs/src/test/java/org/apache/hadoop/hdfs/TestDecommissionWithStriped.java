@@ -243,8 +243,8 @@ public class TestDecommissionWithStriped {
         }
       };
     };
-    int deadDecomissioned = fsn.getNumDecomDeadDataNodes();
-    int liveDecomissioned = fsn.getNumDecomLiveDataNodes();
+    int deadDecommissioned = fsn.getNumDecomDeadDataNodes();
+    int liveDecommissioned = fsn.getNumDecomLiveDataNodes();
     decomTh.start();
     decomStarted.await(5, TimeUnit.SECONDS);
     Thread.sleep(3000); // grace period to trigger decommissioning call
@@ -260,8 +260,8 @@ public class TestDecommissionWithStriped {
     decomTh.join(20000); // waiting 20secs to finish decommission
     LOG.info("Finished decommissioning node:{}", decommisionNodes);
 
-    assertEquals(deadDecomissioned, fsn.getNumDecomDeadDataNodes());
-    assertEquals(liveDecomissioned + decommisionNodes.size(),
+    assertEquals(deadDecommissioned, fsn.getNumDecomDeadDataNodes());
+    assertEquals(liveDecommissioned + decommisionNodes.size(),
         fsn.getNumDecomLiveDataNodes());
 
     // Ensure decommissioned datanode is not automatically shutdown
@@ -328,8 +328,8 @@ public class TestDecommissionWithStriped {
     List<DatanodeInfo> decommisionNodes = getDecommissionDatanode(dfs, ecFile,
         writeBytes, decomNodeCount);
 
-    int deadDecomissioned = fsn.getNumDecomDeadDataNodes();
-    int liveDecomissioned = fsn.getNumDecomLiveDataNodes();
+    int deadDecommissioned = fsn.getNumDecomDeadDataNodes();
+    int liveDecommissioned = fsn.getNumDecomLiveDataNodes();
     List<LocatedBlock> lbs = ((HdfsDataInputStream) dfs.open(ecFile))
         .getAllBlocks();
 
@@ -342,8 +342,8 @@ public class TestDecommissionWithStriped {
     // Decommission node. Verify that node is decommissioned.
     decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
 
-    assertEquals(deadDecomissioned, fsn.getNumDecomDeadDataNodes());
-    assertEquals(liveDecomissioned + decommisionNodes.size(),
+    assertEquals(deadDecommissioned, fsn.getNumDecomDeadDataNodes());
+    assertEquals(liveDecommissioned + decommisionNodes.size(),
         fsn.getNumDecomLiveDataNodes());
 
     // Ensure decommissioned datanode is not automatically shutdown

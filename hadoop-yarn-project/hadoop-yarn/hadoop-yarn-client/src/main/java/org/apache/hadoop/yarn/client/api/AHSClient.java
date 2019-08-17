@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.client.api.impl.AHSClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.AHSv2ClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -46,8 +47,13 @@ public abstract class AHSClient extends AbstractService {
    */
   @Public
   public static AHSClient createAHSClient() {
-    AHSClient client = new AHSClientImpl();
-    return client;
+    return new AHSClientImpl();
+  }
+
+  @InterfaceStability.Evolving
+  @Public
+  public static AHSClient createAHSv2Client() {
+    return new AHSv2ClientImpl();
   }
 
   @Private

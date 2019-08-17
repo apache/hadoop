@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
 import org.junit.Assert;
@@ -85,46 +86,62 @@ public class TestLocalAllocationTagsManager {
     // Expect tag mappings to be present including temp Tags
     Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            TestUtils.getMockApplicationId(1), ImmutableSet.of("mapper"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(1),
+                ImmutableSet.of("mapper")),
             Long::sum));
 
     Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            TestUtils.getMockApplicationId(1), ImmutableSet.of("service"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(1),
+                ImmutableSet.of("service")),
             Long::sum));
 
     Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(2), ImmutableSet.of("service"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(2),
+                ImmutableSet.of("service")),
             Long::sum));
 
     // Do a temp Tag cleanup on app2
     ephAtm.cleanTempContainers(TestUtils.getMockApplicationId(2));
     Assert.assertEquals(0,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(2), ImmutableSet.of("service"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(2),
+                ImmutableSet.of("service")),
             Long::sum));
     // Expect app1 to be unaffected
     Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            TestUtils.getMockApplicationId(1), ImmutableSet.of("mapper"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(1),
+                ImmutableSet.of("mapper")),
             Long::sum));
     // Do a cleanup on app1 as well
     ephAtm.cleanTempContainers(TestUtils.getMockApplicationId(1));
     Assert.assertEquals(0,
         atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            TestUtils.getMockApplicationId(1), ImmutableSet.of("mapper"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(1),
+                ImmutableSet.of("mapper")),
             Long::sum));
 
     // Non temp-tags should be unaffected
     Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            TestUtils.getMockApplicationId(1), ImmutableSet.of("service"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(1),
+                ImmutableSet.of("service")),
             Long::sum));
 
     Assert.assertEquals(0,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(2), ImmutableSet.of("service"),
+            AllocationTags.createSingleAppAllocationTags(
+                TestUtils.getMockApplicationId(2),
+                ImmutableSet.of("service")),
             Long::sum));
 
     // Expect app2 with no containers, and app1 with 2 containers across 2 nodes

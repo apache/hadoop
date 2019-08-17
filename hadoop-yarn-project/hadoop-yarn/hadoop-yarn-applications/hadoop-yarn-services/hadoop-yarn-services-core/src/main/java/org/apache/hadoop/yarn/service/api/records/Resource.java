@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.xml.bind.annotation.XmlElement;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -39,7 +40,6 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 public class Resource extends BaseResource implements Cloneable {
   private static final long serialVersionUID = -6431667797380250037L;
 
@@ -49,7 +49,7 @@ public class Resource extends BaseResource implements Cloneable {
 
   @JsonProperty("additional")
   @XmlElement(name = "additional")
-  private Map<String, ResourceInformation> additional = null;
+  private Map<String, ResourceInformation> additional = new HashMap<>();
 
   /**
    * Each resource profile has a unique id which is associated with a
@@ -162,14 +162,14 @@ public class Resource extends BaseResource implements Cloneable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Resource {\n");
+    sb.append("class Resource {\n")
 
-    sb.append("    profile: ").append(toIndentedString(profile)).append("\n");
-    sb.append("    cpus: ").append(toIndentedString(cpus)).append("\n");
-    sb.append("    memory: ").append(toIndentedString(memory)).append("\n");
-    sb.append("    additional: ").append(
-        toIndentedString(additional)).append("\n");
-    sb.append("}");
+        .append("    profile: ").append(toIndentedString(profile)).append("\n")
+        .append("    cpus: ").append(toIndentedString(cpus)).append("\n")
+        .append("    memory: ").append(toIndentedString(memory)).append("\n")
+        .append("    additional: ").append(
+            toIndentedString(additional)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

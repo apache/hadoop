@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -31,15 +31,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class ReservedContainerCandidatesSelector
     extends PreemptionCandidatesSelector {
-  private static final Log LOG =
-      LogFactory.getLog(ReservedContainerCandidatesSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReservedContainerCandidatesSelector.class);
 
   private PreemptableResourceCalculator preemptableAmountCalculator;
 
@@ -63,7 +62,7 @@ public class ReservedContainerCandidatesSelector
       CapacitySchedulerPreemptionContext preemptionContext) {
     super(preemptionContext);
     preemptableAmountCalculator = new PreemptableResourceCalculator(
-        preemptionContext, true);
+        preemptionContext, true, false);
   }
 
   @Override
@@ -71,6 +70,7 @@ public class ReservedContainerCandidatesSelector
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource,
       Resource totalPreemptedResourceAllowed) {
+    Map<ApplicationAttemptId, Set<RMContainer>> curCandidates = new HashMap<>();
     // Calculate how much resources we need to preempt
     preemptableAmountCalculator.computeIdealAllocation(clusterResource,
         totalPreemptedResourceAllowed);
@@ -101,24 +101,18 @@ public class ReservedContainerCandidatesSelector
           selectedCandidates, totalPreemptedResourceAllowed, false);
       if (null != preemptionResult) {
         for (RMContainer c : preemptionResult.selectedContainers) {
-          ApplicationAttemptId appId = c.getApplicationAttemptId();
-          Set<RMContainer> containers = selectedCandidates.get(appId);
-          if (null == containers) {
-            containers = new HashSet<>();
-            selectedCandidates.put(appId, containers);
-          }
+          // Add to preemptMap
+          CapacitySchedulerPreemptionUtils.addToPreemptMap(selectedCandidates,
+              curCandidates, c.getApplicationAttemptId(), c);
 
-          containers.add(c);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this.getClass().getName() + " Marked container=" + c
-                .getContainerId() + " from queue=" + c.getQueueName()
-                + " to be preemption candidates");
-          }
+          LOG.debug("{} Marked container={} from queue={} to be preemption"
+              + " candidates", this.getClass().getName(), c.getContainerId(),
+              c.getQueueName());
         }
       }
     }
 
-    return selectedCandidates;
+    return curCandidates;
   }
 
   private Resource getPreemptableResource(String queueName,
@@ -219,10 +213,9 @@ public class ReservedContainerCandidatesSelector
       // An alternative approach is add a "penalty cost" if AM container is
       // selected. Here for safety, avoid preempt AM container in any cases
       if (c.isAMContainer()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip selecting AM container on host=" + node.getNodeID()
-              + " AM container=" + c.getContainerId());
-        }
+        LOG.debug("Skip selecting AM container on host={} AM container={}",
+            node.getNodeID(), c.getContainerId());
+
         continue;
       }
 

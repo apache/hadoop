@@ -17,9 +17,13 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.MockPrivilegedOperationCaptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -39,14 +43,17 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor.DockerContainerStatus;
+import static org.eclipse.jetty.server.handler.gzip.GzipHttpOutputInterceptor.LOG;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,9 +62,11 @@ import static org.mockito.Mockito.when;
  */
 public class TestDockerCommandExecutor {
 
-  private static final String MOCK_CONTAINER_ID = "container_id";
+  private static final String MOCK_CONTAINER_ID =
+      "container_e11_1861047502093_13763105_01_000001";
   private static final String MOCK_LOCAL_IMAGE_NAME = "local_image_name";
   private static final String MOCK_IMAGE_NAME = "image_name";
+  private static final String MOCK_CGROUP_HIERARCHY = "hadoop-yarn";
 
   private PrivilegedOperationExecutor mockExecutor;
   private CGroupsHandler mockCGroupsHandler;
@@ -68,21 +77,29 @@ public class TestDockerCommandExecutor {
   private ContainerId cId;
   private ContainerLaunchContext context;
   private HashMap<String, String> env;
+  private Context nmContext;
+  private ApplicationAttemptId appAttemptId;
 
   @Before
   public void setUp() throws Exception {
     mockExecutor = mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = mock(CGroupsHandler.class);
     configuration = new Configuration();
+    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+        .append('/').append("hadoop.tmp.dir").toString();
+    configuration.set("hadoop.tmp.dir", tmpPath);
     runtime = new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     container = mock(Container.class);
     cId = mock(ContainerId.class);
     context = mock(ContainerLaunchContext.class);
     env = new HashMap<>();
     builder = new ContainerRuntimeContext.Builder(container);
+    nmContext = createMockNMContext();
+    appAttemptId = mock(ApplicationAttemptId.class);
 
     when(container.getContainerId()).thenReturn(cId);
     when(cId.toString()).thenReturn(MOCK_CONTAINER_ID);
+    when(cId.getApplicationAttemptId()).thenReturn(appAttemptId);
     when(container.getLaunchContext()).thenReturn(context);
     when(context.getEnvironment()).thenReturn(env);
 
@@ -92,12 +109,37 @@ public class TestDockerCommandExecutor {
         null);
   }
 
+
+  public Context createMockNMContext() {
+    Context mockNMContext = mock(Context.class);
+    LocalDirsHandlerService localDirsHandler =
+        mock(LocalDirsHandlerService.class);
+
+    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+        .append('/').append("hadoop.tmp.dir").toString();
+
+    ConcurrentMap<ContainerId, Container> containerMap =
+        mock(ConcurrentMap.class);
+
+    when(mockNMContext.getLocalDirsHandler()).thenReturn(localDirsHandler);
+    when(mockNMContext.getContainers()).thenReturn(containerMap);
+    when(containerMap.get(any())).thenReturn(container);
+
+    try {
+      when(localDirsHandler.getLocalPathForWrite(anyString()))
+          .thenReturn(new Path(tmpPath));
+    } catch (IOException ioe) {
+      LOG.info("LocalDirsHandler failed" + ioe);
+    }
+    return mockNMContext;
+  }
+
   @Test
   public void testExecuteDockerCommand() throws Exception {
     DockerStopCommand dockerStopCommand =
         new DockerStopCommand(MOCK_CONTAINER_ID);
     DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
-        cId.toString(), env, configuration, mockExecutor, false);
+        cId.toString(), env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     assertEquals(1, ops.size());
@@ -107,26 +149,46 @@ public class TestDockerCommandExecutor {
 
   @Test
   public void testExecuteDockerRm() throws Exception {
-    DockerRmCommand dockerCommand = new DockerRmCommand(MOCK_CONTAINER_ID);
+    DockerRmCommand dockerCommand =
+        new DockerRmCommand(MOCK_CONTAINER_ID, null);
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
-        env, configuration, mockExecutor, false);
+        env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
-    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
     assertEquals(1, ops.size());
-    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
-        ops.get(0).getOperationType().name());
-    assertEquals(3, dockerCommands.size());
-    assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    assertEquals("  docker-command=rm", dockerCommands.get(1));
-    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
+    assertEquals(PrivilegedOperation.OperationType.
+        REMOVE_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(1, args.size());
+    assertEquals(MOCK_CONTAINER_ID, args.get(0));
+  }
+
+  @Test
+  public void testExecuteDockerRmWithCgroup() throws Exception {
+    DockerRmCommand dockerCommand =
+        new DockerRmCommand(MOCK_CONTAINER_ID, MOCK_CGROUP_HIERARCHY);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, mockExecutor, false, nmContext);
+    List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
+        .capturePrivilegedOperations(mockExecutor, 1, true);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
+    assertEquals(1, ops.size());
+    assertEquals(PrivilegedOperation.OperationType.
+            REMOVE_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(2, args.size());
+    assertEquals(MOCK_CGROUP_HIERARCHY, args.get(0));
+    assertEquals(MOCK_CONTAINER_ID, args.get(1));
   }
 
   @Test
   public void testExecuteDockerStop() throws Exception {
     DockerStopCommand dockerCommand = new DockerStopCommand(MOCK_CONTAINER_ID);
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
-        env, configuration, mockExecutor, false);
+        env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -144,19 +206,18 @@ public class TestDockerCommandExecutor {
     DockerInspectCommand dockerCommand =
         new DockerInspectCommand(MOCK_CONTAINER_ID).getContainerStatus();
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
-        env, configuration, mockExecutor, false);
+        env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
-    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
     assertEquals(1, ops.size());
-    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
-        ops.get(0).getOperationType().name());
-    assertEquals(4, dockerCommands.size());
-    assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    assertEquals("  docker-command=inspect", dockerCommands.get(1));
-    assertEquals("  format={{.State.Status}}", dockerCommands.get(2));
-    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(3));
-
+    assertEquals(PrivilegedOperation.OperationType.
+        INSPECT_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(2, args.size());
+    assertEquals("--format={{.State.Status}}", args.get(0));
+    assertEquals(MOCK_CONTAINER_ID, args.get(1));
   }
 
   @Test
@@ -164,7 +225,7 @@ public class TestDockerCommandExecutor {
     DockerPullCommand dockerCommand =
         new DockerPullCommand(MOCK_IMAGE_NAME);
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
-        env, configuration, mockExecutor, false);
+        env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -182,7 +243,7 @@ public class TestDockerCommandExecutor {
     DockerLoadCommand dockerCommand =
         new DockerLoadCommand(MOCK_LOCAL_IMAGE_NAME);
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
-        env, configuration, mockExecutor, false);
+        env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -204,7 +265,7 @@ public class TestDockerCommandExecutor {
           any(PrivilegedOperation.class), eq(null), any(), eq(true), eq(false)))
           .thenReturn(status.getName());
       assertEquals(status, DockerCommandExecutor.getContainerStatus(
-          MOCK_CONTAINER_ID, configuration, mockExecutor));
+          MOCK_CONTAINER_ID, mockExecutor, nmContext));
     }
   }
 
@@ -214,7 +275,7 @@ public class TestDockerCommandExecutor {
         new DockerKillCommand(MOCK_CONTAINER_ID)
             .setSignal(ContainerExecutor.Signal.QUIT.name());
     DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+        MOCK_CONTAINER_ID, env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -235,7 +296,7 @@ public class TestDockerCommandExecutor {
         new DockerKillCommand(MOCK_CONTAINER_ID)
             .setSignal(ContainerExecutor.Signal.KILL.name());
     DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+        MOCK_CONTAINER_ID, env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -256,7 +317,7 @@ public class TestDockerCommandExecutor {
         new DockerKillCommand(MOCK_CONTAINER_ID)
             .setSignal(ContainerExecutor.Signal.TERM.name());
     DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+        MOCK_CONTAINER_ID, env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);

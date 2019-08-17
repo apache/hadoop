@@ -39,11 +39,29 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
- * a filesystem instance with others..
+ * a filesystem instance with others.
+ * Checksums are turned on unless explicitly disabled for a test case.
  */
 public class ITestS3AMiscOperations extends AbstractS3ATestBase {
 
   private static final byte[] HELLO = "hello".getBytes(StandardCharsets.UTF_8);
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    // checksums are forced on.
+    enableChecksums(true);
+  }
+
+  /**
+   * Turn checksums on.
+   * Relies on the FS not caching the configuration option
+   * @param enabled enabled flag.
+   */
+  protected void enableChecksums(final boolean enabled) {
+    getFileSystem().getConf().setBoolean(Constants.ETAG_CHECKSUM_ENABLED,
+        enabled);
+  }
 
   @Test
   public void testCreateNonRecursiveSuccess() throws IOException {
@@ -124,10 +142,24 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
     LOG.info("Checksum for {}: {}", file1, checksum1);
-    assertNotNull("file 1 checksum", checksum1);
+    assertNotNull("Null file 1 checksum", checksum1);
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums", checksum1,
         fs.getFileChecksum(touchFile("file2"), 0));
+  }
+
+  /**
+   * Make sure that when checksums are disabled, the caller
+   * gets null back.
+   */
+  @Test
+  public void testChecksumDisabled() throws Throwable {
+    // checksums are forced off.
+    enableChecksums(false);
+    final S3AFileSystem fs = getFileSystem();
+    Path file1 = touchFile("file1");
+    EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
+    assertNull("Checksums are being generated", checksum1);
   }
 
   /**
@@ -138,6 +170,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   @Test
   public void testNonEmptyFileChecksums() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
+
     final Path file3 = mkFile("file3", HELLO);
     final EtagChecksum checksum1 = fs.getFileChecksum(file3, 0);
     assertNotNull("file 3 checksum", checksum1);
@@ -178,12 +211,20 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testLengthPastEOF() throws Throwable {
+  public void testNegativeLengthDisabledChecksum() throws Throwable {
+    enableChecksums(false);
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> getFileSystem().getFileChecksum(mkFile("negative", HELLO), -1));
+  }
+
+  @Test
+  public void testChecksumLengthPastEOF() throws Throwable {
+    enableChecksums(true);
     final S3AFileSystem fs = getFileSystem();
     Path f = mkFile("file5", HELLO);
-    assertEquals(
-        fs.getFileChecksum(f, HELLO.length),
-        fs.getFileChecksum(f, HELLO.length * 2));
+    EtagChecksum l = fs.getFileChecksum(f, HELLO.length);
+    assertNotNull("Null checksum", l);
+    assertEquals(l, fs.getFileChecksum(f, HELLO.length * 2));
   }
 
   @Test

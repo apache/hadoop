@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.fs.swift.snative;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -54,8 +55,8 @@ public class SwiftNativeFileSystem extends FileSystem {
 
   /** filesystem prefix: {@value} */
   public static final String SWIFT = "swift";
-  private static final Log LOG =
-          LogFactory.getLog(SwiftNativeFileSystem.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftNativeFileSystem.class);
 
   /**
    * path to user work directory for storing temporary files
@@ -100,7 +101,7 @@ public class SwiftNativeFileSystem extends FileSystem {
   }
 
   /**
-   * default class initialization
+   * default class initialization.
    *
    * @param fsuri path to Swift
    * @param conf  Hadoop configuration
@@ -115,7 +116,14 @@ public class SwiftNativeFileSystem extends FileSystem {
       store = new SwiftNativeFileSystemStore();
     }
     this.uri = fsuri;
-    String username = System.getProperty("user.name");
+    String username;
+    try {
+      username = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch (IOException ex) {
+      LOG.warn("Unable to get user name. Fall back to system property " +
+          "user.name", ex);
+      username = System.getProperty("user.name");
+    }
     this.workingDir = new Path("/user", username)
       .makeQualified(uri, new Path(username));
     if (LOG.isDebugEnabled()) {

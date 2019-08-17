@@ -77,14 +77,114 @@ Step 2.  Configure a path to the local file-system directory where the NodeManag
 |:---- |:---- |
 | `yarn.nodemanager.recovery.dir` | The local filesystem directory in which the node manager will store state when recovery is enabled. The default value is set to `$hadoop.tmp.dir/yarn-nm-recovery`. |
 
-Step 3.  Configure a valid RPC address for the NodeManager.
+Step 3: Enable NM supervision under recovery to prevent running containers from getting cleaned up when NM exits.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.nodemanager.recovery.supervised` | If enabled, NodeManager running will not try to cleanup containers as it exits with the assumption it will be immediately be restarted and recover containers The default value is set to 'false'. |
+
+Step 4.  Configure a valid RPC address for the NodeManager.
 
 | Property | Description |
 |:---- |:---- |
 | `yarn.nodemanager.address` | Ephemeral ports (port 0, which is default) cannot be used for the NodeManager's RPC server specified via yarn.nodemanager.address as it can make NM use different ports before and after a restart. This will break any previously running clients that were communicating with the NM before restart. Explicitly setting yarn.nodemanager.address to an address with specific port number (for e.g 0.0.0.0:45454) is a precondition for enabling NM restart. |
 
-Step 4.  Auxiliary services.
+Step 5.  Auxiliary services.
 
   * NodeManagers in a YARN cluster can be configured to run auxiliary services. For a completely functional NM restart, YARN relies on any auxiliary service configured to also support recovery. This usually includes (1) avoiding usage of ephemeral ports so that previously running clients (in this case, usually containers) are not disrupted after restart and (2) having the auxiliary service itself support recoverability by reloading any previous state when NodeManager restarts and reinitializes the auxiliary service.
 
-  * A simple example for the above is the auxiliary service 'ShuffleHandler' for MapReduce (MR). ShuffleHandler respects the above two requirements already, so users/admins don't have do anything for it to support NM restart: (1) The configuration property **mapreduce.shuffle.port** controls which port the ShuffleHandler on a NodeManager host binds to, and it defaults to a non-ephemeral port. (2) The ShuffleHandler service also already supports recovery of previous state after NM restarts.
+  * A simple example for the above is the auxiliary service 'ShuffleHandler' for MapReduce (MR). ShuffleHandler respects the above two requirements already, so users/admins don't have to do anything for it to support NM restart: (1) The configuration property **mapreduce.shuffle.port** controls which port the ShuffleHandler on a NodeManager host binds to, and it defaults to a non-ephemeral port. (2) The ShuffleHandler service also already supports recovery of previous state after NM restarts.
+
+  * There are two ways to configure auxiliary services, through a manifest or through the Configuration. Auxiliary services will only be loaded via the prior method of using Configuration properties when an auxiliary services manifest is not enabled. One advantage of using a manifest is that NMs can dynamically reload auxiliary services based on changes to the manifest. To support reloading, AuxiliaryService implementations must perform any cleanup that is needed during the service stop phase for the NM to be able to create a new instance of the auxiliary service.
+
+Auxiliary Service Classpath Isolation
+-------------------------------------
+
+### Introduction
+To launch auxiliary services on a NodeManager, users have to add their jar to NodeManager's classpath directly, thus put them on the system classloader. But if multiple versions of the plugin are present on the classpath, there is no control over which version actually gets loaded. Or if there are any conflicts between the dependencies introduced by the auxiliary services and the NodeManager itself, they can break the NodeManager, the auxiliary services, or both. To solve this issue, we can instantiate auxiliary services using a classloader that is different from the system classloader.
+
+### Manifest
+This section describes the auxiliary service manifest for aux-service classpath isolation.
+To use a manifest, the property `yarn.nodemanager.aux-services.manifest.enabled` must be set to true in *yarn-site.xml*.
+
+To load the manifest file from a filesystem, set the file path in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms` (defaults to 0; setting interval <= 0 means it will not be reloaded automatically).
+Alternatively, the manifest file may be sent to an NM via REST API by making a PUT call to the endpoint `http://nm-http-address:port/ws/v1/node/auxiliaryservices`. Note this only updates the manifest on one NM.
+When it reads a new manifest, the NM will add, remove, or reload auxiliary services as needed based on the service names and versions found in the manifest.
+
+An example manifest that configures classpath isolation for a CustomAuxService follows. One or more files may be specified to make up the classpath of a service, with jar or archive formats being supported.
+```
+{
+  "services": [
+    {
+      "name": "mapreduce_shuffle",
+      "version": "2",
+      "configuration": {
+        "properties": {
+          "class.name": "org.apache.hadoop.mapred.ShuffleHandler",
+          "mapreduce.shuffle.transfer.buffer.size": "102400",
+          "mapreduce.shuffle.port": "13562"
+        }
+      }
+    },
+    {
+      "name": "CustomAuxService",
+      "version": "1",
+      "configuration": {
+        "properties": {
+          "class.name": "org.aux.CustomAuxService"
+        },
+        "files": [
+          {
+            "src_file": "${remote-dir}/CustomAuxService.jar",
+            "type": "STATIC"
+          },
+          {
+            "src_file": "${remote-dir}/CustomAuxService.tgz",
+            "type": "ARCHIVE"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Configuration
+This section describes the configuration variables for aux-service classpath isolation. Aux services will only be loaded from the configuration if a manifest file is not specified.
+
+The following settings need to be set in *yarn-site.xml*.
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `yarn.nodemanager.aux-services.%s.classpath` | Provide local directory which includes the related jar file as well as all the dependencies’ jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all jars under the dep directory. |
+| `yarn.nodemanager.aux-services.%s.remote-classpath` | Provide remote absolute or relative path to jar file(We also support zip, tar.gz, tgz, tar and gz files as well). For the same aux-service class, we can only specify one of the configurations: yarn.nodemanager.aux-services.%s.classpath or yarn.nodemanager.aux-services.%s.remote-classpath. The YarnRuntimeException will be thrown. Please also make sure that the owner of the jar file must be the same as the NodeManager user and the permbits should satisfy (permbits & 0022)==0 (such as 600, it's not writable by group or other).|
+| `yarn.nodemanager.aux-services.%s.system-classes` | Normally, we do not need to set this configuration. The class would be loaded from customized classpath if it does not belongs to system-classes. For example, by default, the package org.apache.hadoop is in the system-classes, if your class CustomAuxService is in the package org.apache.hadoop, it would not be loaded from customized classpath. To solve this, either we could change the package for CustomAuxService, or configure our own system-classes which exclude org.apache.hadoop. |
+
+### Configuration Examples
+
+	<property>
+		<name>yarn.nodemanager.aux-services</name>
+		<value>mapreduce_shuffle,CustomAuxService</value>
+	</property>
+
+	<property>
+		<name>yarn.nodemanager.aux-services.CustomAuxService.classpath</name>
+		<value>${local_dir_to_jar}/CustomAuxService.jar</value>
+	</property>
+
+    <!--
+	<property>
+		<name>yarn.nodemanager.aux-services.CustomAuxService.remote-classpath</name>
+		<value>${remote-dir_to_jar}/CustomAuxService.jar</value>
+	</property>
+    -->
+
+	<property>
+		<name>yarn.nodemanager.aux-services.CustomAuxService.class</name>
+		<value>org.aux.CustomAuxService</value>
+	</property>
+
+	<property>
+		<name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+		<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+	</property>

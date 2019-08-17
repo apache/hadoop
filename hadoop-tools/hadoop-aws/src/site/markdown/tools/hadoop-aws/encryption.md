@@ -23,7 +23,7 @@
 The S3A filesystem client supports Amazon S3's Server Side Encryption
 for at-rest data encryption.
 You should to read up on the [AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html)
-for S3 Server Side Encryption for up to date information on the encryption mechansims.
+for S3 Server Side Encryption for up to date information on the encryption mechanisms.
 
 
 
@@ -37,6 +37,8 @@ and keys with which the file was encrypted.
 * You can use AWS bucket policies to mandate encryption rules for a bucket.
 * You can use S3A per-bucket configuration to ensure that S3A clients use encryption
 policies consistent with the mandated rules.
+* You can use S3 Default Encryption to encrypt data without needing to
+set anything in the client.
 * Changing the encryption options on the client does not change how existing
 files were encrypted, except when the files are renamed.
 * For all mechanisms other than SSE-C, clients do not need any configuration
@@ -58,14 +60,28 @@ The server-side "SSE" encryption is performed with symmetric AES256 encryption;
 S3 offers different mechanisms for actually defining the key to use.
 
 
-There are thrre key management mechanisms, which in order of simplicity of use,
+There are four key management mechanisms, which in order of simplicity of use,
 are:
 
+* S3 Default Encryption
 * SSE-S3: an AES256 key is generated in S3, and saved alongside the data.
 * SSE-KMS: an AES256 key is generated in S3, and encrypted with a secret key provided
 by Amazon's Key Management Service, a key referenced by name in the uploading client.
 * SSE-C : the client specifies an actual base64 encoded AES-256 key to be used
 to encrypt and decrypt the data.
+
+
+## <a name="sse-s3"></a> S3 Default Encryption
+
+This feature allows the administrators of the AWS account to set the "default"
+encryption policy on a bucket -the encryption to use if the client does
+not explicitly declare an encryption algorithm.
+
+[S3 Default Encryption for S3 Buckets](https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
+
+This supports SSE-S3 and SSE-KMS.
+
+There is no need to set anything up in the client: do it in the AWS console.
 
 
 ## <a name="sse-s3"></a> SSE-S3 Amazon S3-Managed Encryption Keys
@@ -119,7 +135,7 @@ it blank to use the default configured for that region.
 the right to use it, uses it to encrypt the object-specific key.
 
 
-When downloading SSE-KMS encrypte data, the sequence is as follows
+When downloading SSE-KMS encrypted data, the sequence is as follows
 
 1. The S3A client issues an HTTP GET request to read the data.
 1. S3 sees that the data was encrypted with SSE-KMS, and looks up the specific key in the KMS service
@@ -397,8 +413,8 @@ a KMS key hosted in the AWS-KMS service in the same region.
 
 ```
 
-Again the approprate bucket policy can be used to guarantee that all callers
-will use SSE-KMS; they can even mandata the name of the key used to encrypt
+Again the appropriate bucket policy can be used to guarantee that all callers
+will use SSE-KMS; they can even mandate the name of the key used to encrypt
 the data, so guaranteeing that access to thee data can be read by everyone
 granted access to that key, and nobody without access to it.
 
@@ -413,7 +429,6 @@ How can you do that from Hadoop? With `rename()`.
 
 The S3A client mimics a real filesystem's' rename operation by copying all the
 source files to the destination paths, then deleting the old ones.
-If you do a rename()
 
 Note: this does not work for SSE-C, because you cannot set a different key
 for reading as for writing, and you must supply that key for reading. There
@@ -421,7 +436,7 @@ you need to copy one bucket to a different bucket, one with a different key.
 Use `distCp`for this, with per-bucket encryption policies.
 
 
-## <a name="Troubleshooting"></a> Troubleshooting Encryption
+## <a name="troubleshooting"></a> Troubleshooting Encryption
 
 The [troubleshooting](./troubleshooting_s3a.html) document covers
 stack traces which may surface when working with encrypted data.

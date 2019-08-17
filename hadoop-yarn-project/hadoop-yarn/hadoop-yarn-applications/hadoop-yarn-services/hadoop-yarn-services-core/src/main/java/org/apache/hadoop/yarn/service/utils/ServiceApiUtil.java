@@ -18,32 +18,45 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
-import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
+import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
+import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
 import org.apache.hadoop.yarn.service.api.records.Resource;
-import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.hadoop.yarn.service.provider.ProviderFactory;
-import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
+import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -52,12 +65,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_DOES_NOT_NEED_UPGRADE;
+import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE;
+
 public class ServiceApiUtil {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServiceApiUtil.class);
   public static JsonSerDeser<Service> jsonSerDeser =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
+
+  public static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
+      new JsonSerDeser<>(Container[].class,
+          PropertyNamingStrategy.SNAKE_CASE);
+
+  public static final JsonSerDeser<ComponentContainers[]>
+      COMP_CONTAINERS_JSON_SERDE = new JsonSerDeser<>(
+          ComponentContainers[].class,
+          PropertyNamingStrategy.SNAKE_CASE);
+
+  public static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
+      new JsonSerDeser<>(Component[].class,
+          PropertyNamingStrategy.SNAKE_CASE);
+
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
 
@@ -89,6 +119,12 @@ public class ServiceApiUtil {
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
     }
 
+    if (StringUtils.isEmpty(service.getVersion())) {
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_APPLICATION_VERSION_INVALID,
+          service.getName()));
+    }
+
     validateNameFormat(service.getName(), conf);
 
     // If the service has no components, throw error
@@ -98,14 +134,14 @@ public class ServiceApiUtil {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      if (!StringUtils.isEmpty(service.getKerberosPrincipal().getKeytab())) {
-        try {
-          // validate URI format
-          new URI(service.getKerberosPrincipal().getKeytab());
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-      }
+      validateKerberosPrincipal(service.getKerberosPrincipal());
+    }
+
+    // Validate the Docker client config.
+    try {
+      validateDockerClientConfiguration(service, conf);
+    } catch (IOException e) {
+      throw new IllegalArgumentException(e);
     }
 
     // Validate there are no component name collisions (collisions are not
@@ -121,13 +157,17 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException(String.format(RestApiErrorMessages
             .ERROR_COMPONENT_NAME_INVALID, maxCompLength, comp.getName()));
       }
+      if (service.getName().equals(comp.getName())) {
+        throw new IllegalArgumentException(String.format(RestApiErrorMessages
+                .ERROR_COMPONENT_NAME_CONFLICTS_WITH_SERVICE_NAME,
+            comp.getName(), service.getName()));
+      }
       if (componentNames.contains(comp.getName())) {
         throw new IllegalArgumentException("Component name collision: " +
             comp.getName());
       }
-      // If artifact is of type SERVICE (which cannot be filled from
-      // global), read external service and add its components to this
-      // service
+      // If artifact is of type SERVICE (which cannot be filled from global),
+      // read external service and add its components to this service
       if (comp.getArtifact() != null && comp.getArtifact().getType() ==
           Artifact.TypeEnum.SERVICE) {
         if (StringUtils.isEmpty(comp.getArtifact().getId())) {
@@ -195,6 +235,7 @@ public class ServiceApiUtil {
       }
       validateComponent(comp, fs.getFileSystem(), conf);
     }
+    validatePlacementPolicy(service.getComponents(), componentNames);
 
     // validate dependency tree
     sortByDependencies(service.getComponents());
@@ -205,6 +246,32 @@ public class ServiceApiUtil {
     }
   }
 
+  public static void validateKerberosPrincipal(
+      KerberosPrincipal kerberosPrincipal) throws IOException {
+    if (!StringUtils.isEmpty(kerberosPrincipal.getPrincipalName())) {
+      if (!kerberosPrincipal.getPrincipalName().contains("/")) {
+        throw new IllegalArgumentException(String.format(
+            RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
+            kerberosPrincipal.getPrincipalName()));
+      }
+    }
+  }
+
+  private static void validateDockerClientConfiguration(Service service,
+      org.apache.hadoop.conf.Configuration conf) throws IOException {
+    String dockerClientConfig = service.getDockerClientConfig();
+    if (!StringUtils.isEmpty(dockerClientConfig)) {
+      Path dockerClientConfigPath = new Path(dockerClientConfig);
+      FileSystem fs = dockerClientConfigPath.getFileSystem(conf);
+      LOG.info("The supplied Docker client config is " + dockerClientConfig);
+      if (!fs.exists(dockerClientConfigPath)) {
+        throw new IOException(
+            "The supplied Docker client config does not exist: "
+                + dockerClientConfig);
+      }
+    }
+  }
+
   private static void validateComponent(Component comp, FileSystem fs,
       org.apache.hadoop.conf.Configuration conf)
       throws IOException {
@@ -212,7 +279,7 @@ public class ServiceApiUtil {
 
     AbstractClientProvider compClientProvider = ProviderFactory
         .getClientProvider(comp.getArtifact());
-    compClientProvider.validateArtifact(comp.getArtifact(), fs);
+    compClientProvider.validateArtifact(comp.getArtifact(), comp.getName(), fs);
 
     if (comp.getLaunchCommand() == null && (comp.getArtifact() == null || comp
         .getArtifact().getType() != Artifact.TypeEnum.DOCKER)) {
@@ -229,7 +296,7 @@ public class ServiceApiUtil {
               + ": " + comp.getNumberOfContainers(), comp.getName()));
     }
     compClientProvider.validateConfigFiles(comp.getConfiguration()
-        .getFiles(), fs);
+        .getFiles(), comp.getName(), fs);
 
     MonitorUtils.getProbe(comp.getReadinessCheck());
   }
@@ -256,6 +323,43 @@ public class ServiceApiUtil {
     namePattern.validate(name);
   }
 
+  private static void validatePlacementPolicy(List<Component> components,
+      Set<String> componentNames) {
+    for (Component comp : components) {
+      PlacementPolicy placementPolicy = comp.getPlacementPolicy();
+      if (placementPolicy != null) {
+        for (PlacementConstraint constraint : placementPolicy
+            .getConstraints()) {
+          if (constraint.getType() == null) {
+            throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TYPE_NULL,
+              constraint.getName() == null ? "" : constraint.getName() + " ",
+              comp.getName()));
+          }
+          if (constraint.getScope() == null) {
+            throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL,
+              constraint.getName() == null ? "" : constraint.getName() + " ",
+              comp.getName()));
+          }
+          if (constraint.getTargetTags().isEmpty()) {
+            throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
+              constraint.getName() == null ? "" : constraint.getName() + " ",
+              comp.getName()));
+          }
+          for (String targetTag : constraint.getTargetTags()) {
+            if (!comp.getName().equals(targetTag)) {
+              throw new IllegalArgumentException(String.format(
+                  RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
+                  targetTag, comp.getName(), comp.getName(), comp.getName()));
+            }
+          }
+        }
+      }
+    }
+  }
+
   @VisibleForTesting
   public static List<Component> getComponents(SliderFileSystem
       fs, String serviceName) throws IOException {
@@ -267,6 +371,14 @@ public class ServiceApiUtil {
     Path serviceJson = getServiceJsonPath(fs, serviceName);
     LOG.info("Loading service definition from " + serviceJson);
     return jsonSerDeser.load(fs.getFileSystem(), serviceJson);
+  }
+
+  public static Service loadServiceUpgrade(SliderFileSystem fs,
+      String serviceName, String version) throws IOException {
+    Path versionPath = fs.buildClusterUpgradeDirPath(serviceName, version);
+    Path versionedDef = new Path(versionPath, serviceName + ".json");
+    LOG.info("Loading service definition from {}", versionedDef);
+    return jsonSerDeser.load(fs.getFileSystem(), versionedDef);
   }
 
   public static Service loadServiceFrom(SliderFileSystem fs,
@@ -423,7 +535,253 @@ public class ServiceApiUtil {
     return sortByDependencies(components, sortedComponents);
   }
 
+  public static void createDirAndPersistApp(SliderFileSystem fs, Path appDir,
+      Service service)
+      throws IOException, SliderException {
+    FsPermission appDirPermission = new FsPermission("750");
+    fs.createWithPermissions(appDir, appDirPermission);
+    Path appJson = writeAppDefinition(fs, appDir, service);
+    LOG.info("Persisted service {} version {} at {}", service.getName(),
+        service.getVersion(), appJson);
+  }
+
+  public static Path writeAppDefinition(SliderFileSystem fs, Path appDir,
+      Service service) throws IOException {
+    Path appJson = new Path(appDir, service.getName() + ".json");
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
+  }
+
+  public static Path writeAppDefinition(SliderFileSystem fs, Service service)
+      throws IOException {
+    Path appJson = getServiceJsonPath(fs, service.getName());
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
+  }
+
+  public static List<Container> getLiveContainers(Service service,
+      List<String> componentInstances)
+      throws YarnException {
+    List<Container> result = new ArrayList<>();
+
+    // In order to avoid iterating over all the containers of all components,
+    // first find the affected components by parsing the instance name.
+    Multimap<String, String> affectedComps = ArrayListMultimap.create();
+    for (String instanceName : componentInstances) {
+      affectedComps.put(
+          ServiceApiUtil.parseComponentName(instanceName), instanceName);
+    }
+
+    service.getComponents().forEach(comp -> {
+      // Iterating once over the containers of the affected component to
+      // find all the containers. Avoiding multiple calls to
+      // service.getComponent(...) and component.getContainer(...) because they
+      // iterate over all the components of the service and all the containers
+      // of the components respectively.
+      if (affectedComps.get(comp.getName()) != null) {
+        Collection<String> instanceNames = affectedComps.get(comp.getName());
+        comp.getContainers().forEach(container -> {
+          if (instanceNames.contains(container.getComponentInstanceName())) {
+            result.add(container);
+          }
+        });
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Validates that the component instances that are requested to upgrade
+   * require an upgrade.
+   */
+  public static void validateInstancesUpgrade(List<Container>
+      liveContainers) throws YarnException {
+    for (Container liveContainer : liveContainers) {
+      if (!isUpgradable(liveContainer)) {
+        // Nothing to upgrade
+        throw new YarnException(String.format(
+            ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE,
+            liveContainer.getComponentInstanceName()));
+      }
+    }
+  }
+
+  /**
+   * Returns whether the container can be upgraded in the current state.
+   */
+  public static boolean isUpgradable(Container container) {
+
+    return container.getState() != null &&
+        (container.getState().equals(ContainerState.NEEDS_UPGRADE) ||
+            container.getState().equals(ContainerState.FAILED_UPGRADE));
+  }
+
+  /**
+   * Validates the components that are requested to upgrade require an upgrade.
+   * It returns the instances of the components which need upgrade.
+   */
+  public static List<Container> validateAndResolveCompsUpgrade(
+      Service liveService, Collection<String> compNames) throws YarnException {
+    Preconditions.checkNotNull(compNames);
+    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    List<Container> containerNeedUpgrade = new ArrayList<>();
+    for (Component liveComp : liveService.getComponents()) {
+      if (requestedComps.contains(liveComp.getName())) {
+        if (!liveComp.getState().equals(ComponentState.NEEDS_UPGRADE)) {
+          // Nothing to upgrade
+          throw new YarnException(String.format(
+              ERROR_COMP_DOES_NOT_NEED_UPGRADE, liveComp.getName()));
+        }
+        liveComp.getContainers().forEach(liveContainer -> {
+          if (isUpgradable(liveContainer)) {
+            containerNeedUpgrade.add(liveContainer);
+          }
+        });
+      }
+    }
+    return containerNeedUpgrade;
+  }
+
+  /**
+   * Validates the components that are requested are stable for upgrade.
+   * It returns the instances of the components which are in ready state.
+   */
+  public static List<Container> validateAndResolveCompsStable(
+      Service liveService, Collection<String> compNames) throws YarnException {
+    Preconditions.checkNotNull(compNames);
+    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    List<Container> containerNeedUpgrade = new ArrayList<>();
+    for (Component liveComp : liveService.getComponents()) {
+      if (requestedComps.contains(liveComp.getName())) {
+        if (!liveComp.getState().equals(ComponentState.STABLE)) {
+          // Nothing to upgrade
+          throw new YarnException(String.format(
+              ERROR_COMP_DOES_NOT_NEED_UPGRADE, liveComp.getName()));
+        }
+        liveComp.getContainers().forEach(liveContainer -> {
+          if (liveContainer.getState().equals(ContainerState.READY)) {
+            containerNeedUpgrade.add(liveContainer);
+          }
+        });
+      }
+    }
+    return containerNeedUpgrade;
+  }
+
+  public static String getHostnameSuffix(String serviceName, org.apache
+      .hadoop.conf.Configuration conf) {
+    String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+    String hostnameSuffix;
+    if (domain == null || domain.isEmpty()) {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}", serviceName, RegistryUtils.currentUser());
+    } else {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}.{2}", serviceName,
+              RegistryUtils.currentUser(), domain);
+    }
+    return hostnameSuffix;
+  }
+
+  public static String parseAndValidateComponentInstanceName(String
+      instanceOrHostname, String serviceName, org.apache.hadoop.conf
+      .Configuration conf) throws IllegalArgumentException {
+    int idx = instanceOrHostname.indexOf('.');
+    String hostnameSuffix = getHostnameSuffix(serviceName, conf);
+    if (idx != -1) {
+      if (!instanceOrHostname.endsWith(hostnameSuffix)) {
+        throw new IllegalArgumentException("Specified hostname " +
+            instanceOrHostname + " does not have the expected format " +
+            "componentInstanceName" +
+            hostnameSuffix);
+      }
+      instanceOrHostname = instanceOrHostname.substring(0, instanceOrHostname
+          .length() - hostnameSuffix.length());
+    }
+    idx = instanceOrHostname.indexOf('.');
+    if (idx != -1) {
+      throw new IllegalArgumentException("Specified hostname " +
+          instanceOrHostname + " does not have the expected format " +
+          "componentInstanceName" +
+          hostnameSuffix);
+    }
+    return instanceOrHostname;
+  }
+
+  public static String parseComponentName(String componentInstanceName)
+      throws YarnException {
+    int idx = componentInstanceName.indexOf('.');
+    if (idx != -1) {
+      componentInstanceName = componentInstanceName.substring(0, idx);
+    }
+    idx = componentInstanceName.lastIndexOf('-');
+    if (idx == -1) {
+      throw new YarnException("Invalid component instance (" +
+          componentInstanceName + ") name.");
+    }
+    return componentInstanceName.substring(0, idx);
+  }
+
   public static String $(String s) {
     return "${" + s +"}";
+  }
+
+  public static List<String> resolveCompsDependency(Service service) {
+    List<String> components = new ArrayList<String>();
+    for (Component component : service.getComponents()) {
+      int depSize = component.getDependencies().size();
+      if (!components.contains(component.getName())) {
+        components.add(component.getName());
+      }
+      if (depSize != 0) {
+        for (String depComp : component.getDependencies()) {
+          if (!components.contains(depComp)) {
+            components.add(0, depComp);
+          }
+        }
+      }
+    }
+    return components;
+  }
+
+  private static boolean serviceDependencySatisfied(Service service) {
+    boolean result = true;
+    try {
+      List<String> dependencies = service
+          .getDependencies();
+      org.apache.hadoop.conf.Configuration conf =
+          new org.apache.hadoop.conf.Configuration();
+      if (dependencies != null && dependencies.size() > 0) {
+        ServiceClient sc = new ServiceClient();
+        sc.init(conf);
+        sc.start();
+        for (String dependent : dependencies) {
+          Service dependentService = sc.getStatus(dependent);
+          if (dependentService.getState() == null ||
+              !dependentService.getState().equals(ServiceState.STABLE)) {
+            result = false;
+            LOG.info("Service dependency is not satisfied for " +
+                "service: {} state: {}", dependent,
+                dependentService.getState());
+          }
+        }
+        sc.close();
+      }
+    } catch (IOException | YarnException e) {
+      LOG.warn("Caught exception: ", e);
+      LOG.info("Service dependency is not satisified.");
+      result = false;
+    }
+    return result;
+  }
+
+  public static void checkServiceDependencySatisified(Service service) {
+    while (!serviceDependencySatisfied(service)) {
+      try {
+        LOG.info("Waiting for service dependencies.");
+        Thread.sleep(15000L);
+      } catch (InterruptedException e) {
+      }
+    }
   }
 }

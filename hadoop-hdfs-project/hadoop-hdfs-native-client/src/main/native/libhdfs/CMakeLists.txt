@@ -35,7 +35,7 @@ hadoop_add_dual_library(hdfs
     exception.c
     jni_helper.c
     hdfs.c
-    common/htable.c
+    jclasses.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
 )
@@ -55,16 +55,14 @@ set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
 build_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
-link_libhdfs_test(test_libhdfs_ops hdfs_static ${JAVA_JVM_LIBRARY})
-build_libhdfs_test(test_libhdfs_reads hdfs_static test_libhdfs_read.c)
-link_libhdfs_test(test_libhdfs_reads hdfs_static ${JAVA_JVM_LIBRARY})
-build_libhdfs_test(test_libhdfs_write hdfs_static test_libhdfs_write.c)
-link_libhdfs_test(test_libhdfs_write hdfs_static ${JAVA_JVM_LIBRARY})
+link_libhdfs_test(test_libhdfs_ops hdfs_static native_mini_dfs ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(test_libhdfs_ops hdfs_static)
+
 build_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
 link_libhdfs_test(test_libhdfs_threaded hdfs_static native_mini_dfs)
 add_libhdfs_test(test_libhdfs_threaded hdfs_static)
 
-if (NOT WIN32)
+if (NOT WIN32 AND NOT APPLE)
 build_libhdfs_test(test_libhdfs_zerocopy hdfs_static expect.c test_libhdfs_zerocopy.c)
 link_libhdfs_test(test_libhdfs_zerocopy hdfs_static native_mini_dfs ${OS_LINK_LIBRARIES})
 add_libhdfs_test(test_libhdfs_zerocopy hdfs_static)
@@ -74,9 +72,11 @@ endif()
 # introducing an abstraction layer over the sys/mman.h functions.
 if(NOT WIN32)
     build_libhdfs_test(test_libhdfs_vecsum hdfs vecsum.c)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
     if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs ${CMAKE_THREAD_LIBS_INIT})
     else()
-        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread rt)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs ${CMAKE_THREAD_LIBS_INIT} rt)
     endif()
 endif()

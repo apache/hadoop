@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.swift;
 
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -46,8 +46,8 @@ import static org.apache.hadoop.fs.swift.util.SwiftTestUtils.writeTextFile;
  */
 public class TestSwiftFileSystemBasicOps extends SwiftFileSystemBaseTest {
 
-  private static final Log LOG =
-          LogFactory.getLog(TestSwiftFileSystemBasicOps.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftFileSystemBasicOps.class);
 
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   public void testLsRoot() throws Throwable {

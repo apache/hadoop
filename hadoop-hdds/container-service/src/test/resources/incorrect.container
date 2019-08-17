@@ -1,0 +1,13 @@
+!<KeyValueContainerData>
+containerDBType: RocksDB
+chunksPath: /hdds/current/aed-fg4-hji-jkl/containerDir0/1
+containerID: 9223372036854775807
+containerType: KeyValueContainer
+metadataPath: /hdds/current/aed-fg4-hji-jkl/containerDir0/1
+layOutVersion: 1
+maxSize: 5368709120
+originPipelineId: b2c96aa4-b757-4f97-b286-6fb80a1baf8e
+originNodeId: 6dcfb385-caea-4efb-9ef3-f87fadca0f51
+metadata: {OWNER: ozone, VOLUME: hdfs}
+state: NO_SUCH_STATE
+checksum: 08bc9d390f9183aeed3cf33c789e2a07310bba60f3cf55941caccc939db8670f

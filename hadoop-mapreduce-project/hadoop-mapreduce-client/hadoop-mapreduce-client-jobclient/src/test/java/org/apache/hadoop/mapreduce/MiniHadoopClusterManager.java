@@ -137,7 +137,7 @@ public class MiniHadoopClusterManager {
     while (true) {
       try {
         Thread.sleep(1000 * 60);
-      } catch (InterruptedException _) {
+      } catch (InterruptedException e) {
         // nothing
       }
     }
@@ -156,6 +156,7 @@ public class MiniHadoopClusterManager {
     if (!noDFS) {
       dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nnPort)
           .nameNodeHttpPort(nnHttpPort).numDataNodes(numDataNodes)
+          .format(dfsOpts == StartupOption.FORMAT)
           .startupOption(dfsOpts).build();
       LOG.info("Started MiniDFSCluster -- namenode on port "
           + dfs.getNameNodePort());

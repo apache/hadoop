@@ -182,7 +182,8 @@ public class RollingFileSystemSinkTestBase {
         .add(prefix + ".sink.mysink0.ignore-error", ignoreErrors)
         .add(prefix + ".sink.mysink0.allow-append", allowAppend)
         .add(prefix + ".sink.mysink0.roll-offset-interval-millis", 0)
-        .add(prefix + ".sink.mysink0.roll-interval", "1h");
+        .add(prefix + ".sink.mysink0.roll-interval", "1h")
+        .add("*.queue.capacity", 2);
 
     if (useSecureParams) {
       builder.add(prefix + ".sink.mysink0.keytab-key", SINK_KEYTAB_FILE_KEY)

@@ -1,0 +1,248 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdds.protocol.proto";
+option java_outer_classname = "HddsProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdds;
+
+message DatanodeDetailsProto {
+    required string uuid = 1;  // UUID assigned to the Datanode.
+    required string ipAddress = 2;     // IP address
+    required string hostName = 3;      // hostname
+    repeated Port ports = 4;
+    optional string certSerialId = 5;   // Certificate serial id.
+    // network name, can be Ip address or host name, depends
+    optional string networkName = 6;
+    optional string networkLocation = 7; // Network topology location
+}
+
+/**
+ Proto message encapsulating information required to uniquely identify a
+ OzoneManager.
+*/
+message OzoneManagerDetailsProto {
+    required string uuid = 1;          // UUID assigned to the OzoneManager.
+    required string ipAddress = 2;     // IP address of OM.
+    required string hostName = 3;      // Hostname of OM.
+    repeated Port ports = 4;
+}
+
+message Port {
+    required string name = 1;
+    required uint32 value = 2;
+}
+
+message PipelineID {
+  required string id = 1;
+}
+
+enum PipelineState {
+    PIPELINE_ALLOCATED = 1;
+    PIPELINE_OPEN = 2;
+    PIPELINE_CLOSED = 3;
+}
+
+message Pipeline {
+    required string leaderID = 1;
+    repeated DatanodeDetailsProto members = 2;
+    // TODO: remove the state and leaderID from this class
+    optional PipelineState state = 3 [default = PIPELINE_ALLOCATED];
+    optional ReplicationType type = 4 [default = STAND_ALONE];
+    optional ReplicationFactor factor = 5 [default = ONE];
+    required PipelineID id = 6;
+    repeated uint32 memberOrders = 7;
+}
+
+message KeyValue {
+    required string key = 1;
+    optional string value = 2;
+}
+
+/**
+ * Type of the node.
+ */
+enum NodeType {
+    OM = 1;         // Ozone Manager
+    SCM = 2;        // Storage Container Manager
+    DATANODE = 3;   // DataNode
+}
+
+// Should we rename NodeState to DatanodeState?
+/**
+ * Enum that represents the Node State. This is used in calls to getNodeList
+ * and getNodeCount.
+ */
+enum NodeState {
+    HEALTHY = 1;
+    STALE = 2;
+    DEAD = 3;
+    DECOMMISSIONING = 4;
+    DECOMMISSIONED = 5;
+}
+
+enum QueryScope {
+    CLUSTER = 1;
+    POOL = 2;
+}
+
+message Node {
+    required DatanodeDetailsProto nodeID = 1;
+    repeated NodeState nodeStates = 2;
+}
+
+message NodePool {
+    repeated Node nodes = 1;
+}
+
+/**
+ * LifeCycleState for SCM object creation state machine:
+ *    ->Allocated: allocated on SCM but clean has not started creating it yet.
+ *    ->Creating: allocated and assigned to client to create but not ack-ed yet.
+ *    ->Open: allocated on SCM and created on datanodes and ack-ed by a client.
+ *    ->Close: container closed due to space all used or error?
+ *    ->Timeout -> container failed to create on datanodes or ack-ed by client.
+ *    ->Deleting(TBD) -> container will be deleted after timeout
+ * 1. ALLOCATE-ed containers on SCM can't serve key/block related operation
+ *    until ACK-ed explicitly which changes the state to OPEN.
+ * 2. Only OPEN/CLOSED containers can serve key/block related operation.
+ * 3. ALLOCATE-ed containers that are not ACK-ed timely will be TIMEOUT and
+ *    CLEANUP asynchronously.
+ */
+
+enum LifeCycleState {
+    OPEN = 1;
+    CLOSING = 2;
+    QUASI_CLOSED = 3;
+    CLOSED = 4;
+    DELETING = 5;
+    DELETED = 6; // object is deleted.
+}
+
+enum LifeCycleEvent {
+    FINALIZE = 1;
+    QUASI_CLOSE = 2;
+    CLOSE = 3; // !!Event after this has not been used yet.
+    FORCE_CLOSE = 4;
+    DELETE = 5;
+    CLEANUP = 6;
+}
+
+message ContainerInfoProto {
+    required int64 containerID = 1;
+    required LifeCycleState state = 2;
+    optional PipelineID pipelineID = 3;
+    required uint64 usedBytes = 4;
+    required uint64 numberOfKeys = 5;
+    optional int64 stateEnterTime = 6;
+    required string owner = 7;
+    optional int64 deleteTransactionId = 8;
+    optional int64 sequenceId = 9;
+    required ReplicationFactor replicationFactor  = 10;
+    required ReplicationType replicationType  = 11;
+}
+
+message ContainerWithPipeline {
+  required ContainerInfoProto containerInfo = 1;
+  required Pipeline pipeline = 2;
+}
+
+message GetScmInfoRequestProto {
+    optional string traceID = 1;
+}
+
+message GetScmInfoResponseProto {
+    required string clusterId = 1;
+    required string scmId = 2;
+}
+
+
+enum ReplicationType {
+    RATIS = 1;
+    STAND_ALONE = 2;
+    CHAINED = 3;
+}
+
+enum ReplicationFactor {
+    ONE = 1;
+    THREE = 3;
+}
+
+enum ScmOps {
+    allocateBlock = 1;
+    keyBlocksInfoList = 2;
+    getScmInfo = 3;
+    deleteBlock = 4;
+    createReplicationPipeline = 5;
+    allocateContainer = 6;
+    getContainer = 7;
+    getContainerWithPipeline = 8;
+    listContainer = 9;
+    deleteContainer = 10;
+    queryNode = 11;
+}
+
+message ExcludeListProto {
+    repeated string datanodes = 1;
+    repeated int64 containerIds = 2;
+    repeated PipelineID pipelineIds = 3;
+}
+
+/**
+ * Block ID that uniquely identify a block by SCM.
+ */
+message ContainerBlockID {
+    required int64 containerID = 1;
+    required int64 localID = 2;
+}
+
+
+/**
+ * Information for the Hdds block token.
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ */
+message BlockTokenSecretProto {
+    /**
+     * File access permissions mode.
+     */
+    enum AccessModeProto {
+        READ = 1;
+        WRITE = 2;
+        COPY = 3;
+        DELETE = 4;
+    }
+    required string ownerId = 1;
+    required string blockId = 2;
+    required uint64 expiryDate = 3;
+    required string omCertSerialId = 4;
+    repeated AccessModeProto modes = 5;
+    required uint64 maxLength = 6;
+}
+
+message BlockID {
+    required ContainerBlockID containerBlockID = 1;
+    optional uint64 blockCommitSequenceId = 2 [default = 0];
+}

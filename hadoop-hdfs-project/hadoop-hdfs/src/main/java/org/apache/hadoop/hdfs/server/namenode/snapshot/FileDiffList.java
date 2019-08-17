@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -66,8 +62,8 @@ public class FileDiffList extends
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
-    List<FileDiff> diffs = this.asList();
-    int i = Collections.binarySearch(diffs, snapshotId);
+    DiffList<FileDiff> diffs = this.asList();
+    int i = diffs.binarySearch(snapshotId);
     BlockInfo[] blocks = null;
     for(i = i >= 0 ? i : -i-2; i >= 0; i--) {
       blocks = diffs.get(i).getBlocks();
@@ -83,8 +79,8 @@ public class FileDiffList extends
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
-    List<FileDiff> diffs = this.asList();
-    int i = Collections.binarySearch(diffs, snapshotId);
+    DiffList<FileDiff> diffs = this.asList();
+    int i = diffs.binarySearch(snapshotId);
     BlockInfo[] blocks = null;
     for (i = i >= 0 ? i+1 : -i-1; i < diffs.size(); i++) {
       blocks = diffs.get(i).getBlocks();
@@ -132,7 +128,7 @@ public class FileDiffList extends
     }
     // Check if last block is part of truncate recovery
     BlockInfo lastBlock = file.getLastBlock();
-    Block dontRemoveBlock = null;
+    BlockInfo dontRemoveBlock = null;
     if (lastBlock != null && lastBlock.getBlockUCState().equals(
         HdfsServerConstants.BlockUCState.UNDER_RECOVERY)) {
       dontRemoveBlock = lastBlock.getUnderConstructionFeature()

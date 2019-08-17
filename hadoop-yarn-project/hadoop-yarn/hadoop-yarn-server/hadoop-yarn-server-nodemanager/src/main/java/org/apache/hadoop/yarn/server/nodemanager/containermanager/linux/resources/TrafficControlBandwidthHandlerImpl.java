@@ -185,10 +185,8 @@ public class TrafficControlBandwidthHandlerImpl
       throws ResourceHandlerException {
     String containerIdStr = containerId.toString();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Attempting to reacquire classId for container: " +
-          containerIdStr);
-    }
+    LOG.debug("Attempting to reacquire classId for container: {}",
+        containerIdStr);
 
     String classIdStrFromFile = cGroupsHandler.getCGroupParam(
         CGroupsHandler.CGroupController.NET_CLS, containerIdStr,
@@ -200,6 +198,12 @@ public class TrafficControlBandwidthHandlerImpl
         + " -> " + classId);
     containerIdClassIdMap.put(containerId, classId);
 
+    return null;
+  }
+
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
     return null;
   }
 
@@ -235,7 +239,7 @@ public class TrafficControlBandwidthHandlerImpl
    * Cleanup operations once container is completed - deletes cgroup and
    * removes traffic shaping rule(s).
    * @param containerId of the container that was completed.
-   * @return
+   * @return null
    * @throws ResourceHandlerException
    */
   @Override
@@ -271,10 +275,13 @@ public class TrafficControlBandwidthHandlerImpl
   @Override
   public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("teardown(): Nothing to do");
-    }
+    LOG.debug("teardown(): Nothing to do");
 
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return TrafficControlBandwidthHandlerImpl.class.getName();
   }
 }

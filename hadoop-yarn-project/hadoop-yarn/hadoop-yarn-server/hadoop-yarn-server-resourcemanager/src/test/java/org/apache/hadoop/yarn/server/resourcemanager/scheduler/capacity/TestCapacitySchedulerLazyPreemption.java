@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
@@ -47,8 +46,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static org.mockito.Mockito.mock;
 
 public class TestCapacitySchedulerLazyPreemption
     extends CapacitySchedulerPreemptionTestBase {
@@ -155,6 +152,14 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 has 6 containers, and app2 has 2 containers
     Assert.assertEquals(6, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+
+    // Ensure preemption metrics were recored.
+    Assert.assertEquals(
+        "Number of preempted containers incorrectly recorded:", 1,
+        cs.getQueue("a").getMetrics().getAggregatePreemptedContainers());
+    Assert.assertEquals(
+        "Number of preempted containers incorrectly recorded:", 1,
+        cs.getRootQueue().getMetrics().getAggregatePreemptedContainers());
 
     rm1.close();
   }

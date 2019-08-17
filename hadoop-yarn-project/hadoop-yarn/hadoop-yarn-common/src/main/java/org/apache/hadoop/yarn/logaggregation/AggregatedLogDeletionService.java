@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -50,7 +52,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.LimitedPrivate({"yarn", "mapreduce"})
 public class AggregatedLogDeletionService extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(AggregatedLogDeletionService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AggregatedLogDeletionService.class);
   
   private Timer timer = null;
   private long checkIntervalMsecs;
@@ -66,10 +69,12 @@ public class AggregatedLogDeletionService extends AbstractService {
     public LogDeletionTask(Configuration conf, long retentionSecs, ApplicationClientProtocol rmClient) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
-      this.suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
-      this.remoteRootLogDir =
-        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+      this.suffix = LogAggregationUtils.getBucketSuffix();
+      LogAggregationFileControllerFactory factory =
+          new LogAggregationFileControllerFactory(conf);
+      LogAggregationFileController fileController =
+          factory.getFileControllerForWrite();
+      this.remoteRootLogDir = fileController.getRemoteRootLogDir();
       this.rmClient = rmClient;
     }
     
@@ -81,8 +86,18 @@ public class AggregatedLogDeletionService extends AbstractService {
         FileSystem fs = remoteRootLogDir.getFileSystem(conf);
         for(FileStatus userDir : fs.listStatus(remoteRootLogDir)) {
           if(userDir.isDirectory()) {
-            Path userDirPath = new Path(userDir.getPath(), suffix);
-            deleteOldLogDirsFrom(userDirPath, cutoffMillis, fs, rmClient);
+            for (FileStatus suffixDir : fs.listStatus(userDir.getPath())) {
+              Path suffixDirPath = suffixDir.getPath();
+              if (suffixDir.isDirectory() && suffixDirPath.getName().
+                  startsWith(suffix)) {
+                for (FileStatus bucketDir : fs.listStatus(suffixDirPath)) {
+                  if (bucketDir.isDirectory()) {
+                    deleteOldLogDirsFrom(bucketDir.getPath(), cutoffMillis,
+                        fs, rmClient);
+                  }
+                }
+              }
+            }
           }
         }
       } catch (Throwable t) {
@@ -258,7 +273,7 @@ public class AggregatedLogDeletionService extends AbstractService {
       return;
     }
     setLogAggCheckIntervalMsecs(retentionSecs);
-    task = new LogDeletionTask(conf, retentionSecs, creatRMClient());
+    task = new LogDeletionTask(conf, retentionSecs, createRMClient());
     timer = new Timer();
     timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
   }
@@ -281,7 +296,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   // We have already marked ApplicationClientProtocol.getApplicationReport
   // as @Idempotent, it will automatically take care of RM restart/failover.
   @VisibleForTesting
-  protected ApplicationClientProtocol creatRMClient() throws IOException {
+  protected ApplicationClientProtocol createRMClient() throws IOException {
     return ClientRMProxy.createRMProxy(getConfig(),
       ApplicationClientProtocol.class);
   }

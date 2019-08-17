@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hdfs.util;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,7 +61,8 @@ public final class CombinedHostsFileWriter {
     final ObjectMapper objectMapper = new ObjectMapper();
 
     try (Writer output =
-       new OutputStreamWriter(new FileOutputStream(hostsFile), "UTF-8")) {
+        new OutputStreamWriter(Files.newOutputStream(Paths.get(hostsFile)),
+            "UTF-8")) {
       objectMapper.writeValue(output, allDNs);
     }
   }

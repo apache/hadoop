@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -360,34 +359,65 @@ public class TestApplication {
     }
   }
 
-//TODO Re-work after Application transitions are changed.
-//  @Test
+  @Test
   @SuppressWarnings("unchecked")
-  public void testStartContainerAfterAppFinished() {
+  public void testStartContainerAfterAppRunning() {
     WrappedApplication wa = null;
     try {
-      wa = new WrappedApplication(5, 314159265358979L, "yak", 3);
+      wa = new WrappedApplication(5, 314159265358979L, "yak", 4);
       wa.initApplication();
-      wa.initContainer(-1);
+      wa.initContainer(0);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
 
-      reset(wa.localizerBus);
-      wa.containerFinished(0);
-      wa.containerFinished(1);
-      wa.containerFinished(2);
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
-      assertEquals(0, wa.app.getContainers().size());
+      assertEquals(1, wa.app.getContainers().size());
 
       wa.appFinished();
+      verify(wa.containerBus).handle(
+          argThat(new ContainerKillMatcher(wa.containers.get(0)
+              .getContainerId())));
+      assertEquals(ApplicationState.FINISHING_CONTAINERS_WAIT,
+          wa.app.getApplicationState());
+
+      wa.initContainer(1);
+      verify(wa.containerBus).handle(
+          argThat(new ContainerKillMatcher(wa.containers.get(1)
+              .getContainerId())));
+      assertEquals(ApplicationState.FINISHING_CONTAINERS_WAIT,
+          wa.app.getApplicationState());
+      wa.containerFinished(1);
+      assertEquals(ApplicationState.FINISHING_CONTAINERS_WAIT,
+          wa.app.getApplicationState());
+
+      wa.containerFinished(0);
       assertEquals(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
           wa.app.getApplicationState());
       verify(wa.localizerBus).handle(
           refEq(new ApplicationLocalizationEvent(
-              LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app)));
+              LocalizationEventType.DESTROY_APPLICATION_RESOURCES,
+              wa.app), "timestamp"));
+
+      wa.initContainer(2);
+      verify(wa.containerBus).handle(
+          argThat(new ContainerKillMatcher(wa.containers.get(2)
+              .getContainerId())));
+      assertEquals(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
+          wa.app.getApplicationState());
+      wa.containerFinished(2);
+      assertEquals(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
+          wa.app.getApplicationState());
 
       wa.appResourcesCleanedup();
+      assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
+
+      wa.initContainer(3);
+      verify(wa.containerBus).handle(
+          argThat(new ContainerKillMatcher(wa.containers.get(3)
+              .getContainerId())));
+      assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
+      wa.containerFinished(3);
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
     } finally {
       if (wa != null)
@@ -459,7 +489,8 @@ public class TestApplication {
     }
   }
 
-  private class ContainerKillMatcher extends ArgumentMatcher<ContainerEvent> {
+  private class ContainerKillMatcher implements
+      ArgumentMatcher<ContainerEvent> {
     private ContainerId cId;
 
     public ContainerKillMatcher(ContainerId cId) {
@@ -467,7 +498,7 @@ public class TestApplication {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(ContainerEvent argument) {
       if (argument instanceof ContainerKillEvent) {
         ContainerKillEvent event = (ContainerKillEvent) argument;
         return event.getContainerID().equals(cId);
@@ -476,7 +507,8 @@ public class TestApplication {
     }
   }
 
-  private class ContainerInitMatcher extends ArgumentMatcher<ContainerEvent> {
+  private class ContainerInitMatcher implements
+      ArgumentMatcher<ContainerEvent> {
     private ContainerId cId;
 
     public ContainerInitMatcher(ContainerId cId) {
@@ -484,7 +516,7 @@ public class TestApplication {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(ContainerEvent argument) {
       if (argument instanceof ContainerInitEvent) {
         ContainerInitEvent event = (ContainerInitEvent) argument;
         return event.getContainerID().equals(cId);

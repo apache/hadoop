@@ -21,6 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
+import java.net.URISyntaxException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -92,6 +93,8 @@ import java.util.Arrays;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 
 @InterfaceAudience.Private
@@ -191,7 +194,7 @@ public class DFSUtilClient {
   /**
    * Returns collection of nameservice Ids from the configuration.
    * @param conf configuration
-   * @return collection of nameservice Ids, or null if not specified
+   * @return collection of nameservice Ids. Empty list if unspecified.
    */
   public static Collection<String> getNameServiceIds(Configuration conf) {
     return conf.getTrimmedStringCollection(DFS_NAMESERVICES);
@@ -266,8 +269,8 @@ public class DFSUtilClient {
   }
 
   /**
-   * Convert a List<LocatedBlock> to BlockLocation[]
-   * @param blocks A List<LocatedBlock> to be converted
+   * Convert a List to BlockLocation[]
+   * @param blocks A List to be converted
    * @return converted array of BlockLocation
    */
   public static BlockLocation[] locatedBlocks2Locations(
@@ -396,7 +399,7 @@ public class DFSUtilClient {
    * @param keys Set of keys to look for in the order of preference
    * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
    */
-  static Map<String, Map<String, InetSocketAddress>> getAddresses(
+  public static Map<String, Map<String, InetSocketAddress>> getAddresses(
       Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
@@ -426,13 +429,13 @@ public class DFSUtilClient {
     return ret;
   }
 
-  static Map<String, InetSocketAddress> getAddressesForNameserviceId(
+  public static Map<String, InetSocketAddress> getAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue, String... keys) {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
       String suffix = concatSuffixes(nsId, nnId);
-      String address = getConfValue(defaultValue, suffix, conf, keys);
+      String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
       if (address != null) {
         InetSocketAddress isa = NetUtils.createSocketAddr(address);
         if (isa.isUnresolved()) {
@@ -444,6 +447,86 @@ public class DFSUtilClient {
       }
     }
     return ret;
+  }
+
+  /**
+   * Return address from configuration. Take a list of keys as preference.
+   * If the address to be returned is the value of DFS_NAMENODE_RPC_ADDRESS_KEY,
+   * will check to see if auxiliary ports are enabled. If so, call to replace
+   * address port with auxiliary port. If the address is not the value of
+   * DFS_NAMENODE_RPC_ADDRESS_KEY, return the original address. If failed to
+   * find any address, return the given default value.
+   *
+   * @param defaultValue the default value if no values found for given keys
+   * @param suffix suffix to append to keys
+   * @param conf the configuration
+   * @param keys a list of keys, ordered by preference
+   * @return
+   */
+  private static String checkKeysAndProcess(String defaultValue, String suffix,
+      Configuration conf, String... keys) {
+    String succeededKey = null;
+    String address = null;
+    for (String key : keys) {
+      address = getConfValue(null, suffix, conf, key);
+      if (address != null) {
+        succeededKey = key;
+        break;
+      }
+    }
+    String ret;
+    if (address == null) {
+      ret = defaultValue;
+    } else if(DFS_NAMENODE_RPC_ADDRESS_KEY.equals(succeededKey))  {
+      ret = checkRpcAuxiliary(conf, suffix, address);
+    } else {
+      ret = address;
+    }
+    return ret;
+  }
+
+  /**
+   * Check if auxiliary port is enabled, if yes, check if the given address
+   * should have its port replaced by an auxiliary port. If the given address
+   * does not contain a port, append the auxiliary port to enforce using it.
+   *
+   * @param conf configuration.
+   * @param address the address to check and modify (if needed).
+   * @return the new modified address containing auxiliary port, or original
+   * address if auxiliary port not enabled.
+   */
+  private static String checkRpcAuxiliary(Configuration conf, String suffix,
+      String address) {
+    String key = DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
+    key = addSuffix(key, suffix);
+    int[] ports = conf.getInts(key);
+    if (ports == null || ports.length == 0) {
+      return address;
+    }
+    LOG.info("Using server auxiliary ports " + Arrays.toString(ports));
+    URI uri;
+    try {
+      uri = new URI(address);
+    } catch (URISyntaxException e) {
+      // return the original address untouched if it is not a valid URI. This
+      // happens in unit test, as MiniDFSCluster sets the value to
+      // 127.0.0.1:0, without schema (i.e. "hdfs://"). While in practice, this
+      // should not be the case. So log a warning message here.
+      LOG.warn("NameNode address is not a valid uri:" + address);
+      return address;
+    }
+    // Ignore the port, only take the schema(e.g. hdfs) and host (e.g.
+    // localhost), then append port
+    // TODO : revisit if there is a better way
+    StringBuilder sb = new StringBuilder();
+    sb.append(uri.getScheme())
+        .append("://")
+        .append(uri.getHost())
+        .append(":");
+    // TODO : currently, only the very first auxiliary port is being used.
+    // But actually NN supports running multiple auxiliary
+    sb.append(ports[0]);
+    return sb.toString();
   }
 
   /**
@@ -649,7 +732,7 @@ public class DFSUtilClient {
       return peer;
     } finally {
       if (!success) {
-        IOUtilsClient.cleanup(null, peer);
+        IOUtilsClient.cleanupWithLogger(LOG, peer);
       }
     }
   }
@@ -751,14 +834,14 @@ public class DFSUtilClient {
   public static class CorruptedBlocks {
     private Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap;
 
-    public CorruptedBlocks() {
-      this.corruptionMap = new HashMap<>();
-    }
-
     /**
      * Indicate a block replica on the specified datanode is corrupted
      */
     public void addCorruptedBlock(ExtendedBlock blk, DatanodeInfo node) {
+      if (corruptionMap == null) {
+        corruptionMap = new HashMap<>();
+      }
+
       Set<DatanodeInfo> dnSet = corruptionMap.get(blk);
       if (dnSet == null) {
         dnSet = new HashSet<>();
@@ -770,7 +853,8 @@ public class DFSUtilClient {
     }
 
     /**
-     * @return the map that contains all the corruption entries.
+     * @return the map that contains all the corruption entries, or null if
+     * there were no corrupted entries
      */
     public Map<ExtendedBlock, Set<DatanodeInfo>> getCorruptionMap() {
       return corruptionMap;
@@ -910,4 +994,24 @@ public class DFSUtilClient {
     return new Path(sb.toString());
   }
 
+  /**
+   * Returns current user home directory under a home directory prefix.
+   * The home directory prefix can be defined by
+   * {@link HdfsClientConfigKeys#DFS_USER_HOME_DIR_PREFIX_KEY}.
+   * User info is obtained from given {@link UserGroupInformation}.
+   * @param conf configuration
+   * @param ugi {@link UserGroupInformation} of current user.
+   * @return the home directory of current user.
+   */
+  public static Path getHomeDirectory(Configuration conf,
+      UserGroupInformation ugi) {
+    String userHomePrefix = HdfsClientConfigKeys
+        .DFS_USER_HOME_DIR_PREFIX_DEFAULT;
+    if (conf != null) {
+      userHomePrefix = conf.get(
+          HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
+          HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
+    }
+    return new Path(userHomePrefix + "/" + ugi.getShortUserName());
+  }
 }

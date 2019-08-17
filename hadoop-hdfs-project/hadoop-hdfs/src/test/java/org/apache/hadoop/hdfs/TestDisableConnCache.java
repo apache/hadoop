@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -32,7 +32,7 @@ import org.junit.Test;
  * mini-cluster.
  */
 public class TestDisableConnCache {
-  static final Log LOG = LogFactory.getLog(TestDisableConnCache.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestDisableConnCache.class);
 
   static final int BLOCK_SIZE = 4096;
   static final int FILE_SIZE = 3 * BLOCK_SIZE;

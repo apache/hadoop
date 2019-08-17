@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.io.retry.Idempotent;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -69,6 +70,7 @@ public interface InMemoryAliasMapProtocol {
    * FileRegions and the next marker.
    * @throws IOException
    */
+  @Idempotent
   InMemoryAliasMap.IterationResult list(Optional<Block> marker)
       throws IOException;
 
@@ -80,6 +82,7 @@ public interface InMemoryAliasMapProtocol {
    * @throws IOException
    */
   @Nonnull
+  @Idempotent
   Optional<ProvidedStorageLocation> read(@Nonnull Block block)
       throws IOException;
 
@@ -90,6 +93,7 @@ public interface InMemoryAliasMapProtocol {
    * @param providedStorageLocation
    * @throws IOException
    */
+  @Idempotent
   void write(@Nonnull Block block,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException;
@@ -99,5 +103,6 @@ public interface InMemoryAliasMapProtocol {
    * @return the block pool id associated with the Namenode running
    * the in-memory alias map.
    */
+  @Idempotent
   String getBlockPoolId() throws IOException;
 }

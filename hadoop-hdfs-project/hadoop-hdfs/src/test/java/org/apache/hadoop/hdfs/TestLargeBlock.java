@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,11 +45,13 @@ public class TestLargeBlock {
     GenericTestUtils.setLogLevel(TestLargeBlock.LOG, Level.ALL);
   }
  */
-  private static final Log LOG = LogFactory.getLog(TestLargeBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestLargeBlock.class);
 
   // should we verify the data read back from the file? (slow)
   static final boolean verifyData = true;
   static final byte[] pattern = { 'D', 'E', 'A', 'D', 'B', 'E', 'E', 'F'};
+  static final int numDatanodes = 3;
 
   // creates a file 
   static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl,
@@ -158,7 +160,7 @@ public class TestLargeBlock {
    * timeout here.
    * @throws IOException in case of errors
    */
-  @Test (timeout = 900000)
+  @Test (timeout = 1800000)
   public void testLargeBlockSize() throws IOException {
     final long blockSize = 2L * 1024L * 1024L * 1024L + 512L; // 2GB + 512B
     runTest(blockSize);
@@ -175,7 +177,8 @@ public class TestLargeBlock {
     final long fileSize = blockSize + 1L;
 
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(numDatanodes).build();
     FileSystem fs = cluster.getFileSystem();
     try {
 

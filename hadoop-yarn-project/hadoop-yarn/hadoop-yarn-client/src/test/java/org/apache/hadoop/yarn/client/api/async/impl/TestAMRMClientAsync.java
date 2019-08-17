@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.client.api.async.impl;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyFloat;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -596,7 +597,7 @@ public class TestAMRMClientAsync {
 
     @Override
     public void onError(Throwable e) {
-      Assert.assertEquals(e.getMessage(), "Exception from callback handler");
+      assertThat(e).hasMessage("Exception from callback handler");
       callStopAndNotify();
     }
 

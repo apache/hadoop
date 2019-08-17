@@ -47,13 +47,11 @@ import org.apache.hadoop.hdfs.util.CombinedHostsFileReader;
 /**
  * This class manages datanode configuration using a json file.
  * Please refer to {@link CombinedHostsFileReader} for the json format.
- * <p/>
- * <p/>
+ * <p>
  * Entries may or may not specify a port.  If they don't, we consider
  * them to apply to every DataNode on that host. The code canonicalizes the
  * entries into IP addresses.
- * <p/>
- * <p/>
+ * <p>
  * The code ignores all entries that the DNS fails to resolve their IP
  * addresses. This is okay because by default the NN rejects the registrations
  * of DNs when it fails to do a forward and reverse lookup. Note that DNS

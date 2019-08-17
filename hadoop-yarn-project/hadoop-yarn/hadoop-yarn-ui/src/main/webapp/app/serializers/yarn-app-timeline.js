@@ -45,7 +45,6 @@ export default DS.JSONAPISerializer.extend({
         progress: 100,
         applicationType: payload.info.YARN_APPLICATION_TYPE,
         diagnostics: (diagnostics && diagnostics !== 'null')? diagnostics : '',
-        amContainerLogs: '',
         amHostHttpAddress: '',
         logAggregationStatus: '',
         unmanagedApplication: payload.info.YARN_APPLICATION_UNMANAGED_APPLICATION || 'N/A',
@@ -62,7 +61,9 @@ export default DS.JSONAPISerializer.extend({
         numAMContainerPreempted: 0,
         clusterUsagePercentage: 0,
         queueUsagePercentage: 0,
-        currentAppAttemptId: payload.info.YARN_APPLICATION_LATEST_APP_ATTEMPT
+        currentAppAttemptId: payload.info.YARN_APPLICATION_LATEST_APP_ATTEMPT,
+        trackingUI : '',
+        trackingUrl : ''
       }
     };
 

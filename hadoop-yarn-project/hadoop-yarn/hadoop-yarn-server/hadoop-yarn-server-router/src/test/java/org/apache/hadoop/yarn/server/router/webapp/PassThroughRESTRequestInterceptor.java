@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -48,9 +49,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -66,6 +70,14 @@ public class PassThroughRESTRequestInterceptor
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
     return getNextInterceptor().getAppAttempts(hsr, appId);
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr)
+      throws AuthorizationException {
+    return getNextInterceptor().checkUserAccessToQueue(queue, username,
+        queueAclType, hsr);
   }
 
   @Override
@@ -99,6 +111,11 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    return getNextInterceptor().getClusterUserInfo(hsr);
+  }
+
+  @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     return getNextInterceptor().getClusterMetricsInfo();
   }
@@ -125,6 +142,13 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException {
+    return getNextInterceptor().updateNodeResource(
+        hsr, nodeId, resourceOption);
+  }
+
+  @Override
   public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
@@ -137,14 +161,19 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
-    return getNextInterceptor().getActivities(hsr, nodeId);
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
+    return getNextInterceptor().getActivities(hsr, nodeId, groupBy);
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
-    return getNextInterceptor().getAppActivities(hsr, appId, time);
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
+    return getNextInterceptor().getAppActivities(hsr, appId, time,
+        requestPriorities, allocationRequestIds, groupBy, limit,
+        actions, summarize);
   }
 
   @Override
@@ -335,5 +364,11 @@ public class PassThroughRESTRequestInterceptor
       YarnException, InterruptedException, IOException {
     return getNextInterceptor().updateApplicationTimeout(appTimeout, hsr,
         appId);
+  }
+
+  @Override
+  public Response signalToContainer(String containerId,
+      String command, HttpServletRequest req) throws AuthorizationException {
+    return getNextInterceptor().signalToContainer(containerId, command, req);
   }
 }

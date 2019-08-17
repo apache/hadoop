@@ -14,20 +14,20 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-maven-plugins</artifactId>
   <packaging>maven-plugin</packaging>
   <name>Apache Hadoop Maven Plugins</name>
   <properties>
-    <maven.dependency.version>3.0</maven.dependency.version>
-    <maven.plugin-tools.version>3.4</maven.plugin-tools.version>
+    <maven.dependency.version>3.0.5</maven.dependency.version>
+    <maven.plugin-tools.version>3.6.0</maven.plugin-tools.version>
   </properties>
   <dependencies>
     <dependency>
@@ -45,6 +45,14 @@
       <artifactId>maven-plugin-annotations</artifactId>
       <version>${maven.plugin-tools.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <!-- excluding dependency that conflicts with other maven
+             dependencies -->
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-artifact</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -60,19 +68,35 @@
       <version>${maven-shade-plugin.version}</version>
       <scope>provided</scope>
       <exclusions>
-        <!-- shade conflicts with itself and our other maven internals
-             by including a combination of 3.x and 2.x
-          -->
+        <!-- shade conflicts with itself and other maven internals so we simply
+             exclude shade's (older) copies of the dependencies -->
         <exclusion>
-          <groupId>org.apache.maven.shared</groupId>
-          <artifactId>maven-dependency-tree</artifactId>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-artifact</artifactId>
         </exclusion>
-        <!-- again, shade conflicts with itself on the transitives of this
-             dependency
-          -->
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-compat</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-model</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-plugin-api</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.vafer</groupId>
           <artifactId>jdependency</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.sonatype.sisu</groupId>
+          <artifactId>sisu-inject-plexus</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

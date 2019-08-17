@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,7 +55,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,17 +68,16 @@ import org.junit.rules.Timeout;
  */
 public class TestDataNodeVolumeFailureReporting {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestDataNodeVolumeFailureReporting.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeVolumeFailureReporting.class);
   {
     GenericTestUtils.setLogLevel(TestDataNodeVolumeFailureReporting.LOG,
-        Level.ALL);
+        Level.TRACE);
   }
 
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Configuration conf;
-  private String dataDir;
   private long volumeCapacity;
 
   // Sleep at least 3 seconds (a 1s heartbeat plus padding) to allow
@@ -104,7 +103,7 @@ public class TestDataNodeVolumeFailureReporting {
 
   @After
   public void tearDown() throws Exception {
-    IOUtils.cleanup(LOG, fs);
+    IOUtils.cleanupWithLogger(LOG, fs);
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
@@ -134,10 +133,10 @@ public class TestDataNodeVolumeFailureReporting {
     final long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
-    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    File dn3Vol1 = new File(dataDir, "data"+(2*2+1));
-    File dn3Vol2 = new File(dataDir, "data"+(2*2+2));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
+    File dn3Vol1 = cluster.getInstanceStorageDir(2, 0);
+    File dn3Vol2 = cluster.getInstanceStorageDir(2, 1);
 
     /*
      * Make the 1st volume directories on the first two datanodes
@@ -275,8 +274,8 @@ public class TestDataNodeVolumeFailureReporting {
 
     // Fail the first volume on both datanodes (we have to keep the 
     // third healthy so one node in the pipeline will not fail). 
-    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
 
     Path file1 = new Path("/test1");
@@ -317,10 +316,10 @@ public class TestDataNodeVolumeFailureReporting {
     long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
-    File dn1Vol1 = new File(dataDir, "data"+(4*0+1));
-    File dn1Vol2 = new File(dataDir, "data"+(4*0+2));
-    File dn2Vol1 = new File(dataDir, "data"+(4*1+1));
-    File dn2Vol2 = new File(dataDir, "data"+(4*1+2));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn1Vol2 = cluster.getInstanceStorageDir(0, 1);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
+    File dn2Vol2 = cluster.getInstanceStorageDir(1, 1);
 
     // Make the first two volume directories on the first two datanodes
     // non-accessible.
@@ -376,10 +375,10 @@ public class TestDataNodeVolumeFailureReporting {
 
     // Fail the first volume on both datanodes (we have to keep the
     // third healthy so one node in the pipeline will not fail).
-    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
-    File dn1Vol2 = new File(dataDir, "data"+(2*0+2));
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    File dn2Vol2 = new File(dataDir, "data"+(2*1+2));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn1Vol2 = cluster.getInstanceStorageDir(0, 1);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
+    File dn2Vol2 = cluster.getInstanceStorageDir(1, 1);
     DataNodeTestUtils.injectDataDirFailure(dn1Vol1);
     DataNodeTestUtils.injectDataDirFailure(dn2Vol1);
 
@@ -528,8 +527,8 @@ public class TestDataNodeVolumeFailureReporting {
   @Test
   public void testHotSwapOutFailedVolumeAndReporting()
           throws Exception {
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     final DataNode dn0 = cluster.getDataNodes().get(0);
     final String oldDataDirs = dn0.getConf().get(
             DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
@@ -777,7 +776,6 @@ public class TestDataNodeVolumeFailureReporting {
         .storagesPerDatanode(storagesPerDatanode).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    dataDir = cluster.getDataDirectory();
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(
         cluster.getNamesystem().getBlockManager().getDatanodeManager(), 0);
     volumeCapacity = dnCapacity / cluster.getStoragesPerDatanode();

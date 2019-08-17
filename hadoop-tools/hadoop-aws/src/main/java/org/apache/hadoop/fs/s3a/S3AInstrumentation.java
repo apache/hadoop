@@ -120,7 +120,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   private final MutableCounterLong streamBytesReadInClose;
   private final MutableCounterLong streamBytesDiscardedInAbort;
   private final MutableCounterLong ignoredErrors;
-
+  private final MutableQuantiles putLatencyQuantile;
+  private final MutableQuantiles throttleRateQuantile;
   private final MutableCounterLong numberOfFilesCreated;
   private final MutableCounterLong numberOfFilesCopied;
   private final MutableCounterLong bytesOfFilesCopied;
@@ -139,6 +140,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       INVOCATION_CREATE_NON_RECURSIVE,
       INVOCATION_DELETE,
       INVOCATION_EXISTS,
+      INVOCATION_GET_DELEGATION_TOKEN,
+      INVOCATION_GET_FILE_CHECKSUM,
       INVOCATION_GET_FILE_STATUS,
       INVOCATION_GLOB_STATUS,
       INVOCATION_IS_DIRECTORY,
@@ -158,6 +161,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       OBJECT_PUT_BYTES,
       OBJECT_PUT_REQUESTS,
       OBJECT_PUT_REQUESTS_COMPLETED,
+      OBJECT_SELECT_REQUESTS,
+      STREAM_READ_VERSION_MISMATCHES,
       STREAM_WRITE_FAILURES,
       STREAM_WRITE_BLOCK_UPLOADS,
       STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
@@ -178,9 +183,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       COMMITTER_MAGIC_FILES_CREATED,
       S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
       S3GUARD_METADATASTORE_INITIALIZATION,
+      S3GUARD_METADATASTORE_RECORD_DELETES,
+      S3GUARD_METADATASTORE_RECORD_READS,
+      S3GUARD_METADATASTORE_RECORD_WRITES,
       S3GUARD_METADATASTORE_RETRY,
       S3GUARD_METADATASTORE_THROTTLED,
-      STORE_IO_THROTTLED
+      STORE_IO_THROTTLED,
+      DELEGATION_TOKENS_ISSUED,
+      FILES_DELETE_REJECTED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {
@@ -234,9 +244,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
     //todo need a config for the quantiles interval?
     int interval = 1;
-    quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+    putLatencyQuantile = quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
         "ops", "latency", interval);
-    quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+    throttleRateQuantile = quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
 
     registerAsMetricsSource(name);
@@ -266,9 +276,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       number = ++metricsSourceNameCounter;
     }
     String msName = METRICS_SOURCE_BASENAME + number;
-    if (number > 1) {
-      msName = msName + number;
-    }
     metricsSourceName = msName + "-" + name.getHost();
     metricsSystem.register(metricsSourceName, "", this);
   }
@@ -550,7 +557,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * Create a stream input statistics instance.
    * @return the new instance
    */
-  InputStreamStatistics newInputStreamStatistics() {
+  public InputStreamStatistics newInputStreamStatistics() {
     return new InputStreamStatistics();
   }
 
@@ -593,6 +600,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     streamReadsIncomplete.incr(statistics.readsIncomplete);
     streamBytesReadInClose.incr(statistics.bytesReadInClose);
     streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
+    incrementCounter(STREAM_READ_VERSION_MISMATCHES,
+        statistics.versionMismatches.get());
   }
 
   @Override
@@ -602,6 +611,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
 
   public void close() {
     synchronized (metricsSystemLock) {
+      putLatencyQuantile.stop();
+      throttleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
       int activeSources = --metricsSourceActiveCounter;
       if (activeSources == 0) {
@@ -638,6 +649,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     public long bytesDiscardedInAbort;
     public long policySetCount;
     public long inputPolicy;
+    /** This is atomic so that it can be passed as a reference. */
+    private final AtomicLong versionMismatches = new AtomicLong(0);
+    private InputStreamStatistics mergedStats;
 
     private InputStreamStatistics() {
     }
@@ -750,7 +764,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      */
     @Override
     public void close() {
-      mergeInputStreamStatistics(this);
+      merge(true);
     }
 
     /**
@@ -760,6 +774,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     public void inputPolicySet(int updatedPolicy) {
       policySetCount++;
       inputPolicy = updatedPolicy;
+    }
+
+    /**
+     * Get a reference to the version mismatch counter.
+     * @return a counter which can be incremented.
+     */
+    public AtomicLong getVersionMismatchCounter() {
+      return versionMismatches;
     }
 
     /**
@@ -795,8 +817,91 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append(", InputPolicySetCount=").append(policySetCount);
+      sb.append(", versionMismatches=").append(versionMismatches.get());
       sb.append('}');
       return sb.toString();
+    }
+
+    /**
+     * Merge the statistics into the filesystem's instrumentation instance.
+     * Takes a diff between the current version of the stats and the
+     * version of the stats when merge was last called, and merges the diff
+     * into the instrumentation instance. Used to periodically merge the
+     * stats into the fs-wide stats. <b>Behavior is undefined if called on a
+     * closed instance.</b>
+     */
+    void merge(boolean isClosed) {
+      if (mergedStats != null) {
+        mergeInputStreamStatistics(diff(mergedStats));
+      } else {
+        mergeInputStreamStatistics(this);
+      }
+      // If stats are closed, no need to create another copy
+      if (!isClosed) {
+        mergedStats = copy();
+      }
+    }
+
+    /**
+     * Returns a diff between this {@link InputStreamStatistics} instance and
+     * the given {@link InputStreamStatistics} instance.
+     */
+    private InputStreamStatistics diff(InputStreamStatistics inputStats) {
+      InputStreamStatistics diff = new InputStreamStatistics();
+      diff.openOperations = openOperations - inputStats.openOperations;
+      diff.closeOperations = closeOperations - inputStats.closeOperations;
+      diff.closed = closed - inputStats.closed;
+      diff.aborted = aborted - inputStats.aborted;
+      diff.seekOperations = seekOperations - inputStats.seekOperations;
+      diff.readExceptions = readExceptions - inputStats.readExceptions;
+      diff.forwardSeekOperations =
+              forwardSeekOperations - inputStats.forwardSeekOperations;
+      diff.backwardSeekOperations =
+              backwardSeekOperations - inputStats.backwardSeekOperations;
+      diff.bytesRead = bytesRead - inputStats.bytesRead;
+      diff.bytesSkippedOnSeek =
+              bytesSkippedOnSeek - inputStats.bytesSkippedOnSeek;
+      diff.bytesBackwardsOnSeek =
+              bytesBackwardsOnSeek - inputStats.bytesBackwardsOnSeek;
+      diff.readOperations = readOperations - inputStats.readOperations;
+      diff.readFullyOperations =
+              readFullyOperations - inputStats.readFullyOperations;
+      diff.readsIncomplete = readsIncomplete - inputStats.readsIncomplete;
+      diff.bytesReadInClose = bytesReadInClose - inputStats.bytesReadInClose;
+      diff.bytesDiscardedInAbort =
+              bytesDiscardedInAbort - inputStats.bytesDiscardedInAbort;
+      diff.policySetCount = policySetCount - inputStats.policySetCount;
+      diff.inputPolicy = inputPolicy - inputStats.inputPolicy;
+      diff.versionMismatches.set(versionMismatches.longValue() -
+              inputStats.versionMismatches.longValue());
+      return diff;
+    }
+
+    /**
+     * Returns a new {@link InputStreamStatistics} instance with all the same
+     * values as this {@link InputStreamStatistics}.
+     */
+    private InputStreamStatistics copy() {
+      InputStreamStatistics copy = new InputStreamStatistics();
+      copy.openOperations = openOperations;
+      copy.closeOperations = closeOperations;
+      copy.closed = closed;
+      copy.aborted = aborted;
+      copy.seekOperations = seekOperations;
+      copy.readExceptions = readExceptions;
+      copy.forwardSeekOperations = forwardSeekOperations;
+      copy.backwardSeekOperations = backwardSeekOperations;
+      copy.bytesRead = bytesRead;
+      copy.bytesSkippedOnSeek = bytesSkippedOnSeek;
+      copy.bytesBackwardsOnSeek = bytesBackwardsOnSeek;
+      copy.readOperations = readOperations;
+      copy.readFullyOperations = readFullyOperations;
+      copy.readsIncomplete = readsIncomplete;
+      copy.bytesReadInClose = bytesReadInClose;
+      copy.bytesDiscardedInAbort = bytesDiscardedInAbort;
+      copy.policySetCount = policySetCount;
+      copy.inputPolicy = inputPolicy;
+      return copy;
     }
   }
 
@@ -1034,16 +1139,40 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Throttled request.
      */
     public void throttled() {
-      incrementCounter(S3GUARD_METADATASTORE_THROTTLED, 1);
-      addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+      // counters are incremented by owner.
     }
 
     /**
      * S3Guard is retrying after a (retryable) failure.
      */
     public void retrying() {
-      incrementCounter(S3GUARD_METADATASTORE_RETRY, 1);
+      // counters are incremented by owner.
     }
+
+    /**
+     * Records have been read.
+     * @param count the number of records read
+     */
+    public void recordsDeleted(int count) {
+      incrementCounter(S3GUARD_METADATASTORE_RECORD_DELETES, count);
+    }
+
+    /**
+     * Records have been read.
+     * @param count the number of records read
+     */
+    public void recordsRead(int count) {
+      incrementCounter(S3GUARD_METADATASTORE_RECORD_READS, count);
+    }
+
+    /**
+     * records have been written (including deleted).
+     * @param count number of records written.
+     */
+    public void recordsWritten(int count) {
+      incrementCounter(S3GUARD_METADATASTORE_RECORD_WRITES, count);
+    }
+
   }
 
   /**
@@ -1104,6 +1233,30 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
+   * Create a delegation token statistics instance.
+   * @return an instance of delegation token statistics
+   */
+  public DelegationTokenStatistics newDelegationTokenStatistics() {
+    return new DelegationTokenStatistics();
+  }
+
+  /**
+   * Instrumentation exported to S3A Delegation Token support.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public final class DelegationTokenStatistics {
+
+    private DelegationTokenStatistics() {
+    }
+
+    /** A token has been issued. */
+    public void tokenIssued() {
+      incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
+    }
+  }
+
+    /**
    * Copy all the metrics to a map of (name, long-value).
    * @return a map of the metrics
    */

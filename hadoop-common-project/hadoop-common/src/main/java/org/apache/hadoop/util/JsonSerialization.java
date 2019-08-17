@@ -21,18 +21,22 @@ package org.apache.hadoop.util;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +69,26 @@ public class JsonSerialization<T> {
   private final Class<T> classType;
   private final ObjectMapper mapper;
 
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
+
+  private static final ObjectReader MAP_READER =
+      new ObjectMapper().readerFor(Map.class);
+
+  /**
+   * @return an ObjectWriter which pretty-prints its output
+   */
+  public static ObjectWriter writer() {
+    return WRITER;
+  }
+
+  /**
+   * @return an ObjectReader which returns simple Maps.
+   */
+  public static ObjectReader mapReader() {
+    return MAP_READER;
+  }
+
   /**
    * Create an instance bound to a specific type.
    * @param classType class to marshall
@@ -87,6 +111,14 @@ public class JsonSerialization<T> {
    */
   public String getName() {
     return classType.getSimpleName();
+  }
+
+  /**
+   * Get the mapper of this class.
+   * @return the mapper
+   */
+  public ObjectMapper getMapper() {
+    return mapper;
   }
 
   /**
@@ -153,12 +185,12 @@ public class JsonSerialization<T> {
    * Save to a local file. Any existing file is overwritten unless
    * the OS blocks that.
    * @param file file
-   * @param path path
+   * @param instance instance
    * @throws IOException IO exception
    */
   public void save(File file, T instance) throws
       IOException {
-    writeJsonAsBytes(instance, new FileOutputStream(file));
+    writeJsonAsBytes(instance, Files.newOutputStream(file.toPath()));
   }
 
   /**

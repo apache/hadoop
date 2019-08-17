@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.util.hash;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -69,11 +71,11 @@ public class JenkinsHash extends Hash {
    * <p>The best hash table sizes are powers of 2.  There is no need to do mod
    * a prime (mod is sooo slow!).  If you need less than 32 bits, use a bitmask.
    * For example, if you need only 10 bits, do
-   * <code>h = (h & hashmask(10));</code>
+   * <code>h = (h &amp; hashmask(10));</code>
    * In which case, the hash table should have hashsize(10) elements.
    * 
    * <p>If you are hashing n strings byte[][] k, do it like this:
-   * for (int i = 0, h = 0; i < n; ++i) h = hash( k[i], h);
+   * for (int i = 0, h = 0; i &lt; n; ++i) h = hash( k[i], h);
    * 
    * <p>By Bob Jenkins, 2006.  bob_jenkins@burtleburtle.net.  You may use this
    * code any way you wish, private, educational, or commercial.  It's free.
@@ -252,7 +254,7 @@ public class JenkinsHash extends Hash {
       System.err.println("Usage: JenkinsHash filename");
       System.exit(-1);
     }
-    try (FileInputStream in = new FileInputStream(args[0])) {
+    try (InputStream in = Files.newInputStream(Paths.get(args[0]))) {
       byte[] bytes = new byte[512];
       int value = 0;
       JenkinsHash hash = new JenkinsHash();

@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Random;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -53,7 +53,8 @@ import org.junit.Before;
  * This class provide utilities for testing of the admin operations of nodes.
  */
 public class AdminStatesBaseTest {
-  public static final Log LOG = LogFactory.getLog(AdminStatesBaseTest.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AdminStatesBaseTest.class);
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;

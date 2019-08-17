@@ -18,9 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 
+
+
+import java.util.Set;
+
 public interface LogHandler extends EventHandler<LogHandlerEvent> {
   public void handle(LogHandlerEvent event);
+
+  public Set<ApplicationId> getInvalidTokenApps();
 }

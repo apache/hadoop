@@ -34,6 +34,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -64,6 +65,9 @@ public class MRAMSimulator extends AMSimulator {
   Maps are scheduled as soon as their requests are received. Reduces are
   scheduled when all maps have finished (not support slow-start currently).
   */
+
+  public static final String MAP_TYPE = "map";
+  public static final String REDUCE_TYPE = "reduce";
 
   private static final int PRIORITY_REDUCE = 10;
   private static final int PRIORITY_MAP = 20;
@@ -123,10 +127,11 @@ public class MRAMSimulator extends AMSimulator {
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
       long traceStartTime, long traceFinishTime, String user, String queue,
       boolean isTracked, String oldAppId, long baselineStartTimeMS,
-      Resource amContainerResource) {
-    super.init(heartbeatInterval, containerList, rm, se,
-        traceStartTime, traceFinishTime, user, queue, isTracked, oldAppId,
-        baselineStartTimeMS, amContainerResource);
+      Resource amContainerResource, String nodeLabelExpr,
+      Map<String, String> params, Map<ApplicationId, AMSimulator> appIdAMSim) {
+    super.init(heartbeatInterval, containerList, rm, se, traceStartTime,
+        traceFinishTime, user, queue, isTracked, oldAppId, baselineStartTimeMS,
+        amContainerResource, nodeLabelExpr, params, appIdAMSim);
     amtype = "mapreduce";
 
     // get map/reduce tasks

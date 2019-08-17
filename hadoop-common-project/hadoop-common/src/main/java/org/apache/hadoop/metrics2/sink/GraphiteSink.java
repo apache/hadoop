@@ -61,7 +61,6 @@ public class GraphiteSink implements MetricsSink, Closeable {
     if (metricsPrefix == null) {
       metricsPrefix = "";
     }
-
     graphite = new Graphite(serverHost, serverPort);
     graphite.connect();
   }

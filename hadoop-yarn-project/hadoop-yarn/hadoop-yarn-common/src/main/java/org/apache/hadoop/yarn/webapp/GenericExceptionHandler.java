@@ -28,8 +28,8 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.UnmarshalException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -44,8 +44,8 @@ import com.google.inject.Singleton;
 @Singleton
 @Provider
 public class GenericExceptionHandler implements ExceptionMapper<Exception> {
-  public static final Log LOG = LogFactory
-      .getLog(GenericExceptionHandler.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(GenericExceptionHandler.class);
 
   private @Context
   HttpServletResponse response;

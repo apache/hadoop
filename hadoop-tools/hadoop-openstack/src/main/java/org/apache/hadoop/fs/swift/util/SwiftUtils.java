@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.swift.util;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -98,7 +98,7 @@ public final class SwiftUtils {
    * @param text text message
    * @param args args arguments to the print statement
    */
-  public static void debug(Log log, String text, Object... args) {
+  public static void debug(Logger log, String text, Object... args) {
     if (log.isDebugEnabled()) {
       log.debug(String.format(text, args));
     }
@@ -110,7 +110,7 @@ public final class SwiftUtils {
    * @param text text message
    * @param ex exception
    */
-  public static void debugEx(Log log, String text, Exception ex) {
+  public static void debugEx(Logger log, String text, Exception ex) {
     if (log.isDebugEnabled()) {
       log.debug(text + ex, ex);
     }
@@ -124,7 +124,7 @@ public final class SwiftUtils {
    * @param text text message
    * @param args args arguments to the print statement
    */
-  public static void trace(Log log, String text, Object... args) {
+  public static void trace(Logger log, String text, Object... args) {
     if (log.isTraceEnabled()) {
       log.trace(String.format(text, args));
     }

@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
  * This exception is thrown when details of an unknown resource type
@@ -28,18 +30,31 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class ResourceNotFoundException extends YarnRuntimeException {
-
   private static final long serialVersionUID = 10081982L;
+  private static final String MESSAGE = "The resource manager encountered a "
+      + "problem that should not occur under normal circumstances. "
+      + "Please report this error to the Hadoop community by opening a "
+      + "JIRA ticket at http://issues.apache.org/jira and including the "
+      + "following information:%n* Resource type requested: %s%n* Resource "
+      + "object: %s%n* The stack trace for this exception: %s%n"
+      + "After encountering this error, the resource manager is "
+      + "in an inconsistent state. It is safe for the resource manager "
+      + "to be restarted as the error encountered should be transitive. "
+      + "If high availability is enabled, failing over to "
+      + "a standby resource manager is also safe.";
+
+  public ResourceNotFoundException(Resource resource, String type) {
+    this(String.format(MESSAGE, type, resource,
+        ExceptionUtils.getStackTrace(new Exception())));
+  }
+
+  public ResourceNotFoundException(Resource resource, String type,
+      Throwable cause) {
+    super(String.format(MESSAGE, type, resource,
+        ExceptionUtils.getStackTrace(cause)), cause);
+  }
 
   public ResourceNotFoundException(String message) {
     super(message);
-  }
-
-  public ResourceNotFoundException(Throwable cause) {
-    super(cause);
-  }
-
-  public ResourceNotFoundException(String message, Throwable cause) {
-    super(message, cause);
   }
 }

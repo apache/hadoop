@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.service.monitor.probe;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,15 +28,20 @@ import java.net.Socket;
 import java.util.Map;
 
 /**
- * Probe for a port being open.
+ * A probe that checks whether a container has a specified port open. This
+ * probe also performs the checks of the {@link DefaultProbe}. Additional
+ * configurable properties include:
+ *
+ *   port - required port for socket connection
+ *   timeout - connection timeout (default 1000)
  */
-public class PortProbe extends Probe {
+public class PortProbe extends DefaultProbe {
   protected static final Logger log = LoggerFactory.getLogger(PortProbe.class);
   private final int port;
   private final int timeout;
 
-  public PortProbe(int port, int timeout) {
-    super("Port probe of " + port + " for " + timeout + "ms", null);
+  public PortProbe(int port, int timeout, Map<String, String> props) {
+    super("Port probe of " + port + " for " + timeout + "ms", props);
     this.port = port;
     this.timeout = timeout;
   }
@@ -54,7 +58,7 @@ public class PortProbe extends Probe {
     int timeout = getPropertyInt(props, PORT_PROBE_CONNECT_TIMEOUT,
         PORT_PROBE_CONNECT_TIMEOUT_DEFAULT);
 
-    return new PortProbe(port, timeout);
+    return new PortProbe(port, timeout, props);
   }
 
   /**
@@ -65,12 +69,8 @@ public class PortProbe extends Probe {
    */
   @Override
   public ProbeStatus ping(ComponentInstance instance) {
-    ProbeStatus status = new ProbeStatus();
-
-    if (instance.getContainerStatus() == null || ServiceUtils
-        .isEmpty(instance.getContainerStatus().getIPs())) {
-      status.fail(this, new IOException(
-          instance.getCompInstanceName() + ": IP is not available yet"));
+    ProbeStatus status = super.ping(instance);
+    if (!status.isSuccess()) {
       return status;
     }
 

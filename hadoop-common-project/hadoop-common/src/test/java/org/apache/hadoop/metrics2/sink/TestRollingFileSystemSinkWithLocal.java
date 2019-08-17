@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.sink;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.metrics2.MetricsSystem;
 
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
     MetricsSystem ms = initMetricsSystem(path, false, false);
 
     assertMetricsContents(doWriteTest(ms, path, 1));
@@ -49,7 +50,7 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testSilentWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
     MetricsSystem ms = initMetricsSystem(path, true, false);
 
     assertMetricsContents(doWriteTest(ms, path, 1));
@@ -62,7 +63,7 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testExistingWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
 
     assertMetricsContents(doAppendTest(path, false, false, 2));
   }
@@ -75,7 +76,7 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testExistingWrite2() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
     MetricsSystem ms = initMetricsSystem(path, false, false);
 
     preCreateLogFile(path, 2);
@@ -91,7 +92,7 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testSilentExistingWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
 
     assertMetricsContents(doAppendTest(path, false, false, 2));
   }
@@ -101,12 +102,12 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testFailedWrite() {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
     MetricsSystem ms = initMetricsSystem(path, false, false);
 
     new MyMetrics1().registerWith(ms);
 
-    methodDir.setWritable(false);
+    assertTrue(FileUtil.setWritable(methodDir, false));
     MockSink.errored = false;
 
     try {
@@ -130,12 +131,12 @@ public class TestRollingFileSystemSinkWithLocal
    */
   @Test
   public void testSilentFailedWrite() {
-    String path = methodDir.getAbsolutePath();
+    String path = methodDir.toURI().toString();
     MetricsSystem ms = initMetricsSystem(path, true, false);
 
     new MyMetrics1().registerWith(ms);
 
-    methodDir.setWritable(false);
+    assertTrue(FileUtil.setWritable(methodDir, false));
     MockSink.errored = false;
 
     try {

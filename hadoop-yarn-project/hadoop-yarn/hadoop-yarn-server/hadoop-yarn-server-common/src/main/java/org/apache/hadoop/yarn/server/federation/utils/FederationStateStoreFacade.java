@@ -36,7 +36,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -392,6 +392,15 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * Get the configuration.
+   *
+   * @return configuration object
+   */
+  public Configuration getConf() {
+    return this.conf;
+  }
+
+  /**
    * Helper method to create instances of Object using the class name defined in
    * the configuration object. The instances creates {@link RetryProxy} using
    * the specific {@link RetryPolicy}.
@@ -454,8 +463,9 @@ public final class FederationStateStoreFacade {
 
   private Object buildGetSubClustersCacheRequest(
       final boolean filterInactiveSubClusters) {
-    final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_SUBCLUSTERS_CACHEID, null);
+    final String cacheKey =
+        buildCacheKey(getClass().getSimpleName(), GET_SUBCLUSTERS_CACHEID,
+            Boolean.toString(filterInactiveSubClusters));
     CacheRequest<String, Map<SubClusterId, SubClusterInfo>> cacheRequest =
         new CacheRequest<String, Map<SubClusterId, SubClusterInfo>>(cacheKey,
             new Func<String, Map<SubClusterId, SubClusterInfo>>() {
@@ -506,8 +516,8 @@ public final class FederationStateStoreFacade {
   protected String buildCacheKey(String typeName, String methodName,
       String argName) {
     StringBuilder buffer = new StringBuilder();
-    buffer.append(typeName).append(".");
-    buffer.append(methodName);
+    buffer.append(typeName).append(".")
+        .append(methodName);
     if (argName != null) {
       buffer.append("::");
       buffer.append(argName);
@@ -538,7 +548,7 @@ public final class FederationStateStoreFacade {
         throws CacheLoaderException {
       // The FACADE does not use the Cache's getAll API. Hence this is not
       // required to be implemented
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
   }
 

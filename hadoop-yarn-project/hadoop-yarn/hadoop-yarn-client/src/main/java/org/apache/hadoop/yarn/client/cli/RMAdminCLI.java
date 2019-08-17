@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -36,7 +35,7 @@ import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -54,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -77,12 +77,14 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+
+import static org.apache.hadoop.yarn.client.util.YarnClientUtils.NO_LABEL_ERR_MSG;
 
 @Private
 @Unstable
@@ -91,15 +93,10 @@ public class RMAdminCLI extends HAAdmin {
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
   static CommonNodeLabelsManager localNodeLabelsManager = null;
-  private static final String NO_LABEL_ERR_MSG =
-      "No cluster node-labels are specified";
   private static final String NO_MAPPING_ERR_MSG =
       "No node-to-labels mappings are specified";
   private static final String INVALID_TIMEOUT_ERR_MSG =
       "Invalid timeout specified : ";
-  private static final String ADD_LABEL_FORMAT_ERR_MSG =
-      "Input format for adding node-labels is not correct, it should be "
-          + "labelName1[(exclusive=true/false)],LabelName2[] ..";
   private static final Pattern RESOURCE_TYPES_ARGS_PATTERN =
       Pattern.compile("^[0-9]*$");
 
@@ -190,7 +187,8 @@ public class RMAdminCLI extends HAAdmin {
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")
-          || cmdEntry.getKey().equals("-failover")) {
+          || cmdEntry.getKey().equals("-failover")
+          || cmdEntry.getKey().equals("-transitionToObserver")) {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
@@ -294,8 +292,8 @@ public class RMAdminCLI extends HAAdmin {
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
-    summary.append(" [-help [cmd]]");
-    summary.append("\n");
+    summary.append(" [-help [cmd]]")
+        .append("\n");
 
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -305,7 +303,8 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (isHAEnabled) {
       for (String cmdKey : USAGE.keySet()) {
-        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")) {
+        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
+            && !cmdKey.equals("-transitionToObserver")) {
           buildHelpMsg(cmdKey, helpBuilder);
           helpBuilder.append("\n");
         }
@@ -514,8 +513,8 @@ public class RMAdminCLI extends HAAdmin {
       StringBuilder sb = new StringBuilder();
       sb.append(username + " :");
       for (String group : adminProtocol.getGroupsForUser(username)) {
-        sb.append(" ");
-        sb.append(group);
+        sb.append(" ")
+            .append(group);
       }
       System.out.println(sb);
     }
@@ -532,65 +531,6 @@ public class RMAdminCLI extends HAAdmin {
       localNodeLabelsManager.start();
     }
     return localNodeLabelsManager;
-  }
-  
-  private List<NodeLabel> buildNodeLabelsFromStr(String args) {
-    List<NodeLabel> nodeLabels = new ArrayList<>();
-    for (String p : args.split(",")) {
-      if (!p.trim().isEmpty()) {
-        String labelName = p;
-
-        // Try to parse exclusive
-        boolean exclusive = NodeLabel.DEFAULT_NODE_LABEL_EXCLUSIVITY;
-        int leftParenthesisIdx = p.indexOf("(");
-        int rightParenthesisIdx = p.indexOf(")");
-
-        if ((leftParenthesisIdx == -1 && rightParenthesisIdx != -1)
-            || (leftParenthesisIdx != -1 && rightParenthesisIdx == -1)) {
-          // Parenthese not match
-          throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
-        }
-
-        if (leftParenthesisIdx > 0 && rightParenthesisIdx > 0) {
-          if (leftParenthesisIdx > rightParenthesisIdx) {
-            // Parentese not match
-            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
-          }
-
-          String property = p.substring(p.indexOf("(") + 1, p.indexOf(")"));
-          if (property.contains("=")) {
-            String key = property.substring(0, property.indexOf("=")).trim();
-            String value =
-                property
-                    .substring(property.indexOf("=") + 1, property.length())
-                    .trim();
-
-            // Now we only support one property, which is exclusive, so check if
-            // key = exclusive and value = {true/false}
-            if (key.equals("exclusive")
-                && ImmutableSet.of("true", "false").contains(value)) {
-              exclusive = Boolean.parseBoolean(value);
-            } else {
-              throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
-            }
-          } else if (!property.trim().isEmpty()) {
-            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
-          }
-        }
-
-        // Try to get labelName if there's "(..)"
-        if (labelName.contains("(")) {
-          labelName = labelName.substring(0, labelName.indexOf("(")).trim();
-        }
-
-        nodeLabels.add(NodeLabel.newInstance(labelName, exclusive));
-      }
-    }
-
-    if (nodeLabels.isEmpty()) {
-      throw new IllegalArgumentException(NO_LABEL_ERR_MSG);
-    }
-    return nodeLabels;
   }
 
   private Set<String> buildNodeLabelNamesFromStr(String args) {
@@ -624,7 +564,7 @@ public class RMAdminCLI extends HAAdmin {
       return exitCode;
     }
 
-    List<NodeLabel> labels = buildNodeLabelsFromStr(
+    List<NodeLabel> labels = YarnClientUtils.buildNodeLabelsFromStr(
         cliParser.getOptionValue("addToClusterNodeLabels"));
     if (cliParser.hasOption("directlyAccessNodeLabelStore")) {
       getNodeLabelManagerInstance(getConf()).addToCluserNodeLabels(labels);
@@ -993,8 +933,14 @@ public class RMAdminCLI extends HAAdmin {
         if (resourceTypesFromRM.containsKey(resName)) {
           String[] resourceValue = ResourceUtils.parseResourceValue(resValue);
           if (resourceValue.length == 2) {
+            long value = Long.parseLong(resourceValue[1]);
+            if (!resourceTypesFromRM.get(resName).getUnits()
+                .equals(resourceValue[0])) {
+              value = UnitsConversionUtil.convert(resourceValue[0],
+                  resourceTypesFromRM.get(resName).getUnits(), value);
+            }
             ResourceInformation ri = ResourceInformation.newInstance(resName,
-                resourceValue[0], Long.parseLong(resourceValue[1]));
+                resourceValue[0], value);
             resource.setResourceInformation(resName, ri);
           } else {
             throw new IllegalArgumentException("Invalid resource value: " +

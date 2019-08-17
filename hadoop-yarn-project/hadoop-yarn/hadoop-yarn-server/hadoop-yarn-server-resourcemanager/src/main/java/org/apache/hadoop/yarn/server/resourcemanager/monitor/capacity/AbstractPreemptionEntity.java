@@ -59,6 +59,10 @@ public class AbstractPreemptionEntity {
     this.selected = Resource.newInstance(0, 0);
   }
 
+  public String getQueueName() {
+    return queueName;
+  }
+
   public Resource getUsed() {
     return current;
   }

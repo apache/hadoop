@@ -8,17 +8,12 @@ following notices:
 * Copyright 2011 FuseSource Corp. http://fusesource.com
 
 The binary distribution of this product bundles binaries of
-AWS SDK for Java - Bundle 1.11.134,
-AWS Java SDK for AWS KMS 1.11.134,
-AWS Java SDK for Amazon S3 1.11.134,
-AWS Java SDK for AWS STS 1.11.134,
-JMES Path Query library 1.0,
+AWS SDK for Java - Bundle 1.11.563 (https://github.com/aws/aws-sdk-java),
 which has the following notices:
- * This software includes third party software subject to the following
- copyrights: - XML parsing and utility functions from JetS3t - Copyright
- 2006-2009 James Murty. - JSON parsing and utility functions from JSON.org -
- Copyright 2002 JSON.org. - PKCS#1 PEM encoded private key parsing and utility
- functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
+
+This software includes third party software subject to the following copyrights:
+- XML parsing and utility functions from JetS3t - Copyright 2006-2009 James Murty.
+- PKCS#1 PEM encoded private key parsing and utility functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
 
 The binary distribution of this product bundles binaries of
 Gson 2.2.4,
@@ -195,6 +190,14 @@ by Google Inc, which can be obtained at:
     * license/LICENSE.snappy.txt (New BSD License)
   * HOMEPAGE:
     * http://code.google.com/p/snappy/
+
+This product contains a modified portion of UnsignedBytes LexicographicalComparator
+from Guava v21 project by Google Inc, which can be obtained at:
+
+  * LICENSE:
+    * license/COPYING (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/google/guava
 
 This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
@@ -591,3 +594,39 @@ The binary distribution of this product bundles binaries of
 swagger-annotations (https://github.com/swagger-api/swagger-core),
 which has the following notices:
  * Copyright 2016 SmartBear Software
+
+The binary distribution of this product bundles binaries of
+metrics-core 3.2.4
+which has the following notices:
+ * Copyright 2010-2013 Coda Hale and Yammer, Inc.
+
+   This product includes software developed by Coda Hale and Yammer, Inc.
+
+   This product includes code derived from the JSR-166 project (ThreadLocalRandom, Striped64,
+   LongAdder), which was released with the following comments:
+
+   Written by Doug Lea with assistance from members of JCP JSR-166
+   Expert Group and released to the public domain, as explained at
+   http://creativecommons.org/publicdomain/zero/1.0/
+
+The source and binary distribution of this product bundles binaries of
+xterm.js 3.8.0
+which has the following notices:
+Copyright (c) 2017-2018, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+Copyright (c) 2014-2016, SourceLair Private Company (https://www.sourcelair.com)
+Copyright (c) 2012-2013, Christopher Jeffrey (https://github.com/chjj/)
+
+The source and binary distribution of this product bundles modified version of
+  github.com/awslabs/aws-js-s3-explorer licensed under Apache 2.0 license
+  with the following notice:
+
+AWS JavaScript S3 Explorer
+Copyright 2014-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+The binary distribution of this product bundles binaries of
+jline 3.9.0 (https://github.com/jline/jline3)
+
+  * LICENSE:
+    * license/LICENSE.jline3.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/jline/jline3

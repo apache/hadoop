@@ -92,6 +92,11 @@ public final class HdfsConstants {
    */
   public static final String CLIENT_NAMENODE_PROTOCOL_NAME =
       "org.apache.hadoop.hdfs.protocol.ClientProtocol";
+  /**
+   * Router admin Protocol Names.
+   */
+  public static final String ROUTER_ADMIN_PROTOCOL_NAME =
+      "org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocol";
 
   // Timeouts for communicating with DataNode for streaming writes/reads
   public static final int READ_TIMEOUT = 60 * 1000;
@@ -128,6 +133,38 @@ public final class HdfsConstants {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET, SAFEMODE_FORCE_EXIT
   }
 
+  /**
+   * Storage policy satisfier service modes.
+   */
+  public enum StoragePolicySatisfierMode {
+
+    /**
+     * This mode represents that SPS service is running outside Namenode as an
+     * external service and can accept any SPS call request.
+     */
+    EXTERNAL,
+
+    /**
+     * This mode represents that SPS service is disabled and cannot accept any
+     * SPS call request.
+     */
+    NONE;
+
+    private static final Map<String, StoragePolicySatisfierMode> MAP =
+        new HashMap<>();
+
+    static {
+      for (StoragePolicySatisfierMode a : values()) {
+        MAP.put(a.name(), a);
+      }
+    }
+
+    /** Convert the given String to a StoragePolicySatisfierMode. */
+    public static StoragePolicySatisfierMode fromString(String s) {
+      return MAP.get(StringUtils.toUpperCase(s));
+    }
+  }
+
   public enum RollingUpgradeAction {
     QUERY, PREPARE, FINALIZE;
 
@@ -144,6 +181,13 @@ public final class HdfsConstants {
     public static RollingUpgradeAction fromString(String s) {
       return MAP.get(StringUtils.toUpperCase(s));
     }
+  }
+
+  /**
+   * Upgrade actions.
+   */
+  public enum UpgradeAction {
+    QUERY, FINALIZE;
   }
 
   // type of the datanode report

@@ -31,10 +31,10 @@ import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.*
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -54,8 +54,8 @@ import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -96,8 +96,8 @@ import javax.xml.stream.events.XMLEvent;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class OfflineImageReconstructor {
-  public static final Log LOG =
-      LogFactory.getLog(OfflineImageReconstructor.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageReconstructor.class);
 
   /**
    * The output stream.
@@ -385,8 +385,8 @@ class OfflineImageReconstructor {
           break;
         case XMLEvent.CHARACTERS:
           String val = XMLUtils.
-              unmangleXmlString(ev.asCharacters().getData(), true);
-          parent.setVal(val);
+              unmangleXmlString(ev.asCharacters().getData(), false);
+          parent.setVal(parent.getVal() + val);
           events.nextEvent();
           break;
         case XMLEvent.ATTRIBUTE:
@@ -1353,9 +1353,11 @@ class OfflineImageReconstructor {
         if (sd == null) {
           break;
         }
-        Long dir = sd.removeChildLong(SNAPSHOT_SECTION_DIR);
-        sd.verifyNoRemainingKeys("<dir>");
-        bld.addSnapshottableDir(dir);
+        Long dir;
+        while ((dir = sd.removeChildLong(SNAPSHOT_SECTION_DIR)) != null) {
+          // Add all snapshottable directories, one by one
+          bld.addSnapshottableDir(dir);
+        }
       }
       header.verifyNoRemainingKeys("SnapshotSection");
       bld.build().writeDelimitedTo(out);
@@ -1821,16 +1823,16 @@ class OfflineImageReconstructor {
   public static void run(String inputPath, String outputPath)
       throws Exception {
     MessageDigest digester = MD5Hash.getDigester();
-    FileOutputStream fout = null;
+    OutputStream fout = null;
     File foutHash = new File(outputPath + ".md5");
     Files.deleteIfExists(foutHash.toPath()); // delete any .md5 file that exists
     CountingOutputStream out = null;
-    FileInputStream fis = null;
+    InputStream fis = null;
     InputStreamReader reader = null;
     try {
       Files.deleteIfExists(Paths.get(outputPath));
-      fout = new FileOutputStream(outputPath);
-      fis = new FileInputStream(inputPath);
+      fout = Files.newOutputStream(Paths.get(outputPath));
+      fis = Files.newInputStream(Paths.get(inputPath));
       reader = new InputStreamReader(fis, Charset.forName("UTF-8"));
       out = new CountingOutputStream(
           new DigestOutputStream(
@@ -1839,7 +1841,7 @@ class OfflineImageReconstructor {
           new OfflineImageReconstructor(out, reader);
       oir.processXml();
     } finally {
-      IOUtils.cleanup(LOG, reader, fis, out, fout);
+      IOUtils.cleanupWithLogger(LOG, reader, fis, out, fout);
     }
     // Write the md5 file
     MD5FileUtils.saveMD5File(new File(outputPath),

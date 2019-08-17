@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -74,8 +74,8 @@ public class TestPlacementProcessor {
 
   private static final int GB = 1024;
 
-  private static final Log LOG =
-      LogFactory.getLog(TestPlacementProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestPlacementProcessor.class);
   private MockRM rm;
   private DrainDispatcher dispatcher;
 
@@ -86,8 +86,8 @@ public class TestPlacementProcessor {
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(
-        YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     conf.setInt(
         YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS, 1);
     startRM(conf);
@@ -381,8 +381,8 @@ public class TestPlacementProcessor {
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(
-        YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     startRM(conf);
 
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
@@ -533,8 +533,8 @@ public class TestPlacementProcessor {
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(
-        YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     conf.setInt(
         YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS, 2);
     startRM(conf);

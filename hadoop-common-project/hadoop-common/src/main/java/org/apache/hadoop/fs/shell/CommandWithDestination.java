@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.NotInMountpointException;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -494,6 +495,17 @@ abstract class CommandWithDestination extends FsCommand {
         throws IOException {
       try {
         if (lazyPersist) {
+          long defaultBlockSize;
+          try {
+            defaultBlockSize = getDefaultBlockSize();
+          } catch (NotInMountpointException ex) {
+            // ViewFileSystem#getDefaultBlockSize() throws an exception as it
+            // needs a target FS to retrive the default block size from.
+            // Hence, for ViewFs, we should call getDefaultBlockSize with the
+            // target path.
+            defaultBlockSize = getDefaultBlockSize(item.path);
+          }
+
           EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE, LAZY_PERSIST);
           return create(item.path,
                         FsPermission.getFileDefault().applyUMask(
@@ -502,7 +514,7 @@ abstract class CommandWithDestination extends FsCommand {
                         getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
                             IO_FILE_BUFFER_SIZE_DEFAULT),
                         (short) 1,
-                        getDefaultBlockSize(),
+                        defaultBlockSize,
                         null,
                         null);
         } else {

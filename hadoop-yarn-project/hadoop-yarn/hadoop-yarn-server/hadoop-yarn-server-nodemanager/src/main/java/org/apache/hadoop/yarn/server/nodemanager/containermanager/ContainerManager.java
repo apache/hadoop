@@ -44,4 +44,5 @@ public interface ContainerManager extends ServiceStateChangeListener,
 
   ContainerScheduler getContainerScheduler();
 
+  void handleCredentialUpdate();
 }

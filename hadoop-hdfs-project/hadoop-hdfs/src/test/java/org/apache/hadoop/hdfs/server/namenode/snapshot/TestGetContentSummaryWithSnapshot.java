@@ -81,24 +81,31 @@ public class TestGetContentSummaryWithSnapshot {
    * 3. create a 10 byte file /foo/bar/baz
    * Make sure for "/foo/bar" and "/foo/.snapshot/s1/bar" have correct results:
    * the 1 byte file is not included in snapshot s1.
+   * 4. create another snapshot, append to the file /foo/bar/baz,
+   * and make sure file count, directory count and file length is good.
+   * 5. delete the file, ensure contentSummary output too.
    */
   @Test
   public void testGetContentSummary() throws IOException {
     final Path foo = new Path("/foo");
     final Path bar = new Path(foo, "bar");
     final Path baz = new Path(bar, "baz");
+    final Path qux = new Path(bar, "qux");
+    final Path temp = new Path("/temp");
 
     dfs.mkdirs(bar);
+    dfs.mkdirs(temp);
     dfs.allowSnapshot(foo);
     dfs.createSnapshot(foo, "s1");
 
     DFSTestUtil.createFile(dfs, baz, 10, REPLICATION, 0L);
+    DFSTestUtil.createFile(dfs, qux, 10, REPLICATION, 0L);
 
     ContentSummary summary = cluster.getNameNodeRpc().getContentSummary(
         bar.toString());
     Assert.assertEquals(1, summary.getDirectoryCount());
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(10, summary.getLength());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(20, summary.getLength());
 
     final Path barS1 = SnapshotTestHelper.getSnapshotPath(foo, "s1", "bar");
     summary = cluster.getNameNodeRpc().getContentSummary(barS1.toString());
@@ -109,8 +116,8 @@ public class TestGetContentSummaryWithSnapshot {
     // also check /foo and /foo/.snapshot/s1
     summary = cluster.getNameNodeRpc().getContentSummary(foo.toString());
     Assert.assertEquals(2, summary.getDirectoryCount());
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(10, summary.getLength());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(20, summary.getLength());
 
     final Path fooS1 = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
     summary = cluster.getNameNodeRpc().getContentSummary(fooS1.toString());
@@ -118,10 +125,46 @@ public class TestGetContentSummaryWithSnapshot {
     Assert.assertEquals(0, summary.getFileCount());
     Assert.assertEquals(0, summary.getLength());
 
+    // create a new snapshot s2 and update the file
+    dfs.createSnapshot(foo, "s2");
+    DFSTestUtil.appendFile(dfs, baz, 10);
+    summary = cluster.getNameNodeRpc().getContentSummary(
+        bar.toString());
+    Assert.assertEquals(1, summary.getDirectoryCount());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(30, summary.getLength());
+
+    final Path fooS2 = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
+    summary = cluster.getNameNodeRpc().getContentSummary(fooS2.toString());
+    Assert.assertEquals(2, summary.getDirectoryCount());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(20, summary.getLength());
+
+    cluster.getNameNodeRpc().delete(baz.toString(), false);
+
+    summary = cluster.getNameNodeRpc().getContentSummary(
+        foo.toString());
+    Assert.assertEquals(0, summary.getSnapshotDirectoryCount());
+    Assert.assertEquals(1, summary.getSnapshotFileCount());
+    Assert.assertEquals(20, summary.getSnapshotLength());
+    Assert.assertEquals(2, summary.getDirectoryCount());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(30, summary.getLength());
+
     final Path bazS1 = SnapshotTestHelper.getSnapshotPath(foo, "s1", "bar/baz");
     try {
       cluster.getNameNodeRpc().getContentSummary(bazS1.toString());
       Assert.fail("should get FileNotFoundException");
     } catch (FileNotFoundException ignored) {}
+    cluster.getNameNodeRpc().rename(qux.toString(), "/temp/qux");
+    summary = cluster.getNameNodeRpc().getContentSummary(
+        foo.toString());
+    Assert.assertEquals(0, summary.getSnapshotDirectoryCount());
+    Assert.assertEquals(2, summary.getSnapshotFileCount());
+    Assert.assertEquals(30, summary.getSnapshotLength());
+    Assert.assertEquals(2, summary.getDirectoryCount());
+    Assert.assertEquals(2, summary.getFileCount());
+    Assert.assertEquals(30, summary.getLength());
+
   }
 }

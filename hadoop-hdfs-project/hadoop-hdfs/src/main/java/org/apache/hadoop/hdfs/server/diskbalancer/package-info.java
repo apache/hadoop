@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.diskbalancer;
 /**
  * Disk Balancer connects to a {@link org.apache.hadoop.hdfs.server.datanode
  * .DataNode} and attempts to spread data across all volumes evenly.
@@ -34,3 +33,4 @@ package org.apache.hadoop.hdfs.server.diskbalancer;
  * 3) Disk Balancer operates against data nodes which are live and operational.
  *
  */
+package org.apache.hadoop.hdfs.server.diskbalancer;

@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -85,7 +85,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
 public class TestGridMixClasses {
-  private static final Log LOG = LogFactory.getLog(TestGridMixClasses.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGridMixClasses.class);
 
   /*
    * simple test LoadSplit (getters,copy, write, read...)
@@ -595,16 +595,16 @@ public class TestGridMixClasses {
     Configuration conf = new Configuration();
 
     FileSystem fs1 = mock(FileSystem.class);
-    when(fs1.open((Path) anyObject())).thenReturn(
+    when(fs1.open(any(Path.class))).thenReturn(
             new FakeFSDataInputStream(new FakeInputStream()));
     Path p1 = mock(Path.class);
-    when(p1.getFileSystem((JobConf) anyObject())).thenReturn(fs1);
+    when(p1.getFileSystem(any())).thenReturn(fs1);
 
     FileSystem fs2 = mock(FileSystem.class);
-    when(fs2.open((Path) anyObject())).thenReturn(
+    when(fs2.open(any(Path.class))).thenReturn(
             new FakeFSDataInputStream(new FakeInputStream()));
     Path p2 = mock(Path.class);
-    when(p2.getFileSystem((JobConf) anyObject())).thenReturn(fs2);
+    when(p2.getFileSystem(any())).thenReturn(fs2);
 
     Path[] paths = {p1, p2};
 

@@ -36,4 +36,14 @@ public class AclException extends IOException {
   public AclException(String message) {
     super(message);
   }
+
+  /**
+   * Creates a new AclException.
+   *
+   * @param message String message
+   * @param cause The cause of the exception
+   */
+  public AclException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

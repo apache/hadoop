@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
@@ -41,9 +42,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.DateUtils;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -59,9 +61,11 @@ import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
@@ -95,7 +99,7 @@ import org.mockito.Mockito;
 import com.google.common.base.Supplier;
 
 public class TestCacheDirectives {
-  static final Log LOG = LogFactory.getLog(TestCacheDirectives.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCacheDirectives.class);
 
   private static final UserGroupInformation unprivilegedUser =
       UserGroupInformation.createRemoteUser("unprivilegedUser");
@@ -420,6 +424,9 @@ public class TestCacheDirectives {
         setMode(new FsPermission((short)0777)));
     proto.addCachePool(new CachePoolInfo("pool4").
         setMode(new FsPermission((short)0)));
+    proto.addCachePool(new CachePoolInfo("pool5").
+        setMode(new FsPermission((short)0007))
+        .setOwnerName(unprivilegedUser.getShortUserName()));
 
     CacheDirectiveInfo alpha = new CacheDirectiveInfo.Builder().
         setPath(new Path("/alpha")).
@@ -487,6 +494,18 @@ public class TestCacheDirectives {
     }
 
     long deltaId = addAsUnprivileged(delta);
+
+    try {
+      addAsUnprivileged(new CacheDirectiveInfo.Builder().
+          setPath(new Path("/epsilon")).
+          setPool("pool5").
+          build());
+      fail("expected an error when adding to a pool with " +
+          "mode 007 (no permissions for pool owner).");
+    } catch (AccessControlException e) {
+      GenericTestUtils.
+          assertExceptionContains("Permission denied while accessing pool", e);
+    }
 
     // We expect the following to succeed, because DistributedFileSystem
     // qualifies the path.
@@ -1540,5 +1559,114 @@ public class TestCacheDirectives {
     LocatedBlocks locations = Mockito.mock(LocatedBlocks.class);
     cm.setCachedLocations(locations);
     Mockito.verifyZeroInteractions(locations);
+  }
+
+  @Test(timeout=120000)
+  public void testAddingCacheDirectiveInfosWhenCachingIsDisabled()
+          throws Exception {
+    cluster.shutdown();
+    HdfsConfiguration config = createCachingConf();
+    config.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(config)
+            .numDataNodes(NUM_DATANODES).build();
+
+    cluster.waitActive();
+    dfs = cluster.getFileSystem();
+    namenode = cluster.getNameNode();
+    CacheManager cacheManager = namenode.getNamesystem().getCacheManager();
+    assertFalse(cacheManager.isEnabled());
+    assertNull(cacheManager.getCacheReplicationMonitor());
+    // Create the pool
+    String pool = "pool1";
+    namenode.getRpcServer().addCachePool(new CachePoolInfo(pool));
+    // Create some test files
+    final int numFiles = 2;
+    final int numBlocksPerFile = 2;
+    final List<String> paths = new ArrayList<String>(numFiles);
+    for (int i=0; i<numFiles; i++) {
+      Path p = new Path("/testCachePaths-" + i);
+      FileSystemTestHelper.createFile(dfs, p, numBlocksPerFile,
+              (int)BLOCK_SIZE);
+      paths.add(p.toUri().getPath());
+    }
+    // Check the initial statistics at the namenode
+    waitForCachedBlocks(namenode, 0, 0,
+            "testAddingCacheDirectiveInfosWhenCachingIsDisabled:0");
+    // Cache and check each path in sequence
+    int expected = 0;
+    for (int i=0; i<numFiles; i++) {
+      CacheDirectiveInfo directive =
+              new CacheDirectiveInfo.Builder().
+                      setPath(new Path(paths.get(i))).
+                      setPool(pool).
+                      build();
+      dfs.addCacheDirective(directive);
+      waitForCachedBlocks(namenode, expected, 0,
+              "testAddingCacheDirectiveInfosWhenCachingIsDisabled:1");
+    }
+    Thread.sleep(20000);
+    waitForCachedBlocks(namenode, expected, 0,
+            "testAddingCacheDirectiveInfosWhenCachingIsDisabled:2");
+  }
+
+  @Test(timeout=120000)
+  public void testExpiryTimeConsistency() throws Exception {
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    MiniDFSCluster dfsCluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
+            .nnTopology(MiniDFSNNTopology.simpleHATopology())
+            .build();
+    dfsCluster.transitionToActive(0);
+
+    DistributedFileSystem fs = dfsCluster.getFileSystem(0);
+    final NameNode ann = dfsCluster.getNameNode(0);
+
+    final Path filename = new Path("/file");
+    final short replication = (short) 3;
+    DFSTestUtil.createFile(fs, filename, 1, replication, 0x0BAC);
+    fs.addCachePool(new CachePoolInfo("pool"));
+    long id = fs.addCacheDirective(
+        new CacheDirectiveInfo.Builder().setPool("pool").setPath(filename)
+            .setExpiration(CacheDirectiveInfo.Expiration.newRelative(86400000))
+            .setReplication(replication).build());
+    fs.modifyCacheDirective(new CacheDirectiveInfo.Builder()
+        .setId(id)
+        .setExpiration(CacheDirectiveInfo.Expiration.newRelative(172800000))
+        .build());
+    final NameNode sbn = dfsCluster.getNameNode(1);
+    final CacheManager annCachemanager = ann.getNamesystem().getCacheManager();
+    final CacheManager sbnCachemanager = sbn.getNamesystem().getCacheManager();
+    HATestUtil.waitForStandbyToCatchUp(ann, sbn);
+    GenericTestUtils.waitFor(() -> {
+      boolean isConsistence = false;
+      ann.getNamesystem().readLock();
+      try {
+        sbn.getNamesystem().readLock();
+        try {
+          Iterator<CacheDirective> annDirectivesIt = annCachemanager.
+              getCacheDirectives().iterator();
+          Iterator<CacheDirective> sbnDirectivesIt = sbnCachemanager.
+              getCacheDirectives().iterator();
+          if (annDirectivesIt.hasNext() && sbnDirectivesIt.hasNext()) {
+            CacheDirective annDirective = annDirectivesIt.next();
+            CacheDirective sbnDirective = sbnDirectivesIt.next();
+            if (annDirective.getExpiryTimeString().
+                equals(sbnDirective.getExpiryTimeString())) {
+              isConsistence = true;
+            }
+          }
+        } finally {
+          sbn.getNamesystem().readUnlock();
+        }
+      } finally {
+        ann.getNamesystem().readUnlock();
+      }
+      if (!isConsistence) {
+        LOG.info("testEexpiryTimeConsistency:"
+            + "ANN CacheDirective Status is inconsistent with SBN");
+      }
+      return isConsistence;
+    }, 500, 120000);
   }
 }

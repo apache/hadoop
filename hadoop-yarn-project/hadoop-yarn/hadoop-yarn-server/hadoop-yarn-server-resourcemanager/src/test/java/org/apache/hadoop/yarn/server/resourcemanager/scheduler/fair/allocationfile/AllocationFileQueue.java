@@ -60,9 +60,11 @@ class AllocationFileQueue {
         () -> AllocationFileWriter
             .createNumberSupplier(properties.getFairSharePreemptionTimeout()));
     AllocationFileWriter.addIfPresent(pw, "fairSharePreemptionThreshold",
+        () -> AllocationFileWriter.createNumberSupplier(
+            properties.getFairSharePreemptionThreshold()));
+    AllocationFileWriter.addIfPresent(pw, "maxContainerAllocation",
         () -> AllocationFileWriter
-            .createNumberSupplier(
-                    properties.getFairSharePreemptionThreshold()));
+            .createNumberSupplier(properties.getMaxContainerAllocation()));
     printEndTag(pw);
     pw.close();
     return sw.toString();

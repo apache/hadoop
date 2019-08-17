@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.sls.nodemanager;
 
+import com.google.common.base.Supplier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -76,7 +78,7 @@ public class TestNMSimulator {
     // Register one node
     NMSimulator node1 = new NMSimulator();
     node1.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
-        rm);
+        rm, -1f);
     node1.middleStep();
 
     int numClusterNodes = rm.getResourceScheduler().getNumClusterNodes();
@@ -88,6 +90,13 @@ public class TestNMSimulator {
       cumulativeSleepTime = cumulativeSleepTime + sleepInterval;
       numClusterNodes = rm.getResourceScheduler().getNumClusterNodes();
     }
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return rm.getResourceScheduler().getRootQueueMetrics()
+            .getAvailableMB() > 0;
+      }
+    }, 500, 10000);
 
     Assert.assertEquals(1, rm.getResourceScheduler().getNumClusterNodes());
     Assert.assertEquals(GB * 10,

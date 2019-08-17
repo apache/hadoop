@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
 
+import static java.lang.Thread.sleep;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.CANCEL;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.EXECUTE;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.HELP;
@@ -26,6 +27,7 @@ import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.OUTFILE;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.SKIPDATECHECK;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -41,7 +43,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Scanner;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -187,6 +191,171 @@ public class TestDiskBalancerCommand {
     }
   }
 
+
+
+  @Test(timeout = 600000)
+  public void testDiskBalancerExecuteOptionPlanValidityWithException() throws
+      Exception {
+    final int numDatanodes = 1;
+
+    final Configuration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0d");
+
+    /* new cluster with imbalanced capacity */
+    final MiniDFSCluster miniCluster = DiskBalancerTestUtil.
+        newImbalancedCluster(
+        hdfsConf,
+        numDatanodes,
+        CAPACITIES,
+        DEFAULT_BLOCK_SIZE,
+        FILE_LEN);
+
+    try {
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s",
+          EXECUTE,
+          planFileFullName);
+
+      LambdaTestUtils.intercept(
+          RemoteException.class,
+          "DiskBalancerException",
+          "Plan was generated more than 0d ago",
+          () -> {
+            runCommand(cmdLine, hdfsConf, miniCluster);
+          });
+    }  finally{
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 600000)
+  public void testDiskBalancerExecutePlanValidityWithOutUnitException()
+      throws
+      Exception {
+    final int numDatanodes = 1;
+
+    final Configuration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0");
+
+    /* new cluster with imbalanced capacity */
+    final MiniDFSCluster miniCluster = DiskBalancerTestUtil.
+        newImbalancedCluster(
+            hdfsConf,
+            numDatanodes,
+            CAPACITIES,
+            DEFAULT_BLOCK_SIZE,
+            FILE_LEN);
+
+    try {
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s",
+          EXECUTE,
+          planFileFullName);
+
+      LambdaTestUtils.intercept(
+          RemoteException.class,
+          "DiskBalancerException",
+          "Plan was generated more than 0ms ago",
+          () -> {
+            runCommand(cmdLine, hdfsConf, miniCluster);
+          });
+    }  finally{
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 600000)
+  public void testDiskBalancerForceExecute() throws
+      Exception {
+    final int numDatanodes = 1;
+
+    final Configuration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0d");
+
+    /* new cluster with imbalanced capacity */
+    final MiniDFSCluster miniCluster = DiskBalancerTestUtil.
+        newImbalancedCluster(
+            hdfsConf,
+            numDatanodes,
+            CAPACITIES,
+            DEFAULT_BLOCK_SIZE,
+            FILE_LEN);
+
+    try {
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s -%s",
+          EXECUTE,
+          planFileFullName,
+          SKIPDATECHECK);
+
+      // Disk Balancer should execute the plan, as skipDateCheck Option is
+      // specified
+      runCommand(cmdLine, hdfsConf, miniCluster);
+    }  finally{
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+
+  @Test(timeout = 600000)
+  public void testDiskBalancerExecuteOptionPlanValidity() throws Exception {
+    final int numDatanodes = 1;
+
+    final Configuration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "600s");
+
+    /* new cluster with imbalanced capacity */
+    final MiniDFSCluster miniCluster = DiskBalancerTestUtil.
+        newImbalancedCluster(
+            hdfsConf,
+            numDatanodes,
+            CAPACITIES,
+            DEFAULT_BLOCK_SIZE,
+            FILE_LEN);
+
+    try {
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s",
+          EXECUTE,
+          planFileFullName);
+
+      // Plan is valid for 600 seconds, sleeping for 10seconds, so now
+      // diskbalancer should execute the plan
+      sleep(10000);
+      runCommand(cmdLine, hdfsConf, miniCluster);
+    }  finally{
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
   private String runAndVerifyPlan(
       final MiniDFSCluster miniCluster,
       final Configuration hdfsConf) throws Exception {
@@ -214,6 +383,16 @@ public class TestDiskBalancerCommand {
     /* get full path of plan file*/
     final String planFileFullName = outputs.get(1);
     return planFileFullName;
+  }
+
+  /* test exception on invalid arguments */
+  @Test(timeout = 60000)
+  public void testExceptionOnInvalidArguments() throws Exception {
+    final String cmdLine = "hdfs diskbalancer random1 -report random2 random3";
+    thrown.expect(HadoopIllegalArgumentException.class);
+    thrown.expectMessage(
+        "Invalid or extra Arguments: [random1, random2, random3]");
+    runCommand(cmdLine);
   }
 
   /* test basic report */
@@ -447,13 +626,15 @@ public class TestDiskBalancerCommand {
     assertThat(
         outputs.get(3),
         is(allOf(containsString("DISK"),
-            containsString("/dfs/data/data1"),
+            containsString(new Path(cluster.getInstanceStorageDir(0, 0)
+                .getAbsolutePath()).toString()),
             containsString("0.00"),
             containsString("1.00"))));
     assertThat(
         outputs.get(4),
         is(allOf(containsString("DISK"),
-            containsString("/dfs/data/data2"),
+            containsString(new Path(cluster.getInstanceStorageDir(0, 1)
+                .getAbsolutePath()).toString()),
             containsString("0.00"),
             containsString("1.00"))));
   }
@@ -549,9 +730,7 @@ public class TestDiskBalancerCommand {
   @Test
   public void testPrintFullPathOfPlan()
       throws Exception {
-    final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
-        GenericTestUtils.getMethodName());
+    String parent = GenericTestUtils.getRandomizedTempPath();
 
     MiniDFSCluster miniCluster = null;
     try {
@@ -645,7 +824,8 @@ public class TestDiskBalancerCommand {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
-    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(numDatanodes).build();
     try {
       miniDFSCluster.waitActive();

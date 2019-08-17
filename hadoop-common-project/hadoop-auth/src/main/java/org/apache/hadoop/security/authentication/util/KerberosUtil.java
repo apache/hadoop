@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -44,6 +43,7 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.Oid;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.kerberos.KeyTab;
 
@@ -90,36 +90,37 @@ public class KerberosUtil {
     return (Oid)oidField.get(oidClass);
   }
 
-  public static String getDefaultRealm() 
-      throws ClassNotFoundException, NoSuchMethodException, 
-      IllegalArgumentException, IllegalAccessException, 
+  /**
+   * Return the default realm for this JVM.
+   *
+   * @return The default realm
+   * @throws IllegalArgumentException If the default realm does not exist.
+   * @throws ClassNotFoundException Not thrown. Exists for compatibility.
+   * @throws NoSuchMethodException Not thrown. Exists for compatibility.
+   * @throws IllegalAccessException Not thrown. Exists for compatibility.
+   * @throws InvocationTargetException Not thrown. Exists for compatibility.
+   */
+  public static String getDefaultRealm()
+      throws ClassNotFoundException, NoSuchMethodException,
+      IllegalArgumentException, IllegalAccessException,
       InvocationTargetException {
-    Object kerbConf;
-    Class<?> classRef;
-    Method getInstanceMethod;
-    Method getDefaultRealmMethod;
-    if (IBM_JAVA) {
-      classRef = Class.forName("com.ibm.security.krb5.internal.Config");
-    } else {
-      classRef = Class.forName("sun.security.krb5.Config");
-    }
-    getInstanceMethod = classRef.getMethod("getInstance", new Class[0]);
-    kerbConf = getInstanceMethod.invoke(classRef, new Object[0]);
-    getDefaultRealmMethod = classRef.getDeclaredMethod("getDefaultRealm",
-         new Class[0]);
-    return (String)getDefaultRealmMethod.invoke(kerbConf, new Object[0]);
+    // Any name is okay.
+    return new KerberosPrincipal("tmp", 1).getRealm();
   }
 
+  /**
+   * Return the default realm for this JVM.
+   * If the default realm does not exist, this method returns null.
+   *
+   * @return The default realm
+   */
   public static String getDefaultRealmProtected() {
-    String realmString = null;
     try {
-      realmString = getDefaultRealm();
-    } catch (RuntimeException rte) {
-      //silently catch everything
+      return getDefaultRealm();
     } catch (Exception e) {
-      //silently return null
+      //silently catch everything
+      return null;
     }
-    return realmString;
   }
 
   /*
@@ -167,7 +168,7 @@ public class KerberosUtil {
   }
 
   /* Return fqdn of the current host */
-  static String getLocalHostName() throws UnknownHostException {
+  public static String getLocalHostName() throws UnknownHostException {
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
   

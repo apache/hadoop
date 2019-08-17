@@ -22,7 +22,7 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,22 +39,21 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
-import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -62,9 +61,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -72,9 +73,12 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -90,6 +94,8 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 public class TestRMWebServices extends JerseyTestBase {
+  private static final Logger LOG =
+          LoggerFactory.getLogger(TestRMWebServices.class);
 
   private static MockRM rm;
 
@@ -420,9 +426,11 @@ public class TestRMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "reservedMB"),
           WebServicesTestUtils.getXmlInt(element, "availableMB"),
           WebServicesTestUtils.getXmlInt(element, "allocatedMB"),
+          WebServicesTestUtils.getXmlInt(element, "pendingMB"),
           WebServicesTestUtils.getXmlInt(element, "reservedVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "availableVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "allocatedVirtualCores"),
+          WebServicesTestUtils.getXmlInt(element, "pendingVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "totalVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "containersAllocated"),
           WebServicesTestUtils.getXmlInt(element, "totalMB"),
@@ -440,13 +448,16 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 25, clusterinfo.length());
+    assertEquals("incorrect number of elements", 27, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
-        clusterinfo.getInt("allocatedMB"),
-        clusterinfo.getInt("reservedVirtualCores"), clusterinfo.getInt("availableVirtualCores"),
-        clusterinfo.getInt("allocatedVirtualCores"), clusterinfo.getInt("totalVirtualCores"),
+        clusterinfo.getInt("allocatedMB"), clusterinfo.getInt("pendingMB"),
+        clusterinfo.getInt("reservedVirtualCores"),
+        clusterinfo.getInt("availableVirtualCores"),
+        clusterinfo.getInt("allocatedVirtualCores"),
+        clusterinfo.getInt("pendingVirtualCores"),
+        clusterinfo.getInt("totalVirtualCores"),
         clusterinfo.getInt("containersAllocated"),
         clusterinfo.getInt("totalMB"), clusterinfo.getInt("totalNodes"),
         clusterinfo.getInt("lostNodes"), clusterinfo.getInt("unhealthyNodes"),
@@ -456,8 +467,9 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   public void verifyClusterMetrics(int submittedApps, int completedApps,
-      int reservedMB, int availableMB, int allocMB, int reservedVirtualCores,
-      int availableVirtualCores, int allocVirtualCores, int totalVirtualCores,
+      int reservedMB, int availableMB, int allocMB, int pendingMB,
+      int reservedVirtualCores, int availableVirtualCores,
+      int allocVirtualCores, int pendingVirtualCores, int totalVirtualCores,
       int containersAlloc, int totalMB, int totalNodes, int lostNodes,
       int unhealthyNodes, int decommissionedNodes, int rebootedNodes,
       int activeNodes, int shutdownNodes) throws JSONException, Exception {
@@ -466,26 +478,33 @@ public class TestRMWebServices extends JerseyTestBase {
     QueueMetrics metrics = rs.getRootQueueMetrics();
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
 
-    long totalMBExpect = 
+    long totalMBExpect =
         metrics.getAvailableMB() + metrics.getAllocatedMB();
-    long totalVirtualCoresExpect = 
+    long totalVirtualCoresExpect =
         metrics.getAvailableVirtualCores() + metrics.getAllocatedVirtualCores();
-    assertEquals("appsSubmitted doesn't match", 
+    assertEquals("appsSubmitted doesn't match",
         metrics.getAppsSubmitted(), submittedApps);
-    assertEquals("appsCompleted doesn't match", 
+    assertEquals("appsCompleted doesn't match",
         metrics.getAppsCompleted(), completedApps);
     assertEquals("reservedMB doesn't match",
         metrics.getReservedMB(), reservedMB);
-    assertEquals("availableMB doesn't match", 
+    assertEquals("availableMB doesn't match",
         metrics.getAvailableMB(), availableMB);
-    assertEquals("allocatedMB doesn't match", 
+    assertEquals("allocatedMB doesn't match",
         metrics.getAllocatedMB(), allocMB);
+    assertEquals("pendingMB doesn't match",
+            metrics.getPendingMB(), pendingMB);
     assertEquals("reservedVirtualCores doesn't match",
         metrics.getReservedVirtualCores(), reservedVirtualCores);
     assertEquals("availableVirtualCores doesn't match",
         metrics.getAvailableVirtualCores(), availableVirtualCores);
+    assertEquals("pendingVirtualCores doesn't match",
+        metrics.getPendingVirtualCores(), pendingVirtualCores);
     assertEquals("allocatedVirtualCores doesn't match",
-        totalVirtualCoresExpect, allocVirtualCores);
+        metrics.getAllocatedVirtualCores(), allocVirtualCores);
+    assertEquals("totalVirtualCores doesn't match",
+        totalVirtualCoresExpect, totalVirtualCores);
+
     assertEquals("containersAllocated doesn't match", 0, containersAlloc);
     assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
     assertEquals(
@@ -591,11 +610,13 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterSchedulerFifo(JSONObject json) throws JSONException,
       Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals("incorrect number of elements in: " + json, 1, json.length());
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 11, info.length());
+
+    LOG.debug("schedulerInfo: {}", info);
+    assertEquals("incorrect number of elements in: " + info, 11, info.length());
 
     verifyClusterSchedulerFifoGeneric(info.getString("type"),
         info.getString("qstate"), (float) info.getDouble("capacity"),
@@ -678,7 +699,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     ResourceManager mockRM = mock(ResourceManager.class);
     Configuration conf = new YarnConfiguration();
-    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
     ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
     when(mockRM.getApplicationACLsManager()).thenReturn(aclsManager);
     RMWebServices webSvc =
@@ -751,5 +772,109 @@ public class TestRMWebServices extends JerseyTestBase {
       }
       tickcount--;
     }
+  }
+
+  private HttpServletRequest mockHttpServletRequestByUserName(String username) {
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getRemoteUser()).thenReturn(username);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(username);
+    when(mockHsr.getUserPrincipal()).thenReturn(principal);
+    return mockHsr;
+  }
+
+  @Test
+  public void testCheckUserAccessToQueue() throws Exception {
+
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+
+    // Inject a mock scheduler implementation.
+    // Only admin user has ADMINISTER_QUEUE access.
+    // For SUBMIT_APPLICATION ACL, both of admin/yarn user have acess
+    ResourceScheduler mockScheduler = new FifoScheduler() {
+      @Override
+      public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+          QueueACL acl, String queueName) {
+        if (acl == QueueACL.ADMINISTER_QUEUE) {
+          if (callerUGI.getUserName().equals("admin")) {
+            return true;
+          }
+        } else {
+          if (ImmutableSet.of("admin", "yarn").contains(callerUGI.getUserName())) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+
+    when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
+
+    RMWebServices webSvc =
+        new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+
+    boolean caughtException = false;
+
+    // Case 1: Only queue admin user can access other user's information
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
+    try {
+      webSvc.checkUserAccessToQueue("queue", "jack",
+          QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr);
+    } catch (ForbiddenException e) {
+      caughtException = true;
+    }
+    Assert.assertTrue(caughtException);
+
+    // Case 2: request an unknown ACL causes BAD_REQUEST
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    caughtException = false;
+    try {
+      webSvc.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr);
+    } catch (BadRequestException e) {
+      caughtException = true;
+    }
+    Assert.assertTrue(caughtException);
+
+    // Case 3: get FORBIDDEN for rejected ACL
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
+
+    // Case 4: get OK for listed ACLs
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
+
+    // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
+  }
+
+  @Test
+  public void testClusterUserInfo() throws JSONException, Exception {
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+    when(mockRM.getRMLoginUser()).thenReturn("yarn");
+    RMWebServices webSvc =
+            new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    ClusterUserInfo userInfo = webSvc.getClusterUserInfo(mockHsr);
+    verifyClusterUserInfo(userInfo, "yarn", "admin");
+  }
+
+  public void verifyClusterUserInfo(ClusterUserInfo userInfo,
+            String rmLoginUser, String requestedUser) {
+    assertEquals("rmLoginUser doesn't match: ",
+            rmLoginUser, userInfo.getRmLoginUser());
+    assertEquals("requestedUser doesn't match: ",
+            requestedUser, userInfo.getRequestedUser());
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.hamcrest.CoreMatchers.either;
@@ -45,10 +46,10 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.util.List;
 
@@ -242,10 +243,15 @@ public class TestFSNamesystem {
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
     // Disable top logger
     conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     fsn = new FSNamesystem(conf, fsImage);
     auditLoggers = fsn.getAuditLoggers();
     assertTrue(auditLoggers.size() == 1);
-    assertTrue(auditLoggers.get(0) instanceof FSNamesystem.DefaultAuditLogger);
+    assertTrue(
+        auditLoggers.get(0) instanceof FSNamesystem.FSNamesystemAuditLogger);
+    FSNamesystem.FSNamesystemAuditLogger defaultAuditLogger =
+        (FSNamesystem.FSNamesystemAuditLogger) auditLoggers.get(0);
+    assertTrue(defaultAuditLogger.getCallerContextEnabled());
 
     // Not to specify any audit loggers in config
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
@@ -257,7 +263,7 @@ public class TestFSNamesystem {
     // the audit loggers order is not defined
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class)));
     }
 
@@ -270,7 +276,7 @@ public class TestFSNamesystem {
     assertTrue(auditLoggers.size() == 2);
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class)));
     }
 
@@ -284,7 +290,7 @@ public class TestFSNamesystem {
     assertTrue(auditLoggers.size() == 3);
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class))
               .or(instanceOf(DummyAuditLogger.class)));
     }

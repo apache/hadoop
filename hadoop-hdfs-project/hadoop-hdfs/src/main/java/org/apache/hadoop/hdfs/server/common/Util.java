@@ -38,8 +38,8 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -57,7 +57,8 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 
 @InterfaceAudience.Private
 public final class Util {
-  private final static Log LOG = LogFactory.getLog(Util.class.getName());
+  private final static Logger LOG =
+      LoggerFactory.getLogger(Util.class.getName());
 
   public final static String FILE_LENGTH = "File-Length";
   public final static String CONTENT_LENGTH = "Content-Length";
@@ -96,8 +97,7 @@ public final class Util {
 
     // if URI is null or scheme is undefined, then assume it's file://
     if(u == null || u.getScheme() == null){
-      LOG.warn("Path " + s + " should be specified as a URI "
-          + "in configuration files. Please update hdfs configuration.");
+      LOG.info("Assuming 'file' scheme for path " + s + " in configuration.");
       u = fileAsURI(new File(s));
     }
     return u;

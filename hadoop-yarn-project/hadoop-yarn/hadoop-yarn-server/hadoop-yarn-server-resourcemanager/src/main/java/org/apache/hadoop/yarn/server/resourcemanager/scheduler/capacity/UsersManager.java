@@ -29,8 +29,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -50,7 +50,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 public class UsersManager implements AbstractUsersManager {
 
-  private static final Log LOG = LogFactory.getLog(UsersManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(UsersManager.class);
 
   /*
    * Member declaration for UsersManager class.
@@ -85,6 +86,7 @@ public class UsersManager implements AbstractUsersManager {
 
   private final QueueMetrics metrics;
   private AtomicInteger activeUsers = new AtomicInteger(0);
+  private AtomicInteger activeUsersWithOnlyPendingApps = new AtomicInteger(0);
   private Map<String, Set<ApplicationId>> usersApplications =
       new HashMap<String, Set<ApplicationId>>();
 
@@ -112,8 +114,8 @@ public class UsersManager implements AbstractUsersManager {
     }
 
     private void incUsageRatio(String label, float delta) {
+      writeLock.lock();
       try {
-        writeLock.lock();
         float usage = 0f;
         if (usageRatios.containsKey(label)) {
           usage = usageRatios.get(label);
@@ -126,8 +128,8 @@ public class UsersManager implements AbstractUsersManager {
     }
 
     private float getUsageRatio(String label) {
+      readLock.lock();
       try {
-        readLock.lock();
         Float f = usageRatios.get(label);
         if (null == f) {
           return 0.0f;
@@ -139,8 +141,8 @@ public class UsersManager implements AbstractUsersManager {
     }
 
     private void setUsageRatio(String label, float ratio) {
+      writeLock.lock();
       try {
-        writeLock.lock();
         usageRatios.put(label, ratio);
       } finally {
         writeLock.unlock();
@@ -177,8 +179,8 @@ public class UsersManager implements AbstractUsersManager {
 
     public float setAndUpdateUsageRatio(ResourceCalculator resourceCalculator,
         Resource resource, String nodePartition) {
+      writeLock.lock();
       try {
-        writeLock.lock();
         userUsageRatios.setUsageRatio(nodePartition, 0);
         return updateUsageRatio(resourceCalculator, resource, nodePartition);
       } finally {
@@ -188,8 +190,8 @@ public class UsersManager implements AbstractUsersManager {
 
     public float updateUsageRatio(ResourceCalculator resourceCalculator,
         Resource resource, String nodePartition) {
+      writeLock.lock();
       try {
-        writeLock.lock();
         float delta;
         float newRatio = Resources.ratio(resourceCalculator,
             getUsed(nodePartition), resource);
@@ -356,8 +358,8 @@ public class UsersManager implements AbstractUsersManager {
     // If latestVersionOfUsersState is negative due to overflow, ideally we need
     // to reset it. This method is invoked from UsersManager and LeafQueue and
     // all is happening within write/readLock. Below logic can help to set 0.
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       long value = latestVersionOfUsersState.incrementAndGet();
       if (value < 0) {
@@ -393,8 +395,8 @@ public class UsersManager implements AbstractUsersManager {
    *          User Name
    */
   public void removeUser(String userName) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.users.remove(userName);
 
       // Remove user from active/non-active list as well.
@@ -415,8 +417,8 @@ public class UsersManager implements AbstractUsersManager {
    * @return User object
    */
   public User getUserAndAddIfAbsent(String userName) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       User u = getUser(userName);
       if (null == u) {
         u = new User(userName);
@@ -446,8 +448,8 @@ public class UsersManager implements AbstractUsersManager {
    * @return an ArrayList of UserInfo objects who are active in this queue
    */
   public ArrayList<UserInfo> getUsersInfo() {
+    readLock.lock();
     try {
-      readLock.lock();
       ArrayList<UserInfo> usersToReturn = new ArrayList<UserInfo>();
       for (Map.Entry<String, User> entry : getUsers().entrySet()) {
         User user = entry.getValue();
@@ -490,11 +492,12 @@ public class UsersManager implements AbstractUsersManager {
       Resource clusterResource, String nodePartition,
       SchedulingMode schedulingMode) {
 
-    Map<SchedulingMode, Resource> userLimitPerSchedulingMode = preComputedActiveUserLimit
-        .get(nodePartition);
+    Map<SchedulingMode, Resource> userLimitPerSchedulingMode;
 
+    writeLock.lock();
     try {
-      writeLock.lock();
+      userLimitPerSchedulingMode =
+          preComputedActiveUserLimit.get(nodePartition);
       if (isRecomputeNeeded(schedulingMode, nodePartition, true)) {
         // recompute
         userLimitPerSchedulingMode = reComputeUserLimits(userName,
@@ -519,12 +522,10 @@ public class UsersManager implements AbstractUsersManager {
       user.setUserResourceLimit(userSpecificUserLimit);
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("userLimit is fetched. userLimit=" + userLimitResource
-          + ", userSpecificUserLimit=" + userSpecificUserLimit
-          + ", schedulingMode=" + schedulingMode
-          + ", partition=" + nodePartition);
-    }
+    LOG.debug("userLimit is fetched. userLimit={}, userSpecificUserLimit={},"
+        + " schedulingMode={}, partition={}", userLimitResource,
+        userSpecificUserLimit, schedulingMode, nodePartition);
+
     return userSpecificUserLimit;
   }
 
@@ -548,11 +549,11 @@ public class UsersManager implements AbstractUsersManager {
       Resource clusterResource, String nodePartition,
       SchedulingMode schedulingMode) {
 
-    Map<SchedulingMode, Resource> userLimitPerSchedulingMode = preComputedAllUserLimit
-        .get(nodePartition);
+    Map<SchedulingMode, Resource> userLimitPerSchedulingMode;
 
+    writeLock.lock();
     try {
-      writeLock.lock();
+      userLimitPerSchedulingMode = preComputedAllUserLimit.get(nodePartition);
       if (isRecomputeNeeded(schedulingMode, nodePartition, false)) {
         // recompute
         userLimitPerSchedulingMode = reComputeUserLimits(userName,
@@ -573,12 +574,9 @@ public class UsersManager implements AbstractUsersManager {
         Resources.multiplyAndNormalizeDown(resourceCalculator,
             userLimitResource, weight, lQueue.getMinimumAllocation());
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("userLimit is fetched. userLimit=" + userLimitResource
-          + ", userSpecificUserLimit=" + userSpecificUserLimit
-          + ", schedulingMode=" + schedulingMode
-          + ", partition=" + nodePartition);
-    }
+    LOG.debug("userLimit is fetched. userLimit={}, userSpecificUserLimit={},"
+        + " schedulingMode={}, partition={}", userLimitResource,
+        userSpecificUserLimit, schedulingMode, nodePartition);
 
     return userSpecificUserLimit;
   }
@@ -599,8 +597,8 @@ public class UsersManager implements AbstractUsersManager {
    */
   private void setLocalVersionOfUsersState(String nodePartition,
       SchedulingMode schedulingMode, boolean isActive) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Map<String, Map<SchedulingMode, Long>> localVersionOfUsersState = (isActive)
           ? localVersionOfActiveUsersState
           : localVersionOfAllUsersState;
@@ -623,8 +621,8 @@ public class UsersManager implements AbstractUsersManager {
    */
   private long getLocalVersionOfUsersState(String nodePartition,
       SchedulingMode schedulingMode, boolean isActive) {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       Map<String, Map<SchedulingMode, Long>> localVersionOfUsersState = (isActive)
           ? localVersionOfActiveUsersState
           : localVersionOfAllUsersState;
@@ -670,7 +668,21 @@ public class UsersManager implements AbstractUsersManager {
     // update in local storage
     userLimitPerSchedulingMode.put(schedulingMode, computedUserLimit);
 
+    computeNumActiveUsersWithOnlyPendingApps();
+
     return userLimitPerSchedulingMode;
+  }
+
+  // This method is called within the lock.
+  private void computeNumActiveUsersWithOnlyPendingApps() {
+    int numPendingUsers = 0;
+    for (User user : users.values()) {
+      if ((user.getPendingApplications() > 0)
+          && (user.getActiveApplications() <= 0)) {
+        numPendingUsers++;
+      }
+    }
+    activeUsersWithOnlyPendingApps = new AtomicInteger(numPendingUsers);
   }
 
   private Resource computeUserLimit(String userName, Resource clusterResource,
@@ -808,8 +820,8 @@ public class UsersManager implements AbstractUsersManager {
    *          Cluster Resource
    */
   public void updateUsageRatio(String partition, Resource clusterResource) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Resource resourceByLabel = labelManager.getResourceByLabel(partition,
           clusterResource);
       float consumed = 0;
@@ -835,8 +847,13 @@ public class UsersManager implements AbstractUsersManager {
 
   @Override
   public void activateApplication(String user, ApplicationId applicationId) {
+
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
+      User userDesc = getUser(user);
+      if (userDesc != null && userDesc.getActiveApplications() <= 0) {
+        return;
+      }
 
       Set<ApplicationId> userApps = usersApplications.get(user);
       if (userApps == null) {
@@ -848,10 +865,8 @@ public class UsersManager implements AbstractUsersManager {
         // A user is added to active list. Invalidate user-limit cache.
         userLimitNeedsRecompute();
         updateActiveUsersResourceUsage(user);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User " + user + " added to activeUsers, currently: "
-              + activeUsers);
-        }
+        LOG.debug("User {} added to activeUsers, currently: {}",
+            user, activeUsers);
       }
       if (userApps.add(applicationId)) {
         metrics.activateApp(user);
@@ -863,9 +878,9 @@ public class UsersManager implements AbstractUsersManager {
 
   @Override
   public void deactivateApplication(String user, ApplicationId applicationId) {
-    try {
-      this.writeLock.lock();
 
+    this.writeLock.lock();
+    try {
       Set<ApplicationId> userApps = usersApplications.get(user);
       if (userApps != null) {
         if (userApps.remove(applicationId)) {
@@ -879,10 +894,8 @@ public class UsersManager implements AbstractUsersManager {
           // A user is removed from active list. Invalidate user-limit cache.
           userLimitNeedsRecompute();
           updateNonActiveUsersResourceUsage(user);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("User " + user + " removed from activeUsers, currently: "
-                + activeUsers);
-          }
+          LOG.debug("User {} removed from activeUsers, currently: {}",
+              user, activeUsers);
         }
       }
     } finally {
@@ -892,13 +905,13 @@ public class UsersManager implements AbstractUsersManager {
 
   @Override
   public int getNumActiveUsers() {
-    return activeUsers.get();
+    return activeUsers.get() + activeUsersWithOnlyPendingApps.get();
   }
 
   float sumActiveUsersTimesWeights() {
     float count = 0.0f;
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       for (String u : activeUsersSet) {
         count += getUser(u).getWeight();
       }
@@ -910,8 +923,8 @@ public class UsersManager implements AbstractUsersManager {
 
   float sumAllUsersTimesWeights() {
     float count = 0.0f;
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       for (String u : users.keySet()) {
         count += getUser(u).getWeight();
       }
@@ -922,9 +935,8 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   private void updateActiveUsersResourceUsage(String userName) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
-
       // For UT case: We might need to add the user to users list.
       User user = getUserAndAddIfAbsent(userName);
       ResourceUsage resourceUsage = user.getResourceUsage();
@@ -961,8 +973,8 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   private void updateNonActiveUsersResourceUsage(String userName) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
 
       // For UT case: We might need to add the user to users list.
       User user = getUser(userName);
@@ -1030,8 +1042,8 @@ public class UsersManager implements AbstractUsersManager {
    */
   public User updateUserResourceUsage(String userName, Resource resource,
       String nodePartition, boolean isAllocate) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
 
       // TODO, should use getUser, use this method just to avoid UT failure
       // which is caused by wrong invoking order, will fix UT separately
@@ -1077,8 +1089,8 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   public void updateUserWeights() {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       for (Map.Entry<String, User> ue : users.entrySet()) {
         ue.getValue().setWeight(getUserWeightFromQueue(ue.getKey()));
       }
@@ -1088,5 +1100,10 @@ public class UsersManager implements AbstractUsersManager {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @VisibleForTesting
+  public int getNumActiveUsersWithOnlyPendingApps() {
+    return activeUsersWithOnlyPendingApps.get();
   }
 }

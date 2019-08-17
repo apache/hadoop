@@ -1,5 +1,6 @@
 {
   "name": "external-2",
+  "version": "1.0.0",
   "lifetime": "3600",
   "components": [
     {

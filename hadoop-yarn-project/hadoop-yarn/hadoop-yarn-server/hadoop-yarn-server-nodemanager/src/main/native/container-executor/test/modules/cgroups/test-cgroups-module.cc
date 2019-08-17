@@ -73,6 +73,8 @@ TEST_F(TestCGroupsModule, test_cgroups_get_path_without_define_root) {
   char* path = get_cgroups_path_to_write("devices", "deny", "container_1");
 
   ASSERT_TRUE(NULL == path) << "Should fail.\n";
+
+  free_executor_configurations();
 }
 
 TEST_F(TestCGroupsModule, test_cgroups_get_path_without_define_yarn_hierarchy) {
@@ -92,6 +94,8 @@ TEST_F(TestCGroupsModule, test_cgroups_get_path_without_define_yarn_hierarchy) {
   char* path = get_cgroups_path_to_write("devices", "deny", "container_1");
 
   ASSERT_TRUE(NULL == path) << "Should fail.\n";
+
+  free_executor_configurations();
 }
 
 TEST_F(TestCGroupsModule, test_cgroups_get_path_succeeded) {
@@ -117,5 +121,9 @@ TEST_F(TestCGroupsModule, test_cgroups_get_path_succeeded) {
 
   ASSERT_STREQ(EXPECTED, path)
       << "Return cgroup-path-to-write is not expected\n";
+
+  free(path);
+
+  free_executor_configurations();
 }
 } // namespace ContainerExecutor

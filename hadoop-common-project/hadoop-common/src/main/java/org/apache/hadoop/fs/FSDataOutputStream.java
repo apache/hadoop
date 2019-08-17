@@ -105,8 +105,8 @@ public class FSDataOutputStream extends DataOutputStream
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "FSDataOutputStream{");
-    sb.append("wrappedStream=").append(wrappedStream);
-    sb.append('}');
+    sb.append("wrappedStream=").append(wrappedStream)
+        .append('}');
     return sb.toString();
   }
 

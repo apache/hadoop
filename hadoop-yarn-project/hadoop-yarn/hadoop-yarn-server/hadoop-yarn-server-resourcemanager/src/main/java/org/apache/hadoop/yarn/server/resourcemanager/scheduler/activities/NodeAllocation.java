@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
@@ -46,7 +46,8 @@ public class NodeAllocation {
 
   private ActivityNode root = null;
 
-  private static final Log LOG = LogFactory.getLog(NodeAllocation.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeAllocation.class);
 
   public NodeAllocation(NodeId nodeId) {
     this.nodeId = nodeId;
@@ -54,9 +55,10 @@ public class NodeAllocation {
   }
 
   public void addAllocationActivity(String parentName, String childName,
-      String priority, ActivityState state, String diagnostic, String type) {
+      String priority, ActivityState state, String diagnostic, String type,
+      NodeId nId, String allocationRequestId) {
     AllocationActivity allocate = new AllocationActivity(parentName, childName,
-        priority, state, diagnostic, type);
+        priority, state, diagnostic, type, nId, allocationRequestId);
     this.allocationOperations.add(allocate);
   }
 
@@ -133,7 +135,7 @@ public class NodeAllocation {
     return root;
   }
 
-  public String getNodeId() {
-    return nodeId.toString();
+  public NodeId getNodeId() {
+    return nodeId;
   }
 }

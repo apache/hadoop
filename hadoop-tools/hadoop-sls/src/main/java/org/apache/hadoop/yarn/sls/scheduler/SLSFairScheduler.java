@@ -311,7 +311,9 @@ public class SLSFairScheduler extends FairScheduler
   @Override
   public void serviceStop() throws Exception {
     try {
-      schedulerMetrics.tearDown();
+      if (metricsON) {
+        schedulerMetrics.tearDown();
+      }
     } catch (Exception e) {
       e.printStackTrace();
     }

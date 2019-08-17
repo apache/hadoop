@@ -22,9 +22,9 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -38,7 +38,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -47,6 +46,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAc
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.MockLocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
@@ -81,45 +82,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class TestDefaultContainerExecutor {
-
-  /*
-  // XXX FileContext cannot be mocked to do this
-  static FSDataInputStream getRandomStream(Random r, int len)
-      throws IOException {
-    byte[] bytes = new byte[len];
-    r.nextBytes(bytes);
-    DataInputBuffer buf = new DataInputBuffer();
-    buf.reset(bytes, 0, bytes.length);
-    return new FSDataInputStream(new FakeFSDataInputStream(buf));
-  }
-
-  class PathEndsWith extends ArgumentMatcher<Path> {
-    final String suffix;
-    PathEndsWith(String suffix) {
-      this.suffix = suffix;
-    }
-    @Override
-    public boolean matches(Object o) {
-      return
-      suffix.equals(((Path)o).getName());
-    }
-  }
-
-  DataOutputBuffer mockStream(
-      AbstractFileSystem spylfs, Path p, Random r, int len) 
-      throws IOException {
-    DataOutputBuffer dob = new DataOutputBuffer();
-    doReturn(getRandomStream(r, len)).when(spylfs).open(p);
-    doReturn(new FileStatus(len, false, -1, -1L, -1L, p)).when(
-        spylfs).getFileStatus(argThat(new PathEndsWith(p.getName())));
-    doReturn(new FSDataOutputStream(dob)).when(spylfs).createInternal(
-        argThat(new PathEndsWith(p.getName())),
-        eq(EnumSet.of(OVERWRITE)),
-        Matchers.<FsPermission>anyObject(), anyInt(), anyShort(), anyLong(),
-        Matchers.<Progressable>anyObject(), anyInt(), anyBoolean());
-    return dob;
-  }
-  */
 
   private static Path BASE_TMP_PATH = new Path("target",
       TestDefaultContainerExecutor.class.getSimpleName());
@@ -225,6 +187,157 @@ public class TestDefaultContainerExecutor {
     }
   }
 
+  private void writeStringToRelativePath(FileContext fc, Path p, String str)
+      throws IOException {
+    p = p.makeQualified(fc.getDefaultFileSystem().getUri(),
+        new Path(new File(".").getAbsolutePath()));
+    try (FSDataOutputStream os = fc.create(p).build()) {
+      os.writeUTF(str);
+    }
+  }
+
+  private String readStringFromPath(FileContext fc, Path p) throws IOException {
+    try (FSDataInputStream is = fc.open(p)) {
+      return is.readUTF();
+    }
+  }
+
+  @Test
+  public void testLaunchContainerCopyFilesWithoutHTTPS() throws Exception {
+    testLaunchContainerCopyFiles(false);
+  }
+
+  @Test
+  public void testLaunchContainerCopyFilesWithHTTPS() throws Exception {
+    testLaunchContainerCopyFiles(true);
+  }
+
+  private void testLaunchContainerCopyFiles(boolean https) throws Exception {
+    if (Shell.WINDOWS) {
+      BASE_TMP_PATH =
+          new Path(new File("target").getAbsolutePath(),
+              TestDefaultContainerExecutor.class.getSimpleName());
+    }
+
+    Path localDir = new Path(BASE_TMP_PATH, "localDir");
+    List<String> localDirs = new ArrayList<String>();
+    localDirs.add(localDir.toString());
+    List<String> logDirs = new ArrayList<String>();
+    Path logDir = new Path(BASE_TMP_PATH, "logDir");
+    logDirs.add(logDir.toString());
+
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.toString());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.toString());
+
+    FileContext lfs = FileContext.getLocalFSFileContext(conf);
+    deleteTmpFiles();
+    lfs.mkdir(BASE_TMP_PATH, FsPermission.getDefault(), true);
+    DefaultContainerExecutor dce = new DefaultContainerExecutor(lfs);
+    dce.setConf(conf);
+
+    Container container = mock(Container.class);
+    ContainerId cId = mock(ContainerId.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    HashMap<String, String> env = new HashMap<String, String>();
+    env.put("LANG", "C");
+
+    String appSubmitter = "nobody";
+    String appId = "APP_ID";
+    String containerId = "CONTAINER_ID";
+
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(context);
+    when(cId.toString()).thenReturn(containerId);
+    when(cId.getApplicationAttemptId()).thenReturn(
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 0));
+    when(context.getEnvironment()).thenReturn(env);
+
+    Path scriptPath = new Path(BASE_TMP_PATH, "script");
+    Path tokensPath = new Path(BASE_TMP_PATH, "tokens");
+    Path keystorePath = new Path(BASE_TMP_PATH, "keystore");
+    Path truststorePath = new Path(BASE_TMP_PATH, "truststore");
+    writeStringToRelativePath(lfs, scriptPath, "script");
+    writeStringToRelativePath(lfs, tokensPath, "tokens");
+    if (https) {
+      writeStringToRelativePath(lfs, keystorePath, "keystore");
+      writeStringToRelativePath(lfs, truststorePath, "truststore");
+    }
+
+    Path workDir = localDir;
+    Path pidFile = new Path(workDir, "pid.txt");
+
+    dce.init(null);
+    dce.activateContainer(cId, pidFile);
+    ContainerStartContext.Builder ctxBuilder =
+        new ContainerStartContext.Builder()
+            .setContainer(container)
+            .setNmPrivateContainerScriptPath(scriptPath)
+            .setNmPrivateTokensPath(tokensPath)
+            .setUser(appSubmitter)
+            .setAppId(appId)
+            .setContainerWorkDir(workDir)
+            .setLocalDirs(localDirs)
+            .setLogDirs(logDirs);
+    if (https) {
+      ctxBuilder.setNmPrivateTruststorePath(truststorePath)
+          .setNmPrivateKeystorePath(keystorePath);
+    }
+    ContainerStartContext ctx = ctxBuilder.build();
+
+    // #launchContainer will copy a number of files to this directory.
+    // Ensure that it doesn't exist first
+    lfs.delete(workDir, true);
+    try {
+      lfs.getFileStatus(workDir);
+      Assert.fail("Expected FileNotFoundException on " + workDir);
+    } catch (FileNotFoundException e) {
+      // expected
+    }
+
+    dce.launchContainer(ctx);
+
+    Path finalScriptPath = new Path(workDir,
+        ContainerLaunch.CONTAINER_SCRIPT);
+    Path finalTokensPath = new Path(workDir,
+        ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
+    Path finalKeystorePath = new Path(workDir,
+        ContainerLaunch.KEYSTORE_FILE);
+    Path finalTrustorePath = new Path(workDir,
+        ContainerLaunch.TRUSTSTORE_FILE);
+
+    Assert.assertTrue(lfs.getFileStatus(workDir).isDirectory());
+    Assert.assertTrue(lfs.getFileStatus(finalScriptPath).isFile());
+    Assert.assertTrue(lfs.getFileStatus(finalTokensPath).isFile());
+    if (https) {
+      Assert.assertTrue(lfs.getFileStatus(finalKeystorePath).isFile());
+      Assert.assertTrue(lfs.getFileStatus(finalTrustorePath).isFile());
+    } else {
+      try {
+        lfs.getFileStatus(finalKeystorePath);
+        Assert.fail("Expected FileNotFoundException on " + finalKeystorePath);
+      } catch (FileNotFoundException e) {
+        // expected
+      }
+      try {
+        lfs.getFileStatus(finalTrustorePath);
+        Assert.fail("Expected FileNotFoundException on " + finalKeystorePath);
+      } catch (FileNotFoundException e) {
+        // expected
+      }
+    }
+
+    Assert.assertEquals("script", readStringFromPath(lfs, finalScriptPath));
+    Assert.assertEquals("tokens", readStringFromPath(lfs, finalTokensPath));
+    if (https) {
+      Assert.assertEquals("keystore", readStringFromPath(lfs,
+          finalKeystorePath));
+      Assert.assertEquals("truststore", readStringFromPath(lfs,
+          finalTrustorePath));
+    }
+  }
+
   @Test
   public void testContainerLaunchError()
       throws IOException, InterruptedException, ConfigurationException {
@@ -303,6 +416,8 @@ public class TestDefaultContainerExecutor {
 
       Path scriptPath = new Path("file:///bin/echo");
       Path tokensPath = new Path("file:///dev/null");
+      Path keystorePath = new Path("file:///dev/null");
+      Path truststorePath = new Path("file:///dev/null");
       if (Shell.WINDOWS) {
         File tmp = new File(BASE_TMP_PATH.toString(), "test_echo.cmd");
         BufferedWriter output = new BufferedWriter(new FileWriter(tmp));
@@ -323,6 +438,8 @@ public class TestDefaultContainerExecutor {
           .setContainer(container)
           .setNmPrivateContainerScriptPath(scriptPath)
           .setNmPrivateTokensPath(tokensPath)
+          .setNmPrivateKeystorePath(keystorePath)
+          .setNmPrivateTruststorePath(truststorePath)
           .setUser(appSubmitter)
           .setAppId(appId)
           .setContainerWorkDir(workDir)
@@ -412,14 +529,15 @@ public class TestDefaultContainerExecutor {
         spy(new DefaultContainerExecutor(mockLfs) {
           @Override
           public ContainerLocalizer createContainerLocalizer(String user,
-              String appId, String locId, List<String> localDirs,
-              FileContext localizerFc) throws IOException {
+              String appId, String locId, String tokenFileName,
+              List<String> localDirs, FileContext localizerFc)
+              throws IOException {
 
             // Spy on the localizer and make it return valid heart-beat
             // responses even though there is no real NodeManager.
             ContainerLocalizer localizer =
-                super.createContainerLocalizer(user, appId, locId, localDirs,
-                  localizerFc);
+                super.createContainerLocalizer(user, appId, locId,
+                    tokenFileName, localDirs, localizerFc);
             ContainerLocalizer spyLocalizer = spy(localizer);
             LocalizationProtocol nmProxy = mock(LocalizationProtocol.class);
             try {
@@ -429,7 +547,7 @@ public class TestDefaultContainerExecutor {
             } catch (YarnException e) {
               throw new IOException(e);
             }
-            when(spyLocalizer.getProxy(any(InetSocketAddress.class)))
+            when(spyLocalizer.getProxy(any()))
               .thenReturn(nmProxy);
 
             return spyLocalizer;

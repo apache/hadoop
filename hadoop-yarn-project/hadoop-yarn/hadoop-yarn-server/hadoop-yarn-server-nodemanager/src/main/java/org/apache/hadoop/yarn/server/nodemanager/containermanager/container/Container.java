@@ -23,6 +23,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -37,7 +38,15 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   ContainerId getContainerId();
 
+  /**
+   * The timestamp when the container start request is received.
+   */
   long getContainerStartTime();
+
+  /**
+   * The timestamp when the container is allowed to be launched.
+   */
+  long getContainerLaunchTime();
 
   Resource getResource();
 
@@ -67,11 +76,17 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   void setWorkDir(String workDir);
 
+  String getCsiVolumesRootDir();
+
+  void setCsiVolumesRootDir(String volumesRootDir);
+
   String getLogDir();
 
   void setLogDir(String logDir);
 
   void setIpAndHost(String[] ipAndHost);
+
+  void setExposedPorts(String ports);
 
   String toString();
 
@@ -105,4 +120,16 @@ public interface Container extends EventHandler<ContainerEvent> {
   ResourceMappings getResourceMappings();
 
   void sendPauseEvent(String description);
+
+  /**
+   * Verify container is in final states.
+   * @return true/false based on container's state
+   */
+  boolean isContainerInFinalStates();
+
+  /**
+   * Get the localization statuses.
+   * @return localization statuses.
+   */
+  List<LocalizationStatus> getLocalizationStatuses();
 }

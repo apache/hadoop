@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -57,6 +59,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class FairSchedulerTestBase {
@@ -75,6 +78,7 @@ public class FairSchedulerTestBase {
   public static final float TEST_RESERVATION_THRESHOLD = 0.09f;
   private static final int SLEEP_DURATION = 10;
   private static final int SLEEP_RETRIES = 1000;
+  protected static final int RM_SCHEDULER_MAXIMUM_ALLOCATION_MB_VALUE = 10240;
   final static ContainerUpdates NULL_UPDATE_REQUESTS =
       new ContainerUpdates();
 
@@ -91,7 +95,8 @@ public class FairSchedulerTestBase {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
     conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
         1024);
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 10240);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        RM_SCHEDULER_MAXIMUM_ALLOCATION_MB_VALUE);
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, false);
     conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 10);
     conf.setFloat(FairSchedulerConfiguration.PREEMPTION_THRESHOLD, 0f);
@@ -163,37 +168,47 @@ public class FairSchedulerTestBase {
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers,
       int priority) {
-    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++,
-        this.ATTEMPT_ID++);
-    scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
+    ResourceRequest request = createResourceRequest(memory, vcores,
+            ResourceRequest.ANY, priority, numContainers, true);
+    return createSchedulingRequest(Lists.newArrayList(request), queueId,
+            userId);
+  }
+
+  protected ApplicationAttemptId createSchedulingRequest(
+      Collection<ResourceRequest> requests, String queueId, String userId) {
+    ApplicationAttemptId id =
+        createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queueId);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, false,
+        placementCtx);
     // This conditional is for testAclSubmitApplication where app is rejected
     // and no app is added.
-    if (scheduler.getSchedulerApplications().
-        containsKey(id.getApplicationId())) {
+    if (scheduler.getSchedulerApplications()
+        .containsKey(id.getApplicationId())) {
       scheduler.addApplicationAttempt(id, false, false);
     }
-    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ResourceRequest request = createResourceRequest(memory, vcores,
-        ResourceRequest.ANY, priority, numContainers, true);
-    ask.add(request);
+
+    List<ResourceRequest> ask = new ArrayList<>(requests);
 
     RMApp rmApp = mock(RMApp.class);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
-        new RMAppAttemptMetrics(id, resourceManager.getRMContext()));
+            new RMAppAttemptMetrics(id, resourceManager.getRMContext()));
     ApplicationSubmissionContext submissionContext =
-        mock(ApplicationSubmissionContext.class);
+            mock(ApplicationSubmissionContext.class);
     when(submissionContext.getUnmanagedAM()).thenReturn(false);
     when(rmAppAttempt.getSubmissionContext()).thenReturn(submissionContext);
     when(rmApp.getApplicationSubmissionContext()).thenReturn(submissionContext);
     Container container = mock(Container.class);
     when(rmAppAttempt.getMasterContainer()).thenReturn(container);
     resourceManager.getRMContext().getRMApps()
-        .put(id.getApplicationId(), rmApp);
+            .put(id.getApplicationId(), rmApp);
 
-    scheduler.allocate(id, ask, null, new ArrayList<ContainerId>(),
-        null, null, NULL_UPDATE_REQUESTS);
+    scheduler.allocate(id, ask, null, new ArrayList<>(),
+            null, null, NULL_UPDATE_REQUESTS);
     scheduler.update();
     return id;
   }
@@ -202,10 +217,15 @@ public class FairSchedulerTestBase {
       String userId, List<ResourceRequest> ask) {
     ApplicationAttemptId id = createAppAttemptId(this.APP_ID++,
         this.ATTEMPT_ID++);
-    scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queueId);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, false,
+        placementCtx);
     // This conditional is for testAclSubmitApplication where app is rejected
     // and no app is added.
-    if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
+    if (scheduler.getSchedulerApplications().containsKey(
+        id.getApplicationId())) {
       scheduler.addApplicationAttempt(id, false, false);
     }
 
@@ -252,24 +272,58 @@ public class FairSchedulerTestBase {
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,
       String queue, String user, Resource amResource) {
+    createApplicationWithAMResourceInternal(attId, queue, user, amResource,
+        null);
+    ApplicationId appId = attId.getApplicationId();
+    addApplication(queue, user, appId);
+    addAppAttempt(attId);
+  }
+
+  protected void createApplicationWithAMResource(ApplicationAttemptId attId,
+      String queue, String user, Resource amResource,
+      List<ResourceRequest> amReqs) {
+    createApplicationWithAMResourceInternal(attId, queue, user, amResource,
+        amReqs);
+    ApplicationId appId = attId.getApplicationId();
+    addApplication(queue, user, appId);
+  }
+
+  private void createApplicationWithAMResourceInternal(
+      ApplicationAttemptId attId, String queue, String user,
+      Resource amResource, List<ResourceRequest> amReqs) {
     RMContext rmContext = resourceManager.getRMContext();
     ApplicationId appId = attId.getApplicationId();
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queue);
+    // Set the placement in the app and not just in the event in the next call
+    // otherwise with out of order event processing we might remove the app.
     RMApp rmApp = new RMAppImpl(appId, rmContext, conf, null, user, null,
         ApplicationSubmissionContext.newInstance(appId, null, queue, null,
             mock(ContainerLaunchContext.class), false, false, 0, amResource,
-            null), scheduler, null, 0, null, null, null);
+            null),
+        scheduler, null, 0, null, null, amReqs, placementCtx, -1);
     rmContext.getRMApps().put(appId, rmApp);
+  }
+
+  private void addApplication(String queue, String user, ApplicationId appId) {
     RMAppEvent event = new RMAppEvent(appId, RMAppEventType.START);
     resourceManager.getRMContext().getRMApps().get(appId).handle(event);
     event = new RMAppEvent(appId, RMAppEventType.APP_NEW_SAVED);
     resourceManager.getRMContext().getRMApps().get(appId).handle(event);
     event = new RMAppEvent(appId, RMAppEventType.APP_ACCEPTED);
     resourceManager.getRMContext().getRMApps().get(appId).handle(event);
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queue);
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-        appId, queue, user);
+        appId, queue, user, placementCtx);
     scheduler.handle(appAddedEvent);
+  }
+
+  private void addAppAttempt(ApplicationAttemptId attId) {
     AppAttemptAddedSchedulerEvent attempAddedEvent =
-        new AppAttemptAddedSchedulerEvent(attId, false);
+            new AppAttemptAddedSchedulerEvent(attId, false);
     scheduler.handle(attempAddedEvent);
   }
 

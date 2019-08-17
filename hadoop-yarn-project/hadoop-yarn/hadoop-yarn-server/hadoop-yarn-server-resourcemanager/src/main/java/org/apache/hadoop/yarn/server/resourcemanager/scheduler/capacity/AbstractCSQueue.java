@@ -28,9 +28,9 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -69,13 +70,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
+
 public abstract class AbstractCSQueue implements CSQueue {
 
-  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractCSQueue.class);
   volatile CSQueue parent;
   final String queueName;
   private final String queuePath;
@@ -92,7 +97,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
-  
+  private String multiNodeSortingPolicyName = null;
+
   Map<AccessType, AccessControlList> acls = 
       new HashMap<AccessType, AccessControlList>();
   volatile boolean reservationsContinueLooking;
@@ -273,8 +279,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(float maximumCapacity) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       CSQueueUtils.checkMaxCapacity(getQueueName(),
           queueCapacities.getCapacity(), maximumCapacity);
@@ -295,8 +301,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(String nodeLabel, float maximumCapacity) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       CSQueueUtils.checkMaxCapacity(getQueueName(),
           queueCapacities.getCapacity(nodeLabel), maximumCapacity);
@@ -327,8 +333,8 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacitySchedulerConfiguration configuration) throws
       IOException {
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       // get labels
       this.accessibleLabels =
           configuration.getAccessibleNodeLabels(getQueuePath());
@@ -360,9 +366,9 @@ public abstract class AbstractCSQueue implements CSQueue {
       capacityConfigType = CapacityConfigType.NONE;
       updateConfigurableResourceRequirement(getQueuePath(), clusterResource);
 
-      this.maximumAllocation =
-          configuration.getMaximumAllocationPerQueue(
-              getQueuePath());
+      // Setup queue's maximumAllocation respecting the global setting
+      // and queue setting
+      setupMaximumAllocation(configuration);
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
@@ -414,9 +420,58 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
+      // Update multi-node sorting algorithm for scheduling as configured.
+      setMultiNodeSortingPolicyName(
+          configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePath()));
+
       this.userWeights = getUserWeightsFromHierarchy(configuration);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
+    String queue = getQueuePath();
+    Resource clusterMax = ResourceUtils
+            .fetchMaximumAllocationFromConfig(csConf);
+    Resource queueMax = csConf.getQueueMaximumAllocation(queue);
+
+    maximumAllocation = Resources.clone(
+            parent == null ? clusterMax : parent.getMaximumAllocation());
+
+    String errMsg =
+            "Queue maximum allocation cannot be larger than the cluster setting"
+            + " for queue " + queue
+            + " max allocation per queue: %s"
+            + " cluster setting: " + clusterMax;
+
+    if (queueMax == Resources.none()) {
+      // Handle backward compatibility
+      long queueMemory = csConf.getQueueMaximumAllocationMb(queue);
+      int queueVcores = csConf.getQueueMaximumAllocationVcores(queue);
+      if (queueMemory != UNDEFINED) {
+        maximumAllocation.setMemorySize(queueMemory);
+      }
+
+      if (queueVcores != UNDEFINED) {
+        maximumAllocation.setVirtualCores(queueVcores);
+      }
+
+      if ((queueMemory != UNDEFINED && queueMemory > clusterMax.getMemorySize()
+          || (queueVcores != UNDEFINED
+              && queueVcores > clusterMax.getVirtualCores()))) {
+        throw new IllegalArgumentException(
+                String.format(errMsg, maximumAllocation));
+      }
+    } else {
+      // Queue level maximum-allocation can't be larger than cluster setting
+      for (ResourceInformation ri : queueMax.getResources()) {
+        if (ri.compareTo(clusterMax.getResourceInformation(ri.getName())) > 0) {
+          throw new IllegalArgumentException(String.format(errMsg, queueMax));
+        }
+
+        maximumAllocation.setResourceInformation(ri.getName(), ri);
+      }
     }
   }
 
@@ -447,19 +502,16 @@ public abstract class AbstractCSQueue implements CSQueue {
       Resource maxResource = conf.getMaximumResourceRequirement(label,
           queuePath, resourceTypes);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("capacityConfigType is '" + capacityConfigType
-            + "' for queue '" + getQueueName());
-      }
+      LOG.debug("capacityConfigType is '{}' for queue {}",
+          capacityConfigType, getQueueName());
+
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
         this.capacityConfigType = (!minResource.equals(Resources.none())
             && queueCapacities.getAbsoluteCapacity(label) == 0f)
                 ? CapacityConfigType.ABSOLUTE_RESOURCE
                 : CapacityConfigType.PERCENTAGE;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("capacityConfigType is updated as '" + capacityConfigType
-              + "' for queue '" + getQueueName());
-        }
+        LOG.debug("capacityConfigType is updated as '{}' for queue {}",
+            capacityConfigType, getQueueName());
       }
 
       validateAbsoluteVsPercentageCapacityConfig(minResource);
@@ -496,11 +548,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         }
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating absolute resource configuration for queue:"
-            + getQueueName() + " as minResource=" + minResource
-            + " and maxResource=" + maxResource);
-      }
+      LOG.debug("Updating absolute resource configuration for queue:{} as"
+          + " minResource={} and maxResource={}", getQueueName(), minResource,
+          maxResource);
 
       queueResourceQuotas.setConfiguredMinResource(label, minResource);
       queueResourceQuotas.setConfiguredMaxResource(label, maxResource);
@@ -695,8 +745,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   void allocateResource(Resource clusterResource,
       Resource resource, String nodePartition) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       queueUsage.incUsed(nodePartition, resource);
 
       ++numContainers;
@@ -710,8 +760,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   protected void releaseResource(Resource clusterResource,
       Resource resource, String nodePartition) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       queueUsage.decUsed(nodePartition, resource);
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -730,8 +780,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   @Private
   public Map<AccessType, AccessControlList> getACLs() {
+    readLock.lock();
     try {
-      readLock.lock();
       return acls;
     } finally {
       readLock.unlock();
@@ -786,7 +836,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   private boolean isQueueHierarchyPreemptionDisabled(CSQueue q,
       CapacitySchedulerConfiguration configuration) {
     boolean systemWidePreemption =
-        configuration
+        csContext.getConfiguration()
             .getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
                        YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS);
     CSQueue parentQ = q.getParent();
@@ -824,7 +874,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   private boolean isIntraQueueHierarchyPreemptionDisabled(CSQueue q,
       CapacitySchedulerConfiguration configuration) {
     boolean systemWideIntraQueuePreemption =
-        configuration.getBoolean(
+        csContext.getConfiguration().getBoolean(
             CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED,
             CapacitySchedulerConfiguration
             .DEFAULT_INTRAQUEUE_PREEMPTION_ENABLED);
@@ -883,8 +933,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {
+    readLock.lock();
     try {
-      readLock.lock();
       // Get current limited resource:
       // - When doing RESPECT_PARTITION_EXCLUSIVITY allocation, we will respect
       // queues' max capacity.
@@ -1148,9 +1198,8 @@ public abstract class AbstractCSQueue implements CSQueue {
       Resource netAllocated = Resources.subtract(required,
           request.getTotalReleasedResource());
 
+      readLock.lock();
       try {
-        readLock.lock();
-
         String partition = schedulerContainer.getNodePartition();
         Resource maxResourceLimit;
         if (allocation.getSchedulingMode()
@@ -1199,8 +1248,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public void activeQueue() throws YarnException {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getState() == QueueState.RUNNING) {
         LOG.info("The specified queue:" + queueName
             + " is already in the RUNNING state.");
@@ -1223,8 +1272,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   protected void appFinished() {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getState() == QueueState.DRAINING) {
         if (getNumApplications() == 0) {
           updateQueueState(QueueState.STOPPED);
@@ -1243,5 +1292,29 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public Map<String, Float> getUserWeights() {
     return userWeights;
+  }
+
+  public void recoverDrainingState() {
+    this.writeLock.lock();
+    try {
+      if (getState() == QueueState.STOPPED) {
+        updateQueueState(QueueState.DRAINING);
+      }
+      LOG.info("Recover draining state for queue " + this.getQueuePath());
+      if (getParent() != null && getParent().getState() == QueueState.STOPPED) {
+        ((AbstractCSQueue) getParent()).recoverDrainingState();
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public String getMultiNodeSortingPolicyName() {
+    return this.multiNodeSortingPolicyName;
+  }
+
+  public void setMultiNodeSortingPolicyName(String policyName) {
+    this.multiNodeSortingPolicyName = policyName;
   }
 }

@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
@@ -53,7 +52,7 @@ public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
-  private static final Log LOG = LogFactory.getLog(JspHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JspHelper.class);
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {}
@@ -119,12 +118,9 @@ public class JspHelper {
       remoteUser = request.getRemoteUser();
       final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
-        // Token-based connections need only verify the effective user, and
-        // disallow proxying to different user.  Proxy authorization checks
-        // are not required since the checks apply to issuing a token.
+
+        // user.name, doas param is ignored in the token-based auth
         ugi = getTokenUGI(context, request, tokenString, conf);
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
-        checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
       } else if (remoteUser == null) {
         throw new IOException(
             "Security enabled but user not authenticated by filter");
@@ -138,13 +134,12 @@ public class JspHelper {
 
     if (ugi == null) { // security is off, or there's no token
       ugi = UserGroupInformation.createRemoteUser(remoteUser);
-      checkUsername(ugi.getShortUserName(), usernameFromQuery);
       if (UserGroupInformation.isSecurityEnabled()) {
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
         ugi.setAuthenticationMethod(secureAuthMethod);
       }
-      if (doAsUserFromQuery != null) {
+      if (doAsUserFromQuery != null && !doAsUserFromQuery.equals(remoteUser)) {
         // create and attempt to authorize a proxy user
         ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
         ProxyUsers.authorize(ugi, getRemoteAddr(request));
@@ -176,10 +171,11 @@ public class JspHelper {
     DelegationTokenIdentifier id = new DelegationTokenIdentifier();
     id.readFields(in);
     if (context != null) {
-      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-      if (nn != null) {
+      final TokenVerifier<DelegationTokenIdentifier> tokenVerifier =
+          NameNodeHttpServer.getTokenVerifierFromContext(context);
+      if (tokenVerifier != null) {
         // Verify the token.
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        tokenVerifier.verifyToken(id, token.getPassword());
       }
     }
     UserGroupInformation ugi = id.getUser();

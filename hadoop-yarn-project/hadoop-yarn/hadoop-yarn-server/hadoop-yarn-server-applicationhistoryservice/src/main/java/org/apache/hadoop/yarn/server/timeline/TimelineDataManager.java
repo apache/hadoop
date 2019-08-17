@@ -219,7 +219,12 @@ public class TimelineDataManager extends AbstractService {
       // check ACLs
       if (!timelineACLsManager.checkAccess(
           callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
-        entity = null;
+        final String user = callerUGI != null ? callerUGI.getShortUserName():
+            null;
+        throw new YarnException(
+            user + " is not allowed to get the timeline entity "
+            + "{ id: " + entity.getEntityId() + ", type: "
+            + entity.getEntityType() + " }.");
       }
     }
     return entity;

@@ -28,6 +28,7 @@ export default Ember.Component.extend({
   serviceResp: null,
   isLoading: false,
   userName: '',
+  hosts: Ember.inject.service('hosts'),
 
   actions: {
     showSaveTemplateModal() {
@@ -151,17 +152,22 @@ export default Ember.Component.extend({
 
   isUserNameGiven: Ember.computed.empty('userName'),
 
-  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue', 'serviceDef.serviceComponents.[]', function () {
+  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue',
+      'serviceDef.version', 'serviceDef.serviceComponents.[]', function () {
     return this.get('serviceDef').isValidServiceDef();
   }),
 
   isValidCustomServiceDef: Ember.computed.notEmpty('customServiceDef'),
 
+  isSecurityNotEnabled: Ember.computed('isSecurityEnabled', function () {
+    return this.get(`hosts.isSecurityEnabled`) === 'simple';
+  }),
+
   enableSaveOrDeployBtn: Ember.computed('isValidServiceDef', 'isValidCustomServiceDef', 'viewType', 'isLoading', 'isUserNameGiven', function() {
     if (this.get('isLoading')) {
       return false;
     }
-    if (this.get('isUserNameGiven')) {
+    if (this.get('isSecurityNotEnabled') && this.get('isUserNameGiven')) {
       return false;
     }
     if (this.get('isStandardViewType')) {

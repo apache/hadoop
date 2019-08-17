@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import org.apache.commons.logging.LogFactory;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystemException;
@@ -32,7 +30,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -50,12 +47,15 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A cache saves DFSClient objects for different users.
  */
 class DFSClientCache {
-  private static final Log LOG = LogFactory.getLog(DFSClientCache.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DFSClientCache.class);
   /**
    * Cache that maps User id to the corresponding DFSClient.
    */
@@ -169,8 +169,8 @@ class DFSClientCache {
       URI value = namenodeUriMap.get(namenodeId);
       // if a unique nnid, add it to the map
       if (value == null) {
-        LOG.info("Added export:" + exportPath + " FileSystem URI:" + exportURI
-              + " with namenodeId:" + namenodeId);
+        LOG.info("Added export: {} FileSystem URI: {} with namenodeId: {}",
+            exportPath, exportPath, namenodeId);
         namenodeUriMap.put(namenodeId, exportURI);
       } else {
         // if the nnid already exists, it better be the for the same namenode
@@ -194,7 +194,7 @@ class DFSClientCache {
       try {
         closeAll(true);
       } catch (IOException e) {
-        LOG.info("DFSClientCache.closeAll() threw an exception:\n", e);
+        LOG.info("DFSClientCache.closeAll() threw an exception", e);
       }
     }
   }
@@ -269,10 +269,7 @@ class DFSClientCache {
 
     UserGroupInformation ugi =
             UserGroupInformation.createProxyUser(effectiveUser, realUser);
-    if (LOG.isDebugEnabled()){
-      LOG.debug(String.format("Created ugi:" +
-              " %s for username: %s", ugi, effectiveUser));
-    }
+    LOG.debug("Created ugi: {} for username: {}", ugi, effectiveUser);
     return ugi;
   }
 
@@ -329,8 +326,7 @@ class DFSClientCache {
     try {
       client = clientCache.get(new DfsClientKey(userName, namenodeId));
     } catch (ExecutionException e) {
-      LOG.error("Failed to create DFSClient for user:" + userName + " Cause:"
-          + e);
+      LOG.error("Failed to create DFSClient for user: {}", userName, e);
     }
     return client;
   }
@@ -343,8 +339,7 @@ class DFSClientCache {
     try {
       s = inputstreamCache.get(k);
     } catch (ExecutionException e) {
-      LOG.warn("Failed to create DFSInputStream for user:" + userName
-          + " Cause:" + e);
+      LOG.warn("Failed to create DFSInputStream for user: {}", userName, e);
     }
     return s;
   }

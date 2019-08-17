@@ -30,6 +30,7 @@ string(REGEX MATCH . HCD_ONE "${HADOOP_CONF_DIR}")
 string(COMPARE EQUAL ${HCD_ONE} / HADOOP_CONF_DIR_IS_ABS)
 
 set (CMAKE_C_STANDARD 99)
+set (CMAKE_CXX_STANDARD 11)
 
 include(CheckIncludeFiles)
 check_include_files("sys/types.h;sys/sysctl.h" HAVE_SYS_SYSCTL_H)
@@ -113,6 +114,7 @@ include_directories(
     ${GTEST_SRC_DIR}/include
     main/native/container-executor
     main/native/container-executor/impl
+    main/native/oom-listener/impl
 )
 # add gtest as system library to suppress gcc warnings
 include_directories(SYSTEM ${GTEST_SRC_DIR}/include)
@@ -133,6 +135,7 @@ add_library(container
     main/native/container-executor/impl/modules/common/module-configs.c
     main/native/container-executor/impl/modules/gpu/gpu-module.c
     main/native/container-executor/impl/modules/fpga/fpga-module.c
+    main/native/container-executor/impl/modules/devices/devices-module.c
     main/native/container-executor/impl/utils/docker-util.c
 )
 
@@ -167,7 +170,30 @@ add_executable(cetest
         main/native/container-executor/test/modules/cgroups/test-cgroups-module.cc
         main/native/container-executor/test/modules/gpu/test-gpu-module.cc
         main/native/container-executor/test/modules/fpga/test-fpga-module.cc
+        main/native/container-executor/test/modules/devices/test-devices-module.cc
         main/native/container-executor/test/test_util.cc
         main/native/container-executor/test/utils/test_docker_util.cc)
 target_link_libraries(cetest gtest container)
 output_directory(cetest test)
+
+# CGroup OOM listener
+add_executable(oom-listener
+        main/native/oom-listener/impl/oom_listener.c
+        main/native/oom-listener/impl/oom_listener.h
+        main/native/oom-listener/impl/oom_listener_main.c
+)
+output_directory(oom-listener target/usr/local/bin)
+
+# CGroup OOM listener test with GTest
+add_executable(test-oom-listener
+        main/native/oom-listener/impl/oom_listener.c
+        main/native/oom-listener/impl/oom_listener.h
+        main/native/oom-listener/test/oom_listener_test_main.cc
+)
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS doesn't have librt
+    target_link_libraries(test-oom-listener gtest)
+else()
+    target_link_libraries(test-oom-listener gtest rt)
+endif()
+output_directory(test-oom-listener test)

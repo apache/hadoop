@@ -1,0 +1,467 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and Unstable.
+ * Please see http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/InterfaceClassification.html
+ * for what changes are allowed for a *Unstable* .proto interface.
+ */
+
+// This file contains protocol buffers that are used to transfer data
+// to and from the datanode.
+syntax = "proto2";
+option java_package = "org.apache.hadoop.hdds.protocol.datanode.proto";
+option java_outer_classname = "ContainerProtos";
+option java_generate_equals_and_hash = true;
+package hadoop.hdds.datanode;
+
+/**
+ * Commands that are used to manipulate the state of containers on a datanode.
+ *
+ * These commands allow us to work against the datanode - from
+ * StorageContainer Manager as well as clients.
+ *
+ *  1. CreateContainer - This call is usually made by Storage Container
+ *     manager, when we need to create a new container on a given datanode.
+ *
+ *  2. ReadContainer - Allows end user to stat a container. For example
+ *     this allows us to return the metadata of a container.
+ *
+ *  3. UpdateContainer - Updates a container metadata.
+
+ *  4. DeleteContainer - This call is made to delete a container.
+ *
+ *  5. ListContainer - Returns the list of containers on this
+ *     datanode. This will be used by tests and tools.
+ *
+ *  6. PutBlock - Given a valid container, creates a block.
+ *
+ *  7. GetBlock - Allows user to read the metadata of a block.
+ *
+ *  8. DeleteBlock - Deletes a given block.
+ *
+ *  9. ListBlock - Returns a list of blocks that are present inside
+ *      a given container.
+ *
+ *  10. ReadChunk - Allows us to read a chunk.
+ *
+ *  11. DeleteChunk - Delete an unused chunk.
+ *
+ *  12. WriteChunk - Allows us to write a chunk
+ *
+ *  13. ListChunk - Given a Container/Block returns the list of Chunks.
+ *
+ *  14. CompactChunk - Re-writes a chunk based on Offsets.
+ *
+ *  15. PutSmallFile - A single RPC that combines both putBlock and WriteChunk.
+ *
+ *  16. GetSmallFile - A single RPC that combines both getBlock and ReadChunk.
+ *
+ *  17. CloseContainer - Closes an open container and makes it immutable.
+ *
+ *  18. CopyContainer - Copies a container from a remote machine.
+ */
+
+enum Type {
+  CreateContainer = 1;
+  ReadContainer = 2;
+  UpdateContainer = 3;
+  DeleteContainer = 4;
+  ListContainer = 5;
+
+  PutBlock = 6;
+  GetBlock = 7;
+  DeleteBlock = 8;
+  ListBlock = 9;
+
+  ReadChunk = 10;
+  DeleteChunk = 11;
+  WriteChunk = 12;
+  ListChunk = 13;
+  CompactChunk = 14;
+
+  /** Combines Block and Chunk Operation into Single RPC. */
+  PutSmallFile = 15;
+  GetSmallFile = 16;
+  CloseContainer = 17;
+  GetCommittedBlockLength = 18;
+}
+
+
+enum Result {
+  SUCCESS = 1;
+  UNSUPPORTED_REQUEST = 2;
+  MALFORMED_REQUEST = 3;
+  CONTAINER_INTERNAL_ERROR = 4;
+  INVALID_CONFIG = 5;
+  INVALID_FILE_HASH_FOUND = 6;
+  CONTAINER_EXISTS = 7;
+  NO_SUCH_ALGORITHM = 8;
+  CONTAINER_NOT_FOUND = 9;
+  IO_EXCEPTION = 10;
+  UNABLE_TO_READ_METADATA_DB = 11;
+  NO_SUCH_BLOCK = 12;
+  OVERWRITE_FLAG_REQUIRED = 13;
+  UNABLE_TO_FIND_DATA_DIR = 14;
+  INVALID_WRITE_SIZE = 15;
+  CHECKSUM_MISMATCH = 16;
+  UNABLE_TO_FIND_CHUNK = 17;
+  PROTOC_DECODING_ERROR = 18;
+  INVALID_ARGUMENT = 19;
+  PUT_SMALL_FILE_ERROR = 20;
+  GET_SMALL_FILE_ERROR = 21;
+  CLOSED_CONTAINER_IO = 22;
+  ERROR_IN_COMPACT_DB = 24;
+  UNCLOSED_CONTAINER_IO = 25;
+  DELETE_ON_OPEN_CONTAINER = 26;
+  CLOSED_CONTAINER_RETRY = 27;
+  INVALID_CONTAINER_STATE = 28;
+  DISK_OUT_OF_SPACE = 29;
+  CONTAINER_ALREADY_EXISTS = 30;
+  CONTAINER_METADATA_ERROR = 31;
+  CONTAINER_FILES_CREATE_ERROR = 32;
+  CONTAINER_CHECKSUM_ERROR = 33;
+  UNKNOWN_CONTAINER_TYPE = 34;
+  BLOCK_NOT_COMMITTED = 35;
+  CONTAINER_UNHEALTHY = 36;
+  UNKNOWN_BCSID = 37;
+  BCSID_MISMATCH = 38;
+  CONTAINER_NOT_OPEN = 39;
+  CONTAINER_MISSING = 40;
+  BLOCK_TOKEN_VERIFICATION_FAILED = 41;
+}
+
+/**
+ * Block ID that uniquely identify a block in Datanode.
+ */
+message DatanodeBlockID {
+  required int64 containerID = 1;
+  required int64 localID = 2;
+  optional uint64 blockCommitSequenceId = 3 [default = 0];
+}
+
+message KeyValue {
+  required string key = 1;
+  optional string value = 2;
+}
+
+message ContainerCommandRequestProto {
+  required   Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional   string traceID = 2;
+
+  required   int64 containerID = 3;
+  required   string datanodeUuid = 4;
+  optional   string pipelineID = 5;
+
+  // One of the following command is available when the corresponding
+  // cmdType is set. At the protocol level we allow only
+  // one command in each packet.
+  // TODO : Upgrade to Protobuf 2.6 or later.
+  optional   CreateContainerRequestProto createContainer = 6;
+  optional   ReadContainerRequestProto readContainer = 7;
+  optional   UpdateContainerRequestProto updateContainer = 8;
+  optional   DeleteContainerRequestProto deleteContainer = 9;
+  optional   ListContainerRequestProto listContainer = 10;
+  optional   CloseContainerRequestProto closeContainer = 11;
+
+  optional   PutBlockRequestProto putBlock = 12;
+  optional   GetBlockRequestProto getBlock = 13;
+  optional   DeleteBlockRequestProto deleteBlock = 14;
+  optional   ListBlockRequestProto listBlock = 15;
+
+  optional   ReadChunkRequestProto readChunk = 16;
+  optional   WriteChunkRequestProto writeChunk = 17;
+  optional   DeleteChunkRequestProto deleteChunk = 18;
+  optional   ListChunkRequestProto listChunk = 19;
+
+  optional   PutSmallFileRequestProto putSmallFile = 20;
+  optional   GetSmallFileRequestProto getSmallFile = 21;
+  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 22;
+  optional   string encodedToken = 23;
+}
+
+message ContainerCommandResponseProto {
+  required   Type cmdType = 1;
+  optional   string traceID = 2;
+
+  required   Result result = 3;
+  optional   string message = 4;
+
+  optional   CreateContainerResponseProto createContainer = 5;
+  optional   ReadContainerResponseProto readContainer = 6;
+  optional   UpdateContainerResponseProto updateContainer = 7;
+  optional   DeleteContainerResponseProto deleteContainer = 8;
+  optional   ListContainerResponseProto listContainer = 9;
+  optional   CloseContainerResponseProto closeContainer = 10;
+
+  optional   PutBlockResponseProto putBlock = 11;
+  optional   GetBlockResponseProto getBlock = 12;
+  optional   DeleteBlockResponseProto deleteBlock = 13;
+  optional   ListBlockResponseProto listBlock = 14;
+
+  optional   WriteChunkResponseProto writeChunk = 15;
+  optional   ReadChunkResponseProto readChunk = 16;
+  optional   DeleteChunkResponseProto deleteChunk = 17;
+  optional   ListChunkResponseProto listChunk = 18;
+
+  optional   PutSmallFileResponseProto putSmallFile = 19;
+  optional   GetSmallFileResponseProto getSmallFile = 20;
+
+  optional GetCommittedBlockLengthResponseProto getCommittedBlockLength = 21;
+}
+
+message ContainerDataProto {
+  enum State {
+    OPEN = 1;
+    CLOSING = 2;
+    QUASI_CLOSED =3;
+    CLOSED = 4;
+    UNHEALTHY = 5;
+    INVALID = 6;
+  }
+  required int64 containerID = 1;
+  repeated KeyValue metadata = 2;
+  optional string containerPath = 4;
+  optional int64 bytesUsed = 6;
+  optional int64 size = 7;
+  optional int64 blockCount = 8;
+  optional State state = 9 [default = OPEN];
+  optional ContainerType containerType = 10 [default = KeyValueContainer];
+}
+
+message ContainerIdSetProto {
+    repeated int64 containerId = 1;
+}
+
+enum ContainerType {
+  KeyValueContainer = 1;
+}
+
+
+// Container Messages.
+message  CreateContainerRequestProto {
+  repeated KeyValue metadata = 2;
+  optional ContainerType containerType = 3 [default = KeyValueContainer];
+}
+
+message  CreateContainerResponseProto {
+}
+
+message  ReadContainerRequestProto {
+}
+
+message  ReadContainerResponseProto {
+  optional ContainerDataProto containerData = 1;
+}
+
+message  UpdateContainerRequestProto {
+  repeated KeyValue metadata = 2;
+  optional bool forceUpdate = 3 [default = false];
+}
+
+message  UpdateContainerResponseProto {
+}
+
+message  DeleteContainerRequestProto {
+  optional bool forceDelete = 2 [default = false];
+}
+
+message  DeleteContainerResponseProto {
+}
+
+message  ListContainerRequestProto {
+  optional uint32 count = 2; // Max Results to return
+}
+
+message  ListContainerResponseProto {
+  repeated ContainerDataProto containerData = 1;
+}
+
+message CloseContainerRequestProto {
+}
+
+message CloseContainerResponseProto {
+  optional string hash = 1;
+  optional int64 containerID = 2;
+}
+
+message BlockData {
+  required DatanodeBlockID blockID = 1;
+  optional int64 flags = 2; // for future use.
+  repeated KeyValue metadata = 3;
+  repeated ChunkInfo chunks = 4;
+  optional int64 size = 5;
+}
+
+// Block Messages.
+message  PutBlockRequestProto {
+  required BlockData blockData = 1;
+}
+
+message  PutBlockResponseProto {
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
+}
+
+message  GetBlockRequestProto  {
+  required DatanodeBlockID blockID = 1;
+}
+
+message  GetBlockResponseProto  {
+  required BlockData blockData = 1;
+}
+
+
+message  DeleteBlockRequestProto {
+  required DatanodeBlockID blockID = 1;
+}
+
+message  GetCommittedBlockLengthRequestProto {
+  required DatanodeBlockID blockID = 1;
+}
+
+message  GetCommittedBlockLengthResponseProto {
+  required DatanodeBlockID blockID = 1;
+  required int64 blockLength = 2;
+}
+
+message   DeleteBlockResponseProto {
+}
+
+message  ListBlockRequestProto {
+  optional int64 startLocalID = 2;
+  required uint32 count = 3;
+
+}
+
+message  ListBlockResponseProto {
+  repeated BlockData blockData = 1;
+}
+
+// Chunk Operations
+
+message ChunkInfo {
+  required string chunkName = 1;
+  required uint64 offset = 2;
+  required uint64 len = 3;
+  repeated KeyValue metadata = 4;
+  required ChecksumData checksumData =5;
+}
+
+message ChecksumData {
+  required ChecksumType type = 1;
+  required uint32 bytesPerChecksum = 2;
+  repeated bytes checksums = 3;
+}
+
+enum ChecksumType {
+    NONE = 1;
+    CRC32 = 2;
+    CRC32C = 3;
+    SHA256 = 4;
+    MD5 = 5;
+}
+
+message  WriteChunkRequestProto  {
+  required DatanodeBlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
+  optional bytes data = 3;
+}
+
+message  WriteChunkResponseProto {
+}
+
+message  ReadChunkRequestProto  {
+  required DatanodeBlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
+}
+
+message  ReadChunkResponseProto {
+  required DatanodeBlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
+  required bytes data = 3;
+}
+
+message  DeleteChunkRequestProto {
+  required DatanodeBlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
+}
+
+message  DeleteChunkResponseProto {
+}
+
+message  ListChunkRequestProto {
+  required DatanodeBlockID blockID = 1;
+  required string prevChunkName = 2;
+  required uint32 count = 3;
+}
+
+message  ListChunkResponseProto {
+  repeated ChunkInfo chunkData = 1;
+}
+
+/** For small file access combines write chunk and putBlock into a single
+RPC */
+
+message PutSmallFileRequestProto {
+  required PutBlockRequestProto block = 1;
+  required ChunkInfo chunkInfo = 2;
+  required bytes data = 3;
+}
+
+
+message PutSmallFileResponseProto {
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
+}
+
+message GetSmallFileRequestProto {
+  required GetBlockRequestProto block = 1;
+}
+
+message GetSmallFileResponseProto {
+  required ReadChunkResponseProto data = 1;
+}
+
+message CopyContainerRequestProto {
+  required int64 containerID = 1;
+  required uint64 readOffset = 2;
+  optional uint64 len = 3;
+}
+
+message CopyContainerResponseProto {
+  required int64 containerID = 1;
+  required uint64 readOffset = 2;
+  required uint64 len = 3;
+  required bool eof = 4;
+  required bytes data = 5;
+  optional int64 checksum = 6;
+}
+
+service XceiverClientProtocolService {
+  // A client-to-datanode RPC to send container commands
+  rpc send(stream ContainerCommandRequestProto) returns
+    (stream ContainerCommandResponseProto) {};
+
+}
+
+service IntraDatanodeProtocolService {
+  // An intradatanode service to copy the raw container data between nodes
+  rpc download (CopyContainerRequestProto) returns (stream CopyContainerResponseProto);
+}

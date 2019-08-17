@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
@@ -129,7 +131,7 @@ public class TestStorageLocationChecker {
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 3);
 
-    thrown.expect(IOException.class);
+    thrown.expect(HadoopIllegalArgumentException.class);
     thrown.expectMessage("Invalid value configured");
     StorageLocationChecker checker =
         new StorageLocationChecker(conf, new FakeTimer());
@@ -213,5 +215,34 @@ public class TestStorageLocationChecker {
       locations.add(location);
     }
     return locations;
+  }
+
+  @Test
+  public void testInvalidConfigurationValues() throws Exception {
+    final List<StorageLocation> locations =
+        makeMockLocations(HEALTHY, HEALTHY, HEALTHY);
+    Configuration conf = new HdfsConfiguration();
+
+    conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 4);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.failed.volumes.tolerated"
+            + " - 4. Value configured is >= to the "
+            + "number of configured volumes (3).",
+        () -> new StorageLocationChecker(conf, new FakeTimer()).check(conf,
+            locations));
+    conf.unset(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY);
+
+    conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, 0);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.timeout"
+            + " - 0 (should be > 0)",
+        () -> new StorageLocationChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY);
+
+    conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, -2);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.failed.volumes.tolerated"
+            + " - -2 should be greater than or equal to -1",
+        () -> new StorageLocationChecker(conf, new FakeTimer()));
   }
 }

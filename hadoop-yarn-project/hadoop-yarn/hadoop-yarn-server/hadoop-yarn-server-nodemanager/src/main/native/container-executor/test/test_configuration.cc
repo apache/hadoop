@@ -51,6 +51,7 @@ namespace ContainerExecutor {
     virtual void TearDown() {
       free_configuration(&new_config_format);
       free_configuration(&old_config_format);
+      free_configuration(&mixed_config_format);
       return;
     }
 
@@ -84,12 +85,12 @@ namespace ContainerExecutor {
     ASSERT_STREQ("/var/run/yarn", split_values[0]);
     ASSERT_STREQ("/tmp/mydir", split_values[1]);
     ASSERT_EQ(NULL, split_values[2]);
-    free(split_values);
+    free_values(split_values);
     split_values = get_configuration_values_delimiter("allowed.system.users",
                       "", &old_config_format, "%");
     ASSERT_STREQ("nobody,daemon", split_values[0]);
     ASSERT_EQ(NULL, split_values[1]);
-    free(split_values);
+    free_values(split_values);
   }
 
   TEST_F(TestConfiguration, test_get_configuration_values) {
@@ -105,13 +106,13 @@ namespace ContainerExecutor {
     split_values = get_configuration_values("yarn.local.dirs", "", &old_config_format);
     ASSERT_STREQ("/var/run/yarn%/tmp/mydir", split_values[0]);
     ASSERT_EQ(NULL, split_values[1]);
-    free(split_values);
+    free_values(split_values);
     split_values = get_configuration_values("allowed.system.users", "",
                       &old_config_format);
     ASSERT_STREQ("nobody", split_values[0]);
     ASSERT_STREQ("daemon", split_values[1]);
     ASSERT_EQ(NULL, split_values[2]);
-    free(split_values);
+    free_values(split_values);
   }
 
   TEST_F(TestConfiguration, test_get_configuration_value) {
@@ -149,21 +150,28 @@ namespace ContainerExecutor {
     char *value = NULL;
     value = get_section_value("yarn.nodemanager.linux-container-executor.group", executor_cfg);
     ASSERT_STREQ("yarn", value);
+    free(value);
     value = get_section_value("feature.docker.enabled", executor_cfg);
     ASSERT_STREQ("1", value);
+    free(value);
     value = get_section_value("feature.tc.enabled", executor_cfg);
     ASSERT_STREQ("0", value);
+    free(value);
     value = get_section_value("min.user.id", executor_cfg);
     ASSERT_STREQ("1000", value);
+    free(value);
     value = get_section_value("docker.binary", executor_cfg);
     ASSERT_STREQ("/usr/bin/docker", value);
+    free(value);
     char **list = get_section_values("allowed.system.users", executor_cfg);
     ASSERT_STREQ("nobody", list[0]);
     ASSERT_STREQ("daemon", list[1]);
+    free_values(list);
     list = get_section_values("banned.users", executor_cfg);
     ASSERT_STREQ("root", list[0]);
     ASSERT_STREQ("testuser1", list[1]);
     ASSERT_STREQ("testuser2", list[2]);
+    free_values(list);
   }
 
   TEST_F(TestConfiguration, test_get_section_values_delimiter) {
@@ -176,12 +184,16 @@ namespace ContainerExecutor {
     free(value);
     value = get_section_value("key2", section);
     ASSERT_EQ(NULL, value);
+    free(value);
     split_values = get_section_values_delimiter(NULL, section, "%");
     ASSERT_EQ(NULL, split_values);
+    free_values(split_values);
     split_values = get_section_values_delimiter("split-key", NULL, "%");
     ASSERT_EQ(NULL, split_values);
+    free_values(split_values);
     split_values = get_section_values_delimiter("split-key", section, NULL);
     ASSERT_EQ(NULL, split_values);
+    free_values(split_values);
     split_values = get_section_values_delimiter("split-key", section, "%");
     ASSERT_FALSE(split_values == NULL);
     ASSERT_STREQ("val1,val2,val3", split_values[0]);
@@ -192,6 +204,7 @@ namespace ContainerExecutor {
     ASSERT_STREQ("perc-val1", split_values[0]);
     ASSERT_STREQ("perc-val2", split_values[1]);
     ASSERT_TRUE(split_values[2] == NULL);
+    free_values(split_values);
   }
 
   TEST_F(TestConfiguration, test_get_section_values) {
@@ -201,13 +214,16 @@ namespace ContainerExecutor {
     section = get_configuration_section("section-1", &new_config_format);
     value = get_section_value(NULL, section);
     ASSERT_EQ(NULL, value);
+    free(value);
     value = get_section_value("key1", NULL);
     ASSERT_EQ(NULL, value);
+    free(value);
     value = get_section_value("key1", section);
     ASSERT_STREQ("value1", value);
     free(value);
     value = get_section_value("key2", section);
     ASSERT_EQ(NULL, value);
+    free(value);
     split_values = get_section_values("split-key", section);
     ASSERT_FALSE(split_values == NULL);
     ASSERT_STREQ("val1", split_values[0]);
@@ -235,14 +251,16 @@ namespace ContainerExecutor {
     section = get_configuration_section("split-section", &new_config_format);
     value = get_section_value(NULL, section);
     ASSERT_EQ(NULL, value);
+    free(value);
     value = get_section_value("key3", NULL);
     ASSERT_EQ(NULL, value);
+    free(value);
     value = get_section_value("key3", section);
     ASSERT_STREQ("value3", value);
     free(value);
     value = get_section_value("key4", section);
     ASSERT_STREQ("value4", value);
-
+    free(value);
   }
 
   TEST_F(TestConfiguration, test_get_configuration_section) {
@@ -343,6 +361,7 @@ namespace ContainerExecutor {
       oss.str("");
       oss << "value" << i;
       ASSERT_STREQ(oss.str().c_str(), value);
+      free((void *) value);
     }
     remove(sample_file_name.c_str());
     free_configuration(&cfg);
@@ -372,6 +391,7 @@ namespace ContainerExecutor {
       oss.str("");
       oss << "value" << i;
       ASSERT_STREQ(oss.str().c_str(), value);
+      free((void *) value);
     }
     remove(sample_file_name.c_str());
     free_configuration(&cfg);
@@ -415,18 +435,22 @@ namespace ContainerExecutor {
     char *value = NULL;
     value = get_section_value("key1", executor_cfg);
     ASSERT_STREQ("value1", value);
+    free(value);
     value = get_section_value("key2", executor_cfg);
     ASSERT_STREQ("value2", value);
     ASSERT_EQ(2, executor_cfg->size);
+    free(value);
     executor_cfg = get_configuration_section("section-1",
                                              &mixed_config_format);
     value = get_section_value("key3", executor_cfg);
     ASSERT_STREQ("value3", value);
+    free(value);
     value = get_section_value("key1", executor_cfg);
     ASSERT_STREQ("value4", value);
     ASSERT_EQ(2, executor_cfg->size);
     ASSERT_EQ(2, mixed_config_format.size);
     ASSERT_STREQ("", mixed_config_format.sections[0]->name);
     ASSERT_STREQ("section-1", mixed_config_format.sections[1]->name);
+    free(value);
   }
 }

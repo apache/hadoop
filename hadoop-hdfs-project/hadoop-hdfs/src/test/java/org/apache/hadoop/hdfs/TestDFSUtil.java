@@ -22,6 +22,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
@@ -70,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
@@ -87,6 +90,8 @@ public class TestDFSUtil {
   static final String NS1_NN_ADDR    = "ns1-nn.example.com:8020";
   static final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
   static final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
+  static final String NS1_NN1_HTTPS_ADDR   = "ns1-nn1.example.com:50740";
+  static final String NS1_NN1_HTTP_ADDR    = "ns1-nn1.example.com:50070";
 
   /**
    * Reset to default UGI settings since some tests change them.
@@ -463,6 +468,32 @@ public class TestDFSUtil {
     } catch (IOException expected) {
       /** Expected */
     }
+  }
+
+  @Test
+  public void testGetNamenodeWebAddr() {
+    HdfsConfiguration conf = new HdfsConfiguration();
+
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTPS_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HTTPS_ADDR);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HTTP_ADDR);
+
+    conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    String httpsOnlyWebAddr = DFSUtil.getNamenodeWebAddr(
+        conf, "ns1", "nn1");
+    assertEquals(NS1_NN1_HTTPS_ADDR, httpsOnlyWebAddr);
+
+    conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTP_ONLY.name());
+    String httpOnlyWebAddr = DFSUtil.getNamenodeWebAddr(
+        conf, "ns1", "nn1");
+    assertEquals(NS1_NN1_HTTP_ADDR, httpOnlyWebAddr);
+
+    conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTP_AND_HTTPS.name());
+    String httpAndHttpsWebAddr = DFSUtil.getNamenodeWebAddr(
+        conf, "ns1", "nn1");
+    assertEquals(NS1_NN1_HTTP_ADDR, httpAndHttpsWebAddr);
+
   }
 
   @Test

@@ -39,8 +39,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
@@ -80,9 +84,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -98,6 +100,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -105,6 +109,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
     .RMWebServices.DEFAULT_QUEUE;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -121,8 +127,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   @Before
   public void setup() throws UnknownHostException {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     conf = getConf();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
@@ -260,7 +265,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers().contains(
       scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
@@ -418,7 +424,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         .contains(scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers()
         .contains(scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
@@ -760,6 +767,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       MockMemoryRMStateStore memStore, RMState state) throws Exception {
     // Restart RM with fail-fast as false. App should be killed.
     csConf.setBoolean(YarnConfiguration.RM_FAIL_FAST, false);
+    csConf.setBoolean(CapacitySchedulerConfiguration.APP_FAIL_FAST, false);
     rm2 = new MockRM(csConf, memStore);
     rm2.start();
 
@@ -771,8 +779,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     ApplicationReport report = rm2.getApplicationReport(app.getApplicationId());
     assertEquals(report.getFinalApplicationStatus(),
         FinalApplicationStatus.KILLED);
-    assertEquals(report.getYarnApplicationState(), YarnApplicationState.KILLED);
-    assertEquals(report.getDiagnostics(), diagnostics);
+    assertThat(report.getYarnApplicationState()).
+        isEqualTo(YarnApplicationState.KILLED);
+    assertThat(report.getDiagnostics()).isEqualTo(diagnostics);
 
     //Reload previous state with cloned app sub context object
     RMState newState = memStore2.reloadStateWithClonedAppSubCtxt(state);
@@ -794,6 +803,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     // Now restart RM with fail-fast as true. QueueException should be thrown.
     csConf.setBoolean(YarnConfiguration.RM_FAIL_FAST, true);
+    csConf.setBoolean(CapacitySchedulerConfiguration.APP_FAIL_FAST, true);
     MockRM rm = new MockRM(csConf, memStore2);
     try {
       rm.start();
@@ -1553,6 +1563,48 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   }
 
   @Test(timeout = 30000)
+  public void testUnknownUserOnRecovery() throws Exception {
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    MockMemoryRMStateStore memStore =
+        (MockMemoryRMStateStore) rm1.getRMStateStore();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the UAM
+    RMApp app0 = rm1.submitApp(200, true);
+    MockAM am0 = MockRM.launchUAM(app0, rm1, nm1);
+    am0.registerAppAttempt();
+    rm1.killApp(app0.getApplicationId());
+    PlacementManager placementMgr = mock(PlacementManager.class);
+    doThrow(new YarnException("No groups for user")).when(placementMgr)
+        .placeApplication(any(ApplicationSubmissionContext.class),
+            any(String.class));
+    MockRM rm2 = new MockRM(conf, memStore) {
+      @Override
+      protected RMAppManager createRMAppManager() {
+        return new RMAppManager(this.rmContext, this.scheduler,
+            this.masterService, this.applicationACLsManager, conf) {
+          @Override
+          ApplicationPlacementContext placeApplication(
+              PlacementManager placementManager,
+              ApplicationSubmissionContext context, String user,
+              boolean isRecovery) throws YarnException {
+            return super
+                .placeApplication(placementMgr, context, user, isRecovery);
+          }
+        };
+      }
+    };
+    rm2.start();
+    RMApp recoveredApp =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    Assert.assertEquals(RMAppState.KILLED, recoveredApp.getState());
+  }
+
+  @Test(timeout = 30000)
   public void testDynamicAutoCreatedQueueRecoveryWithDefaultQueue()
       throws Exception {
     //if queue name is not specified, it should submit to 'default' queue
@@ -1683,7 +1735,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         .contains(scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers()
         .contains(scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());

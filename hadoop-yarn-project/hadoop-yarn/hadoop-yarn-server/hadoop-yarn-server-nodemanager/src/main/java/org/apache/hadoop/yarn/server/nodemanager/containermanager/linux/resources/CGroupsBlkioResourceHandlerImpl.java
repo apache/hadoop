@@ -156,6 +156,12 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId)
       throws ResourceHandlerException {
     cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.BLKIO,
@@ -166,5 +172,10 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return CGroupsBlkioResourceHandlerImpl.class.getName();
   }
 }

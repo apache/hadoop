@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
+import javax.ws.rs.core.MediaType;
+
 public interface RestApiConstants {
 
   // Rest endpoints
@@ -26,9 +28,24 @@ public interface RestApiConstants {
   String SERVICE_PATH = "/services/{service_name}";
   String COMPONENT_PATH = "/services/{service_name}/components/{component_name}";
 
-  // Query param
+  String COMP_INSTANCE_PATH = SERVICE_PATH +
+      "/component-instances/{component_instance_name}";
+  String COMP_INSTANCE_LONG_PATH = COMPONENT_PATH +
+      "/component-instances/{component_instance_name}";
+  String COMP_INSTANCES = "component-instances";
+  String COMP_INSTANCES_PATH = SERVICE_PATH + "/" + COMP_INSTANCES;
+  String COMPONENTS = "components";
+  String COMPONENTS_PATH = SERVICE_PATH + "/" + COMPONENTS;
+
   String SERVICE_NAME = "service_name";
   String COMPONENT_NAME = "component_name";
+  String COMP_INSTANCE_NAME = "component_instance_name";
+
+  String PARAM_COMP_NAME = "componentName";
+  String PARAM_VERSION = "version";
+  String PARAM_CONTAINER_STATE = "containerState";
+
+  String MEDIA_TYPE_JSON_UTF8 = MediaType.APPLICATION_JSON + ";charset=utf-8";
 
   Long DEFAULT_UNLIMITED_LIFETIME = -1l;
 

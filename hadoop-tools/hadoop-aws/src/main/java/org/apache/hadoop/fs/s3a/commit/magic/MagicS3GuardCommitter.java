@@ -35,12 +35,12 @@ import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
@@ -123,8 +123,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   public void cleanupStagingDirs() {
     Path path = magicSubdir(getOutputPath());
-    Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
-        () -> deleteWithWarning(getDestFS(), path, true));
+    try(DurationInfo ignored = new DurationInfo(LOG, true,
+        "Deleting magic directory %s", path)) {
+      Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
+          () -> deleteWithWarning(getDestFS(), path, true));
+    }
   }
 
   @Override
@@ -285,4 +288,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     return CommitUtilsWithMR.getTempTaskAttemptPath(context, getOutputPath());
   }
 
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "MagicCommitter{");
+    sb.append('}');
+    return sb.toString();
+  }
 }

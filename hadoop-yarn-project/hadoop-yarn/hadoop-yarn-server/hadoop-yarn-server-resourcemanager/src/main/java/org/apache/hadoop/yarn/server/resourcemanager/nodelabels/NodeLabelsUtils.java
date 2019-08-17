@@ -21,16 +21,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 
 /**
  * Node labels utilities.
  */
 public final class NodeLabelsUtils {
-  private static final Log LOG = LogFactory.getLog(NodeLabelsUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeLabelsUtils.class);
 
   private NodeLabelsUtils() { /* Hidden constructor */ }
 
@@ -55,5 +58,22 @@ public final class NodeLabelsUtils {
       LOG.error(msg);
       throw new IOException(msg);
     }
+  }
+
+  /**
+   * Returns a set of node attributes whose name exists in the provided
+   * <code>attributeNames</code> list.
+   *
+   * @param attributeNames For this given list of attribute names get the
+   *          cluster NodeAttributes
+   * @param clusterNodeAttributes set of node Attributes
+   * @return set of Node Attributes which maps to the give attributes names
+   */
+  public static Set <NodeAttribute> getNodeAttributesByName(
+      Set<String> attributeNames, Set<NodeAttribute> clusterNodeAttributes) {
+    return clusterNodeAttributes.stream()
+        .filter(attribute -> attributeNames
+            .contains(attribute.getAttributeKey().getAttributeName()))
+        .collect(Collectors.toSet());
   }
 }

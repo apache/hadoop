@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -45,8 +46,8 @@ import org.junit.Test;
 
 public class TestKillApplicationWithRMHA extends RMHATestBase{
 
-  public static final Log LOG = LogFactory
-      .getLog(TestKillApplicationWithRMHA.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestKillApplicationWithRMHA.class);
 
   @Test (timeout = 20000)
   public void testKillAppWhenFailoverHappensAtNewState()
@@ -150,7 +151,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // ensure that the app is in running state
-    Assert.assertEquals(app0.getState(), RMAppState.RUNNING);
+    assertThat(app0.getState()).isEqualTo(RMAppState.RUNNING);
 
     // kill the app.
     rm1.killApp(app0.getApplicationId());

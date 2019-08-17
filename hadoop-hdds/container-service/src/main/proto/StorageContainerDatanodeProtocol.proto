@@ -1,0 +1,404 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdds.protocol.proto";
+
+option java_outer_classname = "StorageContainerDatanodeProtocolProtos";
+
+option java_generic_services = true;
+
+option java_generate_equals_and_hash = true;
+
+package hadoop.hdds;
+
+import "hdds.proto";
+
+/**
+ * Request for version info of the software stack on the server.
+ */
+message SCMVersionRequestProto {}
+
+/**
+* Generic response that is send to a version request. This allows keys to be
+* added on the fly and protocol to remain stable.
+*/
+message SCMVersionResponseProto {
+  required uint32 softwareVersion = 1;
+  repeated hadoop.hdds.KeyValue keys = 2;
+}
+
+message SCMRegisterRequestProto {
+  required DatanodeDetailsProto datanodeDetails = 1;
+  required NodeReportProto nodeReport = 2;
+  required ContainerReportsProto containerReport = 3;
+  required PipelineReportsProto pipelineReports = 4;
+}
+
+/**
+ * Datanode ID returned by the SCM. This is similar to name node
+ * registeration of a datanode.
+ */
+message SCMRegisteredResponseProto {
+  enum ErrorCode {
+    success = 1;
+    errorNodeNotPermitted = 2;
+  }
+  required ErrorCode errorCode = 1;
+  required string datanodeUUID = 2;
+  required string clusterID = 3;
+  optional SCMNodeAddressList addressList = 4;
+  optional string hostname = 5;
+  optional string ipAddress = 6;
+  optional string networkName = 7;
+  optional string networkLocation = 8;
+}
+
+/**
+* This message is send by data node to indicate that it is alive or it is
+* registering with the node manager.
+*/
+message SCMHeartbeatRequestProto {
+  required DatanodeDetailsProto datanodeDetails = 1;
+  optional NodeReportProto nodeReport = 2;
+  optional ContainerReportsProto containerReport = 3;
+  repeated IncrementalContainerReportProto incrementalContainerReport = 4;
+  repeated CommandStatusReportsProto commandStatusReports = 5;
+  optional ContainerActionsProto containerActions = 6;
+  optional PipelineActionsProto pipelineActions = 7;
+  optional PipelineReportsProto pipelineReports = 8;
+}
+
+/*
+ * A group of commands for the datanode to execute
+ */
+message SCMHeartbeatResponseProto {
+  required string datanodeUUID = 1;
+  repeated SCMCommandProto commands = 2;
+}
+
+message SCMNodeAddressList {
+  repeated string addressList = 1;
+}
+
+/**
+* This message is send along with the heart beat to report datanode
+* storage utilization to SCM.
+*/
+message NodeReportProto {
+  repeated StorageReportProto storageReport = 1;
+}
+
+message StorageReportProto {
+  required string storageUuid = 1;
+  required string storageLocation = 2;
+  optional uint64 capacity = 3 [default = 0];
+  optional uint64 scmUsed = 4 [default = 0];
+  optional uint64 remaining = 5 [default = 0];
+  optional StorageTypeProto storageType = 6 [default = DISK];
+  optional bool failed = 7 [default = false];
+}
+
+/**
+ * Types of recognized storage media.
+ */
+enum StorageTypeProto {
+  DISK = 1;
+  SSD = 2;
+  ARCHIVE = 3;
+  RAM_DISK = 4;
+  PROVIDED = 5;
+}
+
+message ContainerReportsProto {
+  repeated ContainerReplicaProto reports = 1;
+}
+
+message IncrementalContainerReportProto {
+  repeated ContainerReplicaProto report = 1;
+}
+
+message ContainerReplicaProto {
+  enum State {
+    OPEN = 1;
+    CLOSING = 2;
+    QUASI_CLOSED = 3;
+    CLOSED = 4;
+    UNHEALTHY = 5;
+    INVALID = 6;
+  }
+  required int64 containerID = 1;
+  required State state = 2;
+  optional int64 size = 3;
+  optional int64 used = 4;
+  optional int64 keyCount = 5;
+  optional int64 readCount = 6;
+  optional int64 writeCount = 7;
+  optional int64 readBytes = 8;
+  optional int64 writeBytes = 9;
+  optional string finalhash = 10;
+  optional int64 deleteTransactionId = 11;
+  optional uint64 blockCommitSequenceId = 12;
+  optional string originNodeId = 13;
+}
+
+message CommandStatusReportsProto {
+  repeated CommandStatus cmdStatus = 1;
+}
+
+message CommandStatus {
+  enum Status {
+    PENDING = 1;
+    EXECUTED = 2;
+    FAILED = 3;
+  }
+  required int64 cmdId = 1;
+  required Status status = 2 [default = PENDING];
+  required SCMCommandProto.Type type = 3;
+  optional string msg = 4;
+  optional ContainerBlocksDeletionACKProto blockDeletionAck = 5;
+}
+
+message ContainerActionsProto {
+  repeated ContainerAction containerActions = 1;
+}
+
+message ContainerAction {
+  enum Action {
+    CLOSE = 1;
+  }
+
+  enum Reason {
+    CONTAINER_FULL = 1;
+    CONTAINER_UNHEALTHY = 2;
+  }
+
+  required int64 containerID = 1;
+  required Action action = 2;
+  optional Reason reason = 3;
+}
+
+message PipelineReport {
+  required PipelineID pipelineID = 1;
+}
+
+message PipelineReportsProto {
+  repeated PipelineReport pipelineReport = 1;
+}
+
+message PipelineActionsProto {
+  repeated PipelineAction pipelineActions = 1;
+}
+
+message ClosePipelineInfo {
+  enum Reason {
+    PIPELINE_FAILED = 1;
+    PIPELINE_LOG_FAILED = 2;
+  }
+  required PipelineID pipelineID = 1;
+  optional Reason reason = 3;
+  optional string detailedReason = 4;
+}
+
+message PipelineAction {
+  enum Action {
+    CLOSE = 1;
+  }
+
+  /**
+   * Action will be used to identify the correct pipeline action.
+   */
+  required Action action = 1;
+  optional ClosePipelineInfo closePipeline = 2;
+}
+
+/*
+ * These are commands returned by SCM for to the datanode to execute.
+ */
+message SCMCommandProto {
+  enum Type {
+    reregisterCommand = 1;
+    deleteBlocksCommand = 2;
+    closeContainerCommand = 3;
+    deleteContainerCommand = 4;
+    replicateContainerCommand = 5;
+  }
+  // TODO: once we start using protoc 3.x, refactor this message using "oneof"
+  required Type commandType = 1;
+  optional ReregisterCommandProto reregisterCommandProto = 2;
+  optional DeleteBlocksCommandProto deleteBlocksCommandProto = 3;
+  optional CloseContainerCommandProto closeContainerCommandProto = 4;
+  optional DeleteContainerCommandProto deleteContainerCommandProto = 5;
+  optional ReplicateContainerCommandProto replicateContainerCommandProto = 6;
+}
+
+/**
+ * SCM informs a datanode to register itself again.
+ * With recieving this command, datanode will transit to REGISTER state.
+ */
+message ReregisterCommandProto {}
+
+
+// HB response from SCM, contains a list of block deletion transactions.
+message DeleteBlocksCommandProto {
+  repeated DeletedBlocksTransaction deletedBlocksTransactions = 1;
+  required int64 cmdId = 3;
+}
+
+// The deleted blocks which are stored in deletedBlock.db of scm.
+// We don't use BlockID because this only contians multiple localIDs
+// of the same containerID.
+message DeletedBlocksTransaction {
+  required int64 txID = 1;
+  required int64 containerID = 2;
+  repeated int64 localID = 3;
+  // the retry time of sending deleting command to datanode.
+  required int32 count = 4;
+}
+
+// ACK message datanode sent to SCM, contains the result of
+// block deletion transactions.
+message ContainerBlocksDeletionACKProto {
+  message DeleteBlockTransactionResult {
+    required int64 txID = 1;
+    required int64 containerID = 2;
+    required bool success = 3;
+  }
+  repeated DeleteBlockTransactionResult results = 1;
+  required string dnId = 2;
+}
+
+/**
+This command asks the datanode to close a specific container.
+*/
+message CloseContainerCommandProto {
+  required int64 containerID = 1;
+  required PipelineID pipelineID = 2;
+  // cmdId will be removed
+  required int64 cmdId = 3;
+  // Force will be used when closing a container out side of ratis.
+  optional bool force = 4 [default = false];
+}
+
+/**
+This command asks the datanode to delete a specific container.
+*/
+message DeleteContainerCommandProto {
+  required int64 containerID = 1;
+  required int64 cmdId = 2;
+  required bool force = 3 [default = false];
+}
+
+/**
+This command asks the datanode to replicate a container from specific sources.
+*/
+message ReplicateContainerCommandProto {
+  required int64 containerID = 1;
+  repeated DatanodeDetailsProto sources = 2;
+  required int64 cmdId = 3;
+}
+
+/**
+ * Protocol used from a datanode to StorageContainerManager.
+ *
+ * Please see the request and response messages for details of the RPC calls.
+ *
+ * Here is a simple state diagram that shows how a datanode would boot up and
+ * communicate with SCM.
+ *
+ *           -----------------------
+ *          |         Start         |
+ *           ---------- ------------
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *           ----------v-------------
+ *          |   Searching for  SCM    ------------
+ *           ---------- -------------             |
+ *                     |                          |
+ *                     |                          |
+ *                     |                ----------v-------------
+ *                     |               | Register if needed     |
+ *                     |                ----------- ------------
+ *                     |                           |
+ *                     v                           |
+ *            ----------- ----------------         |
+ *  ---------   Heartbeat state           <--------
+ * |          --------^-------------------
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ *  ------------------
+ *
+ *
+ *
+ * Here is how this protocol is used by the datanode. When a datanode boots up
+ * it moves into a stated called SEARCHING_SCM. In this state datanode is
+ * trying to establish communication with the SCM. The address of the SCMs are
+ * retrieved from the configuration information.
+ *
+ * In the SEARCHING_SCM state, only rpc call made by datanode is a getVersion
+ * call to SCM. Once any of the SCMs reply, datanode checks if it has a local
+ * persisted datanode ID. If it has this means that this datanode is already
+ * registered with some SCM. If this file is not found, datanode assumes that
+ * it needs to do a registration.
+ *
+ * If registration is need datanode moves into REGISTER state. It will
+ * send a register call with DatanodeDetailsProto data structure and presist
+ * that info.
+ *
+ * The response to the command contains clusterID. This information is
+ * also persisted by the datanode and moves into heartbeat state.
+ *
+ * Once in the heartbeat state, datanode sends heartbeats and container reports
+ * to SCM and process commands issued by SCM until it is shutdown.
+ *
+ */
+service StorageContainerDatanodeProtocolService {
+
+  /**
+  * Gets the version information from the SCM.
+  */
+  rpc getVersion (SCMVersionRequestProto) returns (SCMVersionResponseProto);
+
+  /**
+  * Registers a data node with SCM.
+  */
+  rpc register (SCMRegisterRequestProto) returns (SCMRegisteredResponseProto);
+
+  /**
+   * Send heartbeat from datanode to SCM. HB's under SCM looks more
+   * like life line protocol than HB's under HDFS. In other words, it is
+   * extremely light weight and contains no data payload.
+   */
+  rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
+
+}

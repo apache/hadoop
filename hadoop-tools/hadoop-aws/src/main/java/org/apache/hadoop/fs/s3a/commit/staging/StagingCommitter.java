@@ -36,10 +36,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.Tasks;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
@@ -48,6 +50,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
+import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -500,6 +503,10 @@ public class StagingCommitter extends AbstractS3ACommitter {
           listAndFilter(attemptFS,
               wrappedJobAttemptPath, false,
               HIDDEN_FILE_FILTER));
+    } catch (FileNotFoundException e) {
+      // this can mean the job was aborted early on, so don't confuse people
+      // with long stack traces that aren't the underlying problem.
+      maybeIgnore(suppressExceptions, "Pending upload directory not found", e);
     } catch (IOException e) {
       // unable to work with endpoint, if suppressing errors decide our actions
       maybeIgnore(suppressExceptions, "Listing pending uploads", e);
@@ -565,13 +572,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
   }
 
   /**
-   * Delete the working paths of a job. Does not attempt to clean up
-   * the work of the wrapped committer.
+   * Delete the working paths of a job.
    * <ol>
    *   <li>The job attempt path</li>
-   *   <li>$dest/__temporary</li>
+   *   <li>{@code $dest/__temporary}</li>
    *   <li>the local working directory for staged files</li>
    * </ol>
+   * Does not attempt to clean up the work of the wrapped committer.
    * @param context job context
    * @throws IOException IO failure
    */
@@ -723,9 +730,14 @@ public class StagingCommitter extends AbstractS3ACommitter {
           LOG.error(
               "{}: Exception during commit process, aborting {} commit(s)",
               getRole(), commits.size());
-          Tasks.foreach(commits)
-              .suppressExceptions()
-              .run(commit -> getCommitOperations().abortSingleCommit(commit));
+          try(CommitOperations.CommitContext commitContext
+                  = initiateCommitOperation();
+              DurationInfo ignored = new DurationInfo(LOG,
+                  "Aborting %s uploads", commits.size())) {
+            Tasks.foreach(commits)
+                .suppressExceptions()
+                .run(commitContext::abortSingleCommit);
+          }
           deleteTaskAttemptPathQuietly(context);
         }
       }
@@ -830,23 +842,62 @@ public class StagingCommitter extends AbstractS3ACommitter {
       Configuration fsConf) {
     if (conflictResolution == null) {
       this.conflictResolution = ConflictResolution.valueOf(
-          getConfictModeOption(context, fsConf));
+          getConfictModeOption(context, fsConf, DEFAULT_CONFLICT_MODE));
     }
     return conflictResolution;
+  }
+
+  /**
+   * Generate a {@link PathExistsException} because the destination exists.
+   * Lists some of the child entries first, to help diagnose the problem.
+   * @param path path which exists
+   * @param description description (usually task/job ID)
+   * @return an exception to throw
+   */
+  protected PathExistsException failDestinationExists(final Path path,
+      final String description) {
+
+    LOG.error("{}: Failing commit by job {} to write"
+            + " to existing output path {}.",
+        description,
+        getJobContext().getJobID(), path);
+    // List the first 10 descendants, to give some details
+    // on what is wrong but not overload things if there are many files.
+    try {
+      int limit = 10;
+      RemoteIterator<LocatedFileStatus> lf
+          = getDestFS().listFiles(path, true);
+      LOG.info("Partial Directory listing");
+      while (limit > 0 && lf.hasNext()) {
+        limit--;
+        LocatedFileStatus status = lf.next();
+        LOG.info("{}: {}",
+            status.getPath(),
+            status.isDirectory()
+                ? " dir"
+                : ("file size " + status.getLen() + " bytes"));
+      }
+    } catch (IOException e) {
+      LOG.info("Discarding exception raised when listing {}: " + e, path);
+      LOG.debug("stack trace ", e);
+    }
+    return new PathExistsException(path.toString(),
+        description + ": " + InternalCommitterConstants.E_DEST_EXISTS);
   }
 
   /**
    * Get the conflict mode option string.
    * @param context context with the config
    * @param fsConf filesystem config
+   * @param defVal default value.
    * @return the trimmed configuration option, upper case.
    */
   public static String getConfictModeOption(JobContext context,
-      Configuration fsConf) {
+      Configuration fsConf, String defVal) {
     return getConfigurationOption(context,
         fsConf,
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
-        DEFAULT_CONFLICT_MODE).toUpperCase(Locale.ENGLISH);
+        defVal).toUpperCase(Locale.ENGLISH);
   }
 
 }

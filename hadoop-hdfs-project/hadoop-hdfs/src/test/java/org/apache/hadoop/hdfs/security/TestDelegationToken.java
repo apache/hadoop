@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.security;
 
 
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -28,8 +29,8 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -53,7 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,7 +65,8 @@ public class TestDelegationToken {
   private MiniDFSCluster cluster;
   private DelegationTokenSecretManager dtSecretManager;
   private Configuration config;
-  private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDelegationToken.class);
   
   @Before
   public void setUp() throws Exception {
@@ -152,7 +155,27 @@ public class TestDelegationToken {
       // PASS
     }
   }
-  
+
+  @Test
+  public void testDelegationTokenMetrics() throws Exception {
+    FSNamesystem namesystem = cluster.getNamesystem();
+    // should start with no token
+    assertEquals(0, namesystem.getCurrentTokensCount());
+
+    // get token
+    Token<DelegationTokenIdentifier> token = generateDelegationToken(
+        "SomeUser", "JobTracker");
+    assertEquals(1, namesystem.getCurrentTokensCount());
+
+    // Renew token shouldn't change the count of tokens
+    dtSecretManager.renewToken(token, "JobTracker");
+    assertEquals(1, namesystem.getCurrentTokensCount());
+
+    // Cancel token should remove the token from memory
+    dtSecretManager.cancelToken(token, "JobTracker");
+    assertEquals(0, namesystem.getCurrentTokensCount());
+  }
+
   @Test
   public void testAddDelegationTokensDFSApi() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("JobTracker");
@@ -170,7 +193,7 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenWebHdfsApi() throws Exception {
-    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.TRACE);
     final String uri = WebHdfsConstants.WEBHDFS_SCHEME + "://"
         + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     //get file system as JobTracker

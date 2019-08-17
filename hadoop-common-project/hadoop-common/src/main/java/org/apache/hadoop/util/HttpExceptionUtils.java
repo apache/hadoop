@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -37,10 +34,10 @@ import java.util.Map;
 /**
  * HTTP utility class to help propagate server side exception to the client
  * over HTTP as a JSON payload.
- * <p/>
+ * <p>
  * It creates HTTP Servlet and JAX-RPC error responses including details of the
  * exception that allows a client to recreate the remote exception.
- * <p/>
+ * <p>
  * It parses HTTP client connections and recreates the exception.
  */
 @InterfaceAudience.Private
@@ -55,11 +52,6 @@ public class HttpExceptionUtils {
   private static final String APPLICATION_JSON_MIME = "application/json";
 
   private static final String ENTER = System.getProperty("line.separator");
-
-  private static final ObjectReader READER =
-      new ObjectMapper().readerFor(Map.class);
-  private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
 
   /**
    * Creates a HTTP servlet response serializing the exception in it as JSON.
@@ -82,7 +74,7 @@ public class HttpExceptionUtils {
     Map<String, Object> jsonResponse = new LinkedHashMap<String, Object>();
     jsonResponse.put(ERROR_JSON, json);
     Writer writer = response.getWriter();
-    WRITER.writeValue(writer, jsonResponse);
+    JsonSerialization.writer().writeValue(writer, jsonResponse);
     writer.flush();
   }
 
@@ -133,7 +125,7 @@ public class HttpExceptionUtils {
    * expected HTTP status code. If the current status code is not the expected
    * one it throws an exception with a detail message using Server side error
    * messages if available.
-   * <p/>
+   * <p>
    * <b>NOTE:</b> this method will throw the deserialized exception even if not
    * declared in the <code>throws</code> of the method signature.
    *
@@ -150,7 +142,7 @@ public class HttpExceptionUtils {
       InputStream es = null;
       try {
         es = conn.getErrorStream();
-        Map json = READER.readValue(es);
+        Map json = JsonSerialization.mapReader().readValue(es);
         json = (Map) json.get(ERROR_JSON);
         String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
         String exMsg = (String) json.get(ERROR_MESSAGE_JSON);
@@ -162,18 +154,20 @@ public class HttpExceptionUtils {
             toThrow = (Exception) constr.newInstance(exMsg);
           } catch (Exception ex) {
             toThrow = new IOException(String.format(
-                "HTTP status [%d], exception [%s], message [%s] ",
-                conn.getResponseCode(), exClass, exMsg));
+                "HTTP status [%d], exception [%s], message [%s], URL [%s]",
+                conn.getResponseCode(), exClass, exMsg, conn.getURL()));
           }
         } else {
           String msg = (exMsg != null) ? exMsg : conn.getResponseMessage();
           toThrow = new IOException(String.format(
-              "HTTP status [%d], message [%s]", conn.getResponseCode(), msg));
+              "HTTP status [%d], message [%s], URL [%s]",
+              conn.getResponseCode(), msg, conn.getURL()));
         }
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
-            "HTTP status [%d], message [%s]", conn.getResponseCode(),
-            conn.getResponseMessage()));
+            "HTTP status [%d], message [%s], URL [%s], exception [%s]",
+            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
+            ex.toString()), ex);
       } finally {
         if (es != null) {
           try {

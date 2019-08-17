@@ -22,6 +22,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -39,12 +45,23 @@ import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
+import org.apache.hadoop.yarn.sls.SLSRunner.NodeDetails;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Unstable
 public class SLSUtils {
   public final static String DEFAULT_JOB_TYPE = "mapreduce";
+
+  private static final String LABEL_FORMAT_ERR_MSG =
+      "Input format for adding node-labels is not correct, it should be "
+          + "labelName1[(exclusive=true/false)],labelName2[] ..";
 
   // hostname includes the network path and the host name. for example
   // "/default-rack/hostFoo" or "/coreSwitchA/TORSwitchB/hostBar".
@@ -60,9 +77,9 @@ public class SLSUtils {
   /**
    * parse the rumen trace file, return each host name
    */
-  public static Set<String> parseNodesFromRumenTrace(String jobTrace)
-          throws IOException {
-    Set<String> nodeSet = new HashSet<String>();
+  public static Set<NodeDetails> parseNodesFromRumenTrace(
+      String jobTrace) throws IOException {
+    Set<NodeDetails> nodeSet = new HashSet<>();
 
     File fin = new File(jobTrace);
     Configuration conf = new Configuration();
@@ -79,7 +96,8 @@ public class SLSUtils {
           }
           LoggedTaskAttempt taskAttempt = mapTask.getAttempts()
                   .get(mapTask.getAttempts().size() - 1);
-          nodeSet.add(taskAttempt.getHostName().getValue());
+          nodeSet.add(new NodeDetails(
+              taskAttempt.getHostName().getValue()));
         }
         for(LoggedTask reduceTask : job.getReduceTasks()) {
           if (reduceTask.getAttempts().size() == 0) {
@@ -87,7 +105,8 @@ public class SLSUtils {
           }
           LoggedTaskAttempt taskAttempt = reduceTask.getAttempts()
                   .get(reduceTask.getAttempts().size() - 1);
-          nodeSet.add(taskAttempt.getHostName().getValue());
+          nodeSet.add(new NodeDetails(
+              taskAttempt.getHostName().getValue()));
         }
       }
     } finally {
@@ -100,9 +119,9 @@ public class SLSUtils {
   /**
    * parse the sls trace file, return each host name
    */
-  public static Set<String> parseNodesFromSLSTrace(String jobTrace)
-          throws IOException {
-    Set<String> nodeSet = new HashSet<>();
+  public static Set<NodeDetails> parseNodesFromSLSTrace(
+      String jobTrace) throws IOException {
+    Set<NodeDetails> nodeSet = new HashSet<>();
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
@@ -118,7 +137,8 @@ public class SLSUtils {
     return nodeSet;
   }
 
-  private static void addNodes(Set<String> nodeSet, Map jsonEntry) {
+  private static void addNodes(Set<NodeDetails> nodeSet,
+      Map jsonEntry) {
     if (jsonEntry.containsKey(SLSConfiguration.NUM_NODES)) {
       int numNodes = Integer.parseInt(
           jsonEntry.get(SLSConfiguration.NUM_NODES).toString());
@@ -136,7 +156,7 @@ public class SLSUtils {
         Map jsonTask = (Map) o;
         String hostname = (String) jsonTask.get(SLSConfiguration.TASK_HOST);
         if (hostname != null) {
-          nodeSet.add(hostname);
+          nodeSet.add(new NodeDetails(hostname));
         }
       }
     }
@@ -144,10 +164,11 @@ public class SLSUtils {
 
   /**
    * parse the input node file, return each host name
+   * sample input: label1(exclusive=true),label2(exclusive=false),label3
    */
-  public static Set<String> parseNodesFromNodeFile(String nodeFile)
-          throws IOException {
-    Set<String> nodeSet = new HashSet<String>();
+  public static Set<NodeDetails> parseNodesFromNodeFile(
+      String nodeFile, Resource nmDefaultResource) throws IOException {
+    Set<NodeDetails> nodeSet = new HashSet<>();
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
@@ -160,7 +181,24 @@ public class SLSUtils {
         List tasks = (List) jsonE.get("nodes");
         for (Object o : tasks) {
           Map jsonNode = (Map) o;
-          nodeSet.add(rack + "/" + jsonNode.get("node"));
+          NodeDetails nodeDetails = new NodeDetails(
+              rack + "/" + jsonNode.get("node"));
+          Resource nodeResource = Resources.clone(nmDefaultResource);
+          ResourceInformation[] infors = ResourceUtils.getResourceTypesArray();
+          for (ResourceInformation info : infors) {
+            if (jsonNode.get(info.getName()) != null) {
+              nodeResource.setResourceValue(info.getName(),
+                  Integer.parseInt(jsonNode.get(info.getName()).toString()));
+            }
+          }
+          nodeDetails.setNodeResource(nodeResource);
+          if (jsonNode.get("labels") != null) {
+            Set<NodeLabel> nodeLabels =  new HashSet<>(
+                YarnClientUtils.buildNodeLabelsFromStr(
+                    jsonNode.get("labels").toString()));
+            nodeDetails.setLabels(nodeLabels);
+          }
+          nodeSet.add(nodeDetails);
         }
       }
     } finally {
@@ -169,9 +207,9 @@ public class SLSUtils {
     return nodeSet;
   }
 
-  public static Set<? extends String> generateNodes(int numNodes,
+  public static Set<NodeDetails> generateNodes(int numNodes,
       int numRacks){
-    Set<String> nodeSet = new HashSet<>();
+    Set<NodeDetails> nodeSet = new HashSet<>();
     if (numRacks < 1) {
       numRacks = 1;
     }
@@ -181,8 +219,37 @@ public class SLSUtils {
     }
 
     for (int i = 0; i < numNodes; i++) {
-      nodeSet.add("/rack" + i % numRacks + "/node" + i);
+      nodeSet.add(new NodeDetails(
+          "/rack" + i % numRacks + "/node" + i));
     }
     return nodeSet;
+  }
+
+  /**
+   * Generates a node to rack mapping file based on node details.
+   * This file is then being used by TableMapping to resolve rack names.
+   * The format required by TableMapping is a two column text file
+   * where first column specifies node name
+   * and second column specifies rack name.
+   * @param nodeDetails Set of node details.
+   * @param filePath File path where to write table mapping.
+   * @throws IOException
+   */
+  public static void generateNodeTableMapping(Set<NodeDetails> nodeDetails,
+      String filePath) throws IOException {
+    List<String> entries = new ArrayList<>();
+    for (NodeDetails nodeDetail : nodeDetails) {
+      if (nodeDetail.getHostname().contains("/")) {
+        String hostname = nodeDetail.getHostname();
+        int lIndex = hostname.lastIndexOf("/");
+        String node = hostname.substring(lIndex + 1);
+        String rack = hostname.substring(0, lIndex);
+        entries.add(node + " " + rack);
+      }
+    }
+    Files.write(Paths.get(filePath),
+        entries,
+        StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE);
   }
 }

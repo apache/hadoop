@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import AbstractAdapter from './abstract';
+import RESTAbstractAdapter from './restabstract';
 
-export default AbstractAdapter.extend({
+export default RESTAbstractAdapter.extend({
   address: "rmWebAddress",
   restNameSpace: "cluster",
   serverName: "RM",
@@ -38,4 +38,13 @@ export default AbstractAdapter.extend({
   pathForType(/*modelName*/) {
     return 'apps'; // move to some common place, return path by modelname.
   },
+
+  sendKillApplication(id) {
+    var url = this._buildURL();
+    url += '/apps/' + id + '/state';
+    var data = {
+      "state": "KILLED"
+    };
+    return this.ajax(url, "PUT", { data: data });
+  }
 });

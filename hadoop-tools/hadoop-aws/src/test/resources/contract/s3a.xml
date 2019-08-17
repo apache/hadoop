@@ -108,6 +108,11 @@
   </property>
 
   <property>
+    <name>fs.contract.supports-multipartuploader</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.supports-unix-permissions</name>
     <value>false</value>
   </property>
@@ -115,6 +120,11 @@
   <property>
     <name>fs.contract.rename-overwrites-dest</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-unbuffer</name>
+    <value>true</value>
   </property>
 
 </configuration>

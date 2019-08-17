@@ -69,6 +69,8 @@ public final class ServiceTimelineMetricsConstants {
    */
   public static final String IP = "IP";
 
+  public static final String EXPOSED_PORTS = "EXPOSED_PORTS";
+
   public static final String HOSTNAME = "HOSTNAME";
 
   public static final String BARE_HOST = "BARE_HOST";

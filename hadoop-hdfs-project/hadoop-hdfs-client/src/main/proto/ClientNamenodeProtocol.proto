@@ -35,6 +35,7 @@ import "xattr.proto";
 import "encryption.proto";
 import "inotify.proto";
 import "erasurecoding.proto";
+import "HAServiceProtocol.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -82,6 +83,7 @@ message CreateRequestProto {
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
   optional FsPermissionProto unmasked = 9;
   optional string ecPolicyName = 10;
+  optional string storagePolicy = 11;
 }
 
 message CreateResponseProto {
@@ -167,6 +169,7 @@ message AbandonBlockResponseProto { // void response
 
 enum AddBlockFlagProto {
   NO_LOCAL_WRITE = 1; // avoid writing to local node.
+  IGNORE_CLIENT_LOCALITY = 2; // write to a random node
 }
 
 message AddBlockRequestProto {
@@ -347,6 +350,8 @@ message GetFsReplicatedBlockStatsResponseProto {
   required uint64 missing_repl_one_blocks = 4;
   required uint64 blocks_in_future = 5;
   required uint64 pending_deletion_blocks = 6;
+  optional uint64 highest_prio_low_redundancy_blocks = 7;
+
 }
 
 message GetFsECBlockGroupStatsRequestProto { // no input paramters
@@ -358,6 +363,7 @@ message GetFsECBlockGroupStatsResponseProto {
   required uint64 missing_blocks = 3;
   required uint64 blocks_in_future = 4;
   required uint64 pending_deletion_blocks = 5;
+  optional uint64 highest_prio_low_redundancy_blocks = 6;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
@@ -450,6 +456,13 @@ message FinalizeUpgradeRequestProto { // no parameters
 message FinalizeUpgradeResponseProto { // void response
 }
 
+message UpgradeStatusRequestProto { // no parameters
+}
+
+message UpgradeStatusResponseProto {
+ required bool upgradeFinalized = 1;
+}
+
 enum RollingUpgradeActionProto {
   QUERY = 1;
   START = 2;
@@ -470,7 +483,6 @@ message RollingUpgradeInfoProto {
 message RollingUpgradeResponseProto {
   optional RollingUpgradeInfoProto rollingUpgradeInfo= 1;
 }
-
 message ListCorruptFileBlocksRequestProto {
   required string path = 1;
   optional string cookie = 2;
@@ -820,6 +832,27 @@ message ListOpenFilesResponseProto {
   repeated OpenFilesTypeProto types = 3;
 }
 
+message MsyncRequestProto {
+}
+
+message MsyncResponseProto {
+}
+
+message SatisfyStoragePolicyRequestProto {
+  required string src = 1;
+}
+
+message SatisfyStoragePolicyResponseProto {
+
+}
+
+message HAServiceStateRequestProto {
+}
+
+message HAServiceStateResponseProto {
+  required hadoop.common.HAServiceStateProto state = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -879,6 +912,8 @@ service ClientNamenodeProtocol {
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
   rpc finalizeUpgrade(FinalizeUpgradeRequestProto)
       returns(FinalizeUpgradeResponseProto);
+  rpc upgradeStatus(UpgradeStatusRequestProto)
+      returns(UpgradeStatusResponseProto);
   rpc rollingUpgrade(RollingUpgradeRequestProto)
       returns(RollingUpgradeResponseProto);
   rpc listCorruptFileBlocks(ListCorruptFileBlocksRequestProto)
@@ -1004,4 +1039,10 @@ service ClientNamenodeProtocol {
       returns(GetQuotaUsageResponseProto);
   rpc listOpenFiles(ListOpenFilesRequestProto)
       returns(ListOpenFilesResponseProto);
+  rpc msync(MsyncRequestProto)
+      returns(MsyncResponseProto);
+  rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
+      returns(SatisfyStoragePolicyResponseProto);
+  rpc getHAServiceState(HAServiceStateRequestProto)
+      returns(HAServiceStateResponseProto);
 }

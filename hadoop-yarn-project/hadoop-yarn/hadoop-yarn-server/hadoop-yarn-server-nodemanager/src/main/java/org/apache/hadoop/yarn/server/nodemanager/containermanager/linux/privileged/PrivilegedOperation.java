@@ -44,6 +44,7 @@ public class PrivilegedOperation {
     INITIALIZE_CONTAINER(""), //no CLI switch supported yet
     LAUNCH_CONTAINER(""), //no CLI switch supported yet
     SIGNAL_CONTAINER(""), //no CLI switch supported yet
+    EXEC_CONTAINER("--exec-container"), //no CLI switch supported yet
     DELETE_AS_USER(""), //no CLI switch supported yet
     LAUNCH_DOCKER_CONTAINER(""), //no CLI switch supported yet
     TC_MODIFY_STATE("--tc-modify-state"),
@@ -53,7 +54,12 @@ public class PrivilegedOperation {
     RUN_DOCKER_CMD("--run-docker"),
     GPU("--module-gpu"),
     FPGA("--module-fpga"),
-    LIST_AS_USER(""); //no CLI switch supported yet.
+    DEVICE("--module-devices"),
+    LIST_AS_USER(""), // no CLI switch supported yet.
+    ADD_NUMA_PARAMS(""), // no CLI switch supported yet.
+    REMOVE_DOCKER_CONTAINER("--remove-docker-container"),
+    INSPECT_DOCKER_CONTAINER("--inspect-docker-container"),
+    SYNC_YARN_SYSFS("");
 
     private final String option;
 
@@ -150,7 +156,8 @@ public class PrivilegedOperation {
     SIGNAL_CONTAINER(2),
     DELETE_AS_USER(3),
     LAUNCH_DOCKER_CONTAINER(4),
-    LIST_AS_USER(5);
+    LIST_AS_USER(5),
+    SYNC_YARN_SYSFS(6);
 
     private int value;
     RunAsUserCommand(int value) {

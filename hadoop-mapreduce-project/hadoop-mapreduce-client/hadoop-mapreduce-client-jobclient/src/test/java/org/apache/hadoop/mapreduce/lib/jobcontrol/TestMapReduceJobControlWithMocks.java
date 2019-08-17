@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,10 +51,10 @@ public class TestMapReduceJobControlWithMocks {
     assertEquals("Success list", 4, jobControl.getSuccessfulJobList().size());
     assertEquals("Failed list", 0, jobControl.getFailedJobList().size());
     
-    assertTrue(job1.getJobState() == ControlledJob.State.SUCCESS);
-    assertTrue(job2.getJobState() == ControlledJob.State.SUCCESS);
-    assertTrue(job3.getJobState() == ControlledJob.State.SUCCESS);
-    assertTrue(job4.getJobState() == ControlledJob.State.SUCCESS);
+    assertEquals(ControlledJob.State.SUCCESS, job1.getJobState());
+    assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
+    assertEquals(ControlledJob.State.SUCCESS, job3.getJobState());
+    assertEquals(ControlledJob.State.SUCCESS, job4.getJobState());
     
     jobControl.stop();
   }
@@ -74,10 +73,10 @@ public class TestMapReduceJobControlWithMocks {
     assertEquals("Success list", 1, jobControl.getSuccessfulJobList().size());
     assertEquals("Failed list", 3, jobControl.getFailedJobList().size());
 
-    assertTrue(job1.getJobState() == ControlledJob.State.FAILED);
-    assertTrue(job2.getJobState() == ControlledJob.State.SUCCESS);
-    assertTrue(job3.getJobState() == ControlledJob.State.DEPENDENT_FAILED);
-    assertTrue(job4.getJobState() == ControlledJob.State.DEPENDENT_FAILED);
+    assertEquals(ControlledJob.State.FAILED, job1.getJobState());
+    assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
+    assertEquals(ControlledJob.State.DEPENDENT_FAILED, job3.getJobState());
+    assertEquals(ControlledJob.State.DEPENDENT_FAILED, job4.getJobState());
     
     jobControl.stop();
   }
@@ -99,7 +98,7 @@ public class TestMapReduceJobControlWithMocks {
       assertEquals("Success list", 0, jobControl.getSuccessfulJobList().size());
       assertEquals("Failed list", 1, jobControl.getFailedJobList().size());
 
-      assertTrue(job1.getJobState() == ControlledJob.State.FAILED);
+      assertEquals(ControlledJob.State.FAILED, job1.getJobState());
     } finally {
       jobControl.stop();
     }

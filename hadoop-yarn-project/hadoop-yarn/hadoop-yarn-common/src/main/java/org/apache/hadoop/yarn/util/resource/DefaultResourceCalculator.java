@@ -17,17 +17,24 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.Set;
+
 @Private
 @Unstable
 public class DefaultResourceCalculator extends ResourceCalculator {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultResourceCalculator.class);
+
+  private static final Set<String> INSUFFICIENT_RESOURCE_NAME =
+      ImmutableSet.of(ResourceInformation.MEMORY_URI);
 
   @Override
   public int compare(Resource unused, Resource lhs, Resource rhs,
@@ -57,7 +64,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getMemorySize() / b.getMemorySize();
+    return divideSafelyAsFloat(a.getMemorySize(), b.getMemorySize());
   }
 
   @Override
@@ -136,13 +143,27 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean isAnyMajorResourceZero(Resource resource) {
-    return resource.getMemorySize() == 0f;
-  }
-
-  @Override
   public Resource normalizeDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
         roundDown((r.getMemorySize()), stepFactor.getMemorySize()));
+  }
+
+  @Override
+  public boolean isAnyMajorResourceZeroOrNegative(Resource resource) {
+    return resource.getMemorySize() <= 0;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceAboveZero(Resource resource) {
+    return resource.getMemorySize() > 0;
+  }
+
+  public Set<String> getInsufficientResourceNames(Resource required,
+      Resource available) {
+    if (required.getMemorySize() > available.getMemorySize()) {
+      return INSUFFICIENT_RESOURCE_NAME;
+    } else {
+      return ImmutableSet.of();
+    }
   }
 }

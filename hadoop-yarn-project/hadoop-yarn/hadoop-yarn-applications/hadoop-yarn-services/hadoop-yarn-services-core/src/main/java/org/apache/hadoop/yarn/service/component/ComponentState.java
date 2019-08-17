@@ -21,5 +21,7 @@ package org.apache.hadoop.yarn.service.component;
 public enum ComponentState {
   INIT,
   FLEXING,
-  STABLE
+  STABLE,
+  UPGRADING,
+  CANCEL_UPGRADING
 }

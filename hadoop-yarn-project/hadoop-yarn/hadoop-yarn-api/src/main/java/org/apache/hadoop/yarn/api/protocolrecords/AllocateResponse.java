@@ -420,7 +420,7 @@ public abstract class AllocateResponse {
   @Public
   @Unstable
   public List<RejectedSchedulingRequest> getRejectedSchedulingRequests() {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   /**

@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckContext;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Rule;
@@ -39,10 +41,15 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
@@ -122,8 +129,10 @@ public class TestDatasetVolumeChecker {
           }
         });
 
+    GenericTestUtils.waitFor(() -> numCallbackInvocations.get() > 0, 5, 10000);
+
     // Ensure that the check was invoked at least once.
-    verify(volume, times(1)).check(anyObject());
+    verify(volume, times(1)).check(any());
     if (result) {
       assertThat(numCallbackInvocations.get(), is(1L));
     }
@@ -157,7 +166,7 @@ public class TestDatasetVolumeChecker {
 
     // Ensure each volume's check() method was called exactly once.
     for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyObject());
+      verify(volume, times(1)).check(any());
     }
   }
 
@@ -214,13 +223,44 @@ public class TestDatasetVolumeChecker {
       when(volume.getStorageLocation()).thenReturn(location);
 
       if (health != null) {
-        when(volume.check(anyObject())).thenReturn(health);
+        when(volume.check(any())).thenReturn(health);
       } else {
         final DiskErrorException de = new DiskErrorException("Fake Exception");
-        when(volume.check(anyObject())).thenThrow(de);
+        when(volume.check(any())).thenThrow(de);
       }
       volumes.add(volume);
     }
     return volumes;
+  }
+
+  @Test
+  public void testInvalidConfigurationValues() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, 0);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.timeout"
+            + " - 0 (should be > 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY);
+
+    conf.setInt(DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY, -1);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.min.gap"
+            + " - -1 (should be >= 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY);
+
+    conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, -1);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.timeout"
+            + " - -1 (should be > 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY);
+
+    conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, -2);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.failed.volumes.tolerated"
+            + " - -2 should be greater than or equal to -1",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
   }
 }

@@ -19,18 +19,15 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.UnknownSubclusterException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
@@ -39,8 +36,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * broadcasts each {@link ResourceRequest} to all the available sub-clusters.
  */
 public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
-
-  private Set<SubClusterId> knownClusterIds = new HashSet<>();
 
   @Override
   public void reinitialize(
@@ -55,7 +50,8 @@ public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
@@ -65,21 +61,9 @@ public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // simply broadcast the resource request to all sub-clusters
     for (SubClusterId subClusterId : activeSubclusters.keySet()) {
       answer.put(subClusterId, resourceRequests);
-      knownClusterIds.add(subClusterId);
     }
 
     return answer;
-  }
-
-  @Override
-  public void notifyOfResponse(SubClusterId subClusterId,
-      AllocateResponse response) throws YarnException {
-    if (!knownClusterIds.contains(subClusterId)) {
-      throw new UnknownSubclusterException(
-          "The response is received from a subcluster that is unknown to this "
-              + "policy.");
-    }
-    // stateless policy does not care about responses
   }
 
 }

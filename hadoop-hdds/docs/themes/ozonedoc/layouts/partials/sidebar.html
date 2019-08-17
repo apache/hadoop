@@ -1,0 +1,71 @@
+<!---
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<div class="col-sm-2 col-md-2 sidebar" id="sidebar">
+  <ul class="nav nav-sidebar">
+    {{ $currentPage := . }}
+    {{ range .Site.Menus.main }}
+        {{ if .HasChildren }}
+            <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
+                <a href="{{ .URL | relURL}}">
+                    {{ .Pre }}
+                    <span>{{ .Name }}</span>
+                </a>
+                <ul class="nav">
+                    {{ range .Children }}
+                        <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
+                           {{ if .HasChildren }}
+                               <a href="{{ .URL | relURL}}">
+                                 {{ .Pre }}
+                                 <span>{{ .Name }}</span>
+                               </a>
+                               <ul class="nav">
+                               {{ range .Children }}
+                                  <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
+                                     <a href="{{ .URL | relURL}}">{{ .Name }}</a>
+                                  </li>
+                               {{ end }}
+                               </ul>
+                           {{ else }}
+                           <a href="{{ .URL }}">{{ .Name }}</a>
+                           {{ end }}
+                        </li>
+                    {{ end }}
+                </ul>
+            </li>
+        {{ else }}
+            <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
+                {{ if eq .URL "/" }}
+                   <a href="{{ "index.html" | relURL }}">
+                {{ else }}
+                   <a href="{{ .URL | relURL }}">
+                {{ end }}
+
+                    {{ .Pre }}
+                    <span>{{ .Name }}</span>
+                </a>
+            </li>
+        {{ end }}
+    {{ end }}
+    <li class="visible-xs"><a href="#">References</a>
+    <ul class="nav">
+        <li><a href="https://github.com/apache/hadoop"><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> Source</a></li>
+        <li><a href="https://hadoop.apache.org"><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> Apache Hadoop</a></li>
+        <li><a href="https://apache.org"><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> ASF</a></li>
+    </ul></li>
+  </ul>
+
+</div>

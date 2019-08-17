@@ -30,7 +30,8 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.commons.logging.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  * Shared functionality for hadoopStreaming formats.
@@ -40,7 +41,7 @@ import org.apache.commons.logging.*;
  */
 public abstract class StreamBaseRecordReader implements RecordReader<Text, Text> {
 
-  protected static final Log LOG = LogFactory.getLog(StreamBaseRecordReader.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(StreamBaseRecordReader.class.getName());
 
   // custom JobConf properties for this class are prefixed with this namespace
   final static String CONF_NS = "stream.recordreader.";

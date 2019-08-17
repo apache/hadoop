@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<svg width="703px" height="465px" viewBox="0 0 703 465" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 44.1 (41455) - http://www.bohemiancoding.com/sketch -->
+    <title>Desktop HD</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="131" height="36" rx="8"></rect>
+        <rect id="path-2" x="0" y="0" width="131" height="36" rx="8"></rect>
+        <rect id="path-3" x="9" y="304" width="437" height="144"></rect>
+        <mask id="mask-4" maskContentUnits="userSpaceOnUse" maskUnits="objectBoundingBox" x="0" y="0" width="437" height="144" fill="white">
+            <use xlink:href="#path-3"></use>
+        </mask>
+        <rect id="path-5" x="0" y="0" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-6" x="3.26727637" y="4.49286685" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-7" x="7.07909881" y="11.2321671" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-8" x="0" y="0" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-9" x="3.26727637" y="4.49286685" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-10" x="7.07909881" y="11.2321671" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-11" x="0" y="0" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-12" x="3.26727637" y="4.49286685" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-13" x="7.07909881" y="11.2321671" width="123.06741" height="40.4358016" rx="8"></rect>
+        <rect id="path-14" x="0" y="14.7446809" width="97" height="36.1914894"></rect>
+        <rect id="path-15" x="0" y="14.7446809" width="97" height="36.1914894"></rect>
+        <rect id="path-16" x="0" y="0" width="131" height="36" rx="8"></rect>
+        <rect id="path-17" x="0" y="0" width="131" height="36" rx="8"></rect>
+        <rect id="path-18" x="0.140758874" y="0" width="142.859241" height="35.1071084" rx="8"></rect>
+        <rect id="path-19" x="0" y="0" width="226" height="36" rx="8"></rect>
+        <rect id="path-20" x="6" y="4" width="226" height="36" rx="8"></rect>
+        <rect id="path-21" x="13" y="10" width="226" height="36" rx="8"></rect>
+        <rect id="path-22" x="0" y="0" width="226" height="36" rx="8"></rect>
+        <rect id="path-23" x="6" y="4" width="226" height="36" rx="8"></rect>
+        <rect id="path-24" x="13" y="10" width="226" height="36" rx="8"></rect>
+        <rect id="path-25" x="0" y="14.7446809" width="97" height="36.1914894"></rect>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M84.5,51.5 L240.5,130.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+        <path id="Line-decoration-1" d="M240.5,130.5 L232.220366,122.944362 L229.50967,128.29713 L240.5,130.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+        <path d="M142.5,150.5 L177.5,150.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+        <path id="Line-decoration-1" d="M177.5,150.5 L166.7,147.5 L166.7,153.5 L177.5,150.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+        <g id="Desktop-HD">
+            <g id="Client" transform="translate(176.000000, 132.000000)">
+                <g id="Rectangle">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-1"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="130" height="35" rx="8"></rect>
+                </g>
+                <text id="Ozone-Client" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="24.2107393" y="24">Ozone Client</tspan>
+                </text>
+            </g>
+            <g id="Handler" transform="translate(35.000000, 18.000000)">
+                <g id="Rectangle-2">
+                    <use fill="#E4D6F8" fill-rule="evenodd" xlink:href="#path-2"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="130" height="35" rx="8"></rect>
+                </g>
+                <text id="Rest-Handler" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="22.3208008" y="22">Rest Handler</tspan>
+                </text>
+            </g>
+            <use id="Rectangle-4" stroke="#979797" mask="url(#mask-4)" stroke-width="2" fill="#FFFFFF" stroke-dasharray="1,3,1,3" xlink:href="#path-3"></use>
+            <g id="Ratis" transform="translate(315.000000, 378.000000)">
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-5"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-6"></use>
+                    <rect stroke="#000000" stroke-width="1" x="3.76727637" y="4.99286685" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-7"></use>
+                    <rect stroke="#000000" stroke-width="1" x="7.57909881" y="11.7321671" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="51.3828125" y="35.9642655">Ratis</tspan>
+                </text>
+            </g>
+            <g id="Ratis" transform="translate(166.000000, 378.000000)">
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-8"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-9"></use>
+                    <rect stroke="#000000" stroke-width="1" x="3.76727637" y="4.99286685" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-10"></use>
+                    <rect stroke="#000000" stroke-width="1" x="7.57909881" y="11.7321671" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="51.3828125" y="35.9642655">Ratis</tspan>
+                </text>
+            </g>
+            <g id="Ratis" transform="translate(10.000000, 378.000000)">
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-11"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-12"></use>
+                    <rect stroke="#000000" stroke-width="1" x="3.76727637" y="4.99286685" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-13"></use>
+                    <rect stroke="#000000" stroke-width="1" x="7.57909881" y="11.7321671" width="122.06741" height="39.4358016" rx="8"></rect>
+                </g>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="51.3828125" y="35.9642655">Ratis</tspan>
+                </text>
+            </g>
+            <path d="M240.5,168.5 L240.5,311.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path id="Line-decoration-1" d="M240.5,311.5 L243.5,300.7 L237.5,300.7 L240.5,311.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path d="M243.5,54.5 L243.5,131.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path id="Line-decoration-1" d="M243.5,131.5 L246.5,120.7 L240.5,120.7 L243.5,131.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <g id="Container" transform="translate(328.000000, 313.000000)">
+                <g id="Rectangle-5">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-14"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="15.2446809" width="96" height="35.1914894"></rect>
+                </g>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="11.393617" rx="48.5" ry="11.393617"></ellipse>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="51.606383" rx="48.5" ry="11.393617"></ellipse>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="14.3310547" y="37">Container</tspan>
+                </text>
+            </g>
+            <g id="Container" transform="translate(176.000000, 312.000000)">
+                <g id="Rectangle-5">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-15"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="15.2446809" width="96" height="35.1914894"></rect>
+                </g>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="11.393617" rx="48.5" ry="11.393617"></ellipse>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="51.606383" rx="48.5" ry="11.393617"></ellipse>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="14.3310547" y="37">Container</tspan>
+                </text>
+            </g>
+            <g id="FileSystem" transform="translate(11.000000, 133.000000)">
+                <g id="Rectangle-2">
+                    <use fill="#7ED321" fill-rule="evenodd" xlink:href="#path-16"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="130" height="35" rx="8"></rect>
+                </g>
+                <text id="Ozone-File-System" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="3.25878906" y="22">Ozone File System</tspan>
+                </text>
+            </g>
+            <g id="CLI" transform="translate(179.000000, 18.000000)">
+                <g id="Rectangle-2">
+                    <use fill="#E4D6F8" fill-rule="evenodd" xlink:href="#path-17"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="130" height="35" rx="8"></rect>
+                </g>
+                <text id="Ozone-CLI" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="26.3896484" y="23">Ozone CLI</tspan>
+                </text>
+            </g>
+            <path d="M333.336323,48.7787611 L248.494492,130.227891" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path id="Line-decoration-1" d="M248.494492,130.227891 L258.363039,124.91265 L254.207822,120.584351 L248.494492,130.227891 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <g id="Corona" transform="translate(325.000000, 17.000000)">
+                <g id="Rectangle-2">
+                    <use fill="#E4D6F8" fill-rule="evenodd" xlink:href="#path-18"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.640758874" y="0.5" width="141.859241" height="34.1071084" rx="8"></rect>
+                </g>
+                <text id="Freon" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="50.7326544" y="22.8128606">Freon</tspan>
+                </text>
+            </g>
+            <path d="M307.5,148.5 L433.5,148.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path id="Line-decoration-1" d="M433.5,148.5 L422.7,145.5 L422.7,151.5 L433.5,148.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path d="M4,232 L699,232" id="Line" stroke="#000000" stroke-width="2" stroke-linecap="square" stroke-dasharray="5,2,5"></path>
+            <g id="OM" transform="translate(432.000000, 132.000000)">
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-19"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-20"></use>
+                    <rect stroke="#000000" stroke-width="1" x="6.5" y="4.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-21"></use>
+                    <rect stroke="#000000" stroke-width="1" x="13.5" y="10.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <text id="Ozone-Manager" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="67.3793945" y="32">Ozone Manager</tspan>
+                </text>
+            </g>
+            <g id="SCM" transform="translate(450.000000, 281.000000)">
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-22"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-23"></use>
+                    <rect stroke="#000000" stroke-width="1" x="6.5" y="4.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <g id="Rectangle-3">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-24"></use>
+                    <rect stroke="#000000" stroke-width="1" x="13.5" y="10.5" width="225" height="35" rx="8"></rect>
+                </g>
+                <text id="Storage-Container-Manager" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="28.0932617" y="32">Storage Container Manager</tspan>
+                </text>
+            </g>
+            <path d="M534.5,178.5 L534.5,283.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <path id="Line-decoration-1" d="M534.5,283.5 L537.5,272.7 L531.5,272.7 L534.5,283.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
+            <text id="Datanodes" font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                <tspan x="196.213867" y="462">Datanodes</tspan>
+            </text>
+            <g id="Container" transform="translate(15.000000, 311.000000)">
+                <g id="Rectangle-5">
+                    <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-25"></use>
+                    <rect stroke="#000000" stroke-width="1" x="0.5" y="15.2446809" width="96" height="35.1914894"></rect>
+                </g>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="11.393617" rx="48.5" ry="11.393617"></ellipse>
+                <ellipse id="Oval" stroke="#000000" fill="#C6D4F9" cx="48.5" cy="51.606383" rx="48.5" ry="11.393617"></ellipse>
+                <text font-family="Helvetica-Bold, Helvetica" font-size="14" font-weight="bold" fill="#000000">
+                    <tspan x="14.3310547" y="37">Container</tspan>
+                </text>
+            </g>
+            <path d="M84.5,137.5 L86,139" id="Line" stroke="#979797" stroke-linecap="square"></path>
+            <text id="Hadoop-Distributed-D" font-family="Helvetica-Bold, Helvetica" font-size="20" font-weight="bold" fill="#000000">
+                <tspan x="205.433594" y="230">Hadoop Distributed Data Store</tspan>
+            </text>
+        </g>
+    </g>
+</svg>

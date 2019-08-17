@@ -27,13 +27,14 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 import java.util.EnumSet;
 import java.util.Collection;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -124,7 +125,7 @@ public class TaskPage extends AppView {
       StringBuilder attemptsTableData = new StringBuilder("[\n");
 
       for (TaskAttempt attempt : getTaskAttempts()) {
-        TaskAttemptInfo ta = new TaskAttemptInfo(attempt, true);
+        TaskAttemptInfo ta = new MapTaskAttemptInfo(attempt, true);
         String progress = StringUtils.format("%.2f", ta.getProgress());
 
         String nodeHttpAddr = ta.getNode();
@@ -134,8 +135,8 @@ public class TaskPage extends AppView {
         .append(getAttemptId(taskId, ta)).append("\",\"")
         .append(progress).append("\",\"")
         .append(ta.getState().toString()).append("\",\"")
-        .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(ta.getStatus()))).append("\",\"")
+        .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(ta.getStatus()))).append("\",\"")
 
         .append(nodeHttpAddr == null ? "N/A" :
             "<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>"
@@ -151,8 +152,8 @@ public class TaskPage extends AppView {
         .append(ta.getStartTime()).append("\",\"")
         .append(ta.getFinishTime()).append("\",\"")
         .append(ta.getElapsedTime()).append("\",\"")
-        .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-          diag)));
+        .append(StringEscapeUtils.escapeEcmaScript(
+            StringEscapeUtils.escapeHtml4(diag)));
         if (enableUIActions) {
           attemptsTableData.append("\",\"");
           if (EnumSet.of(
