@@ -273,7 +273,7 @@ public class SecurityConfig {
   /**
    * Returns the File path to where certificates are stored.
    *
-   * @return path Key location.
+   * @return path Certificate location.
    */
   public Path getCertificateLocation() {
     Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
