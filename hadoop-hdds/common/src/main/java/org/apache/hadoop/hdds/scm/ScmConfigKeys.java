@@ -119,7 +119,7 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.log.purge.gap";
   // TODO: Set to 1024 once RATIS issue around purge is fixed.
   public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
-      1000000000;
+      1000000;
   // expiry interval stateMachineData cache entry inside containerStateMachine
   public static final String
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
