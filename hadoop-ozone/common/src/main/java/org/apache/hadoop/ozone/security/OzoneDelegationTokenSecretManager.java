@@ -287,16 +287,38 @@ public class OzoneDelegationTokenSecretManager
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token " + formatTokenId(id));
     }
-    try {
-      store.removeToken(id);
-    } catch (IOException e) {
-      LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
-    }
-    TokenInfo info = currentTokens.remove(id);
-    if (info == null) {
-      throw new InvalidToken("Token not found " + formatTokenId(id));
+
+    // For HA ratis will take care of removal.
+    // This check will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        store.removeToken(id);
+      } catch (IOException e) {
+        LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
+      }
+      TokenInfo info = currentTokens.remove(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found " + formatTokenId(id));
+      }
+    } else {
+      // Check whether token is there in-memory map of tokens or not on the
+      // OM leader.
+      TokenInfo info = currentTokens.get(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found in-memory map of tokens" +
+            formatTokenId(id));
+      }
     }
     return id;
+  }
+
+  /**
+   * Remove the expired token from in-memory map.
+   * @param ozoneTokenIdentifier
+   * @throws IOException
+   */
+  public void removeToken(OzoneTokenIdentifier ozoneTokenIdentifier) {
+    currentTokens.remove(ozoneTokenIdentifier);
   }
 
   @Override

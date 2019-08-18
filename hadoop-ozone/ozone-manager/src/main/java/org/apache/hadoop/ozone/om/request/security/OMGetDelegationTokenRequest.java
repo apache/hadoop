@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.response.security.OMDelegationTokenResponse;
+import org.apache.hadoop.ozone.om.response.security.OMGetDelegationTokenResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
@@ -65,13 +65,13 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
         .getDelegationToken(new Text(getDelegationTokenRequest.getRenewer()));
 
 
-    // Client issues GetDelegationToken request, when received by OM leader will
-    // it generate Token. Original GetDelegationToken request is converted to
-    // UpdateGetDelegationToken request with the generated token information.
-    // This updated request will be submitted to Ratis. In this way delegation
-    // token created by leader, will be replicated across all OMs.
-    // And also original GetDelegationToken request from client does not need
-    // any proto changes.
+    // Client issues GetDelegationToken request, when received by OM leader
+    // it will generate a token. Original GetDelegationToken request is
+    // converted to UpdateGetDelegationToken request with the generated token
+    // information. This updated request will be submitted to Ratis. In this
+    // way delegation token created by leader, will be replicated across all
+    // OMs. With this approach, original GetDelegationToken request from
+    // client does not need any proto changes.
 
     // Create UpdateGetDelegationTokenRequest with token response.
     OMRequest.Builder omRequest = OMRequest.newBuilder()
@@ -129,14 +129,14 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
           new CacheValue<>(Optional.of(renewTime), transactionLogIndex));
 
       omClientResponse =
-          new OMDelegationTokenResponse(ozoneTokenIdentifier, renewTime,
+          new OMGetDelegationTokenResponse(ozoneTokenIdentifier, renewTime,
               omResponse.setGetDelegationTokenResponse(
                   updateGetDelegationTokenRequest
                       .getGetDelegationTokenResponse()).build());
     } catch (IOException ex) {
-      LOG.error("Error in Updating DelegationToken {} to DB",
+      LOG.error("Error in Updating DelegationToken {}",
           ozoneTokenIdentifierToken, ex);
-      omClientResponse = new OMDelegationTokenResponse(null, -1L,
+      omClientResponse = new OMGetDelegationTokenResponse(null, -1L,
           createErrorOMResponse(omResponse, ex));
     } finally {
       if (omClientResponse != null) {
@@ -147,7 +147,7 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Updated delegation token to OM DB: {}",
+      LOG.debug("Updated delegation token in-memory map: {}",
           ozoneTokenIdentifierToken);
     }
 
