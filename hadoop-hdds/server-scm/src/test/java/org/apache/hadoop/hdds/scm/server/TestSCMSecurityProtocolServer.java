@@ -19,12 +19,9 @@ package org.apache.hadoop.hdds.scm.server;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT;
 
-import java.net.ServerSocket;
-
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -38,18 +35,12 @@ public class TestSCMSecurityProtocolServer {
 
   @Rule
   public Timeout timeout = new Timeout(1000 * 20);
-  private static int scmRpcSecurePort;
-
-  @BeforeClass
-  public static void setupClass() throws Exception {
-    scmRpcSecurePort = new ServerSocket(0).getLocalPort();
-  }
 
   @Before
   public void setUp() throws Exception {
     config = new OzoneConfiguration();
     config.set(OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY,
-        OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT + ":" + scmRpcSecurePort);
+        OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT + ":0");
     securityProtocolServer = new SCMSecurityProtocolServer(config, null);
   }
 
