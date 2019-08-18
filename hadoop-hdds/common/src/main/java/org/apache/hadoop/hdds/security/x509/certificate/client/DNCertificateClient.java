@@ -26,8 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 
-import java.nio.file.Paths;
-
 /**
  * Certificate client for DataNodes.
  */
@@ -36,7 +34,7 @@ public class DNCertificateClient extends DefaultCertificateClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(DNCertificateClient.class);
 
-  public static final String COMPONENT_NAME = Paths.get("dn").toString();
+  public static final String COMPONENT_NAME = "dn";
 
   public DNCertificateClient(SecurityConfig securityConfig,
       String certSerialId) {

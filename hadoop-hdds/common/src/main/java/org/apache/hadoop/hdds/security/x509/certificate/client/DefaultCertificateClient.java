@@ -96,7 +96,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       String certSerialId, String component) {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
-    keyCodec = new KeyCodec(securityConfig);
+    keyCodec = new KeyCodec(securityConfig, component);
     this.logger = log;
     this.certificateMap = new ConcurrentHashMap<>();
     this.certSerialId = certSerialId;
@@ -160,7 +160,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return privateKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPrivateKeyFileName())) {
       try {
@@ -184,7 +184,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return publicKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPublicKeyFileName())) {
       try {
@@ -741,7 +741,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * location.
    * */
   protected void bootstrapClientKeys() throws CertificateException {
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (Files.notExists(keyPath)) {
       try {
         Files.createDirectories(keyPath);
