@@ -27,6 +27,7 @@ import org.apache.hadoop.utils.db.BatchOperation;
 import org.apache.hadoop.utils.db.Table;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -38,7 +39,7 @@ public class OMGetDelegationTokenResponse extends OMClientResponse {
   private long renewTime = -1L;
 
   public OMGetDelegationTokenResponse(
-      @Nonnull OzoneTokenIdentifier ozoneTokenIdentifier,
+      @Nullable OzoneTokenIdentifier ozoneTokenIdentifier,
       long renewTime, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.ozoneTokenIdentifier = ozoneTokenIdentifier;
