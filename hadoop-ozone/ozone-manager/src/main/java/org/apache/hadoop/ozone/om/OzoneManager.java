@@ -445,7 +445,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       delegationTokenMgr = createDelegationTokenSecretManager(configuration);
     }
 
-    prefixManager = new PrefixManagerImpl(metadataManager);
+    prefixManager = new PrefixManagerImpl(metadataManager, isRatisEnabled);
     keyManager = new KeyManagerImpl(this, scmClient, configuration,
         omStorage.getOmId());
 
@@ -3429,4 +3429,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .getUpdatesSince(dbUpdatesRequest.getSequenceNumber());
 
   }
+
+  public OzoneDelegationTokenSecretManager getDelegationTokenMgr() {
+    return delegationTokenMgr;
+  }
+
 }

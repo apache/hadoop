@@ -61,7 +61,7 @@ public class RpcDetailedMetrics {
    */
   public void init(Class<?> protocol) {
     rates.init(protocol);
-    deferredRpcRates.init(protocol);
+    deferredRpcRates.init(protocol, "Deferred");
   }
 
   /**
