@@ -24,18 +24,23 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.Table;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
- * Handle response for DelegationToken request.
+ * Handle response for GetDelegationToken request.
  */
-public class OMDelegationTokenResponse extends OMClientResponse {
+public class OMGetDelegationTokenResponse extends OMClientResponse {
 
   private OzoneTokenIdentifier ozoneTokenIdentifier;
-  private long renewTime;
-  public OMDelegationTokenResponse(OzoneTokenIdentifier ozoneTokenIdentifier,
-      long renewTime, OMResponse omResponse) {
+  private long renewTime = -1L;
+
+  public OMGetDelegationTokenResponse(
+      @Nullable OzoneTokenIdentifier ozoneTokenIdentifier,
+      long renewTime, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.ozoneTokenIdentifier = ozoneTokenIdentifier;
     this.renewTime = renewTime;
@@ -44,10 +49,9 @@ public class OMDelegationTokenResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
-
+    Table table = omMetadataManager.getDelegationTokenTable();
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
-      omMetadataManager.getDelegationTokenTable().putWithBatch(batchOperation,
-          ozoneTokenIdentifier, renewTime);
+      table.putWithBatch(batchOperation, ozoneTokenIdentifier, renewTime);
     }
   }
 }
