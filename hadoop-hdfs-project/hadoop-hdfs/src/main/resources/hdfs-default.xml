@@ -2182,6 +2182,15 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.datanode.peer.metrics.min.outlier.detection.samples</name>
+    <value>1000</value>
+    <description>
+      Minimum number of packet send samples which are required to qualify for outlier detection.
+      If the number of samples is below this then outlier detection is skipped.
+    </description>
+  </property>
+
 <property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
