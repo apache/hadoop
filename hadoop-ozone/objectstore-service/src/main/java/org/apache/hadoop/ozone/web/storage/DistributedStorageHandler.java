@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -434,7 +435,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setDataSize(args.getSize())
         .setType(xceiverClientManager.getType())
         .setFactor(xceiverClientManager.getFactor())
-        .setAcls(OzoneUtils.getAclList(args.getUserName(),
+        .setAcls(OzoneAclUtil.getAclList(args.getUserName(),
             args.getGroups() != null ? Arrays.asList(args.getGroups()) : null,
             ACLType.ALL, ACLType.ALL))
         .build();
