@@ -79,8 +79,8 @@ public class TestPendingDataNodeMessages {
 
   @Test
   public void testPendingDataNodeMessagesWithEC() throws Exception {
-    ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getPolicies()
-        .get(3);
+    ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
     Path dirPath = new Path("/testPendingDataNodeMessagesWithEC");
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 20 * 60000);
