@@ -22,7 +22,7 @@ services:
          - ../..:/opt/hadoop
          - ./haproxy-conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
       ports:
-         - 8081:9878
+         - 9878:9878
    datanode:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
