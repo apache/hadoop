@@ -144,14 +144,15 @@ public abstract class TestOzoneRpcClientAbstract {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static String remoteUserName = "remoteUser";
+  private static String remoteGroupName = "remoteGroup";
   private static OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
       READ, DEFAULT);
-  private static OzoneAcl defaultGroupAcl = new OzoneAcl(GROUP, remoteUserName,
+  private static OzoneAcl defaultGroupAcl = new OzoneAcl(GROUP, remoteGroupName,
       READ, DEFAULT);
   private static OzoneAcl inheritedUserAcl = new OzoneAcl(USER, remoteUserName,
       READ, ACCESS);
   private static OzoneAcl inheritedGroupAcl = new OzoneAcl(GROUP,
-      remoteUserName, READ, ACCESS);
+      remoteGroupName, READ, ACCESS);
 
   private static String scmId = UUID.randomUUID().toString();
 
@@ -2280,11 +2281,11 @@ public abstract class TestOzoneRpcClientAbstract {
       }
     }
     List<OzoneAcl> acls = store.getAcl(parentObj);
-    assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+    assertTrue("Current acls: " + StringUtils.join(",", acls) +
+            " inheritedUserAcl: " + inheritedUserAcl,
         acls.contains(defaultUserAcl));
-    assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+    assertTrue("Current acls: " + StringUtils.join(",", acls) +
+            " inheritedGroupAcl: " + inheritedGroupAcl,
         acls.contains(defaultGroupAcl));
 
     acls = store.getAcl(childObj);
@@ -2292,7 +2293,7 @@ public abstract class TestOzoneRpcClientAbstract {
             " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(inheritedUserAcl));
     assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+            " inheritedGroupAcl:" + inheritedGroupAcl,
         acls.contains(inheritedGroupAcl));
   }
 

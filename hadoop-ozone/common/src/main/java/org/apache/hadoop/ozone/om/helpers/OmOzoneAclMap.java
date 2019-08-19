@@ -28,7 +28,6 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.util.BitSet;
@@ -235,12 +234,12 @@ public class OmOzoneAclMap {
 
     switch (identityType) {
     case USER:
-      return OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+      return OzoneAclUtil.checkIfAclBitIsSet(acl, getAcl(identityType,
           ugi.getUserName()));
     case GROUP:
       // Check access for user groups.
       for (String userGroup : ugi.getGroupNames()) {
-        if (OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+        if (OzoneAclUtil.checkIfAclBitIsSet(acl, getAcl(identityType,
             userGroup))) {
           // Return true if any user group has required permission.
           return true;
@@ -249,7 +248,7 @@ public class OmOzoneAclMap {
       break;
     default:
       // For type WORLD and ANONYMOUS we set acl type as name.
-      if(OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+      if(OzoneAclUtil.checkIfAclBitIsSet(acl, getAcl(identityType,
           identityType.name()))) {
         return true;
       }
