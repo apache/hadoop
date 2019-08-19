@@ -87,7 +87,7 @@ public class TestAdlSdkConfiguration {
       fs = (AdlFileSystem)
           (AdlStorageConfiguration.createStorageConnector(conf));
     } catch (URISyntaxException e) {
-      throw new IllegalStateException("Can not initialize ADL FileSystem. "
+      throw new IllegalStateException("ADL FileSystem initialization failed. "
           + "Please check test.fs.adl.name property.", e);
     }
 
