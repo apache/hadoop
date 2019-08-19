@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -63,7 +64,7 @@ public class TestFSImageWithSnapshot {
   }
 
   static final long seed = 0;
-  static final short NUM_DATANODES = 3;
+  static final short NUM_DATANODES = 1;
   static final int BLOCKSIZE = 1024;
   static final long txid = 1;
 
@@ -509,5 +510,102 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
+  }
+
+  void rename(Path src, Path dst) throws Exception {
+    printTree("Before rename " + src + " -> " + dst);
+    hdfs.rename(src, dst);
+    printTree("After rename " + src + " -> " + dst);
+  }
+
+  void createFile(Path directory, String filename) throws Exception {
+    final Path f = new Path(directory, filename);
+    DFSTestUtil.createFile(hdfs, f, 0, NUM_DATANODES, seed);
+  }
+
+  void appendFile(Path directory, String filename) throws Exception {
+    final Path f = new Path(directory, filename);
+    DFSTestUtil.appendFile(hdfs, f, "more data");
+    printTree("appended " + f);
+  }
+
+  void deleteSnapshot(Path directory, String snapshotName) throws Exception {
+    hdfs.deleteSnapshot(directory, snapshotName);
+    printTree("deleted snapshot " + snapshotName);
+  }
+
+  @Test (timeout=60000)
+  public void testDoubleRename() throws Exception {
+    final Path parent = new Path("/parent");
+    hdfs.mkdirs(parent);
+    final Path sub1 = new Path(parent, "sub1");
+    final Path sub1foo = new Path(sub1, "foo");
+    hdfs.mkdirs(sub1);
+    hdfs.mkdirs(sub1foo);
+    createFile(sub1foo, "file0");
+
+    printTree("before s0");
+    hdfs.allowSnapshot(parent);
+    hdfs.createSnapshot(parent, "s0");
+
+    createFile(sub1foo, "file1");
+    createFile(sub1foo, "file2");
+
+    final Path sub2 = new Path(parent, "sub2");
+    hdfs.mkdirs(sub2);
+    final Path sub2foo = new Path(sub2, "foo");
+    // mv /parent/sub1/foo to /parent/sub2/foo
+    rename(sub1foo, sub2foo);
+
+    hdfs.createSnapshot(parent, "s1");
+    hdfs.createSnapshot(parent, "s2");
+    printTree("created snapshots: s1, s2");
+
+    appendFile(sub2foo, "file1");
+    createFile(sub2foo, "file3");
+
+    final Path sub3 = new Path(parent, "sub3");
+    hdfs.mkdirs(sub3);
+    // mv /parent/sub2/foo to /parent/sub3/foo
+    rename(sub2foo, sub3);
+
+    hdfs.delete(sub3,  true);
+    printTree("deleted " + sub3);
+
+    deleteSnapshot(parent, "s1");
+    restartCluster();
+
+    deleteSnapshot(parent, "s2");
+    restartCluster();
+  }
+
+  void restartCluster() throws Exception {
+    final File before = dumpTree2File("before.txt");
+
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    final File after = dumpTree2File("after.txt");
+    SnapshotTestHelper.compareDumpedTreeInFile(before, after, true);
+  }
+
+  private final PrintWriter output = new PrintWriter(System.out, true);
+  private int printTreeCount = 0;
+
+  String printTree(String label) throws Exception {
+    output.println();
+    output.println();
+    output.println("***** " + printTreeCount++ + ": " + label);
+    final String b =
+        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
+    output.println(b);
+    return b;
   }
 }
