@@ -1045,6 +1045,18 @@ public class INodeFile extends INodeWithAdditionalFields
     out.print(", blocks=");
     out.print(blocks.length == 0 ? null: blocks[0]);
     out.println();
+
+    final FileWithSnapshotFeature snapshotFeature =
+        getFileWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      if (prefix.length() >= 2) {
+        prefix.setLength(prefix.length() - 2);
+        prefix.append("  ");
+      }
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
+    out.println();
   }
 
   /**

@@ -740,15 +740,21 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           // were created before "prior" will be covered by the later 
           // cleanSubtreeRecursively call.
           if (priorCreated != null) {
-            // we only check the node originally in prior's created list
-            for (INode cNode : priorDiff.getChildrenDiff().getList(
-                ListType.CREATED)) {
-              if (priorCreated.containsKey(cNode)) {
-                cNode.cleanSubtree(reclaimContext, snapshot, NO_SNAPSHOT_ID);
+            if (currentINode.isLastReference()) {
+              // if this is the last reference, the created list can be
+              // destroyed.
+              priorDiff.getChildrenDiff().destroyCreatedList(
+                  reclaimContext, currentINode);
+            } else {
+              // we only check the node originally in prior's created list
+              for (INode cNode : priorDiff.getChildrenDiff().getList(
+                  ListType.CREATED)) {
+                if (priorCreated.containsKey(cNode)) {
+                  cNode.cleanSubtree(reclaimContext, snapshot, NO_SNAPSHOT_ID);
+                }
               }
             }
           }
-          
           // When a directory is moved from the deleted list of the posterior
           // diff to the deleted list of this diff, we need to destroy its
           // descendants that were 1) created after taking this diff and 2)
@@ -772,5 +778,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     if (currentINode.isQuotaSet()) {
       reclaimContext.quotaDelta().addQuotaDirUpdate(currentINode, current);
     }
+  }
+
+  @Override
+  public String toString() {
+    return "" + diffs;
   }
 }

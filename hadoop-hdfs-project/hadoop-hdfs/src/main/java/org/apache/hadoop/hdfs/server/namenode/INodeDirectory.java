@@ -893,6 +893,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
       prefix.setLength(prefix.length() - 2);
       prefix.append("  ");
     }
+
+    final DirectoryWithSnapshotFeature snapshotFeature =
+        getDirectoryWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
+    out.println();
     dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
       final Iterator<INode> i = getChildrenList(snapshot).iterator();
       
