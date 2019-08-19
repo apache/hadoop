@@ -2744,6 +2744,9 @@ public class PBHelperClient {
       case SYMLINK:
         fileType = FileType.IS_SYMLINK;
         break;
+      default:
+        throw new IllegalArgumentException("Unknown INodeType: " +
+            entry.getINodeType());
     }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
