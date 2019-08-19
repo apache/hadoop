@@ -77,12 +77,38 @@ Or put command etc. In other words, all programs like Hive, Spark, and Distcp wi
 Please note that any keys created/deleted in the bucket using methods apart from OzoneFileSystem will show up as directories and files in the Ozone File System.
 
 Note: Bucket and volume names are not allowed to have a period in them.
-Moreover, the filesystem URI can take a fully qualified form with the OM host and port as a part of the path following the volume name.
-For example,
+Moreover, the filesystem URI can take a fully qualified form with the OM host and an optional port as a part of the path following the volume name.
+For example, you can specify both host and port:
 
 {{< highlight bash>}}
 hdfs dfs -ls o3fs://bucket.volume.om-host.example.com:5678/key
 {{< /highlight >}}
+
+When the port number is not specified, it will be retrieved from config key `ozone.om.address`
+if defined; or it will fall back to the default port `9862`.
+For example, we have `ozone.om.address` configured as following in `ozone-site.xml`:
+
+{{< highlight xml >}}
+  <property>
+    <name>ozone.om.address</name>
+    <value>0.0.0.0:6789</value>
+  </property>
+{{< /highlight >}}
+
+When we run command:
+
+{{< highlight bash>}}
+hdfs dfs -ls o3fs://bucket.volume.om-host.example.com/key
+{{< /highlight >}}
+
+The above command is essentially equivalent to:
+
+{{< highlight bash>}}
+hdfs dfs -ls o3fs://bucket.volume.om-host.example.com:6789/key
+{{< /highlight >}}
+
+Note: Only port number from the config is used in this case, 
+whereas the host name in the config `ozone.om.address` is ignored.
 
 
 ## Supporting older Hadoop version (Legacy jar, BasicOzoneFilesystem)
