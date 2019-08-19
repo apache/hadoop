@@ -712,8 +712,6 @@ public class ContainerStateMachine extends BaseStateMachine {
           isStateMachineHealthy.compareAndSet(true, false);
           ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
         } else {
-          metrics.incNumBytesWrittenCount(
-              requestProto.getWriteChunk().getChunkData().getLen());
           LOG.debug(
               "gid {} : ApplyTransaction completed. cmd {} logIndex {} msg : "
                   + "{} Container Result: {}", gid, r.getCmdType(), index,
