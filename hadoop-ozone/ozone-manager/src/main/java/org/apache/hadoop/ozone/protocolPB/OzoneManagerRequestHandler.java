@@ -403,10 +403,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
     List<OzoneAclInfo> acls = new ArrayList<>();
-
     List<OzoneAcl> aclList =
         impl.getAcl(OzoneObjInfo.fromProtobuf(req.getObj()));
-    aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    if (aclList != null) {
+      aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    }
     return GetAclResponse.newBuilder().addAllAcls(acls).build();
   }
 
