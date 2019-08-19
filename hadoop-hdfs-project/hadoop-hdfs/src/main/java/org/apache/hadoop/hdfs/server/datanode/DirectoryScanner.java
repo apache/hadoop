@@ -63,6 +63,7 @@ import org.apache.hadoop.util.Time;
 public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
   private static final int MILLIS_PER_SECOND = 1000;
+  private static final int RECONCILE_BLOCKS_BATCH_SIZE = 1000;
   private static final String START_MESSAGE =
       "Periodic Directory Tree Verification scan"
       + " starting at %s with interval of %dms";
@@ -564,14 +565,27 @@ public class DirectoryScanner implements Runnable {
    */
   @VisibleForTesting
   void reconcile() throws IOException {
+    LOG.debug("reconcile start DirectoryScanning");
     scan();
     for (Entry<String, LinkedList<ScanInfo>> entry : diffs.entrySet()) {
       String bpid = entry.getKey();
       LinkedList<ScanInfo> diff = entry.getValue();
-      
+
+      // HDFS-14476: run checkAndUpadte with batch to avoid holding the lock too
+      // long
+      int loopCount = 0;
       for (ScanInfo info : diff) {
         dataset.checkAndUpdate(bpid, info.getBlockId(), info.getBlockFile(),
             info.getMetaFile(), info.getVolume());
+
+        if (loopCount % RECONCILE_BLOCKS_BATCH_SIZE == 0) {
+          try {
+            Thread.sleep(2000);
+          } catch (InterruptedException e) {
+            // do nothing
+          }
+        }
+        loopCount++;
       }
     }
     if (!retainDiffs) clear();
