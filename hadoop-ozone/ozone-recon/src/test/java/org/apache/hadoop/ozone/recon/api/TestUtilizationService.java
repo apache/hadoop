@@ -18,35 +18,25 @@
 
 package org.apache.hadoop.ozone.recon.api;
 
-import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.FileCountBySize;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test for File size count service.
  */
-@RunWith(PowerMockRunner.class)
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
-@PrepareForTest(ReconUtils.class)
 public class TestUtilizationService {
   private UtilizationService utilizationService;
-  @Mock private FileCountBySizeDao fileCountBySizeDao;
   private int maxBinSize = 42;
 
   private List<FileCountBySize> setUpResultList() {
@@ -68,6 +58,7 @@ public class TestUtilizationService {
   public void testGetFileCounts() {
     List<FileCountBySize> resultList = setUpResultList();
 
+    FileCountBySizeDao fileCountBySizeDao = mock(FileCountBySizeDao.class);
     utilizationService = mock(UtilizationService.class);
     when(utilizationService.getFileCounts()).thenCallRealMethod();
     when(utilizationService.getDao()).thenReturn(fileCountBySizeDao);

@@ -27,35 +27,54 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNE
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNECTION_TIMEOUT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNECTION_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_FLUSH_PARAM;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SOCKET_TIMEOUT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SOCKET_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.ozone.recon.ReconUtils.getReconDbDir;
-import static org.apache.hadoop.ozone.recon.ReconUtils.makeHttpCall;
-import static org.apache.hadoop.ozone.recon.ReconUtils.untarCheckpointFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
+import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
+import org.apache.hadoop.ozone.recon.tasks.OMDBUpdatesHandler;
+import org.apache.hadoop.ozone.recon.tasks.OMUpdateEventBatch;
+import org.apache.hadoop.ozone.recon.tasks.ReconTaskController;
 import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.RDBBatchOperation;
+import org.apache.hadoop.utils.db.RDBStore;
 import org.apache.hadoop.utils.db.RocksDBCheckpoint;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.ratis.protocol.ClientId;
+import org.hadoop.ozone.recon.schema.tables.daos.ReconTaskStatusDao;
+import org.hadoop.ozone.recon.schema.tables.pojos.ReconTaskStatus;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteBatch;
+import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,11 +94,28 @@ public class OzoneManagerServiceProviderImpl
   private File omSnapshotDBParentDir = null;
   private String omDBSnapshotUrl;
 
-  @Inject
+  private OzoneManagerProtocol ozoneManagerClient;
+  private final ClientId clientId = ClientId.randomId();
+  private final OzoneConfiguration configuration;
+  private final ScheduledExecutorService scheduler =
+      Executors.newScheduledThreadPool(1);
+
   private ReconOMMetadataManager omMetadataManager;
+  private ReconTaskController reconTaskController;
+  private ReconTaskStatusDao reconTaskStatusDao;
+  private ReconUtils reconUtils;
+  private enum OmSnapshotTaskName {
+    OM_DB_FULL_SNAPSHOT,
+    OM_DB_DELTA_UPDATES
+  }
 
   @Inject
-  public OzoneManagerServiceProviderImpl(Configuration configuration) {
+  public OzoneManagerServiceProviderImpl(
+      OzoneConfiguration configuration,
+      ReconOMMetadataManager omMetadataManager,
+      ReconTaskController reconTaskController,
+      ReconUtils reconUtils,
+      OzoneManagerProtocol ozoneManagerClient) throws IOException {
 
     String ozoneManagerHttpAddress = configuration.get(OMConfigKeys
         .OZONE_OM_HTTP_ADDRESS_KEY);
@@ -87,7 +123,7 @@ public class OzoneManagerServiceProviderImpl
     String ozoneManagerHttpsAddress = configuration.get(OMConfigKeys
         .OZONE_OM_HTTPS_ADDRESS_KEY);
 
-    omSnapshotDBParentDir = getReconDbDir(configuration,
+    omSnapshotDBParentDir = reconUtils.getReconDbDir(configuration,
         OZONE_RECON_OM_SNAPSHOT_DB_DIR);
 
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(configuration);
@@ -127,17 +163,81 @@ public class OzoneManagerServiceProviderImpl
       omDBSnapshotUrl += "?" + OZONE_DB_CHECKPOINT_REQUEST_FLUSH + "=true";
     }
 
+    this.reconUtils = reconUtils;
+    this.omMetadataManager = omMetadataManager;
+    this.reconTaskController = reconTaskController;
+    this.reconTaskStatusDao = reconTaskController.getReconTaskStatusDao();
+    this.ozoneManagerClient = ozoneManagerClient;
+    this.configuration = configuration;
   }
 
   @Override
-  public void init() throws IOException {
-    updateReconOmDBWithNewSnapshot();
+  public OMMetadataManager getOMMetadataManagerInstance() {
+    return omMetadataManager;
   }
 
   @Override
-  public void updateReconOmDBWithNewSnapshot() throws IOException {
-    //Obtain the current DB snapshot from OM and
-    //update the in house OM metadata managed DB instance.
+  public void start() {
+    long initialDelay = configuration.getTimeDuration(
+        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY,
+        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    long interval = configuration.getTimeDuration(
+        RECON_OM_SNAPSHOT_TASK_INTERVAL,
+        RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    scheduler.scheduleWithFixedDelay(this::syncDataFromOM,
+        initialDelay,
+        interval,
+        TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void stop() {
+    reconTaskController.stop();
+    scheduler.shutdownNow();
+  }
+
+  /**
+   * Method to obtain current OM DB Snapshot.
+   * @return DBCheckpoint instance.
+   */
+  @VisibleForTesting
+  DBCheckpoint getOzoneManagerDBSnapshot() {
+    String snapshotFileName = RECON_OM_SNAPSHOT_DB + "_" + System
+        .currentTimeMillis();
+    File targetFile = new File(omSnapshotDBParentDir, snapshotFileName +
+        ".tar.gz");
+    try {
+      try (InputStream inputStream = reconUtils.makeHttpCall(httpClient,
+          omDBSnapshotUrl)) {
+        FileUtils.copyInputStreamToFile(inputStream, targetFile);
+      }
+
+      // Untar the checkpoint file.
+      Path untarredDbDir = Paths.get(omSnapshotDBParentDir.getAbsolutePath(),
+          snapshotFileName);
+      reconUtils.untarCheckpointFile(targetFile, untarredDbDir);
+      FileUtils.deleteQuietly(targetFile);
+
+      // TODO Create Checkpoint based on OM DB type.
+      // Currently, OM DB type is not configurable. Hence, defaulting to
+      // RocksDB.
+      return new RocksDBCheckpoint(untarredDbDir);
+    } catch (IOException e) {
+      LOG.error("Unable to obtain Ozone Manager DB Snapshot. ", e);
+    }
+    return null;
+  }
+
+  /**
+   * Update Local OM DB with new OM DB snapshot.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  void updateReconOmDBWithNewSnapshot() throws IOException {
+    // Obtain the current DB snapshot from OM and
+    // update the in house OM metadata managed DB instance.
     DBCheckpoint dbSnapshot = getOzoneManagerDBSnapshot();
     if (dbSnapshot != null && dbSnapshot.getCheckpointLocation() != null) {
       try {
@@ -151,41 +251,97 @@ public class OzoneManagerServiceProviderImpl
     }
   }
 
-  @Override
-  public OMMetadataManager getOMMetadataManagerInstance() {
-    return omMetadataManager;
+  /**
+   * Get Delta updates from OM through RPC call and apply to local OM DB as
+   * well as accumulate in a buffer.
+   * @param fromSequenceNumber from sequence number to request from.
+   * @param omdbUpdatesHandler OM DB updates handler to buffer updates.
+   * @throws IOException when OM RPC request fails.
+   * @throws RocksDBException when writing to RocksDB fails.
+   */
+  @VisibleForTesting
+  void getAndApplyDeltaUpdatesFromOM(
+      long fromSequenceNumber, OMDBUpdatesHandler omdbUpdatesHandler)
+      throws IOException, RocksDBException {
+    DBUpdatesRequest dbUpdatesRequest = DBUpdatesRequest.newBuilder()
+        .setSequenceNumber(fromSequenceNumber).build();
+    DBUpdatesWrapper dbUpdates = ozoneManagerClient.getDBUpdates(
+        dbUpdatesRequest);
+    if (null != dbUpdates) {
+      RDBStore rocksDBStore = (RDBStore)omMetadataManager.getStore();
+      RocksDB rocksDB = rocksDBStore.getDb();
+      LOG.debug("Number of updates received from OM : " +
+          dbUpdates.getData().size());
+      for (byte[] data : dbUpdates.getData()) {
+        WriteBatch writeBatch = new WriteBatch(data);
+        writeBatch.iterate(omdbUpdatesHandler);
+        RDBBatchOperation rdbBatchOperation = new RDBBatchOperation(writeBatch);
+        rdbBatchOperation.commit(rocksDB, new WriteOptions());
+      }
+    }
   }
 
   /**
-   * Method to obtain current OM DB Snapshot.
-   * @return DBCheckpoint instance.
+   * Based on current state of Recon's OM DB, we either get delta updates or
+   * full snapshot from Ozone Manager.
    */
   @VisibleForTesting
-  protected DBCheckpoint getOzoneManagerDBSnapshot() {
-    String snapshotFileName = RECON_OM_SNAPSHOT_DB + "_" + System
-        .currentTimeMillis();
-    File targetFile = new File(omSnapshotDBParentDir, snapshotFileName +
-        ".tar.gz");
-    try {
-      try (InputStream inputStream = makeHttpCall(httpClient,
-          omDBSnapshotUrl)) {
-        FileUtils.copyInputStreamToFile(inputStream, targetFile);
+  void syncDataFromOM() {
+    long currentSequenceNumber = getCurrentOMDBSequenceNumber();
+    boolean fullSnapshot = false;
+
+    if (currentSequenceNumber <= 0) {
+      fullSnapshot = true;
+    } else {
+      OMDBUpdatesHandler omdbUpdatesHandler =
+          new OMDBUpdatesHandler(omMetadataManager);
+      try {
+        // Get updates from OM and apply to local Recon OM DB.
+        getAndApplyDeltaUpdatesFromOM(currentSequenceNumber,
+            omdbUpdatesHandler);
+        // Update timestamp of successful delta updates query.
+        ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(
+            OmSnapshotTaskName.OM_DB_DELTA_UPDATES.name(),
+                System.currentTimeMillis(), getCurrentOMDBSequenceNumber());
+        reconTaskStatusDao.update(reconTaskStatusRecord);
+        // Pass on DB update events to tasks that are listening.
+        reconTaskController.consumeOMEvents(new OMUpdateEventBatch(
+            omdbUpdatesHandler.getEvents()), omMetadataManager);
+      } catch (IOException | InterruptedException | RocksDBException e) {
+        LOG.warn("Unable to get and apply delta updates from OM.", e);
+        fullSnapshot = true;
       }
-
-      //Untar the checkpoint file.
-      Path untarredDbDir = Paths.get(omSnapshotDBParentDir.getAbsolutePath(),
-          snapshotFileName);
-      untarCheckpointFile(targetFile, untarredDbDir);
-      FileUtils.deleteQuietly(targetFile);
-
-      //TODO Create Checkpoint based on OM DB type.
-      // Currently, OM DB type is not configurable. Hence, defaulting to
-      // RocksDB.
-      return new RocksDBCheckpoint(untarredDbDir);
-    } catch (IOException e) {
-      LOG.error("Unable to obtain Ozone Manager DB Snapshot. ", e);
     }
-    return null;
+
+    if (fullSnapshot) {
+      try {
+        // Update local Recon OM DB to new snapshot.
+        updateReconOmDBWithNewSnapshot();
+        // Update timestamp of successful delta updates query.
+        ReconTaskStatus reconTaskStatusRecord =
+            new ReconTaskStatus(
+                OmSnapshotTaskName.OM_DB_FULL_SNAPSHOT.name(),
+                System.currentTimeMillis(), getCurrentOMDBSequenceNumber());
+        reconTaskStatusDao.update(reconTaskStatusRecord);
+        // Reinitialize tasks that are listening.
+        reconTaskController.reInitializeTasks(omMetadataManager);
+      } catch (IOException | InterruptedException e) {
+        LOG.error("Unable to update Recon's OM DB with new snapshot ", e);
+      }
+    }
+  }
+
+  /**
+   * Get OM RocksDB's latest sequence number.
+   * @return latest sequence number.
+   */
+  private long getCurrentOMDBSequenceNumber() {
+    RDBStore rocksDBStore = (RDBStore)omMetadataManager.getStore();
+    if (null == rocksDBStore) {
+      return 0;
+    } else {
+      return rocksDBStore.getDb().getLatestSequenceNumber();
+    }
   }
 }
 

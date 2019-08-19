@@ -20,6 +20,9 @@ package org.apache.hadoop.ozone.recon.tasks;
 
 import java.util.Map;
 
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.hadoop.ozone.recon.schema.tables.daos.ReconTaskStatusDao;
+
 /**
  * Controller used by Recon to manage Tasks that are waiting on Recon events.
  */
@@ -36,11 +39,31 @@ public interface ReconTaskController {
    * @param events set of events
    * @throws InterruptedException InterruptedException
    */
-  void consumeOMEvents(OMUpdateEventBatch events) throws InterruptedException;
+  void consumeOMEvents(OMUpdateEventBatch events,
+                       OMMetadataManager omMetadataManager)
+      throws InterruptedException;
+
+  /**
+   * Pass on the handle to a new OM DB instance to the registered tasks.
+   * @param omMetadataManager OM Metadata Manager instance
+   */
+  void reInitializeTasks(OMMetadataManager omMetadataManager)
+      throws InterruptedException;
 
   /**
    * Get set of registered tasks.
    * @return Map of Task name -> Task.
    */
   Map<String, ReconDBUpdateTask> getRegisteredTasks();
+
+  /**
+   * Get instance of ReconTaskStatusDao.
+   * @return instance of ReconTaskStatusDao
+   */
+  ReconTaskStatusDao getReconTaskStatusDao();
+
+  /**
+   * Stop the tasks. Start API is not needed since it is implicit.
+   */
+  void stop();
 }
