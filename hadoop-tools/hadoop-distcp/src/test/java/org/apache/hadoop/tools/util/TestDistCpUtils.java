@@ -26,10 +26,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
@@ -1117,6 +1119,71 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
     Assert.assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
     Assert.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
+  }
+
+  @Test
+  public void testCompareFileLengthsAndChecksums() throws IOException {
+
+    String base = "/tmp/verify-checksum/";
+    long srcSeed = System.currentTimeMillis();
+    long dstSeed = srcSeed + rand.nextLong();
+    short replFactor = 2;
+
+    FileSystem fs = FileSystem.get(config);
+    Path basePath = new Path(base);
+    fs.mkdirs(basePath);
+
+    // empty lengths comparison
+    Path srcWithLen0 = new Path(base + "srcLen0");
+    Path dstWithLen0 = new Path(base + "dstLen0");
+    fs.create(srcWithLen0).close();
+    fs.create(dstWithLen0).close();
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithLen0,
+        null, fs, dstWithLen0, false);
+
+    // different lengths comparison
+    Path srcWithLen1 = new Path(base + "srcLen1");
+    Path dstWithLen2 = new Path(base + "dstLen2");
+    DFSTestUtil.createFile(fs, srcWithLen1, 1, replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithLen2, 2, replFactor, srcSeed);
+    try {
+      DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithLen1,
+          null, fs, dstWithLen2, false);
+      Assert.fail("Expected different lengths comparison to fail!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Mismatch in length", e);
+    }
+
+    // checksums matched
+    Path srcWithChecksum1 = new Path(base + "srcChecksum1");
+    Path dstWithChecksum1 = new Path(base + "dstChecksum1");
+    DFSTestUtil.createFile(fs, srcWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        null, fs, dstWithChecksum1, false);
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        fs.getFileChecksum(srcWithChecksum1), fs, dstWithChecksum1,
+        false);
+
+    // checksums mismatched
+    Path dstWithChecksum2 = new Path(base + "dstChecksum2");
+    DFSTestUtil.createFile(fs, dstWithChecksum2, 1024,
+        replFactor, dstSeed);
+    try {
+      DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+          null, fs, dstWithChecksum2, false);
+      Assert.fail("Expected different checksums comparison to fail!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Checksum mismatch", e);
+    }
+
+    // checksums mismatched but skipped
+    DistCpUtils.compareFileLengthsAndChecksums(fs, srcWithChecksum1,
+        null, fs, dstWithChecksum2, true);
   }
 
   private static Random rand = new Random();

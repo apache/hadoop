@@ -144,15 +144,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           offset, context, fileAttributes, sourceChecksum);
 
       if (!source.isSplit()) {
-        compareFileLengths(source, targetPath, configuration, bytesRead
-            + offset);
-      }
-      //At this point, src&dest lengths are same. if length==0, we skip checksum
-      if ((bytesRead != 0) && (!skipCrc)) {
-        if (!source.isSplit()) {
-          compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
-              targetFS, targetPath);
-        }
+        DistCpUtils.compareFileLengthsAndChecksums(sourceFS, sourcePath,
+            sourceChecksum, targetFS, targetPath, skipCrc);
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.
@@ -215,51 +208,6 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
     return copyBytes(source, sourceOffset, outStream, copyBufferSize,
         context);
-  }
-
-  private void compareFileLengths(CopyListingFileStatus source, Path target,
-                                  Configuration configuration, long targetLen)
-                                  throws IOException {
-    final Path sourcePath = source.getPath();
-    FileSystem fs = sourcePath.getFileSystem(configuration);
-    long srcLen = fs.getFileStatus(sourcePath).getLen();
-    if (srcLen != targetLen)
-      throw new IOException("Mismatch in length of source:" + sourcePath + " (" + srcLen +
-          ") and target:" + target + " (" + targetLen + ")");
-  }
-
-  private void compareCheckSums(FileSystem sourceFS, Path source,
-      FileChecksum sourceChecksum, FileSystem targetFS, Path target)
-      throws IOException {
-    if (!DistCpUtils.checksumsAreEqual(sourceFS, source, sourceChecksum,
-        targetFS, target)) {
-      StringBuilder errorMessage =
-          new StringBuilder("Checksum mismatch between ")
-              .append(source).append(" and ").append(target).append(".");
-      boolean addSkipHint = false;
-      String srcScheme = sourceFS.getScheme();
-      String targetScheme = targetFS.getScheme();
-      if (!srcScheme.equals(targetScheme)
-          && !(srcScheme.contains("hdfs") && targetScheme.contains("hdfs"))) {
-        // the filesystems are different and they aren't both hdfs connectors
-        errorMessage.append("Source and destination filesystems are of"
-            + " different types\n")
-            .append("Their checksum algorithms may be incompatible");
-        addSkipHint = true;
-      } else if (sourceFS.getFileStatus(source).getBlockSize() !=
-          targetFS.getFileStatus(target).getBlockSize()) {
-        errorMessage.append(" Source and target differ in block-size.\n")
-            .append(" Use -pb to preserve block-sizes during copy.");
-        addSkipHint = true;
-      }
-      if (addSkipHint) {
-        errorMessage.append(" You can skip checksum-checks altogether "
-            + " with -skipcrccheck.\n")
-            .append(" (NOTE: By skipping checksums, one runs the risk of " +
-                "masking data-corruption during file-transfer.)\n");
-      }
-      throw new IOException(errorMessage.toString());
-    }
   }
 
   //If target file exists and unable to delete target - fail
