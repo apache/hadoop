@@ -1611,11 +1611,14 @@ public class PBHelperClient {
       case IS_SYMLINK:
         inodeType = SnapshotDiffReport.INodeType.SYMLINK;
         break;
+      default:
+        throw new IllegalArgumentException("Unknown INodeType: " +
+            entry.getFileType());
       }
     }
-    return type == null ? null : new DiffReportEntry(inodeType, type, entry.getFullpath()
-        .toByteArray(), entry.hasTargetPath() ? entry.getTargetPath()
-        .toByteArray() : null);
+    return type == null ? null : new DiffReportEntry(inodeType, type,
+        entry.getFullpath().toByteArray(), entry.hasTargetPath() ?
+        entry.getTargetPath().toByteArray() : null);
   }
 
   public static SnapshotDiffReportListing convert(
@@ -1665,15 +1668,15 @@ public class PBHelperClient {
     }
     DiffReportListingEntry.INodeType inodeType = null;
     switch(entry.getFileType()) {
-      case IS_FILE:
-        inodeType = DiffReportListingEntry.INodeType.FILE;
-        break;
-      case IS_DIR:
-        inodeType = DiffReportListingEntry.INodeType.DIRECTORY;
-        break;
-      case IS_SYMLINK:
-        inodeType = DiffReportListingEntry.INodeType.SYMLINK;
-        break;
+    case IS_FILE:
+      inodeType = DiffReportListingEntry.INodeType.FILE;
+      break;
+    case IS_DIR:
+      inodeType = DiffReportListingEntry.INodeType.DIRECTORY;
+      break;
+    case IS_SYMLINK:
+      inodeType = DiffReportListingEntry.INodeType.SYMLINK;
+      break;
     }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
@@ -2706,15 +2709,18 @@ public class PBHelperClient {
         .newBuilder().setFullpath(sourcePath)
         .setModificationLabel(modification);
     switch(entry.getINodeType()){
-      case FILE:
-        builder.setFileType(FileType.IS_FILE);
-        break;
-      case DIRECTORY:
-        builder.setFileType(FileType.IS_DIR);
-        break;
-      case SYMLINK:
-        builder.setFileType(FileType.IS_SYMLINK);
-        break;
+    case FILE:
+      builder.setFileType(FileType.IS_FILE);
+      break;
+    case DIRECTORY:
+      builder.setFileType(FileType.IS_DIR);
+      break;
+    case SYMLINK:
+      builder.setFileType(FileType.IS_SYMLINK);
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown INodeType: " +
+          entry.getINodeType());
     }
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath =
@@ -2735,18 +2741,18 @@ public class PBHelperClient {
             DFSUtilClient.byteArray2bytes(entry.getSourcePath()));
     HdfsFileStatusProto.FileType fileType = null;
     switch(entry.getINodeType()){
-      case FILE:
-        fileType = FileType.IS_FILE;
-        break;
-      case DIRECTORY:
-        fileType = FileType.IS_DIR;
-        break;
-      case SYMLINK:
-        fileType = FileType.IS_SYMLINK;
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown INodeType: " +
-            entry.getINodeType());
+    case FILE:
+      fileType = FileType.IS_FILE;
+      break;
+    case DIRECTORY:
+      fileType = FileType.IS_DIR;
+      break;
+    case SYMLINK:
+      fileType = FileType.IS_SYMLINK;
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown INodeType: " +
+          entry.getINodeType());
     }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();

@@ -33,7 +33,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry.INodeType.*;
-import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry.INodeType.FILE;
 
 /**
  * A class describing the difference between snapshots of a snapshottable

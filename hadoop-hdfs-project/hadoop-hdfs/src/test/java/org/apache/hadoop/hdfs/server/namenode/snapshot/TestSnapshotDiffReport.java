@@ -31,7 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Optional;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
@@ -259,7 +258,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
         new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file13")),
         new DiffReportEntry(SYMLINK, DiffType.DELETE, string2Bytes("link13")),
-        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes ("link13")));
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")));
 
     verifyDiffReport(sub1, "s0", "s5",
         new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
@@ -899,7 +898,8 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
         new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
             string2Bytes("dir1/foo")),
-        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir2/bar")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir2/bar")),
         new DiffReportEntry(FILE, DiffType.DELETE,
             string2Bytes("dir2/bar/file")),
         new DiffReportEntry(FILE, DiffType.RENAME,
@@ -1476,25 +1476,37 @@ public class TestSnapshotDiffReport {
         report.getIsFromEarlier(), modifiedList, createdList, deletedList);
     verifyDiffReportForGivenReport(root, "s0", "s1",
         snapshotDiffReport.generateReport(),
-        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DIRECTORY, DiffType.CREATE, DFSUtil.string2Bytes("dir4")),
-        new DiffReportEntry(DIRECTORY, DiffType.RENAME, DFSUtil.string2Bytes("dir2"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE,
+            DFSUtil.string2Bytes("dir4")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2"),
             DFSUtil.string2Bytes("dir3/dir2")),
-        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir1/file1"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir1")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file1"),
             DFSUtil.string2Bytes("dir4/file1")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir1/file2"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file2"),
             DFSUtil.string2Bytes("dir4/file2")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir1/file3"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file3"),
             DFSUtil.string2Bytes("dir4/file3")),
-        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir2/file1"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir2")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file1"),
             DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir2/file2"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file2"),
             DFSUtil.string2Bytes("dir3/file2")),
-        new DiffReportEntry(FILE, DiffType.RENAME, DFSUtil.string2Bytes("dir2/file3"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file3"),
             DFSUtil.string2Bytes("dir3/file3")),
-        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, DFSUtil.string2Bytes("dir3")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir3")),
         new DiffReportEntry(FILE, DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file1")),
         new DiffReportEntry(FILE, DiffType.DELETE,

@@ -1542,11 +1542,13 @@ public class TestEncryptionZones {
     fs.createSnapshot(zone, "snap2");
     verifyDiffReport(zone, "snap1", "snap2",
         new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(FILE, DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            DFSUtil.string2Bytes("zoneFile")));
 
     verifyDiffReport(rawZone, "snap1", "snap2",
         new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(FILE, DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            DFSUtil.string2Bytes("zoneFile")));
   }
 
   /**

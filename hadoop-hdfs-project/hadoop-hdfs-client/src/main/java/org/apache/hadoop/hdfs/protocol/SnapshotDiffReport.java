@@ -75,6 +75,9 @@ public class SnapshotDiffReport {
     }
   }
 
+  /**
+   * INodeType specifies the type of INode: FILE, DIRECTORY, or SYMLINK.
+   */
   public enum INodeType {
     FILE,
     DIRECTORY,
@@ -100,15 +103,18 @@ public class SnapshotDiffReport {
     private final byte[] sourcePath;
     private final byte[] targetPath;
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type, byte[] sourcePath) {
+    public DiffReportEntry(INodeType iNodeType, DiffType type,
+        byte[] sourcePath) {
       this(iNodeType, type, sourcePath, null);
     }
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type, byte[][] sourcePathComponents) {
+    public DiffReportEntry(INodeType iNodeType, DiffType type,
+        byte[][] sourcePathComponents) {
       this(iNodeType, type, sourcePathComponents, null);
     }
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type, byte[] sourcePath, byte[] targetPath) {
+    public DiffReportEntry(INodeType iNodeType, DiffType type,
+        byte[] sourcePath, byte[] targetPath) {
       this.iNodeType = iNodeType;
       this.type = type;
       this.sourcePath = sourcePath;

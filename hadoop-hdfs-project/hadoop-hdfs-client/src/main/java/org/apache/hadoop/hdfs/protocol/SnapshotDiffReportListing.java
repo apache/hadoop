@@ -38,6 +38,9 @@ public class SnapshotDiffReportListing {
    */
   public static class DiffReportListingEntry {
 
+    /**
+     * INodeType specifies the type of the INode.
+     */
     public enum INodeType {
 
       FILE(SnapshotDiffReport.INodeType.FILE),

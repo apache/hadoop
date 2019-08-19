@@ -239,7 +239,8 @@ class SnapshotDiffInfo {
     for (Map.Entry<INode,byte[][]> drEntry : diffMap.entrySet()) {
       INode node = drEntry.getKey();
       byte[][] path = drEntry.getValue();
-      diffReportList.add(new DiffReportEntry(determineINodeType(node),DiffType.MODIFY, path, null));
+      diffReportList.add(new DiffReportEntry(determineINodeType(node),
+          DiffType.MODIFY, path, null));
       if (node.isDirectory()) {
         List<DiffReportEntry> subList = generateReport(dirDiffMap.get(node),
             path, isFromEarlier(), renameMap);
@@ -275,8 +276,8 @@ class SnapshotDiffInfo {
       RenameEntry entry = renameMap.get(cnode.getId());
       if (entry == null || !entry.isRename()) {
         fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-        list.add(new DiffReportEntry(determineINodeType(cnode),fromEarlier ? DiffType.CREATE
-            : DiffType.DELETE, fullPath));
+        list.add(new DiffReportEntry(determineINodeType(cnode),
+            fromEarlier ? DiffType.CREATE : DiffType.DELETE, fullPath));
       }
     }
     for (INode dnode : dirDiff.getDeletedUnmodifiable()) {
@@ -287,8 +288,8 @@ class SnapshotDiffInfo {
             fromEarlier ? entry.getTargetPath() : entry.getSourcePath()));
       } else {
         fullPath[fullPath.length - 1] = dnode.getLocalNameBytes();
-        list.add(new DiffReportEntry(determineINodeType(dnode), fromEarlier ? DiffType.DELETE
-            : DiffType.CREATE, fullPath));
+        list.add(new DiffReportEntry(determineINodeType(dnode),
+            fromEarlier ? DiffType.DELETE : DiffType.CREATE, fullPath));
       }
     }
     return list;

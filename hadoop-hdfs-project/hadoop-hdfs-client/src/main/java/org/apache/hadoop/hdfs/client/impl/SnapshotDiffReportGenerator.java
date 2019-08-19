@@ -222,7 +222,8 @@ public class SnapshotDiffReportGenerator {
     generateReportList();
     for (DiffReportListingEntry modified : mlist) {
       diffReportList.add(
-          new DiffReportEntry(modified.getINodeType().toSnapshotDiffReportINodeType(),
+          new DiffReportEntry(modified.getINodeType()
+              .toSnapshotDiffReportINodeType(),
               DiffType.MODIFY, modified.getSourcePath(), null));
       if (modified.isReference()
           && dirDiffMap.get(modified.getDirId()) != null) {
