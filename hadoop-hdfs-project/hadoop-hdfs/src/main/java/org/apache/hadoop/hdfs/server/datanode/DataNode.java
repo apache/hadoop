@@ -2587,13 +2587,7 @@ public class DataNode extends ReconfigurableBase
           metrics.incrBlocksReplicated();
         }
       } catch (IOException ie) {
-        if (ie instanceof InvalidChecksumSizeException) {
-          // Add the block to the front of the scanning queue if metadata file
-          // is corrupt. We already add the block to front of scanner if the
-          // peer disconnects.
-          LOG.info("Adding block: {} for scanning", b);
-          blockScanner.markSuspectBlock(data.getVolume(b).getStorageID(), b);
-        }
+        handleBadBlock(b, ie, false);
         LOG.warn("{}:Failed to transfer {} to {} got",
             bpReg, b, targets[0], ie);
       } finally {
@@ -3419,6 +3413,41 @@ public class DataNode extends ReconfigurableBase
     LOG.debug("{}", sb);
       // send blockreport regarding volume failure
     handleDiskError(sb.toString());
+  }
+
+  /**
+   * A bad block need to be handled, either to add to blockScanner suspect queue
+   * or report to NameNode directly.
+   *
+   * If the method is called by scanner, then the block must be a bad block, we
+   * report it to NameNode directly. Otherwise if we judge it as a bad block
+   * according to exception type, then we try to add the bad block to
+   * blockScanner suspect queue if blockScanner is enabled, or report to
+   * NameNode directly otherwise.
+   *
+   * @param block The suspicious block
+   * @param e The exception encountered when accessing the block
+   * @param fromScanner Is it from blockScanner. The blockScanner will call this
+   *          method only when it's sure that the block is corrupt.
+   */
+  void handleBadBlock(ExtendedBlock block, IOException e, boolean fromScanner) {
+
+    boolean isBadBlock = fromScanner || (e instanceof DiskFileCorruptException
+        || e instanceof InvalidChecksumSizeException);
+
+    if (!isBadBlock) {
+      return;
+    }
+    if (!fromScanner && blockScanner.isEnabled()) {
+      blockScanner.markSuspectBlock(data.getVolume(block).getStorageID(),
+          block);
+    } else {
+      try {
+        reportBadBlocks(block);
+      } catch (IOException ie) {
+        LOG.warn("report bad block {} failed", block, ie);
+      }
+    }
   }
 
   @VisibleForTesting
