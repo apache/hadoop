@@ -33,11 +33,12 @@ import org.slf4j.LoggerFactory;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
 import static org.apache.hadoop.ozone.recon.tasks.
     OMDBUpdateEvent.OMDBUpdateAction.DELETE;
 import static org.apache.hadoop.ozone.recon.tasks.
@@ -48,7 +49,7 @@ import static org.apache.hadoop.ozone.recon.tasks.
  * files binned into ranges (1KB, 2Kb..,4MB,.., 1TB,..1PB) to the Recon
  * fileSize DB.
  */
-public class FileSizeCountTask extends ReconDBUpdateTask {
+public class FileSizeCountTask implements ReconDBUpdateTask {
   private static final Logger LOG =
       LoggerFactory.getLogger(FileSizeCountTask.class);
 
@@ -56,19 +57,11 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   private long maxFileSizeUpperBound = 1125899906842624L; // 1 PB
   private long[] upperBoundCount;
   private long oneKb = 1024L;
-  private Collection<String> tables = new ArrayList<>();
   private FileCountBySizeDao fileCountBySizeDao;
 
   @Inject
-  public FileSizeCountTask(OMMetadataManager omMetadataManager,
-      Configuration sqlConfiguration) {
-    super("FileSizeCountTask");
-    try {
-      tables.add(omMetadataManager.getKeyTable().getName());
-      fileCountBySizeDao = new FileCountBySizeDao(sqlConfiguration);
-    } catch (Exception e) {
-      LOG.error("Unable to fetch Key Table updates ", e);
-    }
+  public FileSizeCountTask(Configuration sqlConfiguration) {
+    fileCountBySizeDao = new FileCountBySizeDao(sqlConfiguration);
     upperBoundCount = new long[getMaxBinSize()];
   }
 
@@ -98,7 +91,6 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    */
   @Override
   public Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
-    LOG.info("Starting a 'reprocess' run of FileSizeCountTask.");
     Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
     try (TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
         keyIter = omKeyInfoTable.iterator()) {
@@ -119,8 +111,13 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   }
 
   @Override
-  protected Collection<String> getTaskTables() {
-    return tables;
+  public String getTaskName() {
+    return "FileSizeCountTask";
+  }
+
+  @Override
+  public Collection<String> getTaskTables() {
+    return Collections.singletonList(KEY_TABLE);
   }
 
   private void updateCountFromDB() {
@@ -144,8 +141,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    * @return Pair
    */
   @Override
-  Pair<String, Boolean> process(OMUpdateEventBatch events) {
-    LOG.info("Starting a 'process' run of FileSizeCountTask.");
+  public Pair<String, Boolean> process(OMUpdateEventBatch events) {
     Iterator<OMDBUpdateEvent> eventIterator = events.getIterator();
 
     //update array with file size count from DB
@@ -246,9 +242,9 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
         //decrement only if it had files before, default DB value is 0
         upperBoundCount[binIndex]--;
       } else {
-        LOG.debug("Cannot decrement count. Default value is 0 (zero).");
-        throw new IOException("Cannot decrement count. "
-            + "Default value is 0 (zero).");
+        LOG.warn("Unexpected error while updating bin count. Found 0 count " +
+            "for index : " + binIndex + " while processing DELETE event for "
+            + omKeyInfo.getKeyName());
       }
     }
   }

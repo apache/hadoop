@@ -24,43 +24,35 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 
 /**
- * Abstract class used to denote a Recon task that needs to act on OM DB events.
+ * Interface used to denote a Recon task that needs to act on OM DB events.
  */
-public abstract class ReconDBUpdateTask {
-
-  private String taskName;
-
-  protected ReconDBUpdateTask(String taskName) {
-    this.taskName = taskName;
-  }
+public interface ReconDBUpdateTask {
 
   /**
    * Return task name.
    * @return task name
    */
-  public String getTaskName() {
-    return taskName;
-  }
+  String getTaskName();
 
   /**
    * Return the list of tables that the task is listening on.
    * Empty list means the task is NOT listening on any tables.
    * @return Collection of Tables.
    */
-  protected abstract Collection<String> getTaskTables();
+  Collection<String> getTaskTables();
 
   /**
    * Process a set of OM events on tables that the task is listening on.
    * @param events Set of events to be processed by the task.
    * @return Pair of task name -> task success.
    */
-  abstract Pair<String, Boolean> process(OMUpdateEventBatch events);
+  Pair<String, Boolean> process(OMUpdateEventBatch events);
 
   /**
    * Process a  on tables that the task is listening on.
    * @param omMetadataManager OM Metadata manager instance.
    * @return Pair of task name -> task success.
    */
-  abstract Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager);
+  Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager);
 
 }

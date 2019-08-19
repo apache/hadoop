@@ -41,6 +41,10 @@ public class DBUpdatesWrapper {
     return dataList;
   }
 
+  public void setCurrentSequenceNumber(long sequenceNumber) {
+    this.currentSequenceNumber = sequenceNumber;
+  }
+
   public long getCurrentSequenceNumber() {
     return currentSequenceNumber;
   }
