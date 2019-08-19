@@ -291,9 +291,6 @@ public final class DistributedStorageHandler implements StorageHandler {
     OmBucketInfo.Builder builder = OmBucketInfo.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName());
-    if(args.getAddAcls() != null) {
-      builder.setAcls(args.getAddAcls());
-    }
     if(args.getStorageType() != null) {
       builder.setStorageType(args.getStorageType());
     }
@@ -323,25 +320,6 @@ public final class DistributedStorageHandler implements StorageHandler {
       }
     }
     return false;
-  }
-
-  @Override
-  public void setBucketAcls(BucketArgs args)
-      throws IOException, OzoneException {
-    List<OzoneAcl> removeAcls = args.getRemoveAcls();
-    List<OzoneAcl> addAcls = args.getAddAcls();
-    if(removeAcls != null || addAcls != null) {
-      OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-      builder.setVolumeName(args.getVolumeName())
-          .setBucketName(args.getBucketName());
-      if(removeAcls != null && !removeAcls.isEmpty()) {
-        builder.setRemoveAcls(args.getRemoveAcls());
-      }
-      if(addAcls != null && !addAcls.isEmpty()) {
-        builder.setAddAcls(args.getAddAcls());
-      }
-      ozoneManagerClient.setBucketProperty(builder.build());
-    }
   }
 
   @Override

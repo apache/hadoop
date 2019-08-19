@@ -35,7 +35,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts.PartInfo;
@@ -63,7 +62,6 @@ public class OzoneBucketStub extends OzoneBucket {
    *
    * @param volumeName   Name of the volume the bucket belongs to.
    * @param bucketName   Name of the bucket.
-   * @param acls         ACLs associated with the bucket.
    * @param storageType  StorageType of the bucket.
    * @param versioning   versioning status of the bucket.
    * @param creationTime creation time of the bucket.
@@ -71,14 +69,12 @@ public class OzoneBucketStub extends OzoneBucket {
   public OzoneBucketStub(
       String volumeName,
       String bucketName,
-      List<OzoneAcl> acls,
       StorageType storageType, Boolean versioning,
       long creationTime) {
     super(volumeName,
         bucketName,
         ReplicationFactor.ONE,
         ReplicationType.STAND_ALONE,
-        acls,
         storageType,
         versioning,
         creationTime);

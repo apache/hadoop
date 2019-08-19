@@ -18,11 +18,7 @@
 package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * BucketArgs packages all bucket related arguments to
@@ -30,8 +26,6 @@ import java.util.List;
  */
 public class BucketArgs extends VolumeArgs {
   private final String bucketName;
-  private List<OzoneAcl> addAcls;
-  private List<OzoneAcl> removeAcls;
   private OzoneConsts.Versioning versioning;
   private StorageType storageType;
 
@@ -70,8 +64,6 @@ public class BucketArgs extends VolumeArgs {
    */
   public BucketArgs(BucketArgs args) {
     this(args.getBucketName(), args);
-    this.setAddAcls(args.getAddAcls());
-    this.setRemoveAcls(args.getRemoveAcls());
   }
 
   /**
@@ -82,78 +74,6 @@ public class BucketArgs extends VolumeArgs {
   public String getBucketName() {
     return bucketName;
   }
-
-  /**
-   * Returns Additive ACLs for the Bucket if specified.
-   *
-   * @return acls
-   */
-  public List<OzoneAcl> getAddAcls() {
-    return addAcls;
-  }
-
-  /**
-   * Set Additive ACLs.
-   *
-   * @param acl - ACL
-   */
-  public void setAddAcls(List<OzoneAcl> acl) {
-    this.addAcls = acl;
-  }
-
-  /**
-   * Returns remove ACLs for the Bucket if specified.
-   *
-   * @return acls
-   */
-  public List<OzoneAcl> getRemoveAcls() {
-    return removeAcls;
-  }
-
-  /**
-   * Takes an ACL and sets the ACL object to ACL represented by the String.
-   *
-   * @param aclString - aclString
-   */
-  public void addAcls(List<String> aclString) throws IllegalArgumentException {
-    if (aclString == null) {
-      throw new IllegalArgumentException("ACLs cannot be null");
-    }
-    if (this.addAcls == null) {
-      this.addAcls = new LinkedList<>();
-    }
-    for (String s : aclString) {
-      this.addAcls.add(OzoneAcl.parseAcl(s));
-    }
-  }
-
-  /**
-   * Takes an ACL and sets the ACL object to ACL represented by the String.
-   *
-   * @param aclString - aclString
-   */
-  public void removeAcls(List<String> aclString)
-      throws IllegalArgumentException {
-    if (aclString == null) {
-      throw new IllegalArgumentException("ACLs cannot be null");
-    }
-    if (this.removeAcls == null) {
-      this.removeAcls = new LinkedList<>();
-    }
-    for (String s : aclString) {
-      this.removeAcls.add(OzoneAcl.parseAcl(s));
-    }
-  }
-
-  /**
-   * Set remove ACLs.
-   *
-   * @param acl - ACL
-   */
-  public void setRemoveAcls(List<OzoneAcl> acl) {
-    this.removeAcls = acl;
-  }
-
 
   /**
    * Returns Versioning Info.

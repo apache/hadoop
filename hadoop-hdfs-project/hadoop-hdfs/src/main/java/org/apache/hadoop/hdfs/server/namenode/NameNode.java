@@ -982,9 +982,9 @@ public class NameNode extends ReconfigurableBase implements
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(getConf());
+      state.prepareToEnterState(haContext);
       try {
         haContext.writeLock();
-        state.prepareToEnterState(haContext);
         state.enterState(haContext);
       } finally {
         haContext.writeUnlock();

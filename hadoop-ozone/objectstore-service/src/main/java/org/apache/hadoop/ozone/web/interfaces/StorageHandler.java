@@ -144,15 +144,6 @@ public interface StorageHandler extends Closeable{
   void createBucket(BucketArgs args) throws IOException, OzoneException;
 
   /**
-   * Adds or Removes ACLs from a Bucket.
-   *
-   * @param args - BucketArgs
-   *
-   * @throws IOException
-   */
-  void setBucketAcls(BucketArgs args) throws IOException, OzoneException;
-
-  /**
    * Enables or disables Bucket Versioning.
    *
    * @param args - BucketArgs

@@ -159,7 +159,7 @@ public class TestKeyManagerImpl {
     keyManager =
         new KeyManagerImpl(scm.getBlockProtocolServer(), metadataManager, conf,
             "om1", null);
-    prefixManager = new PrefixManagerImpl(metadataManager);
+    prefixManager = new PrefixManagerImpl(metadataManager, false);
 
     Mockito.when(mockScmBlockLocationProtocol
         .allocateBlock(Mockito.anyLong(), Mockito.anyInt(),

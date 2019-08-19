@@ -113,7 +113,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     String remaining = matcher.groupCount() == 3 ? matcher.group(3) : null;
 
     String omHost = null;
-    String omPort = String.valueOf(-1);
+    int omPort = -1;
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
       // Array length should be either 1(host) or 2(host:port)
@@ -122,13 +122,14 @@ public class BasicOzoneFileSystem extends FileSystem {
       }
       omHost = parts[0];
       if (parts.length == 2) {
-        omPort = parts[1];
+        try {
+          omPort = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+        }
       } else {
         // If port number is not specified, read it from config
-        omPort = String.valueOf(OmUtils.getOmRpcPort(conf));
-      }
-      if (!isNumber(omPort)) {
-        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+        omPort = OmUtils.getOmRpcPort(conf);
       }
     }
 
@@ -170,7 +171,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
   protected OzoneClientAdapter createAdapter(Configuration conf,
       String bucketStr,
-      String volumeStr, String omHost, String omPort,
+      String volumeStr, String omHost, int omPort,
       boolean isolatedClassloader) throws IOException {
 
     if (isolatedClassloader) {
@@ -180,8 +181,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
     } else {
 
-      return new BasicOzoneClientAdapterImpl(omHost,
-          Integer.parseInt(omPort), conf,
+      return new BasicOzoneClientAdapterImpl(omHost, omPort, conf,
           volumeStr, bucketStr);
     }
   }
