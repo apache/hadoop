@@ -48,7 +48,7 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 public class OMRenewDelegationTokenRequest extends OMClientRequest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OMGetDelegationTokenRequest.class);
+      LoggerFactory.getLogger(OMRenewDelegationTokenRequest.class);
 
   public OMRenewDelegationTokenRequest(OMRequest omRequest) {
     super(omRequest);
