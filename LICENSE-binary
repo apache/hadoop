@@ -375,7 +375,6 @@ hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/bloom/*
 hadoop-common-project/hadoop-common/src/main/native/gtest/gtest-all.cc
 hadoop-common-project/hadoop-common/src/main/native/gtest/include/gtest/gtest.h
 hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/util/bulk_crc32_x86.c
-hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3.v3.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb
