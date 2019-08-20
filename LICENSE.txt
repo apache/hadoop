@@ -237,18 +237,22 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 MIT License
 -----------
 
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-1.6.4.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-nvd3-1.0.9.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-route-1.6.4.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.3.7
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
-hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/dt-1.10.18/*
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-full-2.0.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-helpers-1.1.1.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-nvd3-1.0.9.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-1.6.4.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-route-1.6.4.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.3.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
+hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
+hadoop-tools/hadoop-sls/src/main/html/css/bootstrap.min.css
+hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/dt-1.10.18/*
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jt/jquery.jstree.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/resources/TERMINAL
