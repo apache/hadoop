@@ -174,7 +174,10 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACCESS_TIME_JSON = "accessTime";
   public static final String MODIFICATION_TIME_JSON = "modificationTime";
   public static final String BLOCK_SIZE_JSON = "blockSize";
+  public static final String CHILDREN_NUM_JSON = "childrenNum";
+  public static final String FILE_ID_JSON = "fileId";
   public static final String REPLICATION_JSON = "replication";
+  public static final String STORAGEPOLICY_JSON = "storagePolicy";
   public static final String XATTRS_JSON = "XAttrs";
   public static final String XATTR_NAME_JSON = "name";
   public static final String XATTR_VALUE_JSON = "value";
