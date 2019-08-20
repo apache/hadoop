@@ -102,6 +102,7 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
@@ -160,6 +161,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -2301,13 +2303,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: retrying; untranslated.
    * @param f path to create
    * @throws IOException IO problem
-   * @throws AmazonClientException untranslated AWS client problem
    */
   @Retries.RetryTranslated
   private void createFakeDirectoryIfNecessary(Path f)
       throws IOException, AmazonClientException {
     String key = pathToKey(f);
-    if (!key.isEmpty() && !s3Exists(f, true)) {
+    // we only make the LIST call; the codepaths to get here should not
+    // be reached if there is an empty dir marker -and if they do, it
+    // is mostly harmless to create a new one.
+    if (!key.isEmpty() && !s3Exists(f, EnumSet.of(StatusProbeEnum.List))) {
       LOG.debug("Creating new fake directory at {}", f);
       createFakeDirectory(key);
     }
@@ -2318,7 +2322,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * That is: it parent is not the root path and does not yet exist.
    * @param path whose parent is created if needed.
    * @throws IOException IO problem
-   * @throws AmazonClientException untranslated AWS client problem
    */
   @Retries.RetryTranslated
   void maybeCreateFakeParentDirectory(Path path)
@@ -2606,7 +2609,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param path fully qualified path
    * @param needEmptyDirectoryFlag if true, implementation will calculate
    *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
-   * @param onlyProbeForDirectory skip the simple object probe
+   * @param onlyProbeForDirectory only perform the directory probes.
    * @return a S3AFileStatus object
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
@@ -2651,7 +2654,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
         S3AFileStatus s3AFileStatus;
         try {
-          s3AFileStatus = s3GetFileStatus(key, path, false, tombstones);
+          s3AFileStatus = s3GetFileStatus(key, path, StatusProbeEnum.ALL,
+              tombstones);
         } catch (FileNotFoundException fne) {
           s3AFileStatus = null;
         }
@@ -2693,7 +2697,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // S3 yet, we'll assume the empty directory is true;
       S3AFileStatus s3FileStatus;
       try {
-        s3FileStatus = s3GetFileStatus(key, path, onlyProbeForDirectory,
+        s3FileStatus = s3GetFileStatus(key, path,
+            onlyProbeForDirectory
+                ? StatusProbeEnum.DIRECTORIES
+                : StatusProbeEnum.ALL,
             tombstones);
       } catch (FileNotFoundException e) {
         return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE,
@@ -2706,7 +2713,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(key, path, false, tombstones), instrumentation,
+          s3GetFileStatus(key, path, StatusProbeEnum.ALL, tombstones),
+          instrumentation,
           ttlTimeProvider);
     }
   }
@@ -2718,16 +2726,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: retry translated.
    * @param key  Key string for the path
    * @param path Qualified path
-   * @param onlyProbeForDirectory skip the simple object probe
+   * @param probes probes to make
+   * @param tombstones tombstones to filter
    * @return Status
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
   @Retries.RetryTranslated
   private S3AFileStatus s3GetFileStatus(String key, final Path path,
-      final boolean onlyProbeForDirectory,
-      Set<Path> tombstones) throws IOException {
-    if (!key.isEmpty() && !onlyProbeForDirectory) {
+      final Set<StatusProbeEnum> probes,
+      final Set<Path> tombstones) throws IOException {
+    if (!key.isEmpty() && probes.contains(StatusProbeEnum.Head)) {
       try {
         ObjectMetadata meta = getObjectMetadata(key);
 
@@ -2745,15 +2754,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               meta.getVersionId());
         }
       } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != 404) {
+        if (e.getStatusCode() != SC_404) {
           throw translateException("getFileStatus", path, e);
         }
       } catch (AmazonClientException e) {
         throw translateException("getFileStatus", path, e);
       }
 
-      // Necessary?
-      if (!key.endsWith("/")) {
+      // Look for the dir marker
+      if (!key.endsWith("/") && probes.contains(StatusProbeEnum.DirMarker) ) {
         String newKey = key + "/";
         try {
           ObjectMetadata meta = getObjectMetadata(newKey);
@@ -2774,7 +2783,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     meta.getVersionId());
           }
         } catch (AmazonServiceException e) {
-          if (e.getStatusCode() != 404) {
+          if (e.getStatusCode() != SC_404) {
             throw translateException("getFileStatus", newKey, e);
           }
         } catch (AmazonClientException e) {
@@ -2783,39 +2792,42 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     }
 
-    try {
-      key = maybeAddTrailingSlash(key);
-      S3ListRequest request = createListObjectsRequest(key, "/", 1);
+    // execute the list
+    if (probes.contains(StatusProbeEnum.List)) {
+      try {
+        key = maybeAddTrailingSlash(key);
+        S3ListRequest request = createListObjectsRequest(key, "/", 1);
 
-      S3ListResult objects = listObjects(request);
+        S3ListResult objects = listObjects(request);
 
-      Collection<String> prefixes = objects.getCommonPrefixes();
-      Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
-      if (!isEmptyOfKeys(prefixes, tombstones) ||
-          !isEmptyOfObjects(summaries, tombstones)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Found path as directory (with /): {}/{}",
-              prefixes.size(), summaries.size());
+        Collection<String> prefixes = objects.getCommonPrefixes();
+        Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
+        if (!isEmptyOfKeys(prefixes, tombstones) ||
+            !isEmptyOfObjects(summaries, tombstones)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found path as directory (with /): {}/{}",
+                prefixes.size(), summaries.size());
 
-          for (S3ObjectSummary summary : summaries) {
-            LOG.debug("Summary: {} {}", summary.getKey(), summary.getSize());
+            for (S3ObjectSummary summary : summaries) {
+              LOG.debug("Summary: {} {}", summary.getKey(), summary.getSize());
+            }
+            for (String prefix : prefixes) {
+              LOG.debug("Prefix: {}", prefix);
+            }
           }
-          for (String prefix : prefixes) {
-            LOG.debug("Prefix: {}", prefix);
-          }
+
+          return new S3AFileStatus(Tristate.FALSE, path, username);
+        } else if (key.isEmpty()) {
+          LOG.debug("Found root directory");
+          return new S3AFileStatus(Tristate.TRUE, path, username);
         }
-
-        return new S3AFileStatus(Tristate.FALSE, path, username);
-      } else if (key.isEmpty()) {
-        LOG.debug("Found root directory");
-        return new S3AFileStatus(Tristate.TRUE, path, username);
-      }
-    } catch (AmazonServiceException e) {
-      if (e.getStatusCode() != 404) {
+      } catch (AmazonServiceException e) {
+        if (e.getStatusCode() != SC_404) {
+          throw translateException("getFileStatus", path, e);
+        }
+      } catch (AmazonClientException e) {
         throw translateException("getFileStatus", path, e);
       }
-    } catch (AmazonClientException e) {
-      throw translateException("getFileStatus", path, e);
     }
 
     LOG.debug("Not Found: {}", path);
@@ -2868,16 +2880,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Raw version of {@link FileSystem#exists(Path)} which uses S3 only:
    * S3Guard MetadataStore, if any, will be skipped.
    * Retry policy: retrying; translated.
+   * @param f path to look for
+   * @param probes probes to make
    * @return true if path exists in S3
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private boolean s3Exists(final Path f, final boolean onlyProbeForDirectory)
+  private boolean s3Exists(final Path f, final Set<StatusProbeEnum> probes)
       throws IOException {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
-      s3GetFileStatus(key, path, onlyProbeForDirectory, null);
+      s3GetFileStatus(key, path, probes, null);
       return true;
     } catch (FileNotFoundException e) {
       return false;
