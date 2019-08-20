@@ -19,16 +19,17 @@ package org.apache.hadoop.ozone.web;
 
 import java.io.IOException;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreRestHttpServer;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.util.ServicePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * DataNode service plugin implementation to start ObjectStore rest server.
@@ -49,12 +50,12 @@ public class OzoneHddsDatanodeService implements ServicePlugin {
         HddsDatanodeService hddsDatanodeService = (HddsDatanodeService) service;
         conf = hddsDatanodeService.getConf();
         handler = new ObjectStoreHandler(conf);
-        objectStoreRestHttpServer = new ObjectStoreRestHttpServer(
-            conf, null, handler);
+        objectStoreRestHttpServer =
+            new ObjectStoreRestHttpServer(conf, null, handler);
         objectStoreRestHttpServer.start();
-        DatanodeDetails.Port restPort = DatanodeDetails.newPort(
-            DatanodeDetails.Port.Name.REST,
-            objectStoreRestHttpServer.getHttpAddress().getPort());
+        DatanodeDetails.Port restPort =
+            DatanodeDetails.newPort(DatanodeDetails.Port.Name.REST,
+                objectStoreRestHttpServer.getHttpAddress().getPort());
         hddsDatanodeService.getDatanodeDetails().setPort(restPort);
 
       } catch (IOException e) {
@@ -67,7 +68,6 @@ public class OzoneHddsDatanodeService implements ServicePlugin {
           HddsDatanodeService.class.getSimpleName());
     }
   }
-
 
   @Override
   public void stop() {
@@ -86,4 +86,13 @@ public class OzoneHddsDatanodeService implements ServicePlugin {
     IOUtils.closeQuietly(handler);
   }
 
+  @VisibleForTesting
+  public ObjectStoreHandler getHandler() {
+    return handler;
+  }
+
+  @VisibleForTesting
+  public ObjectStoreRestHttpServer getObjectStoreRestHttpServer() {
+    return objectStoreRestHttpServer;
+  }
 }
