@@ -57,6 +57,7 @@ public class TestGraphiteMetrics {
     return mockGraphite;
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testPutMetrics() {
     GraphiteSink sink = new GraphiteSink();
@@ -91,6 +92,7 @@ public class TestGraphiteMetrics {
           "null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n"));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testPutMetrics2() {
     GraphiteSink sink = new GraphiteSink();
@@ -128,6 +130,7 @@ public class TestGraphiteMetrics {
   /**
    * Assert that timestamps are converted correctly, ticket HADOOP-11182.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testPutMetrics3() {
 
@@ -166,6 +169,7 @@ public class TestGraphiteMetrics {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testFailureAndPutMetrics() throws IOException {
     GraphiteSink sink = new GraphiteSink();
@@ -209,6 +213,7 @@ public class TestGraphiteMetrics {
           "null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n"));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testClose(){
     GraphiteSink sink = new GraphiteSink();
