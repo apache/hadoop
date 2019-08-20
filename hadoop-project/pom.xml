@@ -68,7 +68,7 @@
 
     <!-- jersey version -->
     <jersey.version>1.19</jersey.version>
-    <jersey2.version>2.28</jersey2.version>
+    <jersey2.version>2.29</jersey2.version>
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
