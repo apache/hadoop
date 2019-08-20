@@ -69,6 +69,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.ERROR_IN_COMPACT_DB;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.ERROR_IN_DB_SYNC;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.INVALID_CONTAINER_STATE;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
@@ -304,6 +306,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } finally {
       writeUnlock();
     }
+
+    // It is ok if this operation takes a bit of time.
+    // Quasi-close transition is not expected to be instantaneous.
+    compactDB();
+    // We must sync the DB after quasi-close operation
+    flushAndSyncDB();
   }
 
   @Override
@@ -318,6 +326,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.
     compactDB();
+    // We must sync the DB after close operation
+    flushAndSyncDB();
   }
 
   /**
@@ -362,6 +372,22 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } catch (IOException ex) {
       LOG.error("Error in DB compaction while closing container", ex);
       throw new StorageContainerException(ex, ERROR_IN_COMPACT_DB);
+    }
+  }
+
+  private void flushAndSyncDB() throws StorageContainerException {
+    try {
+      try (ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
+        db.getStore().flushDB(true);
+        LOG.info("Container {} is synced with bcsId {}.",
+            containerData.getContainerID(),
+            containerData.getBlockCommitSequenceId());
+      }
+    } catch (StorageContainerException ex) {
+      throw ex;
+    } catch (IOException ex) {
+      LOG.error("Error in DB sync while closing container", ex);
+      throw new StorageContainerException(ex, ERROR_IN_DB_SYNC);
     }
   }
 

@@ -279,6 +279,18 @@ public class RocksDBStore implements MetadataStore {
     }
   }
 
+  @Override
+  public void flushDB(boolean sync) throws IOException {
+    if (db != null) {
+      try {
+        // for RocksDB it is sufficient to
+        db.flushWal(sync);
+      } catch (RocksDBException e) {
+        throw toIOException("Failed to flush db", e);
+      }
+    }
+  }
+
   private void deleteQuietly(File fileOrDir) {
     if (fileOrDir != null && fileOrDir.exists()) {
       try {
