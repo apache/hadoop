@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.web;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,11 +35,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.ServicePlugin;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import com.google.protobuf.Service;
 
 /**
  * Test class for {@link OzoneHddsDatanodeService}.
@@ -88,30 +90,12 @@ public class TestOzoneHddsDatanodeService {
   @Test
   public void testStartupFail() throws IOException {
     OzoneHddsDatanodeService ozoneHddsService = new OzoneHddsDatanodeService();
-    ServicePlugin mockService = new MockService();
+    Service mockService = mock(Service.class);
     ozoneHddsService.start(mockService);
 
     assertNull(ozoneHddsService.getHandler());
     assertNull(ozoneHddsService.getObjectStoreRestHttpServer());
 
     ozoneHddsService.close();
-  }
-
-  static class MockService implements ServicePlugin {
-
-    @Override
-    public void close() throws IOException {
-      // Do nothing
-    }
-
-    @Override
-    public void start(Object arg0) {
-      // Do nothing
-    }
-
-    @Override
-    public void stop() {
-      // Do nothing
-    }
   }
 }
