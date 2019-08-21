@@ -143,6 +143,7 @@ message OMRequest {
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
   optional UpdateGetDelegationTokenRequest updateGetDelegationTokenRequest = 64;
+  optional UpdateRenewDelegationTokenRequest updatedRenewDelegationTokenRequest = 65;
 
   optional GetFileStatusRequest             getFileStatusRequest           = 70;
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
@@ -315,6 +316,17 @@ message UserInfo {
 */
 message UpdateGetDelegationTokenRequest {
     required GetDelegationTokenResponseProto getDelegationTokenResponse = 1;
+}
+
+/**
+  This will be used during OM HA, once leader renews token, sends this
+   request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating renewed token information across a quorum of OMs.
+*/
+message UpdateRenewDelegationTokenRequest {
+    required hadoop.common.RenewDelegationTokenRequestProto
+    renewDelegationTokenRequest = 1;
+    required RenewDelegationTokenResponseProto renewDelegationTokenResponse = 2;
 }
 
 /**
