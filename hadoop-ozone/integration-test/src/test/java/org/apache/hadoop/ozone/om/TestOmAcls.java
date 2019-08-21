@@ -19,21 +19,16 @@ package org.apache.hadoop.ozone.om;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IOzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.KeyArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.request.OzoneQuota;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -53,8 +48,6 @@ import org.junit.rules.ExpectedException;
 public class TestOmAcls {
 
   private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
   private static OMMetrics omMetrics;
   private static OzoneConfiguration conf;
   private static String clusterId;
@@ -86,9 +79,6 @@ public class TestOmAcls {
         .setOmId(omId)
         .build();
     cluster.waitForClusterToBeReady();
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
     omMetrics = cluster.getOzoneManager().getMetrics();
     logCapturer =
         GenericTestUtils.LogCapturer.captureLogs(OzoneManager.getLogger());
@@ -104,31 +94,41 @@ public class TestOmAcls {
     }
   }
 
-
   /**
    * Tests the OM Initialization.
    */
   @Test
-  public void testOMAclsPermissionDenied() throws Exception {
+  public void testVolumeCreationPermissionDenied() throws Exception {
     String user0 = "testListVolumes-user-0";
     String adminUser = "testListVolumes-admin";
-    final VolumeArgs createVolumeArgs;
     int i = 100;
     String user0VolName = "Vol-" + user0 + "-" + i;
-    createVolumeArgs = new VolumeArgs(user0VolName, userArgs);
-    createVolumeArgs.setUserName(user0);
-    createVolumeArgs.setAdminName(adminUser);
-    createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
+
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(user0)
+        .setAdmin(adminUser)
+        .setQuota(i + "GB")
+        .build();
+
     logCapturer.clearOutput();
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
-        () -> storageHandler.createVolume(createVolumeArgs));
+        () -> cluster.getClient().getObjectStore()
+            .createVolume(user0VolName, createVolumeArgs));
     assertTrue(logCapturer.getOutput().contains("Only admin users are " +
         "authorized to create Ozone"));
+  }
 
-    BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setStorageType(StorageType.DISK);
+  @Test
+  public void testBucketCreationPermissionDenied() throws Exception {
+
+    String volumeName = RandomStringUtils.randomAlphabetic(5);
+    String bucketName = RandomStringUtils.randomAlphabetic(5);
+    cluster.getClient().getObjectStore().createVolume(volumeName);
+    OzoneVolume volume =
+        cluster.getClient().getObjectStore().getVolume(volumeName);
+
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
-        () -> storageHandler.createBucket(bucketArgs));
+        () -> volume.createBucket(bucketName));
     assertTrue(logCapturer.getOutput().contains("Only admin users are" +
         " authorized to create Ozone"));
   }
@@ -136,21 +136,11 @@ public class TestOmAcls {
   @Test
   public void testFailureInKeyOp() throws Exception {
     final VolumeArgs createVolumeArgs;
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    createVolumeArgs = new VolumeArgs(userName, userArgs);
-    createVolumeArgs.setUserName(userName);
-    createVolumeArgs.setAdminName(adminName);
-    createVolumeArgs.setQuota(new OzoneQuota(100, OzoneQuota.Units.GB));
-    BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setStorageType(StorageType.DISK);
-    logCapturer.clearOutput();
 
-    // write a key without specifying size at all
-    String keyName = "testKey";
-    KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
+    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
-        () -> storageHandler.newKeyWriter(keyArgs));
+        () -> TestDataUtil.createKey(bucket, "testKey", "testcontent"));
     assertTrue(logCapturer.getOutput().contains("doesn't have WRITE " +
         "permission to access key"));
   }

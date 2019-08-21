@@ -36,7 +36,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -210,18 +209,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   @Override
   public OzoneClient getRpcClient() throws IOException {
     return OzoneClientFactory.getRpcClient(conf);
-  }
-
-  /**
-   * Creates an {@link OzoneClient} connected to this cluster's REST
-   * service. Callers take ownership of the client and must close it when done.
-   *
-   * @return OzoneRestClient connected to this cluster's REST service
-   * @throws OzoneException if Ozone encounters an error creating the client
-   */
-  @Override
-  public OzoneClient getRestClient() throws IOException {
-    return OzoneClientFactory.getRestClient(conf);
   }
 
   /**

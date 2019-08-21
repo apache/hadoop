@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
@@ -92,8 +93,7 @@ public class CreateVolumeHandler extends Handler {
 
     if (isVerbose()) {
       OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
-      System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-          JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(vol))));
+      ObjectPrinter.printObjectAsJson(vol);
     }
     return null;
   }

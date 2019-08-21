@@ -1261,7 +1261,7 @@
 
   <property>
     <name>hdds.datanode.plugins</name>
-    <value>org.apache.hadoop.ozone.web.OzoneHddsDatanodeService</value>
+    <value></value>
     <description>
       Comma-separated list of HDDS datanode plug-ins to be activated when
       HDDS service starts as part of datanode.

@@ -46,7 +46,6 @@
     <module>ozonefs-lib-legacy</module>
     <module>tools</module>
     <module>integration-test</module>
-    <module>objectstore-service</module>
     <module>datanode</module>
     <module>s3gateway</module>
     <module>dist</module>
@@ -80,11 +79,6 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-ozone-manager</artifactId>
-        <version>${ozone.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-ozone-objectstore-service</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
