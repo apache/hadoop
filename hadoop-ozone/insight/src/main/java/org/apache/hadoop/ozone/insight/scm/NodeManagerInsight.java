@@ -30,6 +30,7 @@ public class NodeManagerInsight extends BaseInsightPoint {
 
     MetricGroupDisplay nodes =
         new MetricGroupDisplay(Type.SCM, "Node counters");
+
     nodes.addMetrics(
         new MetricDisplay("Healthy Nodes", "scm_node_manager_healthy_nodes"));
     nodes.addMetrics(

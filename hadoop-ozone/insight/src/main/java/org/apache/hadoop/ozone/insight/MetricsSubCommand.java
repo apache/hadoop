@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
     description = "Show available metrics.",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
-public class MetricsSubCommand extends BaseInsightSubcommand
+public class MetricsSubCommand extends BaseInsightSubCommand
     implements Callable<Void> {
 
   @CommandLine.Parameters(description = "Name of the insight point (use list "

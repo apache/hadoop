@@ -19,7 +19,7 @@ import java.util.concurrent.Callable;
     description = "Show configuration for a specific subcomponents",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
-public class ConfigurationSubCommand extends BaseInsightSubcommand
+public class ConfigurationSubCommand extends BaseInsightSubCommand
     implements Callable<Void> {
 
   @CommandLine.Parameters(description = "Name of the insight point (use list "

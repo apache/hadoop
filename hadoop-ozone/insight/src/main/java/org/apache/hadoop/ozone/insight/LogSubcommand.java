@@ -31,7 +31,7 @@ import picocli.CommandLine;
     description = "Show log4j events related to the insight point",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
-public class LogSubcommand extends BaseInsightSubcommand
+public class LogSubcommand extends BaseInsightSubCommand
     implements Callable<Void> {
 
   @CommandLine.Parameters(description = "Name of the insight point (use list "

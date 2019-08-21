@@ -21,7 +21,7 @@ import picocli.CommandLine;
 /**
  * Parent class for all the insight subcommands.
  */
-public class BaseInsightSubcommand {
+public class BaseInsightSubCommand {
 
   @CommandLine.ParentCommand
   private Insight insightCommand;
