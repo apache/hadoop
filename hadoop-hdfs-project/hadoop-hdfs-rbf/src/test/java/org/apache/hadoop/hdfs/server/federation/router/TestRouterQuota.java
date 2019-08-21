@@ -332,9 +332,11 @@ public class TestRouterQuota {
     // /getquota --> ns0---/testdir7
     // /getquota/subdir1 --> ns0---/testdir7/subdir
     // /getquota/subdir2 --> ns1---/testdir8
+    // /getquota/subdir3 --> ns1---/testdir8-ext
     nnFs1.mkdirs(new Path("/testdir7"));
     nnFs1.mkdirs(new Path("/testdir7/subdir"));
     nnFs2.mkdirs(new Path("/testdir8"));
+    nnFs2.mkdirs(new Path("/testdir8-ext"));
     MountTable mountTable1 = MountTable.newInstance("/getquota",
         Collections.singletonMap("ns0", "/testdir7"));
     mountTable1
@@ -350,11 +352,16 @@ public class TestRouterQuota {
         Collections.singletonMap("ns1", "/testdir8"));
     addMountTable(mountTable3);
 
+    MountTable mountTable4 = MountTable.newInstance("/getquota/subdir3",
+            Collections.singletonMap("ns1", "/testdir8-ext"));
+    addMountTable(mountTable4);
+
     // use router client to create new files
     DFSClient routerClient = routerContext.getClient();
     routerClient.create("/getquota/file", true).close();
     routerClient.create("/getquota/subdir1/file", true).close();
     routerClient.create("/getquota/subdir2/file", true).close();
+    routerClient.create("/getquota/subdir3/file", true).close();
 
     ClientProtocol clientProtocol = routerContext.getClient().getNamenode();
     RouterQuotaUpdateService updateService = routerContext.getRouter()
@@ -362,7 +369,7 @@ public class TestRouterQuota {
     updateService.periodicInvoke();
     final QuotaUsage quota = clientProtocol.getQuotaUsage("/getquota");
     // the quota should be aggregated
-    assertEquals(6, quota.getFileAndDirectoryCount());
+    assertEquals(8, quota.getFileAndDirectoryCount());
   }
 
   @Test
