@@ -24,9 +24,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.util.Random;
 
 /**
- * Tests {@link org.apache.hadoop.ozone.om.ratis.OMRatisSnapshotInfo}
+ * Tests {@link org.apache.hadoop.ozone.om.ratis.OMRatisSnapshotInfo}.
  */
 public class TestOMRatisSnapshotInfo {
 
@@ -38,26 +39,27 @@ public class TestOMRatisSnapshotInfo {
     File rootDir = folder.newFolder();
     OMRatisSnapshotInfo omRatisSnapshotInfo = new OMRatisSnapshotInfo(rootDir);
 
-    // Initially term and index should be 0
+    // Initially term and index should be 0 and -1
     Assert.assertEquals(0, omRatisSnapshotInfo.getTerm());
     Assert.assertEquals(-1, omRatisSnapshotInfo.getIndex());
 
-    int snapshotIndex = 10;
-    int termIndex = 2;
+    Random random = new Random();
+    int snapshotIndex = random.nextInt(50);
+    int termIndex = random.nextInt(10);
 
     // Save snapshotInfo to disk
     omRatisSnapshotInfo.updateTerm(termIndex);
     omRatisSnapshotInfo.saveRatisSnapshotToDisk(snapshotIndex);
 
-    Assert.assertEquals(2, omRatisSnapshotInfo.getTerm());
-    Assert.assertEquals(10, omRatisSnapshotInfo.getIndex());
+    Assert.assertEquals(termIndex, omRatisSnapshotInfo.getTerm());
+    Assert.assertEquals(snapshotIndex, omRatisSnapshotInfo.getIndex());
 
     // Load the snapshot file into new SnapshotInfo
     OMRatisSnapshotInfo newSnapshotInfo = new OMRatisSnapshotInfo(rootDir);
 
     // Verify that the snapshot file loaded properly
-    Assert.assertEquals(2, newSnapshotInfo.getTerm());
-    Assert.assertEquals(10, newSnapshotInfo.getIndex());
+    Assert.assertEquals(termIndex, newSnapshotInfo.getTerm());
+    Assert.assertEquals(snapshotIndex, newSnapshotInfo.getIndex());
   }
 
 }

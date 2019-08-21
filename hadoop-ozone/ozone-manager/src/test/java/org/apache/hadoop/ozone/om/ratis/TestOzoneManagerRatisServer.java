@@ -198,7 +198,7 @@ public class TestOzoneManagerRatisServer {
     int ratisPort = 9873;
     InetSocketAddress rpcAddress = new InetSocketAddress(
         InetAddress.getLocalHost(), 0);
-    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+    OMNodeDetails nodeDetails = new OMNodeDetails.Builder()
         .setRpcAddress(rpcAddress)
         .setRatisPort(ratisPort)
         .setOMNodeId(newOmId)
@@ -206,7 +206,7 @@ public class TestOzoneManagerRatisServer {
         .build();
     // Starts a single node Ratis server
     OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
-        .newOMRatisServer(newConf, ozoneManager, omNodeDetails,
+        .newOMRatisServer(newConf, ozoneManager, nodeDetails,
             Collections.emptyList());
     newOmRatisServer.start();
     OzoneManagerRatisClient newOmRatisClient = OzoneManagerRatisClient
@@ -220,4 +220,6 @@ public class TestOzoneManagerRatisServer {
     Assert.assertEquals(uuid, raftGroupId.getUuid());
     Assert.assertEquals(raftGroupId.toByteString().size(), 16);
   }
+
+
 }

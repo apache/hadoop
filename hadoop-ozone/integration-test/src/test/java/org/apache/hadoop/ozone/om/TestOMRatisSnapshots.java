@@ -133,7 +133,6 @@ public class TestOMRatisSnapshots {
 
     long leaderOMappliedLogIndex =
         leaderRatisServer.getStateMachineLastAppliedIndex();
-    leaderOM.getOmRatisServer().getStateMachineLastAppliedIndex();
 
     List<String> keys = new ArrayList<>();
     while (leaderOMappliedLogIndex < 2000) {

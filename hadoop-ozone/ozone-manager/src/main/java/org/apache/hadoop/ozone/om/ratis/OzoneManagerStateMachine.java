@@ -28,8 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.ozone.container.common.transport.server.ratis
-    .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
@@ -116,8 +114,21 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     return snapshotInfo;
   }
 
+  /**
+   * Called to notify state machine about indexes which are processed
+   * internally by Raft Server, this currently happens when conf entries are
+   * processed in raft Server. This keep state machine to keep a track of index
+   * updates.
+   * @param term term of the current log entry
+   * @param index index which is being updated
+   */
   @Override
   public void notifyIndexUpdate(long term, long index) {
+    // SnapshotInfo should be updated when the term changes.
+    // The index here refers to the log entry index and the index in
+    // SnapshotInfo represents the snapshotIndex i.e. the index of the last
+    // transaction included in the snapshot. Hence, snaphsotInfo#index is not
+    // updated here.
     snapshotInfo.updateTerm(term);
   }
 

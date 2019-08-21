@@ -20,25 +20,26 @@ package org.apache.hadoop.ozone.om.ratis;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.FileInfo;
 import org.apache.ratis.statemachine.SnapshotInfo;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.List;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_INDEX;
 
 /**
- * This class captures the {@link OzoneManager#snapshotIndex} and term of the
- * snapshot.
+ * This class captures the snapshotIndex and term of the latest snapshot in
+ * the OM.
  * Ratis server loads the snapshotInfo during startup and updates the
- * lastApplied index to this snapshotIndex. OM SnaphsotInfo does not contain
+ * lastApplied index to this snapshotIndex. OM SnapshotInfo does not contain
  * any files. It is used only to store/ update the last applied index and term.
  */
 public class OMRatisSnapshotInfo implements SnapshotInfo {
@@ -50,10 +51,6 @@ public class OMRatisSnapshotInfo implements SnapshotInfo {
 
   private final File ratisSnapshotFile;
 
-  private final static String TERM_PREFIX = "term";
-  private final static String INDEX_PREFIX = "index";
-  private final static String SEPARATOR = ":";
-
   public OMRatisSnapshotInfo(File ratisDir) throws IOException {
     ratisSnapshotFile = new File(ratisDir, OM_RATIS_SNAPSHOT_INDEX);
     loadRatisSnapshotIndex();
@@ -63,11 +60,11 @@ public class OMRatisSnapshotInfo implements SnapshotInfo {
     term = newTerm;
   }
 
-  public void updateSnapshotIndex(long newSnapshotIndex) {
+  private void updateSnapshotIndex(long newSnapshotIndex) {
     snapshotIndex = newSnapshotIndex;
   }
 
-  public void updateTermIndex(long newTerm, long newIndex) {
+  private void updateTermIndex(long newTerm, long newIndex) {
     this.term = newTerm;
     this.snapshotIndex = newIndex;
   }
@@ -77,37 +74,54 @@ public class OMRatisSnapshotInfo implements SnapshotInfo {
    * if it exists.
    * @throws IOException
    */
-  public void loadRatisSnapshotIndex() throws IOException {
+  private void loadRatisSnapshotIndex() throws IOException {
     if (ratisSnapshotFile.exists()) {
-      try (BufferedReader reader = new BufferedReader(new FileReader(
-          ratisSnapshotFile))) {
-        String termStr = reader.readLine();
-        String indexStr = reader.readLine();
+      RatisSnapshotYaml ratisSnapshotYaml = readRatisSnapshotYaml();
+      updateTermIndex(ratisSnapshotYaml.term, ratisSnapshotYaml.snapshotIndex);
+    }
+  }
 
-        updateTermIndex(Long.parseLong(termStr.split(SEPARATOR)[1]),
-            Long.parseLong(indexStr.split(SEPARATOR)[1]));
-
-      } catch (IOException e) {
-        LOG.error("Failed to load Ratis Snapshot file {}", ratisSnapshotFile);
-        throw e;
+  /**
+   * Read and parse the snapshot yaml file.
+   */
+  private RatisSnapshotYaml readRatisSnapshotYaml() throws IOException {
+    try (FileInputStream inputFileStream = new FileInputStream(
+        ratisSnapshotFile)) {
+      Yaml yaml = new Yaml();
+      try {
+        return yaml.loadAs(inputFileStream, RatisSnapshotYaml.class);
+      } catch (Exception e) {
+        throw new IOException("Unable to parse RatisSnapshot yaml file.", e);
       }
     }
   }
 
   /**
    * Update and persist the snapshot index and term to disk.
-   * @param snapshotIndex new snapshot index to be persisted to disk.
+   * @param index new snapshot index to be persisted to disk.
    * @throws IOException
    */
-  public void saveRatisSnapshotToDisk(long snapshotIndex) throws IOException {
-    updateSnapshotIndex(snapshotIndex);
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-          ratisSnapshotFile))) {
-      writer.write(TERM_PREFIX + SEPARATOR + term);
-      writer.write("\n");
-      writer.write(INDEX_PREFIX + SEPARATOR + snapshotIndex);
-      LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}",
-          snapshotIndex);
+  public void saveRatisSnapshotToDisk(long index) throws IOException {
+    updateSnapshotIndex(index);
+    writeRatisSnapshotYaml();
+    LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}", index);
+  }
+
+  /**
+   * Write snapshot details to disk in yaml format.
+   */
+  private void writeRatisSnapshotYaml() throws IOException {
+    DumperOptions options = new DumperOptions();
+    options.setPrettyFlow(true);
+    options.setDefaultFlowStyle(DumperOptions.FlowStyle.FLOW);
+    Yaml yaml = new Yaml(options);
+
+    RatisSnapshotYaml ratisSnapshotYaml = new RatisSnapshotYaml(term,
+        snapshotIndex);
+
+    try (Writer writer = new OutputStreamWriter(
+        new FileOutputStream(ratisSnapshotFile), "UTF-8")) {
+      yaml.dump(ratisSnapshotYaml, writer);
     }
   }
 
@@ -129,5 +143,38 @@ public class OMRatisSnapshotInfo implements SnapshotInfo {
   @Override
   public List<FileInfo> getFiles() {
     return null;
+  }
+
+  /**
+   * Ratis Snapshot details to be written to the yaml file.
+   */
+  public static class RatisSnapshotYaml {
+    private long term;
+    private long snapshotIndex;
+
+    public RatisSnapshotYaml() {
+      // Needed for snake-yaml introspection.
+    }
+
+    RatisSnapshotYaml(long term, long snapshotIndex) {
+      this.term = term;
+      this.snapshotIndex = snapshotIndex;
+    }
+
+    public void setTerm(long term) {
+      this.term = term;
+    }
+
+    public long getTerm() {
+      return this.term;
+    }
+
+    public void setSnapshotIndex(long index) {
+      this.snapshotIndex = index;
+    }
+
+    public long getSnapshotIndex() {
+      return this.snapshotIndex;
+    }
   }
 }
