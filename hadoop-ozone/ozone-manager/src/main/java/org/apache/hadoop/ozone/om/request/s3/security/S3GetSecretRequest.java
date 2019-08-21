@@ -148,7 +148,8 @@ public class S3GetSecretRequest extends OMClientRequest {
           .setAwsSecret(awsSecret).setKerberosID(kerberosID));
 
       if (s3SecretValue == null) {
-        omClientResponse = new S3GetSecretResponse(s3SecretValue,
+        omClientResponse =
+            new S3GetSecretResponse(new S3SecretValue(kerberosID, awsSecret),
             omResponse.setGetS3SecretResponse(getS3SecretResponse).build());
       } else {
         // As when it already exists, we don't need to add to DB again. So
