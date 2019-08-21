@@ -334,14 +334,14 @@
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
             'columns': [
-              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
-              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": ""},
-              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
-              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
-              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
-              { 'type': 'num' , "defaultContent": 0},
-              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
-              { 'type': 'string' , "defaultContent": ""}
+              { 'orderDataType': 'ng-value', 'searchable': true, 'defaultContent': '' },
+              { 'orderDataType': 'ng-value', 'searchable': true, 'defaultContent': '' },
+              { 'orderDataType': 'ng-value', 'type': 'num', 'defaultContent': '' },
+              { 'orderDataType': 'ng-value', 'type': 'num', 'defaultContent': '' },
+              { 'orderDataType': 'ng-value', 'type': 'num', 'defaultContent': '' },
+              { 'type': 'num', 'defaultContent': '' },
+              { 'orderDataType': 'ng-value', 'type': 'num', 'defaultContent': '' },
+              { 'type': 'string', 'defaultContent': '' }
             ]});
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
