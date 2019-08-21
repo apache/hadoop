@@ -19,11 +19,18 @@
 package org.apache.hadoop.ozone.om.request.s3.security;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.common.base.Optional;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -49,6 +56,9 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.S3_SECRE
  * Handles GetS3Secret request.
  */
 public class S3GetSecretRequest extends OMClientRequest {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3GetSecretRequest.class);
 
   public S3GetSecretRequest(OMRequest omRequest) {
     super(omRequest);
@@ -109,6 +119,7 @@ public class S3GetSecretRequest extends OMClientRequest {
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setSuccess(true);
     boolean acquiredLock = false;
+    IOException exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     UpdateGetS3SecretRequest updateGetS3SecretRequest =
         getOmRequest().getUpdateGetS3SecretRequest();
@@ -147,6 +158,7 @@ public class S3GetSecretRequest extends OMClientRequest {
       }
 
     } catch (IOException ex) {
+      exception = ex;
       omClientResponse = new S3GetSecretResponse(null,
           createErrorOMResponse(omResponse, ex));
     } finally {
@@ -157,6 +169,23 @@ public class S3GetSecretRequest extends OMClientRequest {
       if (acquiredLock) {
         omMetadataManager.getLock().releaseLock(S3_SECRET_LOCK, kerberosID);
       }
+    }
+
+
+    Map<String, String> auditMap = new HashMap<>();
+    auditMap.put(OzoneConsts.S3_GETSECRET_USER, kerberosID);
+
+    // audit log
+    auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(
+        OMAction.GET_S3_SECRET, auditMap,
+        exception, getOmRequest().getUserInfo()));
+
+    if (exception == null) {
+      LOG.debug("Secret for accessKey:{} is generated Successfully",
+          kerberosID);
+    } else {
+      LOG.error("Secret for accessKey:{} is generation failed", kerberosID,
+          exception);
     }
     return omClientResponse;
   }
