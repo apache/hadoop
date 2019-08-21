@@ -558,10 +558,15 @@ public class SLSRunner extends Configured implements Tool {
         executionType = ExecutionType.valueOf(
             jsonTask.get(SLSConfiguration.TASK_EXECUTION_TYPE).toString());
       }
+      long allocationId = -1;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_ALLOCATION_ID)) {
+        allocationId = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_ALLOCATION_ID).toString());
+      }
       for (int i = 0; i < count; i++) {
         containers.add(
             new ContainerSimulator(res, duration, hostname, priority, type,
-                executionType));
+                executionType, allocationId));
       }
     }
 
