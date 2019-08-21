@@ -27,7 +27,6 @@ import org.apache.hadoop.ozone.security.acl.RequestContext;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -159,31 +158,6 @@ public final class OzoneAclUtil {
   }
 
   /**
-   * Helper function to find and return all DEFAULT acls in input list with
-   * scope changed to ACCESS.
-   * @param acls
-   *
-   * @return list of default Acls.
-   * */
-  public static Collection<OzoneAclInfo> getDefaultAclsProto(
-      List<OzoneAcl> acls) {
-    return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
-        .map(OzoneAcl::toProtobufWithAccessType).collect(Collectors.toList());
-  }
-
-  /**
-   * Helper function to find and return all DEFAULT acls in input list with
-   * scope changed to ACCESS.
-   * @param acls
-   *
-   * @return list of default Acls.
-   * */
-  public static List<OzoneAcl> getDefaultAcls(List<OzoneAcl> acls) {
-    return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
-        .collect(Collectors.toList());
-  }
-
-  /**
    * Helper function to inherit default ACL as access ACL for child object.
    * 1. deep copy of OzoneAcl to avoid unexpected parent default ACL change
    * 2. merge inherited access ACL with existing access ACL via
@@ -232,8 +206,8 @@ public final class OzoneAclUtil {
 
   /**
    * Add an OzoneAcl to existing list of OzoneAcls.
-   * @param acl
    * @param existingAcls
+   * @param acl
    * @return true if current OzoneAcls are changed, false otherwise.
    */
   public static boolean addAcl(List<OzoneAcl> existingAcls, OzoneAcl acl) {
@@ -261,6 +235,7 @@ public final class OzoneAclUtil {
 
   /**
    * remove OzoneAcl from existing list of OzoneAcls.
+   * @param existingAcls
    * @param acl
    * @return true if current OzoneAcls are changed, false otherwise.
    */
