@@ -399,12 +399,12 @@ MIT License
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-1.6.4.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-nvd3-1.0.9.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-route-1.6.4.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.3.7
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.4.1
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-full-2.0.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-helpers-1.1.1.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.3.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.4.1.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
