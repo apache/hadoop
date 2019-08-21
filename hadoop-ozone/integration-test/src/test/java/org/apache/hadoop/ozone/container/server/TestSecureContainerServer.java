@@ -202,9 +202,8 @@ public class TestSecureContainerServer {
                 " authenticate with GRPC XceiverServer with Ozone block token",
             () -> finalClient.sendCommand(request));
       } else {
-        ContainerCommandResponseProto response = finalClient.
-            sendCommand(request);
-        assertEquals(BLOCK_TOKEN_VERIFICATION_FAILED, response.getResult());
+        LambdaTestUtils.intercept(IOException.class,
+            () -> finalClient.sendCommand(request));
       }
 
       // Test 2: Test success in request with valid block token.
