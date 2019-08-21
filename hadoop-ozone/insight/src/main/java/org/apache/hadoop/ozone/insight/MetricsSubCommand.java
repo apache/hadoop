@@ -31,7 +31,8 @@ import java.util.stream.Collectors;
 public class MetricsSubCommand extends BaseInsightSubcommand
     implements Callable<Void> {
 
-  @CommandLine.Parameters(defaultValue = "")
+  @CommandLine.Parameters(description = "Name of the insight point (use list "
+      + "to check the available options)")
   private String insightName;
 
   @Override

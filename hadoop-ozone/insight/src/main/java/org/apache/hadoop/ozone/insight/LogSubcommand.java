@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.insight.LoggerSource.Level;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -49,13 +50,22 @@ public class LogSubcommand extends BaseInsightSubcommand
         getInsight(conf, insightName);
 
     List<LoggerSource> loggers = insight.getRelatedLoggers(verbose);
+
     for (LoggerSource logger : loggers) {
-      setLogLevel(conf, logger);
+      setLogLevel(conf, logger.getLoggerName(), logger.getComponent(),
+          logger.getLevel());
     }
 
     Set<Component> sources = loggers.stream().map(LoggerSource::getComponent)
         .collect(Collectors.toSet());
-    streamLog(conf, sources, loggers);
+    try {
+      streamLog(conf, sources, loggers);
+    } finally {
+      for (LoggerSource logger : loggers) {
+        setLogLevel(conf, logger.getLoggerName(), logger.getComponent(),
+            Level.INFO);
+      }
+    }
     return null;
   }
 
@@ -117,13 +127,14 @@ public class LogSubcommand extends BaseInsightSubcommand
     return sb.toString();
   }
 
-  private void setLogLevel(OzoneConfiguration conf, LoggerSource logger) {
+  private void setLogLevel(OzoneConfiguration conf, String name,
+      Component component, LoggerSource.Level level) {
     HttpClient client = HttpClientBuilder.create().build();
 
     String request = String
-        .format("/logLevel?log=%s&level=%s", logger.getLoggerName(),
-            logger.getLevel());
-    String hostName = getHost(conf, logger.getComponent());
+        .format("/logLevel?log=%s&level=%s", name,
+            level);
+    String hostName = getHost(conf, component);
     HttpGet get = new HttpGet(hostName + request);
     try {
       HttpResponse execute = client.execute(get);
