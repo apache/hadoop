@@ -41,15 +41,12 @@ public class LogSubcommand extends BaseInsightSubcommand
       + "show more information / detailed message")
   private boolean verbose;
 
-  @CommandLine.Parameters(defaultValue = "")
-  private String selection;
-
   @Override
   public Void call() throws Exception {
     OzoneConfiguration conf =
         getInsightCommand().createOzoneConfiguration();
     InsightPoint insight =
-        getInsight(conf, selection);
+        getInsight(conf, insightName);
 
     List<LoggerSource> loggers = insight.getRelatedLoggers(verbose);
     for (LoggerSource logger : loggers) {

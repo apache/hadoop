@@ -19,7 +19,7 @@ import java.util.concurrent.Callable;
 public class List extends BaseInsightSubcommand implements Callable<Void> {
 
   @CommandLine.Parameters(defaultValue = "")
-  private String selection;
+  private String insightPrefix;
 
   @Override
   public Void call() throws Exception {
@@ -29,8 +29,10 @@ public class List extends BaseInsightSubcommand implements Callable<Void> {
     Map<String, InsightPoint> insightPoints =
         createInsightPoints(new OzoneConfiguration());
     for (String key : insightPoints.keySet()) {
-      System.out.println(String.format("  %-33s    %s", key,
-          insightPoints.get(key).getDescription()));
+      if (insightPrefix == null || key.startsWith(insightPrefix)) {
+        System.out.println(String.format("  %-33s    %s", key,
+            insightPoints.get(key).getDescription()));
+      }
     }
     return null;
   }

@@ -154,7 +154,7 @@ public class ReplicationManager implements MetricsSource {
    */
   public synchronized void start() {
 
-      if (!isRunning()) {
+    if (!isRunning()) {
       DefaultMetricsSystem.instance().register(METRICS_SOURCE_NAME,
           "SCM Replication manager (closed container replication) related "
               + "metrics",

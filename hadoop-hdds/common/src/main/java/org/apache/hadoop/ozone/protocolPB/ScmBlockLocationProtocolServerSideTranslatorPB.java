@@ -165,15 +165,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       }
     }
 
-    SCMBlockLocationResponse result = response.build();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(
-          "BlockLocationProtocol {} request is responded with: <json>{}</json>",
-          request.getCmdType().toString(),
-          result.toString().replaceAll("\n", "\\\\n"));
-
-    }
-    return result;
+    return response.build();
   }
 
   private Status exceptionToResponseStatus(IOException ex) {

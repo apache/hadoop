@@ -4,6 +4,7 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.Config;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.insight.Component.Type;
 
 import picocli.CommandLine;
 
@@ -21,15 +22,16 @@ import java.util.concurrent.Callable;
 public class ConfigurationSubCommand extends BaseInsightSubcommand
     implements Callable<Void> {
 
-  @CommandLine.Parameters(defaultValue = "")
-  private String selection;
+  @CommandLine.Parameters(description = "Name of the insight point (use list "
+      + "to check the available options)")
+  private String insightName;
 
   @Override
   public Void call() throws Exception {
     InsightPoint insight =
-        getInsight(getInsightCommand().createOzoneConfiguration(), selection);
+        getInsight(getInsightCommand().createOzoneConfiguration(), insightName);
     System.out.println(
-        "Configuration for `" + selection + "` (" + insight.getDescription()
+        "Configuration for `" + insightName + "` (" + insight.getDescription()
             + ")");
     System.out.println();
     for (Class clazz : insight.getConfigurationClasses()) {
@@ -41,7 +43,7 @@ public class ConfigurationSubCommand extends BaseInsightSubcommand
 
   private void showConfig(Class clazz) {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.addResource("http://localhost:9876/conf");
+    conf.addResource(getHost(conf, new Component(Type.SCM)) + "/conf");
     ConfigGroup configGroup =
         (ConfigGroup) clazz.getAnnotation(ConfigGroup.class);
     if (configGroup == null) {
