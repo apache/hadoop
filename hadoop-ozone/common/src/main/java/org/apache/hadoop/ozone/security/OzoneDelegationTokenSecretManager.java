@@ -251,12 +251,28 @@ public class OzoneDelegationTokenSecretManager
     }
 
     long renewTime = Math.min(id.getMaxDate(), now + getTokenRenewInterval());
-    try {
-      addToTokenStore(id, token.getPassword(),  renewTime);
-    } catch (IOException e) {
-      LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+
+    // For HA ratis will take care of updating.
+    // This will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        addToTokenStore(id, token.getPassword(), renewTime);
+      } catch (IOException e) {
+        LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+      }
     }
     return renewTime;
+  }
+
+  public void updateRenewToken(Token<OzoneTokenIdentifier> token,
+      OzoneTokenIdentifier ozoneTokenIdentifier, long expiryTime) {
+    //TODO: Instead of having in-memory map inside this class, we can use
+    // cache from table and make this table cache clean up policy NEVER. In
+    // this way, we don't need to maintain seperate in-memory map. To do this
+    // work we need to merge HA/Non-HA code.
+    TokenInfo tokenInfo = new TokenInfo(expiryTime, token.getPassword(),
+        ozoneTokenIdentifier.getTrackingId());
+    currentTokens.put(ozoneTokenIdentifier, tokenInfo);
   }
 
   /**
