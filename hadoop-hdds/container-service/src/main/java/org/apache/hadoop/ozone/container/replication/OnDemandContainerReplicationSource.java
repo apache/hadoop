@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 import com.google.common.base.Preconditions;
@@ -41,7 +40,7 @@ public class OnDemandContainerReplicationSource
 
   private ContainerController controller;
 
-  private ContainerPacker packer = new TarContainerPacker();
+  private TarContainerPacker packer = new TarContainerPacker();
 
   public OnDemandContainerReplicationSource(
       ContainerController controller) {
@@ -59,18 +58,11 @@ public class OnDemandContainerReplicationSource
 
     Container container = controller.getContainer(containerId);
 
-    Preconditions
-        .checkNotNull(container, "Container is not found " + containerId);
+    Preconditions.checkNotNull(
+        container, "Container is not found " + containerId);
 
-    switch (container.getContainerType()) {
-    case KeyValueContainer:
-      packer.pack(container,
-          destination);
-      break;
-    default:
-      LOG.warn("Container type " + container.getContainerType()
-          + " is not replicable as no compression algorithm for that.");
-    }
+    controller.exportContainer(
+        container.getContainerType(), containerId, destination, packer);
 
   }
 }
