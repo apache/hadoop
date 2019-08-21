@@ -23,7 +23,6 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdds.discovery.DiscoveryUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import picocli.CommandLine;
