@@ -1681,8 +1681,13 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+
+    RemoteMethod method = new RemoteMethod("getReplicatedBlockStats");
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, ReplicatedBlockStats> ret = rpcClient
+        .invokeConcurrent(nss, method, true, false, ReplicatedBlockStats.class);
+    return ReplicatedBlockStats.merge(ret.values());
   }
 
   @Deprecated
