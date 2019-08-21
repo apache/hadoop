@@ -56,7 +56,7 @@ Ozone.
 
 ![FunctionalOzone](FunctionalOzone.png)
 
-Any distributed system can viewed from different perspectives. One way to
+Any distributed system can be viewed from different perspectives. One way to
 look at Ozone is to imagine it as Ozone Manager as a name space service built on
  top of HDDS, a distributed block store.
 
@@ -67,8 +67,8 @@ Another way to visualize Ozone is to look at the functional layers; we have a
 We have a data storage layer, which is basically the data nodes and they are
  managed by SCM.
 
-The replication layer, provided by Ratis is used to replicate metadata (Ozone
-Manager and SCM) and also used for consistency when data is modified at the
+The replication layer, provided by Ratis is used to replicate metadata (OM and SCM)
+and also used for consistency when data is modified at the
 data nodes.
 
 We have a management server called Recon, that talks to all other components
