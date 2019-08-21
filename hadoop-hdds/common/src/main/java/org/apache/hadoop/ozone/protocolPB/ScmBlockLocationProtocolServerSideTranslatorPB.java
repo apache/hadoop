@@ -120,7 +120,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
             "BlockLocationProtocol {} request is processed. Response: "
                 + "<json>{}</json>",
             request.getCmdType().toString(),
-            request.toString().replaceAll("\n", "\\\\n"));
+            response.toString().replaceAll("\n", "\\\\n"));
       }
       return response;
     }
