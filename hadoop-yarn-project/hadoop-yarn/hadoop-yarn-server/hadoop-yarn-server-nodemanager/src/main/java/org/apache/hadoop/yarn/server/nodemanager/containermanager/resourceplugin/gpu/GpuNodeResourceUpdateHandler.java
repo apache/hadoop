@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -36,9 +39,12 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
   private static final Logger LOG =
       LoggerFactory.getLogger(GpuNodeResourceUpdateHandler.class);
   private final GpuDiscoverer gpuDiscoverer;
+  private Configuration conf;
 
-  public GpuNodeResourceUpdateHandler(GpuDiscoverer gpuDiscoverer) {
+  public GpuNodeResourceUpdateHandler(GpuDiscoverer gpuDiscoverer,
+      Configuration conf) {
     this.gpuDiscoverer = gpuDiscoverer;
+    this.conf = conf;
   }
 
   @Override
@@ -51,7 +57,8 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
           "but could not find any usable GPUs on the NodeManager!";
       LOG.error(message);
       // No gpu can be used by YARN.
-      throw new YarnException(message);
+      throwIfNecessary(new YarnException(message), conf);
+      return;
     }
 
     long nUsableGpus = usableGpus.size();
@@ -59,7 +66,7 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
     Map<String, ResourceInformation> configuredResourceTypes =
         ResourceUtils.getResourceTypes();
     if (!configuredResourceTypes.containsKey(GPU_URI)) {
-      throw new YarnException("Found " + nUsableGpus + " usable GPUs, however "
+      LOG.warn("Found " + nUsableGpus + " usable GPUs, however "
           + GPU_URI
           + " resource-type is not configured inside"
           + " resource-types.xml, please configure it to enable GPU feature or"

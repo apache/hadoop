@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.NvidiaBinaryHelper;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -116,10 +117,12 @@ public class TestGpuResourceHandlerImpl {
   @Rule
   public ExpectedException expected = ExpectedException.none();
 
+  private NvidiaBinaryHelper nvidiaBinaryHelper;
+
   @Before
   public void setup() throws IOException {
     createTestDataDirectory();
-
+    nvidiaBinaryHelper = new NvidiaBinaryHelper();
     CustomResourceTypesConfigurationProvider.
         initResourceTypes(ResourceInformation.GPU_URI);
 
@@ -147,13 +150,14 @@ public class TestGpuResourceHandlerImpl {
   @After
   public void cleanupTestFiles() throws IOException {
     FileUtils.deleteDirectory(testDataDirectory);
+    nvidiaBinaryHelper = new NvidiaBinaryHelper();
   }
 
   @Test
   public void testBootstrapWithRealGpuDiscoverer() throws Exception {
     Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0");
-    gpuDiscoverer.initialize(conf);
+    gpuDiscoverer.initialize(conf, nvidiaBinaryHelper);
 
     gpuResourceHandler.bootstrap(conf);
 
@@ -171,7 +175,7 @@ public class TestGpuResourceHandlerImpl {
   public void testBootstrapWithMockGpuDiscoverer() throws Exception {
     GpuDiscoverer mockDiscoverer = mock(GpuDiscoverer.class);
     Configuration conf = new YarnConfiguration();
-    mockDiscoverer.initialize(conf);
+    mockDiscoverer.initialize(conf, nvidiaBinaryHelper);
 
     expected.expect(ResourceHandlerException.class);
     gpuResourceHandler.bootstrap(conf);
@@ -271,7 +275,7 @@ public class TestGpuResourceHandlerImpl {
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
 
     gpuDiscoverer = new GpuDiscoverer();
-    gpuDiscoverer.initialize(conf);
+    gpuDiscoverer.initialize(conf, nvidiaBinaryHelper);
     Context nmContext = createMockNmContext(conf);
     gpuResourceHandler = new GpuResourceHandlerImpl(nmContext,
         mockCGroupsHandler, mockPrivilegedExecutor, gpuDiscoverer);
@@ -380,7 +384,7 @@ public class TestGpuResourceHandlerImpl {
   public void testAllocationWithoutAllowedGpus() throws Exception {
     Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, " ");
-    gpuDiscoverer.initialize(conf);
+    gpuDiscoverer.initialize(conf, nvidiaBinaryHelper);
 
     try {
       gpuResourceHandler.bootstrap(conf);
@@ -461,7 +465,7 @@ public class TestGpuResourceHandlerImpl {
         new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
         mockPrivilegedExecutor, gpuDiscoverer);
 
-    gpuDiscoverer.initialize(conf);
+    gpuDiscoverer.initialize(conf, nvidiaBinaryHelper);
 
     gpuNULLStateResourceHandler.bootstrap(conf);
     verifyNumberOfAvailableGpus(4, gpuNULLStateResourceHandler);

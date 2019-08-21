@@ -3920,6 +3920,17 @@
 
   <property>
     <description>
+      Specifies whether the initialization of the Node Manager should continue
+      if a certain device (GPU, FPGA, etc) was not found in the system. If set
+      to "true", then an exception will be thrown if a device is missing or
+      an error occurred during discovery.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fail-fast</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
       Specify GPU devices which can be managed by YARN NodeManager, split by comma
       Number of GPU devices will be reported to RM to make scheduling decisions.
       Set to auto (default) let YARN automatically discover GPU resource from
