@@ -749,7 +749,8 @@ public class ObjectEndpoint extends EndpointBase {
   /**
    * Parse the key and bucket name from copy header.
    */
-  private Pair<String, String> parseSourceHeader(String copyHeader)
+  @VisibleForTesting
+  public static Pair<String, String> parseSourceHeader(String copyHeader)
       throws OS3Exception {
     String header = copyHeader;
     if (header.startsWith("/")) {
@@ -764,6 +765,6 @@ public class ObjectEndpoint extends EndpointBase {
       throw ex;
     }
 
-    return Pair.of(copyHeader.substring(0, pos), copyHeader.substring(pos + 1));
+    return Pair.of(header.substring(0, pos), header.substring(pos + 1));
   }
 }
