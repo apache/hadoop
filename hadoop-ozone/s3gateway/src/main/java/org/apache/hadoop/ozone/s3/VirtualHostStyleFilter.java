@@ -47,8 +47,10 @@ import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_DOMAIN_NA
 
 @Provider
 @PreMatching
-@Priority(100)
+@Priority(VirtualHostStyleFilter.PRIORITY)
 public class VirtualHostStyleFilter implements ContainerRequestFilter {
+
+  public static final int PRIORITY = 100;
 
   private static final Logger LOG = LoggerFactory.getLogger(
       VirtualHostStyleFilter.class);

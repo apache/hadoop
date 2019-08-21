@@ -29,11 +29,13 @@ import java.io.IOException;
 /**
  * Filter to adjust request headers for compatible reasons.
  *
- * It should be executed AFTER signature check (VirtualHostStyleFilter).
+ * It should be executed AFTER signature check (VirtualHostStyleFilter) as the
+ * original Content-Type could be part of the base of the signature.
  */
 @Provider
 @PreMatching
-@Priority(150)
+@Priority(VirtualHostStyleFilter.PRIORITY
+    + S3GatewayHttpServer.FILTER_PRIORITY_DO_AFTER)
 public class HeaderPreprocessor implements ContainerRequestFilter {
 
   public static final String MULTIPART_UPLOAD_MARKER = "ozone/mpu";
