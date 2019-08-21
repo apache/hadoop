@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.s3;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -78,6 +79,7 @@ public class TestOzoneClientProducer {
     context = Mockito.mock(ContainerRequestContext.class);
     OzoneConfiguration config = new OzoneConfiguration();
     config.setBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY, true);
+    config.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "");
     setupContext();
     producer.setContext(context);
     producer.setOzoneConfiguration(config);

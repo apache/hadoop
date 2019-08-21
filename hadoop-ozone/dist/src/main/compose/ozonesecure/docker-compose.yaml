@@ -76,7 +76,6 @@ services:
       - ./docker-config
     environment:
       WAITFOR: om:9874
-      ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
     command: ["/opt/hadoop/bin/ozone","recon"]
   scm:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}

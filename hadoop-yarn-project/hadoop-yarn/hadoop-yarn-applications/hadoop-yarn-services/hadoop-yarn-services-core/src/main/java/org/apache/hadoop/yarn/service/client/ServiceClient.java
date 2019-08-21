@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
@@ -1558,7 +1559,17 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       return appSpec;
     }
     appSpec.setId(currentAppId.toString());
-    ApplicationReport appReport = yarnClient.getApplicationReport(currentAppId);
+    ApplicationReport appReport = null;
+    try {
+      appReport = yarnClient.getApplicationReport(currentAppId);
+    } catch (ApplicationNotFoundException e) {
+      LOG.info("application ID {} doesn't exist", currentAppId);
+      return appSpec;
+    }
+    if (appReport == null) {
+      LOG.warn("application ID {} is reported as null", currentAppId);
+      return appSpec;
+    }
     appSpec.setState(convertState(appReport.getYarnApplicationState()));
     ApplicationTimeout lifetime =
         appReport.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);

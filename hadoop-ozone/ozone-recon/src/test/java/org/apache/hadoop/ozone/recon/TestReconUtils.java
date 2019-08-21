@@ -61,7 +61,7 @@ public class TestReconUtils {
     OzoneConfiguration configuration = new OzoneConfiguration();
     configuration.set("TEST_DB_DIR", filePath);
 
-    File file = ReconUtils.getReconDbDir(configuration,
+    File file = new ReconUtils().getReconDbDir(configuration,
         "TEST_DB_DIR");
     Assert.assertEquals(filePath, file.getAbsolutePath());
   }
@@ -89,7 +89,7 @@ public class TestReconUtils {
     //Create test tar file.
     File tarFile = OmUtils.createTarFile(newDir.toPath());
     File outputDir = folder.newFolder();
-    ReconUtils.untarCheckpointFile(tarFile, outputDir.toPath());
+    new ReconUtils().untarCheckpointFile(tarFile, outputDir.toPath());
 
     assertTrue(outputDir.isDirectory());
     assertTrue(outputDir.listFiles().length == 2);
@@ -126,7 +126,8 @@ public class TestReconUtils {
       }
     });
 
-    InputStream inputStream = ReconUtils.makeHttpCall(httpClientMock, url);
+    InputStream inputStream = new ReconUtils()
+        .makeHttpCall(httpClientMock, url);
     String contents = IOUtils.toString(inputStream, Charset.defaultCharset());
 
     assertEquals("File 1 Contents", contents);

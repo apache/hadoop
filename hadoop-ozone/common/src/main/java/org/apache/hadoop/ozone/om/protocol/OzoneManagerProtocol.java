@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.Closeable;
@@ -49,6 +50,8 @@ import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 
 /**
  * Protocol to talk to OM.
@@ -504,5 +507,15 @@ public interface OzoneManagerProtocol
    * @throws IOException if there is error.
    * */
   List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
+
+  /**
+   * Get DB updates since a specific sequence number.
+   * @param dbUpdatesRequest request that encapsulates a sequence number.
+   * @return Wrapper containing the updates.
+   * @throws SequenceNumberNotFoundException if db is unable to read the data.
+   */
+  DBUpdatesWrapper getDBUpdates(
+      OzoneManagerProtocolProtos.DBUpdatesRequest dbUpdatesRequest)
+      throws IOException;
 
 }

@@ -152,6 +152,7 @@ public class OMBucketCreateRequest extends OMClientRequest {
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
+
       //Check if bucket already exists
       if (metadataManager.getBucketTable().get(bucketKey) != null) {
         LOG.debug("bucket: {} already exists ", bucketName);

@@ -150,7 +150,7 @@ public class TestOzoneNativeAuthorizer {
     metadataManager = new OmMetadataManagerImpl(ozConfig);
     volumeManager = new VolumeManagerImpl(metadataManager, ozConfig);
     bucketManager = new BucketManagerImpl(metadataManager);
-    prefixManager = new PrefixManagerImpl(metadataManager);
+    prefixManager = new PrefixManagerImpl(metadataManager, false);
 
     NodeManager nodeManager = new MockNodeManager(true, 10);
     SCMConfigurator configurator = new SCMConfigurator();

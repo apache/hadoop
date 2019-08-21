@@ -576,6 +576,12 @@ public class TestRouterAdminCLI {
     assertTrue(out.toString().contains("\t[-getDestination <path>]"));
     out.reset();
 
+    argv = new String[] {"-refreshRouterArgs"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-refreshRouterArgs " +
+            "<host:ipc_port> <key> [arg1..argn]]"));
+    out.reset();
+
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     String expected = "Usage: hdfs dfsrouteradmin :\n"
@@ -594,7 +600,9 @@ public class TestRouterAdminCLI {
         + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
-        + "\t[-getDisabledNameservices]";
+        + "\t[-getDisabledNameservices]\n"
+        + "\t[-refresh]\n"
+        + "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     assertTrue("Wrong message: " + out, out.toString().contains(expected));
     out.reset();
   }

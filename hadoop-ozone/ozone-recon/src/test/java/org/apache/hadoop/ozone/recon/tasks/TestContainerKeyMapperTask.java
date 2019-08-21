@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.recon.tasks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -37,31 +38,22 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
-import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
+import org.apache.hadoop.utils.db.Table;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 import com.google.inject.Injector;
 import javax.sql.DataSource;
 
 /**
  * Unit test for Container Key mapper task.
  */
-@RunWith(PowerMockRunner.class)
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
-@PrepareForTest(ReconUtils.class)
 public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
 
   private ContainerDBServiceProvider containerDbServiceProvider;
@@ -77,16 +69,9 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
     return injector;
   }
 
-  @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private void initializeInjector() throws Exception {
     omMetadataManager = initializeNewOmMetadataManager();
-    OzoneConfiguration configuration =
-        guiceInjectorTest.getTestOzoneConfiguration(temporaryFolder);
-
-    ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
-        configuration);
+    ozoneManagerServiceProvider = getMockOzoneManagerServiceProvider();
     reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
 
     injector = guiceInjectorTest.getInjector(
@@ -151,10 +136,8 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         Collections.singletonList(omKeyLocationInfoGroup));
 
     ContainerKeyMapperTask containerKeyMapperTask =
-        new ContainerKeyMapperTask(containerDbServiceProvider,
-        ozoneManagerServiceProvider.getOMMetadataManagerInstance());
-    containerKeyMapperTask.reprocess(ozoneManagerServiceProvider
-        .getOMMetadataManagerInstance());
+        new ContainerKeyMapperTask(containerDbServiceProvider);
+    containerKeyMapperTask.reprocess(reconOMMetadataManager);
 
     keyPrefixesForContainer =
         containerDbServiceProvider.getKeyPrefixesForContainer(1);
@@ -258,10 +241,8 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         }});
 
     ContainerKeyMapperTask containerKeyMapperTask =
-        new ContainerKeyMapperTask(containerDbServiceProvider,
-            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
-    containerKeyMapperTask.reprocess(ozoneManagerServiceProvider
-        .getOMMetadataManagerInstance());
+        new ContainerKeyMapperTask(containerDbServiceProvider);
+    containerKeyMapperTask.reprocess(reconOMMetadataManager);
 
     keyPrefixesForContainer = containerDbServiceProvider
         .getKeyPrefixesForContainer(1);
@@ -316,5 +297,18 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         .setOmKeyLocationInfos(Collections.singletonList(
             omKeyLocationInfoGroup))
         .build();
+  }
+
+  private OzoneManagerServiceProviderImpl getMockOzoneManagerServiceProvider()
+      throws IOException {
+    OzoneManagerServiceProviderImpl omServiceProviderMock =
+        mock(OzoneManagerServiceProviderImpl.class);
+    OMMetadataManager omMetadataManagerMock = mock(OMMetadataManager.class);
+    Table tableMock = mock(Table.class);
+    when(tableMock.getName()).thenReturn("keyTable");
+    when(omMetadataManagerMock.getKeyTable()).thenReturn(tableMock);
+    when(omServiceProviderMock.getOMMetadataManagerInstance())
+      .thenReturn(omMetadataManagerMock);
+    return omServiceProviderMock;
   }
 }

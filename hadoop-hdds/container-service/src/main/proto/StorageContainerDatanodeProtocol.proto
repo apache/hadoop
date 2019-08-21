@@ -214,6 +214,7 @@ message ClosePipelineInfo {
   enum Reason {
     PIPELINE_FAILED = 1;
     PIPELINE_LOG_FAILED = 2;
+    STATEMACHINE_TRANSACTION_FAILED = 3;
   }
   required PipelineID pipelineID = 1;
   optional Reason reason = 3;
