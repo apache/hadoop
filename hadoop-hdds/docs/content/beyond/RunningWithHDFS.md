@@ -56,7 +56,7 @@ To start ozone with HDFS you should start the the following components:
  2. HDFS Datanode (from the Hadoop distribution with the plugin on the
  classpath from the Ozone distribution)
  3. Ozone Manager (from the Ozone distribution)
- 4. Storage Container manager (from the Ozone distribution)
+ 4. Storage Container Manager (from the Ozone distribution)
 
 Please check the log of the datanode whether the HDDS/Ozone plugin is started or
 not. Log of datanode should contain something like this:

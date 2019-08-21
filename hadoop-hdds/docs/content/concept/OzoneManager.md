@@ -21,14 +21,14 @@ summary: Ozone Manager is the principal name space service of Ozone. OM manages 
   limitations under the License.
 -->
 
-Ozone Manager or OM is the namespace manager for Ozone.
+Ozone Manager (OM) is the namespace manager for Ozone.
 
 This means that when you want to write some data, you ask Ozone
-manager for a block and Ozone Manager gives you a block and remembers that
-information. When you want to read the that file back, you need to find the
-address of the block and Ozone manager returns it you.
+Manager for a block and Ozone Manager gives you a block and remembers that
+information. When you want to read that file back, you need to find the
+address of the block and Ozone Manager returns it you.
 
-Ozone manager also allows users to organize keys under a volume and bucket.
+Ozone Manager also allows users to organize keys under a volume and bucket.
 Volumes and buckets are part of the namespace and managed by Ozone Manager.
 
 Each ozone volume is the root of an independent namespace under OM.
@@ -57,17 +57,17 @@ understood if we trace what happens during a key write and key read.
 
 * To write a key to Ozone, a client tells Ozone manager that it would like to
 write a key into a bucket that lives inside a specific volume. Once Ozone
-manager determines that you are allowed to write a key to specified bucket,
+Manager determines that you are allowed to write a key to the specified bucket,
 OM needs to allocate a block for the client to write data.
 
-* To allocate a block, Ozone manager sends a request to Storage Container
-Manager or SCM; SCM is the manager of data nodes. SCM picks three data nodes
+* To allocate a block, Ozone Manager sends a request to Storage Container
+Manager (SCM); SCM is the manager of data nodes. SCM picks three data nodes
 into which client can write data. SCM allocates the block and returns the
 block ID to Ozone Manager.
 
 * Ozone manager records this block information in its metadata and returns the
 block and a block token (a security permission to write data to the block)
-the client.
+to the client.
 
 * The client uses the block token to prove that it is allowed to write data to
 the block and writes data to the data node.
@@ -82,6 +82,6 @@ Ozone manager.
 * Key reads are simpler, the client requests the block list from the Ozone
 Manager
 * Ozone manager will return the block list and block tokens which
-allows the client to read the data from nodes.
+allows the client to read the data from data nodes.
 * Client connects to the data  node and presents the block token and reads
 the data from the data node.
