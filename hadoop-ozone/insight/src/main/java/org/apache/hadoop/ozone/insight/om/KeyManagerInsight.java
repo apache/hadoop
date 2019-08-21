@@ -48,7 +48,7 @@ public class KeyManagerInsight extends BaseInsightPoint {
   public List<LoggerSource> getRelatedLoggers(boolean verbose) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers.add(
-        new LoggerSource(Type.SCM, KeyManagerImpl.class,
+        new LoggerSource(Type.OM, KeyManagerImpl.class,
             defaultLevel(verbose)));
     return loggers;
   }
