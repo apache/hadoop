@@ -68,7 +68,6 @@ public class DirectoryScanner implements Runnable {
       + " starting at %s with interval of %dms";
   private static final String START_MESSAGE_WITH_THROTTLE = START_MESSAGE
       + " and throttle limit of %dms/s";
-  private static final int RECONCILE_BLOCKS_BATCH_SIZE = 1000;
 
   private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
@@ -374,11 +373,7 @@ public class DirectoryScanner implements Runnable {
    */
   @VisibleForTesting
   public void reconcile() throws IOException {
-    LOG.debug("reconcile start DirectoryScanning");
     scan();
-    // HDFS-14476: run checkAndUpadte with batch to avoid holding the lock too
-    // long
-    int loopCount = 0;
     for (Entry<String, LinkedList<ScanInfo>> entry : diffs.entrySet()) {
       String bpid = entry.getKey();
       LinkedList<ScanInfo> diff = entry.getValue();
@@ -386,15 +381,6 @@ public class DirectoryScanner implements Runnable {
       for (ScanInfo info : diff) {
         dataset.checkAndUpdate(bpid, info);
       }
-
-      if (loopCount % RECONCILE_BLOCKS_BATCH_SIZE == 0) {
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException e) {
-          // do nothing
-        }
-      }
-      loopCount++;
     }
     if (!retainDiffs) clear();
   }
