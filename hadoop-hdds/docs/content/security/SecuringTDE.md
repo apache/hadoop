@@ -22,20 +22,19 @@ icon: lock
   limitations under the License.
 -->
 
-## Transparent Data Encryption
 Ozone TDE setup process and usage are very similar to HDFS TDE.
 The major difference is that Ozone TDE is enabled at Ozone bucket level
 when a bucket is created.
 
 ### Setting up the Key Management Server
 
-To use TDE, clients must setup a Key Management server and provide that URI to
+To use TDE, clients must setup a Key Management Server and provide that URI to
 Ozone/HDFS. Since Ozone and HDFS can use the same Key Management Server, this
  configuration can be provided via *hdfs-site.xml*.
 
 Property| Value
 -----------------------------------|-----------------------------------------
-hadoop.security.key.provider.path  | KMS uri. e.g. kms://http@kms-host:9600/kms
+hadoop.security.key.provider.path  | KMS uri. <br> e.g. kms://http@kms-host:9600/kms
 
 ### Using Transparent Data Encryption
 If this is already configured for your cluster, then you can simply proceed

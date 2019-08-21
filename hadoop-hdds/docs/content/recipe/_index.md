@@ -24,5 +24,6 @@ weight: 8
 
 
 {{<jumbotron title="Recipes of Ozone">}}
-   Standard How-to documents which describe how to use Ozone with other Software. For example, How to use Ozone with Apache Spark.
+   Standard how-to documents which describe how to use Ozone with other Software.
+   For example, how to use Ozone with Apache Spark.
 {{</jumbotron>}}

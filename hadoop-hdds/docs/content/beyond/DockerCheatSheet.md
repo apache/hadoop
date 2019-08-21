@@ -22,7 +22,9 @@ weight: 4
   limitations under the License.
 -->
 
-In the `compose` directory of the ozone distribution there are multiple pseudo-cluster setup which can be used to run Ozone in different way (for example with secure cluster, with tracing enabled, with prometheus etc.).
+In the `compose` directory of the ozone distribution there are multiple pseudo-cluster setup which
+can be used to run Ozone in different way (for example: secure cluster, with tracing enabled,
+with prometheus etc.).
 
 If the usage is not document in a specific directory the default usage is the following:
 
@@ -31,8 +33,7 @@ cd compose/ozone
 docker-compose up -d
 ```
 
-The data of the container is ephemeral and deleted together with the docker volumes. To force the deletion of existing data you can always delete all the temporary data:
-
+The data of the container is ephemeral and deleted together with the docker volumes.
 ```bash
 docker-compose down
 ```

@@ -31,11 +31,13 @@ secure networks where it is possible to deploy without securing the cluster.
 
 This release of Ozone follows that model, but soon will move to _secure by
 default._  Today to enable security in ozone cluster, we need to set the
-configuration **ozone.security.enabled** to true.
+configuration **ozone.security.enabled** to _true_ and **hadoop.security.authentication**
+to _kerberos_.
 
 Property|Value
 ----------------------|---------
-ozone.security.enabled| **true**
+ozone.security.enabled| _true_
+hadoop.security.authentication| _kerberos_
 
 # Tokens #
 
@@ -68,7 +70,7 @@ also enabled by default when security is enabled.
 
 
 Each of the service daemons that make up Ozone needs a  Kerberos service
-principal name and a corresponding [kerberos key tab]({{https://web.mit.edu/kerberos/krb5-latest/doc/basic/keytab_def.html}}) file.
+principal name and a corresponding [kerberos key tab](https://web.mit.edu/kerberos/krb5-latest/doc/basic/keytab_def.html) file.
 
 All these settings should be made in ozone-site.xml.
 
@@ -77,101 +79,100 @@ All these settings should be made in ozone-site.xml.
     <div class="card-body">
       <h3 class="card-title">Storage Container Manager</h3>
       <p class="card-text">
-       <br>
+      <br>
         SCM requires two Kerberos principals, and the corresponding key tab files
         for both of these principals.
-        <br>
-        <table class="table table-dark">
-          <thead>
-            <tr>
-              <th scope="col">Property</th>
-              <th scope="col">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">hdds.scm.kerberos.principal</th>
-              <td>The SCM service principal. e.g. scm/HOST@REALM.COM</td>
-            </tr>
-            <tr>
-              <th scope="row">hdds.scm.kerberos.keytab.file</th>
-              <td>The keytab file used by SCM daemon to login as its service principal.</td>
-            </tr>
-            <tr>
-              <th scope="row">hdds.scm.http.kerberos.principal</th>
-              <td>SCM http server service principal.</td>
-            </tr>
-            <tr>
-              <th scope="row">hdds.scm.http.kerberos.keytab</th>
-              <td>The keytab file used by SCM http server to login as its service principal.</td>
-            </tr>
-          </tbody>
-        </table>
+      <br>
+      <table class="table table-dark">
+        <thead>
+          <tr>
+            <th scope="col">Property</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>hdds.scm.kerberos.principal</th>
+            <td>The SCM service principal. <br/> e.g. scm/_HOST@REALM.COM</td>
+          </tr>
+          <tr>
+            <td>hdds.scm.kerberos.keytab.file</th>
+            <td>The keytab file used by SCM daemon to login as its service principal.</td>
+          </tr>
+          <tr>
+            <td>hdds.scm.http.kerberos.principal</th>
+            <td>SCM http server service principal.</td>
+          </tr>
+          <tr>
+            <td>hdds.scm.http.kerberos.keytab</th>
+            <td>The keytab file used by SCM http server to login as its service principal.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
   <div class="card">
     <div class="card-body">
       <h3 class="card-title">Ozone Manager</h3>
       <p class="card-text">
-             <br>
-              Like SCM, OM also requires two Kerberos principals, and the
-              corresponding key tab files for both of these principals.
-              <br>
-       <table class="table table-dark">
-                <thead>
-                  <tr>
-                    <th scope="col">Property</th>
-                    <th scope="col">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row">ozone.om.kerberos.principal</th>
-                    <td>The OzoneManager service principal. e.g. om/_HOST@REALM
-                    .COM</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">ozone.om.kerberos.keytab.file</th>
-                    <td>TThe keytab file used by SCM daemon to login as its service principal.</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">ozone.om.http.kerberos.principal</th>
-                    <td>Ozone Manager http server service principal.</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">ozone.om.http.kerberos.keytab</th>
-                    <td>The keytab file used by OM http server to login as its service principal.</td>
-                  </tr>
-                </tbody>
-              </table>
-      </div>
+      <br>
+        Like SCM, OM also requires two Kerberos principals, and the
+        corresponding key tab files for both of these principals.
+      <br>
+      <table class="table table-dark">
+        <thead>
+          <tr>
+            <th scope="col">Property</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ozone.om.kerberos.principal</th>
+            <td>The OzoneManager service principal. <br/> e.g. om/_HOST@REALM.COM</td>
+          </tr>
+          <tr>
+            <td>ozone.om.kerberos.keytab.file</th>
+            <td>TThe keytab file used by SCM daemon to login as its service principal.</td>
+          </tr>
+          <tr>
+            <td>ozone.om.http.kerberos.principal</th>
+            <td>Ozone Manager http server service principal.</td>
+          </tr>
+          <tr>
+            <td>ozone.om.http.kerberos.keytab</th>
+            <td>The keytab file used by OM http server to login as its service principal.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <div class="card">
     <div class="card-body">
       <h3 class="card-title">S3 Gateway</h3>
       <p class="card-text">
-        <br>
+      <br>
         S3 gateway requires one service principal and here the configuration values
-         needed in the ozone-site.xml.
-        <br>
+        needed in the ozone-site.xml.
+      <br>
       <table class="table table-dark">
-                      <thead>
-                        <tr>
-                          <th scope="col">Property</th>
-                          <th scope="col">Description</th>
-                        </tr>
-                      </thead>
-                                        <tr>
-                                          <th scope="row">ozone.s3g.keytab.file</th>
-                                          <td>The keytab file used by S3 gateway</td>
-                                        </tr>
-                                        <tr>
-                                          <th scope="row">ozone.s3g.authentication.kerberos
-                                                                                    .principal</th>
-                                          <td>S3 Gateway principal. e.g. HTTP/_HOST@EXAMPLE.COM</td>
-                                        </tr>
-                                      </tbody>
-                    </table>
-      </div>
+        <thead>
+          <tr>
+            <th scope="col">Property</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ozone.s3g.authentication.kerberos.principal</th>
+            <td>S3 Gateway principal. <br/> e.g. HTTP/_HOST@EXAMPLE.COM</td>
+          </tr>
+          <tr>
+            <td>ozone.s3g.keytab.file</th>
+            <td>The keytab file used by S3 gateway</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
