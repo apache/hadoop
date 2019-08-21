@@ -30,15 +30,15 @@ Volume commands generally need administrator privileges. The ozone shell support
 
 ### Create
 
-The volume create command allows an administrator to create a volume and
+The `volume create` command allows an administrator to create a volume and
 assign it to a user.
 
 ***Params:***
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
-| -q, --quota                    | Optional, This argument that specifies the maximum size this volume can use in the Ozone cluster.                    |
-| -u, --user                     |  Required, The name of the user who owns this volume. This user can create, buckets and keys on this volume.                                       |
+| -q, \-\-quota                    | Optional, This argument that specifies the maximum size this volume can use in the Ozone cluster.                    |
+| -u, \-\-user                     |  Required, The name of the user who owns this volume. This user can create, buckets and keys on this volume.                                       |
 |  Uri                           | The name of the volume.                                        |
 
 {{< highlight bash >}}
@@ -50,7 +50,7 @@ volume has a quota of 1TB, and the owner is _bilbo_.
 
 ### Delete
 
-The volume delete command allows an administrator to delete a volume. If the
+The `volume delete` command allows an administrator to delete a volume. If the
 volume is not empty then this command will fail.
 
 ***Params:***
@@ -68,8 +68,9 @@ inside it.
 
 ### Info
 
-The volume info commands returns the information about the volume including
+The `volume info` commands returns the information about the volume including
 quota and owner information.
+
 ***Params:***
 
 | Arguments                      |  Comment                                |
@@ -84,7 +85,7 @@ The above command will print out the information about hive volume.
 
 ### List
 
-The volume list command will list the volumes owned by a user.
+The `volume list` command will list the volumes owned by a user.
 
 {{< highlight bash >}}
 ozone sh volume list --user hadoop
@@ -100,8 +101,8 @@ The volume update command allows changing of owner and quota on a given volume.
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
-| -q, --quota                    | Optional, This argument that specifies the maximum size this volume can use in the Ozone cluster.                    |
-| -u, --user                     |  Optional, The name of the user who owns this volume. This user can create, buckets and keys on this volume.                                       |
+| -q, \-\-quota                    | Optional, This argument that specifies the maximum size this volume can use in the Ozone cluster.                    |
+| -u, \-\-user                     |  Optional, The name of the user who owns this volume. This user can create, buckets and keys on this volume.                                       |
 |  Uri                           | The name of the volume.                                        |
 
 {{< highlight bash >}}
@@ -109,6 +110,3 @@ ozone sh volume update --quota=10TB /hive
 {{< /highlight >}}
 
 The above command updates the volume quota to 10TB.
-
-You can try out these commands from the docker instance of the [Alpha
-Cluster](runningviadocker.html).

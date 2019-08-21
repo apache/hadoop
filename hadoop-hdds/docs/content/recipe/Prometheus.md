@@ -32,28 +32,29 @@ compatible metrics endpoint where all the available hadoop metrics are published
 
 ## Monitoring with prometheus
 
-(1) To enable the Prometheus metrics endpoint you need to add a new configuration to the `ozone-site.xml` file:
+* To enable the Prometheus metrics endpoint you need to add a new configuration to the `ozone-site.xml` file.
 
-```
+ ```xml
   <property>
     <name>hdds.prometheus.endpoint.enabled</name>
     <value>true</value>
   </property>
 ```
 
-_Note_: for Docker compose based pseudo cluster put the `OZONE-SITE.XML_hdds.prometheus.endpoint.enabled=true` line to the `docker-config` file.
+_Note_: for Docker compose based pseudo cluster put the \
+`OZONE-SITE.XML_hdds.prometheus.endpoint.enabled=true` line to the `docker-config` file.
 
-(2) Restart the Ozone Manager and Storage Container Manager and check the prometheus endpoints:
+* Restart the Ozone Manager and Storage Container Manager and check the prometheus endpoints:
 
  * http://scm:9874/prom
 
  * http://ozoneManager:9876/prom
 
-(3) Create a prometheus.yaml configuration with the previous endpoints:
+* Create a prometheus.yaml configuration with the previous endpoints:
 
 ```yaml
 global:
-  scrape_interval:     15s
+  scrape_interval: 15s
 
 scrape_configs:
   - job_name: ozone
@@ -64,20 +65,21 @@ scrape_configs:
         - "ozoneManager:9874"
 ```
 
-(4) Start with prometheus from the directory where you have the prometheus.yaml file:
+* Start with prometheus from the directory where you have the prometheus.yaml file:
 
-```
+```bash
 prometheus
 ```
 
-(5) Check the active targets in the prometheus web-ui:
+* Check the active targets in the prometheus web-ui:
 
 http://localhost:9090/targets
 
 ![Prometheus target page example](prometheus.png)
 
 
-(6) Check any metrics on the prometheus web ui. For example:
+* Check any metrics on the prometheus web ui.\
+For example:
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=om_metrics_num_key_allocate&g0.tab=1
 
