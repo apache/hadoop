@@ -64,6 +64,7 @@ public class TestGpuDiscoverer {
   private static final String BASH_SHEBANG = "#!/bin/bash\n\n";
   private static final String TEST_PARENT_DIR = new File("target/temp/" +
       TestGpuDiscoverer.class.getName()).getAbsolutePath();
+  private NvidiaBinaryHelper binaryHelper = new NvidiaBinaryHelper();
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -150,7 +151,7 @@ public class TestGpuDiscoverer {
       Configuration conf) throws YarnException {
     conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, TEST_PARENT_DIR);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     return discoverer;
   }
 
@@ -163,14 +164,14 @@ public class TestGpuDiscoverer {
     // test case 1, check default setting.
     Configuration conf = new Configuration(false);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     assertEquals(DEFAULT_BINARY_NAME, discoverer.getPathOfGpuBinary());
     assertNvidiaIsOnPath(discoverer);
 
     // test case 2, check mandatory set path.
     File fakeBinary = setupFakeBinary(conf);
     discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     assertEquals(fakeBinary.getAbsolutePath(),
         discoverer.getPathOfGpuBinary());
     assertNull(discoverer.getEnvironmentToRunCommand().get(PATH));
@@ -179,7 +180,7 @@ public class TestGpuDiscoverer {
     // but binary doesn't exist so default path will be used.
     fakeBinary.delete();
     discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     assertEquals(DEFAULT_BINARY_NAME,
         discoverer.getPathOfGpuBinary());
     assertNvidiaIsOnPath(discoverer);
@@ -310,14 +311,14 @@ public class TestGpuDiscoverer {
   }
 
   @Test
-  public void testGpuDiscover() throws YarnException {
+  public void testGpuDiscover() throws YarnException, IOException {
     // Since this is more of a performance unit test, only run if
     // RunUserLimitThroughput is set (-DRunUserLimitThroughput=true)
     Assume.assumeTrue(
         Boolean.valueOf(System.getProperty("runGpuDiscoverUnitTest")));
     Configuration conf = new Configuration(false);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     GpuDeviceInformation info = discoverer.getGpuDeviceInformation();
 
     assertTrue(info.getGpus().size() > 0);
@@ -331,7 +332,7 @@ public class TestGpuDiscoverer {
     Configuration conf = createConfigWithAllowedDevices("1:2");
 
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     List<GpuDevice> usableGpuDevices = discoverer.getGpusUsableByYarn();
     assertEquals(1, usableGpuDevices.size());
 
@@ -346,7 +347,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -354,7 +355,7 @@ public class TestGpuDiscoverer {
   public void testGetNumberOfUsableGpusFromConfig() throws YarnException {
     Configuration conf = createConfigWithAllowedDevices("0:0,1:1,2:2,3:4");
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
 
     List<GpuDevice> usableGpuDevices = discoverer.getGpusUsableByYarn();
     assertEquals(4, usableGpuDevices.size());
@@ -379,7 +380,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -390,7 +391,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -401,7 +402,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -412,7 +413,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -423,7 +424,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -434,7 +435,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -445,7 +446,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -456,7 +457,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -467,7 +468,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -478,7 +479,7 @@ public class TestGpuDiscoverer {
 
     exception.expect(GpuDeviceSpecificationException.class);
     GpuDiscoverer discoverer = new GpuDiscoverer();
-    discoverer.initialize(conf);
+    discoverer.initialize(conf, binaryHelper);
     discoverer.getGpusUsableByYarn();
   }
 
@@ -488,7 +489,7 @@ public class TestGpuDiscoverer {
     conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, "/blabla");
     GpuDiscoverer plugin = new GpuDiscoverer();
     try {
-      plugin.initialize(conf);
+      plugin.initialize(conf, binaryHelper);
       plugin.getGpusUsableByYarn();
       fail("Illegal format, should fail.");
     } catch (YarnException e) {
@@ -501,13 +502,13 @@ public class TestGpuDiscoverer {
   }
 
   @Test
-  public void testScriptNotCalled() throws YarnException {
+  public void testScriptNotCalled() throws YarnException, IOException {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:1,2:3");
 
     GpuDiscoverer gpuSpy = spy(new GpuDiscoverer());
 
-    gpuSpy.initialize(conf);
+    gpuSpy.initialize(conf, binaryHelper);
     gpuSpy.getGpusUsableByYarn();
 
     verify(gpuSpy, never()).getGpuDeviceInformation();

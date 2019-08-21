@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,10 +41,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class GpuResourceHandlerImpl implements ResourceHandler {
   final static Log LOG = LogFactory
@@ -75,7 +77,8 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
             + "any usable GPU devices, please double check configuration!";
         LOG.error(message);
-        throw new ResourceHandlerException(message);
+        throwIfNecessary(new ResourceHandlerException(message),
+            configuration);
       }
     } catch (YarnException e) {
       LOG.error("Exception when trying to get usable GPU device", e);
