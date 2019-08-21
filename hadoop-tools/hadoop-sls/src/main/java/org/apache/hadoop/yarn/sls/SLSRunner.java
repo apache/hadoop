@@ -85,6 +85,7 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
+import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
@@ -779,7 +780,10 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     queueAppNumMap.put(queueName, appNum);
-    wrapper.getSchedulerMetrics().trackQueue(queueName);
+    SchedulerMetrics metrics = wrapper.getSchedulerMetrics();
+    if (metrics != null) {
+      metrics.trackQueue(queueName);
+    }
   }
 
   private void runNewAM(String jobType, String user,
