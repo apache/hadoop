@@ -20,7 +20,7 @@ cd "$DIR/../../.." || exit 1
 OZONE_VERSION=$(grep "<ozone.version>" "$DIR/../../pom.xml" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
 cd "$DIR/../../dist/target/ozone-$OZONE_VERSION/tests" || exit 1
 
-source ../compose/ozoneblockade/.env
+source ${DIR}/../../dist/target/ozone-${OZONE_VERSION}/compose/ozoneblockade/.env
 export HADOOP_RUNNER_VERSION
 export HDDS_VERSION
 
