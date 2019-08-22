@@ -2351,22 +2351,31 @@ public class BlockManager implements BlockStatsMXBean {
           && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
         continue; // already reached replication limit
       }
+
+      // for EC here need to make sure the numReplicas replicates state correct
+      // because in the scheduleReconstruction it need the numReplicas to check
+      // whether need to reconstructe the ec internal block
+      if (isStriped) {
+        byte blockIndex = ((BlockInfoStriped) block)
+            .getStorageBlockIndex(storage);
+        if (!bitSet.get(blockIndex)) {
+          bitSet.set(blockIndex);
+        } else if (state == StoredReplicaState.LIVE) {
+          numReplicas.subtract(StoredReplicaState.LIVE, 1);
+          numReplicas.add(StoredReplicaState.REDUNDANT, 1);
+        }
+      }
+
       if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
         continue;
       }
 
       if(isStriped || srcNodes.isEmpty()) {
         srcNodes.add(node);
-        if (isStriped) {
+        if(isStriped){
           byte blockIndex = ((BlockInfoStriped) block).
               getStorageBlockIndex(storage);
           liveBlockIndices.add(blockIndex);
-          if (!bitSet.get(blockIndex)) {
-            bitSet.set(blockIndex);
-          } else if (state == StoredReplicaState.LIVE) {
-            numReplicas.subtract(StoredReplicaState.LIVE, 1);
-            numReplicas.add(StoredReplicaState.REDUNDANT, 1);
-          }
         }
         continue;
       }
