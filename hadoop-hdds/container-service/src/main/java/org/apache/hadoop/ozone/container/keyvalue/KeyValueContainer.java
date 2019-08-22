@@ -300,8 +300,14 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   @Override
   public void quasiClose() throws StorageContainerException {
+    // The DB must be synced during close operation
+    flushAndSyncDB();
+
     writeLock();
     try {
+      // Second sync should be a very light operation as sync has already
+      // been done outside the lock.
+      flushAndSyncDB();
       updateContainerData(containerData::quasiCloseContainer);
     } finally {
       writeUnlock();
@@ -310,14 +316,18 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     // It is ok if this operation takes a bit of time.
     // Quasi-close transition is not expected to be instantaneous.
     compactDB();
-    // We must sync the DB after quasi-close operation
-    flushAndSyncDB();
   }
 
   @Override
   public void close() throws StorageContainerException {
+    // The DB must be synced during close operation
+    flushAndSyncDB();
+
     writeLock();
     try {
+      // Second sync should be a very light operation as sync has already
+      // been done outside the lock.
+      flushAndSyncDB();
       updateContainerData(containerData::closeContainer);
     } finally {
       writeUnlock();
@@ -326,8 +336,6 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.
     compactDB();
-    // We must sync the DB after close operation
-    flushAndSyncDB();
   }
 
   /**

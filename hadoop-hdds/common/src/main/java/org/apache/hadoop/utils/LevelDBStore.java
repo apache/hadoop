@@ -243,7 +243,7 @@ public class LevelDBStore implements MetadataStore {
   @Override
   public void flushDB(boolean sync) {
     // TODO: Implement flush for level db
-    throw new UnsupportedOperationException("Flush not supported for LevelDB");
+    // do nothing
   }
 
   @Override
