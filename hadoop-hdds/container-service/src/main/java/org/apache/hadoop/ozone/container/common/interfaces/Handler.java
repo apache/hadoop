@@ -125,9 +125,9 @@ public abstract class Handler {
    * Exports container to the output stream.
    */
   public abstract void exportContainer(
-      final Container container,
-      final OutputStream outputStream,
-      final TarContainerPacker packer)
+      Container container,
+      OutputStream outputStream,
+      TarContainerPacker packer)
       throws IOException;
 
   /**

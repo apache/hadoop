@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
@@ -247,6 +248,9 @@ public class BlockDeletingService extends BackgroundService {
     @Override
     public BackgroundTaskResult call() throws Exception {
       ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
+      final Container container = ozoneContainer.getContainerSet()
+          .getContainer(containerData.getContainerID());
+      container.writeLock();
       long startTime = Time.monotonicNow();
       // Scan container's db and get list of under deletion blocks
       try (ReferenceCountedDB meta = BlockUtils.getDB(containerData, conf)) {
@@ -313,6 +317,8 @@ public class BlockDeletingService extends BackgroundService {
         }
         crr.addAll(succeedBlocks);
         return crr;
+      } finally {
+        container.writeUnlock();
       }
     }
 

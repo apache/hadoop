@@ -124,7 +124,8 @@ public class TestContainerReplication {
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(
             sourceDatanodes.get(0).getUuid(),
-            new CloseContainerCommand(containerId, sourcePipelines.getId(), true));
+            new CloseContainerCommand(containerId,
+                sourcePipelines.getId(), true));
 
     //WHEN: send the order to replicate the container
     cluster.getStorageContainerManager().getScmNodeManager()
