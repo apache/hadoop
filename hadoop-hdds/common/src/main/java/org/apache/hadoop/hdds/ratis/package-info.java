@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ratis;
+package org.apache.hadoop.hdds.ratis;
 
 /**
  * This package contains classes related to Apache Ratis.
