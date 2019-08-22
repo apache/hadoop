@@ -144,7 +144,7 @@ via the `auditreplay.command-parser.class` configuration. One mapper will automa
 audit log file within the audit log directory specified at launch time.
 
 The default is a direct format,
-`com.linkedin.dynamometer.workloadgenerator.audit.AuditLogDirectParser`. This accepts files in the format produced
+`org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogDirectParser`. This accepts files in the format produced
 by a standard configuration audit logger, e.g. lines like:
 ```
 1970-01-01 00:00:42,000 INFO FSNamesystem.audit: allowed=true	ugi=hdfs	ip=/127.0.0.1	cmd=open	src=/tmp/foo	dst=null	perm=null	proto=rpc
@@ -154,7 +154,7 @@ the Unix epoch) the start time of the audit traces. This is needed for all mappe
 example, if the above line was the first audit event, you would specify `auditreplay.log-start-time.ms=42000`. Within a
 file, the audit logs must be in order of ascending timestamp.
 
-The other supported format is `com.linkedin.dynamometer.workloadgenerator.audit.AuditLogHiveTableParser`. This accepts
+The other supported format is `org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogHiveTableParser`. This accepts
 files in the format produced by a Hive query with output fields, in order:
 
 * `relativeTimestamp`: event time offset, in milliseconds, from the start of the trace
