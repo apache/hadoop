@@ -23,6 +23,11 @@
 <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
 <title>Namenode information</title>
+<style>
+.col-sm-6 {
+    width: 30%;
+}
+</style>
 </head>
 <body>
 
@@ -315,9 +320,11 @@
 <small><div id="datanode-usage-histogram"></div></small>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
+<p id="datanodefilter" class="col-sm-6">DataNode State </p>
 <table class="table" id="table-datanodes">
   <thead>
     <tr>
+      <th>State</th>
       <th>Node</th>
       <th>Http Address</th>
       <th>Last contact</th>
@@ -330,6 +337,7 @@
   </thead>
   {#LiveNodes}
   <tr>
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
     <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
     <td ng-value="{lastContact}">{lastContact}s</td>
@@ -350,9 +358,11 @@
   {/LiveNodes}
   {#DeadNodes}
   <tr class="danger">
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
     <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
