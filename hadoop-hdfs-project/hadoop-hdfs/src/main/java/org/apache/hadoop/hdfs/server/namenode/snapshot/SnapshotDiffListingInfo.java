@@ -107,7 +107,7 @@ class SnapshotDiffListingInfo {
         if (getTotalEntries() < maxEntries) {
           INode created = iterator.next();
           byte[][] path = newPath(parent, created.getLocalNameBytes());
-          createdList.add(new DiffReportListingEntry(fromINode(created), dirId,
+          createdList.add(new DiffReportListingEntry(getInodeType(created), dirId,
               created.getId(), path, created.isReference(), null));
         } else {
           setLastPath(parent);
@@ -128,7 +128,7 @@ class SnapshotDiffListingInfo {
           final INode d = iterator.next();
           byte[][] path = newPath(parent, d.getLocalNameBytes());
           byte[][] target = findRenameTargetPath(d, laterSnapshot);
-          DiffReportListingEntry.INodeType inodeType = fromINode(d);
+          DiffReportListingEntry.INodeType inodeType = getInodeType(d);
           final DiffReportListingEntry e = target != null ?
               new DiffReportListingEntry(inodeType, dirId, d.getId(), path,
                   true, target) :
@@ -163,7 +163,7 @@ class SnapshotDiffListingInfo {
     return fullPath;
   }
 
-  private static DiffReportListingEntry.INodeType fromINode(INode inode) {
+  private static DiffReportListingEntry.INodeType getInodeType(INode inode) {
     if (inode.isFile()) {
       return FILE;
     } else if (inode.isDirectory()) {

@@ -2708,7 +2708,7 @@ public class PBHelperClient {
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
         .newBuilder().setFullpath(sourcePath)
         .setModificationLabel(modification);
-    switch(entry.getINodeType()){
+    switch(entry.getInodeType()){
     case FILE:
       builder.setFileType(FileType.IS_FILE);
       break;
@@ -2720,7 +2720,7 @@ public class PBHelperClient {
       break;
     default:
       throw new IllegalArgumentException("Unknown INodeType: " +
-          entry.getINodeType());
+          entry.getInodeType());
     }
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath =

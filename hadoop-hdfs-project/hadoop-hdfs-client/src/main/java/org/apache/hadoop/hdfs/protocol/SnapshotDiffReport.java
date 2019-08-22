@@ -95,7 +95,7 @@ public class SnapshotDiffReport {
   public static class DiffReportEntry {
     /** The type of the difference. */
     private final DiffType type;
-    private final INodeType iNodeType;
+    private final INodeType inodeType;
     /**
      * The relative path (related to the snapshot root) of 1) the file/directory
      * where changes have happened, or 2) the source file/dir of a rename op.
@@ -103,27 +103,27 @@ public class SnapshotDiffReport {
     private final byte[] sourcePath;
     private final byte[] targetPath;
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type,
-        byte[] sourcePath) {
-      this(iNodeType, type, sourcePath, null);
+    public DiffReportEntry(INodeType inodeType, DiffType type,
+                           byte[] sourcePath) {
+      this(inodeType, type, sourcePath, null);
     }
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type,
-        byte[][] sourcePathComponents) {
-      this(iNodeType, type, sourcePathComponents, null);
+    public DiffReportEntry(INodeType inodeType, DiffType type,
+                           byte[][] sourcePathComponents) {
+      this(inodeType, type, sourcePathComponents, null);
     }
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type,
+    public DiffReportEntry(INodeType inodeType, DiffType type,
         byte[] sourcePath, byte[] targetPath) {
-      this.iNodeType = iNodeType;
+      this.inodeType = inodeType;
       this.type = type;
       this.sourcePath = sourcePath;
       this.targetPath = targetPath;
     }
 
-    public DiffReportEntry(INodeType iNodeType, DiffType type, byte[][] sourcePathComponents,
-        byte[][] targetPathComponents) {
-      this.iNodeType = iNodeType;
+    public DiffReportEntry(INodeType inodeType, DiffType type, byte[][] sourcePathComponents,
+                           byte[][] targetPathComponents) {
+      this.inodeType = inodeType;
       this.type = type;
       this.sourcePath = DFSUtilClient.byteArray2bytes(sourcePathComponents);
       this.targetPath = targetPathComponents == null ? null : DFSUtilClient
@@ -143,8 +143,8 @@ public class SnapshotDiffReport {
       return type;
     }
 
-    public INodeType getINodeType() {
-      return iNodeType;
+    public INodeType getInodeType() {
+      return inodeType;
     }
 
     static String getPathString(byte[] path) {
