@@ -15,7 +15,10 @@ import org.apache.commons.lang3.RandomStringUtils;
 /**
  * Utility to help to generate test data.
  */
-public class TestDataUtil {
+public final class TestDataUtil {
+
+  private TestDataUtil() {
+  }
 
   public static OzoneBucket createVolumeAndBucket(MiniOzoneCluster cluster,
       String volumeName, String bucketName) throws IOException {

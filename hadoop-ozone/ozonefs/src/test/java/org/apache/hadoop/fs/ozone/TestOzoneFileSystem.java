@@ -268,7 +268,8 @@ public class TestOzoneFileSystem {
     if (isDirectory) {
       key = key + "/";
     }
-    return cluster.getClient().getObjectStore().getVolume(volumeName).getBucket(bucketName).getKey(key);
+    return cluster.getClient().getObjectStore().getVolume(volumeName)
+        .getBucket(bucketName).getKey(key);
   }
 
   private void assertKeyNotFoundException(IOException ex) {
