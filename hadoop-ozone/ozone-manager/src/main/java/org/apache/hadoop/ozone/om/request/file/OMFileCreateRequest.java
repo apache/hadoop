@@ -265,20 +265,20 @@ public class OMFileCreateRequest extends OMKeyRequest {
       omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
           omMetadataManager.getOzoneKey(volumeName, bucketName,
               keyName), keyArgs.getDataSize(), locations,
-          encryptionInfo.orNull());
+          encryptionInfo.orNull(), ozoneManager.getPrefixManager(), bucketInfo);
 
       omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
           locations, encryptionInfo.orNull(), exception,
           createFileRequest.getClientID(), transactionLogIndex, volumeName,
           bucketName, keyName, ozoneManager,
-          OMAction.CREATE_FILE);
+          OMAction.CREATE_FILE, ozoneManager.getPrefixManager(), bucketInfo);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
           locations, encryptionInfo.orNull(), exception,
           createFileRequest.getClientID(), transactionLogIndex,
           volumeName, bucketName, keyName, ozoneManager,
-          OMAction.CREATE_FILE);
+          OMAction.CREATE_FILE, ozoneManager.getPrefixManager(), null);
     } finally {
       if (omClientResponse != null) {
         omClientResponse.setFlushFuture(
