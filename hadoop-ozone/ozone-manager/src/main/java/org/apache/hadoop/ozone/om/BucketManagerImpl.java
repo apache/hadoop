@@ -18,7 +18,6 @@ package org.apache.hadoop.ozone.om;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -34,9 +33,9 @@ import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
@@ -45,12 +44,10 @@ import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INTERNAL_ERROR;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclScope.*;
 
 /**
  * OM bucket manager.
@@ -391,6 +388,7 @@ public class BucketManagerImpl implements BucketManager {
     }
     String volume = obj.getVolumeName();
     String bucket = obj.getBucketName();
+    boolean changed = false;
     metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       String dbBucketKey = metadataManager.getBucketKey(volume, bucket);
@@ -402,43 +400,10 @@ public class BucketManagerImpl implements BucketManager {
             BUCKET_NOT_FOUND);
       }
 
-      // Case 1: When we are adding more rights to existing user/group.
-      boolean addToExistingAcl = false;
-      for(OzoneAcl a: bucketInfo.getAcls()) {
-        if(a.getName().equals(acl.getName()) &&
-            a.getType().equals(acl.getType())) {
-          BitSet bits = (BitSet) acl.getAclBitSet().clone();
-          bits.or(a.getAclBitSet());
-
-          if (bits.equals(a.getAclBitSet())) {
-            return false;
-          }
-          a.getAclBitSet().or(acl.getAclBitSet());
-          addToExistingAcl = true;
-          break;
-        }
+      changed = bucketInfo.addAcl(acl);
+      if (changed) {
+        metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
       }
-
-      // Case 2: When a completely new acl is added.
-      if(!addToExistingAcl) {
-        List<OzoneAcl> newAcls = bucketInfo.getAcls();
-        if(newAcls == null) {
-          newAcls = new ArrayList<>();
-        }
-        newAcls.add(acl);
-        bucketInfo = OmBucketInfo.newBuilder()
-            .setVolumeName(bucketInfo.getVolumeName())
-            .setBucketName(bucketInfo.getBucketName())
-            .setStorageType(bucketInfo.getStorageType())
-            .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
-            .setCreationTime(bucketInfo.getCreationTime())
-            .setBucketEncryptionKey(bucketInfo.getEncryptionKeyInfo())
-            .addAllMetadata(bucketInfo.getMetadata())
-            .setAcls(newAcls)
-            .build();
-      }
-
-      metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Add acl operation failed for bucket:{}/{} acl:{}",
@@ -449,7 +414,7 @@ public class BucketManagerImpl implements BucketManager {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
 
-    return true;
+    return changed;
   }
 
   /**
@@ -470,6 +435,7 @@ public class BucketManagerImpl implements BucketManager {
     }
     String volume = obj.getVolumeName();
     String bucket = obj.getBucketName();
+    boolean removed = false;
     metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       String dbBucketKey = metadataManager.getBucketKey(volume, bucket);
@@ -480,33 +446,10 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket " + bucket + " is not found",
             BUCKET_NOT_FOUND);
       }
-
-      boolean removed = false;
-      // When we are removing subset of rights from existing acl.
-      for(OzoneAcl a: bucketInfo.getAcls()) {
-        if(a.getName().equals(acl.getName()) &&
-            a.getType().equals(acl.getType())) {
-          BitSet bits = (BitSet) acl.getAclBitSet().clone();
-          bits.and(a.getAclBitSet());
-
-          if (bits.equals(ZERO_BITSET)) {
-            return false;
-          }
-
-          a.getAclBitSet().xor(bits);
-
-          if(a.getAclBitSet().equals(ZERO_BITSET)) {
-            bucketInfo.getAcls().remove(a);
-          }
-          removed = true;
-          break;
-        }
-      }
-
+      removed = bucketInfo.removeAcl(acl);
       if (removed) {
         metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
       }
-      return removed;
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Remove acl operation failed for bucket:{}/{} acl:{}",
@@ -516,6 +459,7 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
+    return removed;
   }
 
   /**
@@ -546,18 +490,8 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket " + bucket + " is not found",
             BUCKET_NOT_FOUND);
       }
-      OmBucketInfo updatedBucket = OmBucketInfo.newBuilder()
-          .setVolumeName(bucketInfo.getVolumeName())
-          .setBucketName(bucketInfo.getBucketName())
-          .setStorageType(bucketInfo.getStorageType())
-          .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
-          .setCreationTime(bucketInfo.getCreationTime())
-          .setBucketEncryptionKey(bucketInfo.getEncryptionKeyInfo())
-          .addAllMetadata(bucketInfo.getMetadata())
-          .setAcls(acls)
-          .build();
-
-      metadataManager.getBucketTable().put(dbBucketKey, updatedBucket);
+      bucketInfo.setAcls(acls);
+      metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Set acl operation failed for bucket:{}/{} acl:{}",
@@ -567,7 +501,6 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
-
     return true;
   }
 
@@ -634,7 +567,7 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket " + bucket + " is not found",
             BUCKET_NOT_FOUND);
       }
-      boolean hasAccess = OzoneUtils.checkAclRights(bucketInfo.getAcls(),
+      boolean hasAccess = OzoneAclUtil.checkAclRights(bucketInfo.getAcls(),
           context);
       LOG.debug("user:{} has access rights for bucket:{} :{} ",
           context.getClientUgi(), ozObject.getBucketName(), hasAccess);

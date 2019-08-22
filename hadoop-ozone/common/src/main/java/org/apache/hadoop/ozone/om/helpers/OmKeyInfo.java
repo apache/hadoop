@@ -19,24 +19,20 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
-
-import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 
 /**
  * Args for key block. The block instance for the key requested in putKey.
@@ -58,7 +54,7 @@ public final class OmKeyInfo extends WithMetadata {
   /**
    * ACL Information.
    */
-  private List<OzoneAclInfo> acls;
+  private List<OzoneAcl> acls;
 
   @SuppressWarnings("parameternumber")
   OmKeyInfo(String volumeName, String bucketName, String keyName,
@@ -67,7 +63,7 @@ public final class OmKeyInfo extends WithMetadata {
       HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor,
       Map<String, String> metadata,
-      FileEncryptionInfo encInfo, List<OzoneAclInfo> acls) {
+      FileEncryptionInfo encInfo, List<OzoneAcl> acls) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -235,122 +231,21 @@ public final class OmKeyInfo extends WithMetadata {
     return encInfo;
   }
 
-  public List<OzoneAclInfo> getAcls() {
+  public List<OzoneAcl> getAcls() {
     return acls;
   }
 
-  /**
-   * Add an ozoneAcl to list of existing Acl set.
-   * @param ozoneAcl
-   * @return true - if successfully added, false if not added or acl is
-   * already existing in the acl list.
-   */
-  public boolean addAcl(OzoneAclInfo ozoneAcl) {
-    // Case 1: When we are adding more rights to existing user/group.
-    boolean addToExistingAcl = false;
-    for(OzoneAclInfo existingAcl: getAcls()) {
-      if(existingAcl.getName().equals(ozoneAcl.getName()) &&
-          existingAcl.getType().equals(ozoneAcl.getType())) {
-
-        // We need to do "or" before comparision because think of a case like
-        // existing acl is 777 and newly added acl is 444, we have already
-        // that acl set. In this case if we do direct check they will not
-        // be equal, but if we do or and then check, we shall know it
-        // has acl's already set or not.
-        BitSet newAclBits = BitSet.valueOf(
-            existingAcl.getRights().toByteArray());
-
-        newAclBits.or(BitSet.valueOf(ozoneAcl.getRights().toByteArray()));
-
-        if (newAclBits.equals(BitSet.valueOf(
-            existingAcl.getRights().toByteArray()))) {
-          return false;
-        } else {
-          OzoneAclInfo newAcl = OzoneAclInfo.newBuilder()
-              .setType(ozoneAcl.getType())
-              .setName(ozoneAcl.getName())
-              .setAclScope(ozoneAcl.getAclScope())
-              .setRights(ByteString.copyFrom(newAclBits.toByteArray()))
-              .build();
-          getAcls().remove(existingAcl);
-          getAcls().add(newAcl);
-          addToExistingAcl = true;
-          break;
-        }
-      }
-    }
-
-    // Case 2: When a completely new acl is added.
-    if(!addToExistingAcl) {
-      getAcls().add(ozoneAcl);
-    }
-    return true;
+  public boolean addAcl(OzoneAcl acl) {
+    return OzoneAclUtil.addAcl(acls, acl);
   }
 
-  /**
-   * Remove acl from existing acl list.
-   * @param ozoneAcl
-   * @return true - if successfully removed, false if not able to remove due
-   * to that acl is not in the existing acl list.
-   */
-  public boolean removeAcl(OzoneAclInfo ozoneAcl) {
-    boolean removed = false;
-
-    // When we are removing subset of rights from existing acl.
-    for(OzoneAclInfo existingAcl: getAcls()) {
-      if (existingAcl.getName().equals(ozoneAcl.getName()) &&
-          existingAcl.getType().equals(ozoneAcl.getType())) {
-
-        BitSet bits = BitSet.valueOf(ozoneAcl.getRights().toByteArray());
-        BitSet existingAclBits =
-            BitSet.valueOf(existingAcl.getRights().toByteArray());
-        bits.and(existingAclBits);
-
-        // This happens when the acl bitset asked to remove is not set for
-        // matched name and type.
-        // Like a case we have 444 permission, 333 is asked to removed.
-        if (bits.equals(ZERO_BITSET)) {
-          return false;
-        }
-
-        // We have some matching. Remove them.
-        bits.xor(existingAclBits);
-
-        // If existing acl has same bitset as passed acl bitset, remove that
-        // acl from the list
-        if (bits.equals(ZERO_BITSET)) {
-          getAcls().remove(existingAcl);
-        } else {
-          // Remove old acl and add new acl.
-          OzoneAclInfo newAcl = OzoneAclInfo.newBuilder()
-              .setType(ozoneAcl.getType())
-              .setName(ozoneAcl.getName())
-              .setAclScope(ozoneAcl.getAclScope())
-              .setRights(ByteString.copyFrom(bits.toByteArray()))
-              .build();
-          getAcls().remove(existingAcl);
-          getAcls().add(newAcl);
-        }
-        removed = true;
-        break;
-      }
-    }
-
-    return removed;
+  public boolean removeAcl(OzoneAcl acl) {
+    return OzoneAclUtil.removeAcl(acls, acl);
   }
 
-  /**
-   * Reset the existing acl list.
-   * @param ozoneAcls
-   * @return true - if successfully able to reset.
-   */
-  public boolean setAcls(List<OzoneAclInfo> ozoneAcls) {
-    this.acls.clear();
-    this.acls = ozoneAcls;
-    return true;
+  public boolean setAcls(List<OzoneAcl> newAcls) {
+    return OzoneAclUtil.setAcl(acls, newAcls);
   }
-
-
 
   /**
    * Builder of OmKeyInfo.
@@ -368,11 +263,12 @@ public final class OmKeyInfo extends WithMetadata {
     private HddsProtos.ReplicationFactor factor;
     private Map<String, String> metadata;
     private FileEncryptionInfo encInfo;
-    private List<OzoneAclInfo> acls;
+    private List<OzoneAcl> acls;
 
     public Builder() {
       this.metadata = new HashMap<>();
       omKeyLocationInfoGroups = new ArrayList<>();
+      acls = new ArrayList<>();
     }
 
     public Builder setVolumeName(String volume) {
@@ -436,9 +332,10 @@ public final class OmKeyInfo extends WithMetadata {
       return this;
     }
 
-    public Builder setAcls(List<OzoneAclInfo> listOfAcls) {
-      this.acls = new ArrayList<>();
-      this.acls.addAll(listOfAcls);
+    public Builder setAcls(List<OzoneAcl> listOfAcls) {
+      if (listOfAcls != null) {
+        this.acls.addAll(listOfAcls);
+      }
       return this;
     }
 
@@ -466,12 +363,10 @@ public final class OmKeyInfo extends WithMetadata {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
-        .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
+        .addAllAcls(OzoneAclUtil.toProtobuf(acls));
     if (encInfo != null) {
       kb.setFileEncryptionInfo(OMPBHelper.convert(encInfo));
-    }
-    if(acls != null) {
-      kb.addAllAcls(acls);
     }
     return kb.build();
   }
@@ -492,7 +387,8 @@ public final class OmKeyInfo extends WithMetadata {
         .addAllMetadata(KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()))
         .setFileEncryptionInfo(keyInfo.hasFileEncryptionInfo() ?
             OMPBHelper.convert(keyInfo.getFileEncryptionInfo()): null)
-        .setAcls(keyInfo.getAclsList()).build();
+        .setAcls(OzoneAclUtil.fromProtobuf(keyInfo.getAclsList()))
+        .build();
   }
 
   @Override
@@ -514,7 +410,8 @@ public final class OmKeyInfo extends WithMetadata {
             .equals(keyLocationVersions, omKeyInfo.keyLocationVersions) &&
         type == omKeyInfo.type &&
         factor == omKeyInfo.factor &&
-        Objects.equals(metadata, omKeyInfo.metadata);
+        Objects.equals(metadata, omKeyInfo.metadata) &&
+        Objects.equals(acls, omKeyInfo.acls);
   }
 
   @Override

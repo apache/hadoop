@@ -33,20 +33,10 @@ spec:
         app: ozone
         component: datanode
       annotations:
-        prdatanodeetheus.io/scrape: "true"
-        prdatanodeetheus.io/port: "9882"
-        prdatanodeetheus.io/path: /prom
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9882"
+        prometheus.io/path: /prom
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: component
-                operator: In
-                values:
-                - datanode
-            topologyKey: kubernetes.io/hostname
       securityContext:
         fsGroup: 1000
       containers:
@@ -55,12 +45,12 @@ spec:
         args:
         - ozone
         - datanode
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       volumes:
       - name: data
         emptyDir: {}

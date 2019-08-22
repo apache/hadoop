@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.response.key.acl.OMKeyAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -29,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -43,14 +43,15 @@ public class OMKeyAddAclRequest extends OMKeyAclRequest {
       LoggerFactory.getLogger(OMKeyAddAclRequest.class);
 
   private String path;
-  private List<OzoneAclInfo> ozoneAcls;
+  private List<OzoneAcl> ozoneAcls;
 
   public OMKeyAddAclRequest(OMRequest omRequest) {
     super(omRequest);
     OzoneManagerProtocolProtos.AddAclRequest addAclRequest =
         getOmRequest().getAddAclRequest();
     path = addAclRequest.getObj().getPath();
-    ozoneAcls = Lists.newArrayList(addAclRequest.getAcl());
+    ozoneAcls = Lists.newArrayList(
+        OzoneAcl.fromProtobuf(addAclRequest.getAcl()));
   }
 
   @Override

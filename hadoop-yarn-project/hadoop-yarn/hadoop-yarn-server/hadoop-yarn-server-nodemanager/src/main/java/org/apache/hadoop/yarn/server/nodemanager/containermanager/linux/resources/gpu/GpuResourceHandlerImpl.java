@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,7 +77,8 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
             + "any usable GPU devices, please double check configuration!";
         LOG.error(message);
-        throw new ResourceHandlerException(message);
+        throwIfNecessary(new ResourceHandlerException(message),
+            configuration);
       }
     } catch (YarnException e) {
       LOG.error("Exception when trying to get usable GPU device", e);

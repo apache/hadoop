@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -231,7 +232,8 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
             .setDataSize(size)
             .setOmKeyLocationInfos(
                 Collections.singletonList(keyLocationInfoGroup))
-            .setAcls(keyArgs.getAclsList()).build();
+            .setAcls(OzoneAclUtil.fromProtobuf(keyArgs.getAclsList()))
+            .build();
       } else {
         // Already a version exists, so we should add it as a new version.
         // But now as versioning is not supported, just following the commit
