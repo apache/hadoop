@@ -314,6 +314,13 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   left: 75px;
 }
 
+.datanodestatus{
+    width:75px;
+    height:30px;
+    color: #555;
+    display: inline-block;
+}
+
 .bar rect {
     fill: #5FA33F;
 }
