@@ -2762,7 +2762,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       // Look for the dir marker
-      if (!key.endsWith("/") && probes.contains(StatusProbeEnum.DirMarker) ) {
+      if (!key.endsWith("/") && probes.contains(StatusProbeEnum.DirMarker)) {
         String newKey = key + "/";
         try {
           ObjectMetadata meta = getObjectMetadata(newKey);
