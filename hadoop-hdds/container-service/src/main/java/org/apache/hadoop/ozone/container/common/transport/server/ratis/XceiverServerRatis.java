@@ -44,7 +44,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 
 import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
