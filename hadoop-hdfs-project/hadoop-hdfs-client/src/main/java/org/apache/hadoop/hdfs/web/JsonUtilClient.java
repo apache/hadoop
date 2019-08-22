@@ -805,7 +805,7 @@ public class JsonUtilClient {
     }
     SnapshotDiffReport.INodeType iNodeType =
         SnapshotDiffReport.INodeType.parseINodeType(
-            (String) json.get("iNodeType"));
+            (String) json.get("inodeType"));
     SnapshotDiffReport.DiffType type =
         SnapshotDiffReport.DiffType.parseDiffType((String) json.get("type"));
     byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
