@@ -156,6 +156,8 @@ message OMRequest {
   optional GetAclRequest                    getAclRequest                  = 78;
 
   optional PurgeKeysRequest                 purgeKeysRequest               = 81;
+
+  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
 }
 
 message OMResponse {
@@ -287,6 +289,9 @@ enum Status {
     RATIS_ERROR = 52;
 
     INVALID_PATH_IN_ACL_REQUEST = 53; // Invalid path name in acl request.
+
+    USER_MISMATCH = 54; // Error code when requested user name passed is
+    // different from remote user.
 }
 
 
@@ -1048,6 +1053,15 @@ message GetS3SecretRequest {
 
 message GetS3SecretResponse {
     required S3Secret s3Secret = 2;
+}
+
+/**
+  This will be used internally by OM to replicate S3 Secret across quorum of
+  OM's.
+*/
+message UpdateGetS3SecretRequest {
+    required string kerberosID = 1;
+    required string awsSecret = 2;
 }
 
 /**

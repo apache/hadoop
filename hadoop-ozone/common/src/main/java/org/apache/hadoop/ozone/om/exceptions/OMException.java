@@ -207,7 +207,10 @@ public class OMException extends IOException {
 
     RATIS_ERROR, // Error in Ratis server
 
-    INVALID_PATH_IN_ACL_REQUEST // Error code when path name is invalid during
+    INVALID_PATH_IN_ACL_REQUEST, // Error code when path name is invalid during
     // acl requests.
+
+    USER_MISMATCH // Error code when requested user name passed is different
+    // from remote user.
   }
 }
