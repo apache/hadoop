@@ -62,7 +62,7 @@ docker-compose up -d
 These environments are very important tools to start different type of Ozone clusters at any time.
 
 To be sure that the compose files are up-to-date, we also provide acceptance test suites which start
-the cluster and check the basic behaviour.
+the cluster and check the basic behavior.
 
 The acceptance tests are part of the distribution, and you can find the test definitions in `smoketest` directory.
 
@@ -96,7 +96,7 @@ is mounted from the including directory:
 ```
 
 The containers are configured based on environment variables, but because the same environment
-variables should be set for each containers we maintain the list of the environment variables
+variables should be set for each container we maintain the list of the environment variables
 in a separated file:
 
 ```
@@ -132,7 +132,7 @@ based on environment variables.
 The `docker-compose` based approach is recommended only for local test, not for multi node cluster.
 To use containers on a multi-node cluster we need a Container Orchestrator like Kubernetes.
 
-Kubernetes example files are included in the `kubernetes` folder.
+Kubernetes example files are included in `hadoop-ozone/dist/target/ozone-<version>/kubernetes` folder.
 
 *Please note*: all the provided images are based the `hadoop-runner` image which contains all the
 required tool for testing in staging environments. For production we recommend to create your own,

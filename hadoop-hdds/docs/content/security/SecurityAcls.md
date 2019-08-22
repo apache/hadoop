@@ -60,7 +60,8 @@ Where a _right_ can be:
 1. **Create** – This ACL provides a user the ability to create buckets in a
 volume and keys in a bucket. Please note: Under Ozone, Only admins can create volumes.
 2. **List** – This ACL allows listing of buckets and keys. This ACL is attached
- to the volume and buckets which allow listing of the child objects. Please note: The user and admins can list the volumes owned by the user.
+ to the volume and buckets which allow listing of the child objects.
+ Please note: The user and admins can list the volumes owned by the user.
 3. **Delete** – Allows the user to delete a volume, bucket or key.
 4. **Read** – Allows the user to read the metadata of a Volume and Bucket and
 data stream and metadata of a key.
@@ -78,5 +79,7 @@ supported are:
 of the ozone object and a list of ACLs.
 2. **GetAcl** – This API will take the name and type of the ozone object
 and will return a list of ACLs.
-3. **RemoveAcl** - This API will take the name, type of the
-ozone object and the ACL that has to be removed.
+3. **AddAcl** - This API will take user principal, the name, type
+of the ozone object and an ozone ACL, and add it to existing ACLs of the ozone object.
+4. **RemoveAcl** - This API will take the name, type of the
+ozone object and an ozone ACL that has to be removed.

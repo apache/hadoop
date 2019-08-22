@@ -30,7 +30,7 @@ when a bucket is created.
 
 To use TDE, clients must setup a Key Management Server and provide that URI to
 Ozone/HDFS. Since Ozone and HDFS can use the same Key Management Server, this
- configuration can be provided via *hdfs-site.xml*.
+ configuration can be provided via *core-site.xml*.
 
 Property| Value
 -----------------------------------|-----------------------------------------
