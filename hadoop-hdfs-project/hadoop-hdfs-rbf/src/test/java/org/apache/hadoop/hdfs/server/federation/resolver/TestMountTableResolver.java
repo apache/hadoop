@@ -704,4 +704,26 @@ public class TestMountTableResolver {
     mountTable.removeEntry("/testlocationcache");
     mountTable.removeEntry("/anothertestlocationcache");
   }
+
+  @Test
+  public void testInvalidateCache() throws Exception {
+    Map<String, String> map1 = getMountTableEntry("1", "/");
+    MountTable entry1 = MountTable.newInstance("/", map1);
+
+    mountTable.addEntry(entry1);
+    assertEquals("1->/", mountTable.getDestinationForPath("/").toString());
+
+    assertEquals("1->/testInvalidateCache/foo", mountTable
+        .getDestinationForPath("/testInvalidateCache/foo").toString());
+    PathLocation pl =
+        mountTable.getDestinationForPath("/testInvalidateCache/foo");
+
+    Map<String, String> map2 = getMountTableEntry("2", "/testInvalidateCache");
+    MountTable entry2 = MountTable.newInstance("/testInvalidateCache", map2);
+    mountTable.addEntry(entry2);
+    assertEquals("2->/testInvalidateCache",
+        mountTable.getDestinationForPath("/testInvalidateCache").toString());
+    assertEquals("2->/testInvalidateCache/foo", mountTable
+        .getDestinationForPath("/testInvalidateCache/foo").toString());
+  }
 }
