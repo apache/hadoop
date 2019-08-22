@@ -18,42 +18,46 @@
 
 package org.apache.hadoop.ozone;
 
+import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .EndpointStateMachine;
-import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
+import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
-import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
-import static org.junit.Assert.*;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  * Test cases for mini ozone cluster.
@@ -132,6 +136,13 @@ public class TestMiniOzoneCluster {
     File validIdsFile = new File(WRITE_TMP, "valid-values.id");
     validIdsFile.delete();
     ContainerUtils.writeDatanodeDetailsTo(id1, validIdsFile);
+    // Validate using yaml parser
+    Yaml yaml = new Yaml();
+    try {
+      yaml.load(new FileReader(validIdsFile));
+    } catch (Exception e) {
+      Assert.fail("Failed parsing datanode id yaml.");
+    }
     DatanodeDetails validId = ContainerUtils.readDatanodeDetailsFrom(
         validIdsFile);
 
@@ -158,6 +169,17 @@ public class TestMiniOzoneCluster {
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
     }
+
+    // Test upgrade scenario - protobuf file instead of yaml
+    File protoFile = new File(WRITE_TMP, "valid-proto.id");
+    try (FileOutputStream out = new FileOutputStream(protoFile)) {
+      HddsProtos.DatanodeDetailsProto proto = id1.getProtoBufMessage();
+      proto.writeTo(out);
+    }
+    validId = ContainerUtils.readDatanodeDetailsFrom(protoFile);
+    assertEquals(validId.getCertSerialId(), certSerialId);
+    assertEquals(id1, validId);
+    assertEquals(id1.getProtoBufMessage(), validId.getProtoBufMessage());
   }
 
   @Test
@@ -173,36 +195,61 @@ public class TestMiniOzoneCluster {
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
         true);
-    try (
-        DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null);
-        DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null);
-        DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null)
-    ) {
+    List<DatanodeStateMachine> stateMachines = new ArrayList<>();
+    try {
+
+      for (int i = 0; i < 3; i++) {
+        stateMachines.add(new DatanodeStateMachine(
+            TestUtils.randomDatanodeDetails(), ozoneConf, null, null));
+      }
+
+      //we need to start all the servers to get the fix ports
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.getContainer().getReadChannel().start();
+        dsm.getContainer().getWriteChannel().start();
+
+      }
+
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.getContainer().getWriteChannel().stop();
+        dsm.getContainer().getReadChannel().stop();
+
+      }
+
+      //after the start the real port numbers should be available AND unique
       HashSet<Integer> ports = new HashSet<Integer>();
-      assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));
-      assertTrue(ports.add(sm2.getContainer().getReadChannel().getIPCPort()));
-      assertTrue(ports.add(sm3.getContainer().getReadChannel().getIPCPort()));
+      for (DatanodeStateMachine dsm : stateMachines) {
+        int readPort = dsm.getContainer().getReadChannel().getIPCPort();
 
-      // Assert that ratis is also on a different port.
-      assertTrue(ports.add(sm1.getContainer().getWriteChannel().getIPCPort()));
-      assertTrue(ports.add(sm2.getContainer().getWriteChannel().getIPCPort()));
-      assertTrue(ports.add(sm3.getContainer().getWriteChannel().getIPCPort()));
+        assertNotEquals("Port number of the service is not updated", 0,
+            readPort);
 
+        assertTrue("Port of datanode service is conflicted with other server.",
+            ports.add(readPort));
 
+        int writePort = dsm.getContainer().getWriteChannel().getIPCPort();
+
+        assertNotEquals("Port number of the service is not updated", 0,
+            writePort);
+        assertTrue("Port of datanode service is conflicted with other server.",
+            ports.add(writePort));
+      }
+
+    } finally {
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.close();
+      }
     }
 
     // Turn off the random port flag and test again
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null);
+            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null);
+            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null)
+            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null);
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));
@@ -260,7 +307,7 @@ public class TestMiniOzoneCluster {
 
     // DN should successfully register with the SCM after SCM is restarted.
     // Restart the SCM
-    cluster.restartStorageContainerManager();
+    cluster.restartStorageContainerManager(true);
     // Wait for DN to register
     cluster.waitForClusterToBeReady();
     // DN should be in HEARTBEAT state after registering with the SCM

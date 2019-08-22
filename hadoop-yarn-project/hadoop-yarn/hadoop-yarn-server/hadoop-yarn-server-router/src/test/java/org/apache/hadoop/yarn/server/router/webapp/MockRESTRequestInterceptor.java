@@ -133,13 +133,16 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     return new ActivitiesInfo();
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     return new AppActivitiesInfo();
   }
 
@@ -356,5 +359,11 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
     return new ContainerInfo();
+  }
+
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) {
+    return Response.status(Status.OK).build();
   }
 }

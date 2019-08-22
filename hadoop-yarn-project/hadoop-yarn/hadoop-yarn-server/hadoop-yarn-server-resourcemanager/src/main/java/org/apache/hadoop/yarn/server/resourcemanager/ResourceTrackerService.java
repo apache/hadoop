@@ -268,6 +268,7 @@ public class ResourceTrackerService extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
+    decommissioningWatcher.stop();
     if (this.server != null) {
       this.server.stop();
     }
@@ -674,6 +675,11 @@ public class ResourceTrackerService extends AbstractService implements
     // sync back with new resource if not null.
     if (capability != null) {
       nodeHeartBeatResponse.setResource(capability);
+    }
+    // Check if we got an event (AdminService) that updated the resources
+    if (rmNode.isUpdatedCapability()) {
+      nodeHeartBeatResponse.setResource(rmNode.getTotalCapability());
+      rmNode.resetUpdatedCapability();
     }
 
     // 7. Send Container Queuing Limits back to the Node. This will be used by

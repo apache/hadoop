@@ -89,27 +89,27 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testNotUserAsDefaultQueue() throws Exception {
+  public void testNotUserAsDefaultQueue() {
 
-    // Restarting resource manager since the Conf object is changed changed.
-    resourceManager.stop();
+    // We need a new scheduler since we want to change the conf object. This
+    // requires a new RM to propagate it . Do a proper teardown to not leak
+    tearDown();
+    // Create a new one with the amended config.
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
     resourceManager = new MockRM(conf);
     resourceManager.start();
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
 
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId, "default", "user2", null);
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
+    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
         .getNumRunnableApps());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
+    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getNumRunnableApps());
   }
 
   @Test
-  public void testAppAdditionAndRemoval() throws Exception {
+  public void testAppAdditionAndRemoval() {
     ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
     ApplicationPlacementContext apc =
         new ApplicationPlacementContext("user1");

@@ -17,33 +17,27 @@
  */
 package org.apache.hadoop.ozone.client;
 
-import org.apache.hadoop.hdds.client.OzoneQuota;
-import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.rest.response.*;
-import org.apache.ratis.protocol.AlreadyClosedException;
-import org.apache.ratis.protocol.RaftRetryFailureException;
-
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
+import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfoDetails;
+import org.apache.hadoop.ozone.client.rest.response.KeyLocation;
+import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
+import org.apache.hadoop.ozone.client.rest.response.VolumeOwner;
 
 /** A utility class for OzoneClient. */
 public final class OzoneClientUtils {
 
   private OzoneClientUtils() {}
-
-  private static final List<Class<? extends Exception>> EXCEPTION_LIST =
-      new ArrayList<Class<? extends Exception>>() {{
-        add(TimeoutException.class);
-        add(ContainerNotOpenException.class);
-        add(RaftRetryFailureException.class);
-        add(AlreadyClosedException.class);
-      }};
   /**
    * Returns a BucketInfo object constructed using fields of the input
    * OzoneBucket object.
@@ -52,7 +46,7 @@ public final class OzoneClientUtils {
    *               be created.
    * @return BucketInfo instance
    */
-  public static BucketInfo asBucketInfo(OzoneBucket bucket) {
+  public static BucketInfo asBucketInfo(OzoneBucket bucket) throws IOException {
     BucketInfo bucketInfo =
         new BucketInfo(bucket.getVolumeName(), bucket.getName());
     bucketInfo
@@ -60,7 +54,6 @@ public final class OzoneClientUtils {
     bucketInfo.setStorageType(bucket.getStorageType());
     bucketInfo.setVersioning(
         OzoneConsts.Versioning.getVersioning(bucket.getVersioning()));
-    bucketInfo.setAcls(bucket.getAcls());
     bucketInfo.setEncryptionKeyName(
         bucket.getEncryptionKeyName()==null? "N/A" :
             bucket.getEncryptionKeyName());
@@ -125,15 +118,11 @@ public final class OzoneClientUtils {
     return keyInfo;
   }
 
-  public static RetryPolicy createRetryPolicy(int maxRetryCount) {
-    // just retry without sleep
-    RetryPolicy retryPolicy = RetryPolicies
-        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, 0,
-            TimeUnit.MILLISECONDS);
-    return retryPolicy;
+  public static RetryPolicy createRetryPolicy(int maxRetryCount,
+      long retryInterval) {
+    // retry with fixed sleep between retries
+    return RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+        maxRetryCount, retryInterval, TimeUnit.MILLISECONDS);
   }
 
-  public static List<Class<? extends Exception>> getExceptionList() {
-    return EXCEPTION_LIST;
-  }
 }

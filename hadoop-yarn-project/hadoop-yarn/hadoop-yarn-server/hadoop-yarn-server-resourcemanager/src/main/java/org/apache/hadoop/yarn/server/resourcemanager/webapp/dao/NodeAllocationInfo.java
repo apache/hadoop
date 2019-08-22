@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.NodeAllocation;
@@ -42,11 +43,12 @@ public class NodeAllocationInfo {
   NodeAllocationInfo() {
   }
 
-  NodeAllocationInfo(NodeAllocation allocation) {
+  NodeAllocationInfo(NodeAllocation allocation,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.allocatedContainerId = allocation.getContainerId();
     this.finalAllocationState = allocation.getFinalAllocationState().name();
 
-    root = new ActivityNodeInfo(allocation.getRoot());
+    root = new ActivityNodeInfo(allocation.getRoot(), groupBy);
 
   }
 }

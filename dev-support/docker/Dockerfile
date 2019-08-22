@@ -207,23 +207,6 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 # YETUS CUT HERE
 ###
 
-####
-# Install svn & Forrest (for Apache Hadoop website)
-###
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends subversion \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /opt/apache-forrest \
-    && curl -L -s -S \
-      https://archive.apache.org/dist/forrest/0.8/apache-forrest-0.8.tar.gz \
-      -o /opt/forrest.tar.gz \
-    && tar xzf /opt/forrest.tar.gz --strip-components 1 -C /opt/apache-forrest
-RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
-ENV FORREST_HOME=/opt/apache-forrest
-
 # Hugo static website generator (for new hadoop site and Ozone docs)
 RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
     && dpkg --install hugo.deb \

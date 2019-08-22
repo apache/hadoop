@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+
 /**
  * Default implementation for {@link IAccessAuthorizer}.
  * */
@@ -23,7 +25,7 @@ public class OzoneAccessAuthorizer implements IAccessAuthorizer {
 
   @Override
   public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context)
-      throws OzoneAclException {
+      throws OMException {
     return true;
   }
 }

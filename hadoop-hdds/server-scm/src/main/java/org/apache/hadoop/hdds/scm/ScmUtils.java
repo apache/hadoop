@@ -18,18 +18,12 @@
 
 package org.apache.hadoop.hdds.scm;
 
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.chillmode.Precheck;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hdds.scm.safemode.Precheck;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.util.Collection;
 
 /**
  * SCM utility class.
@@ -54,29 +48,4 @@ public final class ScmUtils {
     }
   }
 
-  public static File getDBPath(Configuration conf, String dbDirectory) {
-    final Collection<String> dbDirs =
-        conf.getTrimmedStringCollection(dbDirectory);
-
-    if (dbDirs.size() > 1) {
-      throw new IllegalArgumentException(
-          "Bad configuration setting " + dbDirectory
-              + ". OM does not support multiple metadata dirs currently.");
-    }
-
-    if (dbDirs.size() == 1) {
-      final File dbDirPath = new File(dbDirs.iterator().next());
-      if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
-        throw new IllegalArgumentException(
-            "Unable to create directory " + dbDirPath
-                + " specified in configuration setting " + dbDirectory);
-      }
-      return dbDirPath;
-    }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. "
-            + "Falling back to {} instead.", dbDirectory,
-        HddsConfigKeys.OZONE_METADATA_DIRS);
-    return ServerUtils.getOzoneMetaDirPath(conf);
-  }
 }

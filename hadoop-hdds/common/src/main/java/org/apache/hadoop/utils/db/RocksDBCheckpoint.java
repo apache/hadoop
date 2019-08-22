@@ -38,6 +38,7 @@ public class RocksDBCheckpoint implements DBCheckpoint {
   private long checkpointTimestamp = System.currentTimeMillis();
   private long latestSequenceNumber = -1;
   private long checkpointCreationTimeTaken = 0L;
+  private long ratisSnapshotIndex = 0L;
 
   public RocksDBCheckpoint(Path checkpointLocation) {
     this.checkpointLocation = checkpointLocation;
@@ -77,5 +78,15 @@ public class RocksDBCheckpoint implements DBCheckpoint {
   public void cleanupCheckpoint() throws IOException {
     LOG.debug("Cleaning up checkpoint at " + checkpointLocation.toString());
     FileUtils.deleteDirectory(checkpointLocation.toFile());
+  }
+
+  @Override
+  public void setRatisSnapshotIndex(long omRatisSnapshotIndex) {
+    this.ratisSnapshotIndex = omRatisSnapshotIndex;
+  }
+
+  @Override
+  public long getRatisSnapshotIndex() {
+    return ratisSnapshotIndex;
   }
 }

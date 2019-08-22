@@ -61,13 +61,16 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
-  private @Metric MutableCounterLong numAddAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
   private @Metric MutableCounterLong numGetFileStatus;
+  private @Metric MutableCounterLong numCreateDirectory;
+  private @Metric MutableCounterLong numCreateFile;
+  private @Metric MutableCounterLong numLookupFile;
+  private @Metric MutableCounterLong numListStatus;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -101,21 +104,34 @@ public class OMMetrics {
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
+  private @Metric MutableCounterLong numCreateDirectoryFails;
+  private @Metric MutableCounterLong numCreateFileFails;
+  private @Metric MutableCounterLong numLookupFileFails;
+  private @Metric MutableCounterLong numListStatusFails;
 
   // Metrics for total number of volumes, buckets and keys
 
   private @Metric MutableCounterLong numVolumes;
   private @Metric MutableCounterLong numBuckets;
+  private @Metric MutableCounterLong numS3Buckets;
 
   //TODO: This metric is an estimate and it may be inaccurate on restart if the
   // OM process was not shutdown cleanly. Key creations/deletions in the last
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
 
+
+
   // Metrics to track checkpointing statistics from last run.
   private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
+
+  private @Metric MutableCounterLong numS3BucketCreates;
+  private @Metric MutableCounterLong numS3BucketCreateFails;
+  private @Metric MutableCounterLong numS3BucketDeletes;
+  private @Metric MutableCounterLong numS3BucketDeleteFails;
+
 
   public OMMetrics() {
   }
@@ -125,6 +141,34 @@ public class OMMetrics {
     return ms.register(SOURCE_NAME,
         "Ozone Manager Metrics",
         new OMMetrics());
+  }
+
+  public void incNumS3BucketCreates() {
+    numBucketOps.incr();
+    numS3BucketCreates.incr();
+  }
+
+  public void incNumS3BucketCreateFails() {
+    numS3BucketCreateFails.incr();
+  }
+
+  public void incNumS3BucketDeletes() {
+    numBucketOps.incr();
+    numS3BucketDeletes.incr();
+  }
+
+  public void incNumS3BucketDeleteFails() {
+    numBucketOps.incr();
+    numS3BucketDeleteFails.incr();
+  }
+
+
+  public void incNumS3Buckets() {
+    numS3Buckets.incr();
+  }
+
+  public void decNumS3Buckets() {
+    numS3Buckets.incr();
   }
 
   public void incNumVolumes() {
@@ -152,15 +196,18 @@ public class OMMetrics {
   }
 
   public void setNumVolumes(long val) {
-    this.numVolumes.incr(val);
+    long oldVal = this.numVolumes.value();
+    this.numVolumes.incr(val - oldVal);
   }
 
   public void setNumBuckets(long val) {
-    this.numBuckets.incr(val);
+    long oldVal = this.numBuckets.value();
+    this.numBuckets.incr(val - oldVal);
   }
 
   public void setNumKeys(long val) {
-    this.numKeys.incr(val);
+    long oldVal = this.numKeys.value();
+    this.numKeys.incr(val- oldVal);
   }
 
   public long getNumVolumes() {
@@ -297,6 +344,46 @@ public class OMMetrics {
     numGetFileStatusFails.incr();
   }
 
+  public void incNumCreateDirectory() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateDirectory.incr();
+  }
+
+  public void incNumCreateDirectoryFails() {
+    numCreateDirectoryFails.incr();
+  }
+
+  public void incNumCreateFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateFile.incr();
+  }
+
+  public void incNumCreateFileFails() {
+    numCreateFileFails.incr();
+  }
+
+  public void incNumLookupFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numLookupFile.incr();
+  }
+
+  public void incNumLookupFileFails() {
+    numLookupFileFails.incr();
+  }
+
+  public void incNumListStatus() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numListStatus.incr();
+  }
+
+  public void incNumListStatusFails() {
+    numListStatusFails.incr();
+  }
+
   public void incNumListMultipartUploadPartFails() {
     numListMultipartUploadPartFails.incr();
   }
@@ -393,14 +480,6 @@ public class OMMetrics {
 
   public void incNumBlockAllocateCallFails() {
     numBlockAllocateCallFails.incr();
-  }
-
-  public void incNumAddAllocateBlockCalls() {
-    numAddAllocateBlockCalls.incr();
-  }
-
-  public void incNumAddAllocateBlockFails() {
-    numAddAllocateBlockCallFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -600,6 +679,11 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumGetFileStatus() {
     return numGetFileStatus.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListStatus() {
+    return numListStatus.value();
   }
 
   @VisibleForTesting

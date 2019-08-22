@@ -1,4 +1,4 @@
- /**
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.TimeDuration;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * This class contains constants for configuration keys used in Ozone.
  */
@@ -38,6 +40,8 @@ public final class OzoneConfigKeys {
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;
+
+  public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
 
   /**
    *
@@ -54,7 +58,7 @@ public final class OzoneConfigKeys {
 
   public static final String DFS_CONTAINER_CHUNK_WRITE_SYNC_KEY =
       "dfs.container.chunk.write.sync";
-  public static final boolean DFS_CONTAINER_CHUNK_WRITE_SYNC_DEFAULT = true;
+  public static final boolean DFS_CONTAINER_CHUNK_WRITE_SYNC_DEFAULT = false;
   /**
    * Ratis Port where containers listen to.
    */
@@ -94,6 +98,11 @@ public final class OzoneConfigKeys {
   public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF =
       "OFF";
 
+  public static final String OZONE_UNSAFEBYTEOPERATIONS_ENABLED =
+      "ozone.UnsafeByteOperations.enabled";
+  public static final boolean OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT
+      = true;
+
   public static final String OZONE_CONTAINER_CACHE_SIZE =
       "ozone.container.cache.size";
   public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;
@@ -111,6 +120,10 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS =
       "ozone.administrators";
+  /**
+   * Used only for testing purpose. Results in making every user an admin.
+   * */
+  public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
 
   public static final String OZONE_CLIENT_PROTOCOL =
       "ozone.client.protocol";
@@ -135,8 +148,11 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_CLIENT_MAX_RETRIES =
       "ozone.client.max.retries";
-  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 5;
-
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 100;
+  public static final String OZONE_CLIENT_RETRY_INTERVAL =
+      "ozone.client.retry.interval";
+  public static final TimeDuration OZONE_CLIENT_RETRY_INTERVAL_DEFAULT =
+      TimeDuration.valueOf(0, TimeUnit.MILLISECONDS);
 
   // This defines the overall connection limit for the connection pool used in
   // RestClient.
@@ -312,6 +328,10 @@ public final class OzoneConfigKeys {
   public static final String
       DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT =
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_LOG_PURGE_GAP =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP;
+  public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT;
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
   public static final TimeDuration
@@ -360,7 +380,7 @@ public final class OzoneConfigKeys {
    */
   public static final String OZONE_CLIENT_CHECKSUM_TYPE =
       "ozone.client.checksum.type";
-  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "SHA256";
+  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "CRC32";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM =
       "ozone.client.bytes.per.checksum";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT = "1MB";
@@ -374,6 +394,8 @@ public final class OzoneConfigKeys {
       "ozone.acl.authorizer.class";
   public static final String OZONE_ACL_AUTHORIZER_CLASS_DEFAULT =
       "org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer";
+  public static final String OZONE_ACL_AUTHORIZER_CLASS_NATIVE =
+      "org.apache.hadoop.ozone.security.acl.OzoneNativeAuthorizer";
   public static final String OZONE_ACL_ENABLED =
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
@@ -424,6 +446,10 @@ public final class OzoneConfigKeys {
   public static final String
       OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "ozone.freon.http.kerberos.keytab";
+
+  public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
+      "ozone.network.topology.aware.read";
+  public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
 
   /**
    * There is no need to instantiate this class.

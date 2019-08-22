@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -90,7 +91,7 @@ public class TestKeyDeletingService {
     OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(conf);
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 0),
+            new ScmBlockLocationTestingClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
@@ -112,7 +113,7 @@ public class TestKeyDeletingService {
     //failCallsFrequency = 1 , means all calls fail.
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 1),
+            new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
@@ -139,7 +140,7 @@ public class TestKeyDeletingService {
     //failCallsFrequency = 1 , means all calls fail.
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 1),
+            new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 0);
@@ -192,6 +193,7 @@ public class TestKeyDeletingService {
               .setVolumeName(volumeName)
               .setBucketName(bucketName)
               .setKeyName(keyName)
+              .setAcls(Collections.emptyList())
               .setLocationInfoList(new ArrayList<>())
               .build();
       //Open, Commit and Delete the Keys in the Key Manager.

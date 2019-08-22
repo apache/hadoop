@@ -40,9 +40,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -51,7 +51,8 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-final class PathMetadataDynamoDBTranslation {
+@VisibleForTesting
+public final class PathMetadataDynamoDBTranslation {
 
   /** The HASH key name of each item. */
   @VisibleForTesting
@@ -70,6 +71,8 @@ final class PathMetadataDynamoDBTranslation {
   static final String IS_DELETED = "is_deleted";
   static final String IS_AUTHORITATIVE = "is_authoritative";
   static final String LAST_UPDATED = "last_updated";
+  static final String ETAG = "etag";
+  static final String VERSION_ID = "version_id";
 
   /** Used while testing backward compatibility. */
   @VisibleForTesting
@@ -135,7 +138,7 @@ final class PathMetadataDynamoDBTranslation {
 
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     boolean isAuthoritativeDir = false;
-    final FileStatus fileStatus;
+    final S3AFileStatus fileStatus;
     long lastUpdated = 0;
     if (isDir) {
       isAuthoritativeDir = !IGNORED_FIELDS.contains(IS_AUTHORITATIVE)
@@ -146,8 +149,10 @@ final class PathMetadataDynamoDBTranslation {
       long len = item.hasAttribute(FILE_LENGTH) ? item.getLong(FILE_LENGTH) : 0;
       long modTime = item.hasAttribute(MOD_TIME) ? item.getLong(MOD_TIME) : 0;
       long block = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
-      fileStatus = new FileStatus(len, false, 1, block, modTime, 0, null,
-          username, username, path);
+      String eTag = item.getString(ETAG);
+      String versionId = item.getString(VERSION_ID);
+      fileStatus = new S3AFileStatus(
+          len, modTime, path, block, username, eTag, versionId);
     }
     lastUpdated =
         !IGNORED_FIELDS.contains(LAST_UPDATED)
@@ -172,7 +177,7 @@ final class PathMetadataDynamoDBTranslation {
    */
   static Item pathMetadataToItem(DDBPathMetadata meta) {
     Preconditions.checkNotNull(meta);
-    final FileStatus status = meta.getFileStatus();
+    final S3AFileStatus status = meta.getFileStatus();
     final Item item = new Item().withPrimaryKey(pathToKey(status.getPath()));
     if (status.isDirectory()) {
       item.withBoolean(IS_DIR, true);
@@ -183,6 +188,12 @@ final class PathMetadataDynamoDBTranslation {
       item.withLong(FILE_LENGTH, status.getLen())
           .withLong(MOD_TIME, status.getModificationTime())
           .withLong(BLOCK_SIZE, status.getBlockSize());
+      if (status.getETag() != null) {
+        item.withString(ETAG, status.getETag());
+      }
+      if (status.getVersionId() != null) {
+        item.withString(VERSION_ID, status.getVersionId());
+      }
     }
     item.withBoolean(IS_DELETED, meta.isDeleted());
 
@@ -279,13 +290,15 @@ final class PathMetadataDynamoDBTranslation {
    * @param path path to convert
    * @return string for parent key
    */
-  static String pathToParentKey(Path path) {
+  @VisibleForTesting
+  public static String pathToParentKey(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
+    Preconditions.checkArgument(path.isUriPathAbsolute(),
+        "Path not absolute: '%s'", path);
     URI uri = path.toUri();
     String bucket = uri.getHost();
     Preconditions.checkArgument(!StringUtils.isEmpty(bucket),
-        "Path missing bucket");
+        "Path missing bucket %s", path);
     String pKey = "/" + bucket + uri.getPath();
 
     // Strip trailing slash
@@ -333,10 +346,56 @@ final class PathMetadataDynamoDBTranslation {
   private PathMetadataDynamoDBTranslation() {
   }
 
+  /**
+   * Convert a collection of metadata entries to a list
+   * of DDBPathMetadata entries.
+   * If the sources are already DDBPathMetadata instances, they
+   * are copied directly into the new list, otherwise new
+   * instances are created.
+   * @param pathMetadatas source data
+   * @return the converted list.
+   */
   static List<DDBPathMetadata> pathMetaToDDBPathMeta(
-      Collection<PathMetadata> pathMetadatas) {
-    return pathMetadatas.stream().map(p -> new DDBPathMetadata(p))
+      Collection<? extends PathMetadata> pathMetadatas) {
+    return pathMetadatas.stream().map(p ->
+        (p instanceof DDBPathMetadata)
+            ? (DDBPathMetadata) p
+            : new DDBPathMetadata(p))
         .collect(Collectors.toList());
   }
 
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String itemPrimaryKeyToString(Item item) {
+    String parent = item.getString(PARENT);
+    String child = item.getString(CHILD);
+    return "s3a://" + parent + "/" + child;
+  }
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String primaryKeyToString(PrimaryKey item) {
+    Collection<KeyAttribute> c = item.getComponents();
+    String parent = "";
+    String child = "";
+    for (KeyAttribute attr : c) {
+      switch (attr.getName()) {
+      case PARENT:
+        parent = attr.getValue().toString();
+        break;
+      case CHILD:
+        child = attr.getValue().toString();
+        break;
+      default:
+      }
+    }
+    return "s3a://" + parent + "/" + child;
+  }
 }

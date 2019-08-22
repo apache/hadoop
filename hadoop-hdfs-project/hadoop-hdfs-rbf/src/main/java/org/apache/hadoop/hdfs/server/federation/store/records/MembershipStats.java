@@ -81,6 +81,10 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract int getNumOfDeadDatanodes();
 
+  public abstract void setNumOfStaleDatanodes(int nodes);
+
+  public abstract int getNumOfStaleDatanodes();
+
   public abstract void setNumOfDecommissioningDatanodes(int nodes);
 
   public abstract int getNumOfDecommissioningDatanodes();
@@ -92,6 +96,18 @@ public abstract class MembershipStats extends BaseRecord {
   public abstract void setNumOfDecomDeadDatanodes(int nodes);
 
   public abstract int getNumOfDecomDeadDatanodes();
+
+  public abstract void setNumOfInMaintenanceLiveDataNodes(int nodes);
+
+  public abstract int getNumOfInMaintenanceLiveDataNodes();
+
+  public abstract void setNumOfInMaintenanceDeadDataNodes(int nodes);
+
+  public abstract int getNumOfInMaintenanceDeadDataNodes();
+
+  public abstract void setNumOfEnteringMaintenanceDataNodes(int nodes);
+
+  public abstract int getNumOfEnteringMaintenanceDataNodes();
 
   @Override
   public SortedMap<String, String> getPrimaryKeys() {

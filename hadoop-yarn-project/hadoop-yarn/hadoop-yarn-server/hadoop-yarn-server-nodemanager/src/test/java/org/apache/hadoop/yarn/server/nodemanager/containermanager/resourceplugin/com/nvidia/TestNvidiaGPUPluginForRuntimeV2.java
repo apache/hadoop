@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -265,7 +266,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     reset(spyPlugin);
     Set<Device> allocation = spyPlugin.allocateDevices(copyAvailableDevices,
         1, env);
-    Assert.assertEquals(allocation.size(), 1);
+    assertThat(allocation).hasSize(1);
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
     Assert.assertFalse(spyPlugin.isTopoInitialized());
 
@@ -273,7 +274,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     reset(spyPlugin);
     allocation = spyPlugin.allocateDevices(allDevices, 1, env);
     // ensure no topology scheduling needed
-    Assert.assertEquals(allocation.size(), 1);
+    assertThat(allocation).hasSize(1);
     verify(spyPlugin).basicSchedule(anySet(), anyInt(), anySet());
     reset(spyPlugin);
     // Case 2. allocate all available
@@ -285,13 +286,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     int count = 2;
     Map<String, Integer> pairToWeight = spyPlugin.getDevicePairToWeight();
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     Device[] allocatedDevices =
         allocation.toArray(new Device[count]);
     // Check weights
@@ -302,13 +303,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     reset(spyPlugin);
     count = 3;
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
@@ -327,13 +328,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     iterator.remove();
     count = 2;
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
@@ -377,13 +378,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     int count = 2;
     Map<String, Integer> pairToWeight = spyPlugin.getDevicePairToWeight();
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     Device[] allocatedDevices =
         allocation.toArray(new Device[count]);
     // Check weights
@@ -394,13 +395,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     reset(spyPlugin);
     count = 3;
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
@@ -419,13 +420,13 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     iterator.remove();
     count = 2;
     allocation = spyPlugin.allocateDevices(allDevices, count, env);
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     // the costTable should be init and used topology scheduling
     verify(spyPlugin, times(0)).initCostTable();
     Assert.assertTrue(spyPlugin.isTopoInitialized());
     verify(spyPlugin).topologyAwareSchedule(anySet(), anyInt(), anyMap(),
         anySet(), anyMap());
-    Assert.assertEquals(allocation.size(), count);
+    assertThat(allocation).hasSize(count);
     allocatedDevices =
         allocation.toArray(new Device[count]);
     // check weights
@@ -574,7 +575,7 @@ public class TestNvidiaGPUPluginForRuntimeV2 {
     report.readFromFile();
     ArrayList<ActualPerformanceReport.DataRecord> dataSet =
         report.getDataSet();
-    Assert.assertEquals(dataSet.size(), 2952);
+    assertThat(dataSet).hasSize(2952);
     String[] allModels = {"alexnet", "resnet50", "vgg16", "inception3"};
     int[] batchSizes = {32, 64, 128};
     int[] gpuCounts = {2, 3, 4, 5, 6, 7};

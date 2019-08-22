@@ -74,7 +74,7 @@ public final class ScmConfigKeys {
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY =
       "dfs.container.ratis.segment.size";
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT =
-      "16KB";
+      "1MB";
   public static final String DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY =
       "dfs.container.ratis.segment.preallocated.size";
   public static final String
@@ -90,6 +90,14 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.statemachinedata.sync.retries";
   public static final int
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT = -1;
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS =
+      "dfs.container.ratis.statemachine.max.pending.apply-transactions";
+  // The default value of maximum number of pending state machine apply
+  // transactions is kept same as default snapshot threshold.
+  public static final int
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT =
+      100000;
   public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS =
       "dfs.container.ratis.log.queue.num-elements";
   public static final int DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS_DEFAULT =
@@ -107,6 +115,11 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.log.appender.queue.byte-limit";
   public static final String
       DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+  public static final String DFS_CONTAINER_RATIS_LOG_PURGE_GAP =
+      "dfs.container.ratis.log.purge.gap";
+  // TODO: Set to 1024 once RATIS issue around purge is fixed.
+  public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
+      1000000;
   // expiry interval stateMachineData cache entry inside containerStateMachine
   public static final String
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
@@ -121,12 +134,12 @@ public final class ScmConfigKeys {
       TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
   public static final String DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY =
       "dfs.ratis.client.request.max.retries";
-  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT = 20;
+  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT = 180;
   public static final String DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY =
       "dfs.ratis.client.request.retry.interval";
   public static final TimeDuration
       DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT =
-      TimeDuration.valueOf(500, TimeUnit.MILLISECONDS);
+      TimeDuration.valueOf(1000, TimeUnit.MILLISECONDS);
   public static final String DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY =
       "dfs.ratis.server.retry-cache.timeout.duration";
   public static final TimeDuration
@@ -142,11 +155,11 @@ public final class ScmConfigKeys {
       "dfs.ratis.leader.election.minimum.timeout.duration";
   public static final TimeDuration
       DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
-      TimeDuration.valueOf(1, TimeUnit.SECONDS);
+      TimeDuration.valueOf(5, TimeUnit.SECONDS);
 
   public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
       "dfs.ratis.snapshot.threshold";
-  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 10000;
+  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 100000;
 
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       "dfs.ratis.server.failure.duration";
@@ -260,7 +273,7 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_STALENODE_INTERVAL =
       "ozone.scm.stale.node.interval";
   public static final String OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
-      "90s";
+      "5m";
 
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
@@ -296,11 +309,10 @@ public final class ScmConfigKeys {
 
   public static final int OZONE_SCM_DEFAULT_PORT =
       OZONE_SCM_DATANODE_PORT_DEFAULT;
-  // File Name and path where datanode ID is to written to.
+  // The path where datanode ID is to be written to.
   // if this value is not set then container startup will fail.
-  public static final String OZONE_SCM_DATANODE_ID = "ozone.scm.datanode.id";
-
-  public static final String OZONE_SCM_DATANODE_ID_PATH_DEFAULT = "datanode.id";
+  public static final String OZONE_SCM_DATANODE_ID_DIR =
+      "ozone.scm.datanode.id.dir";
 
   public static final String OZONE_SCM_DB_CACHE_SIZE_MB =
       "ozone.scm.db.cache.size.mb";
@@ -331,7 +343,7 @@ public final class ScmConfigKeys {
       "ozone.scm.pipeline.destroy.timeout";
 
   public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT =
-      "300s";
+      "66s";
 
   public static final String OZONE_SCM_PIPELINE_CREATION_INTERVAL =
       "ozone.scm.pipeline.creation.interval";
@@ -348,18 +360,6 @@ public final class ScmConfigKeys {
   public static final String HDDS_SCM_WATCHER_TIMEOUT_DEFAULT =
       "10m";
 
-  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL =
-      "hdds.scm.replication.thread.interval";
-
-  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL_DEFAULT =
-      "5m";
-
-  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT =
-      "hdds.scm.replication.event.timeout";
-
-  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT_DEFAULT =
-      "10m";
-
   public static final String
       HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY =
       "hdds.scm.http.kerberos.principal";
@@ -372,6 +372,10 @@ public final class ScmConfigKeys {
       "ozone.scm.network.topology.schema.file";
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =
       "network-topology-default.xml";
+
+  public static final String HDDS_TRACING_ENABLED = "hdds.tracing.enabled";
+  public static final boolean HDDS_TRACING_ENABLED_DEFAULT = true;
+
   /**
    * Never constructed.
    */

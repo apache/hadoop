@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingP
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +100,7 @@ import static org.junit.Assert.assertTrue;
     int deletedBlocks = 1;
     int normalBlocks = 3;
     int chunksPerBlock = 4;
-    KeyValueContainerCheck.KvCheckError error;
+    boolean valid = false;
 
     // test Closed Container
     createContainerWithBlocks(containerID, normalBlocks, deletedBlocks, 65536,
@@ -114,14 +114,14 @@ import static org.junit.Assert.assertTrue;
             containerID);
 
     // first run checks on a Open Container
-    error = kvCheck.fastCheck();
-    assertTrue(error == KeyValueContainerCheck.KvCheckError.ERROR_NONE);
+    valid = kvCheck.fastCheck();
+    assertTrue(valid);
 
     container.close();
 
     // next run checks on a Closed Container
-    error = kvCheck.fullCheck();
-    assertTrue(error == KeyValueContainerCheck.KvCheckError.ERROR_NONE);
+    valid = kvCheck.fullCheck();
+    assertTrue(valid);
   }
 
   /**
@@ -148,48 +148,50 @@ import static org.junit.Assert.assertTrue;
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
         UUID.randomUUID().toString());
-    MetadataStore metadataStore = BlockUtils.getDB(containerData, conf);
-    chunkManager = new ChunkManagerImpl(true);
+    try (ReferenceCountedDB metadataStore = BlockUtils.getDB(containerData,
+        conf)) {
+      chunkManager = new ChunkManagerImpl(true);
 
-    assertTrue(containerData.getChunksPath() != null);
-    File chunksPath = new File(containerData.getChunksPath());
-    assertTrue(chunksPath.exists());
-    // Initially chunks folder should be empty.
-    assertTrue(chunksPath.listFiles().length == 0);
+      assertTrue(containerData.getChunksPath() != null);
+      File chunksPath = new File(containerData.getChunksPath());
+      assertTrue(chunksPath.exists());
+      // Initially chunks folder should be empty.
+      assertTrue(chunksPath.listFiles().length == 0);
 
-    List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
-    for (int i = 0; i < (totalBlks); i++) {
-      BlockID blockID = new BlockID(containerId, i);
-      BlockData blockData = new BlockData(blockID);
+      List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
+      for (int i = 0; i < (totalBlks); i++) {
+        BlockID blockID = new BlockID(containerId, i);
+        BlockData blockData = new BlockData(blockID);
 
-      chunkList.clear();
-      for (chunkCount = 0; chunkCount < chunksPerBlock; chunkCount++) {
-        String chunkName = strBlock + i + strChunk + chunkCount;
-        long offset = chunkCount * chunkLen;
-        ChunkInfo info = new ChunkInfo(chunkName, offset, chunkLen);
-        chunkList.add(info.getProtoBufMessage());
-        chunkManager
-            .writeChunk(container, blockID, info, ByteBuffer.wrap(chunkData),
-                new DispatcherContext.Builder()
-                    .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
-                    .build());
-        chunkManager
-            .writeChunk(container, blockID, info, ByteBuffer.wrap(chunkData),
-                new DispatcherContext.Builder()
-                    .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA)
-                    .build());
-      }
-      blockData.setChunks(chunkList);
+        chunkList.clear();
+        for (chunkCount = 0; chunkCount < chunksPerBlock; chunkCount++) {
+          String chunkName = strBlock + i + strChunk + chunkCount;
+          long offset = chunkCount * chunkLen;
+          ChunkInfo info = new ChunkInfo(chunkName, offset, chunkLen);
+          chunkList.add(info.getProtoBufMessage());
+          chunkManager
+              .writeChunk(container, blockID, info, ByteBuffer.wrap(chunkData),
+                  new DispatcherContext.Builder()
+                      .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
+                      .build());
+          chunkManager
+              .writeChunk(container, blockID, info, ByteBuffer.wrap(chunkData),
+                  new DispatcherContext.Builder()
+                      .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA)
+                      .build());
+        }
+        blockData.setChunks(chunkList);
 
-      if (i >= normalBlocks) {
-        // deleted key
-        metadataStore.put(DFSUtil.string2Bytes(
-            OzoneConsts.DELETING_KEY_PREFIX + blockID.getLocalID()),
-            blockData.getProtoBufMessage().toByteArray());
-      } else {
-        // normal key
-        metadataStore.put(Longs.toByteArray(blockID.getLocalID()),
-            blockData.getProtoBufMessage().toByteArray());
+        if (i >= normalBlocks) {
+          // deleted key
+          metadataStore.getStore().put(DFSUtil.string2Bytes(
+              OzoneConsts.DELETING_KEY_PREFIX + blockID.getLocalID()),
+              blockData.getProtoBufMessage().toByteArray());
+        } else {
+          // normal key
+          metadataStore.getStore().put(Longs.toByteArray(blockID.getLocalID()),
+              blockData.getProtoBufMessage().toByteArray());
+        }
       }
     }
   }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -140,9 +140,9 @@ public class TestApplicationPriority {
 
     // Now, the first assignment will be for app2 since app2 is of highest
     // priority
-    assertEquals(q.getApplications().size(), 2);
-    assertEquals(q.getApplications().iterator().next()
-        .getApplicationAttemptId(), appAttemptId2);
+    assertThat(q.getApplications()).hasSize(2);
+    assertThat(q.getApplications().iterator().next().getApplicationAttemptId())
+        .isEqualTo(appAttemptId2);
 
     rm.stop();
   }

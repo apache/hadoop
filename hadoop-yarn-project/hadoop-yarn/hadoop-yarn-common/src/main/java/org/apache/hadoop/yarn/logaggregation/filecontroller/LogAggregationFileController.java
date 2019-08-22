@@ -31,9 +31,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -132,6 +134,10 @@ public abstract class LogAggregationFileController {
       this.retentionSize = configuredRetentionSize;
     }
     this.fileControllerName = controllerName;
+
+    extractRemoteRootLogDir();
+    extractRemoteRootLogDirSuffix();
+
     initInternal(conf);
   }
 
@@ -249,6 +255,45 @@ public abstract class LogAggregationFileController {
       Path aggregatedLogPath, ApplicationId appId) throws IOException;
 
   /**
+   * Sets the remoteRootLogDirSuffix class variable extracting
+   * {@link YarnConfiguration#LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT}
+   * from the configuration, or
+   * {@link YarnConfiguration#NM_REMOTE_APP_LOG_DIR_SUFFIX} appended by the
+   * FileController's name, if the former is not set.
+   */
+  private void extractRemoteRootLogDirSuffix() {
+    String suffix = String.format(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+        fileControllerName);
+    remoteRootLogDirSuffix = conf.get(suffix);
+    if (remoteRootLogDirSuffix == null
+            || remoteRootLogDirSuffix.isEmpty()) {
+      remoteRootLogDirSuffix = conf.get(
+          YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)
+          + "-" + fileControllerName.toLowerCase();
+    }
+  }
+
+  /**
+   * Sets the remoteRootLogDir class variable extracting
+   * {@link YarnConfiguration#LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT}
+   * from the configuration or {@link YarnConfiguration#NM_REMOTE_APP_LOG_DIR},
+   * if the former is not set.
+   */
+  private void extractRemoteRootLogDir() {
+    String remoteDirStr = String.format(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+        fileControllerName);
+    String remoteDir = conf.get(remoteDirStr);
+    if (remoteDir == null || remoteDir.isEmpty()) {
+      remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
+    }
+    remoteRootLogDir = new Path(remoteDir);
+  }
+
+  /**
    * Verify and create the remote log directory.
    */
   public void verifyAndCreateRemoteLogDir() {
@@ -361,32 +406,25 @@ public abstract class LogAggregationFileController {
             // unnecessary load on the filesystem from all of the nodes
             Path appDir = LogAggregationUtils.getRemoteAppLogDir(
                 remoteRootLogDir, appId, user, remoteRootLogDirSuffix);
-
-            appDir = appDir.makeQualified(remoteFS.getUri(),
+            Path curDir = appDir.makeQualified(remoteFS.getUri(),
+                remoteFS.getWorkingDirectory());
+            Path rootLogDir = remoteRootLogDir.makeQualified(remoteFS.getUri(),
                 remoteFS.getWorkingDirectory());
 
-            if (!checkExists(remoteFS, appDir, APP_DIR_PERMISSIONS)) {
-              Path suffixDir = LogAggregationUtils.getRemoteLogSuffixedDir(
-                  remoteRootLogDir, user, remoteRootLogDirSuffix);
-              suffixDir = suffixDir.makeQualified(remoteFS.getUri(),
-                  remoteFS.getWorkingDirectory());
+            LinkedList<Path> pathsToCreate = new LinkedList<>();
 
-              if (!checkExists(remoteFS, suffixDir, APP_DIR_PERMISSIONS)) {
-                Path userDir = LogAggregationUtils.getRemoteLogUserDir(
-                    remoteRootLogDir, user);
-                userDir = userDir.makeQualified(remoteFS.getUri(),
-                    remoteFS.getWorkingDirectory());
-
-                if (!checkExists(remoteFS, userDir, APP_DIR_PERMISSIONS)) {
-                  createDir(remoteFS, userDir, APP_DIR_PERMISSIONS);
-                }
-
-                createDir(remoteFS, suffixDir, APP_DIR_PERMISSIONS);
+            while (!curDir.equals(rootLogDir)) {
+              if (!checkExists(remoteFS, curDir, APP_DIR_PERMISSIONS)) {
+                pathsToCreate.addFirst(curDir);
+                curDir = curDir.getParent();
+              } else {
+                break;
               }
-
-              createDir(remoteFS, appDir, APP_DIR_PERMISSIONS);
             }
 
+            for (Path path : pathsToCreate) {
+              createDir(remoteFS, path, APP_DIR_PERMISSIONS);
+            }
           } catch (IOException e) {
             LOG.error("Failed to setup application log directory for "
                 + appId, e);
@@ -411,7 +449,6 @@ public abstract class LogAggregationFileController {
 
   protected void createDir(FileSystem fs, Path path, FsPermission fsPerm)
       throws IOException {
-
     if (fsSupportsChmod) {
       FsPermission dirPerm = new FsPermission(fsPerm);
       fs.mkdirs(path, dirPerm);
@@ -464,6 +501,19 @@ public abstract class LogAggregationFileController {
   public Path getRemoteAppLogDir(ApplicationId appId, String appOwner)
       throws IOException {
     return LogAggregationUtils.getRemoteAppLogDir(conf, appId, appOwner,
+        this.remoteRootLogDir, this.remoteRootLogDirSuffix);
+  }
+
+  /**
+   * Get the older remote application directory for log aggregation.
+   * @param appId the Application ID
+   * @param appOwner the Application Owner
+   * @return the older remote application directory
+   * @throws IOException if can not find the remote application directory
+   */
+  public Path getOlderRemoteAppLogDir(ApplicationId appId, String appOwner)
+      throws IOException {
+    return LogAggregationUtils.getOlderRemoteAppLogDir(conf, appId, appOwner,
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 

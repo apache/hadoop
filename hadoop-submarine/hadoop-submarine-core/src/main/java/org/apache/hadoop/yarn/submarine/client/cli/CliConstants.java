@@ -18,6 +18,7 @@ package org.apache.hadoop.yarn.submarine.client.cli;
  * NOTE: use lowercase + "_" for the option name
  */
 public class CliConstants {
+  public static final String KILL = "kill";
   public static final String RUN = "run";
   public static final String SERVE = "serve";
   public static final String LIST = "list";
@@ -38,6 +39,7 @@ public class CliConstants {
   public static final String TENSORBOARD_RESOURCES = "tensorboard_resources";
   public static final String TENSORBOARD_DEFAULT_RESOURCES =
       "memory=4G,vcores=1";
+  public static final String ARG_CONF = "conf";
 
   public static final String WORKER_LAUNCH_CMD = "worker_launch_cmd";
   public static final String SERVING_LAUNCH_CMD = "serving_launch_cmd";
@@ -56,4 +58,8 @@ public class CliConstants {
   public static final String KEYTAB = "keytab";
   public static final String PRINCIPAL = "principal";
   public static final String DISTRIBUTE_KEYTAB = "distribute_keytab";
+  public static final String YAML_CONFIG = "f";
+  public static final String INSECURE_CLUSTER = "insecure";
+
+  public static final String FRAMEWORK = "framework";
 }

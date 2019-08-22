@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -68,7 +69,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -105,7 +106,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -140,7 +141,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -188,7 +189,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -224,7 +225,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer = getOzoneContainer(
         conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container = createContainer(
           conf, datanodeDetails, ozoneContainer);
@@ -269,6 +270,8 @@ public class TestCloseContainerCommandHandler {
         TestCloseContainerCommandHandler.class.getName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getPath());
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testDir.getPath());
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
 
     final DatanodeStateMachine datanodeStateMachine = Mockito.mock(
         DatanodeStateMachine.class);
@@ -277,7 +280,6 @@ public class TestCloseContainerCommandHandler {
     Mockito.when(context.getParent()).thenReturn(datanodeStateMachine);
     final OzoneContainer ozoneContainer = new  OzoneContainer(
         datanodeDetails, conf, context, null);
-    ozoneContainer.getDispatcher().setScmId(UUID.randomUUID().toString());
     return ozoneContainer;
   }
 
@@ -296,7 +298,7 @@ public class TestCloseContainerCommandHandler {
             maxOutstandingRequests,
             TimeDuration.valueOf(3, TimeUnit.SECONDS));
     Assert.assertTrue(client.groupAdd(group, peer.getId()).isSuccess());
-    Thread.sleep(2000);
+    Thread.sleep(10000);
     final ContainerID containerId = ContainerID.valueof(
         random.nextLong() & Long.MAX_VALUE);
     ContainerProtos.ContainerCommandRequestProto.Builder request =
@@ -305,7 +307,6 @@ public class TestCloseContainerCommandHandler {
     request.setContainerID(containerId.getId());
     request.setCreateContainer(
         ContainerProtos.CreateContainerRequestProto.getDefaultInstance());
-    request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(datanodeDetails.getUuidString());
     ozoneContainer.getWriteChannel().submitRequest(
         request.build(), pipelineID.getProtobuf());

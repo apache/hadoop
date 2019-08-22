@@ -177,6 +177,15 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
       String userName);
 
   /**
+   * Submit an application attempt to the queue.
+   * @param application application whose attempt is being submitted
+   * @param userName user who submitted the application attempt
+   * @param isMoveApp is application being moved across the queue
+   */
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp);
+
+  /**
    * An application submitted to this queue has finished.
    * @param applicationId
    * @param user user who submitted the application

@@ -38,7 +38,7 @@ import "acl.proto";
  * Extended block idenfies a block
  */
 message ExtendedBlockProto {
-  required string poolId = 1;   // Block pool id - gloablly unique across clusters
+  required string poolId = 1;   // Block pool id - globally unique across clusters
   required uint64 blockId = 2;  // the local id within a pool
   required uint64 generationStamp = 3;
   optional uint64 numBytes = 4 [default = 0];  // len does not belong in ebid 
@@ -671,4 +671,5 @@ message BlockTokenSecretProto {
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
+  optional bytes handshakeSecret = 9;
 }

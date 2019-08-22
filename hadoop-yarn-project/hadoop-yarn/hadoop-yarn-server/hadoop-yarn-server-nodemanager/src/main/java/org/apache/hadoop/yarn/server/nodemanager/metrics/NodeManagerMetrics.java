@@ -44,6 +44,7 @@ public class NodeManagerMetrics {
   @Metric("# of initializing containers")
       MutableGaugeInt containersIniting;
   @Metric MutableGaugeInt containersRunning;
+  @Metric("# of paused containers") MutableGaugeInt containersPaused;
   @Metric("Current allocated memory in GB")
       MutableGaugeInt allocatedGB;
   @Metric("Current # of allocated containers")
@@ -168,6 +169,14 @@ public class NodeManagerMetrics {
     containersReIniting.decr();
   }
 
+  public void pausedContainer() {
+    containersPaused.incr();
+  }
+
+  public void endPausedContainer() {
+    containersPaused.decr();
+  }
+
   public void allocateContainer(Resource res) {
     allocatedContainers.incr();
     allocatedMB = allocatedMB + res.getMemorySize();
@@ -266,6 +275,10 @@ public class NodeManagerMetrics {
 
   public int getRunningContainers() {
     return containersRunning.value();
+  }
+
+  public int getPausedContainers() {
+    return containersPaused.value();
   }
 
   @VisibleForTesting

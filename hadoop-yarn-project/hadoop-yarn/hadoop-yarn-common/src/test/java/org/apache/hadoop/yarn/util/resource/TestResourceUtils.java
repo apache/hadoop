@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -29,9 +31,15 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +49,8 @@ import java.util.Map;
  * Test class to verify all resource utility methods.
  */
 public class TestResourceUtils {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestResourceUtils.class);
 
   private File nodeResourcesFile;
   private File resourceTypesFile;
@@ -50,12 +60,15 @@ public class TestResourceUtils {
     int resourceCount;
     Map<String, String> resourceNameUnitsMap;
 
-    public ResourceFileInformation(String name, int count) {
+    ResourceFileInformation(String name, int count) {
       filename = name;
       resourceCount = count;
       resourceNameUnitsMap = new HashMap<>();
     }
   }
+
+  @Rule
+  public ExpectedException expexted = ExpectedException.none();
 
   @Before
   public void setup() {
@@ -64,12 +77,58 @@ public class TestResourceUtils {
 
   @After
   public void teardown() {
-    if(nodeResourcesFile != null && nodeResourcesFile.exists()) {
+    if (nodeResourcesFile != null && nodeResourcesFile.exists()) {
       nodeResourcesFile.delete();
     }
-    if(resourceTypesFile != null && resourceTypesFile.exists()) {
+    if (resourceTypesFile != null && resourceTypesFile.exists()) {
       resourceTypesFile.delete();
     }
+  }
+
+  public static String setupResourceTypes(Configuration conf, String filename)
+      throws Exception {
+    File source = new File(
+        conf.getClassLoader().getResource(filename).getFile());
+    File dest = new File(source.getParent(), "resource-types.xml");
+    FileUtils.copyFile(source, dest);
+    try {
+      ResourceUtils.getResourceTypes();
+    } catch (Exception e) {
+      if (!dest.delete()) {
+        LOG.error("Could not delete {}", dest);
+      }
+      throw e;
+    }
+    return dest.getAbsolutePath();
+  }
+
+  private Map<String, ResourceInformation> setupResourceTypesInternal(
+      Configuration conf, String srcFileName) throws IOException {
+    URL srcFileUrl = conf.getClassLoader().getResource(srcFileName);
+    if (srcFileUrl == null) {
+      throw new IllegalArgumentException(
+          "Source file does not exist: " + srcFileName);
+    }
+    File source = new File(srcFileUrl.getFile());
+    File dest = new File(source.getParent(), "resource-types.xml");
+    FileUtils.copyFile(source, dest);
+    this.resourceTypesFile = dest;
+    return ResourceUtils.getResourceTypes();
+  }
+
+  private Map<String, ResourceInformation> setupNodeResources(
+      Configuration conf, String srcFileName) throws IOException {
+    URL srcFileUrl = conf.getClassLoader().getResource(srcFileName);
+    if (srcFileUrl == null) {
+      throw new IllegalArgumentException(
+          "Source file does not exist: " + srcFileName);
+    }
+    File source = new File(srcFileUrl.getFile());
+    File dest = new File(source.getParent(), "node-resources.xml");
+    FileUtils.copyFile(source, dest);
+    this.nodeResourcesFile = dest;
+    return ResourceUtils
+        .getNodeResourceInformation(conf);
   }
 
   private void testMemoryAndVcores(Map<String, ResourceInformation> res) {
@@ -90,8 +149,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  public void testGetResourceTypes() throws Exception {
-
+  public void testGetResourceTypes() {
     Map<String, ResourceInformation> res = ResourceUtils.getResourceTypes();
     Assert.assertEquals(2, res.size());
     testMemoryAndVcores(res);
@@ -99,7 +157,6 @@ public class TestResourceUtils {
 
   @Test
   public void testGetResourceTypesConfigs() throws Exception {
-
     Configuration conf = new YarnConfiguration();
 
     ResourceFileInformation testFile1 =
@@ -121,16 +178,11 @@ public class TestResourceUtils {
     Map<String, ResourceInformation> res;
     for (ResourceFileInformation testInformation : tests) {
       ResourceUtils.resetResourceTypes();
-      File source = new File(
-          conf.getClassLoader().getResource(testInformation.filename)
-              .getFile());
-      resourceTypesFile = new File(source.getParent(), "resource-types.xml");
-      FileUtils.copyFile(source, resourceTypesFile);
-      res = ResourceUtils.getResourceTypes();
+      res = setupResourceTypesInternal(conf, testInformation.filename);
       testMemoryAndVcores(res);
       Assert.assertEquals(testInformation.resourceCount, res.size());
-      for (Map.Entry<String, String> entry : testInformation.resourceNameUnitsMap
-          .entrySet()) {
+      for (Map.Entry<String, String> entry :
+          testInformation.resourceNameUnitsMap.entrySet()) {
         String resourceName = entry.getKey();
         Assert.assertTrue("Missing key " + resourceName,
             res.containsKey(resourceName));
@@ -140,7 +192,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  public void testGetResourceTypesConfigErrors() throws Exception {
+  public void testGetResourceTypesConfigErrors() throws IOException {
     Configuration conf = new YarnConfiguration();
 
     String[] resourceFiles = {"resource-types-error-1.xml",
@@ -149,22 +201,16 @@ public class TestResourceUtils {
     for (String resourceFile : resourceFiles) {
       ResourceUtils.resetResourceTypes();
       try {
-        File source =
-            new File(conf.getClassLoader().getResource(resourceFile).getFile());
-        resourceTypesFile = new File(source.getParent(), "resource-types.xml");
-        FileUtils.copyFile(source, resourceTypesFile);
-        ResourceUtils.getResourceTypes();
+        setupResourceTypesInternal(conf, resourceFile);
         Assert.fail("Expected error with file " + resourceFile);
-      } catch (NullPointerException ne) {
-        throw ne;
-      } catch (Exception e) {
+      } catch (YarnRuntimeException | IllegalArgumentException e) {
         //Test passed
       }
     }
   }
 
   @Test
-  public void testInitializeResourcesMap() throws Exception {
+  public void testInitializeResourcesMap() {
     String[] empty = {"", ""};
     String[] res1 = {"resource1", "m"};
     String[] res2 = {"resource2", "G"};
@@ -225,8 +271,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  public void testInitializeResourcesMapErrors() throws Exception {
-
+  public void testInitializeResourcesMapErrors() {
     String[] mem1 = {"memory-mb", ""};
     String[] vcores1 = {"vcores", "M"};
 
@@ -266,11 +311,9 @@ public class TestResourceUtils {
 
   @Test
   public void testGetResourceInformation() throws Exception {
-
     Configuration conf = new YarnConfiguration();
     Map<String, Resource> testRun = new HashMap<>();
-    setupResourceTypes(conf, "resource-types-4.xml");
-    // testRun.put("node-resources-1.xml", Resource.newInstance(1024, 1));
+    setupResourceTypesInternal(conf, "resource-types-4.xml");
     Resource test3Resources = Resource.newInstance(0, 0);
     test3Resources.setResourceInformation("resource1",
         ResourceInformation.newInstance("resource1", "Gi", 5L));
@@ -283,12 +326,8 @@ public class TestResourceUtils {
     for (Map.Entry<String, Resource> entry : testRun.entrySet()) {
       String resourceFile = entry.getKey();
       ResourceUtils.resetNodeResources();
-      File source = new File(
-          conf.getClassLoader().getResource(resourceFile).getFile());
-      nodeResourcesFile = new File(source.getParent(), "node-resources.xml");
-      FileUtils.copyFile(source, nodeResourcesFile);
-      Map<String, ResourceInformation> actual = ResourceUtils
-          .getNodeResourceInformation(conf);
+      Map<String, ResourceInformation> actual = setupNodeResources(conf,
+          resourceFile);
       Assert.assertEquals(actual.size(),
           entry.getValue().getResources().length);
       for (ResourceInformation resInfo : entry.getValue().getResources()) {
@@ -300,28 +339,40 @@ public class TestResourceUtils {
   @Test
   public void testGetNodeResourcesConfigErrors() throws Exception {
     Configuration conf = new YarnConfiguration();
-    Map<String, Resource> testRun = new HashMap<>();
-    setupResourceTypes(conf, "resource-types-4.xml");
-    String invalidNodeResFiles[] = { "node-resources-error-1.xml"};
+    setupResourceTypesInternal(conf, "resource-types-4.xml");
+    String[] invalidNodeResFiles = {"node-resources-error-1.xml"};
 
     for (String resourceFile : invalidNodeResFiles) {
       ResourceUtils.resetNodeResources();
       try {
-        File source = new File(conf.getClassLoader().getResource(resourceFile).getFile());
-        nodeResourcesFile = new File(source.getParent(), "node-resources.xml");
-        FileUtils.copyFile(source, nodeResourcesFile);
-        Map<String, ResourceInformation> actual = ResourceUtils.getNodeResourceInformation(conf);
+        setupNodeResources(conf, resourceFile);
         Assert.fail("Expected error with file " + resourceFile);
-      } catch (NullPointerException ne) {
-        throw ne;
-      } catch (Exception e) {
+      } catch (YarnRuntimeException e) {
         //Test passed
       }
     }
   }
 
   @Test
-  public void testResourceNameFormatValidation() throws Exception {
+  public void testGetNodeResourcesRedefineFpgaErrors() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    expexted.expect(YarnRuntimeException.class);
+    expexted.expectMessage("Defined mandatory resource type=yarn.io/fpga");
+    setupResourceTypesInternal(conf,
+        "resource-types-error-redefine-fpga-unit.xml");
+  }
+
+  @Test
+  public void testGetNodeResourcesRedefineGpuErrors() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    expexted.expect(YarnRuntimeException.class);
+    expexted.expectMessage("Defined mandatory resource type=yarn.io/gpu");
+    setupResourceTypesInternal(conf,
+        "resource-types-error-redefine-gpu-unit.xml");
+  }
+
+  @Test
+  public void testResourceNameFormatValidation() {
     String[] validNames = new String[] {
         "yarn.io/gpu",
         "gpu",
@@ -358,10 +409,9 @@ public class TestResourceUtils {
 
   @Test
   public void testGetResourceInformationWithDiffUnits() throws Exception {
-
     Configuration conf = new YarnConfiguration();
     Map<String, Resource> testRun = new HashMap<>();
-    setupResourceTypes(conf, "resource-types-4.xml");
+    setupResourceTypesInternal(conf, "resource-types-4.xml");
     Resource test3Resources = Resource.newInstance(0, 0);
 
     //Resource 'resource1' has been passed as 5T
@@ -380,12 +430,8 @@ public class TestResourceUtils {
     for (Map.Entry<String, Resource> entry : testRun.entrySet()) {
       String resourceFile = entry.getKey();
       ResourceUtils.resetNodeResources();
-      File source = new File(
-          conf.getClassLoader().getResource(resourceFile).getFile());
-      nodeResourcesFile = new File(source.getParent(), "node-resources.xml");
-      FileUtils.copyFile(source, nodeResourcesFile);
-      Map<String, ResourceInformation> actual = ResourceUtils
-          .getNodeResourceInformation(conf);
+      Map<String, ResourceInformation> actual = setupNodeResources(conf,
+          resourceFile);
       Assert.assertEquals(actual.size(),
           entry.getValue().getResources().length);
       for (ResourceInformation resInfo : entry.getValue().getResources()) {
@@ -458,18 +504,6 @@ public class TestResourceUtils {
             "memory=2G,vcores=3,yarn.io/gpu=3", resTypes);
     Assert.assertEquals(2 * 1024, res.getMemorySize());
     Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    // TODO, add more negative tests.
-  }
-
-  public static String setupResourceTypes(Configuration conf, String filename)
-      throws Exception {
-    File source = new File(
-        conf.getClassLoader().getResource(filename).getFile());
-    File dest = new File(source.getParent(), "resource-types.xml");
-    FileUtils.copyFile(source, dest);
-    ResourceUtils.getResourceTypes();
-    return dest.getAbsolutePath();
   }
 
   @Test
@@ -501,27 +535,25 @@ public class TestResourceUtils {
         ResourceInformation.newInstance("yarn.io/test-volume", "", 3));
 
     Resource addedResource = Resources.add(resourceA, resourceB);
-    Assert.assertEquals(addedResource.getMemorySize(), 5);
-    Assert.assertEquals(addedResource.getVirtualCores(), 10);
-    Assert.assertEquals(
-        addedResource.getResourceInformation("resource1").getValue(), 8);
+    assertThat(addedResource.getMemorySize()).isEqualTo(5);
+    assertThat(addedResource.getVirtualCores()).isEqualTo(10);
+    assertThat(addedResource.getResourceInformation("resource1").getValue()).
+        isEqualTo(8);
 
     // Verify that value of resourceA and resourceB is not added up for
     // "yarn.io/test-volume".
-    Assert.assertEquals(
-        addedResource.getResourceInformation("yarn.io/test-volume").getValue(),
-        2);
+    assertThat(addedResource.getResourceInformation("yarn.io/test-volume").
+        getValue()).isEqualTo(2);
 
     Resource mulResource = Resources.multiplyAndRoundDown(resourceA, 3);
-    Assert.assertEquals(mulResource.getMemorySize(), 6);
-    Assert.assertEquals(mulResource.getVirtualCores(), 12);
-    Assert.assertEquals(
-        mulResource.getResourceInformation("resource1").getValue(), 15);
+    assertThat(mulResource.getMemorySize()).isEqualTo(6);
+    assertThat(mulResource.getVirtualCores()).isEqualTo(12);
+    assertThat(mulResource.getResourceInformation("resource1").getValue()).
+        isEqualTo(15);
 
     // Verify that value of resourceA is not multiplied up for
     // "yarn.io/test-volume".
-    Assert.assertEquals(
-        mulResource.getResourceInformation("yarn.io/test-volume").getValue(),
-        2);
+    assertThat(mulResource.getResourceInformation("yarn.io/test-volume").
+        getValue()).isEqualTo(2);
   }
 }

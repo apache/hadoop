@@ -158,6 +158,10 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
   String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
 
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX =
+      "fs.s3a.s3guard.test.dynamo.table.prefix";
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT = "s3guard.test.";
+
   /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
@@ -193,4 +197,14 @@ public interface S3ATestConstants {
   Duration TEST_SESSION_TOKEN_DURATION = Duration.ofSeconds(
       TEST_SESSION_TOKEN_DURATION_SECONDS);
 
+  /**
+   * Test table name to use during DynamoDB integration tests in
+   * {@code ITestDynamoDBMetadataStore}.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
 }

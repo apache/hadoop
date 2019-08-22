@@ -39,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * Handler for close container command received from SCM.
@@ -138,7 +137,6 @@ public class CloseContainerCommandHandler implements CommandHandler {
     command.setContainerID(containerId);
     command.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-    command.setTraceID(UUID.randomUUID().toString());
     command.setDatanodeUuid(datanodeDetails.getUuidString());
     return command.build();
   }

@@ -55,4 +55,20 @@ public interface DBCheckpoint {
    */
   void cleanupCheckpoint() throws IOException;
 
+  /**
+   * Set the OM Ratis snapshot index corresponding to the OM DB checkpoint.
+   * The snapshot index is the latest snapshot index saved by ratis
+   * snapshots. It is not guaranteed to be the last ratis index applied to
+   * the OM DB state.
+   * @param omRatisSnapshotIndex the saved ratis snapshot index
+   */
+  void setRatisSnapshotIndex(long omRatisSnapshotIndex);
+
+  /**
+   * Get the OM Ratis snapshot index corresponding to the OM DB checkpoint.
+   * The ratis snapshot index indicates upto which index is definitely
+   * included in the DB checkpoint. It is not guaranteed to be the last ratis
+   * log index applied to the DB checkpoint.
+   */
+  long getRatisSnapshotIndex();
 }

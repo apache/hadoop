@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -1685,26 +1686,26 @@ public class TestYarnCLI {
   public void testMissingArguments() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     int result = cli.run(new String[] { "application", "-status" });
-    Assert.assertEquals(result, -1);
+    assertThat(result).isEqualTo(-1);
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createApplicationCLIHelpMessage()), sysOutStream.toString());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "applicationattempt", "-status" });
-    Assert.assertEquals(result, -1);
+    assertThat(result).isEqualTo(-1);
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createApplicationAttemptCLIHelpMessage()), sysOutStream.toString());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "container", "-status" });
-    Assert.assertEquals(result, -1);
+    assertThat(result).isEqualTo(-1);
     Assert.assertEquals(String.format("Missing argument for options %1s",
         createContainerCLIHelpMessage()), normalize(sysOutStream.toString()));
 
     sysOutStream.reset();
     NodeCLI nodeCLI = createAndGetNodeCLI();
     result = nodeCLI.run(new String[] { "-status" });
-    Assert.assertEquals(result, -1);
+    assertThat(result).isEqualTo(-1);
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createNodeCLIHelpMessage()), sysOutStream.toString());
   }
@@ -2017,7 +2018,7 @@ public class TestYarnCLI {
         cli.run(new String[] { "application", "-appId",
             applicationId.toString(),
         "-updatePriority", "1" });
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
     verify(client).updateApplicationPriority(any(ApplicationId.class),
         any(Priority.class));
 
@@ -2026,9 +2027,8 @@ public class TestYarnCLI {
   @Test
   public void testFailApplicationAttempt() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    int exitCode =
-        cli.run(new String[] { "applicationattempt", "-fail",
-            "appattempt_1444199730803_0003_000001" });
+    int exitCode = cli.run(new String[] {"applicationattempt", "-fail",
+        "appattempt_1444199730803_0003_000001"});
     Assert.assertEquals(0, exitCode);
 
     verify(client).failApplicationAttempt(any(ApplicationAttemptId.class));
@@ -2413,7 +2413,7 @@ public class TestYarnCLI {
 
     int result = cli.run(new String[] { "application", "-appId",
         applicationId.toString(), "-updateLifetime", "10" });
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
     verify(client)
         .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class));
   }

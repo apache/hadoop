@@ -578,6 +578,12 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName) {
+    submitApplicationAttempt(application, userName, false);
+  }
+
+  @Override
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp) {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
@@ -592,7 +598,7 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     // We don't want to update metrics for move app
-    if (application.isPending()) {
+    if (!isMoveApp) {
       metrics.submitAppAttempt(userName);
     }
 
@@ -1068,8 +1074,8 @@ public class LeafQueue extends AbstractCSQueue {
         && !accessibleToPartition(candidates.getPartition())) {
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
           getParent().getQueueName(), getQueueName(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + candidates
-              .getPartition());
+          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + " "
+              + candidates.getPartition());
       return CSAssignment.NULL_ASSIGNMENT;
     }
 
@@ -1182,6 +1188,9 @@ public class LeafQueue extends AbstractCSQueue {
         application.updateNodeInfoForAMDiagnostics(node);
       } else if (assignment.getSkippedType()
           == CSAssignment.SkippedType.QUEUE_LIMIT) {
+        ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+            getParent().getQueueName(), getQueueName(), ActivityState.SKIPPED,
+            ActivityDiagnosticConstant.QUEUE_SKIPPED_HEADROOM);
         return assignment;
       } else{
         // If we don't allocate anything, and it is not skipped by application,

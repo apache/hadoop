@@ -19,21 +19,32 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class maintains Pipeline related metrics.
  */
 @InterfaceAudience.Private
 @Metrics(about = "SCM PipelineManager Metrics", context = "ozone")
-public final class SCMPipelineMetrics {
+public final class SCMPipelineMetrics implements MetricsSource {
 
   private static final String SOURCE_NAME =
       SCMPipelineMetrics.class.getSimpleName();
+
+  private MetricsRegistry registry;
 
   private @Metric MutableCounterLong numPipelineCreated;
   private @Metric MutableCounterLong numPipelineCreationFailed;
@@ -41,9 +52,13 @@ public final class SCMPipelineMetrics {
   private @Metric MutableCounterLong numPipelineDestroyFailed;
   private @Metric MutableCounterLong numPipelineReportProcessed;
   private @Metric MutableCounterLong numPipelineReportProcessingFailed;
+  private Map<PipelineID, MutableCounterLong> numBlocksAllocated;
 
   /** Private constructor. */
-  private SCMPipelineMetrics() { }
+  private SCMPipelineMetrics() {
+    this.registry = new MetricsRegistry(SOURCE_NAME);
+    numBlocksAllocated = new ConcurrentHashMap<>();
+  }
 
   /**
    * Create and returns SCMPipelineMetrics instance.
@@ -62,6 +77,43 @@ public final class SCMPipelineMetrics {
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     ms.unregisterSource(SOURCE_NAME);
+  }
+
+  @Override
+  @SuppressWarnings("SuspiciousMethodCalls")
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    MetricsRecordBuilder recordBuilder = collector.addRecord(SOURCE_NAME);
+    numPipelineCreated.snapshot(recordBuilder, true);
+    numPipelineCreationFailed.snapshot(recordBuilder, true);
+    numPipelineDestroyed.snapshot(recordBuilder, true);
+    numPipelineDestroyFailed.snapshot(recordBuilder, true);
+    numPipelineReportProcessed.snapshot(recordBuilder, true);
+    numPipelineReportProcessingFailed.snapshot(recordBuilder, true);
+    numBlocksAllocated
+        .forEach((pid, metric) -> metric.snapshot(recordBuilder, true));
+  }
+
+  void createPerPipelineMetrics(Pipeline pipeline) {
+    numBlocksAllocated.put(pipeline.getId(), new MutableCounterLong(Interns
+        .info(getBlockAllocationMetricName(pipeline),
+            "Number of blocks allocated in pipeline " + pipeline.getId()), 0L));
+  }
+
+  public static String getBlockAllocationMetricName(Pipeline pipeline) {
+    return "NumBlocksAllocated-" + pipeline.getType() + "-" + pipeline
+        .getFactor() + "-" + pipeline.getId().getId();
+  }
+
+  void removePipelineMetrics(PipelineID pipelineID) {
+    numBlocksAllocated.remove(pipelineID);
+  }
+
+  /**
+   * Increments number of blocks allocated for the pipeline.
+   */
+  void incNumBlocksAllocated(PipelineID pipelineID) {
+    Optional.of(numBlocksAllocated.get(pipelineID)).ifPresent(
+        MutableCounterLong::incr);
   }
 
   /**

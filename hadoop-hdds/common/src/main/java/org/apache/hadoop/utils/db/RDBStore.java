@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.utils.RocksDBStoreMBean;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
@@ -45,6 +46,7 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.TransactionLogIterator;
 import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,15 +66,16 @@ public class RDBStore implements DBStore {
   private ObjectName statMBeanName;
   private RDBCheckpointManager checkPointManager;
   private String checkpointsParentDir;
+  private List<ColumnFamilyHandle> columnFamilyHandles;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
                   Set<TableConfig> families) throws IOException {
-    this(dbFile, options, families, new CodecRegistry(), false);
+    this(dbFile, options, families, new CodecRegistry());
   }
 
   public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
-                  CodecRegistry registry, boolean readOnly)
+                  CodecRegistry registry)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
@@ -81,7 +84,7 @@ public class RDBStore implements DBStore {
     codecRegistry = registry;
     final List<ColumnFamilyDescriptor> columnFamilyDescriptors =
         new ArrayList<>();
-    final List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
+    columnFamilyHandles = new ArrayList<>();
 
     for (TableConfig family : families) {
       columnFamilyDescriptors.add(family.getDescriptor());
@@ -93,13 +96,8 @@ public class RDBStore implements DBStore {
     writeOptions = new WriteOptions();
 
     try {
-      if (readOnly) {
-        db = RocksDB.openReadOnly(dbOptions, dbLocation.getAbsolutePath(),
-            columnFamilyDescriptors, columnFamilyHandles);
-      } else {
-        db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
-            columnFamilyDescriptors, columnFamilyHandles);
-      }
+      db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
+          columnFamilyDescriptors, columnFamilyHandles);
 
       for (int x = 0; x < columnFamilyHandles.size(); x++) {
         handleTable.put(
@@ -112,7 +110,8 @@ public class RDBStore implements DBStore {
         jmxProperties.put("dbName", dbFile.getName());
         statMBeanName = HddsUtils.registerWithJmxProperties(
             "Ozone", "RocksDbStore", jmxProperties,
-            new RocksDBStoreMBean(dbOptions.statistics()));
+            RocksDBStoreMBean.create(dbOptions.statistics(),
+                dbFile.getName()));
         if (statMBeanName == null) {
           LOG.warn("jmx registration failed during RocksDB init, db path :{}",
               dbFile.getAbsolutePath());
@@ -264,12 +263,31 @@ public class RDBStore implements DBStore {
   }
 
   @Override
+  public <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException {
+    return new TypedTable<KEY, VALUE>(getTable(name), codecRegistry, keyType,
+        valueType, cleanupPolicy);
+  }
+
+  @Override
   public ArrayList<Table> listTables() throws IOException {
     ArrayList<Table> returnList = new ArrayList<>();
     for (ColumnFamilyHandle handle : handleTable.values()) {
       returnList.add(new RDBTable(db, handle, writeOptions));
     }
     return returnList;
+  }
+
+  @Override
+  public void flush() throws IOException {
+    final FlushOptions flushOptions = new FlushOptions().setWaitForFlush(true);
+    try {
+      db.flush(flushOptions);
+    } catch (RocksDBException e) {
+      LOG.error("Unable to Flush RocksDB data", e);
+      throw toIOException("Unable to Flush RocksDB data", e);
+    }
   }
 
   @Override
@@ -287,4 +305,77 @@ public class RDBStore implements DBStore {
   public File getDbLocation() {
     return dbLocation;
   }
+
+  @Override
+  public Map<Integer, String> getTableNames() {
+    Map<Integer, String> tableNames = new HashMap<>();
+    StringCodec stringCodec = new StringCodec();
+
+    for (ColumnFamilyHandle columnFamilyHandle : columnFamilyHandles) {
+      try {
+        tableNames.put(columnFamilyHandle.getID(), stringCodec
+            .fromPersistedFormat(columnFamilyHandle.getName()));
+      } catch (RocksDBException | IOException e) {
+        LOG.error("Unexpected exception while reading column family handle " +
+            "name", e);
+      }
+    }
+    return tableNames;
+  }
+
+  @Override
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
+  }
+
+  @Override
+  public DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
+      throws SequenceNumberNotFoundException {
+
+    DBUpdatesWrapper dbUpdatesWrapper = new DBUpdatesWrapper();
+    try {
+      TransactionLogIterator transactionLogIterator =
+          db.getUpdatesSince(sequenceNumber);
+
+      // Only the first record needs to be checked if its seq number <
+      // ( 1 + passed_in_sequence_number). For example, if seqNumber passed
+      // in is 100, then we can read from the WAL ONLY if the first sequence
+      // number is <= 101. If it is 102, then 101 may already be flushed to
+      // SST. If it 99, we can skip 99 and 100, and then read from 101.
+
+      boolean checkValidStartingSeqNumber = true;
+
+      while (transactionLogIterator.isValid()) {
+        TransactionLogIterator.BatchResult result =
+            transactionLogIterator.getBatch();
+        long currSequenceNumber = result.sequenceNumber();
+        if (checkValidStartingSeqNumber &&
+            currSequenceNumber > 1 + sequenceNumber) {
+          throw new SequenceNumberNotFoundException("Unable to read data from" +
+              " RocksDB wal to get delta updates. It may have already been" +
+              "flushed to SSTs.");
+        }
+        // If the above condition was not satisfied, then it is OK to reset
+        // the flag.
+        checkValidStartingSeqNumber = false;
+        if (currSequenceNumber <= sequenceNumber) {
+          transactionLogIterator.next();
+          continue;
+        }
+        dbUpdatesWrapper.addWriteBatch(result.writeBatch().data(),
+            result.sequenceNumber());
+        transactionLogIterator.next();
+      }
+    } catch (RocksDBException e) {
+      LOG.error("Unable to get delta updates since sequenceNumber {} ",
+          sequenceNumber, e);
+    }
+    return dbUpdatesWrapper;
+  }
+
+  @VisibleForTesting
+  public RocksDB getDb() {
+    return db;
+  }
+
 }

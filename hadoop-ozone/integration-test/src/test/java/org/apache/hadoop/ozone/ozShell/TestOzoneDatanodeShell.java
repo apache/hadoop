@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.HddsDatanodeService;
@@ -108,7 +107,7 @@ public class TestOzoneDatanodeShell {
     baseDir = new File(path);
     baseDir.mkdirs();
 
-    datanode = new HddsDatanodeService();
+    datanode = HddsDatanodeService.createHddsDatanodeService(null);
 
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
@@ -177,7 +176,7 @@ public class TestOzoneDatanodeShell {
    * was thrown and contains the specified usage string.
    */
   private void executeDatanodeWithError(HddsDatanodeService hdds, String[] args,
-      String expectedError, String usage) {
+      String expectedError) {
     if (Strings.isNullOrEmpty(expectedError)) {
       executeDatanode(hdds, args);
     } else {
@@ -197,24 +196,27 @@ public class TestOzoneDatanodeShell {
                       "exception [%s] in [%s]",
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
-          Assert.assertTrue(
-              exceptionToCheck instanceof MissingSubcommandException);
-          Assert.assertTrue(
-              ((MissingSubcommandException) exceptionToCheck)
-                  .getUsage().contains(usage));
         }
       }
     }
   }
 
   @Test
-  public void testDatanodeIncompleteCommand() {
+  public void testDatanodeCommand() {
     LOG.info("Running testDatanodeIncompleteCommand");
-    String expectedError = "Incomplete command";
     String[] args = new String[]{}; //executing 'ozone datanode'
 
-    executeDatanodeWithError(datanode, args, expectedError,
-        "Usage: ozone datanode [-hV] [--verbose] [-D=<String=String>]...");
+    //'ozone datanode' command should not result in error
+    executeDatanodeWithError(datanode, args, null);
+  }
 
+  @Test
+  public void testDatanodeInvalidParamCommand() {
+    LOG.info("Running testDatanodeIncompleteCommand");
+    String expectedError = "Unknown option: -invalidParam";
+    //executing 'ozone datanode -invalidParam'
+    String[] args = new String[]{"-invalidParam"};
+
+    executeDatanodeWithError(datanode, args, expectedError);
   }
 }

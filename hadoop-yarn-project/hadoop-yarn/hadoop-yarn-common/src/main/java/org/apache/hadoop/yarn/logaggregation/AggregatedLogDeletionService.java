@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -67,10 +69,12 @@ public class AggregatedLogDeletionService extends AbstractService {
     public LogDeletionTask(Configuration conf, long retentionSecs, ApplicationClientProtocol rmClient) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
-      this.suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
-      this.remoteRootLogDir =
-        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+      this.suffix = LogAggregationUtils.getBucketSuffix();
+      LogAggregationFileControllerFactory factory =
+          new LogAggregationFileControllerFactory(conf);
+      LogAggregationFileController fileController =
+          factory.getFileControllerForWrite();
+      this.remoteRootLogDir = fileController.getRemoteRootLogDir();
       this.rmClient = rmClient;
     }
     
@@ -82,8 +86,18 @@ public class AggregatedLogDeletionService extends AbstractService {
         FileSystem fs = remoteRootLogDir.getFileSystem(conf);
         for(FileStatus userDir : fs.listStatus(remoteRootLogDir)) {
           if(userDir.isDirectory()) {
-            Path userDirPath = new Path(userDir.getPath(), suffix);
-            deleteOldLogDirsFrom(userDirPath, cutoffMillis, fs, rmClient);
+            for (FileStatus suffixDir : fs.listStatus(userDir.getPath())) {
+              Path suffixDirPath = suffixDir.getPath();
+              if (suffixDir.isDirectory() && suffixDirPath.getName().
+                  startsWith(suffix)) {
+                for (FileStatus bucketDir : fs.listStatus(suffixDirPath)) {
+                  if (bucketDir.isDirectory()) {
+                    deleteOldLogDirsFrom(bucketDir.getPath(), cutoffMillis,
+                        fs, rmClient);
+                  }
+                }
+              }
+            }
           }
         }
       } catch (Throwable t) {

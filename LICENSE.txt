@@ -617,7 +617,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.3.7
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.4.1
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap.min.css
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
@@ -667,7 +667,7 @@ spin.js v2.3.2
 Azure Data Lake Store - Java client SDK 2.0.11
 JCodings 1.0.8
 Joni 2.1.2
-Mockito 2.23.4
+Mockito 2.28.2
 JUL to SLF4J bridge 1.7.25
 SLF4J API Module 1.7.25
 SLF4J LOG4J-12 Binding 1.7.25
@@ -761,7 +761,7 @@ THE SOFTWARE.
 
 
 For:
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.3.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.4.1.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 Apache HBase - Server which contains JQuery minified javascript library version 1.8.3
@@ -1636,7 +1636,6 @@ derived.)
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-JUnit 4.11
 Eclipse JDT Core 3.1.1
 --------------------------------------------------------------------------------
 (EPL v1.0)

@@ -97,7 +97,7 @@ public class TestNodeSchemaLoader {
       NodeSchemaLoader.getInstance().loadSchemaFromFile(filePath);
       fail("should fail");
     } catch (Throwable e) {
-      assertTrue(e.getMessage().contains("file " + filePath + " is not found"));
+      assertTrue(e.getMessage().contains("not found"));
     }
   }
 }

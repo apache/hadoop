@@ -70,7 +70,10 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
     assertEquals("Kind of token " + token,
         kind,
         token.getKind());
-    return token.decodeIdentifier();
+    AbstractS3ATokenIdentifier tid
+        = token.decodeIdentifier();
+    LOG.info("Found for URI {}, token {}", uri, tid);
+    return tid;
   }
 
   /**

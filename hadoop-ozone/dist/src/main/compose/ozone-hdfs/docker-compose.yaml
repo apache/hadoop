@@ -37,19 +37,18 @@ services:
       env_file:
         - ./docker-config
    om:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["ozone","om"]
    scm:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -60,7 +59,7 @@ services:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["ozone","scm"]
    s3g:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:

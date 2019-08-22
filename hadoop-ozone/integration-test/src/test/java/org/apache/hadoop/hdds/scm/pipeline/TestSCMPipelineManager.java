@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -25,11 +28,12 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -154,8 +158,8 @@ public class TestSCMPipelineManager {
     pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
         mockRatisProvider);
 
-    SCMChillModeManager scmChillModeManager =
-        new SCMChillModeManager(new OzoneConfiguration(),
+    SCMSafeModeManager scmSafeModeManager =
+        new SCMSafeModeManager(new OzoneConfiguration(),
             new ArrayList<>(), pipelineManager, eventQueue);
 
     // create a pipeline in allocated state with no dns yet reported
@@ -169,7 +173,7 @@ public class TestSCMPipelineManager {
 
     // get pipeline report from each dn in the pipeline
     PipelineReportHandler pipelineReportHandler =
-        new PipelineReportHandler(scmChillModeManager, pipelineManager, conf);
+        new PipelineReportHandler(scmSafeModeManager, pipelineManager, conf);
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
           TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
@@ -207,5 +211,62 @@ public class TestSCMPipelineManager {
 
     // clean up
     pipelineManager.close();
+  }
+
+  @Test
+  public void testPipelineCreationFailedMetric() throws Exception {
+    MockNodeManager nodeManagerMock = new MockNodeManager(true,
+        20);
+    SCMPipelineManager pipelineManager =
+        new SCMPipelineManager(conf, nodeManagerMock, new EventQueue());
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManagerMock,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+
+    MetricsRecordBuilder metrics = getMetrics(
+        SCMPipelineMetrics.class.getSimpleName());
+    long numPipelineCreated = getLongCounter("NumPipelineCreated",
+        metrics);
+    Assert.assertTrue(numPipelineCreated == 0);
+
+    // 3 DNs are unhealthy.
+    // Create 5 pipelines (Use up 15 Datanodes)
+    for (int i = 0; i < 5; i++) {
+      Pipeline pipeline = pipelineManager
+          .createPipeline(HddsProtos.ReplicationType.RATIS,
+              HddsProtos.ReplicationFactor.THREE);
+      Assert.assertNotNull(pipeline);
+    }
+
+    metrics = getMetrics(
+        SCMPipelineMetrics.class.getSimpleName());
+    numPipelineCreated = getLongCounter("NumPipelineCreated", metrics);
+    Assert.assertTrue(numPipelineCreated == 5);
+
+    long numPipelineCreateFailed = getLongCounter(
+        "NumPipelineCreationFailed", metrics);
+    Assert.assertTrue(numPipelineCreateFailed == 0);
+
+    //This should fail...
+    try {
+      pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.THREE);
+      Assert.fail();
+    } catch (InsufficientDatanodesException idEx) {
+      Assert.assertEquals(
+          "Cannot create pipeline of factor 3 using 1 nodes.",
+          idEx.getMessage());
+    }
+
+    metrics = getMetrics(
+        SCMPipelineMetrics.class.getSimpleName());
+    numPipelineCreated = getLongCounter("NumPipelineCreated", metrics);
+    Assert.assertTrue(numPipelineCreated == 5);
+
+    numPipelineCreateFailed = getLongCounter(
+        "NumPipelineCreationFailed", metrics);
+    Assert.assertTrue(numPipelineCreateFailed == 0);
   }
 }

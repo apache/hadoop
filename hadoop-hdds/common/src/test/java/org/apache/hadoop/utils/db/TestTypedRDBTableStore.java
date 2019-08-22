@@ -26,10 +26,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +55,8 @@ public class TestTypedRDBTableStore {
       Arrays.asList(DFSUtil.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
           "First", "Second", "Third",
           "Fourth", "Fifth",
-          "Sixth");
+          "Sixth", "Seven", "Eighth",
+          "Ninth");
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
@@ -234,6 +239,135 @@ public class TestTypedRDBTableStore {
         Assert.assertEquals(iterCount, count);
 
       }
+    }
+  }
+
+  @Test
+  public void testTypedTableWithCache() throws Exception {
+    int iterCount = 10;
+    try (Table<String, String> testTable = createTypedTable(
+        "Seven")) {
+
+      for (int x = 0; x < iterCount; x++) {
+        String key = Integer.toString(x);
+        String value = Integer.toString(x);
+        testTable.addCacheEntry(new CacheKey<>(key),
+            new CacheValue<>(Optional.of(value),
+            x));
+      }
+
+      // As we have added to cache, so get should return value even if it
+      // does not exist in DB.
+      for (int x = 0; x < iterCount; x++) {
+        Assert.assertEquals(Integer.toString(1),
+            testTable.get(Integer.toString(1)));
+      }
+
+    }
+  }
+
+  @Test
+  public void testTypedTableWithCacheWithFewDeletedOperationType()
+      throws Exception {
+    int iterCount = 10;
+    try (Table<String, String> testTable = createTypedTable(
+        "Seven")) {
+
+      for (int x = 0; x < iterCount; x++) {
+        String key = Integer.toString(x);
+        String value = Integer.toString(x);
+        if (x % 2 == 0) {
+          testTable.addCacheEntry(new CacheKey<>(key),
+              new CacheValue<>(Optional.of(value), x));
+        } else {
+          testTable.addCacheEntry(new CacheKey<>(key),
+              new CacheValue<>(Optional.absent(),
+              x));
+        }
+      }
+
+      // As we have added to cache, so get should return value even if it
+      // does not exist in DB.
+      for (int x = 0; x < iterCount; x++) {
+        if (x % 2 == 0) {
+          Assert.assertEquals(Integer.toString(x),
+              testTable.get(Integer.toString(x)));
+        } else {
+          Assert.assertNull(testTable.get(Integer.toString(x)));
+        }
+      }
+
+      testTable.cleanupCache(5);
+
+      GenericTestUtils.waitFor(() ->
+          ((TypedTable<String, String>) testTable).getCache().size() == 4,
+          100, 5000);
+
+
+      //Check remaining values
+      for (int x = 6; x < iterCount; x++) {
+        if (x % 2 == 0) {
+          Assert.assertEquals(Integer.toString(x),
+              testTable.get(Integer.toString(x)));
+        } else {
+          Assert.assertNull(testTable.get(Integer.toString(x)));
+        }
+      }
+
+
+    }
+  }
+
+  @Test
+  public void testIsExist() throws Exception {
+    try (Table<String, String> testTable = createTypedTable(
+        "Eighth")) {
+      String key =
+          RandomStringUtils.random(10);
+      String value = RandomStringUtils.random(10);
+      testTable.put(key, value);
+      Assert.assertTrue(testTable.isExist(key));
+
+      String invalidKey = key + RandomStringUtils.random(1);
+      Assert.assertFalse(testTable.isExist(invalidKey));
+
+      testTable.delete(key);
+      Assert.assertFalse(testTable.isExist(key));
+    }
+  }
+
+  @Test
+  public void testIsExistCache() throws Exception {
+    try (Table<String, String> testTable = createTypedTable(
+        "Eighth")) {
+      String key =
+          RandomStringUtils.random(10);
+      String value = RandomStringUtils.random(10);
+      testTable.addCacheEntry(new CacheKey<>(key),
+          new CacheValue<>(Optional.of(value), 1L));
+      Assert.assertTrue(testTable.isExist(key));
+
+      testTable.addCacheEntry(new CacheKey<>(key),
+          new CacheValue<>(Optional.absent(), 1L));
+      Assert.assertFalse(testTable.isExist(key));
+    }
+  }
+
+  @Test
+  public void testCountEstimatedRowsInTable() throws Exception {
+    try (Table<String, String> testTable = createTypedTable(
+        "Ninth")) {
+      // Add a few keys
+      final int numKeys = 12345;
+      for (int i = 0; i < numKeys; i++) {
+        String key =
+            RandomStringUtils.random(10);
+        String value = RandomStringUtils.random(10);
+        testTable.put(key, value);
+      }
+      long keyCount = testTable.getEstimatedKeyCount();
+      // The result should be larger than zero but not exceed(?) numKeys
+      Assert.assertTrue(keyCount > 0 && keyCount <= numKeys);
     }
   }
 }

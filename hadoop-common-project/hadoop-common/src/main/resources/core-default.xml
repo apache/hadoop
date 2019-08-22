@@ -1213,8 +1213,12 @@
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>15</value>
-  <description>Controls the maximum number of simultaneous connections to S3.</description>
+  <value>48</value>
+  <description>Controls the maximum number of simultaneous connections to S3.
+    This must be bigger than the value of fs.s3a.threads.max so as to stop
+    threads being blocked waiting for new HTTPS connections.
+    Why not equal? The AWS SDK transfer manager also uses these connections.
+  </description>
 </property>
 
 <property>
@@ -1312,7 +1316,7 @@
 
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>10</value>
+  <value>64</value>
   <description>The total number of threads available in the filesystem for data
     uploads *or any other queued filesystem operation*.</description>
 </property>
@@ -1326,13 +1330,30 @@
 
 <property>
   <name>fs.s3a.max.total.tasks</name>
-  <value>5</value>
-  <description>The number of operations which can be queued for execution</description>
+  <value>32</value>
+  <description>The number of operations which can be queued for execution.
+  This is in addition to the number of active threads in fs.s3a.threads.max.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.executor.capacity</name>
+  <value>16</value>
+  <description>The maximum number of submitted tasks which is a single
+    operation (e.g. rename(), delete()) may submit simultaneously for
+    execution -excluding the IO-heavy block uploads, whose capacity
+    is set in "fs.s3a.fast.upload.active.blocks"
+
+    All tasks are submitted to the shared thread pool whose size is
+    set in "fs.s3a.threads.max"; the value of capacity should be less than that
+    of the thread pool itself, as the goal is to stop a single operation
+    from overloading that thread pool.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -1340,7 +1361,7 @@
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -1502,12 +1523,10 @@
 </property>
 
 <property>
-    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
-    <value>3600000</value>
+    <name>fs.s3a.metadatastore.metadata.ttl</name>
+    <value>15m</value>
     <description>
-        This value sets how long a directory listing in the MS is considered as
-        authoritative. The value is in milliseconds.
-        MetadataStore should be authoritative to use this configuration knob.
+        This value sets how long an entry in a MetadataStore is valid.
     </description>
 </property>
 
@@ -1521,6 +1540,19 @@
         and only source of truth for file and directory metadata.
     </description>
 </property>
+
+<property>
+  <name>fs.s3a.metadatastore.fail.on.write.error</name>
+  <value>true</value>
+  <description>
+    When true (default), FileSystem write operations generate
+    org.apache.hadoop.fs.s3a.MetadataPersistenceException if the metadata
+    cannot be saved to the metadata store.  When false, failures to save to
+    metadata store are logged at ERROR level, but the overall FileSystem
+    write operation succeeds.
+  </description>
+</property>
+
 
 <property>
     <name>fs.s3a.s3guard.cli.prune.age</name>
@@ -1568,23 +1600,27 @@
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>500</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table.  This config value will only be used when
-    creating a new DynamoDB table, though later you can manually provision by
-    increasing or decreasing read capacity as needed for existing tables.
-    See DynamoDB documents for more information.
+    units for the DynamoDB table. This config value will only be used when
+    creating a new DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    If a positive integer is provided for this and the write capacity, then
+    a table with "provisioned capacity" will be created.
+    You can change the capacity of an existing provisioned-capacity table
+    through the "s3guard set-capacity" command.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>100</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.  Refer to related config
-    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+    capacity units for the DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
   </description>
 </property>
 
@@ -1624,7 +1660,7 @@
 
 <property>
   <name>fs.s3a.retry.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
     excluding throttling requests.
@@ -1635,7 +1671,7 @@
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between attempts to retry operations for any reason other
+    Initial retry interval when retrying operations for any reason other
     than S3 throttle errors.
   </description>
 </property>
@@ -1711,7 +1747,7 @@
 
 <property>
   <name>fs.s3a.committer.staging.conflict-mode</name>
-  <value>fail</value>
+  <value>append</value>
   <description>
     Staging committer conflict resolution policy.
     Supported: "fail", "append", "replace".
@@ -1891,15 +1927,15 @@
   <name>fs.s3a.change.detection.mode</name>
   <value>server</value>
   <description>
-    Determines how change detection is applied to alert to S3 objects
-    rewritten while being read. Value 'server' indicates to apply the attribute
-    constraint directly on GetObject requests to S3. Value 'client' means to do a
-    client-side comparison of the attribute value returned in the response.  Value
-    'server' would not work with third-party S3 implementations that do not
-    support these constraints on GetObject. Values 'server' and 'client' generate
-    RemoteObjectChangedException when a mismatch is detected.  Value 'warn' works
-    like 'client' but generates only a warning.  Value 'none' will ignore change
-    detection completely.
+    Determines how change detection is applied to alert to inconsistent S3
+    objects read during or after an overwrite. Value 'server' indicates to apply
+    the attribute constraint directly on GetObject requests to S3. Value 'client'
+    means to do a client-side comparison of the attribute value returned in the
+    response.  Value 'server' would not work with third-party S3 implementations
+    that do not support these constraints on GetObject. Values 'server' and
+    'client' generate RemoteObjectChangedException when a mismatch is detected.
+    Value 'warn' works like 'client' but generates only a warning.  Value 'none'
+    will ignore change detection completely.
   </description>
 </property>
 
@@ -2160,7 +2196,7 @@
 
 <property>
   <name>ipc.server.listen.queue.size</name>
-  <value>128</value>
+  <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting
                client connections.
   </description>
@@ -2177,7 +2213,7 @@
 
 <property>
   <name>ipc.maximum.data.length</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
     accepted by the server. Messages larger than this value are rejected by the
     immediately to avoid possible OOMs. This setting should rarely need to be
@@ -2195,6 +2231,14 @@
   </description>
 </property>
 
+<property>
+  <name>ipc.server.reuseaddr</name>
+  <value>true</value>
+  <description>Enables the SO_REUSEADDR TCP option on the server.
+    Useful if BindException often prevents a certain service to be restarted
+    because the server side is stuck in TIME_WAIT state.
+  </description>
+</property>
 <!-- Proxy Configuration -->
 
 <property>
@@ -2699,6 +2743,15 @@
 </property>
 
 <property>
+  <name>ha.health-monitor.rpc.connect.max.retries</name>
+  <value>1</value>
+  <description>
+    The number of retries on connect error when establishing RPC proxy
+    connection to NameNode, used for monitorHealth() calls.
+  </description>
+</property>
+
+<property>
   <name>ha.health-monitor.rpc-timeout.ms</name>
   <value>45000</value>
   <description>
@@ -2889,7 +2942,7 @@
 
 <property>
   <name>hadoop.security.secure.random.impl</name>
-  <value></value>
+  <value>org.apache.hadoop.crypto.random.OpensslSecureRandom</value>
   <description>
     Implementation of secure random.
   </description>
@@ -3434,6 +3487,50 @@
       RBF Routers etc) discovery. The default implementation
       org.apache.hadoop.net.DNSDomainNameResolver returns all IP addresses associated
       with the input domain name of the services by querying the underlying DNS.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.ignore.namenode.default.kms.uri</name>
+    <value>false</value>
+    <description>
+      Ignore KMS default URI returned from NameNode.
+      When set to true, kms uri is searched in the following order:
+      1. If there is a mapping in Credential's secrets map for namenode uri.
+      2. Fallback to local conf. (i.e hadoop.security.key.provider.path)
+      If client choose to ignore KMS uri provided by NameNode then client
+      should set KMS URI using 'hadoop.security.key.provider.path' to access
+      the right KMS for encrypted files.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <description>
+      If set to true, prometheus compatible metric page on the HTTP servers
+      is enabled via '/prom' endpoint.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.classname</name>
+    <value></value>
+    <description>
+      The class that can tell estimate much space is used in a directory.
+      There are four impl classes that being supported:
+      org.apache.hadoop.fs.DU(default), org.apache.hadoop.fs.WindowsGetSpaceUsed
+      org.apache.hadoop.fs.DFCachingGetSpaceUsed and
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaCachingGetSpaceUsed.
+      And the ReplicaCachingGetSpaceUsed impl class only used in HDFS module.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.jitterMillis</name>
+    <value>60000</value>
+    <description>
+      fs space usage statistics refresh jitter in msec.
     </description>
   </property>
 </configuration>

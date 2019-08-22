@@ -1138,13 +1138,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     throw new NotImplementedException("Code is not implemented");
   }
 
@@ -1338,6 +1341,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         + "FederationInterceptorREST, which should be the last one "
         + "in the chain. Check if the interceptor pipeline configuration "
         + "is correct");
+  }
+
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override

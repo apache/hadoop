@@ -20,9 +20,9 @@ package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -282,7 +282,7 @@ public final class ConfTest {
     boolean ok = true;
     for (File file : files) {
       String path = file.getAbsolutePath();
-      List<String> errors = checkConf(new FileInputStream(file));
+      List<String> errors = checkConf(Files.newInputStream(file.toPath()));
       if (errors.isEmpty()) {
         System.out.println(path + ": valid");
       } else {

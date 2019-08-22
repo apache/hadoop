@@ -54,6 +54,7 @@ import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -98,6 +99,7 @@ import java.util.stream.Collectors;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OM_SERVICE_LIST_HTTP_ENDPOINT;
 
 /**
  * Ozone Client REST protocol implementation. It uses REST protocol to
@@ -112,7 +114,7 @@ public class RestClient implements ClientProtocol {
   private final URI ozoneRestUri;
   private final CloseableHttpClient httpClient;
   private final UserGroupInformation ugi;
-  private final OzoneAcl.OzoneACLRights userRights;
+  // private final OzoneAcl.OzoneACLRights userRights;
 
    /**
     * Creates RestClient instance with the given configuration.
@@ -161,8 +163,8 @@ public class RestClient implements ClientProtocol {
                   .build())
           .build();
 
-      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
-          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
+//      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+//          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
 
       // TODO: Add new configuration parameter to configure RestServerSelector.
       RestServerSelector defaultSelector = new DefaultRestServerSelector();
@@ -189,7 +191,8 @@ public class RestClient implements ClientProtocol {
               " details on configuring Ozone.");
     }
 
-    HttpGet httpGet = new HttpGet("http://" + httpAddress + "/serviceList");
+    HttpGet httpGet = new HttpGet("http://" + httpAddress +
+        OZONE_OM_SERVICE_LIST_HTTP_ENDPOINT);
     HttpEntity entity = executeHttpRequest(httpGet);
     try {
       String serviceListJson = EntityUtils.toString(entity);
@@ -444,54 +447,6 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
-  public void addBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> addAcls)
-      throws IOException {
-    try {
-      HddsClientUtils.verifyResourceName(volumeName, bucketName);
-      Preconditions.checkNotNull(addAcls);
-      URIBuilder builder = new URIBuilder(ozoneRestUri);
-
-      builder.setPath(PATH_SEPARATOR + volumeName +
-          PATH_SEPARATOR + bucketName);
-      HttpPut httpPut = new HttpPut(builder.build());
-      addOzoneHeaders(httpPut);
-
-      for (OzoneAcl acl : addAcls) {
-        httpPut.addHeader(
-            Header.OZONE_ACLS, Header.OZONE_ACL_ADD + " " + acl.toString());
-      }
-      EntityUtils.consume(executeHttpRequest(httpPut));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public void removeBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> removeAcls)
-      throws IOException {
-    try {
-      HddsClientUtils.verifyResourceName(volumeName, bucketName);
-      Preconditions.checkNotNull(removeAcls);
-      URIBuilder builder = new URIBuilder(ozoneRestUri);
-
-      builder.setPath(PATH_SEPARATOR + volumeName +
-          PATH_SEPARATOR + bucketName);
-      HttpPut httpPut = new HttpPut(builder.build());
-      addOzoneHeaders(httpPut);
-
-      for (OzoneAcl acl : removeAcls) {
-        httpPut.addHeader(
-            Header.OZONE_ACLS, Header.OZONE_ACL_REMOVE + " " + acl.toString());
-      }
-      EntityUtils.consume(executeHttpRequest(httpPut));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
   public void setBucketVersioning(
       String volumeName, String bucketName, Boolean versioning)
       throws IOException {
@@ -575,7 +530,6 @@ public class RestClient implements ClientProtocol {
           this,
           bucketInfo.getVolumeName(),
           bucketInfo.getBucketName(),
-          bucketInfo.getAcls(),
           bucketInfo.getStorageType(),
           getBucketVersioningFlag(bucketInfo.getVersioning()),
           HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()),
@@ -616,11 +570,9 @@ public class RestClient implements ClientProtocol {
           LOG.warn("Parse exception in getting creation time for volume", e);
         }
         return new OzoneBucket(conf, this, volumeName,
-            bucketInfo.getBucketName(), bucketInfo.getAcls(),
-            bucketInfo.getStorageType(),
+            bucketInfo.getBucketName(), bucketInfo.getStorageType(),
             getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime,
-            new HashMap<>(), bucketInfo
-            .getEncryptionKeyName());
+            new HashMap<>(), bucketInfo.getEncryptionKeyName());
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -1090,5 +1042,89 @@ public class RestClient implements ClientProtocol {
       String bucketName, String keyName) throws IOException {
     throw new UnsupportedOperationException("Ozone REST protocol does not " +
         "support this operation.");
+  }
+
+  @Override
+  public void createDirectory(String volumeName, String bucketName,
+      String keyName) {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public OzoneInputStream readFile(String volumeName, String bucketName,
+      String keyName) {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public OzoneOutputStream createFile(String volumeName, String bucketName,
+      String keyName, long size, ReplicationType type, ReplicationFactor factor,
+      boolean overWrite, boolean recursive) {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   *
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not" +
+        " support this operation.");
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not" +
+        " support this operation.");
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not" +
+        " support this operation.");
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not" +
+        " support this operation.");
   }
 }

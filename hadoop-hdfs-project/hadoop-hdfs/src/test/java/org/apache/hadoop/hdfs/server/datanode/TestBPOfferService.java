@@ -736,7 +736,7 @@ public class TestBPOfferService {
           Mockito.anyInt(), Mockito.anyString());
       String errorString = "Can't send invalid block " + FAKE_BLOCK;
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errorString);
-      Thread.sleep(10000);
+      GenericTestUtils.waitFor(() -> secondCallTime != 0, 100, 20000);
       assertTrue("Active namenode didn't add the report back to the queue "
           + "when errorReport threw IOException", secondCallTime != 0);
     } finally {

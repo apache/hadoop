@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -200,6 +201,9 @@ public class OpportunisticContainerAllocatorAMService
 
       // Create RMContainers and update the NMTokens.
       if (!oppContainers.isEmpty()) {
+        OpportunisticSchedulerMetrics schedulerMetrics =
+            OpportunisticSchedulerMetrics.getMetrics();
+        schedulerMetrics.incrAllocatedOppContainers(oppContainers.size());
         handleNewContainers(oppContainers, false);
         appAttempt.updateNMTokens(oppContainers);
         ApplicationMasterServiceUtils.addToAllocatedContainers(
@@ -225,8 +229,13 @@ public class OpportunisticContainerAllocatorAMService
       YarnScheduler scheduler) {
     super(OpportunisticContainerAllocatorAMService.class.getName(),
         rmContext, scheduler);
+    int maxAllocationsPerAMHeartbeat = rmContext.getYarnConfiguration().getInt(
+        YarnConfiguration.OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT,
+        YarnConfiguration.
+            DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
     this.oppContainerAllocator = new OpportunisticContainerAllocator(
-        rmContext.getContainerTokenSecretManager());
+        rmContext.getContainerTokenSecretManager(),
+        maxAllocationsPerAMHeartbeat);
     this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
         YarnConfiguration.DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED);

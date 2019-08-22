@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -60,12 +61,17 @@ import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -90,7 +96,6 @@ import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -155,7 +160,7 @@ public final class HttpServer2 implements FilterContainer {
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   public static final String ADMINS_ACL = "admins.acl";
-  public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String SPNEGO_FILTER = "authentication";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
@@ -189,6 +194,11 @@ public final class HttpServer2 implements FilterContainer {
   private static final String X_FRAME_OPTIONS = "X-FRAME-OPTIONS";
   private static final Pattern PATTERN_HTTP_HEADER_REGEX =
           Pattern.compile(HTTP_HEADER_REGEX);
+
+  private boolean prometheusSupport;
+  protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
+  private PrometheusMetricsSink prometheusMetricsSink;
+
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -433,7 +443,9 @@ public final class HttpServer2 implements FilterContainer {
 
       HttpServer2 server = new HttpServer2(this);
 
-      if (this.securityEnabled) {
+      if (this.securityEnabled &&
+          !this.conf.get(authFilterConfigurationPrefix + "type").
+          equals(PseudoAuthenticationHandler.TYPE)) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
@@ -608,12 +620,18 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     addDefaultServlets();
+    addPrometheusServlet(conf);
+  }
 
-    if (pathSpecs != null) {
-      for (String path : pathSpecs) {
-        LOG.info("adding path spec: " + path);
-        addFilterPathMapping(path, webAppContext);
-      }
+  private void addPrometheusServlet(Configuration conf) {
+    prometheusSupport = conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED_DEFAULT);
+    if (prometheusSupport) {
+      prometheusMetricsSink = new PrometheusMetricsSink();
+      getWebAppContext().getServletContext()
+          .setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
+      addServlet("prometheus", "/prom", PrometheusServlet.class);
     }
   }
 
@@ -625,7 +643,7 @@ public final class HttpServer2 implements FilterContainer {
       AccessControlList adminsAcl, final String appDir) {
     WebAppContext ctx = new WebAppContext();
     ctx.setDefaultsDescriptor(null);
-    ServletHolder holder = new ServletHolder(new DefaultServlet());
+    ServletHolder holder = new ServletHolder(new WebServlet());
     Map<String, String> params = ImmutableMap. <String, String> builder()
             .put("acceptRanges", "true")
             .put("dirAllowed", "false")
@@ -684,10 +702,16 @@ public final class HttpServer2 implements FilterContainer {
       return null;
     }
 
-    FilterInitializer[] initializers = new FilterInitializer[classes.length];
-    for(int i = 0; i < classes.length; i++) {
+    List<Class<?>> classList = new ArrayList<>(Arrays.asList(classes));
+    if (classList.contains(AuthenticationFilterInitializer.class) &&
+        classList.contains(ProxyUserAuthenticationFilterInitializer.class)) {
+      classList.remove(AuthenticationFilterInitializer.class);
+    }
+
+    FilterInitializer[] initializers = new FilterInitializer[classList.size()];
+    for(int i = 0; i < classList.size(); i++) {
       initializers[i] = (FilterInitializer)ReflectionUtils.newInstance(
-          classes[i], conf);
+          classList.get(i), conf);
     }
     return initializers;
   }
@@ -735,7 +759,7 @@ public final class HttpServer2 implements FilterContainer {
     ServletContextHandler staticContext =
         new ServletContextHandler(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
-    staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.addServlet(WebServlet.class, "/*");
     staticContext.setDisplayName("static");
     @SuppressWarnings("unchecked")
     Map<String, String> params = staticContext.getInitParams();
@@ -794,12 +818,27 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
+    addJerseyResourcePackage(packageName, pathSpec,
+        Collections.<String, String>emptyMap());
+  }
+
+  /**
+   * Add a Jersey resource package.
+   * @param packageName The Java package name containing the Jersey resource.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourcePackage(final String packageName,
+      final String pathSpec, Map<String, String> params) {
     LOG.info("addJerseyResourcePackage: packageName=" + packageName
         + ", pathSpec=" + pathSpec);
     final ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
         "com.sun.jersey.api.core.PackagesResourceConfig");
     sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
     webAppContext.addServlet(sh, pathSpec);
   }
 
@@ -812,7 +851,6 @@ public final class HttpServer2 implements FilterContainer {
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     addInternalServlet(name, pathSpec, clazz, false);
-    addFilterPathMapping(pathSpec, webAppContext);
   }
 
   /**
@@ -869,16 +907,6 @@ public final class HttpServer2 implements FilterContainer {
       }
     }
     webAppContext.addServlet(holder, pathSpec);
-
-    if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
-      LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
-      ServletHandler handler = webAppContext.getServletHandler();
-      FilterMapping fmap = new FilterMapping();
-      fmap.setPathSpec(pathSpec);
-      fmap.setFilterName(SPNEGO_FILTER);
-      fmap.setDispatches(FilterMapping.ALL);
-      handler.addFilterMapping(fmap);
-    }
   }
 
   /**
@@ -945,8 +973,8 @@ public final class HttpServer2 implements FilterContainer {
       Map<String, String> parameters) {
 
     FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
-    final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
-    FilterMapping fmap = getFilterMapping(name, USER_FACING_URLS);
+    final String[] userFacingUrls = {"/", "/*" };
+    FilterMapping fmap = getFilterMapping(name, userFacingUrls);
     defineFilter(webAppContext, filterHolder, fmap);
     LOG.info(
         "Added filter " + name + " (class=" + classname + ") to context "
@@ -1141,6 +1169,11 @@ public final class HttpServer2 implements FilterContainer {
       try {
         openListeners();
         webServer.start();
+        if (prometheusSupport) {
+          DefaultMetricsSystem.instance()
+              .register("prometheus", "Hadoop metrics prometheus exporter",
+                  prometheusMetricsSink);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;

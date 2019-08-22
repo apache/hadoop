@@ -21,61 +21,111 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * {@code PathMetadata} models path metadata stored in the
- * {@link MetadataStore}.
+ * {@link MetadataStore}. The lastUpdated field is implicitly set to 0 in the
+ * constructors without that parameter to show that it will be initialized
+ * with 0 if not set otherwise.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class PathMetadata extends ExpirableMetadata {
 
-  private final FileStatus fileStatus;
+  private S3AFileStatus fileStatus;
   private Tristate isEmptyDirectory;
   private boolean isDeleted;
 
   /**
    * Create a tombstone from the current time.
+   * It is mandatory to set the lastUpdated field to update when the
+   * tombstone state has changed to set when the entry got deleted.
+   *
    * @param path path to tombstone
+   * @param lastUpdated last updated time on which expiration is based.
    * @return the entry.
    */
-  public static PathMetadata tombstone(Path path) {
-    long now = System.currentTimeMillis();
-    FileStatus status = new FileStatus(0, false, 0, 0, now, path);
-    return new PathMetadata(status, Tristate.UNKNOWN, true);
+  public static PathMetadata tombstone(Path path, long lastUpdated) {
+    S3AFileStatus s3aStatus = new S3AFileStatus(0,
+        System.currentTimeMillis(), path, 0, null,
+        null, null);
+    return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true, lastUpdated);
   }
 
   /**
    * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
+   * lastUpdated field will be updated to 0 implicitly in this constructor.
+   *
    * @param fileStatus file status containing an absolute path.
    */
-  public PathMetadata(FileStatus fileStatus) {
-    this(fileStatus, Tristate.UNKNOWN);
+  public PathMetadata(S3AFileStatus fileStatus) {
+    this(fileStatus, Tristate.UNKNOWN, false, 0);
   }
 
-  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir) {
-    this(fileStatus, isEmptyDir, false);
+  /**
+   * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
+   *
+   * @param fileStatus file status containing an absolute path.
+   * @param lastUpdated last updated time on which expiration is based.
+   */
+  public PathMetadata(S3AFileStatus fileStatus, long lastUpdated) {
+    this(fileStatus, Tristate.UNKNOWN, false, lastUpdated);
   }
 
-  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir, boolean
-      isDeleted) {
+  /**
+   * Creates a new {@code PathMetadata}.
+   * lastUpdated field will be updated to 0 implicitly in this constructor.
+   *
+   * @param fileStatus file status containing an absolute path.
+   * @param isEmptyDir empty directory {@link Tristate}
+   */
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir) {
+    this(fileStatus, isEmptyDir, false, 0);
+  }
+
+  /**
+   * Creates a new {@code PathMetadata}.
+   * lastUpdated field will be updated to 0 implicitly in this constructor.
+   *
+   * @param fileStatus file status containing an absolute path.
+   * @param isEmptyDir empty directory {@link Tristate}
+   * @param isDeleted deleted / tombstoned flag
+   */
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
+      boolean isDeleted) {
+    this(fileStatus, isEmptyDir, isDeleted, 0);
+  }
+
+  /**
+   * Creates a new {@code PathMetadata}.
+   *
+   * @param fileStatus file status containing an absolute path.
+   * @param isEmptyDir empty directory {@link Tristate}
+   * @param isDeleted deleted / tombstoned flag
+   * @param lastUpdated last updated time on which expiration is based.
+   */
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir, boolean
+      isDeleted, long lastUpdated) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
     Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
         " non-null");
     Preconditions.checkArgument(fileStatus.getPath().isAbsolute(), "path must" +
         " be absolute");
+    Preconditions.checkArgument(lastUpdated >=0, "lastUpdated parameter must "
+        + "be greater or equal to 0.");
     this.fileStatus = fileStatus;
     this.isEmptyDirectory = isEmptyDir;
     this.isDeleted = isDeleted;
+    this.setLastUpdated(lastUpdated);
   }
 
   /**
    * @return {@code FileStatus} contained in this {@code PathMetadata}.
    */
-  public final FileStatus getFileStatus() {
+  public final S3AFileStatus getFileStatus() {
     return fileStatus;
   }
 
@@ -91,6 +141,7 @@ public class PathMetadata extends ExpirableMetadata {
 
   void setIsEmptyDirectory(Tristate isEmptyDirectory) {
     this.isEmptyDirectory = isEmptyDirectory;
+    fileStatus.setIsEmptyDirectory(isEmptyDirectory);
   }
 
   public boolean isDeleted() {
@@ -120,6 +171,7 @@ public class PathMetadata extends ExpirableMetadata {
         "fileStatus=" + fileStatus +
         "; isEmptyDirectory=" + isEmptyDirectory +
         "; isDeleted=" + isDeleted +
+        "; lastUpdated=" + super.getLastUpdated() +
         '}';
   }
 
@@ -128,10 +180,11 @@ public class PathMetadata extends ExpirableMetadata {
    * @param sb target StringBuilder
    */
   public void prettyPrint(StringBuilder sb) {
-    sb.append(String.format("%-5s %-20s %-7d %-8s %-6s",
+    sb.append(String.format("%-5s %-20s %-7d %-8s %-6s %-20s %-20s",
         fileStatus.isDirectory() ? "dir" : "file",
         fileStatus.getPath().toString(), fileStatus.getLen(),
-        isEmptyDirectory.name(), isDeleted));
+        isEmptyDirectory.name(), isDeleted,
+        fileStatus.getETag(), fileStatus.getVersionId()));
     sb.append(fileStatus);
   }
 

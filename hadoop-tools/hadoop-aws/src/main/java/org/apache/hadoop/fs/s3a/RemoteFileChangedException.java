@@ -32,6 +32,9 @@ import org.apache.hadoop.fs.PathIOException;
 @InterfaceStability.Unstable
 public class RemoteFileChangedException extends PathIOException {
 
+  public static final String PRECONDITIONS_FAILED =
+      "Constraints of request were unsatisfiable";
+
   /**
    * Constructs a RemoteFileChangedException.
    *
@@ -44,6 +47,23 @@ public class RemoteFileChangedException extends PathIOException {
       String operation,
       String message) {
     super(path, message);
+    setOperation(operation);
+  }
+
+  /**
+   * Constructs a RemoteFileChangedException.
+   *
+   * @param path the path accessed when the change was detected
+   * @param operation the operation (e.g. open, re-open) performed when the
+   * change was detected
+   * @param message a message providing more details about the condition
+   * @param cause inner cause.
+   */
+  public RemoteFileChangedException(String path,
+      String operation,
+      String message,
+      Throwable cause) {
+    super(path, message, cause);
     setOperation(operation);
   }
 }

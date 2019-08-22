@@ -47,7 +47,7 @@ public final class ITestPartitionCommitMRJob extends AbstractITCommitMRJob {
 
   @AfterClass
   public static void teardownClusters() throws IOException {
-    clusterBinding.terminate();
+    terminateCluster(clusterBinding);
   }
 
   @Override

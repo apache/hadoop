@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -333,7 +334,7 @@ public class TestFifoScheduler {
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node0);
     scheduler.handle(nodeEvent1);
     
-    assertEquals(scheduler.getNumClusterNodes(), 1);
+    assertThat(scheduler.getNumClusterNodes()).isEqualTo(1);
     
     Resource newResource = Resources.createResource(1024, 4);
     
@@ -1286,20 +1287,20 @@ public class TestFifoScheduler {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemorySize(), 1 * GB);
-    Assert.assertEquals(usedResource.getVirtualCores(), 1);
+    assertThat(usedResource.getMemorySize()).isEqualTo(1 * GB);
+    assertThat(usedResource.getVirtualCores()).isEqualTo(1);
     // Check total resource of scheduler node is also changed to 1 GB 1 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemorySize(), 1 * GB);
-    Assert.assertEquals(totalResource.getVirtualCores(), 1);
+    assertThat(totalResource.getMemorySize()).isEqualTo(1 * GB);
+    assertThat(totalResource.getVirtualCores()).isEqualTo(1);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemorySize(), 0);
-    Assert.assertEquals(availableResource.getVirtualCores(), 0);
+    assertThat(availableResource.getMemorySize()).isEqualTo(0);
+    assertThat(availableResource.getVirtualCores()).isEqualTo(0);
   }
 
   private void checkApplicationResourceUsage(int expected, 

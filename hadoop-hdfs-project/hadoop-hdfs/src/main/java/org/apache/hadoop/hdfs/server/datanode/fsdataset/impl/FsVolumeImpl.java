@@ -163,6 +163,13 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.storageType = storageLocation.getStorageType();
     this.configuredCapacity = -1;
     this.usage = usage;
+    if (this.usage != null) {
+      reserved = new ReservedSpaceCalculator.Builder(conf)
+          .setUsage(this.usage).setStorageType(storageType).build();
+    } else {
+      reserved = null;
+      LOG.warn("Setting reserved to null as usage is null");
+    }
     if (currentDir != null) {
       File parent = currentDir.getParentFile();
       cacheExecutor = initializeCacheExecutor(parent);
@@ -173,8 +180,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    this.reserved = new ReservedSpaceCalculator.Builder(conf)
-        .setUsage(usage).setStorageType(storageType).build();
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -473,7 +478,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getReserved(){
-    return reserved.getReserved();
+    return reserved != null ? reserved.getReserved() : 0;
   }
 
   @VisibleForTesting
@@ -1369,7 +1374,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!Block.isBlockFilename(file)) {
         if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, file.getName())) {
           long blockId = Block.getBlockId(file.getName());
-          verifyFileLocation(file.getParentFile(), bpFinalizedDir,
+          verifyFileLocation(file, bpFinalizedDir,
               blockId);
           report.add(new ScanInfo(blockId, null, file, this));
         }

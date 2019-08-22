@@ -206,6 +206,12 @@ public abstract class FileSystem extends Configured
     CACHE.map.put(new Cache.Key(uri, conf), fs);
   }
 
+  @VisibleForTesting
+  static void removeFileSystemForTesting(URI uri, Configuration conf,
+      FileSystem fs) throws IOException {
+    CACHE.map.remove(new Cache.Key(uri, conf), fs);
+  }
+
   /**
    * Get a FileSystem instance based on the uri, the passed in
    * configuration and the user.
@@ -2241,8 +2247,16 @@ public abstract class FileSystem extends Configured
    * The default implementation returns {@code "/user/$USER/"}.
    */
   public Path getHomeDirectory() {
+    String username;
+    try {
+      username = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch(IOException ex) {
+      LOGGER.warn("Unable to get user name. Fall back to system property " +
+          "user.name", ex);
+      username = System.getProperty("user.name");
+    }
     return this.makeQualified(
-        new Path(USER_HOME_PREFIX + "/" + System.getProperty("user.name")));
+        new Path(USER_HOME_PREFIX + "/" + username));
   }
 
 
@@ -3371,6 +3385,9 @@ public abstract class FileSystem extends Configured
       }
 
       fs = createFileSystem(uri, conf);
+      final long timeout = conf.getTimeDuration(SERVICE_SHUTDOWN_TIMEOUT,
+          SERVICE_SHUTDOWN_TIMEOUT_DEFAULT,
+          ShutdownHookManager.TIME_UNIT_DEFAULT);
       synchronized (this) { // refetch the lock again
         FileSystem oldfs = map.get(key);
         if (oldfs != null) { // a file system is created while lock is releasing
@@ -3381,7 +3398,9 @@ public abstract class FileSystem extends Configured
         // now insert the new file system into the map
         if (map.isEmpty()
                 && !ShutdownHookManager.get().isShutdownInProgress()) {
-          ShutdownHookManager.get().addShutdownHook(clientFinalizer, SHUTDOWN_HOOK_PRIORITY);
+          ShutdownHookManager.get().addShutdownHook(clientFinalizer,
+              SHUTDOWN_HOOK_PRIORITY, timeout,
+              ShutdownHookManager.TIME_UNIT_DEFAULT);
         }
         fs.key = key;
         map.put(key, fs);

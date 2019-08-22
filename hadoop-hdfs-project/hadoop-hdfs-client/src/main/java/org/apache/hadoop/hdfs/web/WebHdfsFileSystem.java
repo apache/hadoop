@@ -37,8 +37,6 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -75,6 +73,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
@@ -146,8 +145,6 @@ public class WebHdfsFileSystem extends FileSystem
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
 
-  public static final String SPECIAL_FILENAME_CHARACTERS_REGEX = ".*[;+%].*";
-
   /**
    * Default connection factory may be overridden in tests to use smaller
    * timeout values
@@ -170,6 +167,7 @@ public class WebHdfsFileSystem extends FileSystem
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
   private boolean disallowFallbackToInsecureCluster;
+  private boolean isInsecureCluster;
   private String restCsrfCustomHeader;
   private Set<String> restCsrfMethodsToIgnore;
 
@@ -282,6 +280,7 @@ public class WebHdfsFileSystem extends FileSystem
 
     this.workingDir = makeQualified(new Path(getHomeDirectoryString(ugi)));
     this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
+    this.isInsecureCluster = !this.canRefreshDelegationToken;
     this.disallowFallbackToInsecureCluster = !conf.getBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
@@ -367,6 +366,7 @@ public class WebHdfsFileSystem extends FileSystem
             LOG.debug("Fetched new token: {}", token);
           } else { // security is disabled
             canRefreshDelegationToken = false;
+            isInsecureCluster = true;
           }
         }
       }
@@ -413,8 +413,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (cachedHomeDirectory == null) {
       final HttpOpParam.Op op = GetOpParam.Op.GETHOMEDIRECTORY;
       try {
-        String pathFromDelegatedFS = new FsPathResponseRunner<String>(op, null,
-            new UserParam(ugi)) {
+        String pathFromDelegatedFS = new FsPathResponseRunner<String>(op, null){
           @Override
           String decodeResponse(Map<?, ?> json) throws IOException {
             return JsonUtilClient.getPath(json);
@@ -576,7 +575,8 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
 
-  Param<?,?>[] getAuthParameters(final HttpOpParam.Op op) throws IOException {
+  private synchronized Param<?, ?>[] getAuthParameters(final HttpOpParam.Op op)
+      throws IOException {
     List<Param<?,?>> authParams = Lists.newArrayList();
     // Skip adding delegation token for token operations because these
     // operations require authentication.
@@ -593,7 +593,12 @@ public class WebHdfsFileSystem extends FileSystem
         authParams.add(new DoAsParam(userUgi.getShortUserName()));
         userUgi = realUgi;
       }
-      authParams.add(new UserParam(userUgi.getShortUserName()));
+      UserParam userParam = new UserParam((userUgi.getShortUserName()));
+
+      //in insecure, use user.name parameter, in secure, use spnego auth
+      if(isInsecureCluster) {
+        authParams.add(userParam);
+      }
     }
     return authParams.toArray(new Param<?,?>[0]);
   }
@@ -602,38 +607,8 @@ public class WebHdfsFileSystem extends FileSystem
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
 
-    Path encodedFSPath = fspath;
-    if (fspath != null) {
-      URI fspathUri = fspath.toUri();
-      String fspathUriDecoded = fspathUri.getPath();
-      boolean pathAlreadyEncoded = false;
-      try {
-        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
-        pathAlreadyEncoded = true;
-      } catch (IllegalArgumentException ex) {
-        LOG.trace("Cannot decode URL encoded file", ex);
-      }
-      String[] fspathItems = fspathUriDecoded.split("/");
-
-      if (fspathItems.length > 0) {
-        StringBuilder fsPathEncodedItems = new StringBuilder();
-        for (String fsPathItem : fspathItems) {
-          fsPathEncodedItems.append("/");
-          if (fsPathItem.matches(SPECIAL_FILENAME_CHARACTERS_REGEX) ||
-              pathAlreadyEncoded) {
-            fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
-          } else {
-            fsPathEncodedItems.append(fsPathItem);
-          }
-        }
-        encodedFSPath = new Path(fspathUri.getScheme(),
-                fspathUri.getAuthority(), fsPathEncodedItems.substring(1));
-      }
-    }
-
     final String path = PATH_PREFIX
-        + (encodedFSPath == null ? "/" :
-            makeQualified(encodedFSPath).toUri().getRawPath());
+        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
@@ -923,6 +898,10 @@ public class WebHdfsFileSystem extends FileSystem
         return toUrl(op, fspath, parameters);
       }
     }
+
+    Path getFspath() {
+      return fspath;
+    }
   }
 
   /**
@@ -1011,6 +990,32 @@ public class WebHdfsFileSystem extends FileSystem
         throws IOException {
       return new FSDataOutputStream(new BufferedOutputStream(
           conn.getOutputStream(), bufferSize), statistics) {
+        @Override
+        public void write(int b) throws IOException {
+          try {
+            super.write(b);
+          } catch (IOException e) {
+            LOG.warn("Write to output stream for file '{}' failed. "
+                + "Attempting to fetch the cause from the connection.",
+                getFspath(), e);
+            validateResponse(op, conn, true);
+            throw e;
+          }
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+          try {
+            super.write(b, off, len);
+          } catch (IOException e) {
+            LOG.warn("Write to output stream for file '{}' failed. "
+                + "Attempting to fetch the cause from the connection.",
+                getFspath(), e);
+            validateResponse(op, conn, true);
+            throw e;
+          }
+        }
+
         @Override
         public void close() throws IOException {
           try {
@@ -1850,6 +1855,20 @@ public class WebHdfsFileSystem extends FileSystem
       @Override
       ContentSummary decodeResponse(Map<?,?> json) {
         return JsonUtilClient.toContentSummary(json);
+      }
+    }.run();
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(final Path p) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_QUOTA_USAGE);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETQUOTAUSAGE;
+    return new FsPathResponseRunner<QuotaUsage>(op, p) {
+      @Override
+      QuotaUsage decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toQuotaUsage(json);
       }
     }.run();
   }

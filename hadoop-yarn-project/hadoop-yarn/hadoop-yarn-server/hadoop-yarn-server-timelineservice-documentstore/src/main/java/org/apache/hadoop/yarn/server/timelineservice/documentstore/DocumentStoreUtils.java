@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.documentstore;
 
-import com.microsoft.azure.documentdb.ConnectionPolicy;
-import com.microsoft.azure.documentdb.ConsistencyLevel;
-import com.microsoft.azure.documentdb.DocumentClient;
+import com.microsoft.azure.cosmosdb.ConnectionPolicy;
+import com.microsoft.azure.cosmosdb.ConsistencyLevel;
+import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
@@ -134,6 +134,10 @@ public final class DocumentStoreUtils {
    * @return false if any of the string is null or empty else true
    */
   public static boolean isNullOrEmpty(String...values) {
+    if (values == null || values.length == 0) {
+      return true;
+    }
+
     for (String value : values) {
       if (value == null || value.isEmpty()) {
         return true;
@@ -143,15 +147,20 @@ public final class DocumentStoreUtils {
   }
 
   /**
-   * Creates CosmosDB Document Client.
+   * Creates CosmosDB Async Document Client.
    * @param conf
    *          to retrieve cosmos db endpoint and key
    * @return async document client for CosmosDB
    */
-  public static DocumentClient createCosmosDBClient(Configuration conf){
-    return new DocumentClient(DocumentStoreUtils.getCosmosDBEndpoint(conf),
-        DocumentStoreUtils.getCosmosDBMasterKey(conf),
-        ConnectionPolicy.GetDefault(), ConsistencyLevel.Session);
+  public static AsyncDocumentClient createCosmosDBAsyncClient(
+      Configuration conf){
+    return new AsyncDocumentClient.Builder()
+      .withServiceEndpoint(DocumentStoreUtils.getCosmosDBEndpoint(conf))
+      .withMasterKeyOrResourceToken(
+          DocumentStoreUtils.getCosmosDBMasterKey(conf))
+      .withConnectionPolicy(ConnectionPolicy.GetDefault())
+      .withConsistencyLevel(ConsistencyLevel.Session)
+      .build();
   }
 
   /**

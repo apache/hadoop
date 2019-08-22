@@ -19,12 +19,12 @@
 package org.apache.hadoop.util;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Matcher;
@@ -246,9 +246,10 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsMemFile), Charset.forName("UTF-8"));
+          Files.newInputStream(Paths.get(procfsMemFile)),
+          Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
+    } catch (IOException f) {
       // shouldn't happen....
       LOG.warn("Couldn't read " + procfsMemFile
           + "; can't determine memory settings");
@@ -316,10 +317,11 @@ public class SysInfoLinux extends SysInfo {
     BufferedReader in;
     InputStreamReader fReader;
     try {
-      fReader = new InputStreamReader(
-          new FileInputStream(procfsCpuFile), Charset.forName("UTF-8"));
+      fReader =
+          new InputStreamReader(Files.newInputStream(Paths.get(procfsCpuFile)),
+              Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
+    } catch (IOException f) {
       // shouldn't happen....
       LOG.warn("Couldn't read " + procfsCpuFile + "; can't determine cpu info");
       return;
@@ -377,9 +379,10 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsStatFile), Charset.forName("UTF-8"));
+          Files.newInputStream(Paths.get(procfsStatFile)),
+          Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
+    } catch (IOException f) {
       // shouldn't happen....
       return;
     }
@@ -431,9 +434,10 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsNetFile), Charset.forName("UTF-8"));
+          Files.newInputStream(Paths.get(procfsNetFile)),
+          Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
+    } catch (IOException f) {
       return;
     }
 
@@ -485,8 +489,9 @@ public class SysInfoLinux extends SysInfo {
     BufferedReader in;
     try {
       in = new BufferedReader(new InputStreamReader(
-            new FileInputStream(procfsDisksFile), Charset.forName("UTF-8")));
-    } catch (FileNotFoundException f) {
+          Files.newInputStream(Paths.get(procfsDisksFile)),
+          Charset.forName("UTF-8")));
+    } catch (IOException f) {
       return;
     }
 
@@ -552,9 +557,9 @@ public class SysInfoLinux extends SysInfo {
     BufferedReader in;
     try {
       in = new BufferedReader(new InputStreamReader(
-            new FileInputStream(procfsDiskSectorFile),
+          Files.newInputStream(Paths.get(procfsDiskSectorFile)),
               Charset.forName("UTF-8")));
-    } catch (FileNotFoundException f) {
+    } catch (IOException f) {
       return defSector;
     }
 

@@ -62,7 +62,6 @@ public final class NodeSchemaManager {
     String schemaFile = conf.get(
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT);
-
     NodeSchemaLoadResult result;
     try {
       result = NodeSchemaLoader.getInstance().loadSchemaFromFile(schemaFile);
@@ -70,10 +69,10 @@ public final class NodeSchemaManager {
       enforcePrefix = result.isEnforePrefix();
       maxLevel = allSchema.size();
     } catch (Throwable e) {
-      String msg = "Fail to load schema file:" + schemaFile
-          + ", error:" + e.getMessage();
-      LOG.error(msg);
-      throw new RuntimeException(msg);
+      String msg = "Failed to load schema file:" + schemaFile
+          + ", error: " + e.getMessage();
+      LOG.error(msg, e);
+      throw new RuntimeException(msg, e);
     }
   }
 

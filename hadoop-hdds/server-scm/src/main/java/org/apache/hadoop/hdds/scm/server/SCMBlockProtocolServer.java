@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.net.Node;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.io.IOUtils;
@@ -223,9 +226,9 @@ public class SCMBlockProtocolServer implements
                 scmEx)
         );
         switch (scmEx.getResult()) {
-        case CHILL_MODE_EXCEPTION:
+        case SAFE_MODE_EXCEPTION:
           resultCode = ScmBlockLocationProtocolProtos.DeleteScmBlockResult
-              .Result.chillMode;
+              .Result.safeMode;
           break;
         case FAILED_TO_FIND_BLOCK:
           resultCode = ScmBlockLocationProtocolProtos.DeleteScmBlockResult
@@ -274,6 +277,40 @@ public class SCMBlockProtocolServer implements
       if(auditSuccess) {
         AUDIT.logReadSuccess(
             buildAuditMessageForSuccess(SCMAction.GET_SCM_INFO, null)
+        );
+      }
+    }
+  }
+
+  @Override
+  public List<DatanodeDetails> sortDatanodes(List<String> nodes,
+      String clientMachine) throws IOException {
+    boolean auditSuccess = true;
+    try{
+      NodeManager nodeManager = scm.getScmNodeManager();
+      Node client = nodeManager.getNodeByAddress(clientMachine);
+      List<Node> nodeList = new ArrayList();
+      nodes.stream().forEach(uuid -> {
+        DatanodeDetails node = nodeManager.getNodeByUuid(uuid);
+        if (node != null) {
+          nodeList.add(node);
+        }
+      });
+      List<? extends Node> sortedNodeList = scm.getClusterMap()
+          .sortByDistanceCost(client, nodeList, nodes.size());
+      List<DatanodeDetails> ret = new ArrayList<>();
+      sortedNodeList.stream().forEach(node -> ret.add((DatanodeDetails)node));
+      return ret;
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.SORT_DATANODE, null, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.SORT_DATANODE, null)
         );
       }
     }

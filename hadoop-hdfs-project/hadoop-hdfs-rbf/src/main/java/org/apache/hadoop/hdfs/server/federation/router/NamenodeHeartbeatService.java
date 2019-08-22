@@ -38,7 +38,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -85,7 +87,10 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private String lifelineAddress;
   /** HTTP address for the namenode. */
   private String webAddress;
-
+  /** Connection factory for JMX calls. */
+  private URLConnectionFactory connectionFactory;
+  /** URL scheme to use for JMX calls. */
+  private String scheme;
   /**
    * Create a new Namenode status updater.
    * @param resolver Namenode resolver service to handle NN registration.
@@ -108,7 +113,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
 
-    this.conf = configuration;
+    this.conf = DFSHAAdmin.addSecurityConfiguration(configuration);
 
     String nnDesc = nameserviceId;
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
@@ -145,6 +150,12 @@ public class NamenodeHeartbeatService extends PeriodicService {
     this.webAddress =
         DFSUtil.getNamenodeWebAddr(conf, nameserviceId, namenodeId);
     LOG.info("{} Web address: {}", nnDesc, webAddress);
+
+    this.connectionFactory =
+        URLConnectionFactory.newDefaultURLConnectionFactory(conf);
+
+    this.scheme =
+        DFSUtil.getHttpPolicy(conf).isHttpEnabled() ? "http" : "https";
 
     this.setIntervalMs(conf.getLong(
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS,
@@ -328,7 +339,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
     try {
       // TODO part of this should be moved to its own utility
       String query = "Hadoop:service=NameNode,name=FSNamesystem*";
-      JSONArray aux = FederationUtil.getJmx(query, address);
+      JSONArray aux = FederationUtil.getJmx(
+          query, address, connectionFactory, scheme);
       if (aux != null) {
         for (int i = 0; i < aux.length(); i++) {
           JSONObject jsonObject = aux.getJSONObject(i);
@@ -337,9 +349,13 @@ public class NamenodeHeartbeatService extends PeriodicService {
             report.setDatanodeInfo(
                 jsonObject.getInt("NumLiveDataNodes"),
                 jsonObject.getInt("NumDeadDataNodes"),
+                jsonObject.getInt("NumStaleDataNodes"),
                 jsonObject.getInt("NumDecommissioningDataNodes"),
                 jsonObject.getInt("NumDecomLiveDataNodes"),
-                jsonObject.getInt("NumDecomDeadDataNodes"));
+                jsonObject.getInt("NumDecomDeadDataNodes"),
+                jsonObject.optInt("NumInMaintenanceLiveDataNodes"),
+                jsonObject.optInt("NumInMaintenanceDeadDataNodes"),
+                jsonObject.optInt("NumEnteringMaintenanceDataNodes"));
           } else if (name.equals(
               "Hadoop:service=NameNode,name=FSNamesystem")) {
             report.setNamesystemInfo(
@@ -351,12 +367,22 @@ public class NamenodeHeartbeatService extends PeriodicService {
                 jsonObject.getLong("PendingReplicationBlocks"),
                 jsonObject.getLong("UnderReplicatedBlocks"),
                 jsonObject.getLong("PendingDeletionBlocks"),
-                jsonObject.getLong("ProvidedCapacityTotal"));
+                jsonObject.optLong("ProvidedCapacityTotal"));
           }
         }
       }
     } catch (Exception e) {
       LOG.error("Cannot get stat from {} using JMX", getNamenodeDesc(), e);
     }
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    LOG.info("Stopping NamenodeHeartbeat service for, NS {} NN {} ",
+        this.nameserviceId, this.namenodeId);
+    if (this.connectionFactory != null) {
+      this.connectionFactory.destroy();
+    }
+    super.serviceStop();
   }
 }

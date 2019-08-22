@@ -16,13 +16,17 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
-import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 
@@ -33,6 +37,7 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -45,9 +50,10 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private static final Logger LOG = LoggerFactory
       .getLogger(OzoneManagerProtocolServerSideTranslatorPB.class);
   private final OzoneManagerRatisServer omRatisServer;
-  private final OzoneManagerRatisClient omRatisClient;
   private final RequestHandler handler;
   private final boolean isRatisEnabled;
+  private final OzoneManager ozoneManager;
+  private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
 
   /**
    * Constructs an instance of the server handler.
@@ -55,12 +61,19 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * @param impl OzoneManagerProtocolPB
    */
   public OzoneManagerProtocolServerSideTranslatorPB(
-      OzoneManagerServerProtocol impl, OzoneManagerRatisServer ratisServer,
-      OzoneManagerRatisClient ratisClient, boolean enableRatis) {
+      OzoneManager impl, OzoneManagerRatisServer ratisServer,
+      boolean enableRatis) {
+    this.ozoneManager = impl;
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
-    this.omRatisClient = ratisClient;
     this.isRatisEnabled = enableRatis;
+    this.ozoneManagerDoubleBuffer =
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(), (i) -> {
+          // Do nothing.
+          // For OM NON-HA code, there is no need to save transaction index.
+          // As we wait until the double buffer flushes DB to disk.
+        }, isRatisEnabled);
+
   }
 
   /**
@@ -80,7 +93,26 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         if (OmUtils.isReadOnly(request)) {
           return submitReadRequestToOM(request);
         } else {
-          return submitRequestToRatis(request);
+          if (omRatisServer.isLeader()) {
+            try {
+              OMClientRequest omClientRequest =
+                  OzoneManagerRatisUtils.createClientRequest(request);
+              if (omClientRequest != null) {
+                request = omClientRequest.preExecute(ozoneManager);
+              }
+            } catch(IOException ex) {
+              // As some of the preExecute returns error. So handle here.
+              return createErrorResponse(request, ex);
+            }
+            return submitRequestToRatis(request);
+          } else {
+            // throw not leader exception. This is being done, so to avoid
+            // unnecessary execution of preExecute on follower OM's. This
+            // will be helpful in the case like where we we reduce the
+            // chance of allocate blocks on follower OM's. Right now our
+            // leader status is updated every 1 second.
+            throw createNotLeaderException();
+          }
         }
       } else {
         return submitRequestDirectlyToOM(request);
@@ -89,12 +121,46 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       scope.close();
     }
   }
+
+  /**
+   * Create OMResponse from the specified OMRequest and exception.
+   * @param omRequest
+   * @param exception
+   * @return OMResponse
+   */
+  private OMResponse createErrorResponse(
+      OMRequest omRequest, IOException exception) {
+    OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
+    switch (cmdType) {
+    case CreateBucket:
+      OMResponse.Builder omResponse = OMResponse.newBuilder()
+          .setStatus(
+              OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
+          .setCmdType(cmdType)
+          .setSuccess(false);
+      if (exception.getMessage() != null) {
+        omResponse.setMessage(exception.getMessage());
+      }
+      return omResponse.build();
+    case DeleteBucket:
+    case SetBucketProperty:
+      // In these cases, we can return null. As this method is called when
+      // some error occurred in preExecute. For these request types
+      // preExecute is do nothing.
+      return null;
+    default:
+      // We shall never come here.
+      return null;
+    }
+  }
   /**
    * Submits request to OM's Ratis server.
    */
   private OMResponse submitRequestToRatis(OMRequest request)
       throws ServiceException {
-    return omRatisClient.sendCommand(request);
+    //TODO: Need to remove OzoneManagerRatisClient, as now we are using
+    // RatisServer Api's.
+    return omRatisServer.submitRequest(request);
   }
 
   private OMResponse submitReadRequestToOM(OMRequest request)
@@ -103,24 +169,28 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     if (omRatisServer.isLeader()) {
       return handler.handle(request);
     } else {
-      RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
-      Optional<RaftPeerId> leaderRaftPeerId = omRatisServer
-          .getCachedLeaderPeerId();
-
-      NotLeaderException notLeaderException;
-      if (leaderRaftPeerId.isPresent()) {
-        notLeaderException = new NotLeaderException(raftPeerId.toString());
-      } else {
-        notLeaderException = new NotLeaderException(
-            raftPeerId.toString(), leaderRaftPeerId.toString());
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(notLeaderException.getMessage());
-      }
-
-      throw new ServiceException(notLeaderException);
+      throw createNotLeaderException();
     }
+  }
+
+  private ServiceException createNotLeaderException() {
+    RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
+    Optional<RaftPeerId> leaderRaftPeerId = omRatisServer
+        .getCachedLeaderPeerId();
+
+    NotLeaderException notLeaderException;
+    if (leaderRaftPeerId.isPresent()) {
+      notLeaderException = new NotLeaderException(raftPeerId.toString());
+    } else {
+      notLeaderException = new NotLeaderException(
+          raftPeerId.toString(), leaderRaftPeerId.toString());
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(notLeaderException.getMessage());
+    }
+
+    return new ServiceException(notLeaderException);
   }
 
   /**
@@ -128,5 +198,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    */
   private OMResponse submitRequestDirectlyToOM(OMRequest request) {
     return handler.handle(request);
+  }
+
+  public void stop() {
+    if (!isRatisEnabled) {
+      ozoneManagerDoubleBuffer.stop();
+    }
   }
 }

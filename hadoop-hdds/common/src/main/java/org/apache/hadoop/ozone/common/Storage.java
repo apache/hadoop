@@ -81,7 +81,7 @@ public abstract class Storage {
 
   /**
    * Gets the path of the Storage dir.
-   * @return Stoarge dir path
+   * @return Storage dir path
    */
   public String getStorageDir() {
     return storageDir.getAbsoluteFile().toString();
@@ -117,7 +117,7 @@ public abstract class Storage {
   }
 
   /**
-   * Retreives the storageInfo instance to read/write the common
+   * Retrieves the storageInfo instance to read/write the common
    * version file properties.
    * @return the instance of the storageInfo class
    */
@@ -128,7 +128,7 @@ public abstract class Storage {
   abstract protected Properties getNodeProperties();
 
   /**
-   * Sets the Node properties spaecific to OM/SCM.
+   * Sets the Node properties specific to OM/SCM.
    */
   private void setNodeProperties() {
     Properties nodeProperties = getNodeProperties();
@@ -145,7 +145,7 @@ public abstract class Storage {
    *
    * @return the directory path
    */
-  private File getCurrentDir() {
+  public File getCurrentDir() {
     return new File(storageDir, STORAGE_DIR_CURRENT);
   }
 

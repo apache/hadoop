@@ -916,10 +916,7 @@ public class TestLoadBalancingKMSClientProvider {
     }
   }
 
-  @Test
-  public void testGetActualUGI() throws Exception {
-    // enable security
-    final Configuration conf = new Configuration();
+  private void testTokenSelectionWithConf(Configuration conf) throws Exception {
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
@@ -927,6 +924,9 @@ public class TestLoadBalancingKMSClientProvider {
         "foo", new String[] {"hadoop"});
 
     String providerUriString = "kms://http@host1;host2;host3:9600/kms/foo";
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        providerUriString);
+
     final URI kmsUri = URI.create(providerUriString);
     // create a fake kms dt
     final Token token = new Token();
@@ -951,7 +951,30 @@ public class TestLoadBalancingKMSClientProvider {
         });
     // make sure getActualUgi() returns the current user, not login user.
     assertEquals(
-        "getActualUgi() should return the current user, not login user",
-        ugi, actualUgi);
+        "testTokenSelectionWithConf() should return the" +
+            " current user, not login user", ugi, actualUgi);
+  }
+
+  @Test
+  public void testTokenSelectionWithKMSUriInConf() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+
+    // test client with hadoop.security.key.provider.path configured.
+    String providerUriString = "kms://http@host1;host2;host3:9600/kms/foo";
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        providerUriString);
+
+    testTokenSelectionWithConf(conf);
+  }
+
+  @Test
+  public void testGetActualUGI() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    // test client without hadoop.security.key.provider.path configured.
+    testTokenSelectionWithConf(conf);
   }
 }

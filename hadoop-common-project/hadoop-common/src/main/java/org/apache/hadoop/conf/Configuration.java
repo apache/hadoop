@@ -30,7 +30,6 @@ import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -43,6 +42,7 @@ import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -69,6 +69,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLInputFactory;
@@ -1839,7 +1840,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
-      return defaultValue;
+      return returnUnit.convert(defaultValue, defaultUnit);
     } else {
       return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
     }
@@ -3074,7 +3075,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           LOG.debug("parsing File " + file);
         }
         reader = (XMLStreamReader2)parse(new BufferedInputStream(
-            new FileInputStream(file)), ((Path)resource).toString(),
+            Files.newInputStream(file.toPath())), ((Path) resource).toString(),
             isRestricted);
       }
     } else if (resource instanceof InputStream) {
@@ -3435,8 +3436,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   private void overlay(Properties to, Properties from) {
-    for (Entry<Object, Object> entry: from.entrySet()) {
-      to.put(entry.getKey(), entry.getValue());
+    synchronized (from) {
+      for (Entry<Object, Object> entry : from.entrySet()) {
+        to.put(entry.getKey(), entry.getValue());
+      }
     }
   }
 
@@ -3512,7 +3515,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </ul>
    * @param out the writer to write to.
    */
-  public void writeXml(String propertyName, Writer out)
+  public void writeXml(@Nullable String propertyName, Writer out)
       throws IOException, IllegalArgumentException {
     Document doc = asXmlDocument(propertyName);
 
@@ -3534,7 +3537,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(String propertyName)
+  private synchronized Document asXmlDocument(@Nullable String propertyName)
       throws IOException, IllegalArgumentException {
     Document doc;
     try {

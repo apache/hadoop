@@ -67,6 +67,7 @@ import io.opentracing.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -113,8 +114,6 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
 
   @Override
   public void shutdown() {
-    // Shutdown the volumes
-    volumeSet.shutdown();
   }
 
   /**
@@ -299,8 +298,18 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         State containerState = container.getContainerData().getState();
         Preconditions.checkState(
             containerState == State.OPEN || containerState == State.CLOSING);
-        container.getContainerData()
-            .setState(ContainerDataProto.State.UNHEALTHY);
+        // mark and persist the container state to be unhealthy
+        try {
+          handler.markContainerUnhealthy(container);
+        } catch (IOException ioe) {
+          // just log the error here in case marking the container fails,
+          // Return the actual failure response to the client
+          LOG.error("Failed to mark container " + containerID + " UNHEALTHY. ",
+              ioe);
+        }
+        // in any case, the in memory state of the container should be unhealthy
+        Preconditions.checkArgument(
+            container.getContainerData().getState() == State.UNHEALTHY);
         sendCloseContainerActionIfNeeded(container);
       }
 

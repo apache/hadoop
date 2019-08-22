@@ -21,9 +21,10 @@ package org.apache.hadoop.hdds.scm.server;
 
 
 import org.apache.hadoop.hdds.scm.block.BlockManager;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -48,7 +49,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority
  * ContainerManager containerManager;
  * BlockManager scmBlockManager;
  * ReplicationManager replicationManager;
- * SCMChillModeManager scmChillModeManager;
+ * SCMSafeModeManager scmSafeModeManager;
  * CertificateServer certificateServer;
  * SCMMetadata scmMetadataStore.
  *
@@ -62,9 +63,10 @@ public final class SCMConfigurator {
   private ContainerManager containerManager;
   private BlockManager scmBlockManager;
   private ReplicationManager replicationManager;
-  private SCMChillModeManager scmChillModeManager;
+  private SCMSafeModeManager scmSafeModeManager;
   private CertificateServer certificateServer;
   private SCMMetadataStore metadataStore;
+  private NetworkTopology networkTopology;
 
   /**
    * Allows user to specify a version of Node manager to use with this SCM.
@@ -111,12 +113,12 @@ public final class SCMConfigurator {
   }
 
   /**
-   * Allows user to specify a custom version of Chill Mode Manager to use
+   * Allows user to specify a custom version of Safe Mode Manager to use
    * with this SCM.
-   * @param scmChillModeManager - ChillMode Manager.
+   * @param scmSafeModeManager - SafeMode Manager.
    */
-  public void setScmChillModeManager(SCMChillModeManager scmChillModeManager) {
-    this.scmChillModeManager = scmChillModeManager;
+  public void setScmSafeModeManager(SCMSafeModeManager scmSafeModeManager) {
+    this.scmSafeModeManager = scmSafeModeManager;
   }
 
   /**
@@ -135,6 +137,15 @@ public final class SCMConfigurator {
    */
   public void setMetadataStore(SCMMetadataStore scmMetadataStore) {
     this.metadataStore = scmMetadataStore;
+  }
+
+  /**
+   * Allows user to specify a custom version of Network Topology Cluster
+   * to  be used with this SCM.
+   * @param networkTopology - network topology cluster.
+   */
+  public void setNetworkTopology(NetworkTopology networkTopology) {
+    this.networkTopology = networkTopology;
   }
 
   /**
@@ -178,11 +189,11 @@ public final class SCMConfigurator {
   }
 
   /**
-   * Gets Chill Mode Manager.
-   * @return Chill Mode manager.
+   * Gets Safe Mode Manager.
+   * @return Safe Mode manager.
    */
-  public SCMChillModeManager getScmChillModeManager() {
-    return scmChillModeManager;
+  public SCMSafeModeManager getScmSafeModeManager() {
+    return scmSafeModeManager;
   }
 
   /**
@@ -199,5 +210,13 @@ public final class SCMConfigurator {
    */
   public SCMMetadataStore getMetadataStore() {
     return metadataStore;
+  }
+
+  /**
+   * Get network topology cluster tree.
+   * @return NetworkTopology.
+   */
+  public NetworkTopology getNetworkTopology() {
+    return networkTopology;
   }
 }

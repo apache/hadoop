@@ -93,6 +93,11 @@ public interface RouterRpcMonitor {
   void proxyOpRetries();
 
   /**
+   * Failed to proxy an operation because of no namenodes available.
+   */
+  void proxyOpNoNamenodes();
+
+  /**
    * If the Router cannot contact the State Store in an operation.
    */
   void routerFailureStateStore();

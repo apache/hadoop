@@ -177,7 +177,7 @@ public class OMException extends IOException {
 
     LIST_MULTIPART_UPLOAD_PARTS_FAILED,
 
-    SCM_IN_CHILL_MODE,
+    SCM_IN_SAFE_MODE,
 
     INVALID_REQUEST,
 
@@ -189,6 +189,25 @@ public class OMException extends IOException {
 
     TOKEN_CREATION_ERROR,
 
-    FILE_NOT_FOUND
+    FILE_NOT_FOUND,
+
+    DIRECTORY_NOT_FOUND,
+
+    FILE_ALREADY_EXISTS,
+
+    NOT_A_FILE,
+
+    PERMISSION_DENIED, // Error codes used during acl validation
+
+    TIMEOUT, // Error codes used during acl validation
+
+    PREFIX_NOT_FOUND,
+
+    S3_BUCKET_INVALID_LENGTH,
+
+    RATIS_ERROR, // Error in Ratis server
+
+    INVALID_PATH_IN_ACL_REQUEST // Error code when path name is invalid during
+    // acl requests.
   }
 }

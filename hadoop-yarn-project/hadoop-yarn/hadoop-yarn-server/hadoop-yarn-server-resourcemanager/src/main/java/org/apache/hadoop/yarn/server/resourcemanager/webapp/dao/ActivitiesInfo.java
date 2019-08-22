@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.NodeAllocation;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -51,7 +54,8 @@ public class ActivitiesInfo {
     this.nodeId = nodeId;
   }
 
-  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId) {
+  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.nodeId = nodeId;
     this.allocations = new ArrayList<>();
 
@@ -63,7 +67,11 @@ public class ActivitiesInfo {
       if (nodeAllocations.size() == 0) {
         diagnostic = "do not have available resources";
       } else {
-        this.nodeId = nodeAllocations.get(0).getNodeId();
+        NodeId rootNodeId = nodeAllocations.get(0).getNodeId();
+        if (rootNodeId != null && !Strings
+            .isNullOrEmpty(rootNodeId.getHost())) {
+          this.nodeId = nodeAllocations.get(0).getNodeId().toString();
+        }
 
         Date date = new Date();
         date.setTime(nodeAllocations.get(0).getTimeStamp());
@@ -72,7 +80,7 @@ public class ActivitiesInfo {
         for (int i = 0; i < nodeAllocations.size(); i++) {
           NodeAllocation nodeAllocation = nodeAllocations.get(i);
           NodeAllocationInfo allocationInfo = new NodeAllocationInfo(
-              nodeAllocation);
+              nodeAllocation, groupBy);
           this.allocations.add(allocationInfo);
         }
       }

@@ -79,6 +79,7 @@ public class TestContainerCleanup {
 
     launch = mock(ContainerLaunch.class);
     launch.containerAlreadyLaunched = new AtomicBoolean(false);
+    launch.completed = new AtomicBoolean(false);
 
     launch.pidFilePath = new Path("target/" + containerId.toString() + ".pid");
     when(launch.getContainerPid()).thenReturn(containerId.toString());
@@ -97,6 +98,18 @@ public class TestContainerCleanup {
   @Test
   public void testCleanup() throws Exception {
     launch.containerAlreadyLaunched.set(true);
+    cleanup.run();
+    ArgumentCaptor<ContainerSignalContext> captor =
+        ArgumentCaptor.forClass(ContainerSignalContext.class);
+
+    verify(executor, Mockito.times(1)).signalContainer(captor.capture());
+    Assert.assertEquals("signal", ContainerExecutor.Signal.TERM,
+        captor.getValue().getSignal());
+  }
+
+  @Test
+  public void testFailedExitCleanup() throws Exception {
+    launch.completed.set(true);
     cleanup.run();
     ArgumentCaptor<ContainerSignalContext> captor =
         ArgumentCaptor.forClass(ContainerSignalContext.class);

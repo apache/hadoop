@@ -91,7 +91,6 @@ import java.util.concurrent.ConcurrentMap;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPLICATION_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
@@ -113,6 +112,9 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_FILECACHE_DIRS;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.CONTAINER_PID_NAMESPACE_SUFFIX;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.RUN_PRIVILEGED_CONTAINER_SUFFIX;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.formatOciEnvKey;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -163,6 +165,13 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
+  private String runtimeTypeUpper = "DOCKER";
+
+  private static final String RUNTIME_TYPE = "DOCKER";
+  private final static String ENV_OCI_CONTAINER_PID_NAMESPACE =
+      formatOciEnvKey(RUNTIME_TYPE, CONTAINER_PID_NAMESPACE_SUFFIX);
+  private final static String ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER =
+      formatOciEnvKey(RUNTIME_TYPE, RUN_PRIVILEGED_CONTAINER_SUFFIX);
 
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
@@ -989,8 +998,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "invalid-value");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "invalid-value");
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
@@ -1011,8 +1019,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "host");
 
     try {
       runtime.launchContainer(builder.build());
@@ -1034,8 +1041,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "host");
 
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
@@ -1081,8 +1087,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "invalid-value");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "invalid-value");
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
@@ -1105,8 +1110,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -1128,8 +1132,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     //By default
     // yarn.nodemanager.runtime.linux.docker.privileged-containers.acl
     // is empty. So we expect this launch to fail.
@@ -1157,8 +1160,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -1184,8 +1186,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
@@ -1853,7 +1854,7 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
         .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
         any(), any(), anyBoolean(), anyBoolean())).thenReturn(
@@ -1870,7 +1871,7 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
         .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
         any(), any(), anyBoolean(), anyBoolean())).thenReturn(
@@ -1892,7 +1893,7 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
         .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
         any(), any(), anyBoolean(), anyBoolean())).thenReturn(
@@ -2479,6 +2480,56 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testLaunchContainersWithSpecificDockerRuntime()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_DOCKER_RUNTIME, "runc");
+    runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
+    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testContainerLaunchWithAllowedRuntimes()
+      throws ContainerExecutionException, IOException,
+      PrivilegedOperationException {
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    String disallowedRuntime = "runc2";
+
+    try {
+      env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DOCKER_RUNTIME,
+          disallowedRuntime);
+      runtime.launchContainer(builder.build());
+      Assert.fail("Runtime was expected to be disallowed: " +
+          disallowedRuntime);
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception: " + e);
+    }
+
+    String allowedRuntime = "runc";
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DOCKER_RUNTIME,
+        allowedRuntime);
+    //this should cause no failures.
+
+    runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
+
+    //This is the expected docker invocation for this case
+    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
   }
 
   private static void verifyStopCommand(List<String> dockerCommands,

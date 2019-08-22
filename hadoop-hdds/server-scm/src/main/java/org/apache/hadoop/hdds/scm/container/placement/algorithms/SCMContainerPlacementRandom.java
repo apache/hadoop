@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.slf4j.Logger;
@@ -49,7 +50,8 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    * @param conf Config
    */
   public SCMContainerPlacementRandom(final NodeManager nodeManager,
-      final Configuration conf) {
+      final Configuration conf, final NetworkTopology networkTopology,
+      final boolean fallback) {
     super(nodeManager, conf);
   }
 
@@ -58,6 +60,7 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    *
    *
    * @param excludedNodes - list of the datanodes to exclude.
+   * @param favoredNodes - list of nodes preferred.
    * @param nodesRequired - number of datanodes required.
    * @param sizeRequired - size required for the container or block.
    * @return List of Datanodes.
@@ -65,10 +68,11 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    */
   @Override
   public List<DatanodeDetails> chooseDatanodes(
-      List<DatanodeDetails> excludedNodes, final int nodesRequired,
-      final long sizeRequired) throws SCMException {
+      List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
+      final int nodesRequired, final long sizeRequired) throws SCMException {
     List<DatanodeDetails> healthyNodes =
-        super.chooseDatanodes(excludedNodes, nodesRequired, sizeRequired);
+        super.chooseDatanodes(excludedNodes, favoredNodes, nodesRequired,
+            sizeRequired);
 
     if (healthyNodes.size() == nodesRequired) {
       return healthyNodes;

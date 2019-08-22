@@ -13,12 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-hadooplines=$(git diff --name-only HEAD~1..HEAD | grep -v hadoop-ozone | grep -v hadoop-hdds | wc -l )
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
+
+hadooplines=$(git diff --name-only HEAD~1..HEAD | grep -v hadoop-ozone | grep -c -v hadoop-hdds  )
 if [ "$hadooplines" == "0" ]; then
   echo "Only ozone/hdds subprojects are changed"
   exit 0
 else
   echo "Main hadoop projects are changed in an ozone patch."
   echo "Please do it in a HADOOP/HDFS patch and test it with hadoop precommit tests"
-  exit -1
+  exit 1
 fi

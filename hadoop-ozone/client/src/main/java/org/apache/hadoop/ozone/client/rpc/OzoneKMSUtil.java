@@ -128,6 +128,9 @@ public final class OzoneKMSUtil {
 
   public static KeyProvider getKeyProvider(final Configuration conf,
       final URI serverProviderUri) throws IOException{
+    if (serverProviderUri == null) {
+      throw new IOException("KMS serverProviderUri is not configured.");
+    }
     return KMSUtil.createKeyProviderFromUri(conf, serverProviderUri);
   }
 

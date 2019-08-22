@@ -77,7 +77,7 @@ public class ListVolumeHandler extends Handler {
     OzoneClient client = address.createClient(createOzoneConfiguration());
 
     if (userName == null) {
-      userName = UserGroupInformation.getCurrentUser().getShortUserName();
+      userName = UserGroupInformation.getCurrentUser().getUserName();
     }
 
     if (maxVolumes < 1) {

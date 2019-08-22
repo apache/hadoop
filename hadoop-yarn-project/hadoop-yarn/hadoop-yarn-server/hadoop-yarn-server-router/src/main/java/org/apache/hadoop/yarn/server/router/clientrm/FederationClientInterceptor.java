@@ -622,7 +622,7 @@ public class FederationClientInterceptor
           ApplicationClientProtocol protocol =
               getClientRMProxyForSubCluster(subClusterId);
           Method method = ApplicationClientProtocol.class
-              .getDeclaredMethod(request.getMethodName(), request.getTypes());
+              .getMethod(request.getMethodName(), request.getTypes());
           return method.invoke(protocol, request.getParams());
         }
       });

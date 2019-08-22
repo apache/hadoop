@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Longs;
+
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -76,12 +78,13 @@ public class Checksum {
 
   /**
    * Computes checksum for give data.
-   * @param byteString input data in the form of ByteString.
+   * @param byteBuffer input data in the form of ByteString.
    * @return ChecksumData computed for input data.
    */
-  public ChecksumData computeChecksum(ByteString byteString)
+  public ChecksumData computeChecksum(ByteBuffer byteBuffer)
       throws OzoneChecksumException {
-    return computeChecksum(byteString.toByteArray());
+    return computeChecksum(byteBuffer.array(), byteBuffer.position(),
+        byteBuffer.limit());
   }
 
   /**
@@ -90,6 +93,16 @@ public class Checksum {
    * @return ChecksumData computed for input data.
    */
   public ChecksumData computeChecksum(byte[] data)
+      throws OzoneChecksumException {
+    return computeChecksum(data, 0, data.length);
+  }
+
+  /**
+   * Computes checksum for give data.
+   * @param data input data in the form of byte array.
+   * @return ChecksumData computed for input data.
+   */
+  public ChecksumData computeChecksum(byte[] data, int offset, int len)
       throws OzoneChecksumException {
     ChecksumData checksumData = new ChecksumData(this.checksumType, this
         .bytesPerChecksum);
@@ -120,7 +133,7 @@ public class Checksum {
 
     // Compute number of checksums needs for given data length based on bytes
     // per checksum.
-    int dataSize = data.length;
+    int dataSize = len - offset;
     int numChecksums = (dataSize + bytesPerChecksum - 1) / bytesPerChecksum;
 
     // Checksum is computed for each bytesPerChecksum number of bytes of data
@@ -128,7 +141,7 @@ public class Checksum {
     // remaining data with length less than bytesPerChecksum.
     List<ByteString> checksumList = new ArrayList<>(numChecksums);
     for (int index = 0; index < numChecksums; index++) {
-      checksumList.add(computeChecksumAtIndex(data, index));
+      checksumList.add(computeChecksumAtIndex(data, index, offset, len));
     }
     checksumData.setChecksums(checksumList);
 
@@ -140,15 +153,19 @@ public class Checksum {
    * and a max length of bytesPerChecksum.
    * @param data input data
    * @param index index to compute the offset from where data must be read
+   * @param start start pos of the array where the computation has to start
+   * @length length of array till which checksum needs to be computed
    * @return computed checksum ByteString
    * @throws OzoneChecksumException thrown when ChecksumType is not recognized
    */
-  private ByteString computeChecksumAtIndex(byte[] data, int index)
+  private ByteString computeChecksumAtIndex(byte[] data, int index, int start,
+      int length)
       throws OzoneChecksumException {
-    int offset = index * bytesPerChecksum;
+    int offset = start + index * bytesPerChecksum;
+    int dataLength = length - start;
     int len = bytesPerChecksum;
-    if ((offset + len) > data.length) {
-      len = data.length - offset;
+    if ((offset + len) > dataLength) {
+      len = dataLength - offset;
     }
     byte[] checksumBytes = null;
     switch (checksumType) {
@@ -208,15 +225,17 @@ public class Checksum {
 
   /**
    * Computes the ChecksumData for the input data and verifies that it
-   * matches with that of the input checksumData.
+   * matches with that of the input checksumData, starting from index
+   * startIndex.
    * @param byteString input data
    * @param checksumData checksumData to match with
+   * @param startIndex index of first checksum in checksumData to match with
+   *                   data's computed checksum.
    * @throws OzoneChecksumException is thrown if checksums do not match
    */
-  public static boolean verifyChecksum(
-      ByteString byteString, ChecksumData checksumData)
-      throws OzoneChecksumException {
-    return verifyChecksum(byteString.toByteArray(), checksumData);
+  public static boolean verifyChecksum(ByteString byteString,
+      ChecksumData checksumData, int startIndex) throws OzoneChecksumException {
+    return verifyChecksum(byteString.toByteArray(), checksumData, startIndex);
   }
 
   /**
@@ -228,6 +247,20 @@ public class Checksum {
    */
   public static boolean verifyChecksum(byte[] data, ChecksumData checksumData)
       throws OzoneChecksumException {
+    return verifyChecksum(data, checksumData, 0);
+  }
+
+  /**
+   * Computes the ChecksumData for the input data and verifies that it
+   * matches with that of the input checksumData.
+   * @param data input data
+   * @param checksumData checksumData to match with
+   * @param startIndex index of first checksum in checksumData to match with
+   *                   data's computed checksum.
+   * @throws OzoneChecksumException is thrown if checksums do not match
+   */
+  public static boolean verifyChecksum(byte[] data, ChecksumData checksumData,
+      int startIndex) throws OzoneChecksumException {
     ChecksumType checksumType = checksumData.getChecksumType();
     if (checksumType == ChecksumType.NONE) {
       // Checksum is set to NONE. No further verification is required.
@@ -236,9 +269,11 @@ public class Checksum {
 
     int bytesPerChecksum = checksumData.getBytesPerChecksum();
     Checksum checksum = new Checksum(checksumType, bytesPerChecksum);
-    ChecksumData computedChecksumData = checksum.computeChecksum(data);
+    ChecksumData computedChecksumData =
+        checksum.computeChecksum(data, 0, data.length);
 
-    return checksumData.verifyChecksumDataMatches(computedChecksumData);
+    return checksumData.verifyChecksumDataMatches(computedChecksumData,
+        startIndex);
   }
 
   /**

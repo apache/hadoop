@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
@@ -33,7 +34,6 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
 import java.security.NoSuchAlgorithmException;
@@ -84,23 +85,20 @@ public final class ChunkUtils {
       throw new StorageContainerException(err, INVALID_WRITE_SIZE);
     }
 
-    AsynchronousFileChannel file = null;
+    FileChannel file = null;
     FileLock lock = null;
 
     try {
       long writeTimeStart = Time.monotonicNow();
-      file = sync ?
-          AsynchronousFileChannel.open(chunkFile.toPath(),
-              StandardOpenOption.CREATE,
-              StandardOpenOption.WRITE,
-              StandardOpenOption.SPARSE,
-              StandardOpenOption.SYNC) :
-          AsynchronousFileChannel.open(chunkFile.toPath(),
+
+      // skip SYNC and DSYNC to reduce contention on file.lock
+      file = FileChannel.open(chunkFile.toPath(),
               StandardOpenOption.CREATE,
               StandardOpenOption.WRITE,
               StandardOpenOption.SPARSE);
-      lock = file.lock().get();
-      int size = file.write(data, chunkInfo.getOffset()).get();
+
+      lock = file.lock();
+      int size = file.write(data, chunkInfo.getOffset());
       // Increment volumeIO stats here.
       volumeIOStats.incWriteTime(Time.monotonicNow() - writeTimeStart);
       volumeIOStats.incWriteOpCount();
@@ -128,6 +126,10 @@ public final class ChunkUtils {
       }
       if (file != null) {
         try {
+          if (sync) {
+            // ensure data and metadata is persisted. Outside the lock
+            file.force(true);
+          }
           file.close();
         } catch (IOException e) {
           throw new StorageContainerException("Error closing chunk file",
@@ -315,7 +317,8 @@ public final class ChunkUtils {
     ReadChunkResponseProto.Builder response =
         ReadChunkResponseProto.newBuilder();
     response.setChunkData(info.getProtoBufMessage());
-    response.setData(ByteString.copyFrom(data));
+    response.setData(
+        ByteStringHelper.getByteString(data));
     response.setBlockID(msg.getReadChunk().getBlockID());
 
     ContainerCommandResponseProto.Builder builder =

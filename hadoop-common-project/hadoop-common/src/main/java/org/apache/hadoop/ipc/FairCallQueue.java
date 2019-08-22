@@ -377,9 +377,21 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       this.revisionNumber++;
     }
 
+    /**
+     * Fetch the current call queue from the weak reference delegate. If there
+     * is no delegate, or the delegate is empty, this will return null.
+     */
+    private FairCallQueue<? extends Schedulable> getCallQueue() {
+      WeakReference<FairCallQueue<? extends Schedulable>> ref = this.delegate;
+      if (ref == null) {
+        return null;
+      }
+      return ref.get();
+    }
+
     @Override
     public int[] getQueueSizes() {
-      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = getCallQueue();
       if (obj == null) {
         return new int[]{};
       }
@@ -389,7 +401,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
     @Override
     public long[] getOverflowedCalls() {
-      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = getCallQueue();
       if (obj == null) {
         return new long[]{};
       }

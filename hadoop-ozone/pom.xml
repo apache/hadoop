@@ -11,7 +11,7 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
---><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+--><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -29,11 +29,13 @@
     <hadoop.version>3.2.0</hadoop.version>
     <hdds.version>0.5.0-SNAPSHOT</hdds.version>
     <ozone.version>0.5.0-SNAPSHOT</ozone.version>
-    <ratis.version>0.4.0-1fc5ace-SNAPSHOT</ratis.version>
+    <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
+    <guice.version>4.0</guice.version>
+    <docker.image>apache/ozone:${project.version}</docker.image>
   </properties>
   <modules>
     <module>common</module>
@@ -49,6 +51,10 @@
     <module>s3gateway</module>
     <module>dist</module>
     <module>ozone-recon</module>
+    <module>ozone-recon-codegen</module>
+    <module>upgrade</module>
+    <module>csi</module>
+    <module>fault-injection-test</module>
   </modules>
 
   <repositories>
@@ -88,6 +94,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-csi</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-datanode</artifactId>
         <version>${ozone.version}</version>
       </dependency>
@@ -113,6 +124,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-config</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-integration-test</artifactId>
         <version>${ozone.version}</version>
         <type>test-jar</type>
@@ -123,7 +139,6 @@
         <version>${ozone.version}</version>
         <type>test-jar</type>
       </dependency>
-
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-common</artifactId>
@@ -166,6 +181,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-upgrade</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-container-service</artifactId>
         <version>${hdds.version}</version>
         <type>test-jar</type>
@@ -200,6 +220,11 @@
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>2.6</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -265,6 +290,9 @@
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
             <exclude>**/dependency-reduced-pom.xml</exclude>
+            <exclude>**/node_modules/**</exclude>
+            <exclude>**/yarn.lock</exclude>
+            <exclude>**/ozone-recon-web/build/**</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -287,7 +315,7 @@
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <attach>true</attach>
+              <outputFile>${project.build.directory}/classpath</outputFile>
               <prefix>$HDDS_LIB_JARS_DIR</prefix>
               <outputFilterFile>true</outputFilterFile>
               <includeScope>runtime</includeScope>
@@ -296,8 +324,36 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-classpath-artifact</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/classpath</file>
+                  <type>cp</type>
+                  <classifier>classpath</classifier>
+                </artifact>
+              </artifacts>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/node_modules/*</exclude>
+            <exclude>**/ozone-recon-web/**</exclude>
+          </excludes>
+        </configuration>
         <executions>
           <execution>
             <goals>
@@ -310,6 +366,12 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>docker-build</id>
+      <properties>
+        <docker.image>${user.name}/ozone:${project.version}</docker.image>
+      </properties>
+    </profile>
     <profile>
       <id>parallel-tests</id>
       <build>

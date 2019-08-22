@@ -196,7 +196,7 @@ public class LocalResolver extends RouterResolver<String, String> {
         try {
           String nsId = nn.getNameserviceId();
           String rpcAddress = nn.getRpcAddress();
-          String hostname = HostAndPort.fromString(rpcAddress).getHostText();
+          String hostname = HostAndPort.fromString(rpcAddress).getHost();
           ret.put(hostname, nsId);
           if (hostname.equals(localHostname)) {
             ret.put(localIp, nsId);

@@ -27,13 +27,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SEND_QOP_ENABLED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
 
-import com.google.common.base.Charsets;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,7 +42,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 
@@ -148,8 +144,6 @@ import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -175,6 +169,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -268,8 +263,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   private final String minimumDataNodeVersion;
 
   private final String defaultECPolicyName;
-
-  private final boolean shouldSendQOP;
 
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
@@ -553,8 +546,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         this.clientRpcServer.addAuxiliaryListener(auxiliaryPort);
       }
     }
-    this.shouldSendQOP = conf.getBoolean(
-        DFS_NAMENODE_SEND_QOP_ENABLED, DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT);
   }
 
   /** Allow access to the lifeline RPC server for testing */
@@ -762,11 +753,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrGetBlockLocations();
     LocatedBlocks locatedBlocks =
         namesystem.getBlockLocations(getClientMachine(), src, offset, length);
-    if (shouldSendQOP) {
-      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        wrapEstablishedQOP(lb, getEstablishedClientQOP());
-      }
-    }
     return locatedBlocks;
   }
   
@@ -841,9 +827,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       RetryCache.setState(cacheEntry, success, info);
     }
     metrics.incrFilesAppended();
-    if (shouldSendQOP) {
-      wrapEstablishedQOP(info.getLastBlock(), getEstablishedClientQOP());
-    }
     return info;
   }
 
@@ -912,9 +895,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (locatedBlock != null) {
       metrics.incrAddBlockOps();
     }
-    if (shouldSendQOP) {
-      wrapEstablishedQOP(locatedBlock, getEstablishedClientQOP());
-    }
     return locatedBlock;
   }
 
@@ -948,9 +928,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     LocatedBlock locatedBlock = namesystem.getAdditionalDatanode(src, fileId,
         blk, existings, existingStorageIDs, excludeSet, numAdditionalNodes,
         clientName);
-    if (shouldSendQOP) {
-      wrapEstablishedQOP(locatedBlock, getEstablishedClientQOP());
-    }
     return locatedBlock;
   }
   /**
@@ -1331,7 +1308,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege();
     return namesystem.rollEditLog();
   }
   
@@ -1592,21 +1568,25 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
-    for (int r = 0; r < reports.length; r++) {
-      final BlockListAsLongs blocks = reports[r].getBlocks();
-      //
-      // BlockManager.processReport accumulates information of prior calls
-      // for the same node and storage, so the value returned by the last
-      // call of this loop is the final updated value for noStaleStorage.
-      //
-      final int index = r;
-      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
-        @Override
-        public Boolean call() throws IOException {
-          return bm.processReport(nodeReg, reports[index].getStorage(),
-              blocks, context);
+    try {
+      if (bm.checkBlockReportLease(context, nodeReg)) {
+        for (int r = 0; r < reports.length; r++) {
+          final BlockListAsLongs blocks = reports[r].getBlocks();
+          //
+          // BlockManager.processReport accumulates information of prior calls
+          // for the same node and storage, so the value returned by the last
+          // call of this loop is the final updated value for noStaleStorage.
+          //
+          final int index = r;
+          noStaleStorages = bm.runBlockOp(() ->
+            bm.processReport(nodeReg, reports[index].getStorage(),
+                blocks, context));
         }
-      });
+      }
+    } catch (UnregisteredNodeException une) {
+      LOG.debug("Datanode {} is attempting to report but not register yet.",
+          nodeReg);
+      return RegisterCommand.REGISTER;
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
@@ -1874,7 +1854,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    *
    * @return the established QOP of this client.
    */
-  private static String getEstablishedClientQOP() {
+  public static String getEstablishedClientQOP() {
     return Server.getEstablishedQOP();
   }
 
@@ -2627,27 +2607,5 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + "external SPS service is not allowed to fetch the path Ids");
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
-  }
-
-
-  /**
-   * Wrapping the QOP information into the LocatedBlock instance.
-   * The wrapped QOP will be used by DataNode, i.e. DataNode will simply use
-   * this QOP to accept client calls, because this this QOP is viewed
-   * as the QOP that NameNode has accepted.
-   *
-   * @param locatedBlock the LocatedBlock instance
-   * @param qop the QOP to wrap in
-   * @throws RuntimeException
-   */
-  private void wrapEstablishedQOP(LocatedBlock locatedBlock, String qop) {
-    if (qop == null || locatedBlock == null) {
-      return;
-    }
-    BlockTokenSecretManager btsm = namesystem.getBlockManager()
-        .getBlockTokenSecretManager();
-    Token<BlockTokenIdentifier> token = locatedBlock.getBlockToken();
-    byte[] secret = btsm.secretGen(qop.getBytes(Charsets.UTF_8));
-    token.setDNHandshakeSecret(secret);
   }
 }

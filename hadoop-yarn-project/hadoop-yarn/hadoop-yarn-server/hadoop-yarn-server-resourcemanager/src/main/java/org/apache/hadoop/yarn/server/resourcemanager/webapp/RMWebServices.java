@@ -56,6 +56,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.JettyUtils;
@@ -93,6 +94,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
@@ -103,6 +105,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -117,6 +120,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -232,6 +236,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public static final String DEFAULT_START_TIME = "0";
   public static final String DEFAULT_END_TIME = "-1";
   public static final String DEFAULT_INCLUDE_RESOURCE = "false";
+  public static final String DEFAULT_SUMMARIZE = "false";
 
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
@@ -632,7 +637,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public ActivitiesInfo getActivities(@Context HttpServletRequest hsr,
-      @QueryParam(RMWSConsts.NODEID) String nodeId) {
+      @QueryParam(RMWSConsts.NODEID) String nodeId,
+      @QueryParam(RMWSConsts.GROUP_BY) String groupBy) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -647,6 +653,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       if (null == activitiesManager) {
         errMessage = "Not Capacity Scheduler";
         return new ActivitiesInfo(errMessage, nodeId);
+      }
+
+      RMWSConsts.ActivitiesGroupBy activitiesGroupBy;
+      try {
+        activitiesGroupBy = parseActivitiesGroupBy(groupBy);
+      } catch (IllegalArgumentException e) {
+        return new ActivitiesInfo(e.getMessage(), nodeId);
       }
 
       List<FiCaSchedulerNode> nodeList =
@@ -689,7 +702,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
       if (!illegalInput) {
         activitiesManager.recordNextNodeUpdateActivities(nodeId);
-        return activitiesManager.getActivitiesInfo(nodeId);
+        return activitiesManager.getActivitiesInfo(nodeId, activitiesGroupBy);
       }
 
       // Return a activities info with error message
@@ -705,8 +718,16 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
-      @QueryParam(RMWSConsts.APP_ID) String appId,
-      @QueryParam(RMWSConsts.MAX_TIME) String time) {
+      @PathParam(RMWSConsts.APPID) String appId,
+      @QueryParam(RMWSConsts.MAX_TIME) String time,
+      @QueryParam(RMWSConsts.REQUEST_PRIORITIES) Set<String> requestPriorities,
+      @QueryParam(RMWSConsts.ALLOCATION_REQUEST_IDS)
+          Set<String> allocationRequestIds,
+      @QueryParam(RMWSConsts.GROUP_BY) String groupBy,
+      @QueryParam(RMWSConsts.LIMIT) String limit,
+      @QueryParam(RMWSConsts.ACTIONS) Set<String> actions,
+      @QueryParam(RMWSConsts.SUMMARIZE) @DefaultValue(DEFAULT_SUMMARIZE)
+          boolean summarize) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -726,6 +747,33 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return new AppActivitiesInfo(errMessage, null);
       }
 
+      RMWSConsts.ActivitiesGroupBy activitiesGroupBy;
+      try {
+        activitiesGroupBy = parseActivitiesGroupBy(groupBy);
+      } catch (IllegalArgumentException e) {
+        return new AppActivitiesInfo(e.getMessage(), appId);
+      }
+
+      Set<RMWSConsts.AppActivitiesRequiredAction> requiredActions;
+      try {
+        requiredActions = parseAppActivitiesRequiredActions(actions);
+      } catch (IllegalArgumentException e) {
+        return new AppActivitiesInfo(e.getMessage(), appId);
+      }
+
+      int limitNum = -1;
+      if (limit != null) {
+        try {
+          limitNum = Integer.parseInt(limit);
+          if (limitNum <= 0) {
+            return new AppActivitiesInfo(
+                "limit must be greater than 0!", appId);
+          }
+        } catch (NumberFormatException e) {
+          return new AppActivitiesInfo("limit must be integer!", appId);
+        }
+      }
+
       double maxTime = 3.0;
 
       if (time != null) {
@@ -739,16 +787,64 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       ApplicationId applicationId;
       try {
         applicationId = ApplicationId.fromString(appId);
-        activitiesManager.turnOnAppActivitiesRecording(applicationId, maxTime);
-        AppActivitiesInfo appActivitiesInfo =
-            activitiesManager.getAppActivitiesInfo(applicationId);
-
-        return appActivitiesInfo;
+        if (requiredActions
+            .contains(RMWSConsts.AppActivitiesRequiredAction.REFRESH)) {
+          activitiesManager
+              .turnOnAppActivitiesRecording(applicationId, maxTime);
+        }
+        if (requiredActions
+            .contains(RMWSConsts.AppActivitiesRequiredAction.GET)) {
+          AppActivitiesInfo appActivitiesInfo = activitiesManager
+              .getAppActivitiesInfo(applicationId, requestPriorities,
+                  allocationRequestIds, activitiesGroupBy, limitNum,
+                  summarize, maxTime);
+          return appActivitiesInfo;
+        }
+        return new AppActivitiesInfo("Successfully notified actions: "
+            + StringUtils.join(',', actions), appId);
       } catch (Exception e) {
         String errMessage = "Cannot find application with given appId";
+        LOG.error(errMessage, e);
         return new AppActivitiesInfo(errMessage, appId);
       }
 
+    }
+    return null;
+  }
+
+  private Set<RMWSConsts.AppActivitiesRequiredAction>
+      parseAppActivitiesRequiredActions(Set<String> actions) {
+    Set<RMWSConsts.AppActivitiesRequiredAction> requiredActions =
+        new HashSet<>();
+    if (actions == null || actions.isEmpty()) {
+      requiredActions.add(RMWSConsts.AppActivitiesRequiredAction.REFRESH);
+      requiredActions.add(RMWSConsts.AppActivitiesRequiredAction.GET);
+    } else {
+      for (String action : actions) {
+        if (!EnumUtils.isValidEnum(RMWSConsts.AppActivitiesRequiredAction.class,
+            action.toUpperCase())) {
+          String errMesasge =
+              "Got invalid action: " + action + ", valid actions: " + Arrays
+                  .asList(RMWSConsts.AppActivitiesRequiredAction.values());
+          throw new IllegalArgumentException(errMesasge);
+        }
+        requiredActions.add(RMWSConsts.AppActivitiesRequiredAction
+            .valueOf(action.toUpperCase()));
+      }
+    }
+    return requiredActions;
+  }
+
+  private RMWSConsts.ActivitiesGroupBy parseActivitiesGroupBy(String groupBy) {
+    if (groupBy != null) {
+      if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class,
+          groupBy.toUpperCase())) {
+        String errMesasge =
+            "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+                + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
+        throw new IllegalArgumentException(errMesasge);
+      }
+      return RMWSConsts.ActivitiesGroupBy.valueOf(groupBy.toUpperCase());
     }
     return null;
   }
@@ -2513,5 +2609,36 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
 
     return new RMQueueAclInfo(true, user.getUserName(), "");
+  }
+
+  @POST
+  @Path(RMWSConsts.SIGNAL_TO_CONTAINER)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response signalToContainer(
+      @PathParam(RMWSConsts.CONTAINERID) String containerId,
+      @PathParam(RMWSConsts.COMMAND) String command,
+      @Context HttpServletRequest hsr)
+      throws AuthorizationException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+    if (!EnumUtils.isValidEnum(
+        SignalContainerCommand.class, command.toUpperCase())) {
+      String errMsg =
+          "Invalid command: " + command.toUpperCase() + ", valid commands are: "
+              + Arrays.asList(SignalContainerCommand.values());
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+    try {
+      ContainerId containerIdObj = ContainerId.fromString(containerId);
+      rm.getClientRMService().signalToContainer(SignalContainerRequest
+          .newInstance(containerIdObj,
+              SignalContainerCommand.valueOf(command.toUpperCase())));
+    } catch (Exception e) {
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity(e.getMessage()).build();
+    }
+    return Response.status(Status.OK).build();
   }
 }

@@ -17,7 +17,7 @@
 version: "3"
 services:
    datanode:
-      image: apache/hadoop-runner:jdk11
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
         - ../..:/opt/hadoop
@@ -28,7 +28,7 @@ services:
       env_file:
         - ./docker-config
    om:
-      image: apache/hadoop-runner:jdk11
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
@@ -36,12 +36,11 @@ services:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
    scm:
-      image: apache/hadoop-runner:jdk11
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop

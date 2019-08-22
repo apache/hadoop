@@ -18,7 +18,7 @@
 
 ## Prepare data for training
 
-CIFAR-10 is a common benchmark in machine learning for image recognition. Below example is based on CIFAR-10 dataset.
+CIFAR-10 is a common benchmark in machine learning for image recognition. The example below is based on CIFAR-10 dataset.
 
 1) Checkout https://github.com/tensorflow/models/:
 ```
@@ -39,9 +39,9 @@ python generate_cifar10_tfrecords.py --data-dir=cifar-10-data
 hadoop fs -put cifar-10-data/ /dataset/cifar-10-data
 ```
 
-**Please note that:**
+**Warning:**
 
-YARN service doesn't allow multiple services with the same name, so please run following command
+Please note that YARN service does not allow multiple services with the same name, so please run following command
 ```
 yarn application -destroy <service-name>
 ```
@@ -49,7 +49,7 @@ to delete services if you want to reuse the same service name.
 
 ## Prepare Docker images
 
-Refer to [Write Dockerfile](WriteDockerfile.md) to build a Docker image or use prebuilt one.
+Refer to [Write Dockerfile](WriteDockerfileTF.html) to build a Docker image or use prebuilt one.
 
 ## Run Tensorflow jobs
 
@@ -57,40 +57,42 @@ Refer to [Write Dockerfile](WriteDockerfile.md) to build a Docker image or use p
 
 ```
 yarn jar path/to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
-   job run --name tf-job-001 --verbose --docker_image hadoopsubmarine/tf-1.8.0-gpu:0.0.1 \
+   job run --name tf-job-001 --verbose --docker_image tf-1.13.1-gpu:0.0.1 \
    --input_path hdfs://default/dataset/cifar-10-data \
-   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
-   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0
+   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
+   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
    --num_workers 1 --worker_resources memory=8G,vcores=2,gpu=1 \
    --worker_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=10000 --eval-batch-size=16 --train-batch-size=16 --num-gpus=2 --sync" \
-   --tensorboard --tensorboard_docker_image wtan/tf-1.8.0-cpu:0.0.3
+   --tensorboard --tensorboard_docker_image tf-1.13.1-cpu:0.0.1
 ```
 
 Explanations:
 
 - When access of HDFS is required, the two environments are required to indicate: JAVA_HOME and HDFS_HOME to access libhdfs libraries *inside Docker image*. We will try to eliminate specifying this in the future.
-- Docker image for worker and tensorboard can be specified separately. For this case, Tensorboard doesn't need GPU, so we will use cpu Docker image for Tensorboard. (Same for parameter-server in the distributed example below).
+- Docker image for worker and tensorboard can be specified separately. For this case, Tensorboard does not need GPU, so we will use the CPU Docker image for Tensorboard. (Same for parameter-server in the distributed example below).
 
 ### Run distributed training
 
 ```
 yarn jar path/to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
-   job run --name tf-job-001 --verbose --docker_image hadoopsubmarine/tf-1.8.0-gpu:0.0.1 \
+   job run --name tf-job-001 --verbose --docker_image tf-1.13.1-gpu:0.0.1 \
    --input_path hdfs://default/dataset/cifar-10-data \
-   --env(s) (same as standalone)
+   --env(s) (same as standalone) \
    --num_workers 2 \
    --worker_resources memory=8G,vcores=2,gpu=1 \
    --worker_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=10000 --eval-batch-size=16 --train-batch-size=16 --num-gpus=2 --sync"  \
-   --ps_docker_image wtan/tf-1.8.0-cpu:0.0.3 \
+   --ps_docker_image tf-1.13.1-cpu:0.0.1 \
    --num_ps 1 --ps_resources memory=4G,vcores=2,gpu=0  \
    --ps_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0" \
-   --tensorboard --tensorboard_docker_image wtan/tf-1.8.0-cpu:0.0.3
+   --tensorboard --tensorboard_docker_image tf-1.13.1-cpu:0.0.1
 ```
 
 Explanations:
 
 - `>1` num_workers indicates it is a distributed training.
-- Parameters / resources / Docker image of parameter server can be specified separately. For many cases, parameter server doesn't require GPU.
+- Parameters / resources / Docker image of parameter server can be specified separately. For many cases, parameter server does not require GPU.
+
+For the meaning of the individual parameters, see the [QuickStart](QuickStart.html) page!
 
 *Outputs of distributed training*
 
@@ -148,7 +150,7 @@ INFO:tensorflow:Average examples/sec: 54.1082 (55.2134), step = 50
 INFO:tensorflow:Average examples/sec: 54.3141 (55.3676), step = 60
 ```
 
-Sample output of ps:
+Sample output of PS:
 ```
 ...
 , '_tf_random_seed': None, '_task_type': u'ps', '_environment': u'cloud', '_is_chief': False, '_cluster_spec': <tensorflow.python.training.server_lib.ClusterSpec object at 0x7f4be54dff90>, '_tf_config': gpu_options {

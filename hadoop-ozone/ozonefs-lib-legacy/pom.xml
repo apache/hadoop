@@ -14,7 +14,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -64,8 +64,12 @@
               <excludeArtifactIds>
                 slf4j-api,slf4j-log4j12,log4j-api,log4j-core,log4j,hadoop-ozone-filesystem
               </excludeArtifactIds>
+              <markersDirectory>
+                ${project.build.directory}/dependency-maven-plugin-markers-lib
+              </markersDirectory>
             </configuration>
           </execution>
+
           <execution>
             <id>include-ozonefs</id>
             <goals>
@@ -74,9 +78,33 @@
             <phase>prepare-package</phase>
             <configuration>
               <outputDirectory>target/classes</outputDirectory>
-              <includeArtifactIds>hadoop-ozone-filesystem</includeArtifactIds>
+              <includeArtifactIds>hadoop-ozone-filesystem,hadoop-ozone-common
+              </includeArtifactIds>
               <includeScope>compile</includeScope>
               <excludes>META-INF/*.SF</excludes>
+              <markersDirectory>
+                ${project.build.directory}/dependency-maven-plugin-markers-direct
+              </markersDirectory>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>include-token</id>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <phase>prepare-package</phase>
+            <configuration>
+              <outputDirectory>target/classes</outputDirectory>
+              <includeArtifactIds>hadoop-ozone-common,hadoop-hdds-common</includeArtifactIds>
+              <includeScope>compile</includeScope>
+              <includes>
+                      org/apache/hadoop/ozone/security/OzoneTokenIdentifier.class,org/apache/hadoop/hdds/security/token/OzoneBlockTokenIdentifier.class,org/apache/hadoop/ozone/protocol/proto/OzoneManagerProtocolProtos*,org/apache/hadoop/hdds/protocol/proto/HddsProtos*
+              </includes>
+              <excludes>META-INF/*.SF</excludes>
+              <markersDirectory>
+                ${project.build.directory}/dependency-maven-plugin-markers-token
+              </markersDirectory>
             </configuration>
           </execution>
         </executions>

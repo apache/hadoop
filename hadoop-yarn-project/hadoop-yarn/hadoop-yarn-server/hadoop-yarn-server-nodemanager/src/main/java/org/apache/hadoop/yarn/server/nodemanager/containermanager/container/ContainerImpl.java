@@ -161,6 +161,7 @@ public class ContainerImpl implements Container {
   private final StringBuilder diagnostics;
   private final int diagnosticsMaxSize;
   private boolean wasLaunched;
+  private boolean wasPaused;
   private long containerLocalizationStartTime;
   private long containerLaunchStartTime;
   private ContainerMetrics containerMetrics;
@@ -1541,6 +1542,7 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       container.sendContainerMonitorStartEvent();
       container.wasLaunched = true;
+      container.setIsPaused(true);
     }
   }
 
@@ -1561,6 +1563,7 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
 
       container.setIsReInitializing(false);
+      container.setIsPaused(false);
       // Set exit code to 0 on success    	
       container.exitCode = 0;
     	
@@ -1591,6 +1594,7 @@ public class ContainerImpl implements Container {
 
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
+      container.setIsPaused(false);
       container.setIsReInitializing(false);
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
       container.exitCode = exitEvent.getExitCode();
@@ -1835,6 +1839,7 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       // Kill the process/process-grp
       container.setIsReInitializing(false);
+      container.setIsPaused(false);
       container.dispatcher.getEventHandler().handle(
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.CLEANUP_CONTAINER));
@@ -2080,6 +2085,8 @@ public class ContainerImpl implements Container {
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
+      container.setIsPaused(true);
+      container.metrics.pausedContainer();
       // Container was PAUSED so tell the scheduler
       container.dispatcher.getEventHandler().handle(
           new ContainerSchedulerEvent(container,
@@ -2096,6 +2103,7 @@ public class ContainerImpl implements Container {
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
+      container.setIsPaused(false);
       // Pause the process/process-grp if it is supported by the container
       container.dispatcher.getEventHandler().handle(
           new ContainersLauncherEvent(container,
@@ -2117,7 +2125,7 @@ public class ContainerImpl implements Container {
         newState =
             stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.warn("Can't handle this event at current state: Current: ["
+        LOG.error("Can't handle this event at current state: Current: ["
             + oldState + "], eventType: [" + event.getType() + "]," +
             " container: [" + containerID + "]", e);
       }
@@ -2152,6 +2160,13 @@ public class ContainerImpl implements Container {
   private static boolean shouldBeUploadedToSharedCache(ContainerImpl container,
       LocalResourceRequest resource) {
     return container.resourceSet.getResourcesUploadPolicies().get(resource);
+  }
+
+  private void setIsPaused(boolean paused) {
+    if (this.wasPaused && !paused) {
+      this.metrics.endPausedContainer();
+    }
+    this.wasPaused = paused;
   }
 
   @VisibleForTesting

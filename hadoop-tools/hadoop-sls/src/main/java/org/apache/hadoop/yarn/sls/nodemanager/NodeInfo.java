@@ -237,6 +237,15 @@ public class NodeInfo {
     public Resource getPhysicalResource() {
       return null;
     }
+
+    @Override
+    public boolean isUpdatedCapability() {
+      return false;
+    }
+
+    @Override
+    public void resetUpdatedCapability() {
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,

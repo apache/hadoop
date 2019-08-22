@@ -30,7 +30,6 @@ import java.util.Map;
 public class TimelineEventSubDoc {
 
   private final TimelineEvent timelineEvent;
-  private boolean valid;
 
   public TimelineEventSubDoc() {
     timelineEvent = new TimelineEvent();
@@ -51,11 +50,7 @@ public class TimelineEventSubDoc {
   public boolean isValid() {
     return timelineEvent.isValid();
   }
-
-  public void setValid(boolean valid) {
-    this.valid = valid;
-  }
-
+  
   public long getTimestamp() {
     return timelineEvent.getTimestamp();
   }

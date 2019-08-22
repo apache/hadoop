@@ -42,7 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tests GenerateOzoneRequiredConfigurations.
+ * Tests AuditParser.
  */
 public class TestAuditParser {
   private static File outputBaseDir;
@@ -177,9 +177,10 @@ public class TestAuditParser {
   public void testHelp() throws Exception {
     String[] args = new String[]{"--help"};
     execute(args,
-        "Usage: ozone auditparser [-hV] [--verbose] [-D=<String=String>]... " +
-            "<database>\n" +
-            "                         [COMMAND]");
+        "Usage: ozone auditparser [-hV] [--verbose] " +
+            "[-conf=<configurationPath>]\n" +
+            "                         [-D=<String=String>]... <database> " +
+            "[COMMAND]");
   }
 
   private static File getRandomTempDir() throws IOException {

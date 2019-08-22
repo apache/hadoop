@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
@@ -199,6 +200,13 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
 
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(new Configuration(false), false);
+
+    String prefix = YarnConfiguration.RESOURCE_TYPES + ".";
+    Map<String, String> rtProps = csContext
+        .getConfiguration().getPropsWithPrefix(prefix);
+    for (Map.Entry<String, String> entry : rtProps.entrySet()) {
+      leafQueueConfigs.set(prefix + entry.getKey(), entry.getValue());
+    }
 
     SortedMap<String, String> sortedConfigs = sortCSConfigurations();
     SortedMap<String, String> templateConfigs = getConfigurationsWithPrefix

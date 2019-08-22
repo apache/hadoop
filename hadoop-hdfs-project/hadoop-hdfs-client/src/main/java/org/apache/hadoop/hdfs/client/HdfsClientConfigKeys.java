@@ -157,6 +157,9 @@ public interface HdfsClientConfigKeys {
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
       "dfs.encrypt.data.transfer.cipher.suites";
 
+  String DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY =
+      "dfs.encrypt.data.overwrite.downstream.new.qop";
+
   String DFS_DATA_TRANSFER_PROTECTION_KEY = "dfs.data.transfer.protection";
   String DFS_DATA_TRANSFER_PROTECTION_DEFAULT = "";
   String DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY =
@@ -291,6 +294,8 @@ public interface HdfsClientConfigKeys {
     String  RESOLVE_ADDRESS_NEEDED_KEY = PREFIX + "resolve-needed";
     boolean RESOLVE_ADDRESS_NEEDED_DEFAULT = false;
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
+    String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
+    boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
   }
 
   /** dfs.client.write configuration properties */

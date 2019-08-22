@@ -42,7 +42,6 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.LinkedList;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -104,14 +103,13 @@ public class TestMultipleContainerReadWrite {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
     String dataString = RandomStringUtils.randomAscii(3 * (int)OzoneConsts.MB);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(3 * (int)OzoneConsts.MB);
+    keyArgs.setUserName(userName);
 
     try (OutputStream outputStream = storageHandler.newKeyWriter(keyArgs)) {
       outputStream.write(dataString.getBytes());
@@ -147,8 +145,6 @@ public class TestMultipleContainerReadWrite {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -182,14 +178,13 @@ public class TestMultipleContainerReadWrite {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
     String dataString = RandomStringUtils.randomAscii(500);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(500);
+    keyArgs.setUserName(userName);
 
     try (OutputStream outputStream = storageHandler.newKeyWriter(keyArgs)) {
       outputStream.write(dataString.getBytes());

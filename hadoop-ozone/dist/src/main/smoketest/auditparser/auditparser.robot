@@ -16,25 +16,38 @@
 *** Settings ***
 Documentation       Smoketest ozone cluster startup
 Library             OperatingSystem
+Library             BuiltIn
 Resource            ../commonlib.robot
 
-*** Test Cases ***
+*** Variables ***
+${user}              hadoop
+${count}             4
+${auditworkdir}      /tmp/
 
+*** Keywords ***
+Set username
+    ${hostname} =          Execute         hostname
+    Set Suite Variable     ${user}         testuser/${hostname}@EXAMPLE.COM
+    [return]               ${user}
+
+*** Test Cases ***
 Initiating freon to generate data
     ${result} =        Execute              ozone freon randomkeys --numOfVolumes 5 --numOfBuckets 5 --numOfKeys 5 --numOfThreads 1
                        Wait Until Keyword Succeeds      3min       10sec     Should contain   ${result}   Number of Keys added: 125
                        Should Not Contain               ${result}  ERROR
 
 Testing audit parser
-    ${logfile} =       Execute              ls -t /opt/hadoop/logs | grep om-audit | head -1
-                       Execute              ozone auditparser /opt/hadoop/audit.db load "/opt/hadoop/logs/${logfile}"
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5cmds
+    ${logdir} =        Get Environment Variable      HADOOP_LOG_DIR     /var/log/hadoop
+    ${logfile} =       Execute              ls -t "${logdir}" | grep om-audit | head -1
+                       Execute              ozone auditparser "${auditworkdir}/audit.db" load "${logdir}/${logfile}"
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" template top5cmds
                        Should Contain       ${result}  ALLOCATE_KEY
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5users
-                       Should Contain       ${result}  hadoop
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_VOLUME' and RESULT='SUCCESS'"
-                       Should Contain       ${result}  5
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
-                       Should Contain       ${result}  5
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where RESULT='FAILURE'"
-                       Should Contain       ${result}  0
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" template top5users
+    Run Keyword If     '${SECURITY_ENABLED}' == 'true'      Set username
+                       Should Contain       ${result}  ${user}
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" query "select count(*) from audit where op='CREATE_VOLUME' and RESULT='SUCCESS'"
+    ${result} =        Convert To Number     ${result}
+                       Should be true       ${result}>${count}
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
+    ${result} =        Convert To Number     ${result}
+                       Should be true       ${result}>${count}

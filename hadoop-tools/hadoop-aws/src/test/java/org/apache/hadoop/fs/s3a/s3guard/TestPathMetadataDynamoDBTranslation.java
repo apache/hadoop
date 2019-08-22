@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
@@ -31,16 +32,16 @@ import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.google.common.base.Preconditions;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
@@ -58,41 +59,75 @@ import static org.mockito.Mockito.never;
  * Test the PathMetadataDynamoDBTranslation is able to translate between domain
  * model objects and DynamoDB items.
  */
+@RunWith(Parameterized.class)
 public class TestPathMetadataDynamoDBTranslation extends Assert {
 
   private static final Path TEST_DIR_PATH = new Path("s3a://test-bucket/myDir");
-  private static final Item TEST_DIR_ITEM = new Item();
-  private static DDBPathMetadata testDirPathMetadata;
-
   private static final long TEST_FILE_LENGTH = 100;
   private static final long TEST_MOD_TIME = 9999;
   private static final long TEST_BLOCK_SIZE = 128;
+  private static final String TEST_ETAG = "abc";
+  private static final String TEST_VERSION_ID = "def";
   private static final Path TEST_FILE_PATH = new Path(TEST_DIR_PATH, "myFile");
-  private static final Item TEST_FILE_ITEM = new Item();
-  private static DDBPathMetadata testFilePathMetadata;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws IOException {
+  private final Item testFileItem;
+  private final DDBPathMetadata testFilePathMetadata;
+  private final Item testDirItem;
+  private final DDBPathMetadata testDirPathMetadata;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() throws IOException {
+    String username = UserGroupInformation.getCurrentUser().getShortUserName();
+
+    return Arrays.asList(new Object[][]{
+        // with etag and versionId
+        {
+            new Item()
+                .withPrimaryKey(PARENT,
+                    pathToParentKey(TEST_FILE_PATH.getParent()),
+                    CHILD, TEST_FILE_PATH.getName())
+                .withBoolean(IS_DIR, false)
+                .withLong(FILE_LENGTH, TEST_FILE_LENGTH)
+                .withLong(MOD_TIME, TEST_MOD_TIME)
+                .withLong(BLOCK_SIZE, TEST_BLOCK_SIZE)
+                .withString(ETAG, TEST_ETAG)
+                .withString(VERSION_ID, TEST_VERSION_ID),
+            new DDBPathMetadata(
+                new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME,
+                    TEST_FILE_PATH, TEST_BLOCK_SIZE, username, TEST_ETAG,
+                    TEST_VERSION_ID))
+        },
+        // without etag or versionId
+        {
+            new Item()
+                .withPrimaryKey(PARENT,
+                    pathToParentKey(TEST_FILE_PATH.getParent()),
+                    CHILD, TEST_FILE_PATH.getName())
+                .withBoolean(IS_DIR, false)
+                .withLong(FILE_LENGTH, TEST_FILE_LENGTH)
+                .withLong(MOD_TIME, TEST_MOD_TIME)
+                .withLong(BLOCK_SIZE, TEST_BLOCK_SIZE),
+            new DDBPathMetadata(
+                new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME,
+                    TEST_FILE_PATH, TEST_BLOCK_SIZE, username, null, null))
+        }
+    });
+  }
+
+  public TestPathMetadataDynamoDBTranslation(Item item,
+      DDBPathMetadata metadata) throws IOException {
+    testFileItem = item;
+    testFilePathMetadata = metadata;
+
     String username = UserGroupInformation.getCurrentUser().getShortUserName();
 
     testDirPathMetadata = new DDBPathMetadata(new S3AFileStatus(false,
         TEST_DIR_PATH, username));
 
-    TEST_DIR_ITEM
+    testDirItem = new Item();
+    testDirItem
         .withPrimaryKey(PARENT, "/test-bucket", CHILD, TEST_DIR_PATH.getName())
         .withBoolean(IS_DIR, true);
-
-    testFilePathMetadata = new DDBPathMetadata(
-        new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME, TEST_FILE_PATH,
-            TEST_BLOCK_SIZE, username));
-
-    TEST_FILE_ITEM
-        .withPrimaryKey(PARENT, pathToParentKey(TEST_FILE_PATH.getParent()),
-            CHILD, TEST_FILE_PATH.getName())
-        .withBoolean(IS_DIR, false)
-        .withLong(FILE_LENGTH, TEST_FILE_LENGTH)
-        .withLong(MOD_TIME, TEST_MOD_TIME)
-        .withLong(BLOCK_SIZE, TEST_BLOCK_SIZE);
   }
 
   /**
@@ -138,8 +173,8 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
         UserGroupInformation.getCurrentUser().getShortUserName();
     assertNull(itemToPathMetadata(null, user));
 
-    verify(TEST_DIR_ITEM, itemToPathMetadata(TEST_DIR_ITEM, user));
-    verify(TEST_FILE_ITEM, itemToPathMetadata(TEST_FILE_ITEM, user));
+    verify(testDirItem, itemToPathMetadata(testDirItem, user));
+    verify(testFileItem, itemToPathMetadata(testFileItem, user));
   }
 
   /**
@@ -147,7 +182,7 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
    */
   private static void verify(Item item, PathMetadata meta) {
     assertNotNull(meta);
-    final FileStatus status = meta.getFileStatus();
+    final S3AFileStatus status = meta.getFileStatus();
     final Path path = status.getPath();
     assertEquals(item.get(PARENT), pathToParentKey(path.getParent()));
     assertEquals(item.get(CHILD), path.getName());
@@ -157,6 +192,10 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
     assertEquals(len, status.getLen());
     long bSize = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
     assertEquals(bSize, status.getBlockSize());
+    String eTag = item.getString(ETAG);
+    assertEquals(eTag, status.getETag());
+    String versionId = item.getString(VERSION_ID);
+    assertEquals(versionId, status.getVersionId());
 
     /*
      * S3AFileStatue#getModificationTime() reports the current time, so the
@@ -252,7 +291,7 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   @Test
   public void testIsAuthoritativeCompatibilityItemToPathMetadata()
       throws Exception {
-    Item item = Mockito.spy(TEST_DIR_ITEM);
+    Item item = Mockito.spy(testDirItem);
     item.withBoolean(IS_AUTHORITATIVE, true);
     PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(IS_AUTHORITATIVE);
 
@@ -288,7 +327,7 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   @Test
   public void testIsLastUpdatedCompatibilityItemToPathMetadata()
       throws Exception {
-    Item item = Mockito.spy(TEST_DIR_ITEM);
+    Item item = Mockito.spy(testDirItem);
     item.withLong(LAST_UPDATED, 100);
     PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(LAST_UPDATED);
 

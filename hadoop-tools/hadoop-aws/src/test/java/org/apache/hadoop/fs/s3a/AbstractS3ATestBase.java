@@ -33,6 +33,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -49,7 +50,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   @Override
+  public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
+    super.setup();
+  }
+
+  @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     super.teardown();
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());
@@ -127,6 +135,10 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     byte[] data = dataset(len, 'a', 'z');
     writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
+  }
+
+  protected String getTestTableName(String suffix) {
+    return getTestDynamoTablePrefix(getConfiguration()) + suffix;
   }
 
   /**

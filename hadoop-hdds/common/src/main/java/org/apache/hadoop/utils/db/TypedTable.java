@@ -19,7 +19,20 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheResult;
+import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
+import org.apache.hadoop.utils.db.cache.TableCache;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl.CacheCleanupPolicy;
+
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.EXISTS;
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.NOT_EXIST;
 /**
  * Strongly typed table implementation.
  * <p>
@@ -31,22 +44,71 @@ import java.io.IOException;
  */
 public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
-  private Table<byte[], byte[]> rawTable;
+  private final Table<byte[], byte[]> rawTable;
 
-  private CodecRegistry codecRegistry;
+  private final CodecRegistry codecRegistry;
 
-  private Class<KEY> keyType;
+  private final Class<KEY> keyType;
 
-  private Class<VALUE> valueType;
+  private final Class<VALUE> valueType;
 
+  private final TableCache<CacheKey<KEY>, CacheValue<VALUE>> cache;
+
+  private final static long EPOCH_DEFAULT = -1L;
+
+  /**
+   * Create an TypedTable from the raw table.
+   * Default cleanup policy used for the table is
+   * {@link CacheCleanupPolicy#MANUAL}.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   */
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
-      Class<VALUE> valueType) {
+      Class<VALUE> valueType) throws IOException {
+    this(rawTable, codecRegistry, keyType, valueType,
+        CacheCleanupPolicy.MANUAL);
+  }
+
+  /**
+   * Create an TypedTable from the raw table with specified cleanup policy
+   * for table cache.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   * @param cleanupPolicy
+   */
+  public TypedTable(
+      Table<byte[], byte[]> rawTable,
+      CodecRegistry codecRegistry, Class<KEY> keyType,
+      Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException {
     this.rawTable = rawTable;
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
+    cache = new TableCacheImpl<>(cleanupPolicy);
+
+    if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+      //fill cache
+      try(TableIterator<KEY, ? extends KeyValue<KEY, VALUE>> tableIterator =
+              iterator()) {
+
+        while (tableIterator.hasNext()) {
+          KeyValue< KEY, VALUE > kv = tableIterator.next();
+
+          // We should build cache after OM restart when clean up policy is
+          // NEVER. Setting epoch value -1, so that when it is marked for
+          // delete, this will be considered for cleanup.
+          cache.put(new CacheKey<>(kv.getKey()),
+              new CacheValue<>(Optional.of(kv.getValue()), EPOCH_DEFAULT));
+        }
+      }
+    }
   }
 
   @Override
@@ -70,7 +132,50 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   }
 
   @Override
+  public boolean isExist(KEY key) throws IOException {
+
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.lookup(new CacheKey<>(key));
+
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return true;
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      return false;
+    } else {
+      return rawTable.isExist(codecRegistry.asRawData(key));
+    }
+  }
+
+  /**
+   * Returns the value mapped to the given key in byte array or returns null
+   * if the key is not found.
+   *
+   * Caller's of this method should use synchronization mechanism, when
+   * accessing. First it will check from cache, if it has entry return the
+   * value, otherwise get from the RocksDB table.
+   *
+   * @param key metadata key
+   * @return VALUE
+   * @throws IOException
+   */
+  @Override
   public VALUE get(KEY key) throws IOException {
+    // Here the metadata lock will guarantee that cache is not updated for same
+    // key during get key.
+
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.lookup(new CacheKey<>(key));
+
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return cacheResult.getValue().getCacheValue();
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      return null;
+    } else {
+      return getFromTable(key);
+    }
+  }
+
+  private VALUE getFromTable(KEY key) throws IOException {
     byte[] keyBytes = codecRegistry.asRawData(key);
     byte[] valueBytes = rawTable.get(keyBytes);
     return codecRegistry.asObject(valueBytes, valueType);
@@ -101,9 +206,56 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   }
 
   @Override
+  public long getEstimatedKeyCount() throws IOException {
+    return rawTable.getEstimatedKeyCount();
+  }
+
+  @Override
   public void close() throws Exception {
     rawTable.close();
 
+  }
+
+  @Override
+  public void addCacheEntry(CacheKey<KEY> cacheKey,
+      CacheValue<VALUE> cacheValue) {
+    // This will override the entry if there is already entry for this key.
+    cache.put(cacheKey, cacheValue);
+  }
+
+  @Override
+  public CacheValue<VALUE> getCacheValue(CacheKey<KEY> cacheKey) {
+    return cache.get(cacheKey);
+  }
+
+  public Iterator<Map.Entry<CacheKey<KEY>, CacheValue<VALUE>>> cacheIterator() {
+    return cache.iterator();
+  }
+
+  @Override
+  public void cleanupCache(long epoch) {
+    cache.cleanup(epoch);
+  }
+
+  @VisibleForTesting
+  TableCache<CacheKey<KEY>, CacheValue<VALUE>> getCache() {
+    return cache;
+  }
+
+  public Table<byte[], byte[]> getRawTable() {
+    return rawTable;
+  }
+
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
+  }
+
+  public Class<KEY> getKeyType() {
+    return keyType;
+  }
+
+  public Class<VALUE> getValueType() {
+    return valueType;
   }
 
   /**

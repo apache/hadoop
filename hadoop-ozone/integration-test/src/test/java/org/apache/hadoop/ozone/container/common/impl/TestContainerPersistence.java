@@ -47,7 +47,7 @@ import org.apache.hadoop.ozone.container.keyvalue.impl.BlockManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -162,6 +162,9 @@ public class TestContainerPersistence {
 
   private Container addContainer(ContainerSet cSet, long cID)
       throws IOException {
+    long commitBytesBefore = 0;
+    long commitBytesAfter = 0;
+    long commitIncrement = 0;
     KeyValueContainerData data = new KeyValueContainerData(cID,
         ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
         UUID.randomUUID().toString());
@@ -169,7 +172,15 @@ public class TestContainerPersistence {
     data.addMetadata("owner)", "bilbo");
     KeyValueContainer container = new KeyValueContainer(data, conf);
     container.create(volumeSet, volumeChoosingPolicy, SCM_ID);
+    commitBytesBefore = container.getContainerData()
+        .getVolume().getCommittedBytes();
     cSet.addContainer(container);
+    commitBytesAfter = container.getContainerData()
+        .getVolume().getCommittedBytes();
+    commitIncrement = commitBytesAfter - commitBytesBefore;
+    // did we commit space for the new container?
+    Assert.assertTrue(commitIncrement ==
+        ContainerTestHelper.CONTAINER_MAX_SIZE);
     return container;
   }
 
@@ -191,7 +202,7 @@ public class TestContainerPersistence {
     Path meta = kvData.getDbFile().toPath().getParent();
     Assert.assertTrue(meta != null && Files.exists(meta));
 
-    MetadataStore store = null;
+    ReferenceCountedDB store = null;
     try {
       store = BlockUtils.getDB(kvData, conf);
       Assert.assertNotNull(store);
@@ -255,7 +266,7 @@ public class TestContainerPersistence {
         "Container cannot be deleted because it is not empty.");
     container2.delete();
     Assert.assertTrue(containerSet.getContainerMapCopy()
-        .containsKey(testContainerID1));
+        .containsKey(testContainerID2));
   }
 
   @Test
@@ -328,6 +339,9 @@ public class TestContainerPersistence {
 
   private ChunkInfo writeChunkHelper(BlockID blockID) throws IOException {
     final int datalen = 1024;
+    long commitBytesBefore = 0;
+    long commitBytesAfter = 0;
+    long commitDecrement = 0;
     long testContainerID = blockID.getContainerID();
     Container container = containerSet.getContainer(testContainerID);
     if (container == null) {
@@ -337,8 +351,15 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
+    commitBytesBefore = container.getContainerData()
+        .getVolume().getCommittedBytes();
     chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
         getDispatcherContext());
+    commitBytesAfter = container.getContainerData()
+        .getVolume().getCommittedBytes();
+    commitDecrement = commitBytesBefore - commitBytesAfter;
+    // did we decrement commit bytes by the amount of data we wrote?
+    Assert.assertTrue(commitDecrement == info.getLen());
     return info;
 
   }

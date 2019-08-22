@@ -18,8 +18,8 @@ package org.apache.hadoop.ozone.container.common.states.datanode;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -117,10 +117,10 @@ public class InitDatanodeState implements DatanodeState,
    * Persist DatanodeDetails to datanode.id file.
    */
   private void persistContainerDatanodeDetails() {
-    String dataNodeIDPath = HddsUtils.getDatanodeIdFilePath(conf);
+    String dataNodeIDPath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (Strings.isNullOrEmpty(dataNodeIDPath)) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+      LOG.error("A valid path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
       this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
       return;
     }

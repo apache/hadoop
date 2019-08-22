@@ -14,21 +14,34 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<div class="col-sm-3 col-md-2 sidebar" id="sidebar">
-  <img src="ozone-logo.png" style="max-width: 100%;"/>
+<div class="col-sm-2 col-md-2 sidebar" id="sidebar">
   <ul class="nav nav-sidebar">
     {{ $currentPage := . }}
     {{ range .Site.Menus.main }}
         {{ if .HasChildren }}
             <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
-                <a href="{{ .URL }}">
+                <a href="{{ .URL | relURL}}">
                     {{ .Pre }}
                     <span>{{ .Name }}</span>
                 </a>
                 <ul class="nav">
                     {{ range .Children }}
                         <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
-                        <a href="{{ .URL }}">{{ .Name }}</a>
+                           {{ if .HasChildren }}
+                               <a href="{{ .URL | relURL}}">
+                                 {{ .Pre }}
+                                 <span>{{ .Name }}</span>
+                               </a>
+                               <ul class="nav">
+                               {{ range .Children }}
+                                  <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
+                                     <a href="{{ .URL | relURL}}">{{ .Name }}</a>
+                                  </li>
+                               {{ end }}
+                               </ul>
+                           {{ else }}
+                           <a href="{{ .URL }}">{{ .Name }}</a>
+                           {{ end }}
                         </li>
                     {{ end }}
                 </ul>
@@ -36,9 +49,9 @@
         {{ else }}
             <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
                 {{ if eq .URL "/" }}
-                   <a href="index.html">
+                   <a href="{{ "index.html" | relURL }}">
                 {{ else }}
-                   <a href="{{ .URL }}">
+                   <a href="{{ .URL | relURL }}">
                 {{ end }}
 
                     {{ .Pre }}

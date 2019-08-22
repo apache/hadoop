@@ -21,7 +21,6 @@ package org.apache.hadoop.utils.db;
 
 import javax.management.MBeanServer;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -291,45 +291,59 @@ public class TestRDBStore {
     }
   }
 
+  /**
+   * Not strictly a unit test. Just a confirmation of the expected behavior
+   * of RocksDB keyMayExist API.
+   * Expected behavior - On average, keyMayExist latency < key.get() latency
+   * for invalid keys.
+   * @throws Exception if unable to read from RocksDB.
+   */
   @Test
-  public void testReadOnlyRocksDB() throws Exception {
-    File dbFile = folder.newFolder();
-    byte[] key = "Key1".getBytes();
-    byte[] value = "Value1".getBytes();
+  public void testRocksDBKeyMayExistApi() throws Exception {
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+      RocksDB db = newStore.getDb();
 
-    //Create Rdb and write some data into it.
-    RDBStore newStore = new RDBStore(dbFile, options, configSet);
-    Assert.assertNotNull("DB Store cannot be null", newStore);
-    Table firstTable = newStore.getTable(families.get(0));
-    Assert.assertNotNull("Table cannot be null", firstTable);
-    firstTable.put(key, value);
+      //Test with 50 invalid keys.
+      long start = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertTrue(db.get(
+            StringUtils.getBytesUtf16("key" + i))== null);
+      }
+      long end = System.nanoTime();
+      long keyGetLatency = end - start;
 
-    RocksDBCheckpoint checkpoint = (RocksDBCheckpoint) newStore.getCheckpoint(
-        true);
+      start = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertFalse(db.keyMayExist(
+            StringUtils.getBytesUtf16("key" + i), new StringBuilder()));
+      }
+      end = System.nanoTime();
+      long keyMayExistLatency = end - start;
 
-    //Create Read Only DB from snapshot of first DB.
-    RDBStore snapshotStore = new RDBStore(checkpoint.getCheckpointLocation()
-        .toFile(), options, configSet, new CodecRegistry(), true);
-
-    Assert.assertNotNull("DB Store cannot be null", newStore);
-
-    //Verify read is allowed.
-    firstTable = snapshotStore.getTable(families.get(0));
-    Assert.assertNotNull("Table cannot be null", firstTable);
-    Assert.assertTrue(Arrays.equals(((byte[])firstTable.get(key)), value));
-
-    //Verify write is not allowed.
-    byte[] key2 =
-        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
-    byte[] value2 =
-        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
-    try {
-      firstTable.put(key2, value2);
-      Assert.fail();
-    } catch (IOException e) {
-      Assert.assertTrue(e.getMessage()
-          .contains("Not supported operation in read only mode"));
+      Assert.assertTrue(keyMayExistLatency < keyGetLatency);
     }
-    checkpoint.cleanupCheckpoint();
   }
+
+  @Test
+  public void testGetDBUpdatesSince() throws Exception {
+
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+
+      try (Table firstTable = newStore.getTable(families.get(1))) {
+        firstTable.put(StringUtils.getBytesUtf16("Key1"), StringUtils
+            .getBytesUtf16("Value1"));
+        firstTable.put(StringUtils.getBytesUtf16("Key2"), StringUtils
+            .getBytesUtf16("Value2"));
+      }
+      Assert.assertTrue(
+          newStore.getDb().getLatestSequenceNumber() == 2);
+
+      DBUpdatesWrapper dbUpdatesSince = newStore.getUpdatesSince(0);
+      Assert.assertEquals(2, dbUpdatesSince.getData().size());
+    }
+  }
+
+
 }

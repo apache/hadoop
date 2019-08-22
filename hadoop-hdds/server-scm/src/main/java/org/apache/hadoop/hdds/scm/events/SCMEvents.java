@@ -21,10 +21,8 @@ package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager.SafeModeStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
-    .ReplicationStatus;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .IncrementalContainerReportFromDatanode;
@@ -40,14 +38,8 @@ import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
-    .DeleteContainerCommandCompleted;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
-    .ReplicationCompleted;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
-
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
+    .NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -106,7 +98,7 @@ public final class SCMEvents {
 
   /**
    * PipelineReport processed by pipeline report handler. This event is
-   * received by HealthyPipelineChillModeRule.
+   * received by HealthyPipelineSafeModeRule.
    */
   public static final TypedEvent<PipelineReportFromDatanode>
       PROCESSED_PIPELINE_REPORT = new TypedEvent<>(
@@ -186,12 +178,6 @@ public final class SCMEvents {
 
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
-   * status for Replication SCMCommand is received.
-   */
-  public static final Event<ReplicationStatus> REPLICATION_STATUS = new
-      TypedEvent<>(ReplicationStatus.class, "Replicate_Command_Status");
-  /**
-   * This event will be triggered by CommandStatusReportHandler whenever a
    * status for DeleteBlock SCMCommand is received.
    */
   public static final TypedEvent<CommandStatusReportHandler.DeleteBlockStatus>
@@ -207,55 +193,8 @@ public final class SCMEvents {
   public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
       new TypedEvent<>(PendingDeleteStatusList.class, "Pending_Delete_Status");
 
-  /**
-   * This is the command for ReplicationManager to handle under/over
-   * replication. Sent by the ContainerReportHandler after processing the
-   * heartbeat.
-   */
-  public static final TypedEvent<ReplicationRequest> REPLICATE_CONTAINER =
-      new TypedEvent<>(ReplicationRequest.class);
-
-  /**
-   * This event is sent by the ReplicaManager to the
-   * ReplicationCommandWatcher to track the in-progress replication.
-   */
-  public static final TypedEvent<ReplicationManager.ReplicationRequestToRepeat>
-      TRACK_REPLICATE_COMMAND =
-      new TypedEvent<>(ReplicationManager.ReplicationRequestToRepeat.class);
-
-  /**
-   * This event is sent by the ReplicaManager to the
-   * DeleteContainerCommandWatcher to track the in-progress delete commands.
-   */
-  public static final TypedEvent<ReplicationManager.DeletionRequestToRepeat>
-      TRACK_DELETE_CONTAINER_COMMAND =
-      new TypedEvent<>(ReplicationManager.DeletionRequestToRepeat.class);
-  /**
-   * This event comes from the Heartbeat dispatcher (in fact from the
-   * datanode) to notify the scm that the replication is done. This is
-   * received by the replicate command watcher to mark in-progress task as
-   * finished.
-    <p>
-   * TODO: Temporary event, should be replaced by specific Heartbeat
-   * ActionRequred event.
-   */
-  public static final TypedEvent<ReplicationCompleted> REPLICATION_COMPLETE =
-      new TypedEvent<>(ReplicationCompleted.class);
-
-  public static final TypedEvent<DeleteContainerCommandCompleted>
-      DELETE_CONTAINER_COMMAND_COMPLETE =
-      new TypedEvent<>(DeleteContainerCommandCompleted.class);
-
-  /**
-   * Signal for all the components (but especially for the replication
-   * manager and container report handler) that the replication could be
-   * started. Should be send only if (almost) all the container state are
-   * available from the datanodes.
-   */
-  public static final TypedEvent<Boolean> START_REPLICATION =
-      new TypedEvent<>(Boolean.class);
-  public static final TypedEvent<ChillModeStatus> CHILL_MODE_STATUS =
-      new TypedEvent<>(ChillModeStatus.class);
+  public static final TypedEvent<SafeModeStatus> SAFE_MODE_STATUS =
+      new TypedEvent<>(SafeModeStatus.class);
 
   /**
    * Private Ctor. Never Constructed.

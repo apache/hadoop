@@ -17,7 +17,7 @@
 version: "3"
 services:
    datanode:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -26,19 +26,18 @@ services:
       env_file:
         - ./docker-config
    om:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
         - ../..:/opt/hadoop
       ports:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["ozone","om"]
    scm:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -48,6 +47,12 @@ services:
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["ozone","scm"]
+   jaeger:
+     image: jaegertracing/all-in-one:latest
+     environment:
+       COLLECTOR_ZIPKIN_HTTP_PORT: 9411
+     ports:
+       - 16686:16686
    prometheus:
      image: prom/prometheus
      volumes:
@@ -56,7 +61,7 @@ services:
      ports:
         - 9090:9090
    freon:
-      image: apache/hadoop-runner
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       environment:
@@ -73,3 +78,12 @@ services:
       command: ["-config","/etc/grafana/grafana.ini"]
       ports:
          - 3000:3000
+   s3g:
+     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+     volumes:
+       - ../..:/opt/hadoop
+     ports:
+       - 9878:9878
+     env_file:
+       - ./docker-config
+     command: ["ozone","s3g"]

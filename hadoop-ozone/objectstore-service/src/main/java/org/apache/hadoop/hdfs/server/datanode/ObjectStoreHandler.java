@@ -16,14 +16,15 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.sun.jersey.api.container.ContainerFactory;
-import com.sun.jersey.api.core.ApplicationAdapter;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -41,23 +42,18 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
 import org.apache.hadoop.ozone.web.storage.DistributedStorageHandler;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.ratis.protocol.ClientId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.sun.jersey.api.container.ContainerFactory;
+import com.sun.jersey.api.core.ApplicationAdapter;
 import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
-import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY;
+import org.apache.ratis.protocol.ClientId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements object store handling within the DataNode process.  This class is
@@ -73,8 +69,7 @@ public final class ObjectStoreHandler implements Closeable {
   private final OzoneManagerProtocol ozoneManagerClient;
   private final StorageContainerLocationProtocol
       storageContainerLocationClient;
-  private final ScmBlockLocationProtocol
-      scmBlockLocationClient;
+
   private final StorageHandler storageHandler;
   private ClientId clientId = ClientId.randomId();
 
@@ -104,18 +99,7 @@ public final class ObjectStoreHandler implements Closeable {
                     scmAddress, UserGroupInformation.getCurrentUser(), conf,
                     NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf))),
-            StorageContainerLocationProtocol.class);
-
-    InetSocketAddress scmBlockAddress =
-        getScmAddressForBlockClients(conf);
-    this.scmBlockLocationClient =
-        TracingUtil.createProxy(
-            new ScmBlockLocationProtocolClientSideTranslatorPB(
-                RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
-                    scmBlockAddress, UserGroupInformation.getCurrentUser(),
-                    conf, NetUtils.getDefaultSocketFactory(conf),
-                    Client.getRpcTimeout(conf))),
-            ScmBlockLocationProtocol.class);
+            StorageContainerLocationProtocol.class, conf);
 
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -129,12 +113,12 @@ public final class ObjectStoreHandler implements Closeable {
                     omAddress, UserGroupInformation.getCurrentUser(), conf,
                     NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf)), clientId.toString()),
-            OzoneManagerProtocol.class);
+            OzoneManagerProtocol.class, conf);
 
     storageHandler = new DistributedStorageHandler(
         new OzoneConfiguration(conf),
         TracingUtil.createProxy(storageContainerLocationClient,
-            StorageContainerLocationProtocol.class),
+            StorageContainerLocationProtocol.class, conf),
         this.ozoneManagerClient);
     ApplicationAdapter aa =
         new ApplicationAdapter(new ObjectStoreApplication());
@@ -171,7 +155,6 @@ public final class ObjectStoreHandler implements Closeable {
     LOG.info("Closing ObjectStoreHandler.");
     storageHandler.close();
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
-    IOUtils.cleanupWithLogger(LOG, scmBlockLocationClient);
     IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
   }
 }

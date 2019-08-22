@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -58,7 +60,8 @@ public class AppActivitiesInfo {
   }
 
   public AppActivitiesInfo(List<AppAllocation> appAllocations,
-      ApplicationId applicationId) {
+      ApplicationId applicationId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.applicationId = applicationId.toString();
     this.allocations = new ArrayList<>();
 
@@ -72,9 +75,14 @@ public class AppActivitiesInfo {
       for (int i = appAllocations.size() - 1; i > -1; i--) {
         AppAllocation appAllocation = appAllocations.get(i);
         AppAllocationInfo appAllocationInfo = new AppAllocationInfo(
-            appAllocation);
+            appAllocation, groupBy);
         this.allocations.add(appAllocationInfo);
       }
     }
+  }
+
+  @VisibleForTesting
+  public List<AppAllocationInfo> getAllocations() {
+    return allocations;
   }
 }

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /*
  * It contains allocation information for one application within a period of
@@ -56,9 +60,10 @@ public class AppAllocation {
   }
 
   public void addAppAllocationActivity(String containerId, String priority,
-      ActivityState state, String diagnostic, String type) {
+      ActivityState state, String diagnose, String type, NodeId nId,
+      String allocationRequestId) {
     ActivityNode container = new ActivityNode(containerId, null, priority,
-        state, diagnostic, type);
+        state, diagnose, type, nId, allocationRequestId);
     this.allocationAttempts.add(container);
     if (state == ActivityState.REJECTED) {
       this.appState = ActivityState.SKIPPED;
@@ -68,7 +73,7 @@ public class AppAllocation {
   }
 
   public String getNodeId() {
-    return nodeId.toString();
+    return nodeId == null ? null : nodeId.toString();
   }
 
   public String getQueueName() {
@@ -79,11 +84,8 @@ public class AppAllocation {
     return appState;
   }
 
-  public String getPriority() {
-    if (priority == null) {
-      return null;
-    }
-    return priority.toString();
+  public Priority getPriority() {
+    return priority;
   }
 
   public String getContainerId() {
@@ -103,5 +105,28 @@ public class AppAllocation {
 
   public List<ActivityNode> getAllocationAttempts() {
     return allocationAttempts;
+  }
+
+  public AppAllocation filterAllocationAttempts(Set<String> requestPriorities,
+      Set<String> allocationRequestIds) {
+    AppAllocation appAllocation =
+        new AppAllocation(this.priority, this.nodeId, this.queueName);
+    appAllocation.appState = this.appState;
+    appAllocation.containerId = this.containerId;
+    appAllocation.timestamp = this.timestamp;
+    appAllocation.diagnostic = this.diagnostic;
+    Predicate<ActivityNode> predicate = (e) ->
+        (CollectionUtils.isEmpty(requestPriorities) || requestPriorities
+            .contains(e.getRequestPriority())) && (
+            CollectionUtils.isEmpty(allocationRequestIds)
+                || allocationRequestIds.contains(e.getAllocationRequestId()));
+    appAllocation.allocationAttempts =
+        this.allocationAttempts.stream().filter(predicate)
+            .collect(Collectors.toList());
+    return appAllocation;
+  }
+
+  public void setAllocationAttempts(List<ActivityNode> allocationAttempts) {
+    this.allocationAttempts = allocationAttempts;
   }
 }

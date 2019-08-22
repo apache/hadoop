@@ -16,20 +16,25 @@
 
 ## Prerequisites
 
-(Please note that all following prerequisites are just an example for you to install. You can always choose to install your own version of kernel, different users, different drivers, etc.).
+Please note that the following prerequisites are just an example for you to install Submarine.
+
+You can always choose to install your own version of kernel, different users, different drivers, etc.
 
 ### Operating System
 
-The operating system and kernel versions we have tested are as shown in the following table, which is the recommneded minimum required versions.
+The operating system and kernel versions we have tested against are shown in the following table.
+The versions in the table are the recommended minimum required versions.
 
-| Enviroment | Verion |
+| Environment | Version |
 | ------ | ------ |
-| Operating System | centos-release-7-3.1611.el7.centos.x86_64 |
-| Kernal | 3.10.0-514.el7.x86_64 |
+| Operating System | centos-release-7-5.1804.el7.centos.x86_64 |
+| Kernel | 3.10.0-862.el7.x86_64 |
 
 ### User & Group
 
-As there are some specific users and groups recommended to be created to install hadoop/docker. Please create them if they are missing.
+There are specific users and groups recommended to be created to install Hadoop with Docker.
+
+Please create these users if they do not exist.
 
 ```
 adduser hdfs
@@ -62,8 +67,8 @@ yum install gcc make g++
 # Approach 1：
 yum install kernel-devel-$(uname -r) kernel-headers-$(uname -r)
 # Approach 2：
-wget http://vault.centos.org/7.3.1611/os/x86_64/Packages/kernel-headers-3.10.0-514.el7.x86_64.rpm
-rpm -ivh kernel-headers-3.10.0-514.el7.x86_64.rpm
+wget http://vault.centos.org/7.3.1611/os/x86_64/Packages/kernel-headers-3.10.0-862.el7.x86_64.rpm
+rpm -ivh kernel-headers-3.10.0-862.el7.x86_64.rpm
 ```
 
 ### GPU Servers (Only for Nvidia GPU equipped nodes)
@@ -80,7 +85,9 @@ lspci | grep -i nvidia
 
 ### Nvidia Driver Installation (Only for Nvidia GPU equipped nodes)
 
-To make a clean installation, if you have requirements to upgrade GPU drivers. If nvidia driver/cuda has been installed before, They should be uninstalled firstly.
+To make a clean installation, if you have requirements to upgrade GPU drivers.
+
+If nvidia driver / CUDA has been installed before, they should be uninstalled as a first step.
 
 ```
 # uninstall cuda：
@@ -90,7 +97,7 @@ sudo /usr/local/cuda-10.0/bin/uninstall_cuda_10.0.pl
 sudo /usr/bin/nvidia-uninstall
 ```
 
-To check GPU version, install nvidia-detect
+To check GPU version, install nvidia-detect:
 
 ```
 yum install nvidia-detect
@@ -107,7 +114,9 @@ Pay attention to `This device requires the current xyz.nm NVIDIA driver kmod-nvi
 Download the installer like [NVIDIA-Linux-x86_64-390.87.run](https://www.nvidia.com/object/linux-amd64-display-archive.html).
 
 
-Some preparatory work for nvidia driver installation. (This is follow normal Nvidia GPU driver installation, just put here for your convenience)
+Some preparatory work for Nvidia driver installation.
+
+The steps below are for Nvidia GPU driver installation, just pasted here for your convenience.
 
 ```
 # It may take a while to update
@@ -152,7 +161,7 @@ Would you like to run the nvidia-xconfig utility to automatically update your X 
 ```
 
 
-Check nvidia driver installation
+Check Nvidia driver installation
 
 ```
 nvidia-smi
@@ -165,30 +174,49 @@ https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
 ### Docker Installation
 
-We recommend to use Docker version >= 1.12.5, following steps are just for your reference. You can always to choose other approaches to install Docker.
+The following steps show you how to install docker 18.06.1.ce. You can choose other approaches to install Docker.
 
 ```
-yum -y update
-yum -y install yum-utils
-yum-config-manager --add-repo https://yum.dockerproject.org/repo/main/centos/7
-yum -y update
+# Remove old version docker
+sudo yum remove docker \
+                docker-client \
+                docker-client-latest \
+                docker-common \
+                docker-latest \
+                docker-latest-logrotate \
+                docker-logrotate \
+                docker-engine
 
-# Show available packages
-yum search --showduplicates docker-engine
+# Docker version
+export DOCKER_VERSION="18.06.1.ce"
+# Setup the repository
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
 
-# Install docker 1.12.5
-yum -y --nogpgcheck install docker-engine-1.12.5*
+# Check docker version
+yum list docker-ce --showduplicates | sort -r
+
+# Install docker with specified DOCKER_VERSION
+sudo yum install -y docker-ce-${DOCKER_VERSION} docker-ce-cli-${DOCKER_VERSION} containerd.io
+
+# Start docker
 systemctl start docker
 
 chown hadoop:netease /var/run/docker.sock
 chown hadoop:netease /usr/bin/docker
 ```
 
-Reference：https://docs.docker.com/cs-engine/1.12/
+Reference：https://docs.docker.com/install/linux/docker-ce/centos/
 
 ### Docker Configuration
 
-Add a file, named daemon.json, under the path of /etc/docker/. Please replace the variables of image_registry_ip, etcd_host_ip, localhost_ip, yarn_dns_registry_host_ip, dns_host_ip with specific ips according to your environments.
+Add a file, named daemon.json, under the path of /etc/docker/.
+
+Please replace the variables of image_registry_ip, etcd_host_ip, localhost_ip, yarn_dns_registry_host_ip, dns_host_ip with specific IPs according to your environment.
 
 ```
 {
@@ -208,46 +236,40 @@ sudo systemctl restart docker
 
 
 
-### Docker EE version
+### Check docker version
 
 ```bash
 $ docker version
 
 Client:
- Version:      1.12.5
- API version:  1.24
- Go version:   go1.6.4
- Git commit:   7392c3b
- Built:        Fri Dec 16 02:23:59 2016
+ Version:      18.06.1-ce
+ API version:  1.38
+ Go version:   go1.10.3
+ Git commit:   e68fc7a
+ Built:        Tue Aug 21 17:23:03 2018
  OS/Arch:      linux/amd64
+ Experimental: false
 
 Server:
- Version:      1.12.5
- API version:  1.24
- Go version:   go1.6.4
- Git commit:   7392c3b
- Built:        Fri Dec 16 02:23:59 2016
+ Version:      18.06.1-ce
+ API version:  1.38 (minimum version 1.12)
+ Go version:   go1.10.3
+ Git commit:   e68fc7a
+ Built:        Tue Aug 21 17:23:03 2018
  OS/Arch:      linux/amd64
+ Experimental: false
 ```
 
 ### Nvidia-docker Installation (Only for Nvidia GPU equipped nodes)
 
-Submarine depends on nvidia-docker 1.0 version
+Submarine has already supported nvidia-docker V2
 
 ```
-wget -P /tmp https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.1/nvidia-docker-1.0.1-1.x86_64.rpm
-sudo rpm -i /tmp/nvidia-docker*.rpm
-# Start nvidia-docker
-sudo systemctl start nvidia-docker
-
-# Check nvidia-docker status：
-systemctl status nvidia-docker
-
-# Check nvidia-docker log：
-journalctl -u nvidia-docker
-
-# Test nvidia-docker-plugin
-curl http://localhost:3476/v1.0/docker/cli
+# Add the package repositories
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+sudo yum install -y nvidia-docker2-2.0.3-1.docker18.06.1.ce
 ```
 
 According to `nvidia-driver` version, add folders under the path of  `/var/lib/nvidia-docker/volumes/nvidia_driver/`
@@ -264,7 +286,7 @@ cp /usr/lib64/libcuda* /var/lib/nvidia-docker/volumes/nvidia_driver/390.87/lib64
 cp /usr/lib64/libnvidia* /var/lib/nvidia-docker/volumes/nvidia_driver/390.87/lib64
 
 # Test with nvidia-smi
-nvidia-docker run --rm nvidia/cuda:9.0-devel nvidia-smi
+nvidia-docker run --rm nvidia/cuda:10.0-devel nvidia-smi
 ```
 
 Test docker, nvidia-docker, nvidia-driver installation
@@ -283,94 +305,24 @@ import tensorflow as tf
 tf.test.is_gpu_available()
 ```
 
-[The way to uninstall nvidia-docker 1.0](https://github.com/nvidia/nvidia-docker/wiki/Installation-(version-2.0))
+If you want to uninstall nvidia-docker V2:
+```
+sudo yum remove -y nvidia-docker2-2.0.3-1.docker18.06.1.ce
+```
 
 Reference:
-https://github.com/NVIDIA/nvidia-docker/tree/1.0
-
+https://github.com/NVIDIA/nvidia-docker
 
 ### Tensorflow Image
 
-There is no need to install CUDNN and CUDA on the servers, because CUDNN and CUDA can be added in the docker images. we can get basic docker images by following WriteDockerfile.md.
+There is no need to install CUDNN and CUDA on the servers, because CUDNN and CUDA can be added in the docker images.
 
-
-The basic Dockerfile doesn't support kerberos security. if you need kerberos, you can get write a Dockerfile like this
-
-
-```shell
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
-
-# Pick up some TF dependencies
-RUN apt-get update && apt-get install -y --allow-downgrades --no-install-recommends \
-        build-essential \
-        cuda-command-line-tools-9-0 \
-        cuda-cublas-9-0 \
-        cuda-cufft-9-0 \
-        cuda-curand-9-0 \
-        cuda-cusolver-9-0 \
-        cuda-cusparse-9-0 \
-        curl \
-        libcudnn7=7.0.5.15-1+cuda9.0 \
-        libfreetype6-dev \
-        libpng12-dev \
-        libzmq3-dev \
-        pkg-config \
-        python \
-        python-dev \
-        rsync \
-        software-properties-common \
-        unzip \
-        && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -yq krb5-user libpam-krb5 && apt-get clean
-
-RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
-    python get-pip.py && \
-    rm get-pip.py
-
-RUN pip --no-cache-dir install \
-        Pillow \
-        h5py \
-        ipykernel \
-        jupyter \
-        matplotlib \
-        numpy \
-        pandas \
-        scipy \
-        sklearn \
-        && \
-    python -m ipykernel.kernelspec
-
-# Install TensorFlow GPU version.
-RUN pip --no-cache-dir install \
-    http://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.8.0-cp27-none-linux_x86_64.whl
-RUN apt-get update && apt-get install git -y
-
-RUN apt-get update && apt-get install -y openjdk-8-jdk wget
-# Downloadhadoop-3.1.1.tar.gz
-RUN wget http://mirrors.hust.edu.cn/apache/hadoop/common/hadoop-3.1.1/hadoop-3.1.1.tar.gz
-RUN tar zxf hadoop-3.1.1.tar.gz
-RUN mv hadoop-3.1.1 hadoop-3.1.0
-
-# Download jdk which supports kerberos
-RUN wget -qO jdk8.tar.gz 'http://${kerberos_jdk_url}/jdk-8u152-linux-x64.tar.gz'
-RUN tar xzf jdk8.tar.gz -C /opt
-RUN mv /opt/jdk* /opt/java
-RUN rm jdk8.tar.gz
-RUN update-alternatives --install /usr/bin/java java /opt/java/bin/java 100
-RUN update-alternatives --install /usr/bin/javac javac /opt/java/bin/javac 100
-
-ENV JAVA_HOME /opt/java
-ENV PATH $PATH:$JAVA_HOME/bin
-```
-
+We can get or build basic docker images by referring to [Write Dockerfile](WriteDockerfileTF.html).
 
 ### Test tensorflow in a docker container
 
 After docker image is built, we can check
-Tensorflow environments before submitting a yarn job.
+Tensorflow environments before submitting a Submarine job.
 
 ```shell
 $ docker run -it ${docker_image_name} /bin/bash
@@ -397,8 +349,8 @@ If there are some errors, we could check the following configuration.
 
 ### Etcd Installation
 
-etcd is a distributed reliable key-value store for the most critical data of a distributed system, Registration and discovery of services used in containers.
-You can also choose alternatives like zookeeper, Consul.
+etcd is a distributed, reliable key-value store for the most critical data of a distributed system, Registration and discovery of services used in containers.
+You can also choose alternatives like ZooKeeper, Consul or others.
 
 To install Etcd on specified servers, we can run Submarine-installer/install.sh
 
@@ -427,8 +379,10 @@ b3d05464c356441a: name=etcdnode1 peerURLs=http://${etcd_host_ip3}:2380 clientURL
 
 ### Calico Installation
 
-Calico creates and manages a flat three-tier network, and each container is assigned a routable ip. We just add the steps here for your convenience.
-You can also choose alternatives like Flannel, OVS.
+Calico creates and manages a flat three-tier network, and each container is assigned a routable IP address.
+
+We are listing the steps here for your convenience.
+You can also choose alternatives like Flannel, OVS or others.
 
 To install Calico on specified servers, we can run Submarine-installer/install.sh
 
@@ -440,7 +394,7 @@ systemctl status calico-node.service
 #### Check Calico Network
 
 ```shell
-# Run the following command to show the all host status in the cluster except localhost.
+# Run the following command to show all host status in the cluster except localhost.
 $ calicoctl node status
 Calico process is running.
 
@@ -473,7 +427,7 @@ docker exec workload-A ping workload-B
 You can either get Hadoop release binary or compile from source code. Please follow the https://hadoop.apache.org/ guides.
 
 
-### Start yarn service
+### Start YARN service
 
 ```
 YARN_LOGFILE=resourcemanager.log ./sbin/yarn-daemon.sh start resourcemanager
@@ -482,7 +436,7 @@ YARN_LOGFILE=timeline.log ./sbin/yarn-daemon.sh start timelineserver
 YARN_LOGFILE=mr-historyserver.log ./sbin/mr-jobhistory-daemon.sh start historyserver
 ```
 
-### Start yarn registery dns service
+### Start YARN registry DNS service
 
 ```
 sudo YARN_LOGFILE=registrydns.log ./yarn-daemon.sh start registrydns
@@ -502,25 +456,25 @@ sudo YARN_LOGFILE=registrydns.log ./yarn-daemon.sh start registrydns
 
 #### Clean up apps with the same name
 
-Suppose we want to submit a tensorflow job named standalone-tf, destroy any application with the same name and clean up historical job directories.
+Suppose we want to submit a TensorFlow job named standalone-tf, destroy any application with the same name and clean up historical job directories.
 
 ```bash
 ./bin/yarn app -destroy standalone-tf
 ./bin/hdfs dfs -rmr hdfs://${dfs_name_service}/tmp/cifar-10-jobdir
 ```
-where ${dfs_name_service} is the hdfs name service you use
+where ${dfs_name_service} is the HDFS name service you use
 
 #### Run a standalone tensorflow job
 
 ```bash
 ./bin/yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name standalone-tf \
- --docker_image dockerfile-cpu-tf1.8.0-with-models \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name standalone-tf \
+ --docker_image tf-1.13.1-cpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-checkpoint \
  --worker_resources memory=4G,vcores=2 --verbose \
- --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --num-gpus=0"
+ --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --num-gpus=0"
 ```
 
 ### Distributed Mode
@@ -532,30 +486,30 @@ where ${dfs_name_service} is the hdfs name service you use
 ./bin/hdfs dfs -rmr hdfs://${dfs_name_service}/tmp/cifar-10-jobdir
 ```
 
-#### Run a distributed tensorflow job
+#### Run a distributed TensorFlow job
 
 ```bash
 ./bin/yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name distributed-tf \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name distributed-tf \
  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
- --docker_image dockerfile-cpu-tf1.8.0-with-models \
+ --docker_image tf-1.13.1-cpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
  --worker_resources memory=4G,vcores=2 --verbose \
  --num_ps 1 \
  --ps_resources memory=4G,vcores=2 \
- --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --num-gpus=0" \
+ --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0" \
  --num_workers 4 \
- --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=0"
+ --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=0"
 ```
 
 
-## Tensorflow Job with GPU
+## TensorFlow Job with GPU
 
-### GPU configurations for both resourcemanager and nodemanager
+### GPU configurations for both ResourceManager and NodeManager
 
-Add the yarn resource configuration file, named resource-types.xml
+Add the YARN resource configuration file, named resource-types.xml
 
    ```
    <configuration>
@@ -566,9 +520,9 @@ Add the yarn resource configuration file, named resource-types.xml
    </configuration>
    ```
 
-#### GPU configurations for resourcemanager
+#### GPU configurations for ResourceManager
 
-The scheduler used by resourcemanager must be  capacity scheduler, and yarn.scheduler.capacity.resource-calculator in  capacity-scheduler.xml should be DominantResourceCalculator
+The scheduler used by ResourceManager must be the capacity scheduler, and yarn.scheduler.capacity.resource-calculator in capacity-scheduler.xml should be DominantResourceCalculator
 
    ```
    <configuration>
@@ -579,7 +533,7 @@ The scheduler used by resourcemanager must be  capacity scheduler, and yarn.sche
    </configuration>
    ```
 
-#### GPU configurations for nodemanager
+#### GPU configurations for NodeManager
 
 Add configurations in yarn-site.xml
 
@@ -589,10 +543,15 @@ Add configurations in yarn-site.xml
        <name>yarn.nodemanager.resource-plugins</name>
        <value>yarn.io/gpu</value>
      </property>
+     <!--Use nvidia docker v2-->
+     <property>
+        <name>yarn.nodemanager.resource-plugins.gpu.docker-plugin</name>
+        <value>nvidia-docker-v2</value>
+     </property>
    </configuration>
    ```
 
-Add configurations in container-executor.cfg
+Add configurations to container-executor.cfg
 
    ```
    [docker]
@@ -603,6 +562,8 @@ Add configurations in container-executor.cfg
    docker.allowed.volume-drivers=/usr/bin/nvidia-docker
    docker.allowed.devices=/dev/nvidiactl,/dev/nvidia-uvm,/dev/nvidia-uvm-tools,/dev/nvidia1,/dev/nvidia0
    docker.allowed.ro-mounts=nvidia_driver_<version>
+   # Use nvidia docker v2
+   docker.allowed.runtimes=nvidia
 
    [gpu]
    module.enabled=true
@@ -613,3 +574,21 @@ Add configurations in container-executor.cfg
    root=/sys/fs/cgroup
    yarn-hierarchy=/hadoop-yarn
    ```
+
+### Run a distributed TensorFlow GPU job
+
+```bash
+ ./yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
+ --env DOCKER_JAVA_HOME=/opt/java \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name distributed-tf-gpu \
+ --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
+ --docker_image tf-1.13.1-gpu:0.0.1 \
+ --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
+ --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
+ --num_ps 0 \
+ --ps_resources memory=4G,vcores=2,gpu=0 \
+ --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0" \
+ --worker_resources memory=4G,vcores=2,gpu=1 --verbose \
+ --num_workers 1 \
+ --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1"
+```

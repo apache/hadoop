@@ -53,6 +53,10 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   private Map<String, OzoneManager> ozoneManagerMap;
   private List<OzoneManager> ozoneManagers;
 
+  // Active OMs denote OMs which are up and running
+  private List<OzoneManager> activeOMs;
+  private List<OzoneManager> inactiveOMs;
+
   private static final Random RANDOM = new Random();
   private static final int RATIS_LEADER_ELECTION_TIMEOUT = 1000; // 1 seconds
 
@@ -67,11 +71,15 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   private MiniOzoneHAClusterImpl(
       OzoneConfiguration conf,
       Map<String, OzoneManager> omMap,
+      List<OzoneManager> activeOMList,
+      List<OzoneManager> inactiveOMList,
       StorageContainerManager scm,
       List<HddsDatanodeService> hddsDatanodes) {
     super(conf, scm, hddsDatanodes);
     this.ozoneManagerMap = omMap;
     this.ozoneManagers = new ArrayList<>(omMap.values());
+    this.activeOMs = activeOMList;
+    this.inactiveOMs = inactiveOMList;
   }
 
   /**
@@ -83,8 +91,30 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
     return this.ozoneManagers.get(0);
   }
 
+  public boolean isOMActive(String omNodeId) {
+    return activeOMs.contains(ozoneManagerMap.get(omNodeId));
+  }
+
   public OzoneManager getOzoneManager(int index) {
     return this.ozoneManagers.get(index);
+  }
+
+  public OzoneManager getOzoneManager(String omNodeId) {
+    return this.ozoneManagerMap.get(omNodeId);
+  }
+
+  /**
+   * Start a previously inactive OM.
+   */
+  public void startInactiveOM(String omNodeID) throws IOException {
+    OzoneManager ozoneManager = ozoneManagerMap.get(omNodeID);
+    if (!inactiveOMs.contains(ozoneManager)) {
+      throw new IOException("OM is already active.");
+    } else {
+      ozoneManager.start();
+      activeOMs.add(ozoneManager);
+      inactiveOMs.remove(ozoneManager);
+    }
   }
 
   @Override
@@ -99,7 +129,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   public void stop() {
     for (OzoneManager ozoneManager : ozoneManagers) {
       if (ozoneManager != null) {
-        LOG.info("Stopping the OzoneManager " + ozoneManager.getOMNodId());
+        LOG.info("Stopping the OzoneManager " + ozoneManager.getOMNodeId());
         ozoneManager.stop();
         ozoneManager.join();
       }
@@ -121,6 +151,8 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   public static class Builder extends MiniOzoneClusterImpl.Builder {
 
     private final String nodeIdBaseStr = "omNode-";
+    private List<OzoneManager> activeOMs = new ArrayList<>();
+    private List<OzoneManager> inactiveOMs = new ArrayList<>();
 
     /**
      * Creates a new Builder.
@@ -133,6 +165,15 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
     @Override
     public MiniOzoneCluster build() throws IOException {
+      if (numOfActiveOMs > numOfOMs) {
+        throw new IllegalArgumentException("Number of active OMs cannot be " +
+            "more than the total number of OMs");
+      }
+
+      // If num of ActiveOMs is not set, set it to numOfOMs.
+      if (numOfActiveOMs == ACTIVE_OMS_NOT_SET) {
+        numOfActiveOMs = numOfOMs;
+      }
       DefaultMetricsSystem.setMiniClusterMode(true);
       initializeConfiguration();
       StorageContainerManager scm;
@@ -146,8 +187,8 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
       }
 
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
-      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(conf, omMap,
-          scm, hddsDatanodes);
+      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(
+          conf, omMap, activeOMs, inactiveOMs, scm, hddsDatanodes);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
       }
@@ -196,6 +237,10 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
             // Set nodeId
             String nodeId = nodeIdBaseStr + i;
             conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeId);
+            // Set the OM http(s) address to null so that the cluster picks
+            // up the address set with service ID and node ID in initHAConfig
+            conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "");
+            conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "");
 
             // Set metadata/DB dir base path
             String metaDirPath = path + "/" + nodeId;
@@ -203,18 +248,20 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
             OMStorage omStore = new OMStorage(conf);
             initializeOmStorage(omStore);
 
-            // Set HTTP address to the rpc port + 2
-            int httpPort = basePort + (6*i) - 4;
-            conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
-                "127.0.0.1:" + httpPort);
-
-            OzoneManager om = OzoneManager.createOm(null, conf);
+            OzoneManager om = OzoneManager.createOm(conf);
             om.setCertClient(certClient);
             omMap.put(nodeId, om);
 
-            om.start();
-            LOG.info("Started OzoneManager RPC server at " +
-                om.getOmRpcServerAddr());
+            if (i <= numOfActiveOMs) {
+              om.start();
+              activeOMs.add(om);
+              LOG.info("Started OzoneManager RPC server at " +
+                  om.getOmRpcServerAddr());
+            } else {
+              inactiveOMs.add(om);
+              LOG.info("Intialized OzoneManager at " + om.getOmRpcServerAddr()
+                  + ". This OM is currently inactive (not running).");
+            }
           }
 
           // Set default OM address to point to the first OM. Clients would
@@ -257,11 +304,16 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
         omNodesKeyValue.append(",").append(omNodeId);
         String omAddrKey = OmUtils.addKeySuffixes(
             OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodeId);
+        String omHttpAddrKey = OmUtils.addKeySuffixes(
+            OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, omServiceId, omNodeId);
+        String omHttpsAddrKey = OmUtils.addKeySuffixes(
+            OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, omServiceId, omNodeId);
         String omRatisPortKey = OmUtils.addKeySuffixes(
             OMConfigKeys.OZONE_OM_RATIS_PORT_KEY, omServiceId, omNodeId);
 
         conf.set(omAddrKey, "127.0.0.1:" + port);
-        // Reserve port+2 for OMs HTTP server
+        conf.set(omHttpAddrKey, "127.0.0.1:" + (port + 2));
+        conf.set(omHttpsAddrKey, "127.0.0.1:" + (port + 3));
         conf.setInt(omRatisPortKey, port + 4);
       }
 

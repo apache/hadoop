@@ -282,6 +282,7 @@
   <description>The max timeout before receiving remote task's first heartbeat.
     This parameter is in order to avoid waiting for the container
     to start indefinitely, which made task stuck in the NEW state.
+    A value of 0 disables the timeout.
   </description>
 </property>
 
@@ -1313,9 +1314,9 @@
 </property>
 
 <property>
- <name>mapreduce.job.counters.limit</name>
+ <name>mapreduce.job.counters.max</name>
   <value>120</value>
-  <description>Limit on the number of user counters allowed per job.
+  <description>The max number of user counters allowed per job.
   </description>
 </property>
 

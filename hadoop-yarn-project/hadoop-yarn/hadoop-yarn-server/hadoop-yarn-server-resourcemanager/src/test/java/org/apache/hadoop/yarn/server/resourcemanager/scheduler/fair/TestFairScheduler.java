@@ -114,6 +114,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -4623,17 +4624,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSQueue queue2 = queueMgr.getLeafQueue("parent2.queue2", true);
     FSQueue queue1 = queueMgr.getLeafQueue("parent1.queue1", true);
 
-    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 1 * GB);
+    assertThat(parent2.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(queue2.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(parent1.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(queue1.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
 
     scheduler.moveApplication(appAttId.getApplicationId(), "parent2.queue2");
 
-    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 1 * GB);
-    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 0);
-    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 0);
+    assertThat(parent2.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(queue2.getResourceUsage().getMemorySize()).isEqualTo(1 * GB);
+    assertThat(parent1.getResourceUsage().getMemorySize()).isEqualTo(0);
+    assertThat(queue1.getResourceUsage().getMemorySize()).isEqualTo(0);
   }
     
   @Test (expected = YarnException.class)
@@ -5070,20 +5071,20 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemorySize(), 0);
-    Assert.assertEquals(usedResource.getVirtualCores(), 0);
+    assertThat(usedResource.getMemorySize()).isEqualTo(0);
+    assertThat(usedResource.getVirtualCores()).isEqualTo(0);
     // Check total resource of scheduler node is also changed to 0 GB 0 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemorySize(), 0 * GB);
-    Assert.assertEquals(totalResource.getVirtualCores(), 0);
+    assertThat(totalResource.getMemorySize()).isEqualTo(0 * GB);
+    assertThat(totalResource.getVirtualCores()).isEqualTo(0);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemorySize(), 0);
-    Assert.assertEquals(availableResource.getVirtualCores(), 0);
+    assertThat(availableResource.getMemorySize()).isEqualTo(0);
+    assertThat(availableResource.getVirtualCores()).isEqualTo(0);
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
@@ -5159,8 +5160,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // container will be allocated at node2
     scheduler.handle(new NodeUpdateSchedulerEvent(node2));
-    assertEquals(scheduler.getSchedulerApp(app2).
-        getLiveContainers().size(), 1);
+    assertThat(scheduler.getSchedulerApp(app2).getLiveContainers()).hasSize(1);
 
     long maxId = 0;
     for (RMContainer container :

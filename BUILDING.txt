@@ -78,6 +78,8 @@ Optional packages:
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
     $ sudo apt-get install zstd
+* PMDK library for storage class memory(SCM) as HDFS cache backend
+  Please refer to http://pmem.io/ and https://github.com/pmem/pmdk
 
 ----------------------------------------------------------------------------------
 Maven main modules:
@@ -262,6 +264,32 @@ Maven build goals:
    invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
    requires maven 3.1.1 or greater.
 
+ PMDK library build options:
+
+   The Persistent Memory Development Kit (PMDK), formerly known as NVML, is a growing
+   collection of libraries which have been developed for various use cases, tuned,
+   validated to production quality, and thoroughly documented. These libraries are built
+   on the Direct Access (DAX) feature available in both Linux and Windows, which allows
+   applications directly load/store access to persistent memory by memory-mapping files
+   on a persistent memory aware file system.
+
+   It is currently an optional component, meaning that Hadoop can be built without
+   this dependency. Please Note the library is used via dynamic module. For getting
+   more details please refer to the official sites:
+   http://pmem.io/ and https://github.com/pmem/pmdk.
+
+  * -Drequire.pmdk is used to build the project with PMDK libraries forcibly. With this
+    option provided, the build will fail if libpmem library is not found. If this option
+    is not given, the build will generate a version of Hadoop with libhadoop.so.
+    And storage class memory(SCM) backed HDFS cache is still supported without PMDK involved.
+    Because PMDK can bring better caching write/read performance, it is recommended to build
+    the project with this option if user plans to use SCM backed HDFS cache.
+  * -Dpmdk.lib is used to specify a nonstandard location for PMDK libraries if they are not
+    under /usr/lib or /usr/lib64.
+  * -Dbundle.pmdk is used to copy the specified libpmem libraries into the distribution tar
+    package. This option requires that -Dpmdk.lib is specified. With -Dbundle.pmdk provided,
+    the build will fail if -Dpmdk.lib is not specified.
+
 ----------------------------------------------------------------------------------
 Building components separately
 
@@ -349,6 +377,50 @@ Here is an example setting to allocate between 256 MB and 1.5 GB of heap space t
 Maven
 
 export MAVEN_OPTS="-Xms256m -Xmx1536m"
+
+----------------------------------------------------------------------------------
+
+Building on macOS (without Docker)
+
+----------------------------------------------------------------------------------
+Installing required dependencies for clean install of macOS 10.14:
+
+* Install Xcode Command Line Tools
+  $ xcode-select --install
+* Install Homebrew
+  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+* Install OpenJDK 8
+  $ brew tap AdoptOpenJDK/openjdk
+  $ brew cask install adoptopenjdk8
+* Install maven and tools
+  $ brew install maven autoconf automake cmake wget
+* Install native libraries, only openssl is required to compile native code,
+you may optionally install zlib, lz4, etc.
+  $ brew install openssl
+* Protocol Buffers 2.5.0 (required), since 2.5.0 is no longer in Homebrew,
+we need to compile it from source
+  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz
+  $ tar zxvf protobuf-2.5.0.tar.gz
+  $ cd protobuf-2.5.0
+  $ ./configure
+  $ make
+  $ make check
+  $ make install
+  $ protoc --version
+
+Note that building Hadoop 3.1.1/3.1.2/3.2.0 native code from source is broken
+on macOS. For 3.1.1/3.1.2, you need to manually backport YARN-8622. For 3.2.0,
+you need to backport both YARN-8622 and YARN-9487 in order to build native code.
+
+----------------------------------------------------------------------------------
+Building command example:
+
+* Create binary distribution with native code but without documentation:
+  $ mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip \
+    -Dopenssl.prefix=/usr/local/opt/openssl
+
+Note that the command above manually specified the openssl library and include
+path. This is necessary at least for Homebrewed OpenSSL.
 
 ----------------------------------------------------------------------------------
 

@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -31,6 +30,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -49,12 +49,21 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.util.OzoneVersionInfo;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -70,20 +79,27 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.RDBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
-import org.apache.ratis.util.LifeCycle;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -91,6 +107,7 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.rocksdb.RocksDB;
 
 /**
  * Test Ozone Manager operation in distributed handler scenario.
@@ -123,6 +140,7 @@ public class TestOzoneManager {
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
+    conf.set(OZONE_ADMINISTRATORS, OZONE_ADMINISTRATORS_WILDCARD);
     cluster =  MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -344,7 +362,7 @@ public class TestOzoneManager {
   // Create a volume and test Volume access for a different user
   @Test
   public void testAccessVolume() throws IOException, OzoneException {
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String userName = UserGroupInformation.getCurrentUser().getUserName();
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String[] groupName =
@@ -356,30 +374,29 @@ public class TestOzoneManager {
     createVolumeArgs.setGroups(groupName);
     storageHandler.createVolume(createVolumeArgs);
 
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, userName,
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, userName,
+        ACLType.READ, ACCESS);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, userAcl));
-    OzoneAcl group = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, groupName[0],
-        OzoneAcl.OzoneACLRights.READ);
+    OzoneAcl group = new OzoneAcl(ACLIdentityType.GROUP, groupName[0],
+        ACLType.READ, ACCESS);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, group));
 
     // Create a different user and access should fail
     String falseUserName = "user" + RandomStringUtils.randomNumeric(5);
     OzoneAcl falseUserAcl =
-        new OzoneAcl(OzoneAcl.OzoneACLType.USER, falseUserName,
-            OzoneAcl.OzoneACLRights.READ_WRITE);
+        new OzoneAcl(ACLIdentityType.USER, falseUserName,
+            ACLType.ALL, ACCESS);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseUserAcl));
     // Checking access with user name and Group Type should fail
-    OzoneAcl falseGroupAcl = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, userName,
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl falseGroupAcl = new OzoneAcl(ACLIdentityType.GROUP, userName,
+        ACLType.ALL, ACCESS);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseGroupAcl));
 
     // Access for acl type world should also fail
     OzoneAcl worldAcl =
-        new OzoneAcl(OzoneAcl.OzoneACLType.WORLD, "",
-            OzoneAcl.OzoneACLRights.READ);
+        new OzoneAcl(ACLIdentityType.WORLD, "", ACLType.READ, ACCESS);
     Assert.assertFalse(storageHandler.checkVolumeAccess(volumeName, worldAcl));
 
     Assert.assertEquals(0, omMetrics.getNumVolumeCheckAccessFails());
@@ -485,6 +502,7 @@ public class TestOzoneManager {
     String dataString = RandomStringUtils.randomAscii(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
@@ -516,14 +534,13 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
     String dataString = RandomStringUtils.randomAscii(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
@@ -559,13 +576,12 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     String dataString = RandomStringUtils.randomAscii(100);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
@@ -576,6 +592,7 @@ public class TestOzoneManager {
     // That is this overwrite only overwrites the keys on OM. We need to
     // garbage collect those blocks from datanode.
     KeyArgs keyArgs2 = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs2.setUserName(userName);
     storageHandler.newKeyWriter(keyArgs2);
     Assert
         .assertEquals(numKeyAllocateFails, omMetrics.getNumKeyAllocateFails());
@@ -602,8 +619,6 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -913,8 +928,6 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -997,8 +1010,8 @@ public class TestOzoneManager {
 
   @Test
   public void testListVolumes() throws IOException, OzoneException {
-
-    String user0 = "testListVolumes-user-0";
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String user0 = ugi.getUserName();
     String user1 = "testListVolumes-user-1";
     String adminUser = "testListVolumes-admin";
     ListArgs listVolumeArgs;
@@ -1057,9 +1070,7 @@ public class TestOzoneManager {
     listVolumeArgs = new ListArgs(userArgs1, null, 100, null);
     listVolumeArgs.setRootScan(false);
     volumes = storageHandler.listVolumes(listVolumeArgs);
-    Assert.assertEquals(10, volumes.getVolumes().size());
-    Assert.assertEquals(user1,
-        volumes.getVolumes().get(3).getOwner().getName());
+    Assert.assertEquals(0, volumes.getVolumes().size());
 
     // Make sure all available fields are returned
     final String user0vol4 = "Vol-" + user0 + "-4";
@@ -1107,8 +1118,6 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -1152,8 +1161,6 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -1213,8 +1220,6 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -1321,7 +1326,7 @@ public class TestOzoneManager {
         conf.get(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY));
 
     OzoneTestUtils.expectOmException(ResultCodes.OM_NOT_INITIALIZED, () -> {
-      OzoneManager.createOm(null, config);
+      OzoneManager.createOm(config);
     });
 
     OzoneTestUtils
@@ -1331,7 +1336,7 @@ public class TestOzoneManager {
           omStore.setScmId("testScmId");
           // writes the version file properties
           omStore.initialize();
-          OzoneManager.createOm(null, config);
+          OzoneManager.createOm(config);
         });
   }
 
@@ -1360,31 +1365,85 @@ public class TestOzoneManager {
         conf.get(OZONE_SCM_CLIENT_ADDRESS_KEY)), scmAddress);
   }
 
-  /**
-   * Test that OM Ratis server is started only when OZONE_OM_RATIS_ENABLE_KEY is
-   * set to true.
-   */
-  @Test
-  public void testRatisServerOnOMInitialization() throws IOException {
-    // OM Ratis server should not be started when OZONE_OM_RATIS_ENABLE_KEY
-    // is not set to true
-    Assert.assertNull("OM Ratis server started though OM Ratis is disabled.",
-        cluster.getOzoneManager().getOmRatisServerState());
-
-    // Enable OM Ratis and restart OM
-    conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
-    cluster.restartOzoneManager();
-
-    // On enabling OM Ratis, the Ratis server should be started
-    Assert.assertEquals("OM Ratis server did not start",
-        LifeCycle.State.RUNNING,
-        cluster.getOzoneManager().getOmRatisServerState());
-  }
-
   @Test
   public void testVersion() {
     String expectedVersion = OzoneVersionInfo.OZONE_VERSION_INFO.getVersion();
     String actualVersion = cluster.getOzoneManager().getSoftwareVersion();
     Assert.assertEquals(expectedVersion, actualVersion);
+  }
+
+  /**
+   * Test if OM RocksDB keyMayExist API works for keys that are present.
+   * Test added in this module since we need access to custom codec dependent
+   * objects like OMKeyInfo.
+   * @throws Exception if OM or RocksDB operations fail.
+   */
+  @Test
+  public void testDBKeyMayExist() throws Exception {
+    RDBStore rdbStore = (RDBStore) cluster.getOzoneManager()
+        .getMetadataManager().getStore();
+    RocksDB db = rdbStore.getDb();
+
+    OmKeyInfo keyInfo = getNewOmKeyInfo();
+    OmKeyInfoCodec omKeyInfoCodec = new OmKeyInfoCodec();
+
+    db.put(StringUtils.getBytesUtf16("OMKey1"),
+        omKeyInfoCodec.toPersistedFormat(keyInfo));
+
+    StringBuilder sb = new StringBuilder();
+    Assert.assertTrue(db.keyMayExist(StringUtils.getBytesUtf16("OMKey1"),
+        sb));
+    Assert.assertTrue(sb.length() > 0);
+  }
+
+
+  @Test
+  public void testGetOMDBUpdates() throws IOException {
+
+    DBUpdatesRequest dbUpdatesRequest =
+        DBUpdatesRequest.newBuilder().setSequenceNumber(0).build();
+
+    DBUpdatesWrapper dbUpdates =
+        cluster.getOzoneManager().getDBUpdates(dbUpdatesRequest);
+    Assert.assertTrue(dbUpdates.getData().isEmpty());
+
+    //Write data to OM.
+    OmKeyInfo keyInfo = getNewOmKeyInfo();
+    Assert.assertNotNull(keyInfo);
+    dbUpdates =
+        cluster.getOzoneManager().getDBUpdates(dbUpdatesRequest);
+    Assert.assertFalse(dbUpdates.getData().isEmpty());
+
+  }
+
+  private OmKeyInfo getNewOmKeyInfo() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    OmVolumeArgs volumeArgs = OmVolumeArgs.newBuilder()
+        .setVolume("vol1")
+        .setAdminName("bilbo")
+        .setOwnerName("bilbo")
+        .build();
+    cluster.getOzoneManager().createVolume(volumeArgs);
+
+    OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
+        .setVolumeName("vol1")
+        .setBucketName("bucket1")
+        .build();
+    cluster.getOzoneManager().createBucket(bucketInfo);
+
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setBucketName("bucket1")
+        .setFactor(HddsProtos.ReplicationFactor.ONE)
+        .setDataSize(0)
+        .setType(HddsProtos.ReplicationType.STAND_ALONE)
+        .setAcls(OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
+            ALL, ALL))
+        .setVolumeName("vol1")
+        .setKeyName(UUID.randomUUID().toString())
+        .setDataSize(16 * 1024 * 1024 * 10)
+        .build();
+    OpenKeySession keySession = cluster.getOzoneManager().getKeyManager()
+        .openKey(keyArgs);
+    return  keySession.getKeyInfo();
   }
 }

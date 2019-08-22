@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -138,7 +137,7 @@ public class Quota {
       boolean isChildPath = false;
 
       for (RemoteLocation d : dests) {
-        if (StringUtils.startsWith(loc.getDest(), d.getDest())) {
+        if (FederationUtil.isParentEntry(loc.getDest(), d.getDest())) {
           isChildPath = true;
           break;
         }
@@ -163,7 +162,7 @@ public class Quota {
     long ssCount = 0;
     long nsQuota = HdfsConstants.QUOTA_RESET;
     long ssQuota = HdfsConstants.QUOTA_RESET;
-    boolean hasQuotaUnSet = false;
+    boolean hasQuotaUnset = false;
 
     for (Map.Entry<RemoteLocation, QuotaUsage> entry : results.entrySet()) {
       RemoteLocation loc = entry.getKey();
@@ -172,7 +171,7 @@ public class Quota {
         // If quota is not set in real FileSystem, the usage
         // value will return -1.
         if (usage.getQuota() == -1 && usage.getSpaceQuota() == -1) {
-          hasQuotaUnSet = true;
+          hasQuotaUnset = true;
         }
         nsQuota = usage.getQuota();
         ssQuota = usage.getSpaceQuota();
@@ -189,7 +188,7 @@ public class Quota {
 
     QuotaUsage.Builder builder = new QuotaUsage.Builder()
         .fileAndDirectoryCount(nsCount).spaceConsumed(ssCount);
-    if (hasQuotaUnSet) {
+    if (hasQuotaUnset) {
       builder.quota(HdfsConstants.QUOTA_RESET)
           .spaceQuota(HdfsConstants.QUOTA_RESET);
     } else {
@@ -213,9 +212,15 @@ public class Quota {
     if (manager != null) {
       Set<String> childrenPaths = manager.getPaths(path);
       for (String childPath : childrenPaths) {
-        locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
+        locations.addAll(
+            rpcServer.getLocationsForPath(childPath, false, false));
       }
     }
-    return locations;
+    if (locations.size() >= 1) {
+      return locations;
+    } else {
+      locations.addAll(rpcServer.getLocationsForPath(path, false, false));
+      return locations;
+    }
   }
 }

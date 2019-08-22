@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.security.token.Token;
-
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
+
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.token.Token;
 
 /**
- * Lightweight adapter to separte hadoop/ozone classes.
+ * Lightweight adapter to separate hadoop/ozone classes.
  * <p>
  * This class contains only the bare minimum Ozone classes in the signature.
  * It could be loaded by a different classloader because only the objects in
@@ -39,19 +39,22 @@ public interface OzoneClientAdapter {
 
   void close() throws IOException;
 
-  InputStream createInputStream(String key) throws IOException;
+  InputStream readFile(String key) throws IOException;
 
-  OzoneFSOutputStream createKey(String key) throws IOException;
+  OzoneFSOutputStream createFile(String key, boolean overWrite,
+      boolean recursive) throws IOException;
 
   void renameKey(String key, String newKeyName) throws IOException;
 
-  boolean isDirectory(BasicKeyInfo key);
-
-  boolean createDirectory(String keyName);
+  boolean createDirectory(String keyName) throws IOException;
 
   boolean deleteObject(String keyName);
 
   Iterator<BasicKeyInfo> listKeys(String pathKey);
+
+  List<FileStatusAdapter> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries, URI uri,
+      Path workingDir, String username) throws IOException;
 
   Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException;
@@ -62,5 +65,7 @@ public interface OzoneClientAdapter {
 
   String getCanonicalServiceName();
 
-  OzoneFileStatus getFileStatus(String pathKey) throws IOException;
+  FileStatusAdapter getFileStatus(String key, URI uri,
+      Path qualifiedPath, String userName) throws IOException;
+
 }

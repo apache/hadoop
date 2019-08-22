@@ -25,10 +25,12 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -133,6 +135,48 @@ public class TestContainerSet {
     }
     assertEquals(10, count);
 
+  }
+
+  @Test
+  public void testIteratorPerVolume() throws StorageContainerException {
+    HddsVolume vol1 = Mockito.mock(HddsVolume.class);
+    Mockito.when(vol1.getStorageID()).thenReturn("uuid-1");
+    HddsVolume vol2 = Mockito.mock(HddsVolume.class);
+    Mockito.when(vol2.getStorageID()).thenReturn("uuid-2");
+
+    ContainerSet containerSet = new ContainerSet();
+    for (int i=0; i<10; i++) {
+      KeyValueContainerData kvData = new KeyValueContainerData(i,
+              (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+              UUID.randomUUID().toString());
+      if (i%2 == 0) {
+        kvData.setVolume(vol1);
+      } else {
+        kvData.setVolume(vol2);
+      }
+      kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
+      KeyValueContainer kv = new KeyValueContainer(kvData, new
+              OzoneConfiguration());
+      containerSet.addContainer(kv);
+    }
+
+    Iterator<Container> iter1 = containerSet.getContainerIterator(vol1);
+    int count1 = 0;
+    while (iter1.hasNext()) {
+      Container c = iter1.next();
+      assertTrue((c.getContainerData().getContainerID() % 2) == 0);
+      count1++;
+    }
+    assertEquals(5, count1);
+
+    Iterator<Container> iter2 = containerSet.getContainerIterator(vol2);
+    int count2 = 0;
+    while (iter2.hasNext()) {
+      Container c = iter2.next();
+      assertTrue((c.getContainerData().getContainerID() % 2) == 1);
+      count2++;
+    }
+    assertEquals(5, count2);
   }
 
 

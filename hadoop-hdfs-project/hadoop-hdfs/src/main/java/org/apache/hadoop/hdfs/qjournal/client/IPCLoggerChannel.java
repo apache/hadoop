@@ -447,7 +447,7 @@ public class IPCLoggerChannel implements AsyncLogger {
           public void onSuccess(Void t) {
             unreserveQueueSpace(data.length);
           }
-        });
+        }, MoreExecutors.directExecutor());
       }
     }
     return ret;
@@ -492,6 +492,10 @@ public class IPCLoggerChannel implements AsyncLogger {
     Preconditions.checkArgument(size >= 0);
     if (queuedEditsSizeBytes + size > queueSizeLimitBytes &&
         queuedEditsSizeBytes > 0) {
+      QuorumJournalManager.LOG.warn("Pending edits to " + IPCLoggerChannel.this
+          + " is going to exceed limit size: " + queueSizeLimitBytes
+          + ", current queued edits size: " + queuedEditsSizeBytes
+          + ", will silently drop " + size + " bytes of edits!");
       throw new LoggerTooFarBehindException();
     }
     queuedEditsSizeBytes += size;

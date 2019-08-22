@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -44,7 +45,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -93,8 +94,9 @@ public class TestOmBlockVersioning {
 
   @Test
   public void testAllocateCommit() throws Exception {
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String userName = ugi.getUserName();
+    String adminName = ugi.getUserName();
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
@@ -105,8 +107,6 @@ public class TestOmBlockVersioning {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -116,6 +116,7 @@ public class TestOmBlockVersioning {
         .setKeyName(keyName)
         .setDataSize(1000)
         .setRefreshPipeline(true)
+        .setAcls(new ArrayList<>())
         .build();
 
     // 1st update, version 0
@@ -205,8 +206,6 @@ public class TestOmBlockVersioning {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -220,6 +219,7 @@ public class TestOmBlockVersioning {
 
     String dataString = RandomStringUtils.randomAlphabetic(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs.setUserName(userName);
     // this write will create 1st version with one block
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());

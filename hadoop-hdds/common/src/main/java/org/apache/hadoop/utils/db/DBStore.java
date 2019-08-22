@@ -22,8 +22,10 @@ package org.apache.hadoop.utils.db;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 
 /**
  * The DBStore interface provides the ability to create Tables, which store
@@ -44,8 +46,11 @@ public interface DBStore extends AutoCloseable {
    */
   Table<byte[], byte[]> getTable(String name) throws IOException;
 
+
   /**
-   * Gets an existing TableStore with implicit key/value conversion.
+   * Gets an existing TableStore with implicit key/value conversion and
+   * with default cleanup policy for cache. Default cache clean up policy is
+   * manual.
    *
    * @param name - Name of the TableStore to get
    * @param keyType
@@ -57,6 +62,15 @@ public interface DBStore extends AutoCloseable {
       Class<KEY> keyType, Class<VALUE> valueType) throws IOException;
 
   /**
+   * Gets an existing TableStore with implicit key/value conversion and
+   * with specified cleanup policy for cache.
+   * @throws IOException
+   */
+  <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException;
+
+  /**
    * Lists the Known list of Tables in a DB.
    *
    * @return List of Tables, in case of Rocks DB and LevelDB we will return at
@@ -64,6 +78,12 @@ public interface DBStore extends AutoCloseable {
    * @throws IOException on Failure
    */
   ArrayList<Table> listTables() throws IOException;
+
+  /**
+   * Flush the DB buffer onto persistent storage.
+   * @throws IOException
+   */
+  void flush() throws IOException;
 
   /**
    * Compact the entire database.
@@ -151,4 +171,26 @@ public interface DBStore extends AutoCloseable {
    * @return DB file location.
    */
   File getDbLocation();
+
+  /**
+   * Get List of Index to Table Names.
+   * (For decoding table from column family index)
+   * @return Map of Index -> TableName
+   */
+  Map<Integer, String> getTableNames();
+
+  /**
+   * Get Codec registry.
+   * @return codec registry.
+   */
+  CodecRegistry getCodecRegistry();
+
+  /**
+   * Get data written to DB since a specific sequence number.
+   * @param sequenceNumber
+   * @return
+   * @throws SequenceNumberNotFoundException
+   */
+  DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
+      throws SequenceNumberNotFoundException;
 }

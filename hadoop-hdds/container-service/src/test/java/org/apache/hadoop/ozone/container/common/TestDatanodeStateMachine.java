@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +25,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -50,7 +50,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +86,7 @@ public class TestDatanodeStateMachine {
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500,
         TimeUnit.MILLISECONDS);
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
     serverAddresses = new ArrayList<>();
     scmServers = new ArrayList<>();
     mockServers = new ArrayList<>();
@@ -117,9 +117,8 @@ public class TestDatanodeStateMachine {
     }
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         new File(testRoot, "scm").getAbsolutePath());
-    path = Paths.get(path.toString(),
-        TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
-    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID, path);
+    path = new File(testRoot, "datanodeID").getAbsolutePath();
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR, path);
     executorService = HadoopExecutors.newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Test Data Node State Machine Thread - %d").build());
@@ -155,22 +154,20 @@ public class TestDatanodeStateMachine {
 
   /**
    * Assert that starting statemachine executes the Init State.
-   *
-   * @throws InterruptedException
    */
   @Test
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null)) {
+        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null, null)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
       GenericTestUtils.waitFor(
           () -> {
-            LOG.info("connectionManager.getValues().size() is {}",
-                connectionManager.getValues().size());
-            return connectionManager.getValues().size() == 1;
+            int size = connectionManager.getValues().size();
+            LOG.info("connectionManager.getValues().size() is {}", size);
+            return size == 1;
           }, 1000, 30000);
 
       stateMachine.stopDaemon();
@@ -214,7 +211,8 @@ public class TestDatanodeStateMachine {
     // There is no mini cluster started in this test,
     // create a ID file so that state machine could load a fake datanode ID.
     File idPath = new File(
-        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR),
+        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT);
     idPath.delete();
     DatanodeDetails datanodeDetails = getNewDatanodeDetails();
     DatanodeDetails.Port port = DatanodeDetails.newPort(
@@ -224,7 +222,7 @@ public class TestDatanodeStateMachine {
     ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf, null)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -261,6 +259,21 @@ public class TestDatanodeStateMachine {
 
       task.execute(executorService);
       newState = task.await(10, TimeUnit.SECONDS);
+
+      // Wait for GetVersion call (called by task.execute) to finish. After
+      // Earlier task.execute called into GetVersion. Wait for the execution
+      // to finish and the endPointState to move to REGISTER state.
+      GenericTestUtils.waitFor(() -> {
+        for (EndpointStateMachine endpoint :
+            stateMachine.getConnectionManager().getValues()) {
+          if (endpoint.getState() !=
+              EndpointStateMachine.EndPointStates.REGISTER) {
+            return false;
+          }
+        }
+        return true;
+      }, 1000, 50000);
+
       // If we are in running state, we should be in running.
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
           newState);
@@ -321,7 +334,8 @@ public class TestDatanodeStateMachine {
   public void testDatanodeStateMachineWithIdWriteFail() throws Exception {
 
     File idPath = new File(
-        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR),
+        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT);
     idPath.delete();
     DatanodeDetails datanodeDetails = getNewDatanodeDetails();
     DatanodeDetails.Port port = DatanodeDetails.newPort(
@@ -330,7 +344,7 @@ public class TestDatanodeStateMachine {
     datanodeDetails.setPort(port);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf, null)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -383,17 +397,17 @@ public class TestDatanodeStateMachine {
     /** Port out of range **/
     confList.add(Maps.immutableEntry(
         ScmConfigKeys.OZONE_SCM_NAMES, "scm:123456"));
-    // Invalid ozone.scm.datanode.id
+    // Invalid ozone.scm.datanode.id.dir
     /** Empty **/
     confList.add(Maps.immutableEntry(
-        ScmConfigKeys.OZONE_SCM_DATANODE_ID, ""));
+        ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR, ""));
 
     confList.forEach((entry) -> {
       Configuration perTestConf = new Configuration(conf);
       perTestConf.setStrings(entry.getKey(), entry.getValue());
       LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-          getNewDatanodeDetails(), perTestConf, null)) {
+          getNewDatanodeDetails(), perTestConf, null, null)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,

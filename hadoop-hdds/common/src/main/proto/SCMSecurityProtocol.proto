@@ -76,6 +76,7 @@ message SCMGetCertResponseProto {
   }
   required ResponseCode responseCode = 1;
   required string x509Certificate = 2; // Base64 encoded X509 certificate.
+  optional string x509CACertificate = 3; // Base64 encoded CA X509 certificate.
 }
 
 

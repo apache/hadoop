@@ -21,6 +21,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
 import org.apache.hadoop.yarn.submarine.client.cli.param.ShowJobParameters;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.exception.SubmarineException;
@@ -36,7 +37,7 @@ public class ShowJobCli extends AbstractCli {
   private static final Logger LOG = LoggerFactory.getLogger(ShowJobCli.class);
 
   private Options options;
-  private ShowJobParameters parameters = new ShowJobParameters();
+  private ParametersHolder parametersHolder;
 
   public ShowJobCli(ClientContext cliContext) {
     super(cliContext);
@@ -61,8 +62,9 @@ public class ShowJobCli extends AbstractCli {
     CommandLine cli;
     try {
       cli = parser.parse(options, args);
-      parameters.updateParametersByParsedCommandline(cli, options,
-          clientContext);
+      parametersHolder = ParametersHolder
+          .createWithCmdLine(cli, Command.SHOW_JOB);
+      parametersHolder.updateParameters(clientContext);
     } catch (ParseException e) {
       printUsages();
     }
@@ -95,7 +97,7 @@ public class ShowJobCli extends AbstractCli {
 
     Map<String, String> jobInfo = null;
     try {
-      jobInfo = storage.getJobInfoByName(parameters.getName());
+      jobInfo = storage.getJobInfoByName(getParameters().getName());
     } catch (IOException e) {
       LOG.error("Failed to retrieve job info", e);
       throw e;
@@ -106,7 +108,7 @@ public class ShowJobCli extends AbstractCli {
 
   @VisibleForTesting
   public ShowJobParameters getParameters() {
-    return parameters;
+    return (ShowJobParameters) parametersHolder.getParameters();
   }
 
   @Override
@@ -117,7 +119,6 @@ public class ShowJobCli extends AbstractCli {
       printUsages();
       return 0;
     }
-
     parseCommandLineAndGetShowJobParameters(args);
     getAndPrintJobInfo();
     return 0;

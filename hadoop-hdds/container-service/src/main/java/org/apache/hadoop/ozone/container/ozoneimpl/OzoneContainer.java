@@ -160,7 +160,9 @@ public class OzoneContainer {
       LOG.info("Background container scrubber has been disabled by {}",
               HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
     } else {
-      this.scrubber = new ContainerScrubber(containerSet, config);
+      if (this.scrubber == null) {
+        this.scrubber = new ContainerScrubber(config, controller);
+      }
       scrubber.up();
     }
   }
@@ -180,12 +182,13 @@ public class OzoneContainer {
    *
    * @throws IOException
    */
-  public void start() throws IOException {
+  public void start(String scmId) throws IOException {
     LOG.info("Attempting to start container services.");
     startContainerScrub();
     writeChannel.start();
     readChannel.start();
     hddsDispatcher.init();
+    hddsDispatcher.setScmId(scmId);
   }
 
   /**
@@ -197,6 +200,7 @@ public class OzoneContainer {
     stopContainerScrub();
     writeChannel.stop();
     readChannel.stop();
+    this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
   }

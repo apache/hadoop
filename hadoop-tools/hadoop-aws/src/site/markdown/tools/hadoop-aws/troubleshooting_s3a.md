@@ -970,8 +970,8 @@ and the like. The standard strategy here is to save to HDFS and then copy to S3.
 
 ```
 org.apache.hadoop.fs.s3a.RemoteFileChangedException: re-open `s3a://my-bucket/test/file.txt':
-  ETag change reported by S3 while reading at position 1949.
-  Version f9c186d787d4de9657e99f280ba26555 was unavailable
+  Change reported by S3 while reading at position 1949.
+  ETag f9c186d787d4de9657e99f280ba26555 was unavailable
   at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:137)
   at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
   at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)
@@ -1129,7 +1129,7 @@ shows that it is generally more efficient to abort the TCP connection and initia
 a new one than read to the end of a large file.
 
 Note: the threshold when data is read rather than the stream aborted can be tuned
-by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.fadvise`.
+by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
 ### <a name="no_such_bucket"></a> `FileNotFoundException` Bucket does not exist.
 
@@ -1233,17 +1233,20 @@ The number of retries and interval between each retry can be configured:
 
 ```xml
 <property>
-  <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors,
-  excluding throttling errors.</description>
+  <name>fs.s3a.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between retry attempts.
+    Initial retry interval when retrying operations for any reason other
+    than S3 throttle errors.
   </description>
 </property>
 ```

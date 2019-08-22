@@ -16,28 +16,19 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
-import org.apache.hadoop.ozone.client.ObjectStore;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.io.OzoneInputStream;
-import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,17 +36,42 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
+import org.apache.log4j.Logger;
 
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
+import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.client.BucketArgs;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneKeyDetails;
+import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.ha.OMProxyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.util.Time;
+
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
@@ -65,6 +81,12 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.NOT_A_FILE;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.READ;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.WRITE;
+import static org.junit.Assert.fail;
 
 /**
  * Test Ozone Manager operation in distributed handler scenario.
@@ -77,6 +99,7 @@ public class TestOzoneManagerHA {
   private String clusterId;
   private String scmId;
   private int numOfOMs = 3;
+  private static final long SNAPSHOT_THRESHOLD = 50;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -98,9 +121,11 @@ public class TestOzoneManagerHA {
     scmId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 3);
-    conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 3);
-
+    conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 10);
+    conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 10);
+    conf.setLong(
+        OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
+        SNAPSHOT_THRESHOLD);
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -119,6 +144,83 @@ public class TestOzoneManagerHA {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+
+  private OzoneVolume createAndCheckVolume(String volumeName)
+      throws Exception {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(userName)
+        .setAdmin(adminName)
+        .build();
+
+    objectStore.createVolume(volumeName, createVolumeArgs);
+
+    OzoneVolume retVolume = objectStore.getVolume(volumeName);
+
+    Assert.assertTrue(retVolume.getName().equals(volumeName));
+    Assert.assertTrue(retVolume.getOwner().equals(userName));
+    Assert.assertTrue(retVolume.getAdmin().equals(adminName));
+
+    return retVolume;
+  }
+  @Test
+  public void testAllVolumeOperations() throws Exception {
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+
+    createAndCheckVolume(volumeName);
+
+    objectStore.deleteVolume(volumeName);
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.VOLUME_NOT_FOUND,
+        () -> objectStore.getVolume(volumeName));
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.VOLUME_NOT_FOUND,
+        () -> objectStore.deleteVolume(volumeName));
+  }
+
+
+  @Test
+  public void testAllBucketOperations() throws Exception {
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "volume" + RandomStringUtils.randomNumeric(5);
+
+    OzoneVolume retVolume = createAndCheckVolume(volumeName);
+
+    BucketArgs bucketArgs =
+        BucketArgs.newBuilder().setStorageType(StorageType.DISK)
+            .setVersioning(true).build();
+
+
+    retVolume.createBucket(bucketName, bucketArgs);
+
+
+    OzoneBucket ozoneBucket = retVolume.getBucket(bucketName);
+
+    Assert.assertEquals(volumeName, ozoneBucket.getVolumeName());
+    Assert.assertEquals(bucketName, ozoneBucket.getName());
+    Assert.assertTrue(ozoneBucket.getVersioning());
+    Assert.assertEquals(StorageType.DISK, ozoneBucket.getStorageType());
+    Assert.assertTrue(ozoneBucket.getCreationTime() <= Time.now());
+
+
+    // Change versioning to false
+    ozoneBucket.setVersioning(false);
+
+    ozoneBucket = retVolume.getBucket(bucketName);
+    Assert.assertFalse(ozoneBucket.getVersioning());
+
+    retVolume.deleteBucket(bucketName);
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.BUCKET_NOT_FOUND,
+        () -> retVolume.deleteBucket(bucketName));
+
+
+
   }
 
   /**
@@ -201,6 +303,141 @@ public class TestOzoneManagerHA {
 
   }
 
+
+  @Test
+  public void testFileOperationsWithRecursive() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+
+    String data = "random data";
+
+    // one level key name
+    String keyName = UUID.randomUUID().toString();
+    testCreateFile(ozoneBucket, keyName, data, true, false);
+
+    // multi level key name
+    keyName = "dir1/dir2/dir3/file1";
+    testCreateFile(ozoneBucket, keyName, data, true, false);
+
+
+    data = "random data random data";
+
+    // multi level key name with over write set.
+    testCreateFile(ozoneBucket, keyName, data, true, true);
+
+
+    try {
+      testCreateFile(ozoneBucket, keyName, data, true, false);
+      fail("testFileOperationsWithRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(FILE_ALREADY_EXISTS, ex.getResult());
+    }
+
+    // Try now with a file name which is same as a directory.
+    try {
+      keyName = "folder/folder2";
+      ozoneBucket.createDirectory(keyName);
+      testCreateFile(ozoneBucket, keyName, data, true, false);
+      fail("testFileOperationsWithNonRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+  }
+
+
+  @Test
+  public void testFileOperationsWithNonRecursive() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+
+    String data = "random data";
+
+    // one level key name
+    String keyName = UUID.randomUUID().toString();
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    // multi level key name
+    keyName = "dir1/dir2/dir3/file1";
+
+    // Should fail, as this is non-recursive and no parent directories exist
+    try {
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+    // create directory, now this should pass.
+    ozoneBucket.createDirectory("dir1/dir2/dir3");
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+    data = "random data random data";
+
+    // multi level key name with over write set.
+    testCreateFile(ozoneBucket, keyName, data, false, true);
+
+    try {
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+      fail("testFileOperationsWithRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(FILE_ALREADY_EXISTS, ex.getResult());
+    }
+
+
+    // Try now with a file which already exists under the path
+    ozoneBucket.createDirectory("folder1/folder2/folder3/folder4");
+
+    keyName = "folder1/folder2/folder3/folder4/file1";
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    keyName = "folder1/folder2/folder3/file1";
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    // Try now with a file under path already. This should fail.
+    try {
+      keyName = "folder/folder2";
+      ozoneBucket.createDirectory(keyName);
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+      fail("testFileOperationsWithNonRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+  }
+
+  /**
+   * This method createFile and verifies the file is successfully created or
+   * not.
+   * @param ozoneBucket
+   * @param keyName
+   * @param data
+   * @param recursive
+   * @param overwrite
+   * @throws Exception
+   */
+  public void testCreateFile(OzoneBucket ozoneBucket, String keyName,
+      String data, boolean recursive, boolean overwrite)
+      throws Exception {
+
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createFile(keyName,
+        data.length(), ReplicationType.RATIS, ReplicationFactor.ONE,
+        overwrite, recursive);
+
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
+
+    OzoneKeyDetails ozoneKeyDetails = ozoneBucket.getKey(keyName);
+
+    Assert.assertEquals(keyName, ozoneKeyDetails.getName());
+    Assert.assertEquals(ozoneBucket.getName(), ozoneKeyDetails.getBucketName());
+    Assert.assertEquals(ozoneBucket.getVolumeName(),
+        ozoneKeyDetails.getVolumeName());
+    Assert.assertEquals(data.length(), ozoneKeyDetails.getDataSize());
+
+    OzoneInputStream ozoneInputStream = ozoneBucket.readKey(keyName);
+
+    byte[] fileContent = new byte[data.getBytes().length];
+    ozoneInputStream.read(fileContent);
+    Assert.assertEquals(data, new String(fileContent));
+  }
+
   @Test
   public void testMultipartUploadWithOneOmNodeDown() throws Exception {
 
@@ -222,7 +459,7 @@ public class TestOzoneManagerHA {
     // Stop one of the ozone manager, to see when the OM leader changes
     // multipart upload is happening successfully or not.
     cluster.stopOzoneManager(leaderOMNodeId);
-
+    Thread.sleep(NODE_FAILURE_TIMEOUT * 2);
 
     createMultipartKeyAndReadKey(ozoneBucket, keyName, uploadID);
 
@@ -321,15 +558,14 @@ public class TestOzoneManagerHA {
         // last running OM as it would fail to get a quorum.
         if (e instanceof RemoteException) {
           GenericTestUtils.assertExceptionContains(
-              "RaftRetryFailureException", e);
+              "NotLeaderException", e);
         }
       } else {
         throw e;
       }
     }
-
-
   }
+
   /**
    * Create a volume and test its attribute.
    */
@@ -354,7 +590,7 @@ public class TestOzoneManagerHA {
         Assert.assertTrue(retVolumeinfo.getAdmin().equals(adminName));
       } else {
         // Verify that the request failed
-        Assert.fail("There is no quorum. Request should have failed");
+        fail("There is no quorum. Request should have failed");
       }
     } catch (ConnectException | RemoteException e) {
       if (!checkSuccess) {
@@ -363,15 +599,13 @@ public class TestOzoneManagerHA {
         // last running OM as it would fail to get a quorum.
         if (e instanceof RemoteException) {
           GenericTestUtils.assertExceptionContains(
-              "RaftRetryFailureException", e);
+              "NotLeaderException", e);
         }
       } else {
         throw e;
       }
     }
   }
-
-
 
   /**
    * Test that OMFailoverProxyProvider creates an OM proxy for each OM in the
@@ -382,8 +616,8 @@ public class TestOzoneManagerHA {
     OzoneClient rpcClient = cluster.getRpcClient();
     OMFailoverProxyProvider omFailoverProxyProvider =
         rpcClient.getObjectStore().getClientProxy().getOMProxyProvider();
-    List<OMFailoverProxyProvider.OMProxyInfo> omProxies =
-        omFailoverProxyProvider.getOMProxies();
+    List<OMProxyInfo> omProxies =
+        omFailoverProxyProvider.getOMProxyInfos();
 
     Assert.assertEquals(numOfOMs, omProxies.size());
 
@@ -391,14 +625,14 @@ public class TestOzoneManagerHA {
       InetSocketAddress omRpcServerAddr =
           cluster.getOzoneManager(i).getOmRpcServerAddr();
       boolean omClientProxyExists = false;
-      for (OMFailoverProxyProvider.OMProxyInfo omProxyInfo : omProxies) {
+      for (OMProxyInfo omProxyInfo : omProxies) {
         if (omProxyInfo.getAddress().equals(omRpcServerAddr)) {
           omClientProxyExists = true;
           break;
         }
       }
       Assert.assertTrue("There is no OM Client Proxy corresponding to OM " +
-              "node" + cluster.getOzoneManager(i).getOMNodId(),
+              "node" + cluster.getOzoneManager(i).getOMNodeId(),
           omClientProxyExists);
     }
   }
@@ -452,7 +686,7 @@ public class TestOzoneManagerHA {
     // Perform a manual failover of the proxy provider to move the
     // currentProxyIndex to a node other than the leader OM.
     omFailoverProxyProvider.performFailover(
-        omFailoverProxyProvider.getProxy().proxy);
+        (OzoneManagerProtocolPB) omFailoverProxyProvider.getProxy().proxy);
 
     String newProxyNodeId = omFailoverProxyProvider.getCurrentProxyOMNodeId();
     Assert.assertNotEquals(leaderOMNodeId, newProxyNodeId);
@@ -485,16 +719,16 @@ public class TestOzoneManagerHA {
 
     try {
       createVolumeTest(true);
-      Assert.fail("TestOMRetryProxy should fail when there are no OMs running");
+      fail("TestOMRetryProxy should fail when there are no OMs running");
     } catch (ConnectException e) {
       // Each retry attempt tries upto 10 times to connect. So there should be
-      // 3*10 "Retrying connect to server" messages
-      Assert.assertEquals(30,
+      // 10*10 "Retrying connect to server" messages
+      Assert.assertEquals(100,
           appender.countLinesWithMessage("Retrying connect to server:"));
 
       Assert.assertEquals(1,
           appender.countLinesWithMessage("Failed to connect to OM. Attempted " +
-              "3 retries and 3 failovers"));
+              "10 retries and 10 failovers"));
     }
   }
 
@@ -523,7 +757,7 @@ public class TestOzoneManagerHA {
 
       // Failover to the OM node that the objectStore points to
       omFailoverProxyProvider.performFailoverIfRequired(
-          ozoneManager.getOMNodId());
+          ozoneManager.getOMNodeId());
 
       // A read request should result in the proxyProvider failing over to
       // leader node.
@@ -533,5 +767,375 @@ public class TestOzoneManagerHA {
       Assert.assertEquals(currentLeaderNodeId,
           proxyProvider.getCurrentProxyOMNodeId());
     }
+  }
+
+  @Test
+  public void testAddBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    testAddAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+  @Test
+  public void testRemoveBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    testRemoveAcl(remoteUserName, ozoneObj, defaultUserAcl);
+
+  }
+
+  @Test
+  public void testSetBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    testSetAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+
+  private boolean containsAcl(OzoneAcl ozoneAcl, List<OzoneAcl> ozoneAcls) {
+    for (OzoneAcl acl : ozoneAcls) {
+      boolean result = compareAcls(ozoneAcl, acl);
+      if (result) {
+        // We found a match, return.
+        return result;
+      }
+    }
+    return false;
+  }
+
+  private boolean compareAcls(OzoneAcl givenAcl, OzoneAcl existingAcl) {
+    if (givenAcl.getType().equals(existingAcl.getType())
+        && givenAcl.getName().equals(existingAcl.getName())
+        && givenAcl.getAclScope().equals(existingAcl.getAclScope())) {
+      BitSet bitSet = (BitSet) givenAcl.getAclBitSet().clone();
+      bitSet.and(existingAcl.getAclBitSet());
+      if (bitSet.equals(existingAcl.getAclBitSet())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Test
+  public void testAddKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testAddAcl(remoteUserName, ozoneObj, userAcl);
+  }
+
+  @Test
+  public void testRemoveKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testRemoveAcl(remoteUserName, ozoneObj, userAcl);
+
+  }
+
+  @Test
+  public void testSetKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testSetAcl(remoteUserName, ozoneObj, userAcl);
+
+  }
+
+  @Test
+  public void testAddPrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    testAddAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+  @Test
+  public void testRemovePrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, ACCESS);
+    OzoneAcl userAcl1 = new OzoneAcl(USER, "remote",
+        READ, ACCESS);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    boolean result = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(result);
+
+    result = objectStore.addAcl(ozoneObj, userAcl1);
+    Assert.assertTrue(result);
+
+    result = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertTrue(result);
+
+    // try removing already removed acl.
+    result = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertFalse(result);
+
+    result = objectStore.removeAcl(ozoneObj, userAcl1);
+    Assert.assertTrue(result);
+
+  }
+
+  @Test
+  public void testSetPrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    testSetAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+
+
+  private void testSetAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl) throws Exception {
+    // As by default create will add some default acls in RpcClient.
+
+    if (!ozoneObj.getResourceType().name().equals(
+        OzoneObj.ResourceType.PREFIX.name())) {
+      List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+      Assert.assertTrue(acls.size() > 0);
+    }
+
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+
+    List<OzoneAcl> newAcls = Collections.singletonList(modifiedUserAcl);
+    boolean setAcl = objectStore.setAcl(ozoneObj, newAcls);
+    Assert.assertTrue(setAcl);
+
+    // Get acls and check whether they are reset or not.
+    List<OzoneAcl> getAcls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(newAcls.size() == getAcls.size());
+    int i = 0;
+    for (OzoneAcl ozoneAcl : newAcls) {
+      Assert.assertTrue(compareAcls(getAcls.get(i++), ozoneAcl));
+    }
+
+  }
+
+  private void testAddAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl) throws Exception {
+    boolean addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(containsAcl(userAcl, acls));
+
+    // Add an already existing acl.
+    addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertFalse(addAcl);
+
+    // Add an acl by changing acl type with same type, name and scope.
+    userAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+  }
+
+  private void testRemoveAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl)
+      throws Exception{
+    // As by default create will add some default acls in RpcClient.
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(acls.size() > 0);
+
+    // Remove an existing acl.
+    boolean removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertTrue(removeAcl);
+
+    // Trying to remove an already removed acl.
+    removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertFalse(removeAcl);
+
+    boolean addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+
+    // Just changed acl type here to write, rest all is same as defaultUserAcl.
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(addAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(removeAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertTrue(removeAcl);
+  }
+
+
+
+  @Test
+  public void testOMRatisSnapshot() throws Exception {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(userName)
+        .setAdmin(adminName)
+        .build();
+
+    objectStore.createVolume(volumeName, createVolumeArgs);
+    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
+
+    retVolumeinfo.createBucket(bucketName);
+    OzoneBucket ozoneBucket = retVolumeinfo.getBucket(bucketName);
+
+    String leaderOMNodeId = objectStore.getClientProxy().getOMProxyProvider()
+        .getCurrentProxyOMNodeId();
+    OzoneManager ozoneManager = cluster.getOzoneManager(leaderOMNodeId);
+
+    // Send commands to ratis to increase the log index so that ratis
+    // triggers a snapshot on the state machine.
+
+    long appliedLogIndex = 0;
+    while (appliedLogIndex <= SNAPSHOT_THRESHOLD) {
+      createKey(ozoneBucket);
+      appliedLogIndex = ozoneManager.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    GenericTestUtils.waitFor(() -> {
+      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+        return true;
+      }
+      return false;
+    }, 1000, 100000);
+
+    // The current lastAppliedLogIndex on the state machine should be greater
+    // than or equal to the saved snapshot index.
+    long smLastAppliedIndex =
+        ozoneManager.getOmRatisServer().getStateMachineLastAppliedIndex();
+    long ratisSnapshotIndex = ozoneManager.loadRatisSnapshotIndex();
+    Assert.assertTrue("LastAppliedIndex on OM State Machine ("
+            + smLastAppliedIndex + ") is less than the saved snapshot index("
+            + ratisSnapshotIndex + ").",
+        smLastAppliedIndex >= ratisSnapshotIndex);
+
+    // Add more transactions to Ratis to trigger another snapshot
+    while (appliedLogIndex <= (smLastAppliedIndex + SNAPSHOT_THRESHOLD)) {
+      createKey(ozoneBucket);
+      appliedLogIndex = ozoneManager.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    GenericTestUtils.waitFor(() -> {
+      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+        return true;
+      }
+      return false;
+    }, 1000, 100000);
+
+    // The new snapshot index must be greater than the previous snapshot index
+    long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
+    Assert.assertTrue("Latest snapshot index must be greater than previous " +
+        "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);
+
+  }
+
+  /**
+   * Create a key in the bucket.
+   * @return the key name.
+   */
+  static String createKey(OzoneBucket ozoneBucket) throws IOException {
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    String data = "data" + RandomStringUtils.randomNumeric(5);
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
+        data.length(), ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE, new HashMap<>());
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
+    return keyName;
   }
 }

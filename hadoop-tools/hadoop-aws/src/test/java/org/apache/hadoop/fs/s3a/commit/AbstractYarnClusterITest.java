@@ -71,7 +71,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
       LoggerFactory.getLogger(AbstractYarnClusterITest.class);
 
   private static final int TEST_FILE_COUNT = 2;
-  private static final int SCALE_TEST_FILE_COUNT = 20;
+  private static final int SCALE_TEST_FILE_COUNT = 50;
 
   public static final int SCALE_TEST_KEYS = 1000;
   public static final int BASE_TEST_KEYS = 10;
@@ -136,6 +136,12 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     MiniMRYarnCluster yarnCluster = deployService(conf,
         new MiniMRYarnCluster(clusterName, 2));
     return new ClusterBinding(miniDFSClusterService, yarnCluster);
+  }
+
+  protected static void terminateCluster(ClusterBinding clusterBinding) {
+    if (clusterBinding != null) {
+      clusterBinding.terminate();
+    }
   }
 
   /**

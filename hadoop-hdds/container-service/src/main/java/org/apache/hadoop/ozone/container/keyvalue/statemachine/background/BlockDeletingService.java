@@ -43,7 +43,7 @@ import org.apache.hadoop.utils.BackgroundTaskQueue;
 import org.apache.hadoop.utils.BackgroundTaskResult;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -185,69 +185,71 @@ public class BlockDeletingService extends BackgroundService{
       ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
       long startTime = Time.monotonicNow();
       // Scan container's db and get list of under deletion blocks
-      MetadataStore meta = BlockUtils.getDB(
-          (KeyValueContainerData) containerData, conf);
-      // # of blocks to delete is throttled
-      KeyPrefixFilter filter =
-          new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
-      List<Map.Entry<byte[], byte[]>> toDeleteBlocks =
-          meta.getSequentialRangeKVs(null, blockLimitPerTask, filter);
-      if (toDeleteBlocks.isEmpty()) {
-        LOG.debug("No under deletion block found in container : {}",
-            containerData.getContainerID());
-      }
+      try (ReferenceCountedDB meta = BlockUtils.getDB(containerData, conf)) {
+        // # of blocks to delete is throttled
+        KeyPrefixFilter filter =
+            new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
+        List<Map.Entry<byte[], byte[]>> toDeleteBlocks =
+            meta.getStore().getSequentialRangeKVs(null, blockLimitPerTask,
+                filter);
+        if (toDeleteBlocks.isEmpty()) {
+          LOG.debug("No under deletion block found in container : {}",
+              containerData.getContainerID());
+        }
 
-      List<String> succeedBlocks = new LinkedList<>();
-      LOG.debug("Container : {}, To-Delete blocks : {}",
-          containerData.getContainerID(), toDeleteBlocks.size());
-      File dataDir = new File(containerData.getChunksPath());
-      if (!dataDir.exists() || !dataDir.isDirectory()) {
-        LOG.error("Invalid container data dir {} : "
-            + "does not exist or not a directory", dataDir.getAbsolutePath());
+        List<String> succeedBlocks = new LinkedList<>();
+        LOG.debug("Container : {}, To-Delete blocks : {}",
+            containerData.getContainerID(), toDeleteBlocks.size());
+        File dataDir = new File(containerData.getChunksPath());
+        if (!dataDir.exists() || !dataDir.isDirectory()) {
+          LOG.error("Invalid container data dir {} : "
+              + "does not exist or not a directory", dataDir.getAbsolutePath());
+          return crr;
+        }
+
+        toDeleteBlocks.forEach(entry -> {
+          String blockName = DFSUtil.bytes2String(entry.getKey());
+          LOG.debug("Deleting block {}", blockName);
+          try {
+            ContainerProtos.BlockData data =
+                ContainerProtos.BlockData.parseFrom(entry.getValue());
+            for (ContainerProtos.ChunkInfo chunkInfo : data.getChunksList()) {
+              File chunkFile = dataDir.toPath()
+                  .resolve(chunkInfo.getChunkName()).toFile();
+              if (FileUtils.deleteQuietly(chunkFile)) {
+                LOG.debug("block {} chunk {} deleted", blockName,
+                    chunkFile.getAbsolutePath());
+              }
+            }
+            succeedBlocks.add(blockName);
+          } catch (InvalidProtocolBufferException e) {
+            LOG.error("Failed to parse block info for block {}", blockName, e);
+          }
+        });
+
+        // Once files are deleted... replace deleting entries with deleted
+        // entries
+        BatchOperation batch = new BatchOperation();
+        succeedBlocks.forEach(entry -> {
+          String blockId =
+              entry.substring(OzoneConsts.DELETING_KEY_PREFIX.length());
+          String deletedEntry = OzoneConsts.DELETED_KEY_PREFIX + blockId;
+          batch.put(DFSUtil.string2Bytes(deletedEntry),
+              DFSUtil.string2Bytes(blockId));
+          batch.delete(DFSUtil.string2Bytes(entry));
+        });
+        meta.getStore().writeBatch(batch);
+        // update count of pending deletion blocks in in-memory container status
+        containerData.decrPendingDeletionBlocks(succeedBlocks.size());
+
+        if (!succeedBlocks.isEmpty()) {
+          LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",
+              containerData.getContainerID(), succeedBlocks.size(),
+              Time.monotonicNow() - startTime);
+        }
+        crr.addAll(succeedBlocks);
         return crr;
       }
-
-      toDeleteBlocks.forEach(entry -> {
-        String blockName = DFSUtil.bytes2String(entry.getKey());
-        LOG.debug("Deleting block {}", blockName);
-        try {
-          ContainerProtos.BlockData data =
-              ContainerProtos.BlockData.parseFrom(entry.getValue());
-          for (ContainerProtos.ChunkInfo chunkInfo : data.getChunksList()) {
-            File chunkFile = dataDir.toPath()
-                .resolve(chunkInfo.getChunkName()).toFile();
-            if (FileUtils.deleteQuietly(chunkFile)) {
-              LOG.debug("block {} chunk {} deleted", blockName,
-                  chunkFile.getAbsolutePath());
-            }
-          }
-          succeedBlocks.add(blockName);
-        } catch (InvalidProtocolBufferException e) {
-          LOG.error("Failed to parse block info for block {}", blockName, e);
-        }
-      });
-
-      // Once files are deleted... replace deleting entries with deleted entries
-      BatchOperation batch = new BatchOperation();
-      succeedBlocks.forEach(entry -> {
-        String blockId =
-            entry.substring(OzoneConsts.DELETING_KEY_PREFIX.length());
-        String deletedEntry = OzoneConsts.DELETED_KEY_PREFIX + blockId;
-        batch.put(DFSUtil.string2Bytes(deletedEntry),
-            DFSUtil.string2Bytes(blockId));
-        batch.delete(DFSUtil.string2Bytes(entry));
-      });
-      meta.writeBatch(batch);
-      // update count of pending deletion blocks in in-memory container status
-      containerData.decrPendingDeletionBlocks(succeedBlocks.size());
-
-      if (!succeedBlocks.isEmpty()) {
-        LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",
-            containerData.getContainerID(), succeedBlocks.size(),
-            Time.monotonicNow() - startTime);
-      }
-      crr.addAll(succeedBlocks);
-      return crr;
     }
 
     @Override

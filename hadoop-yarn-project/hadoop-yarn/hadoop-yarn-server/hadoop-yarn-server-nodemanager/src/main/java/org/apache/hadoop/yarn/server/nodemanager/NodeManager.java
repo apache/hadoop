@@ -381,6 +381,7 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
@@ -473,10 +474,14 @@ public class NodeManager extends CompositeService
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
     ((NMContext) context).setWebServer(webServer);
-
+    int maxAllocationsPerAMHeartbeat = conf.getInt(
+        YarnConfiguration.OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT,
+        YarnConfiguration.
+            DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
     ((NMContext) context).setQueueableContainerAllocator(
         new OpportunisticContainerAllocator(
-            context.getContainerTokenSecretManager()));
+            context.getContainerTokenSecretManager(),
+            maxAllocationsPerAMHeartbeat));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -522,9 +527,11 @@ public class NodeManager extends CompositeService
       DefaultMetricsSystem.shutdown();
 
       // Cleanup ResourcePluginManager
-      ResourcePluginManager rpm = context.getResourcePluginManager();
-      if (rpm != null) {
-        rpm.cleanup();
+      if (null != context) {
+        ResourcePluginManager rpm = context.getResourcePluginManager();
+        if (rpm != null) {
+          rpm.cleanup();
+        }
       }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the

@@ -14,8 +14,8 @@
 
 # Examples
 
-Here're some examples about Submarine usage.
+Here are some examples about how to use Submarine:
 
 [Running Distributed CIFAR 10 Tensorflow Job](RunningDistributedCifar10TFJobs.html)
 
-[Running Zeppelin Notebook on YARN](RunningZeppelinOnYARN.html)
+[Running Standalone CIFAR 10 PyTorch Job](RunningSingleNodeCifar10PTJobs.html)

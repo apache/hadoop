@@ -92,6 +92,10 @@ a:hover {
   padding-right: 40px;
   padding-left: 40px;
 }
+.nav-sidebar > li > ul > li > ul > li > a {
+  padding-right: 60px;
+  padding-left: 60px;
+}
 .nav-sidebar  .active > a,
 .nav-sidebar  .active > a:hover,
 .nav-sidebar  .active > a:focus {
@@ -135,4 +139,28 @@ a:hover {
 .placeholder img {
   display: inline-block;
   border-radius: 50%;
+}
+
+
+
+
+h4 {
+  font-weight: bold;
+}
+
+.cardgroup {
+   margin-bottom: 50px;
+}
+
+.cardgroup .card {
+  padding: 20px;
+}
+
+.cardgroup .media {
+  padding: 30px;
+}
+
+
+.card {
+  padding: 20px;
 }

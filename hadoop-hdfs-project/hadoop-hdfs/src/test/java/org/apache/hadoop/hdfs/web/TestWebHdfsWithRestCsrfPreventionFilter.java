@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.web;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPSERVER_FILTER_HANDLERS;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -76,14 +77,14 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
   @Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { false, false, false },
-        { true, true, true },
-        { true, true, false },
-        { true, false, true },
-        { true, false, false },
-        { false, true, true },
-        { false, true, false },
-        { false, false, true }});
+        {false, false, false},
+        {true, true, true},
+        {true, true, false},
+        {true, false, true},
+        {true, false, false},
+        {false, true, true},
+        {false, true, false},
+        {false, false, true}});
   }
 
   @Before
@@ -97,6 +98,9 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
 
     Configuration dnConf = new Configuration(nnConf);
     dnConf.setBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY, dnRestCsrf);
+    // By default the datanode loads the CSRF filter handler
+    dnConf.set(DFS_DATANODE_HTTPSERVER_FILTER_HANDLERS,
+        "org.apache.hadoop.hdfs.server.datanode.web.RestCsrfPreventionFilterHandler");
     cluster.startDataNodes(dnConf, 1, true, null, null, null, null, false);
 
     cluster.waitActive();

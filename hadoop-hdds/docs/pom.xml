@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-http://maven.apache.org/xsd/maven-4.0.0.xsd">
+https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -31,7 +31,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <dependencies>
 
   </dependencies>
-
   <build>
     <plugins>
       <plugin>
@@ -44,17 +43,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>exec</goal>
             </goals>
             <phase>compile</phase>
-            <configuration>
-              <executable>${shell-executable}</executable>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-              <arguments>
-                <argument>${basedir}/dev-support/bin/generate-site.sh</argument>
-                <argument>${hdds.version}</argument>
-                <argument>${project.build.directory}</argument>
-              </arguments>
-            </configuration>
           </execution>
         </executions>
+        <configuration>
+          <executable>dev-support/bin/generate-site.sh</executable>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>

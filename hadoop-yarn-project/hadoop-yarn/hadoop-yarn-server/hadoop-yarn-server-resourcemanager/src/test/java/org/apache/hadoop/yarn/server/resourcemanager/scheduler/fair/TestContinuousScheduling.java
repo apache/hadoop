@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -153,9 +154,10 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent2);
 
     // available resource
-    Assert.assertEquals(scheduler.getClusterResource().getMemorySize(),
-        16 * 1024);
-    Assert.assertEquals(scheduler.getClusterResource().getVirtualCores(), 16);
+    assertThat(scheduler.getClusterResource().getMemorySize()).
+        isEqualTo(16 * 1024);
+    assertThat(scheduler.getClusterResource().getVirtualCores()).
+        isEqualTo(16);
 
     // send application request
     ApplicationAttemptId appAttemptId =

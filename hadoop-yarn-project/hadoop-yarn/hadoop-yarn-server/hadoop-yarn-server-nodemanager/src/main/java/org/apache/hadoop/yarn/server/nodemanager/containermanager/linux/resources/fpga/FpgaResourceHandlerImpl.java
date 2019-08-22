@@ -64,6 +64,8 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
 
   private final CGroupsHandler cGroupsHandler;
 
+  private final FpgaDiscoverer fpgaDiscoverer;
+
   public static final String EXCLUDED_FPGAS_CLI_OPTION = "--excluded_fpgas";
   public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
   private PrivilegedOperationExecutor privilegedOperationExecutor;
@@ -72,10 +74,11 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   public FpgaResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor,
-      AbstractFpgaVendorPlugin plugin) {
+      AbstractFpgaVendorPlugin plugin,
+      FpgaDiscoverer fpgaDiscoverer) {
     this.allocator = new FpgaResourceAllocator(nmContext);
     this.vendorPlugin = plugin;
-    FpgaDiscoverer.getInstance().setResourceHanderPlugin(vendorPlugin);
+    this.fpgaDiscoverer = fpgaDiscoverer;
     this.cGroupsHandler = cGroupsHandler;
     this.privilegedOperationExecutor = privilegedOperationExecutor;
   }
@@ -99,8 +102,7 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
     }
     LOG.info("FPGA Plugin bootstrap success.");
     // Get avialable devices minor numbers from toolchain or static configuration
-    List<FpgaResourceAllocator.FpgaDevice> fpgaDeviceList =
-        FpgaDiscoverer.getInstance().discover();
+    List<FpgaDevice> fpgaDeviceList = fpgaDiscoverer.discover();
     allocator.addFpgaDevices(vendorPlugin.getFpgaType(), fpgaDeviceList);
     this.cGroupsHandler.initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
@@ -183,7 +185,7 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
               " if you want YARN to program the device");
         } else {
           LOG.info("IP file path:" + ipFilePath);
-          List<FpgaResourceAllocator.FpgaDevice> allowed = allocation.getAllowed();
+          List<FpgaDevice> allowed = allocation.getAllowed();
           String majorMinorNumber;
           for (int i = 0; i < allowed.size(); i++) {
             FpgaDevice device = allowed.get(i);

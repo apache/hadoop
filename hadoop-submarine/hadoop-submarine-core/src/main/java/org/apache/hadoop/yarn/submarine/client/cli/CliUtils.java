@@ -16,7 +16,7 @@ package org.apache.hadoop.yarn.submarine.client.cli;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.slf4j.Logger;

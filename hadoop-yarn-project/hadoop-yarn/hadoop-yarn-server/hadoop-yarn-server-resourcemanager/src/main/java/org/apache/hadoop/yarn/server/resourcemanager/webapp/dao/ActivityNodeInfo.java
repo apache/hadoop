@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /*
  * DAO object to display node information in allocation tree.
@@ -38,30 +43,89 @@ public class ActivityNodeInfo {
   protected String requestPriority;
   protected String allocationState;
   protected String diagnostic;
+  private String nodeId;
+  private String allocationRequestId;
+
+  // Used for groups of activities
+  private String count;
+  private List<String> nodeIds;
 
   protected List<ActivityNodeInfo> children;
 
   ActivityNodeInfo() {
   }
 
-  ActivityNodeInfo(ActivityNode node) {
+  public ActivityNodeInfo(String name, ActivityState allocationState,
+      String diagnostic, NodeId nId) {
+    this.name = name;
+    this.allocationState = allocationState.name();
+    this.diagnostic = diagnostic;
+    setNodeId(nId);
+  }
+
+  public ActivityNodeInfo(ActivityState groupAllocationState,
+      String groupDiagnostic, List<String> groupNodeIds) {
+    this.allocationState = groupAllocationState.name();
+    this.diagnostic = groupDiagnostic;
+    this.count = String.valueOf(groupNodeIds.size());
+    this.nodeIds = groupNodeIds;
+  }
+
+  ActivityNodeInfo(ActivityNode node,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.name = node.getName();
-    getPriority(node);
+    setPriority(node);
+    setNodeId(node.getNodeId());
     this.allocationState = node.getState().name();
     this.diagnostic = node.getDiagnostic();
-    this.children = new ArrayList<>();
-
-    for (ActivityNode child : node.getChildren()) {
-      ActivityNodeInfo containerInfo = new ActivityNodeInfo(child);
-      this.children.add(containerInfo);
+    this.requestPriority = node.getRequestPriority();
+    this.allocationRequestId = node.getAllocationRequestId();
+    // only consider grouping for request type
+    if (node.isRequestType()) {
+      this.children = ActivitiesUtils
+          .getRequestActivityNodeInfos(node.getChildren(), groupBy);
+    } else {
+      this.children = node.getChildren().stream()
+          .map(e -> new ActivityNodeInfo(e, groupBy))
+          .collect(Collectors.toList());
     }
   }
 
-  private void getPriority(ActivityNode node) {
-    if (node.getType()) {
+  public void setNodeId(NodeId nId) {
+    if (nId != null && !Strings.isNullOrEmpty(nId.getHost())) {
+      this.nodeId = nId.toString();
+    }
+  }
+
+  private void setPriority(ActivityNode node) {
+    if (node.isAppType()) {
       this.appPriority = node.getAppPriority();
     } else {
       this.requestPriority = node.getRequestPriority();
     }
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public void setNodeIds(List<String> nodeIds) {
+    this.nodeIds = nodeIds;
+  }
+
+  public String getAllocationRequestId() {
+    return allocationRequestId;
+  }
+
+  public String getCount() {
+    return count;
+  }
+
+  public List<String> getNodeIds() {
+    return nodeIds;
+  }
+
+  public List<ActivityNodeInfo> getChildren() {
+    return children;
   }
 }

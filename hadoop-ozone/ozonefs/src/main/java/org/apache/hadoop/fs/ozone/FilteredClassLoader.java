@@ -22,6 +22,8 @@ import java.net.URLClassLoader;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * Class loader which delegates the loading only for the selected class.
  *
@@ -50,12 +52,19 @@ public class FilteredClassLoader extends URLClassLoader {
 
   public FilteredClassLoader(URL[] urls, ClassLoader parent) {
     super(urls, null);
+    delegatedClasses.add("org.apache.hadoop.crypto.key.KeyProvider");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneClientAdapter");
+    delegatedClasses.add("org.apache.hadoop.fs.ozone.FileStatusAdapter");
+    delegatedClasses.add("org.apache.hadoop.security.token.Token");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.BasicKeyInfo");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSOutputStream");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSStorageStatistics");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.Statistic");
     delegatedClasses.add("org.apache.hadoop.fs.Seekable");
+    delegatedClasses.add("org.apache.hadoop.io.Text");
+    delegatedClasses.add("org.apache.hadoop.fs.Path");
+    delegatedClasses.addAll(StringUtils.getTrimmedStringCollection(
+        System.getenv("HADOOP_OZONE_DELEGATED_CLASSES")));
     this.delegate = parent;
     systemClassLoader = getSystemClassLoader();
 

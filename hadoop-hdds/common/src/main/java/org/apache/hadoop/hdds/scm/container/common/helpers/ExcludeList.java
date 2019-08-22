@@ -23,7 +23,9 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collection;
 
 /**
  * This class contains set of dns and containers which ozone client provides
@@ -73,12 +75,12 @@ public class ExcludeList {
   public HddsProtos.ExcludeListProto getProtoBuf() {
     HddsProtos.ExcludeListProto.Builder builder =
         HddsProtos.ExcludeListProto.newBuilder();
-    containerIds.parallelStream()
+    containerIds
         .forEach(id -> builder.addContainerIds(id.getId()));
-    datanodes.parallelStream().forEach(dn -> {
+    datanodes.forEach(dn -> {
       builder.addDatanodes(dn.getUuidString());
     });
-    pipelineIds.parallelStream().forEach(pipelineID -> {
+    pipelineIds.forEach(pipelineID -> {
       builder.addPipelineIds(pipelineID.getProtobuf());
     });
     return builder.build();
@@ -87,7 +89,7 @@ public class ExcludeList {
   public static ExcludeList getFromProtoBuf(
       HddsProtos.ExcludeListProto excludeListProto) {
     ExcludeList excludeList = new ExcludeList();
-    excludeListProto.getContainerIdsList().parallelStream().forEach(id -> {
+    excludeListProto.getContainerIdsList().forEach(id -> {
       excludeList.addConatinerId(ContainerID.valueof(id));
     });
     DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
@@ -99,5 +101,11 @@ public class ExcludeList {
       excludeList.addPipeline(PipelineID.getFromProtobuf(pipelineID));
     });
     return excludeList;
+  }
+
+  public void clear() {
+    datanodes.clear();
+    containerIds.clear();
+    pipelineIds.clear();
   }
 }

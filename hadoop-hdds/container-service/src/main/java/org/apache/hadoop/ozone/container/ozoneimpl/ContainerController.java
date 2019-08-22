@@ -26,10 +26,12 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -69,6 +71,18 @@ public class ContainerController {
     if (container.getContainerState() == State.OPEN) {
       getHandler(container).markContainerForClose(container);
     }
+  }
+
+  /**
+   * Marks the container as UNHEALTHY.
+   *
+   * @param containerId Id of the container to update
+   * @throws IOException in case of exception
+   */
+  public void markContainerUnhealthy(final long containerId)
+          throws IOException {
+    Container container = containerSet.getContainer(containerId);
+    getHandler(container).markContainerUnhealthy(container);
   }
 
   /**
@@ -123,7 +137,9 @@ public class ContainerController {
   public void deleteContainer(final long containerId, boolean force)
       throws IOException {
     final Container container = containerSet.getContainer(containerId);
-    getHandler(container).deleteContainer(container, force);
+    if (container != null) {
+      getHandler(container).deleteContainer(container, force);
+    }
   }
 
   /**
@@ -134,5 +150,20 @@ public class ContainerController {
    */
   private Handler getHandler(final Container container) {
     return handlers.get(container.getContainerType());
+  }
+
+  public Iterator<Container> getContainers() {
+    return containerSet.getContainerIterator();
+  }
+
+  /**
+   * Return an iterator of containers which are associated with the specified
+   * <code>volume</code>.
+   *
+   * @param  volume the HDDS volume which should be used to filter containers
+   * @return {@literal Iterator<Container>}
+   */
+  public Iterator<Container> getContainers(HddsVolume volume) {
+    return containerSet.getContainerIterator(volume);
   }
 }

@@ -71,7 +71,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
   protected static final String OWNER = "hdfs";
-  protected static final String DYNAMODB_TABLE = "dynamodb://ireland-team";
+  protected static final String DYNAMODB_TABLE = "ireland-team";
   protected static final String S3A_THIS_BUCKET_DOES_NOT_EXIST
       = "s3a://this-bucket-does-not-exist-00000000000";
 
@@ -79,6 +79,16 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
   private MetadataStore ms;
   private S3AFileSystem rawFs;
+
+  /**
+   * The test timeout is increased in case previous tests have created
+   * many tombstone markers which now need to be purged.
+   * @return the test timeout.
+   */
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  }
 
   protected static void expectResult(int expected,
       String message,
@@ -95,7 +105,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the output of any successful run
    * @throws Exception failure
    */
-  protected static String expectSuccess(
+  public static String expectSuccess(
       String message,
       S3GuardTool tool,
       String... args) throws Exception {
@@ -187,19 +197,24 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       fs.mkdirs(path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
-      ms.put(new PathMetadata(status));
+      ms.put(new PathMetadata(status), null);
     }
   }
 
   protected static void putFile(MetadataStore ms, S3AFileStatus f)
       throws IOException {
     assertNotNull(f);
-    ms.put(new PathMetadata(f));
-    Path parent = f.getPath().getParent();
-    while (parent != null) {
-      S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
-      ms.put(new PathMetadata(dir));
-      parent = parent.getParent();
+    try (BulkOperationState bulkWrite =
+             ms.initiateBulkWrite(
+                 BulkOperationState.OperationType.Put,
+                 f.getPath())) {
+      ms.put(new PathMetadata(f), bulkWrite);
+      Path parent = f.getPath().getParent();
+      while (parent != null) {
+        S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
+        ms.put(new PathMetadata(dir), bulkWrite);
+        parent = parent.getParent();
+      }
     }
   }
 
@@ -220,7 +235,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
-          fs.qualify(path), 512L, "hdfs");
+          fs.qualify(path), 512L, "hdfs", null, null);
       putFile(ms, status);
     }
   }
@@ -252,12 +267,13 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       String...args) throws Exception {
     Path keepParent = path("prune-cli-keep");
     StopWatch timer = new StopWatch();
+    final S3AFileSystem fs = getFileSystem();
     try {
       S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
       cmd.setMetadataStore(ms);
 
-      getFileSystem().mkdirs(parent);
-      getFileSystem().mkdirs(keepParent);
+      fs.mkdirs(parent);
+      fs.mkdirs(keepParent);
       createFile(new Path(parent, "stale"), true, true);
       createFile(new Path(keepParent, "stale-to-keep"), true, true);
 
@@ -279,8 +295,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       assertMetastoreListingCount(keepParent,
           "This child should have been kept (prefix restriction).", 1);
     } finally {
-      getFileSystem().delete(parent, true);
-      ms.prune(Long.MAX_VALUE);
+      fs.delete(parent, true);
+      fs.delete(keepParent, true);
+      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+          Long.MAX_VALUE,
+          fs.pathToKey(parent));
+      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+          Long.MAX_VALUE,
+          fs.pathToKey(keepParent));
     }
   }
 
@@ -297,6 +319,19 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     Path testPath = path("testPruneCommandCLI");
     testPruneCommand(getFileSystem().getConf(), testPath,
         "prune", "-seconds", String.valueOf(PRUNE_MAX_AGE_SECS),
+        testPath.toString());
+  }
+
+  @Test
+  public void testPruneCommandTombstones() throws Exception {
+    Path testPath = path("testPruneCommandTombstones");
+    getFileSystem().mkdirs(testPath);
+    getFileSystem().delete(testPath, true);
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.setMetadataStore(ms);
+    exec(cmd,
+        "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
+        "-seconds", "0",
         testPath.toString());
   }
 
@@ -331,7 +366,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testBucketInfoUnguarded() throws Exception {
     final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
     conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
+    String bucket = fsUri.getHost();
+    clearBucketOption(conf, bucket,
+        S3GUARD_DDB_TABLE_CREATE_KEY);
+    clearBucketOption(conf, bucket, S3_METADATA_STORE_IMPL);
+    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_NAME_KEY);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
         "testBucketInfoUnguarded-" + UUID.randomUUID());
 
@@ -340,7 +382,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
     String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
         "-" + S3GuardTool.BucketInfo.UNGUARDED_FLAG,
-        getFileSystem().getUri().toString());
+        fsUri.toString());
 
     assertTrue("Output should contain information about S3A client " + info,
         info.contains("S3A Client"));
@@ -520,7 +562,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
     S3GuardTool.Diff cmd = new S3GuardTool.Diff(fs.getConf());
     cmd.setStore(ms);
-    exec(0, "", cmd, buf, "diff", "-meta", DYNAMODB_TABLE, testPath.toString());
+    String table = "dynamo://" + getTestTableName(DYNAMODB_TABLE);
+    exec(0, "", cmd, buf, "diff", "-meta", table, testPath.toString());
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();

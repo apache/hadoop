@@ -40,11 +40,10 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,8 +81,6 @@ public class TestStorageContainerManagerHelper {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucket, createVolumeArgs);
-    bucketArgs.setAddAcls(new ArrayList<>());
-    bucketArgs.setRemoveAcls(new ArrayList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
@@ -119,16 +116,17 @@ public class TestStorageContainerManagerHelper {
   public List<String> getPendingDeletionBlocks(Long containerID)
       throws IOException {
     List<String> pendingDeletionBlocks = Lists.newArrayList();
-    MetadataStore meta = getContainerMetadata(containerID);
+    ReferenceCountedDB meta = getContainerMetadata(containerID);
     KeyPrefixFilter filter =
         new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
-    List<Map.Entry<byte[], byte[]>> kvs = meta
+    List<Map.Entry<byte[], byte[]>> kvs = meta.getStore()
         .getRangeKVs(null, Integer.MAX_VALUE, filter);
     kvs.forEach(entry -> {
       String key = DFSUtil.bytes2String(entry.getKey());
       pendingDeletionBlocks
           .add(key.replace(OzoneConsts.DELETING_KEY_PREFIX, ""));
     });
+    meta.close();
     return pendingDeletionBlocks;
   }
 
@@ -143,17 +141,18 @@ public class TestStorageContainerManagerHelper {
 
   public List<Long> getAllBlocks(Long containeID) throws IOException {
     List<Long> allBlocks = Lists.newArrayList();
-    MetadataStore meta = getContainerMetadata(containeID);
+    ReferenceCountedDB meta = getContainerMetadata(containeID);
     List<Map.Entry<byte[], byte[]>> kvs =
-        meta.getRangeKVs(null, Integer.MAX_VALUE,
+        meta.getStore().getRangeKVs(null, Integer.MAX_VALUE,
             MetadataKeyFilters.getNormalKeyFilter());
     kvs.forEach(entry -> {
       allBlocks.add(Longs.fromByteArray(entry.getKey()));
     });
+    meta.close();
     return allBlocks;
   }
 
-  private MetadataStore getContainerMetadata(Long containerID)
+  private ReferenceCountedDB getContainerMetadata(Long containerID)
       throws IOException {
     ContainerWithPipeline containerWithPipeline = cluster
         .getStorageContainerManager().getClientProtocolServer()

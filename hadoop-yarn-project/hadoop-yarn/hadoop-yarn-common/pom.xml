@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
@@ -112,6 +112,11 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -237,7 +242,7 @@
             <exclude>src/main/resources/webapps/static/dt-1.10.18/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.12.1.custom.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-3.3.1.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-3.4.1.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>

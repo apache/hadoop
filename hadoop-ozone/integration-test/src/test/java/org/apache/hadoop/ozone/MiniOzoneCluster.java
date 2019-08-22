@@ -89,12 +89,12 @@ public interface MiniOzoneCluster {
   void setWaitForClusterToBeReadyTimeout(int timeoutInMs);
 
   /**
-   * Waits/blocks till the cluster is out of chill mode.
+   * Waits/blocks till the cluster is out of safe mode.
    *
    * @throws TimeoutException TimeoutException In case of timeout
    * @throws InterruptedException In case of interrupt while waiting
    */
-  void waitTobeOutOfChillMode() throws TimeoutException, InterruptedException;
+  void waitTobeOutOfSafeMode() throws TimeoutException, InterruptedException;
 
   /**
    * Returns {@link StorageContainerManager} associated with this
@@ -159,12 +159,14 @@ public interface MiniOzoneCluster {
   /**
    * Restarts StorageContainerManager instance.
    *
+   * @param waitForDatanode
    * @throws IOException
    * @throws TimeoutException
    * @throws InterruptedException
    */
-  void restartStorageContainerManager() throws InterruptedException,
-      TimeoutException, IOException, AuthenticationException;
+  void restartStorageContainerManager(boolean waitForDatanode)
+      throws InterruptedException, TimeoutException, IOException,
+      AuthenticationException;
 
   /**
    * Restarts OzoneManager instance.
@@ -180,6 +182,8 @@ public interface MiniOzoneCluster {
    */
   void restartHddsDatanode(int i, boolean waitForDatanode)
       throws InterruptedException, TimeoutException;
+
+  int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException;
 
   /**
    * Restart a particular HddsDatanode.
@@ -223,6 +227,11 @@ public interface MiniOzoneCluster {
   void startHddsDatanodes();
 
   /**
+   * Shuts down all the DataNodes.
+   */
+  void shutdownHddsDatanodes();
+
+  /**
    * Builder class for MiniOzoneCluster.
    */
   @SuppressWarnings("visibilitymodifier")
@@ -230,6 +239,7 @@ public interface MiniOzoneCluster {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
     protected static final int DEFAULT_HB_PROCESSOR_INTERVAL_MS = 100;
+    protected static final int ACTIVE_OMS_NOT_SET = -1;
 
     protected final OzoneConfiguration conf;
     protected final String path;
@@ -237,6 +247,7 @@ public interface MiniOzoneCluster {
     protected String clusterId;
     protected String omServiceId;
     protected int numOfOMs;
+    protected int numOfActiveOMs = ACTIVE_OMS_NOT_SET;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
@@ -433,6 +444,11 @@ public interface MiniOzoneCluster {
 
     public Builder setNumOfOzoneManagers(int numOMs) {
       this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setNumOfActiveOMs(int numActiveOMs) {
+      this.numOfActiveOMs = numActiveOMs;
       return this;
     }
 

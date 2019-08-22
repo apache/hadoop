@@ -46,6 +46,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .PutSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
+import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
@@ -146,11 +147,20 @@ public class KeyValueHandler extends Handler {
     // this handler lock is used for synchronizing createContainer Requests,
     // so using a fair lock here.
     containerCreationLock = new AutoCloseableLock(new ReentrantLock(true));
+    boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
+        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
+        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
+    ByteStringHelper.init(isUnsafeByteOperationsEnabled);
   }
 
   @VisibleForTesting
   public VolumeChoosingPolicy getVolumeChoosingPolicyForTesting() {
     return volumeChoosingPolicy;
+  }
+
+  @Override
+  public void stop() {
+    blockDeletingService.shutdown();
   }
 
   @Override
@@ -246,7 +256,7 @@ public class KeyValueHandler extends Handler {
         // The create container request for an already existing container can
         // arrive in case the ContainerStateMachine reapplies the transaction
         // on datanode restart. Just log a warning msg here.
-        LOG.warn("Container already exists." +
+        LOG.debug("Container already exists." +
             "container Id " + containerID);
       }
     } catch (StorageContainerException ex) {
@@ -879,11 +889,28 @@ public class KeyValueHandler extends Handler {
   @Override
   public void markContainerForClose(Container container)
       throws IOException {
-    State currentState = container.getContainerState();
     // Move the container to CLOSING state only if it's OPEN
-    if (currentState == State.OPEN) {
+    if (container.getContainerState() == State.OPEN) {
       container.markContainerForClose();
       sendICR(container);
+    }
+  }
+
+  @Override
+  public void markContainerUnhealthy(Container container)
+      throws IOException {
+    if (container.getContainerState() != State.UNHEALTHY) {
+      try {
+        container.markContainerUnhealthy();
+      } catch (IOException ex) {
+        // explicitly catch IOException here since the this operation
+        // will fail if the Rocksdb metadata is corrupted.
+        long id = container.getContainerData().getContainerID();
+        LOG.warn("Unexpected error while marking container "
+                +id+ " as unhealthy", ex);
+      } finally {
+        sendICR(container);
+      }
     }
   }
 
@@ -914,6 +941,12 @@ public class KeyValueHandler extends Handler {
     // Close call is idempotent.
     if (state == State.CLOSED) {
       return;
+    }
+    if (state == State.UNHEALTHY) {
+      throw new StorageContainerException(
+          "Cannot close container #" + container.getContainerData()
+              .getContainerID() + " while in " + state + " state.",
+          ContainerProtos.Result.CONTAINER_UNHEALTHY);
     }
     // The container has to be either in CLOSING or in QUASI_CLOSED state.
     if (state != State.CLOSING && state != State.QUASI_CLOSED) {

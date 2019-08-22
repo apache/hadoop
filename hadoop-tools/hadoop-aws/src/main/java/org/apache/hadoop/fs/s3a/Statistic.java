@@ -42,6 +42,8 @@ public enum Statistic {
       "Total number of files created through the object store."),
   FILES_DELETED("files_deleted",
       "Total number of files deleted from the object store."),
+  FILES_DELETE_REJECTED("files_delete_rejected",
+      "Total number of files whose delete request was rejected"),
   FAKE_DIRECTORIES_CREATED("fake_directories_created",
       "Total number of fake directory entries created in the object store."),
   FAKE_DIRECTORIES_DELETED("fake_directories_deleted",
@@ -207,6 +209,15 @@ public enum Statistic {
       "S3Guard metadata store put one metadata path latency"),
   S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
       "S3Guard metadata store initialization times"),
+  S3GUARD_METADATASTORE_RECORD_DELETES(
+      "s3guard_metadatastore_record_deletes",
+      "S3Guard metadata store records deleted"),
+  S3GUARD_METADATASTORE_RECORD_READS(
+      "s3guard_metadatastore_record_reads",
+      "S3Guard metadata store records read"),
+  S3GUARD_METADATASTORE_RECORD_WRITES(
+      "s3guard_metadatastore_record_writes",
+      "S3Guard metadata store records written"),
   S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
       "S3Guard metadata store retry events"),
   S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",

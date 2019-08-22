@@ -18,7 +18,7 @@ OZONE-SITE.XML_ozone.om.address=om
 OZONE-SITE.XML_ozone.om.http-address=om:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
-OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
+OZONE-SITE.XML_ozone.scm.datanode.id.dir=/data
 OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
 OZONE-SITE.XML_ozone.handler.type=distributed
@@ -31,6 +31,7 @@ OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
 OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
 OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
+OZONE_SITE.XML_ozone.administrators=*
 
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
@@ -72,7 +73,7 @@ MAPRED-SITE.XML_mapreduce.reduce.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
 MAPRED-SITE.XML_mapreduce.map.memory.mb=2048
 MAPRED-SITE.XML_mapreduce.reduce.memory.mb=2048
 #MAPRED-SITE.XML_mapred.child.java.opts=-Xmx2048
-MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
 
 YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
 YARN_SITE.XML_yarn.timeline-service.enabled=true
@@ -147,7 +148,7 @@ LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
 LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
 LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
-LOG4J2.PROPERTIES_appender.rolling.fileName =${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
 LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
 LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
@@ -168,7 +169,7 @@ LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
 
 OZONE_DATANODE_SECURE_USER=root
 KEYTAB_DIR=/etc/security/keytabs
-KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop
+KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop spark
 KERBEROS_KEYSTORES=hadoop
 KERBEROS_SERVER=kdc
 JAVA_HOME=/usr/lib/jvm/jre

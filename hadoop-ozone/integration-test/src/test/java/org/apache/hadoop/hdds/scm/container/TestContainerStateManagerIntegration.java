@@ -75,7 +75,7 @@ public class TestContainerStateManagerIntegration {
             ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
-    cluster.waitTobeOutOfChillMode();
+    cluster.waitTobeOutOfSafeMode();
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
@@ -123,6 +123,30 @@ public class TestContainerStateManagerIntegration {
   }
 
   @Test
+  public void testAllocateContainerWithDifferentOwner() throws IOException {
+
+    // Allocate a container and verify the container info
+    ContainerWithPipeline container1 = scm.getClientProtocolServer()
+        .allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
+    ContainerInfo info = containerManager
+        .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+            container1.getPipeline());
+    Assert.assertNotNull(info);
+
+    String newContainerOwner = "OZONE_NEW";
+    ContainerWithPipeline container2 = scm.getClientProtocolServer()
+        .allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), newContainerOwner);
+    ContainerInfo info2 = containerManager
+        .getMatchingContainer(OzoneConsts.GB * 3, newContainerOwner,
+            container1.getPipeline());
+    Assert.assertNotNull(info2);
+
+    Assert.assertNotEquals(info.containerID(), info2.containerID());
+  }
+
+  @Test
   public void testContainerStateManagerRestart() throws IOException,
       TimeoutException, InterruptedException, AuthenticationException {
     // Allocate 5 containers in ALLOCATED state and 5 in CREATING state
@@ -140,7 +164,7 @@ public class TestContainerStateManagerIntegration {
       }
     }
 
-    cluster.restartStorageContainerManager();
+    cluster.restartStorageContainerManager(true);
 
     List<ContainerInfo> result = cluster.getStorageContainerManager()
         .getContainerManager().listContainer(null, 100);

@@ -29,6 +29,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test class for OzoneConfiguration.
@@ -96,6 +97,37 @@ public class TestOzoneConfiguration {
     Assert.assertEquals("true", conf.getAllPropertiesByTag("YARN")
         .getProperty("dfs.cblock.trace.io"));
   }
+
+  @Test
+  public void getConfigurationObject() {
+    OzoneConfiguration ozoneConfig = new OzoneConfiguration();
+    ozoneConfig.set("ozone.scm.client.address", "address");
+    ozoneConfig.set("ozone.scm.client.bind.host", "host");
+    ozoneConfig.setBoolean("ozone.scm.client.enabled", true);
+    ozoneConfig.setInt("ozone.scm.client.port", 5555);
+    ozoneConfig.setTimeDuration("ozone.scm.client.wait", 10, TimeUnit.MINUTES);
+
+    SimpleConfiguration configuration =
+        ozoneConfig.getObject(SimpleConfiguration.class);
+
+    Assert.assertEquals("host", configuration.getBindHost());
+    Assert.assertEquals("address", configuration.getClientAddress());
+    Assert.assertEquals(true, configuration.isEnabled());
+    Assert.assertEquals(5555, configuration.getPort());
+    Assert.assertEquals(600, configuration.getWaitTime());
+  }
+
+  @Test
+  public void getConfigurationObjectWithDefault() {
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+
+    SimpleConfiguration configuration =
+        ozoneConfiguration.getObject(SimpleConfiguration.class);
+
+    Assert.assertEquals(true, configuration.isEnabled());
+    Assert.assertEquals(9878, configuration.getPort());
+  }
+
 
   private void appendProperty(BufferedWriter out, String name, String val)
       throws IOException {

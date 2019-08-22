@@ -180,7 +180,8 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     // nodeId is specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         ActivitiesInfo.class, HTTPMethods.GET,
@@ -190,7 +191,9 @@ public class DefaultRequestInterceptorREST
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     // time and appId are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppActivitiesInfo.class, HTTPMethods.GET,
@@ -541,4 +544,13 @@ public class DefaultRequestInterceptorREST
         + "is correct");
   }
 
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException {
+    return RouterWebServiceUtil
+        .genericForward(webAppAddress, req, Response.class, HTTPMethods.POST,
+            RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
+                + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
+            null);
+  }
 }

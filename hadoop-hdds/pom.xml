@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-http://maven.apache.org/xsd/maven-4.0.0.xsd">
+https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -38,6 +38,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>server-scm</module>
     <module>tools</module>
     <module>docs</module>
+    <module>config</module>
 
   </modules>
 
@@ -46,7 +47,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hdds.version>0.5.0-SNAPSHOT</hdds.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.4.0-1fc5ace-SNAPSHOT</ratis.version>
+    <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
 
     <bouncycastle.version>1.60</bouncycastle.version>
 
@@ -112,6 +113,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-docs</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-config</artifactId>
         <version>${hdds.version}</version>
       </dependency>
 
@@ -232,7 +239,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli</artifactId>
-      <version>3.5.2</version>
+      <version>3.9.6</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -313,10 +320,32 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <attach>true</attach>
+              <outputFile>${project.build.directory}/classpath</outputFile>
               <prefix>$HDDS_LIB_JARS_DIR</prefix>
               <outputFilterFile>true</outputFilterFile>
               <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-classpath-artifact</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/classpath</file>
+                  <type>cp</type>
+                  <classifier>classpath</classifier>
+                </artifact>
+              </artifacts>
             </configuration>
           </execution>
         </executions>

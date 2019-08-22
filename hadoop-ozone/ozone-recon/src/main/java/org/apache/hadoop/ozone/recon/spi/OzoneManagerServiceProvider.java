@@ -18,8 +18,6 @@ package org.apache.hadoop.ozone.recon.spi;
  * limitations under the License.
  */
 
-import java.io.IOException;
-
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 
 /**
@@ -28,14 +26,14 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 public interface OzoneManagerServiceProvider {
 
   /**
-   * Initialize Ozone Manager Service Provider Impl.
+   * Start a task to sync data from OM.
    */
-  void init() throws IOException;
+  void start();
 
   /**
-   * Update Recon OM DB with new snapshot from OM.
+   * Stop the OM sync data.
    */
-  void updateReconOmDBWithNewSnapshot() throws IOException;
+  void stop();
 
   /**
    * Return instance of OM Metadata manager.

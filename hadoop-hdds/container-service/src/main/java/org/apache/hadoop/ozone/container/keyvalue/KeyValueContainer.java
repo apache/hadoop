@@ -54,7 +54,6 @@ import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.utils.MetadataStore;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
@@ -74,6 +73,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
 
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -339,8 +339,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       updateContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
-      if (oldState != null) {
-        // Failed to update .container file. Reset the state to CLOSING
+      if (oldState != null
+          && containerData.getState() != ContainerDataProto.State.UNHEALTHY) {
+        // Failed to update .container file. Reset the state to old state only
+        // if the current state is not unhealthy.
         containerData.setState(oldState);
       }
       throw ex;
@@ -349,11 +351,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   void compactDB() throws StorageContainerException {
     try {
-      MetadataStore db = BlockUtils.getDB(containerData, config);
-      db.compactDB();
-      LOG.info("Container {} is closed with bcsId {}.",
-          containerData.getContainerID(),
-          containerData.getBlockCommitSequenceId());
+      try(ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
+        db.getStore().compactDB();
+        LOG.info("Container {} is closed with bcsId {}.",
+            containerData.getContainerID(),
+            containerData.getBlockCommitSequenceId());
+      }
     } catch (StorageContainerException ex) {
       throw ex;
     } catch (IOException ex) {
@@ -645,7 +648,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   /**
    * run integrity checks on the Container metadata.
    */
-  public void check() throws StorageContainerException {
+  public boolean check() {
     ContainerCheckLevel level = ContainerCheckLevel.NO_CHECK;
     long containerId = containerData.getContainerID();
 
@@ -668,14 +671,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
           containerData.getState());
       break;
     default:
-      throw new StorageContainerException(
-          "Invalid Container state found for Container : " + containerData
-              .getContainerID(), INVALID_CONTAINER_STATE);
+      break;
     }
 
     if (level == ContainerCheckLevel.NO_CHECK) {
       LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      return;
+      return true;
     }
 
     KeyValueContainerCheck checker =
@@ -684,17 +685,11 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     switch (level) {
     case FAST_CHECK:
-      checker.fastCheck();
-      break;
+      return checker.fastCheck();
     case FULL_CHECK:
-      checker.fullCheck();
-      break;
-    case NO_CHECK:
-      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      break;
+      return checker.fullCheck();
     default:
-      // we should not be here at all, scuttle the ship!
-      Preconditions.checkNotNull(0, "Invalid Containercheck level");
+      return true;
     }
   }
 

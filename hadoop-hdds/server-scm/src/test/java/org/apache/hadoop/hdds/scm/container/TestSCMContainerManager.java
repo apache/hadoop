@@ -43,13 +43,22 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Tests for Container ContainerManager.
@@ -104,8 +113,8 @@ public class TestSCMContainerManager {
   }
 
   @Before
-  public void clearChillMode() {
-    nodeManager.setChillmode(false);
+  public void clearSafeMode() {
+    nodeManager.setSafemode(false);
   }
 
   @Test
@@ -139,6 +148,43 @@ public class TestSCMContainerManager {
           .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
+  }
+
+  @Test
+  public void testAllocateContainerInParallel() throws Exception {
+    int threadCount = 20;
+    List<ExecutorService> executors = new ArrayList<>(threadCount);
+    for (int i = 0; i < threadCount; i++) {
+      executors.add(Executors.newSingleThreadExecutor());
+    }
+    List<CompletableFuture<ContainerInfo>> futureList =
+        new ArrayList<>(threadCount);
+    for (int i = 0; i < threadCount; i++) {
+      final CompletableFuture<ContainerInfo> future = new CompletableFuture<>();
+      CompletableFuture.supplyAsync(() -> {
+        try {
+          ContainerInfo containerInfo = containerManager
+              .allocateContainer(xceiverClientManager.getType(),
+                  xceiverClientManager.getFactor(), containerOwner);
+
+          Assert.assertNotNull(containerInfo);
+          Assert.assertNotNull(containerInfo.getPipelineID());
+          future.complete(containerInfo);
+          return containerInfo;
+        } catch (IOException e) {
+          future.completeExceptionally(e);
+        }
+        return future;
+      }, executors.get(i));
+      futureList.add(future);
+    }
+    try {
+      CompletableFuture
+          .allOf(futureList.toArray(new CompletableFuture[futureList.size()]))
+          .get();
+    } catch (Exception e) {
+      Assert.fail("testAllocateBlockInParallel failed");
+    }
   }
 
   @Test
@@ -195,6 +241,47 @@ public class TestSCMContainerManager {
   }
 
   @Test
+  public void testGetContainerReplicaWithParallelUpdate() throws Exception {
+    testGetContainerWithPipeline();
+    final Optional<ContainerID> id = containerManager.getContainerIDs()
+        .stream().findFirst();
+    Assert.assertTrue(id.isPresent());
+    final ContainerID cId = id.get();
+    final Optional<ContainerReplica> replica = containerManager
+        .getContainerReplicas(cId).stream().findFirst();
+    Assert.assertTrue(replica.isPresent());
+    final ContainerReplica cReplica = replica.get();
+    final AtomicBoolean runUpdaterThread =
+        new AtomicBoolean(true);
+
+    Thread updaterThread = new Thread(() -> {
+      while (runUpdaterThread.get()) {
+        try {
+          containerManager.removeContainerReplica(cId, cReplica);
+          containerManager.updateContainerReplica(cId, cReplica);
+        } catch (ContainerException e) {
+          Assert.fail("Container Exception: " + e.getMessage());
+        }
+      }
+    });
+
+    updaterThread.setDaemon(true);
+    updaterThread.start();
+
+    IntStream.range(0, 100).forEach(i -> {
+      try {
+        Assert.assertNotNull(containerManager
+            .getContainerReplicas(cId)
+            .stream().map(ContainerReplica::getDatanodeDetails)
+            .collect(Collectors.toSet()));
+      } catch (ContainerNotFoundException e) {
+        Assert.fail("Missing Container " + id);
+      }
+    });
+    runUpdaterThread.set(false);
+  }
+
+  @Test
   public void testgetNoneExistentContainer() {
     try {
       containerManager.getContainer(ContainerID.valueof(
@@ -222,7 +309,7 @@ public class TestSCMContainerManager {
    */
   private ContainerInfo createContainer()
       throws IOException {
-    nodeManager.setChillmode(false);
+    nodeManager.setSafemode(false);
     return containerManager
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);

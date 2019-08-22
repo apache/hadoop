@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -49,6 +50,9 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -128,10 +132,13 @@ public class CommitOperations {
   /**
    * Commit the operation, throwing an exception on any failure.
    * @param commit commit to execute
+   * @param operationState S3Guard state of ongoing operation.
    * @throws IOException on a failure
    */
-  public void commitOrFail(SinglePendingCommit commit) throws IOException {
-    commit(commit, commit.getFilename()).maybeRethrow();
+  private void commitOrFail(
+      final SinglePendingCommit commit,
+      final BulkOperationState operationState) throws IOException {
+    commit(commit, commit.getFilename(), operationState).maybeRethrow();
   }
 
   /**
@@ -139,16 +146,20 @@ public class CommitOperations {
    * and converted to an outcome.
    * @param commit entry to commit
    * @param origin origin path/string for outcome text
+   * @param operationState S3Guard state of ongoing operation.
    * @return the outcome
    */
-  public MaybeIOE commit(SinglePendingCommit commit, String origin) {
+  private MaybeIOE commit(
+      final SinglePendingCommit commit,
+      final String origin,
+      final BulkOperationState operationState) {
     LOG.debug("Committing single commit {}", commit);
     MaybeIOE outcome;
     String destKey = "unknown destination";
     try {
       commit.validate();
       destKey = commit.getDestinationKey();
-      long l = innerCommit(commit);
+      long l = innerCommit(commit, operationState);
       LOG.debug("Successful commit of file length {}", l);
       outcome = MaybeIOE.NONE;
       statistics.commitCompleted(commit.getLength());
@@ -171,17 +182,20 @@ public class CommitOperations {
   /**
    * Inner commit operation.
    * @param commit entry to commit
+   * @param operationState S3Guard state of ongoing operation.
    * @return bytes committed.
    * @throws IOException failure
    */
-  private long innerCommit(SinglePendingCommit commit) throws IOException {
+  private long innerCommit(
+      final SinglePendingCommit commit,
+      final BulkOperationState operationState) throws IOException {
     // finalize the commit
-    writeOperations.completeMPUwithRetries(
+    writeOperations.commitUpload(
         commit.getDestinationKey(),
               commit.getUploadId(),
               toPartEtags(commit.getEtags()),
               commit.getLength(),
-              new AtomicInteger(0));
+              operationState);
     return commit.getLength();
   }
 
@@ -249,7 +263,7 @@ public class CommitOperations {
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  public void abortSingleCommit(SinglePendingCommit commit)
+  private void abortSingleCommit(SinglePendingCommit commit)
       throws IOException {
     String destKey = commit.getDestinationKey();
     String origin = commit.getFilename() != null
@@ -268,7 +282,7 @@ public class CommitOperations {
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  public void abortMultipartCommit(String destKey, String uploadId)
+  private void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
     try {
       writeOperations.abortMultipartCommit(destKey, uploadId);
@@ -385,6 +399,8 @@ public class CommitOperations {
         conf.getTrimmed(S3_METADATA_STORE_IMPL, ""));
     successData.addDiagnostic(METADATASTORE_AUTHORITATIVE,
         conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
+    successData.addDiagnostic(AUTHORITATIVE_PATH,
+        conf.getTrimmed(AUTHORITATIVE_PATH, ""));
     successData.addDiagnostic(MAGIC_COMMITTER_ENABLED,
         conf.getTrimmed(MAGIC_COMMITTER_ENABLED, "false"));
 
@@ -392,7 +408,10 @@ public class CommitOperations {
     Path markerPath = new Path(outputPath, _SUCCESS);
     LOG.debug("Touching success marker for job {}: {}", markerPath,
         successData);
-    successData.save(fs, markerPath, true);
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Writing success file %s", markerPath)) {
+      successData.save(fs, markerPath, true);
+    }
   }
 
   /**
@@ -401,7 +420,7 @@ public class CommitOperations {
    * @throws IOException failure
    */
   public void revertCommit(SinglePendingCommit commit) throws IOException {
-    LOG.warn("Revert {}", commit);
+    LOG.info("Revert {}", commit);
     try {
       writeOperations.revertCommit(commit.getDestinationKey());
     } finally {
@@ -518,6 +537,120 @@ public class CommitOperations {
    */
   public void jobCompleted(boolean success) {
     statistics.jobCompleted(success);
+  }
+
+  /**
+   * Begin the final commit.
+   * @param path path for all work.
+   * @return the commit context to pass in.
+   * @throws IOException failure.
+   */
+  public CommitContext initiateCommitOperation(Path path) throws IOException {
+    return new CommitContext(writeOperations.initiateCommitOperation(path));
+  }
+
+  /**
+   * Commit context.
+   *
+   * It is used to manage the final commit sequence where files become
+   * visible. It contains a {@link BulkOperationState} field, which, if
+   * there is a metastore, will be requested from the store so that it
+   * can track multiple creation operations within the same overall operation.
+   * This will be null if there is no metastore, or the store chooses not
+   * to provide one.
+   *
+   * This can only be created through {@link #initiateCommitOperation(Path)}.
+   *
+   * Once the commit operation has completed, it must be closed.
+   * It must not be reused.
+   */
+  public final class CommitContext implements Closeable {
+
+    /**
+     * State of any metastore.
+     */
+    private final BulkOperationState operationState;
+
+    /**
+     * Create.
+     * @param operationState any S3Guard bulk state.
+     */
+    private CommitContext(@Nullable final BulkOperationState operationState) {
+      this.operationState = operationState;
+    }
+
+    /**
+     * Commit the operation, throwing an exception on any failure.
+     * See {@link CommitOperations#commitOrFail(SinglePendingCommit, BulkOperationState)}.
+     * @param commit commit to execute
+     * @throws IOException on a failure
+     */
+    public void commitOrFail(SinglePendingCommit commit) throws IOException {
+      CommitOperations.this.commitOrFail(commit, operationState);
+    }
+
+    /**
+     * Commit a single pending commit; exceptions are caught
+     * and converted to an outcome.
+     * See {@link CommitOperations#commit(SinglePendingCommit, String, BulkOperationState)}.
+     * @param commit entry to commit
+     * @param origin origin path/string for outcome text
+     * @return the outcome
+     */
+    public MaybeIOE commit(SinglePendingCommit commit,
+        String origin) {
+      return CommitOperations.this.commit(commit, origin, operationState);
+    }
+
+    /**
+     * See {@link CommitOperations#abortSingleCommit(SinglePendingCommit)}.
+     * @param commit pending commit to abort
+     * @throws FileNotFoundException if the abort ID is unknown
+     * @throws IOException on any failure
+     */
+    public void abortSingleCommit(final SinglePendingCommit commit)
+        throws IOException {
+      CommitOperations.this.abortSingleCommit(commit);
+    }
+
+    /**
+     * See {@link CommitOperations#revertCommit(SinglePendingCommit)}.
+     * @param commit pending commit
+     * @throws IOException failure
+     */
+    public void revertCommit(final SinglePendingCommit commit)
+        throws IOException {
+      CommitOperations.this.revertCommit(commit);
+    }
+
+    /**
+     * See {@link CommitOperations#abortMultipartCommit(String, String)}..
+     * @param destKey destination key
+     * @param uploadId upload to cancel
+     * @throws FileNotFoundException if the abort ID is unknown
+     * @throws IOException on any failure
+     */
+    public void abortMultipartCommit(
+        final String destKey,
+        final String uploadId)
+        throws IOException {
+      CommitOperations.this.abortMultipartCommit(destKey, uploadId);
+    }
+
+    @Override
+    public void close() throws IOException {
+      IOUtils.cleanupWithLogger(LOG, operationState);
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "CommitContext{");
+      sb.append("operationState=").append(operationState);
+      sb.append('}');
+      return sb.toString();
+    }
+
   }
 
   /**

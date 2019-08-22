@@ -17,19 +17,15 @@
  */
 package org.apache.hadoop.hdds.cli;
 
+import picocli.CommandLine;
+
 /**
  * Exception to throw if subcommand is not selected but required.
  */
-public class MissingSubcommandException extends RuntimeException {
+public class MissingSubcommandException extends CommandLine.ParameterException {
 
-  private String usage;
-
-  public MissingSubcommandException(String usage) {
-    super("Incomplete command");
-    this.usage = usage;
+  public MissingSubcommandException(CommandLine cmd) {
+    super(cmd, "Incomplete command");
   }
 
-  public String getUsage() {
-    return usage;
-  }
 }

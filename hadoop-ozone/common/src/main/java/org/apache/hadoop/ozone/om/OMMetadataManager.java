@@ -24,7 +24,10 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.DBStore;
@@ -96,6 +99,17 @@ public interface OMMetadataManager {
    */
 
   String getOzoneKey(String volume, String bucket, String key);
+
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB directory
+   * key.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key    - key name
+   * @return DB directory key as String.
+   */
+  String getOzoneDirKey(String volume, String bucket, String key);
 
 
   /**
@@ -259,10 +273,15 @@ public interface OMMetadataManager {
    * @return Table.
    */
 
-  Table<byte[], byte[]> getS3Table();
+  Table<String, String> getS3Table();
 
   /**
-<<<<<<< HEAD
+   * Gets the Ozone prefix path to its acl mapping table.
+   * @return Table.
+   */
+  Table<String, OmPrefixInfo> getPrefixTable();
+
+  /**
    * Returns the DB key name of a multipart upload key in OM metadata store.
    *
    * @param volume - volume name
@@ -286,7 +305,7 @@ public interface OMMetadataManager {
    * Gets the S3 Secrets table.
    * @return Table
    */
-  Table<byte[], byte[]> getS3SecretTable();
+  Table<String, S3SecretValue> getS3SecretTable();
 
   /**
    * Returns number of rows in a table.  This should not be used for very
@@ -296,5 +315,16 @@ public interface OMMetadataManager {
    * @throws IOException
    */
   <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
+      throws IOException;
+
+  /**
+   * Returns an estimated number of rows in a table.  This is much quicker
+   * than {@link OMMetadataManager#countRowsInTable} but the result can be
+   * inaccurate.
+   * @param table Table
+   * @return long Estimated number of rows in the table.
+   * @throws IOException
+   */
+  <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
       throws IOException;
 }

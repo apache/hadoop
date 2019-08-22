@@ -25,6 +25,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerPauseEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResumeEvent;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,8 +189,6 @@ public class NMTimelinePublisher extends CompositeService {
               Math.round(cpuUsagePercentPerCore));
           entity.addMetric(cpuMetric);
         }
-        entity.setIdPrefix(TimelineServiceHelper.
-            invertLong(container.getContainerStartTime()));
         ApplicationId appId = container.getContainerId().
             getApplicationAttemptId().getApplicationId();
         try {
@@ -249,9 +250,85 @@ public class NMTimelinePublisher extends CompositeService {
       long containerStartTime = container.getContainerStartTime();
       entity.addEvent(tEvent);
       entity.setCreatedTime(containerStartTime);
-      entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
       dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
           containerId.getApplicationAttemptId().getApplicationId()));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerResumedEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerResumeEvent resumeEvent = (ContainerResumeEvent) event;
+      ContainerId containerId = resumeEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          resumeEvent.getDiagnostic());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.RESUMED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+        entity.addEvent(tEvent);
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerPausedEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerPauseEvent pauseEvent = (ContainerPauseEvent) event;
+      ContainerId containerId = pauseEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          pauseEvent.getDiagnostic());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.PAUSED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+        entity.addEvent(tEvent);
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerKilledEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      ContainerId containerId = killEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          killEvent.getDiagnostic());
+      entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO,
+          killEvent.getContainerExitStatus());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.KILLED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+        entity.addEvent(tEvent);
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
     }
   }
 
@@ -277,7 +354,6 @@ public class NMTimelinePublisher extends CompositeService {
       tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
       tEvent.setTimestamp(containerFinishTime);
       entity.addEvent(tEvent);
-      entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
       dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
           containerId.getApplicationAttemptId().getApplicationId()));
@@ -295,8 +371,6 @@ public class NMTimelinePublisher extends CompositeService {
       tEvent.setId(eventType);
       tEvent.setTimestamp(event.getTimestamp());
       entity.addEvent(tEvent);
-      entity.setIdPrefix(TimelineServiceHelper.
-          invertLong(container.getContainerStartTime()));
 
       ApplicationId appId = container.getContainerId().
           getApplicationAttemptId().getApplicationId();
@@ -328,6 +402,8 @@ public class NMTimelinePublisher extends CompositeService {
       ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(
+        containerId.getContainerId()));
     Identifier parentIdentifier = new Identifier();
     parentIdentifier
         .setType(TimelineEntityType.YARN_APPLICATION_ATTEMPT.name());
@@ -388,7 +464,15 @@ public class NMTimelinePublisher extends CompositeService {
     case INIT_CONTAINER:
       publishContainerCreatedEvent(event);
       break;
-
+    case KILL_CONTAINER:
+      publishContainerKilledEvent(event);
+      break;
+    case PAUSE_CONTAINER:
+      publishContainerPausedEvent(event);
+      break;
+    case RESUME_CONTAINER:
+      publishContainerResumedEvent(event);
+      break;
     default:
       LOG.debug("{} is not a desired ContainerEvent which needs to be "
             + " published by NMTimelinePublisher", event.getType());

@@ -64,7 +64,7 @@ public class TestSCMContainerPlacementCapacity {
         .thenReturn(new SCMNodeMetric(100L, 70L, 30L));
 
     SCMContainerPlacementCapacity scmContainerPlacementRandom =
-        new SCMContainerPlacementCapacity(mockNodeManager, conf);
+        new SCMContainerPlacementCapacity(mockNodeManager, conf, null, true);
 
     List<DatanodeDetails> existingNodes = new ArrayList<>();
     existingNodes.add(datanodes.get(0));
@@ -78,8 +78,8 @@ public class TestSCMContainerPlacementCapacity {
     for (int i = 0; i < 1000; i++) {
 
       //when
-      List<DatanodeDetails> datanodeDetails =
-          scmContainerPlacementRandom.chooseDatanodes(existingNodes, 1, 15);
+      List<DatanodeDetails> datanodeDetails = scmContainerPlacementRandom
+          .chooseDatanodes(existingNodes, null, 1, 15);
 
       //then
       Assert.assertEquals(1, datanodeDetails.size());

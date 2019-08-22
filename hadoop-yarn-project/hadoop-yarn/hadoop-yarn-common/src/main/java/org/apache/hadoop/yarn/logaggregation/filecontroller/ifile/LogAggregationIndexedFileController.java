@@ -145,26 +145,6 @@ public class LogAggregationIndexedFileController
           + " use LogAggregationIndexedFileController when the FileSystem "
           + "support append operations.");
     }
-    String remoteDirStr = String.format(
-        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-        this.fileControllerName);
-    String remoteDir = conf.get(remoteDirStr);
-    if (remoteDir == null || remoteDir.isEmpty()) {
-      remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
-    }
-    this.remoteRootLogDir = new Path(remoteDir);
-    String suffix = String.format(
-        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-        this.fileControllerName);
-    this.remoteRootLogDirSuffix = conf.get(suffix);
-    if (this.remoteRootLogDirSuffix == null
-        || this.remoteRootLogDirSuffix.isEmpty()) {
-      this.remoteRootLogDirSuffix = conf.get(
-          YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)
-          + "-ifile";
-    }
     String compressName = conf.get(
         YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
         YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE);
@@ -816,6 +796,13 @@ public class LogAggregationIndexedFileController
   public Path getRemoteAppLogDir(ApplicationId appId, String user)
       throws IOException {
     return LogAggregationUtils.getRemoteAppLogDir(conf, appId, user,
+        this.remoteRootLogDir, this.remoteRootLogDirSuffix);
+  }
+
+  @Override
+  public Path getOlderRemoteAppLogDir(ApplicationId appId, String user)
+      throws IOException {
+    return LogAggregationUtils.getOlderRemoteAppLogDir(conf, appId, user,
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 

@@ -22,74 +22,77 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test class to verify various resource informations in a given resource.
  */
-public class TestResourceInformation {
+class TestResourceInformation {
 
   @Test
-  public void testName() {
+  void testName() {
     String name = "yarn.io/test";
     ResourceInformation ri = ResourceInformation.newInstance(name);
-    Assert.assertEquals("Resource name incorrect", name, ri.getName());
+    assertEquals(name, ri.getName(), "Resource name incorrect");
   }
 
   @Test
-  public void testUnits() {
+  void testUnits() {
     String name = "yarn.io/test";
     String units = "m";
     ResourceInformation ri = ResourceInformation.newInstance(name, units);
-    Assert.assertEquals("Resource name incorrect", name, ri.getName());
-    Assert.assertEquals("Resource units incorrect", units, ri.getUnits());
+    assertEquals(name, ri.getName(), "Resource name incorrect");
+    assertEquals(units, ri.getUnits(), "Resource units incorrect");
     units = "z";
     try {
       ResourceInformation.newInstance(name, units).setUnits(units);
-      Assert.fail(units + "is not a valid unit");
+      fail(units + "is not a valid unit");
     } catch (IllegalArgumentException ie) {
       // do nothing
     }
   }
 
   @Test
-  public void testValue() {
+  void testValue() {
     String name = "yarn.io/test";
     long value = 1L;
     ResourceInformation ri = ResourceInformation.newInstance(name, value);
-    Assert.assertEquals("Resource name incorrect", name, ri.getName());
-    Assert.assertEquals("Resource value incorrect", value, ri.getValue());
+    assertEquals(name, ri.getName(), "Resource name incorrect");
+    assertEquals(value, ri.getValue(), "Resource value incorrect");
   }
 
   @Test
-  public void testResourceInformation() {
+  void testResourceInformation() {
     String name = "yarn.io/test";
     long value = 1L;
     String units = "m";
     ResourceInformation ri =
         ResourceInformation.newInstance(name, units, value);
-    Assert.assertEquals("Resource name incorrect", name, ri.getName());
-    Assert.assertEquals("Resource value incorrect", value, ri.getValue());
-    Assert.assertEquals("Resource units incorrect", units, ri.getUnits());
+    assertEquals(name, ri.getName(), "Resource name incorrect");
+    assertEquals(value, ri.getValue(), "Resource value incorrect");
+    assertEquals(units, ri.getUnits(), "Resource units incorrect");
   }
 
   @Test
-  public void testEqualsWithTagsAndAttributes() {
+  void testEqualsWithTagsAndAttributes() {
     // Same tags but different order
     ResourceInformation ri01 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100,
         ImmutableSet.of("A", "B"), null);
     ResourceInformation ri02 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of("B", "A"), null);
-    Assert.assertEquals(ri01, ri02);
+    assertEquals(ri01, ri02);
 
     // Different tags
     ResourceInformation ri11 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, null, null);
     ResourceInformation ri12 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of("B", "A"), null);
-    Assert.assertNotEquals(ri11, ri12);
+    assertNotEquals(ri11, ri12);
 
     // Different attributes
     ResourceInformation ri21 = ResourceInformation.newInstance("r1", "M", 100,
@@ -98,20 +101,20 @@ public class TestResourceInformation {
     ResourceInformation ri22 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, null,
         ImmutableMap.of("A", "A1", "B", "B2"));
-    Assert.assertNotEquals(ri21, ri22);
+    assertNotEquals(ri21, ri22);
 
     // No tags or attributes
     ResourceInformation ri31 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, null, null);
     ResourceInformation ri32 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, null, null);
-    Assert.assertEquals(ri31, ri32);
+    assertEquals(ri31, ri32);
 
     // Null tags/attributes same as empty ones
     ResourceInformation ri41 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of(), null);
     ResourceInformation ri42 = ResourceInformation.newInstance("r1", "M", 100,
         ResourceTypes.COUNTABLE, 0, 100, null, ImmutableMap.of());
-    Assert.assertEquals(ri41, ri42);
+    assertEquals(ri41, ri42);
   }
 }

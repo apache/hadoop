@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -252,25 +253,15 @@ public final class HddsServerUtil {
     //
     // Here we check that staleNodeInterval is at least five times more than the
     // frequency at which the accounting thread is going to run.
-    try {
-      sanitizeUserArgs(staleNodeIntervalMs, heartbeatThreadFrequencyMs,
-          5, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Stale Node Interval is cannot be honored due to " +
-              "mis-configured {}. ex:  {}",
-          OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, ex);
-      throw ex;
-    }
+    staleNodeIntervalMs = sanitizeUserArgs(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeIntervalMs, OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        heartbeatThreadFrequencyMs, 5, 1000);
 
     // Make sure that stale node value is greater than configured value that
     // datanodes are going to send HBs.
-    try {
-      sanitizeUserArgs(staleNodeIntervalMs, heartbeatIntervalMs, 3, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Stale Node Interval MS is cannot be honored due to " +
-          "mis-configured {}. ex:  {}", HDDS_HEARTBEAT_INTERVAL, ex);
-      throw ex;
-    }
+    staleNodeIntervalMs = sanitizeUserArgs(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeIntervalMs, HDDS_HEARTBEAT_INTERVAL, heartbeatIntervalMs, 3,
+        1000);
     return staleNodeIntervalMs;
   }
 
@@ -289,16 +280,10 @@ public final class HddsServerUtil {
         OZONE_SCM_DEADNODE_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
 
-    try {
-      // Make sure that dead nodes Ms is at least twice the time for staleNodes
-      // with a max of 1000 times the staleNodes.
-      sanitizeUserArgs(deadNodeIntervalMs, staleNodeIntervalMs, 2, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Dead Node Interval MS is cannot be honored due to " +
-          "mis-configured {}. ex:  {}", OZONE_SCM_STALENODE_INTERVAL, ex);
-      throw ex;
-    }
-    return deadNodeIntervalMs;
+    // Make sure that dead nodes Ms is at least twice the time for staleNodes
+    // with a max of 1000 times the staleNodes.
+    return sanitizeUserArgs(OZONE_SCM_DEADNODE_INTERVAL, deadNodeIntervalMs,
+        OZONE_SCM_STALENODE_INTERVAL, staleNodeIntervalMs, 2, 1000);
   }
 
   /**
@@ -371,5 +356,29 @@ public final class HddsServerUtil {
         HddsConfigKeys.OZONE_METADATA_DIRS);
     File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
     return (new File(metaDirPath, "ratis")).getPath();
+  }
+
+  /**
+   * Get the path for datanode id file.
+   *
+   * @param conf - Configuration
+   * @return the path of datanode id as string
+   */
+  public static String getDatanodeIdFilePath(Configuration conf) {
+    String dataNodeIDDirPath =
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+    if (dataNodeIDDirPath == null) {
+      File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
+      if (metaDirPath == null) {
+        // this means meta data is not found, in theory should not happen at
+        // this point because should've failed earlier.
+        throw new IllegalArgumentException("Unable to locate meta data" +
+            "directory when getting datanode id path");
+      }
+      dataNodeIDDirPath = metaDirPath.toString();
+    }
+    // Use default datanode id file name for file path
+    return new File(dataNodeIDDirPath,
+        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT).toString();
   }
 }

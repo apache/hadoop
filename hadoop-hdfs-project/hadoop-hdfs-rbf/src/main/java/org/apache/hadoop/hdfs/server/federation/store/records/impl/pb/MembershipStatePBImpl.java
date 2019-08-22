@@ -315,7 +315,9 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
 
   @Override
   public void setDateModified(long time) {
-    this.translator.getBuilder().setDateModified(time);
+    if (getState() != FederationNamenodeServiceState.EXPIRED) {
+      this.translator.getBuilder().setDateModified(time);
+    }
   }
 
   @Override

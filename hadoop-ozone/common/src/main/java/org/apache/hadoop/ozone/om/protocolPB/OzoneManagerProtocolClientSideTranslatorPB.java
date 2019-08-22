@@ -34,6 +34,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -55,6 +56,21 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneFileStatusProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateFileRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateFileResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListStatusRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListStatusResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetAclResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
@@ -99,6 +115,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoRequest;
@@ -109,22 +127,27 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListB
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,7 +210,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     this.rpcProxy = TracingUtil.createProxy(
         createRetryProxy(omFailoverProxyProvider, maxRetries, maxFailovers,
             sleepBase, sleepMax),
-        OzoneManagerProtocolPB.class);
+        OzoneManagerProtocolPB.class, conf);
     this.clientID = clientId;
   }
 
@@ -520,12 +543,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     ListVolumeResponse resp =
         handleError(submitRequest(omRequest)).getListVolumeResponse();
-
-
-
-    return resp.getVolumeInfoList().stream()
-        .map(item -> OmVolumeArgs.getFromProtobuf(item))
-        .collect(Collectors.toList());
+    List<OmVolumeArgs> list = new ArrayList<>(resp.getVolumeInfoList().size());
+    for (VolumeInfo info : resp.getVolumeInfoList()) {
+      list.add(OmVolumeArgs.getFromProtobuf(info));
+    }
+    return list;
   }
 
   /**
@@ -651,6 +673,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName());
 
+    if(args.getAcls() != null) {
+      keyArgs.addAllAcls(args.getAcls().stream().distinct().map(a ->
+          OzoneAcl.toProtobuf(a)).collect(Collectors.toList()));
+    }
+
     if (args.getFactor() != null) {
       keyArgs.setFactor(args.getFactor());
     }
@@ -704,11 +731,20 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientId,
       ExcludeList excludeList) throws IOException {
     AllocateBlockRequest.Builder req = AllocateBlockRequest.newBuilder();
-    KeyArgs keyArgs = KeyArgs.newBuilder()
+    KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize()).build();
+        .setDataSize(args.getDataSize());
+
+    if (args.getFactor() != null) {
+      keyArgs.setFactor(args.getFactor());
+    }
+
+    if (args.getType() != null) {
+      keyArgs.setType(args.getType());
+    }
+
     req.setKeyArgs(keyArgs);
     req.setClientID(clientId);
     req.setExcludeList(excludeList.getProtoBuf());
@@ -756,7 +792,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize()).build();
+        .setDataSize(args.getDataSize())
+        .setSortDatanodes(args.getSortDatanodes())
+        .build();
     req.setKeyArgs(keyArgs);
 
     OMRequest omRequest = createOMRequest(Type.LookupKey)
@@ -974,6 +1012,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setBucketName(omKeyArgs.getBucketName())
         .setKeyName(omKeyArgs.getKeyName())
         .setFactor(omKeyArgs.getFactor())
+        .addAllAcls(omKeyArgs.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
         .setType(omKeyArgs.getType());
     multipartInfoInitiateRequest.setKeyArgs(keyArgs.build());
 
@@ -1040,6 +1080,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(omKeyArgs.getVolumeName())
         .setBucketName(omKeyArgs.getBucketName())
         .setKeyName(omKeyArgs.getKeyName())
+        .addAllAcls(omKeyArgs.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
         .setMultipartUploadID(omKeyArgs.getMultipartUploadID());
 
     multipartUploadCompleteRequest.setKeyArgs(keyArgs.build());
@@ -1224,20 +1266,21 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
   /**
    * Get File Status for an Ozone key.
-   * @param volumeName volume name.
-   * @param bucketName bucket name.
-   * @param keyName key name.
+   *
+   * @param args
    * @return OzoneFileStatus for the key.
    * @throws IOException
    */
-  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
-                                String keyName) throws IOException {
-    GetFileStatusRequest req = GetFileStatusRequest
-        .newBuilder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(keyName)
+  public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
         .build();
+    GetFileStatusRequest req =
+        GetFileStatusRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .build();
 
     OMRequest omRequest = createOMRequest(Type.GetFileStatus)
         .setGetFileStatusRequest(req)
@@ -1250,5 +1293,215 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       throw e;
     }
     return OzoneFileStatus.getFromProtobuf(resp.getStatus());
+  }
+
+  @Override
+  public void createDirectory(OmKeyArgs args) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .addAllAcls(args.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
+        .build();
+    CreateDirectoryRequest request = CreateDirectoryRequest.newBuilder()
+        .setKeyArgs(keyArgs)
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.CreateDirectory)
+        .setCreateDirectoryRequest(request)
+        .build();
+
+    handleError(submitRequest(omRequest));
+  }
+
+  @Override
+  public OmKeyInfo lookupFile(OmKeyArgs args)
+      throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setSortDatanodes(args.getSortDatanodes())
+        .build();
+    LookupFileRequest lookupFileRequest = LookupFileRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .build();
+    OMRequest omRequest = createOMRequest(Type.LookupFile)
+        .setLookupFileRequest(lookupFileRequest)
+        .build();
+    LookupFileResponse resp =
+        handleError(submitRequest(omRequest)).getLookupFileResponse();
+    return OmKeyInfo.getFromProtobuf(resp.getKeyInfo());
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   *
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    AddAclRequest req = AddAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .setAcl(OzoneAcl.toProtobuf(acl))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.AddAcl)
+        .setAddAclRequest(req)
+        .build();
+    AddAclResponse addAclResponse =
+        handleError(submitRequest(omRequest)).getAddAclResponse();
+
+    return addAclResponse.getResponse();
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    RemoveAclRequest req = RemoveAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .setAcl(OzoneAcl.toProtobuf(acl))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.RemoveAcl)
+        .setRemoveAclRequest(req)
+        .build();
+    RemoveAclResponse response =
+        handleError(submitRequest(omRequest)).getRemoveAclResponse();
+
+    return response.getResponse();
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    SetAclRequest.Builder builder = SetAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj));
+
+    acls.forEach(a -> builder.addAcl(OzoneAcl.toProtobuf(a)));
+
+    OMRequest omRequest = createOMRequest(Type.SetAcl)
+        .setSetAclRequest(builder.build())
+        .build();
+    SetAclResponse response =
+        handleError(submitRequest(omRequest)).getSetAclResponse();
+
+    return response.getResponse();
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    GetAclRequest req = GetAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.GetAcl)
+        .setGetAclRequest(req)
+        .build();
+    GetAclResponse response =
+        handleError(submitRequest(omRequest)).getGetAclResponse();
+    List<OzoneAcl> acls = new ArrayList<>();
+    response.getAclsList().stream().forEach(a ->
+        acls.add(OzoneAcl.fromProtobuf(a)));
+    return acls;
+  }
+
+  @Override
+  public DBUpdatesWrapper getDBUpdates(DBUpdatesRequest dbUpdatesRequest)
+      throws IOException {
+    OMRequest omRequest = createOMRequest(Type.DBUpdates)
+        .setDbUpdatesRequest(dbUpdatesRequest)
+        .build();
+
+    DBUpdatesResponse dbUpdatesResponse =
+        handleError(submitRequest(omRequest)).getDbUpdatesResponse();
+
+    DBUpdatesWrapper dbUpdatesWrapper = new DBUpdatesWrapper();
+    for (ByteString byteString : dbUpdatesResponse.getDataList()) {
+      dbUpdatesWrapper.addWriteBatch(byteString.toByteArray(), 0L);
+    }
+    dbUpdatesWrapper.setCurrentSequenceNumber(
+        dbUpdatesResponse.getSequenceNumber());
+    return dbUpdatesWrapper;
+  }
+
+  @Override
+  public OpenKeySession createFile(OmKeyArgs args,
+      boolean overWrite, boolean recursive) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getDataSize())
+        .setType(args.getType())
+        .setFactor(args.getFactor())
+        .addAllAcls(args.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
+        .build();
+    CreateFileRequest createFileRequest = CreateFileRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .setIsOverwrite(overWrite)
+            .setIsRecursive(recursive)
+            .build();
+    OMRequest omRequest = createOMRequest(Type.CreateFile)
+        .setCreateFileRequest(createFileRequest)
+        .build();
+    CreateFileResponse resp =
+        handleError(submitRequest(omRequest)).getCreateFileResponse();
+    return new OpenKeySession(resp.getID(),
+        OmKeyInfo.getFromProtobuf(resp.getKeyInfo()), resp.getOpenVersion());
+  }
+
+  @Override
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    ListStatusRequest listStatusRequest =
+        ListStatusRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .setRecursive(recursive)
+            .setStartKey(startKey)
+            .setNumEntries(numEntries)
+            .build();
+    OMRequest omRequest = createOMRequest(Type.ListStatus)
+        .setListStatusRequest(listStatusRequest)
+        .build();
+    ListStatusResponse listStatusResponse =
+        handleError(submitRequest(omRequest)).getListStatusResponse();
+    List<OzoneFileStatus> statusList =
+        new ArrayList<>(listStatusResponse.getStatusesCount());
+    for (OzoneFileStatusProto fileStatus : listStatusResponse
+        .getStatusesList()) {
+      statusList.add(OzoneFileStatus.getFromProtobuf(fileStatus));
+    }
+    return statusList;
   }
 }

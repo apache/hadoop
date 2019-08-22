@@ -51,8 +51,11 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
@@ -82,6 +85,7 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
+import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
@@ -126,6 +130,7 @@ public class SLSRunner extends Configured implements Tool {
   // other simulation information
   private int numNMs, numRacks, numAMs, numTasks;
   private long maxRuntime;
+  private String tableMapping;
 
   private final static Map<String, Object> simulateInfoMap =
           new HashMap<String, Object>();
@@ -231,7 +236,7 @@ public class SLSRunner extends Configured implements Tool {
     this.trackedApps = trackApps;
     this.printSimulation = printsimulation;
     metricsOutputDir = outDir;
-
+    tableMapping = outDir + "/tableMapping.csv";
   }
 
   public void start() throws IOException, ClassNotFoundException, YarnException,
@@ -272,7 +277,12 @@ public class SLSRunner extends Configured implements Tool {
       // TODO add support for FifoScheduler
       throw new YarnException("Fifo Scheduler is not supported yet.");
     }
-
+    rmConf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        TableMapping.class, DNSToSwitchMapping.class);
+    rmConf.set(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY,
+        tableMapping);
     rmConf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricsOutputDir);
 
     final SLSRunner se = this;
@@ -331,6 +341,8 @@ public class SLSRunner extends Configured implements Tool {
     if (nodeSet == null || nodeSet.isEmpty()) {
       throw new YarnException("No node! Please configure nodes.");
     }
+
+    SLSUtils.generateNodeTableMapping(nodeSet, tableMapping);
 
     // create NM simulators
     Random random = new Random();
@@ -546,10 +558,15 @@ public class SLSRunner extends Configured implements Tool {
         executionType = ExecutionType.valueOf(
             jsonTask.get(SLSConfiguration.TASK_EXECUTION_TYPE).toString());
       }
+      long allocationId = -1;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_ALLOCATION_ID)) {
+        allocationId = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_ALLOCATION_ID).toString());
+      }
       for (int i = 0; i < count; i++) {
         containers.add(
             new ContainerSimulator(res, duration, hostname, priority, type,
-                executionType));
+                executionType, allocationId));
       }
     }
 
@@ -768,7 +785,10 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     queueAppNumMap.put(queueName, appNum);
-    wrapper.getSchedulerMetrics().trackQueue(queueName);
+    SchedulerMetrics metrics = wrapper.getSchedulerMetrics();
+    if (metrics != null) {
+      metrics.trackQueue(queueName);
+    }
   }
 
   private void runNewAM(String jobType, String user,

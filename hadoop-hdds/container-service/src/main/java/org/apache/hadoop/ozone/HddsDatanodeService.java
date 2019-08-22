@@ -26,7 +26,9 @@ import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClie
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.security.SecurityUtil;
@@ -52,8 +53,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getX509Certificate;
 import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
@@ -80,32 +83,13 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private CertificateClient dnCertClient;
   private String component;
   private HddsDatanodeHttpServer httpServer;
+  private boolean printBanner;
+  private String[] args;
+  private volatile AtomicBoolean isStopped = new AtomicBoolean(false);
 
-  /**
-   * Default constructor.
-   */
-  public HddsDatanodeService() {
-    this(null);
-  }
-
-  /**
-   * Constructs {@link HddsDatanodeService} using the provided {@code conf}
-   * value.
-   *
-   * @param conf OzoneConfiguration
-   */
-  public HddsDatanodeService(Configuration conf) {
-    if (conf == null) {
-      this.conf = new OzoneConfiguration();
-    } else {
-      this.conf = new OzoneConfiguration(conf);
-    }
-  }
-
-  @VisibleForTesting
-  public static HddsDatanodeService createHddsDatanodeService(
-      String[] args, Configuration conf) {
-    return createHddsDatanodeService(args, conf, true);
+  public HddsDatanodeService(boolean printBanner, String[] args) {
+    this.printBanner = printBanner;
+    this.args = args != null ? Arrays.copyOf(args, args.length) : null;
   }
 
   /**
@@ -114,32 +98,32 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    * This method is intended for unit tests only. It suppresses the
    * startup/shutdown message and skips registering Unix signal handlers.
    *
+   * @param args      command line arguments.
+   * @return Datanode instance
+   */
+  @VisibleForTesting
+  public static HddsDatanodeService createHddsDatanodeService(
+      String[] args) {
+    return createHddsDatanodeService(args, false);
+  }
+
+  /**
+   * Create an Datanode instance based on the supplied command-line arguments.
+   *
    * @param args        command line arguments.
-   * @param conf        HDDS configuration
    * @param printBanner if true, then log a verbose startup message.
    * @return Datanode instance
    */
   private static HddsDatanodeService createHddsDatanodeService(
-      String[] args, Configuration conf, boolean printBanner) {
-    if (args.length == 0 && printBanner) {
-      StringUtils
-          .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
-      return new HddsDatanodeService(conf);
-    } else {
-      new HddsDatanodeService().run(args);
-      return null;
-    }
+      String[] args, boolean printBanner) {
+    return new HddsDatanodeService(printBanner, args);
   }
 
   public static void main(String[] args) {
     try {
-      Configuration conf = new OzoneConfiguration();
       HddsDatanodeService hddsDatanodeService =
-          createHddsDatanodeService(args, conf, true);
-      if (hddsDatanodeService != null) {
-        hddsDatanodeService.start(null);
-        hddsDatanodeService.join();
-      }
+          createHddsDatanodeService(args, true);
+      hddsDatanodeService.run(args);
     } catch (Throwable e) {
       LOG.error("Exception in HddsDatanodeService.", e);
       terminate(1, e);
@@ -150,6 +134,21 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     return LOG;
   }
 
+  @Override
+  public Void call() throws Exception {
+    if (printBanner) {
+      StringUtils
+          .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
+    }
+    start(createOzoneConfiguration());
+    join();
+    return null;
+  }
+
+  public void setConfiguration(OzoneConfiguration configuration) {
+    this.conf = configuration;
+  }
+
   /**
    * Starts HddsDatanode services.
    *
@@ -157,12 +156,21 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   @Override
   public void start(Object service) {
-
-    DefaultMetricsSystem.initialize("HddsDatanode");
-    OzoneConfiguration.activate();
     if (service instanceof Configurable) {
-      conf = new OzoneConfiguration(((Configurable) service).getConf());
+      start(new OzoneConfiguration(((Configurable) service).getConf()));
+    } else {
+      start(new OzoneConfiguration());
     }
+  }
+
+  public void start(OzoneConfiguration configuration) {
+    setConfiguration(configuration);
+    start();
+  }
+
+  public void start() {
+    OzoneConfiguration.activate();
+    HddsUtils.initializeMetrics(conf, "HddsDatanode");
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
         String hostname = HddsUtils.getHostName(conf);
@@ -203,7 +211,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           initializeCertificateClient(conf);
         }
         datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf,
-            dnCertClient);
+            dnCertClient, this::terminateDatanode);
         try {
           httpServer = new HddsDatanodeHttpServer(conf);
           httpServer.start();
@@ -263,16 +271,25 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     try {
       PKCS10CertificationRequest csr = getCSR(config);
       // TODO: For SCM CA we should fetch certificate from multiple SCMs.
-      SCMSecurityProtocol secureScmClient =
+      SCMSecurityProtocolClientSideTranslatorPB secureScmClient =
           HddsUtils.getScmSecurityClient(config,
               HddsUtils.getScmAddressForSecurityProtocol(config));
-
-      String pemEncodedCert = secureScmClient.getDataNodeCertificate(
-          datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
-      dnCertClient.storeCertificate(pemEncodedCert, true);
-      datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
-          getSerialNumber().toString());
-      persistDatanodeDetails(datanodeDetails);
+      SCMGetCertResponseProto response = secureScmClient.
+          getDataNodeCertificateChain(datanodeDetails.getProtoBufMessage(),
+              getEncodedString(csr));
+      // Persist certificates.
+      if(response.hasX509CACertificate()) {
+        String pemEncodedCert = response.getX509Certificate();
+        dnCertClient.storeCertificate(pemEncodedCert, true);
+        dnCertClient.storeCertificate(response.getX509CACertificate(), true,
+            true);
+        datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
+            getSerialNumber().toString());
+        persistDatanodeDetails(datanodeDetails);
+      } else {
+        throw new RuntimeException("Unable to retrieve datanode certificate " +
+            "chain");
+      }
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
@@ -310,11 +327,12 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   private DatanodeDetails initializeDatanodeDetails()
       throws IOException {
-    String idFilePath = HddsUtils.getDatanodeIdFilePath(conf);
+    String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_DATANODE_ID +
+      LOG.error("A valid path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration" +
           " for details on configuring Ozone.");
@@ -340,11 +358,12 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   private void persistDatanodeDetails(DatanodeDetails dnDetails)
       throws IOException {
-    String idFilePath = HddsUtils.getDatanodeIdFilePath(conf);
+    String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_DATANODE_ID +
+      LOG.error("A valid path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration" +
           " for details on configuring Ozone.");
@@ -405,37 +424,47 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   }
 
   public void join() {
-    try {
-      datanodeStateMachine.join();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      LOG.info("Interrupted during StorageContainerManager join.");
+    if (datanodeStateMachine != null) {
+      try {
+        datanodeStateMachine.join();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.info("Interrupted during StorageContainerManager join.");
+      }
     }
   }
 
+  public void terminateDatanode() {
+    stop();
+    terminate(1);
+  }
+
+
   @Override
   public void stop() {
-    if (plugins != null) {
-      for (ServicePlugin plugin : plugins) {
+    if (!isStopped.get()) {
+      isStopped.set(true);
+      if (plugins != null) {
+        for (ServicePlugin plugin : plugins) {
+          try {
+            plugin.stop();
+            LOG.info("Stopped plug-in {}", plugin);
+          } catch (Throwable t) {
+            LOG.warn("ServicePlugin {} could not be stopped", plugin, t);
+          }
+        }
+      }
+      if (datanodeStateMachine != null) {
+        datanodeStateMachine.stopDaemon();
+      }
+      if (httpServer != null) {
         try {
-          plugin.stop();
-          LOG.info("Stopped plug-in {}", plugin);
-        } catch (Throwable t) {
-          LOG.warn("ServicePlugin {} could not be stopped", plugin, t);
+          httpServer.stop();
+        } catch (Exception e) {
+          LOG.error("Stopping HttpServer is failed.", e);
         }
       }
     }
-    if (datanodeStateMachine != null) {
-      datanodeStateMachine.stopDaemon();
-    }
-    if (httpServer != null) {
-      try {
-        httpServer.stop();
-      } catch (Exception e) {
-        LOG.error("Stopping HttpServer is failed.", e);
-      }
-    }
-
   }
 
   @Override

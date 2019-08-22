@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -308,14 +309,15 @@ public class TestApplicationLimits {
     		queue.getUserAMResourceLimit());
     
     Resource amResourceLimit = Resource.newInstance(160 * GB, 1);
-    assertEquals(queue.calculateAndGetAMResourceLimit(), amResourceLimit);
-    assertEquals(queue.getUserAMResourceLimit(), 
+    assertThat(queue.calculateAndGetAMResourceLimit()).
+        isEqualTo(amResourceLimit);
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
       Resource.newInstance(80*GB, 1));
     
     // Assert in metrics
-    assertEquals(queue.getMetrics().getAMResourceLimitMB(),
+    assertThat(queue.getMetrics().getAMResourceLimitMB()).isEqualTo(
         amResourceLimit.getMemorySize());
-    assertEquals(queue.getMetrics().getAMResourceLimitVCores(),
+    assertThat(queue.getMetrics().getAMResourceLimitVCores()).isEqualTo(
         amResourceLimit.getVirtualCores());
 
     assertEquals(
@@ -327,11 +329,11 @@ public class TestApplicationLimits {
     clusterResource = Resources.createResource(120 * 16 * GB);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
-    
-    assertEquals(queue.calculateAndGetAMResourceLimit(),
+
+    assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(192 * GB, 1));
-    assertEquals(queue.getUserAMResourceLimit(), 
-      Resource.newInstance(96*GB, 1));
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
+        Resource.newInstance(96*GB, 1));
     
     assertEquals(
         (int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
@@ -378,11 +380,11 @@ public class TestApplicationLimits {
         (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(
           queue.getQueuePath())
         );
-    
-    assertEquals(queue.calculateAndGetAMResourceLimit(),
+
+    assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
-    assertEquals(queue.getUserAMResourceLimit(), 
-      Resource.newInstance(400*GB, 1));
+    assertThat(queue.getUserAMResourceLimit()).isEqualTo(
+        Resource.newInstance(400*GB, 1));
 
     // Change the per-queue max applications.
     csConf.setInt(PREFIX + queue.getQueuePath() + ".maximum-applications",

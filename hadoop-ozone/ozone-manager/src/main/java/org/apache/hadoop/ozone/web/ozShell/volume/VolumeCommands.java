@@ -40,7 +40,11 @@ import picocli.CommandLine.ParentCommand;
         ListVolumeHandler.class,
         CreateVolumeHandler.class,
         UpdateVolumeHandler.class,
-        DeleteVolumeHandler.class
+        DeleteVolumeHandler.class,
+        AddAclVolumeHandler.class,
+        RemoveAclVolumeHandler.class,
+        SetAclVolumeHandler.class,
+        GetAclVolumeHandler.class
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
@@ -52,7 +56,7 @@ public class VolumeCommands implements GenericParentCommand, Callable<Void> {
   @Override
   public Void call() throws Exception {
     throw new MissingSubcommandException(
-        this.shell.getCmd().getSubcommands().get("volume").getUsageMessage());
+        this.shell.getCmd().getSubcommands().get("volume"));
   }
 
   @Override

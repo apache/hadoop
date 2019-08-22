@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -49,13 +51,20 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
+    .NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
+    .NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL;
@@ -68,7 +77,6 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
-import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -132,7 +140,7 @@ public class TestSCMNodeManager {
 
   /**
    * Tests that Node manager handles heartbeats correctly, and comes out of
-   * chill Mode.
+   * safe Mode.
    *
    * @throws IOException
    * @throws InterruptedException
@@ -160,7 +168,7 @@ public class TestSCMNodeManager {
   }
 
   /**
-   * asserts that if we send no heartbeats node manager stays in chillmode.
+   * asserts that if we send no heartbeats node manager stays in safemode.
    *
    * @throws IOException
    * @throws InterruptedException
@@ -232,37 +240,6 @@ public class TestSCMNodeManager {
       Thread.sleep(4 * 1000);
       assertEquals(count, nodeManager.getNodeCount(HEALTHY));
     }
-  }
-
-  /**
-   * Asserts that if user provides a value less than 5 times the heartbeat
-   * interval as the StaleNode Value, we throw since that is a QoS that we
-   * cannot maintain.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-
-  @Test
-  public void testScmSanityOfUserConfig1()
-      throws IOException, AuthenticationException {
-    OzoneConfiguration conf = getConf();
-    final int interval = 100;
-    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, interval,
-        MILLISECONDS);
-    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 1, SECONDS);
-
-    // This should be 5 times more than  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL
-    // and 3 times more than OZONE_SCM_HEARTBEAT_INTERVAL
-    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, interval, MILLISECONDS);
-
-    thrown.expect(IllegalArgumentException.class);
-
-    // This string is a multiple of the interval value
-    thrown.expectMessage(
-        startsWith("100 is not within min = 500 or max = 100000"));
-    createNodeManager(conf);
   }
 
   /**
@@ -368,6 +345,96 @@ public class TestSCMNodeManager {
           1, deadNodeList.size());
       assertEquals("Dead node is not the expected ID", staleNode
           .getUuid(), deadNodeList.get(0).getUuid());
+    }
+  }
+
+  /**
+   * Simulate a JVM Pause by pausing the health check process
+   * Ensure that none of the nodes with heartbeats become Dead or Stale.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws AuthenticationException
+   */
+  @Test
+  public void testScmHandleJvmPause()
+      throws IOException, InterruptedException, AuthenticationException {
+    final int healthCheckInterval = 200; // milliseconds
+    final int heartbeatInterval = 1; // seconds
+    final int staleNodeInterval = 3; // seconds
+    final int deadNodeInterval = 6; // seconds
+    ScheduledFuture schedFuture;
+
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        healthCheckInterval, MILLISECONDS);
+    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL,
+        heartbeatInterval, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeInterval, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL,
+        deadNodeInterval, SECONDS);
+
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails node1 =
+          TestUtils.createRandomDatanodeAndRegister(nodeManager);
+      DatanodeDetails node2 =
+          TestUtils.createRandomDatanodeAndRegister(nodeManager);
+
+      nodeManager.processHeartbeat(node1);
+      nodeManager.processHeartbeat(node2);
+
+      // Sleep so that heartbeat processing thread gets to run.
+      Thread.sleep(1000);
+
+      //Assert all nodes are healthy.
+      assertEquals(2, nodeManager.getAllNodes().size());
+      assertEquals(2, nodeManager.getNodeCount(HEALTHY));
+
+      /**
+       * Simulate a JVM Pause and subsequent handling in following steps:
+       * Step 1 : stop heartbeat check process for stale node interval
+       * Step 2 : resume heartbeat check
+       * Step 3 : wait for 1 iteration of heartbeat check thread
+       * Step 4 : retrieve the state of all nodes - assert all are HEALTHY
+       * Step 5 : heartbeat for node1
+       * [TODO : what if there is scheduling delay of test thread in Step 5?]
+       * Step 6 : wait for some time to allow iterations of check process
+       * Step 7 : retrieve the state of all nodes -  assert node2 is STALE
+       * and node1 is HEALTHY
+       */
+
+      // Step 1 : stop health check process (simulate JVM pause)
+      nodeManager.pauseHealthCheck();
+      Thread.sleep(MILLISECONDS.convert(staleNodeInterval, SECONDS));
+
+      // Step 2 : resume health check
+      assertTrue("Unexpected, already skipped heartbeat checks",
+          (nodeManager.getSkippedHealthChecks() == 0));
+      schedFuture = nodeManager.unpauseHealthCheck();
+
+      // Step 3 : wait for 1 iteration of health check
+      try {
+        schedFuture.get();
+        assertTrue("We did not skip any heartbeat checks",
+            nodeManager.getSkippedHealthChecks() > 0);
+      } catch (ExecutionException e) {
+        assertEquals("Unexpected exception waiting for Scheduled Health Check",
+            0, 1);
+      }
+
+      // Step 4 : all nodes should still be HEALTHY
+      assertEquals(2, nodeManager.getAllNodes().size());
+      assertEquals(2, nodeManager.getNodeCount(HEALTHY));
+
+      // Step 5 : heartbeat for node1
+      nodeManager.processHeartbeat(node1);
+
+      // Step 6 : wait for health check process to run
+      Thread.sleep(1000);
+
+      // Step 7 : node2 should transition to STALE
+      assertEquals(1, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(1, nodeManager.getNodeCount(STALE));
     }
   }
 
@@ -977,4 +1044,119 @@ public class TestSCMNodeManager {
     }
   }
 
+  /**
+   * Test add node into network topology during node register. Datanode
+   * uses Ip address to resolve network location.
+   */
+  @Test
+  public void testScmRegisterNodeWithIpAddress()
+      throws IOException, InterruptedException, AuthenticationException {
+    testScmRegisterNodeWithNetworkTopology(false);
+  }
+
+  /**
+   * Test add node into network topology during node register. Datanode
+   * uses hostname to resolve network location.
+   */
+  @Test
+  public void testScmRegisterNodeWithHostname()
+      throws IOException, InterruptedException, AuthenticationException {
+    testScmRegisterNodeWithNetworkTopology(true);
+  }
+
+  /**
+   * Test add node into a 4-layer network topology during node register.
+   */
+  @Test
+  public void testScmRegisterNodeWith4LayerNetworkTopology()
+      throws IOException, InterruptedException, AuthenticationException {
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
+        MILLISECONDS);
+
+    // create table mapping file
+    String[] hostNames = {"host1", "host2", "host3", "host4"};
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("nodegroup-mapping").getPath();
+
+    // create and register nodes
+    conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        "org.apache.hadoop.net.TableMapping");
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
+    conf.set(ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
+        "network-topology-nodegroup.xml");
+    final int nodeCount = hostNames.length;
+    // use default IP address to resolve node
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        DatanodeDetails node = TestUtils.createDatanodeDetails(
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
+        nodeManager.register(node, null, null);
+        nodes[i] = node;
+      }
+
+      // verify network topology cluster has all the registered nodes
+      Thread.sleep(4 * 1000);
+      NetworkTopology clusterMap = scm.getClusterMap();
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(nodeCount, clusterMap.getNumOfLeafNode(""));
+      assertEquals(4, clusterMap.getMaxLevel());
+      List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
+      nodeList.stream().forEach(node ->
+          Assert.assertTrue(node.getNetworkLocation().startsWith("/rack1/ng")));
+    }
+  }
+
+  private void testScmRegisterNodeWithNetworkTopology(boolean useHostname)
+      throws IOException, InterruptedException, AuthenticationException {
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
+        MILLISECONDS);
+
+    // create table mapping file
+    String[] hostNames = {"host1", "host2", "host3", "host4"};
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("rack-mapping").getPath();
+
+    // create and register nodes
+    conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        "org.apache.hadoop.net.TableMapping");
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
+    if (useHostname) {
+      conf.set(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, "true");
+    }
+    final int nodeCount = hostNames.length;
+    // use default IP address to resolve node
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        DatanodeDetails node = TestUtils.createDatanodeDetails(
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
+        nodeManager.register(node, null, null);
+        nodes[i] = node;
+      }
+
+      // verify network topology cluster has all the registered nodes
+      Thread.sleep(4 * 1000);
+      NetworkTopology clusterMap = scm.getClusterMap();
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(nodeCount, clusterMap.getNumOfLeafNode(""));
+      assertEquals(3, clusterMap.getMaxLevel());
+      List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
+      nodeList.stream().forEach(node ->
+          Assert.assertTrue(node.getNetworkLocation().equals("/rack1")));
+
+      // test get node
+      if (useHostname) {
+        Arrays.stream(hostNames).forEach(hostname ->
+            Assert.assertNotNull(nodeManager.getNodeByAddress(hostname)));
+      } else {
+        Arrays.stream(ipAddress).forEach(ip ->
+            Assert.assertNotNull(nodeManager.getNodeByAddress(ip)));
+      }
+    }
+  }
 }

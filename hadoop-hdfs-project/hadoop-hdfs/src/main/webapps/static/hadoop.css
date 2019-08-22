@@ -235,8 +235,13 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     content: "\e013";
 }
 
+.dfshealth-node-decommissioning:before {
+    color: #5fa341;
+    content: "\e090";
+}
+
 .dfshealth-node-decommissioned:before {
-    color: #bc5f04;
+    color: #eea236;
     content: "\e090";
 }
 
@@ -246,7 +251,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 }
 
 .dfshealth-node-entering-maintenance:before {
-    color: #eea236;
+    color: #5fa341;
     content: "\e136";
 }
 
@@ -256,7 +261,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 }
 
 .dfshealth-node-down-decommissioned:before {
-    color: #2e6da6;
+    color: #c7254e;
     content: "\e017";
 }
 

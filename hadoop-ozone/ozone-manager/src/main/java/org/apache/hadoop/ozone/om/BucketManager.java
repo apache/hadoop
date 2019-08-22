@@ -25,12 +25,14 @@ import java.util.List;
 /**
  * BucketManager handles all the bucket level operations.
  */
-public interface BucketManager {
+public interface BucketManager extends IOzoneAcl {
   /**
    * Creates a bucket.
    * @param bucketInfo - OmBucketInfo for creating bucket.
    */
   void createBucket(OmBucketInfo bucketInfo) throws IOException;
+
+
   /**
    * Returns Bucket Information.
    * @param volumeName - Name of the Volume.
@@ -76,4 +78,5 @@ public interface BucketManager {
   List<OmBucketInfo> listBuckets(String volumeName,
       String startBucket, String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
+
 }

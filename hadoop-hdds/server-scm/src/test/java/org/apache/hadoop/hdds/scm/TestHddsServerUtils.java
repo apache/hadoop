@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.test.PathUtils;
+
+import org.apache.commons.io.FileUtils;
+import static org.junit.Assert.assertTrue;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -33,13 +35,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link HddsServerUtil}.
@@ -202,5 +205,25 @@ public class TestHddsServerUtils {
   public void testNoScmDbDirConfigured() {
     thrown.expect(IllegalArgumentException.class);
     ServerUtils.getScmDbDir(new OzoneConfiguration());
+  }
+
+  @Test
+  public void testGetStaleNodeInterval() {
+    final Configuration conf = new OzoneConfiguration();
+
+    // Reset OZONE_SCM_STALENODE_INTERVAL to 300s that
+    // larger than max limit value.
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 300, TimeUnit.SECONDS);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100);
+    // the max limit value will be returned
+    assertEquals(100000, HddsServerUtil.getStaleNodeInterval(conf));
+
+    // Reset OZONE_SCM_STALENODE_INTERVAL to 10ms that
+    // smaller than min limit value.
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 10,
+        TimeUnit.MILLISECONDS);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100);
+    // the min limit value will be returned
+    assertEquals(90000, HddsServerUtil.getStaleNodeInterval(conf));
   }
 }

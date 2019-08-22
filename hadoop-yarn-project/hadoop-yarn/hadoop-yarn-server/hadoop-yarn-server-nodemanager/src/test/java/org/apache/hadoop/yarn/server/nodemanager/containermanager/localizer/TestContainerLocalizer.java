@@ -70,12 +70,14 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -232,6 +234,33 @@ public class TestContainerLocalizer {
       Assert.fail("Localization succeeded unexpectedly!");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("Sigh, no token!"));
+    }
+  }
+
+  @Test
+  public void testDiskCheckFailure() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.DISK_VALIDATOR, "read-write");
+    FileContext lfs = FileContext.getLocalFSFileContext(conf);
+    Path fileCacheDir = lfs.makeQualified(new Path(basedir, "filecache"));
+    lfs.mkdir(fileCacheDir, FsPermission.getDefault(), true);
+    RecordFactory recordFactory = mock(RecordFactory.class);
+    ContainerLocalizer localizer = new ContainerLocalizer(lfs,
+        UserGroupInformation.getCurrentUser().getUserName(), "application_01",
+        "container_01", String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+        "container_01"), new ArrayList<>(), recordFactory){
+      @Override
+      Configuration initConfiguration() {
+        return conf;
+      }
+    };
+    LocalResource rsrc = mock(LocalResource.class);
+    Path destDirPath = new Path(fileCacheDir, "11");
+    try {
+      localizer.download(destDirPath, rsrc,
+          UserGroupInformation.getCurrentUser());
+    } catch (DiskErrorException ex) {
+      fail(ex.getCause().toString());
     }
   }
 

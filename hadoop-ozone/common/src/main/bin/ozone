@@ -46,11 +46,14 @@ function hadoop_usage
   hadoop_add_subcommand "om" daemon "Ozone Manager"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "s3g" daemon "run the S3 compatible REST gateway"
+  hadoop_add_subcommand "csi" daemon "run the standalone CSI daemon"
+  hadoop_add_subcommand "recon" daemon "run the Recon service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "sh" client "command line interface for object store operations"
   hadoop_add_subcommand "s3" client "command line interface for s3 related operations"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
+  hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -88,7 +91,11 @@ function ozonecmd_case
     ;;
     datanode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties"
+      # Add JVM parameter (org.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false)
+      # for disabling netty PooledByteBufAllocator thread caches for non-netty threads.
+      # This parameter significantly reduces GC pressure for Datanode.
+      # Corresponding Ratis issue https://issues.apache.org/jira/browse/RATIS-534.
+      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties -Dorg.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDDS_DN_OPTS}"
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.HddsDatanodeService
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-datanode"
@@ -122,13 +129,14 @@ function ozonecmd_case
     ;;
     om)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.om.OzoneManager
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.om.OzoneManagerStarter
       HDFS_OM_OPTS="${HDFS_OM_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/om-audit-log4j2.properties"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     sh | shell)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_SH_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     s3)
@@ -137,7 +145,7 @@ function ozonecmd_case
     ;;
     scm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME='org.apache.hadoop.hdds.scm.server.StorageContainerManager'
+      HADOOP_CLASSNAME='org.apache.hadoop.hdds.scm.server.StorageContainerManagerStarter'
       hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
       HDFS_STORAGECONTAINERMANAGER_OPTS="${HDFS_STORAGECONTAINERMANAGER_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/scm-audit-log4j2.properties"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
@@ -148,12 +156,23 @@ function ozonecmd_case
       HADOOP_CLASSNAME='org.apache.hadoop.ozone.s3.Gateway'
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-s3gateway"
     ;;
+    csi)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.csi.CsiServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-csi"
+    ;;
+    recon)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.recon.ReconServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-recon"
+    ;;
     fs)
       HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     scmcli)
       HADOOP_CLASSNAME=org.apache.hadoop.hdds.scm.cli.SCMCLI
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_SCM_CLI_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-tools"
     ;;
     version)
@@ -167,6 +186,10 @@ function ozonecmd_case
     dtutil)
       HADOOP_CLASSNAME=org.apache.hadoop.security.token.DtUtilShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    upgrade)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.upgrade.InPlaceUpgrade
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-upgrade"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

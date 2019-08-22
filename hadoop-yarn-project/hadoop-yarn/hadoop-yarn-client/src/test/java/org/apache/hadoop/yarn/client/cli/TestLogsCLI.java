@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -82,6 +86,7 @@ import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
@@ -407,7 +412,7 @@ public class TestLogsCLI {
 
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs/application_0_0001");
+        + "/bucket-logs-tfile/0001/application_0_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -925,7 +930,6 @@ public class TestLogsCLI {
   public void testFetchApplictionLogsAsAnotherUser() throws Exception {
     String remoteLogRootDir = "target/logs/";
     String rootLogDir = "target/LocalLogs";
-
     String testUser = "test";
     UserGroupInformation testUgi = UserGroupInformation
         .createRemoteUser(testUser);
@@ -966,9 +970,9 @@ public class TestLogsCLI {
       // create container logs in localLogDir for app
       createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
 
-      // create the remote app dir for app
-      // but for a different user testUser"
-      Path path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
+      // create the remote app dir for app but for a different user testUser
+      Path path = new Path(remoteLogRootDir + testUser +
+          "/bucket-logs-tfile/0001/" + appId);
       if (fs.exists(path)) {
         fs.delete(path, true);
       }
@@ -1016,6 +1020,22 @@ public class TestLogsCLI {
           logMessage(containerId, "syslog")));
       sysOutStream.reset();
 
+      // Verify appOwner guessed correctly with older log dir dtructure
+      path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      uploadContainerLogIntoRemoteDir(testUgi, configuration, rootLogDirs,
+          nodeId, containerId, path, fs);
+
+      exitCode = cli.run(new String[] {
+          "-applicationId", appId.toString()});
+      assertTrue(exitCode == 0);
+      assertTrue(sysOutStream.toString().contains(
+          logMessage(containerId, "syslog")));
+      sysOutStream.reset();
+
       // Verify that we could get the err message "Can not find the appOwner"
       // if we do not specify the appOwner, can not get appReport, and
       // the app does not exist in remote dir.
@@ -1034,7 +1054,7 @@ public class TestLogsCLI {
           System.currentTimeMillis(), 1000);
       String priorityUser = "priority";
       Path pathWithoutPerm = new Path(remoteLogRootDir + priorityUser
-          + "/logs/" + appTest);
+          + "/bucket-logs-tfile/1000/" + appTest);
       if (fs.exists(pathWithoutPerm)) {
         fs.delete(pathWithoutPerm, true);
       }
@@ -1124,6 +1144,84 @@ public class TestLogsCLI {
     }
   }
 
+  @Test (timeout = 5000)
+  public void testGuessAppOwnerWithCustomSuffix() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String jobUser = "user1";
+    String loggedUser = "user2";
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    String controllerName = "indexed";
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, controllerName);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+         controllerName), LogAggregationIndexedFileController.class.getName());
+    conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+         controllerName), controllerName);
+
+    FileSystem fs = FileSystem.get(conf);
+    try {
+      // Test New App Log Dir Struture (after YARN-6929) with Custom Suffix
+      ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+      Path path = new Path(remoteLogRootDir + jobUser + "/bucket-indexed/0001/"
+          + appId1);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      String appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId1,
+          loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+
+      // Test Old App Log Dir Struture (before YARN-6929) with Custom Suffix
+      ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+      path = new Path(remoteLogRootDir + jobUser + "/indexed/" + appId2);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId2, loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+    } finally {
+      fs.delete(new Path(remoteLogRootDir), true);
+    }
+  }
+
+  @Test (timeout = 5000)
+  public void testGuessAppOwnerWithCustomAppLogDir() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String remoteLogRootDir1 = "target/logs1/";
+    String jobUser = "user1";
+    String loggedUser = "user2";
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    String controllerName = "indexed";
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, controllerName);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+         controllerName), LogAggregationIndexedFileController.class.getName());
+    conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+         controllerName), remoteLogRootDir1);
+
+    FileSystem fs = FileSystem.get(conf);
+    try {
+      // Test Custom App Log Dir Structure
+      ApplicationId appId1 = ApplicationId.newInstance(0, 3);
+      Path path = new Path(remoteLogRootDir1 + jobUser +
+          "/bucket-logs-indexed/0003/" + appId1);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      String appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId1,
+          loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+    } finally {
+      fs.delete(new Path(remoteLogRootDir1), true);
+    }
+  }
 
   @Test (timeout = 15000)
   public void testSaveContainerLogsLocally() throws Exception {
@@ -1392,7 +1490,7 @@ public class TestLogsCLI {
     assertNotNull(harUrl);
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs/application_1440536969523_0001");
+            + "/bucket-logs-tfile/0001/application_1440536969523_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -1453,7 +1551,7 @@ public class TestLogsCLI {
     }
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-        + "/logs/application_0_0001");
+        + "/bucket-logs-tfile/0001/application_0_0001");
 
     if (fs.exists(path)) {
       fs.delete(path, true);

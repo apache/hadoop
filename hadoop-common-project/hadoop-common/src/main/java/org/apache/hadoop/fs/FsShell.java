@@ -97,7 +97,7 @@ public class FsShell extends Configured implements Tool {
     return this.help;
   }
   
-  protected void init() throws IOException {
+  protected void init() {
     getConf().setQuietMode(true);
     UserGroupInformation.setConfiguration(getConf());
     if (commandFactory == null) {
@@ -298,7 +298,7 @@ public class FsShell extends Configured implements Tool {
    * run
    */
   @Override
-  public int run(String argv[]) throws Exception {
+  public int run(String[] argv) {
     // initialize FsShell
     init();
     Tracer tracer = new Tracer.Builder("FsShell").

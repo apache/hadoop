@@ -34,8 +34,7 @@
   function load_overview() {
     var BEANS = [
       {"name": "federation",  "url": "/jmx?qry=Hadoop:service=Router,name=FederationState"},
-      {"name": "routerstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
-      {"name": "router",      "url": "/jmx?qrt=Hadoop:service=NameNode,name=NameNodeInfo"},
+      {"name": "router",  "url": "/jmx?qry=Hadoop:service=Router,name=Router"},
       {"name": "mem",         "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 
@@ -317,14 +316,27 @@
         for (var i = 0, e = mountTable.length; i < e; ++i) {
           if (mountTable[i].readonly == true) {
             mountTable[i].readonly = "true"
+            mountTable[i].status = "Read only"
           } else {
             mountTable[i].readonly = "false"
           }
         }
       }
 
+      function augment_fault_tolerant(mountTable) {
+        for (var i = 0, e = mountTable.length; i < e; ++i) {
+          if (mountTable[i].faulttolerant == true) {
+            mountTable[i].faulttolerant = "true"
+            mountTable[i].ftStatus = "Fault tolerant"
+          } else {
+            mountTable[i].faulttolerant = "false"
+          }
+        }
+      }
+
       resource.MountTable = JSON.parse(resource.MountTable)
       augment_read_only(resource.MountTable)
+      augment_fault_tolerant(resource.MountTable)
       return resource;
     }
 

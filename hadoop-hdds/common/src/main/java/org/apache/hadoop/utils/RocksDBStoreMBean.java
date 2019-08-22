@@ -18,10 +18,18 @@
 
 package org.apache.hadoop.utils;
 
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.Interns;
 import org.rocksdb.HistogramData;
 import org.rocksdb.HistogramType;
 import org.rocksdb.Statistics;
 import org.rocksdb.TickerType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
@@ -41,19 +49,43 @@ import java.util.Set;
 /**
  * Adapter JMX bean to publish all the Rocksdb metrics.
  */
-public class RocksDBStoreMBean implements DynamicMBean {
+public class RocksDBStoreMBean implements DynamicMBean, MetricsSource {
 
   private Statistics statistics;
 
   private Set<String> histogramAttributes = new HashSet<>();
 
-  public RocksDBStoreMBean(Statistics statistics) {
+  private String contextName;
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RocksDBStoreMBean.class);
+
+  public final static String ROCKSDB_CONTEXT_PREFIX = "Rocksdb_";
+
+  public RocksDBStoreMBean(Statistics statistics, String dbName) {
+    this.contextName = ROCKSDB_CONTEXT_PREFIX + dbName;
     this.statistics = statistics;
     histogramAttributes.add("Average");
     histogramAttributes.add("Median");
     histogramAttributes.add("Percentile95");
     histogramAttributes.add("Percentile99");
     histogramAttributes.add("StandardDeviation");
+  }
+
+  public static RocksDBStoreMBean create(Statistics statistics,
+                                         String contextName) {
+
+    RocksDBStoreMBean rocksDBStoreMBean = new RocksDBStoreMBean(
+        statistics, contextName);
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    MetricsSource metricsSource = ms.getSource(rocksDBStoreMBean.contextName);
+    if (metricsSource != null) {
+      return (RocksDBStoreMBean)metricsSource;
+    } else {
+      return ms.register(rocksDBStoreMBean.contextName,
+          "RocksDB Metrics",
+          rocksDBStoreMBean);
+    }
   }
 
   @Override
@@ -141,4 +173,47 @@ public class RocksDBStoreMBean implements DynamicMBean {
         attributes.toArray(new MBeanAttributeInfo[0]), null, null, null);
 
   }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean b) {
+    MetricsRecordBuilder rb = metricsCollector.addRecord(contextName);
+    getHistogramData(rb);
+    getTickerTypeData(rb);
+  }
+
+  /**
+   * Collect all histogram metrics from RocksDB statistics.
+   * @param rb Metrics Record Builder.
+   */
+  private void getHistogramData(MetricsRecordBuilder rb) {
+    for (HistogramType histogramType : HistogramType.values()) {
+      HistogramData histogram =
+          statistics.getHistogramData(
+              HistogramType.valueOf(histogramType.name()));
+      for (String histogramAttribute : histogramAttributes) {
+        try {
+          Method method =
+              HistogramData.class.getMethod("get" + histogramAttribute);
+          double metricValue =  (double) method.invoke(histogram);
+          rb.addGauge(Interns.info(histogramType.name() + "_" +
+                  histogramAttribute.toUpperCase(), "RocksDBStat"),
+              metricValue);
+        } catch (Exception e) {
+          LOG.error("Error reading histogram data {} ", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Collect all Counter metrics from RocksDB statistics.
+   * @param rb Metrics Record Builder.
+   */
+  private void getTickerTypeData(MetricsRecordBuilder rb) {
+    for (TickerType tickerType : TickerType.values()) {
+      rb.addCounter(Interns.info(tickerType.name(), "RocksDBStat"),
+          statistics.getTickerCount(tickerType));
+    }
+  }
+
 }

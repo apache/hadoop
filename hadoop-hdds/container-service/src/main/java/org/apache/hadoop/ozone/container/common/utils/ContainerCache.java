@@ -67,22 +67,6 @@ public final class ContainerCache extends LRUMap {
   }
 
   /**
-   * Closes a db instance.
-   *
-   * @param containerID - ID of the container to be closed.
-   * @param db - db instance to close.
-   */
-  private void closeDB(long containerID, MetadataStore db) {
-    if (db != null) {
-      try {
-        db.close();
-      } catch (IOException e) {
-        LOG.error("Error closing DB. Container: " + containerID, e);
-      }
-    }
-  }
-
-  /**
    * Closes all the db instances and resets the cache.
    */
   public void shutdownCache() {
@@ -92,8 +76,9 @@ public final class ContainerCache extends LRUMap {
       MapIterator iterator = cache.mapIterator();
       while (iterator.hasNext()) {
         iterator.next();
-        MetadataStore db = (MetadataStore) iterator.getValue();
-        closeDB(((Number)iterator.getKey()).longValue(), db);
+        ReferenceCountedDB db = (ReferenceCountedDB) iterator.getValue();
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
+            db.getReferenceCount());
       }
       // reset the cache
       cache.clear();
@@ -107,14 +92,13 @@ public final class ContainerCache extends LRUMap {
    */
   @Override
   protected boolean removeLRU(LinkEntry entry) {
+    ReferenceCountedDB db = (ReferenceCountedDB) entry.getValue();
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) entry.getValue();
-      closeDB(((Number)entry.getKey()).longValue(), db);
+      return db.cleanup();
     } finally {
       lock.unlock();
     }
-    return true;
   }
 
   /**
@@ -124,26 +108,30 @@ public final class ContainerCache extends LRUMap {
    * @param containerDBType - DB type of the container.
    * @param containerDBPath - DB path of the container.
    * @param conf - Hadoop Configuration.
-   * @return MetadataStore.
+   * @return ReferenceCountedDB.
    */
-  public MetadataStore getDB(long containerID, String containerDBType,
+  public ReferenceCountedDB getDB(long containerID, String containerDBType,
                              String containerDBPath, Configuration conf)
       throws IOException {
     Preconditions.checkState(containerID >= 0,
         "Container ID cannot be negative.");
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) this.get(containerID);
+      ReferenceCountedDB db = (ReferenceCountedDB) this.get(containerDBPath);
 
       if (db == null) {
-        db = MetadataStoreBuilder.newBuilder()
+        MetadataStore metadataStore =
+            MetadataStoreBuilder.newBuilder()
             .setDbFile(new File(containerDBPath))
             .setCreateIfMissing(false)
             .setConf(conf)
             .setDBType(containerDBType)
             .build();
-        this.put(containerID, db);
+        db = new ReferenceCountedDB(metadataStore, containerDBPath);
+        this.put(containerDBPath, db);
       }
+      // increment the reference before returning the object
+      db.incrementReference();
       return db;
     } catch (Exception e) {
       LOG.error("Error opening DB. Container:{} ContainerPath:{}",
@@ -157,16 +145,17 @@ public final class ContainerCache extends LRUMap {
   /**
    * Remove a DB handler from cache.
    *
-   * @param containerID - ID of the container.
+   * @param containerDBPath - path of the container db file.
    */
-  public void removeDB(long containerID) {
-    Preconditions.checkState(containerID >= 0,
-        "Container ID cannot be negative.");
+  public void removeDB(String containerDBPath) {
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore)this.get(containerID);
-      closeDB(containerID, db);
-      this.remove(containerID);
+      ReferenceCountedDB db = (ReferenceCountedDB)this.get(containerDBPath);
+      if (db != null) {
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
+            db.getReferenceCount());
+      }
+      this.remove(containerDBPath);
     } finally {
       lock.unlock();
     }

@@ -21,7 +21,6 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,6 +28,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -276,7 +276,7 @@ public class DebugAdmin extends Configured implements Tool {
 
         final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
         metaOut = new DataOutputStream(
-            new BufferedOutputStream(new FileOutputStream(srcMeta),
+            new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
                 smallBufferSize));
         BlockMetadataHeader.writeHeader(metaOut, checksum);
         metaOut.close();

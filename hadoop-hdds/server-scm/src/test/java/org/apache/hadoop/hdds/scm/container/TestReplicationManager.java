@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.ozone.lock.LockManager;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.junit.After;
 import org.junit.Assert;
@@ -95,18 +97,39 @@ public class TestReplicationManager {
 
     Mockito.when(containerPlacementPolicy.chooseDatanodes(
         Mockito.anyListOf(DatanodeDetails.class),
+        Mockito.anyListOf(DatanodeDetails.class),
         Mockito.anyInt(), Mockito.anyLong()))
         .thenAnswer(invocation -> {
-          int count = (int) invocation.getArguments()[1];
+          int count = (int) invocation.getArguments()[2];
           return IntStream.range(0, count)
               .mapToObj(i -> randomDatanodeDetails())
               .collect(Collectors.toList());
         });
 
     replicationManager = new ReplicationManager(
-        conf, containerManager, containerPlacementPolicy, eventQueue);
+        new ReplicationManagerConfiguration(),
+        containerManager,
+        containerPlacementPolicy,
+        eventQueue,
+        new LockManager<>(conf));
     replicationManager.start();
     Thread.sleep(100L);
+  }
+
+
+  /**
+   * Checks if restarting of replication manager works.
+   */
+  @Test
+  public void testReplicationManagerRestart() throws InterruptedException {
+    Assert.assertTrue(replicationManager.isRunning());
+    replicationManager.stop();
+    // Stop is a non-blocking call, it might take sometime for the
+    // ReplicationManager to shutdown
+    Thread.sleep(500);
+    Assert.assertFalse(replicationManager.isRunning());
+    replicationManager.start();
+    Assert.assertTrue(replicationManager.isRunning());
   }
 
   /**
@@ -567,6 +590,20 @@ public class TestReplicationManager {
     // Wait for EventQueue to call the event handler
     Thread.sleep(100L);
     Assert.assertEquals(0, datanodeCommandHandler.getInvocation());
+  }
+
+  @Test
+  public void testGeneratedConfig() {
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+
+    ReplicationManagerConfiguration rmc =
+        ozoneConfiguration.getObject(ReplicationManagerConfiguration.class);
+
+    //default is not included in ozone-site.xml but generated from annotation
+    //to the ozone-site-generated.xml which should be loaded by the
+    // OzoneConfiguration.
+    Assert.assertEquals(600000, rmc.getEventTimeout());
+
   }
 
   @After

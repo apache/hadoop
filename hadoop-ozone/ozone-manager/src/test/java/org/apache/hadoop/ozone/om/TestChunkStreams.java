@@ -25,7 +25,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -48,8 +47,7 @@ public class TestChunkStreams {
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
         BlockInputStream in =
-            new BlockInputStream(null, null, null, new ArrayList<>(), null,
-                true) {
+            new BlockInputStream(null, 100, null, null, true, null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
@@ -84,7 +82,7 @@ public class TestChunkStreams {
               }
             };
         offset += 100;
-        groupInputStream.addStream(in, 100);
+        groupInputStream.addStream(in);
       }
 
       byte[] resBuf = new byte[500];
@@ -105,8 +103,7 @@ public class TestChunkStreams {
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
         BlockInputStream in =
-            new BlockInputStream(null, null, null, new ArrayList<>(), null,
-                true) {
+            new BlockInputStream(null, 100, null, null, true, null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
@@ -141,7 +138,7 @@ public class TestChunkStreams {
               }
             };
         offset += 100;
-        groupInputStream.addStream(in, 100);
+        groupInputStream.addStream(in);
       }
 
       byte[] resBuf = new byte[600];

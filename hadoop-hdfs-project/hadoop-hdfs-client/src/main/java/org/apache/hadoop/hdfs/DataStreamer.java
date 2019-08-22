@@ -680,7 +680,7 @@ class DataStreamer extends Daemon {
             try {
               dataQueue.wait(timeout);
             } catch (InterruptedException  e) {
-              LOG.warn("Caught exception", e);
+              LOG.debug("Thread interrupted", e);
             }
             doSleep = false;
             now = Time.monotonicNow();
@@ -695,7 +695,7 @@ class DataStreamer extends Daemon {
             try {
               backOffIfNecessary();
             } catch (InterruptedException e) {
-              LOG.warn("Caught exception", e);
+              LOG.debug("Thread interrupted", e);
             }
             one = dataQueue.getFirst(); // regular data packet
             SpanId[] parents = one.getTraceParents();
@@ -708,9 +708,8 @@ class DataStreamer extends Daemon {
         }
 
         // get new block from namenode.
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("stage=" + stage + ", " + this);
-        }
+        LOG.debug("stage={}, {}", stage, this);
+
         if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
           LOG.debug("Allocating new block: {}", this);
           setPipeline(nextBlockOutputStream());
@@ -738,7 +737,7 @@ class DataStreamer extends Daemon {
                 // wait for acks to arrive from datanodes
                 dataQueue.wait(1000);
               } catch (InterruptedException  e) {
-                LOG.warn("Caught exception", e);
+                LOG.debug("Thread interrupted", e);
               }
             }
           }
@@ -893,6 +892,7 @@ class DataStreamer extends Daemon {
         }
         checkClosed();
       } catch (ClosedChannelException cce) {
+        LOG.debug("Closed channel exception", cce);
       }
       long duration = Time.monotonicNow() - begin;
       if (duration > dfsclientSlowLogThresholdMs) {
@@ -946,7 +946,8 @@ class DataStreamer extends Daemon {
         }
         checkClosed();
         queuePacket(packet);
-      } catch (ClosedChannelException ignored) {
+      } catch (ClosedChannelException cce) {
+        LOG.debug("Closed channel exception", cce);
       }
     }
   }
@@ -985,7 +986,8 @@ class DataStreamer extends Daemon {
         response.close();
         response.join();
       } catch (InterruptedException  e) {
-        LOG.warn("Caught exception", e);
+        LOG.debug("Thread interrupted", e);
+        Thread.currentThread().interrupt();
       } finally {
         response = null;
       }
@@ -1097,9 +1099,7 @@ class DataStreamer extends Daemon {
             }
           }
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("DFSClient {}", ack);
-          }
+          LOG.debug("DFSClient {}", ack);
 
           long seqno = ack.getSeqno();
           // processes response status from datanodes.
@@ -1153,8 +1153,8 @@ class DataStreamer extends Daemon {
           }
           if (one.getSeqno() != seqno) {
             throw new IOException("ResponseProcessor: Expecting seqno " +
-                " for block " + block +
-                one.getSeqno() + " but received " + seqno);
+                one.getSeqno() + " for block " + block +
+                " but received " + seqno);
           }
           isLastPacketInBlock = one.isLastPacketInBlock();
 
@@ -1386,7 +1386,7 @@ class DataStreamer extends Daemon {
         if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 && nodes.length
             >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
           DFSClient.LOG.warn(
-              "Failed to find a new datanode to add to the write pipeline, "
+              "Failed to find a new datanode to add to the write pipeline,"
                   + " continue to write to the pipeline with " + nodes.length
                   + " nodes since it's no less than minimum replication: "
                   + dfsClient.dtpReplaceDatanodeOnFailureReplication
@@ -1616,7 +1616,8 @@ class DataStreamer extends Daemon {
         // good reports should follow bad ones, if client committed
         // with those nodes.
         Thread.sleep(2000);
-      } catch (InterruptedException ignored) {
+      } catch (InterruptedException e) {
+        LOG.debug("Thread interrupted", e);
       }
     }
   }

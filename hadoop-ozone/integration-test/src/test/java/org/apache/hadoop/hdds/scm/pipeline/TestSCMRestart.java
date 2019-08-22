@@ -75,7 +75,7 @@ public class TestSCMRestart {
     // At this stage, there should be 2 pipeline one with 1 open container
     // each. Try restarting the SCM and then discover that pipeline are in
     // correct state.
-    cluster.restartStorageContainerManager();
+    cluster.restartStorageContainerManager(true);
     newContainerManager = cluster.getStorageContainerManager()
         .getContainerManager();
     pipelineManager = cluster.getStorageContainerManager().getPipelineManager();

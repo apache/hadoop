@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import java.util.LinkedList;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -27,7 +26,6 @@ import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IOzoneObj;
-import org.apache.hadoop.ozone.security.acl.OzoneAclException;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -80,7 +78,7 @@ public class TestOmAcls {
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    conf.setClass(OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthrizerTest.class,
+    conf.setClass(OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizerTest.class,
         IAccessAuthorizer.class);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
@@ -122,19 +120,17 @@ public class TestOmAcls {
     createVolumeArgs.setAdminName(adminUser);
     createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
     logCapturer.clearOutput();
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createVolume(createVolumeArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
-        "permission to access volume"));
+    assertTrue(logCapturer.getOutput().contains("Only admin users are " +
+        "authorized to create Ozone"));
 
     BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createBucket(bucketArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
-        "permission to access bucket"));
+    assertTrue(logCapturer.getOutput().contains("Only admin users are" +
+        " authorized to create Ozone"));
   }
 
   @Test
@@ -147,29 +143,26 @@ public class TestOmAcls {
     createVolumeArgs.setAdminName(adminName);
     createVolumeArgs.setQuota(new OzoneQuota(100, OzoneQuota.Units.GB));
     BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     logCapturer.clearOutput();
 
     // write a key without specifying size at all
     String keyName = "testKey";
     KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.newKeyWriter(keyArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have READ permission" +
-        " to access key"));
+    assertTrue(logCapturer.getOutput().contains("doesn't have WRITE " +
+        "permission to access key"));
   }
 }
 
 /**
  * Test implementation to negative case.
  */
-class OzoneAccessAuthrizerTest implements IAccessAuthorizer {
+class OzoneAccessAuthorizerTest implements IAccessAuthorizer {
 
   @Override
-  public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context)
-      throws OzoneAclException {
+  public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context) {
     return false;
   }
 }

@@ -87,7 +87,8 @@ public class SCMPipelineManager implements PipelineManager {
     this.lock = new ReentrantReadWriteLock();
     this.conf = conf;
     this.stateManager = new PipelineStateManager(conf);
-    this.pipelineFactory = new PipelineFactory(nodeManager, stateManager, conf);
+    this.pipelineFactory = new PipelineFactory(nodeManager, stateManager,
+        conf);
     // TODO: See if thread priority needs to be set for these threads
     scheduler = new Scheduler("RatisPipelineUtilsThread", false, 1);
     this.backgroundPipelineCreator =
@@ -151,7 +152,10 @@ public class SCMPipelineManager implements PipelineManager {
       stateManager.addPipeline(pipeline);
       nodeManager.addPipeline(pipeline);
       metrics.incNumPipelineCreated();
+      metrics.createPerPipelineMetrics(pipeline);
       return pipeline;
+    } catch (InsufficientDatanodesException idEx) {
+      throw idEx;
     } catch (IOException ex) {
       metrics.incNumPipelineCreationFailed();
       throw ex;
@@ -282,7 +286,8 @@ public class SCMPipelineManager implements PipelineManager {
   public void openPipeline(PipelineID pipelineId) throws IOException {
     lock.writeLock().lock();
     try {
-      stateManager.openPipeline(pipelineId);
+      Pipeline pipeline = stateManager.openPipeline(pipelineId);
+      metrics.createPerPipelineMetrics(pipeline);
     } finally {
       lock.writeLock().unlock();
     }
@@ -359,6 +364,7 @@ public class SCMPipelineManager implements PipelineManager {
       for (ContainerID containerID : containerIDs) {
         eventPublisher.fireEvent(SCMEvents.CLOSE_CONTAINER, containerID);
       }
+      metrics.removePipelineMetrics(pipelineId);
     } finally {
       lock.writeLock().unlock();
     }
@@ -400,6 +406,11 @@ public class SCMPipelineManager implements PipelineManager {
   }
 
   @Override
+  public void incNumBlocksAllocatedMetric(PipelineID id) {
+    metrics.incNumBlocksAllocated(id);
+  }
+
+  @Override
   public void close() throws IOException {
     if (scheduler != null) {
       scheduler.close();
@@ -417,5 +428,7 @@ public class SCMPipelineManager implements PipelineManager {
     if(metrics != null) {
       metrics.unRegister();
     }
+    // shutdown pipeline provider.
+    pipelineFactory.shutdown();
   }
 }

@@ -19,10 +19,10 @@ Distributed-shell + GPU + cgroup
 ```bash
  ./yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name distributed-tf-gpu \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name distributed-tf-gpu \
  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
- --worker_docker_image gpu-cuda9.0-tf1.8.0-with-models \
- --ps_docker_image dockerfile-cpu-tf1.8.0-with-models \
+ --worker_docker_image tf-1.13.1-gpu:0.0.1 \
+ --ps_docker_image tf-1.13.1-cpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
  --num_ps 0 \
@@ -37,7 +37,7 @@ Distributed-shell + GPU + cgroup
 
 ## Issues:
 
-### Issue 1: Fail to start nodemanager after system reboot
+### Issue 1: Fail to start NodeManager after system reboot
 
 ```
 2018-09-20 18:54:39,785 ERROR org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor: Failed to bootstrap configured resource subsystems!
@@ -62,7 +62,7 @@ chown :yarn -R /sys/fs/cgroup/cpu,cpuacct
 chmod g+rwx -R /sys/fs/cgroup/cpu,cpuacct
 ```
 
-If GPUs are used，the access to cgroup devices folder is neede as well
+If GPUs are used, access to cgroup devices folder is required as well.
 
 ```
 chown :yarn -R /sys/fs/cgroup/devices
@@ -140,26 +140,7 @@ $ chmod +x find-busy-mnt.sh
 $ kill -9 5007
 ```
 
+### Issue 5：YARN fails to start containers
 
-### Issue 5：Failed to execute `sudo nvidia-docker run`
-
-```
-docker: Error response from daemon: create nvidia_driver_361.42: VolumeDriver.Create: internal error, check logs for details.
-See 'docker run --help'.
-```
-
-Solution:
-
-```
-#check nvidia-docker status
-$ systemctl status nvidia-docker
-$ journalctl -n -u nvidia-docker
-#restart nvidia-docker
-systemctl stop nvidia-docker
-systemctl start nvidia-docker
-```
-
-### Issue 6：Yarn failed to start containers
-
-if the number of GPUs required by applications is larger than the number of GPUs in the cluster, there would be some containers can't be created.
+If the number of GPUs required by an application is greater than the number of GPUs in the cluster, some container will not be created.
 

@@ -24,15 +24,21 @@ import io.opentracing.Scope;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeRequestProto;
+    .StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeResponseProto;
+    .StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -265,13 +271,13 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
+  public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
     try (Scope scope = TracingUtil
         .importAndCreateScope("getScmInfo", req.getTraceID())) {
       ScmInfo scmInfo = impl.getScmInfo();
-      return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
+      return HddsProtos.GetScmInfoResponseProto.newBuilder()
           .setClusterId(scmInfo.getClusterId())
           .setScmId(scmInfo.getScmId())
           .build();
@@ -282,28 +288,68 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public InChillModeResponseProto inChillMode(
+  public InSafeModeResponseProto inSafeMode(
       RpcController controller,
-      InChillModeRequestProto request) throws ServiceException {
+      InSafeModeRequestProto request) throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("inChillMode", request.getTraceID())) {
-      return InChillModeResponseProto.newBuilder()
-          .setInChillMode(impl.inChillMode()).build();
+        .importAndCreateScope("inSafeMode", request.getTraceID())) {
+      return InSafeModeResponseProto.newBuilder()
+          .setInSafeMode(impl.inSafeMode()).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
   }
 
   @Override
-  public ForceExitChillModeResponseProto forceExitChillMode(
-      RpcController controller, ForceExitChillModeRequestProto request)
+  public ForceExitSafeModeResponseProto forceExitSafeMode(
+      RpcController controller, ForceExitSafeModeRequestProto request)
       throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("forceExitChillMode", request.getTraceID())) {
-      return ForceExitChillModeResponseProto.newBuilder()
-          .setExitedChillMode(impl.forceExitChillMode()).build();
+        .importAndCreateScope("forceExitSafeMode", request.getTraceID())) {
+      return ForceExitSafeModeResponseProto.newBuilder()
+          .setExitedSafeMode(impl.forceExitSafeMode()).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
   }
+
+  @Override
+  public StartReplicationManagerResponseProto startReplicationManager(
+      RpcController controller, StartReplicationManagerRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "startReplicationManager", request.getTraceID())) {
+      impl.startReplicationManager();
+      return StartReplicationManagerResponseProto.newBuilder().build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public StopReplicationManagerResponseProto stopReplicationManager(
+      RpcController controller, StopReplicationManagerRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "stopReplicationManager", request.getTraceID())) {
+      impl.stopReplicationManager();
+      return StopReplicationManagerResponseProto.newBuilder().build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public ReplicationManagerStatusResponseProto getReplicationManagerStatus(
+      RpcController controller, ReplicationManagerStatusRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "getReplicationManagerStatus", request.getTraceID())) {
+      return ReplicationManagerStatusResponseProto.newBuilder()
+          .setIsRunning(impl.getReplicationManagerStatus()).build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
 }

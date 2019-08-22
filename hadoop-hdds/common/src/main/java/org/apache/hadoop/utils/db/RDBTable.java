@@ -22,6 +22,7 @@ package org.apache.hadoop.utils.db;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 import org.rocksdb.ColumnFamilyHandle;
@@ -33,9 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * RocksDB implementation of ozone metadata store.
+ * RocksDB implementation of ozone metadata store. This class should be only
+ * used as part of TypedTable as it's underlying implementation to access the
+ * metadata store content. All other user's using Table should use TypedTable.
  */
-public class RDBTable implements Table<byte[], byte[]> {
+@InterfaceAudience.Private
+class RDBTable implements Table<byte[], byte[]> {
 
 
   private static final Logger LOG =
@@ -52,7 +56,7 @@ public class RDBTable implements Table<byte[], byte[]> {
    * @param handle - ColumnFamily Handle.
    * @param writeOptions - RocksDB write Options.
    */
-  public RDBTable(RocksDB db, ColumnFamilyHandle handle,
+  RDBTable(RocksDB db, ColumnFamilyHandle handle,
       WriteOptions writeOptions) {
     this.db = db;
     this.handle = handle;
@@ -116,6 +120,20 @@ public class RDBTable implements Table<byte[], byte[]> {
   }
 
   @Override
+  public boolean isExist(byte[] key) throws IOException {
+    try {
+      // RocksDB#keyMayExist
+      // If the key definitely does not exist in the database, then this
+      // method returns false, else true.
+      return db.keyMayExist(handle, key, new StringBuilder())
+          && db.get(handle, key) != null;
+    } catch (RocksDBException e) {
+      throw toIOException(
+          "Error in accessing DB. ", e);
+    }
+  }
+
+  @Override
   public byte[] get(byte[] key) throws IOException {
     try {
       return db.get(handle, key);
@@ -148,6 +166,7 @@ public class RDBTable implements Table<byte[], byte[]> {
   @Override
   public TableIterator<byte[], ByteArrayKeyValue> iterator() {
     ReadOptions readOptions = new ReadOptions();
+    readOptions.setFillCache(false);
     return new RDBStoreIterator(db.newIterator(handle, readOptions));
   }
 
@@ -163,5 +182,15 @@ public class RDBTable implements Table<byte[], byte[]> {
   @Override
   public void close() throws Exception {
     // Nothing do for a Column Family.
+  }
+
+  @Override
+  public long getEstimatedKeyCount() throws IOException {
+    try {
+      return db.getLongProperty(handle, "rocksdb.estimate-num-keys");
+    } catch (RocksDBException e) {
+      throw toIOException(
+          "Failed to get estimated key count of table " + getName(), e);
+    }
   }
 }

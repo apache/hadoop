@@ -97,6 +97,22 @@ public final class TestUtils {
   }
 
   /**
+   * Creates DatanodeDetails with random UUID, specific hostname and network
+   * location.
+   *
+   * @return DatanodeDetails
+   */
+  public static DatanodeDetails createDatanodeDetails(String hostname,
+       String loc) {
+    String ipAddress = random.nextInt(256)
+        + "." + random.nextInt(256)
+        + "." + random.nextInt(256)
+        + "." + random.nextInt(256);
+    return createDatanodeDetails(UUID.randomUUID().toString(), hostname,
+        ipAddress, loc);
+  }
+
+  /**
    * Creates DatanodeDetails using the given UUID.
    *
    * @param uuid Datanode's UUID
@@ -108,7 +124,8 @@ public final class TestUtils {
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256);
-    return createDatanodeDetails(uuid.toString(), "localhost", ipAddress);
+    return createDatanodeDetails(uuid.toString(), "localhost" + "-" + ipAddress,
+        ipAddress, null);
   }
 
   /**
@@ -120,8 +137,11 @@ public final class TestUtils {
    */
   public static DatanodeDetails getDatanodeDetails(
       RegisteredCommand registeredCommand) {
-    return createDatanodeDetails(registeredCommand.getDatanodeUUID(),
-        registeredCommand.getHostName(), registeredCommand.getIpAddress());
+    return createDatanodeDetails(
+        registeredCommand.getDatanode().getUuidString(),
+        registeredCommand.getDatanode().getHostName(),
+        registeredCommand.getDatanode().getIpAddress(),
+        null);
   }
 
   /**
@@ -133,8 +153,8 @@ public final class TestUtils {
    *
    * @return DatanodeDetails
    */
-  private static DatanodeDetails createDatanodeDetails(String uuid,
-      String hostname, String ipAddress) {
+  public static DatanodeDetails createDatanodeDetails(String uuid,
+      String hostname, String ipAddress, String networkLocation) {
     DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
         DatanodeDetails.Port.Name.STANDALONE, 0);
     DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
@@ -147,7 +167,8 @@ public final class TestUtils {
         .setIpAddress(ipAddress)
         .addPort(containerPort)
         .addPort(ratisPort)
-        .addPort(restPort);
+        .addPort(restPort)
+        .setNetworkLocation(networkLocation);
     return builder.build();
   }
 
@@ -533,6 +554,7 @@ public final class TestUtils {
         .setReplicationType(HddsProtos.ReplicationType.RATIS)
         .setReplicationFactor(HddsProtos.ReplicationFactor.THREE)
         .setState(state)
+        .setSequenceId(10000L)
         .setOwner("TEST")
         .build();
   }

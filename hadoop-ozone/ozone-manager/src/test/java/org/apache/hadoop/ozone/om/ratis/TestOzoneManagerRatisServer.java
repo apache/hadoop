@@ -31,7 +31,10 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -41,15 +44,23 @@ import org.apache.ratis.util.LifeCycle;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
+import static org.mockito.Mockito.when;
 
 /**
  * Test OM Ratis server.
  */
 public class TestOzoneManagerRatisServer {
+
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
 
   private OzoneConfiguration conf;
   private OzoneManagerRatisServer omRatisServer;
@@ -57,6 +68,8 @@ public class TestOzoneManagerRatisServer {
   private String omID;
   private String clientId = UUID.randomUUID().toString();
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
+  private OMMetadataManager omMetadataManager;
+  private OzoneManager ozoneManager;
 
   @Before
   public void init() throws Exception {
@@ -80,7 +93,13 @@ public class TestOzoneManagerRatisServer {
         .setOMServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
         .build();
     // Starts a single node Ratis server
-    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, null,
+    ozoneManager = Mockito.mock(OzoneManager.class);
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
+        folder.newFolder().getAbsolutePath());
+    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
+    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
       omNodeDetails, Collections.emptyList());
     omRatisServer.start();
     omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(omID,
@@ -124,7 +143,8 @@ public class TestOzoneManagerRatisServer {
           .setClientId(clientId)
           .build();
       OmUtils.isReadOnly(request);
-      assertFalse(cmdtype + "is not categorized in OmUtils#isReadyOnly",
+      assertFalse(cmdtype + " is not categorized in " +
+              "OmUtils#isReadyOnly",
           logCapturer.getOutput().contains("CmdType " + cmdtype +" is not " +
               "categorized as readOnly or not."));
       logCapturer.clearOutput();
@@ -164,8 +184,8 @@ public class TestOzoneManagerRatisServer {
         .build();
     // Starts a single node Ratis server
     OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
-        .newOMRatisServer(newConf, null,
-            omNodeDetails, Collections.emptyList());
+        .newOMRatisServer(newConf, ozoneManager, omNodeDetails,
+            Collections.emptyList());
     newOmRatisServer.start();
     OzoneManagerRatisClient newOmRatisClient = OzoneManagerRatisClient
         .newOzoneManagerRatisClient(

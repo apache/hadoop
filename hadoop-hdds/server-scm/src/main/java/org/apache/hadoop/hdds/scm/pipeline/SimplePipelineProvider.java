@@ -72,4 +72,9 @@ public class SimplePipelineProvider implements PipelineProvider {
         .setNodes(nodes)
         .build();
   }
+
+  @Override
+  public void shutdown() {
+    // Do nothing.
+  }
 }

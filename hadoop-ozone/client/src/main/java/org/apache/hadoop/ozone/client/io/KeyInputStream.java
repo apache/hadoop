@@ -20,19 +20,10 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.storage.BlockInputStream;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.storage.BlockInputStream;
-import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,43 +44,93 @@ public class KeyInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
-  private final ArrayList<ChunkInputStreamEntry> streamEntries;
-  // streamOffset[i] stores the offset at which blockInputStream i stores
-  // data in the key
-  private long[] streamOffset = null;
-  private int currentStreamIndex;
+  private String key;
   private long length = 0;
   private boolean closed = false;
-  private String key;
+
+  // List of BlockInputStreams, one for each block in the key
+  private final List<BlockInputStream> blockStreams;
+
+  // blockOffsets[i] stores the index of the first data byte in
+  // blockStream w.r.t the key data.
+  // For example, let’s say the block size is 200 bytes and block[0] stores
+  // data from indices 0 - 199, block[1] from indices 200 - 399 and so on.
+  // Then, blockOffset[0] = 0 (the offset of the first byte of data in
+  // block[0]), blockOffset[1] = 200 and so on.
+  private long[] blockOffsets = null;
+
+  // Index of the blockStream corresponding to the current position of the
+  // KeyInputStream i.e. offset of the data to be read next
+  private int blockIndex;
+
+  // Tracks the blockIndex corresponding to the last seeked position so that it
+  // can be reset if a new position is seeked.
+  private int blockIndexOfPrevPosition;
 
   public KeyInputStream() {
-    streamEntries = new ArrayList<>();
-    currentStreamIndex = 0;
-  }
-
-  @VisibleForTesting
-  public synchronized int getCurrentStreamIndex() {
-    return currentStreamIndex;
-  }
-
-  @VisibleForTesting
-  public long getRemainingOfIndex(int index) throws IOException {
-    return streamEntries.get(index).getRemaining();
+    blockStreams = new ArrayList<>();
+    blockIndex = 0;
   }
 
   /**
-   * Append another stream to the end of the list.
-   *
-   * @param stream       the stream instance.
-   * @param streamLength the max number of bytes that should be written to this
-   *                     stream.
+   * For each block in keyInfo, add a BlockInputStream to blockStreams.
    */
-  public synchronized void addStream(BlockInputStream stream,
-      long streamLength) {
-    streamEntries.add(new ChunkInputStreamEntry(stream, streamLength));
+  public static LengthInputStream getFromOmKeyInfo(OmKeyInfo keyInfo,
+      XceiverClientManager xceiverClientManager,
+      boolean verifyChecksum) {
+    List<OmKeyLocationInfo> keyLocationInfos = keyInfo
+        .getLatestVersionLocations().getBlocksLatestVersionOnly();
+
+    KeyInputStream keyInputStream = new KeyInputStream();
+    keyInputStream.initialize(keyInfo.getKeyName(), keyLocationInfos,
+        xceiverClientManager, verifyChecksum);
+
+    return new LengthInputStream(keyInputStream, keyInputStream.length);
   }
 
+  private synchronized void initialize(String keyName,
+      List<OmKeyLocationInfo> blockInfos,
+      XceiverClientManager xceiverClientManager,
+      boolean verifyChecksum) {
+    this.key = keyName;
+    this.blockOffsets = new long[blockInfos.size()];
+    long keyLength = 0;
+    for (int i = 0; i < blockInfos.size(); i++) {
+      OmKeyLocationInfo omKeyLocationInfo = blockInfos.get(i);
+      LOG.debug("Adding stream for accessing {}. The stream will be " +
+          "initialized later.", omKeyLocationInfo);
 
+      addStream(omKeyLocationInfo, xceiverClientManager,
+          verifyChecksum);
+
+      this.blockOffsets[i] = keyLength;
+      keyLength += omKeyLocationInfo.getLength();
+    }
+    this.length = keyLength;
+  }
+
+  /**
+   * Append another BlockInputStream to the end of the list. Note that the
+   * BlockInputStream is only created here and not initialized. The
+   * BlockInputStream is initialized when a read operation is performed on
+   * the block for the first time.
+   */
+  private synchronized void addStream(OmKeyLocationInfo blockInfo,
+      XceiverClientManager xceiverClientMngr,
+      boolean verifyChecksum) {
+    blockStreams.add(new BlockInputStream(blockInfo.getBlockID(),
+        blockInfo.getLength(), blockInfo.getPipeline(), blockInfo.getToken(),
+        verifyChecksum, xceiverClientMngr));
+  }
+
+  @VisibleForTesting
+  public void addStream(BlockInputStream blockInputStream) {
+    blockStreams.add(blockInputStream);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read() throws IOException {
     byte[] buf = new byte[1];
@@ -99,9 +140,12 @@ public class KeyInputStream extends InputStream implements Seekable {
     return Byte.toUnsignedInt(buf[0]);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
-    checkNotClosed();
+    checkOpen();
     if (b == null) {
       throw new NullPointerException();
     }
@@ -114,13 +158,15 @@ public class KeyInputStream extends InputStream implements Seekable {
     int totalReadLen = 0;
     while (len > 0) {
       // if we are at the last block and have read the entire block, return
-      if (streamEntries.size() == 0 ||
-              (streamEntries.size() - 1 <= currentStreamIndex &&
-                      streamEntries.get(currentStreamIndex)
-                              .getRemaining() == 0)) {
+      if (blockStreams.size() == 0 ||
+          (blockStreams.size() - 1 <= blockIndex &&
+              blockStreams.get(blockIndex)
+                  .getRemaining() == 0)) {
         return totalReadLen == 0 ? EOF : totalReadLen;
       }
-      ChunkInputStreamEntry current = streamEntries.get(currentStreamIndex);
+
+      // Get the current blockStream and read data from it
+      BlockInputStream current = blockStreams.get(blockIndex);
       int numBytesToRead = Math.min(len, (int)current.getRemaining());
       int numBytesRead = current.read(b, off, numBytesToRead);
       if (numBytesRead != numBytesToRead) {
@@ -129,23 +175,35 @@ public class KeyInputStream extends InputStream implements Seekable {
         // this case.
         throw new IOException(String.format(
             "Inconsistent read for blockID=%s length=%d numBytesRead=%d",
-            current.blockInputStream.getBlockID(), current.length,
-            numBytesRead));
+            current.getBlockID(), current.getLength(), numBytesRead));
       }
       totalReadLen += numBytesRead;
       off += numBytesRead;
       len -= numBytesRead;
       if (current.getRemaining() <= 0 &&
-          ((currentStreamIndex + 1) < streamEntries.size())) {
-        currentStreamIndex += 1;
+          ((blockIndex + 1) < blockStreams.size())) {
+        blockIndex += 1;
       }
     }
     return totalReadLen;
   }
 
+  /**
+   * Seeks the KeyInputStream to the specified position. This involves 2 steps:
+   *    1. Updating the blockIndex to the blockStream corresponding to the
+   *    seeked position.
+   *    2. Seeking the corresponding blockStream to the adjusted position.
+   *
+   * For example, let’s say the block size is 200 bytes and block[0] stores
+   * data from indices 0 - 199, block[1] from indices 200 - 399 and so on.
+   * Let’s say we seek to position 240. In the first step, the blockIndex
+   * would be updated to 1 as indices 200 - 399 reside in blockStream[1]. In
+   * the second step, the blockStream[1] would be seeked to position 40 (=
+   * 240 - blockOffset[1] (= 200)).
+   */
   @Override
-  public void seek(long pos) throws IOException {
-    checkNotClosed();
+  public synchronized void seek(long pos) throws IOException {
+    checkOpen();
     if (pos < 0 || pos >= length) {
       if (pos == 0) {
         // It is possible for length and pos to be zero in which case
@@ -155,35 +213,39 @@ public class KeyInputStream extends InputStream implements Seekable {
       throw new EOFException(
           "EOF encountered at pos: " + pos + " for key: " + key);
     }
-    Preconditions.assertTrue(currentStreamIndex >= 0);
-    if (currentStreamIndex >= streamEntries.size()) {
-      currentStreamIndex = Arrays.binarySearch(streamOffset, pos);
-    } else if (pos < streamOffset[currentStreamIndex]) {
-      currentStreamIndex =
-          Arrays.binarySearch(streamOffset, 0, currentStreamIndex, pos);
-    } else if (pos >= streamOffset[currentStreamIndex] + streamEntries
-        .get(currentStreamIndex).length) {
-      currentStreamIndex = Arrays
-          .binarySearch(streamOffset, currentStreamIndex + 1,
-              streamEntries.size(), pos);
+
+    // 1. Update the blockIndex
+    if (blockIndex >= blockStreams.size()) {
+      blockIndex = Arrays.binarySearch(blockOffsets, pos);
+    } else if (pos < blockOffsets[blockIndex]) {
+      blockIndex =
+          Arrays.binarySearch(blockOffsets, 0, blockIndex, pos);
+    } else if (pos >= blockOffsets[blockIndex] + blockStreams
+        .get(blockIndex).getLength()) {
+      blockIndex = Arrays
+          .binarySearch(blockOffsets, blockIndex + 1,
+              blockStreams.size(), pos);
     }
-    if (currentStreamIndex < 0) {
+    if (blockIndex < 0) {
       // Binary search returns -insertionPoint - 1  if element is not present
       // in the array. insertionPoint is the point at which element would be
-      // inserted in the sorted array. We need to adjust the currentStreamIndex
-      // accordingly so that currentStreamIndex = insertionPoint - 1
-      currentStreamIndex = -currentStreamIndex - 2;
+      // inserted in the sorted array. We need to adjust the blockIndex
+      // accordingly so that blockIndex = insertionPoint - 1
+      blockIndex = -blockIndex - 2;
     }
-    // seek to the proper offset in the BlockInputStream
-    streamEntries.get(currentStreamIndex)
-        .seek(pos - streamOffset[currentStreamIndex]);
+
+    // Reset the previous blockStream's position
+    blockStreams.get(blockIndexOfPrevPosition).resetPosition();
+
+    // 2. Seek the blockStream to the adjusted position
+    blockStreams.get(blockIndex).seek(pos - blockOffsets[blockIndex]);
+    blockIndexOfPrevPosition = blockIndex;
   }
 
   @Override
-  public long getPos() throws IOException {
-    return length == 0 ? 0 :
-        streamOffset[currentStreamIndex] + streamEntries.get(currentStreamIndex)
-            .getPos();
+  public synchronized long getPos() throws IOException {
+    return length == 0 ? 0 : blockOffsets[blockIndex] +
+        blockStreams.get(blockIndex).getPos();
   }
 
   @Override
@@ -193,7 +255,7 @@ public class KeyInputStream extends InputStream implements Seekable {
 
   @Override
   public int available() throws IOException {
-    checkNotClosed();
+    checkOpen();
     long remaining = length - getPos();
     return remaining <= Integer.MAX_VALUE ? (int) remaining : Integer.MAX_VALUE;
   }
@@ -201,124 +263,9 @@ public class KeyInputStream extends InputStream implements Seekable {
   @Override
   public void close() throws IOException {
     closed = true;
-    for (int i = 0; i < streamEntries.size(); i++) {
-      streamEntries.get(i).close();
+    for (BlockInputStream blockStream : blockStreams) {
+      blockStream.close();
     }
-  }
-
-  /**
-   * Encapsulates BlockInputStream.
-   */
-  public static class ChunkInputStreamEntry extends InputStream
-      implements Seekable {
-
-    private final BlockInputStream blockInputStream;
-    private final long length;
-
-    public ChunkInputStreamEntry(BlockInputStream blockInputStream,
-        long length) {
-      this.blockInputStream = blockInputStream;
-      this.length = length;
-    }
-
-    synchronized long getRemaining() throws IOException {
-      return length - getPos();
-    }
-
-    @Override
-    public synchronized int read(byte[] b, int off, int len)
-        throws IOException {
-      int readLen = blockInputStream.read(b, off, len);
-      return readLen;
-    }
-
-    @Override
-    public synchronized int read() throws IOException {
-      int data = blockInputStream.read();
-      return data;
-    }
-
-    @Override
-    public synchronized void close() throws IOException {
-      blockInputStream.close();
-    }
-
-    @Override
-    public void seek(long pos) throws IOException {
-      blockInputStream.seek(pos);
-    }
-
-    @Override
-    public long getPos() throws IOException {
-      return blockInputStream.getPos();
-    }
-
-    @Override
-    public boolean seekToNewSource(long targetPos) throws IOException {
-      return false;
-    }
-  }
-
-  public static LengthInputStream getFromOmKeyInfo(
-      OmKeyInfo keyInfo,
-      XceiverClientManager xceiverClientManager,
-      StorageContainerLocationProtocol
-          storageContainerLocationClient,
-      String requestId, boolean verifyChecksum) throws IOException {
-    long length = 0;
-    long containerKey;
-    KeyInputStream groupInputStream = new KeyInputStream();
-    groupInputStream.key = keyInfo.getKeyName();
-    List<OmKeyLocationInfo> keyLocationInfos =
-        keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly();
-    groupInputStream.streamOffset = new long[keyLocationInfos.size()];
-    for (int i = 0; i < keyLocationInfos.size(); i++) {
-      OmKeyLocationInfo omKeyLocationInfo = keyLocationInfos.get(i);
-      BlockID blockID = omKeyLocationInfo.getBlockID();
-      long containerID = blockID.getContainerID();
-      Pipeline pipeline = omKeyLocationInfo.getPipeline();
-
-      // irrespective of the container state, we will always read via Standalone
-      // protocol.
-      if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
-        pipeline = Pipeline.newBuilder(pipeline)
-            .setType(HddsProtos.ReplicationType.STAND_ALONE).build();
-      }
-      XceiverClientSpi xceiverClient = xceiverClientManager
-          .acquireClient(pipeline);
-      boolean success = false;
-      containerKey = omKeyLocationInfo.getLocalID();
-      try {
-        LOG.debug("get key accessing {} {}",
-            containerID, containerKey);
-        groupInputStream.streamOffset[i] = length;
-        ContainerProtos.DatanodeBlockID datanodeBlockID = blockID
-            .getDatanodeBlockIDProtobuf();
-        if (omKeyLocationInfo.getToken() != null) {
-          UserGroupInformation.getCurrentUser().
-              addToken(omKeyLocationInfo.getToken());
-        }
-        ContainerProtos.GetBlockResponseProto response = ContainerProtocolCalls
-            .getBlock(xceiverClient, datanodeBlockID, requestId);
-        List<ContainerProtos.ChunkInfo> chunks =
-            response.getBlockData().getChunksList();
-        for (ContainerProtos.ChunkInfo chunk : chunks) {
-          length += chunk.getLen();
-        }
-        success = true;
-        BlockInputStream inputStream = new BlockInputStream(
-            omKeyLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
-            chunks, requestId, verifyChecksum);
-        groupInputStream.addStream(inputStream,
-            omKeyLocationInfo.getLength());
-      } finally {
-        if (!success) {
-          xceiverClientManager.releaseClient(xceiverClient, false);
-        }
-      }
-    }
-    groupInputStream.length = length;
-    return new LengthInputStream(groupInputStream, length);
   }
 
   /**
@@ -326,10 +273,20 @@ public class KeyInputStream extends InputStream implements Seekable {
    * the last state of the volatile {@link #closed} field.
    * @throws IOException if the connection is closed.
    */
-  private void checkNotClosed() throws IOException {
+  private void checkOpen() throws IOException {
     if (closed) {
       throw new IOException(
           ": " + FSExceptionMessages.STREAM_IS_CLOSED + " Key: " + key);
     }
+  }
+
+  @VisibleForTesting
+  public synchronized int getCurrentStreamIndex() {
+    return blockIndex;
+  }
+
+  @VisibleForTesting
+  public long getRemainingOfIndex(int index) throws IOException {
+    return blockStreams.get(index).getRemaining();
   }
 }

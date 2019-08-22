@@ -253,7 +253,7 @@ The following properties should be set in yarn-site.xml:
 </configuration>
 ```
 
-In addition, a container-executer.cfg file must exist and contain settings for
+In addition, a container-executor.cfg file must exist and contain settings for
 the container executor. The file must be owned by root with permissions 0400.
 The format of the file is the standard Java properties file format, for example
 
@@ -359,13 +359,65 @@ implicitly perform a Docker pull command. Both MapReduce and Spark assume that
 tasks which take more that 10 minutes to report progress have stalled, so
 specifying a large Docker image may cause the application to fail.
 
+CGroups configuration Requirements
+----------------------------------
+The Docker plugin utilizes cgroups to limit resource usage of individual containers.
+Since launched containers belong to YARN, the command line option `--cgroup-parent` is
+used to define the appropriate control group.
+
+Docker supports two different cgroups driver: `cgroupfs` and `systemd`. Note that only
+`cgroupfs` is supported - attempt to launch a Docker container with `systemd` results in the
+following, similar error message:
+
+```
+Container id: container_1561638268473_0006_01_000002
+Exit code: 7
+Exception message: Launch container failed
+Shell error output: /usr/bin/docker-current: Error response from daemon: cgroup-parent for systemd cgroup should be a valid slice named as "xxx.slice".
+See '/usr/bin/docker-current run --help'.
+Shell output: main : command provided 4
+```
+
+This means you have to reconfigure the Docker deamon on each host where `systemd` driver is used.
+
+Depending on what OS Hadoop is running on, reconfiguration might require different steps. However,
+if `systemd` was chosen for cgroups driver, it is likely that the `systemctl` command is available
+on the system.
+
+Check the `ExecStart` property of the Docker daemon:
+
+```
+~$ systemctl show --no-pager --property=ExecStart docker.service
+ExecStart={ path=/usr/bin/dockerd-current ; argv[]=/usr/bin/dockerd-current --add-runtime
+docker-runc=/usr/libexec/docker/docker-runc-current --default-runtime=docker-runc --exec-opt native.cgroupdriver=systemd
+--userland-proxy-path=/usr/libexec/docker/docker-proxy-current
+--init-path=/usr/libexec/docker/docker-init-current
+--seccomp-profile=/etc/docker/seccomp.json
+$OPTIONS $DOCKER_STORAGE_OPTIONS $DOCKER_NETWORK_OPTIONS $ADD_REGISTRY $BLOCK_REGISTRY $INSECURE_REGISTRY $REGISTRIES ;
+ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+```
+
+This example shows that the `native.cgroupdriver` is `systemd`. You have to modify that in the unit file of the daemon.
+
+```
+~$ sudo systemctl edit --full docker.service
+```
+
+This brings up the whole configuration for editing. Just replace the `systemd` string to `cgroupfs`. Save the
+changes and restart both the systemd and Docker daemon:
+
+```
+~$ sudo systemctl daemon-reload
+~$ sudo systemctl restart docker.service
+```
+
 Application Submission
 ----------------------
 
 Before attempting to launch a Docker container, make sure that the LCE
 configuration is working for applications requesting regular YARN containers.
 If after enabling the LCE one or more NodeManagers fail to start, the cause is
-most likely that the ownership and/or permissions on the container-executer
+most likely that the ownership and/or permissions on the container-executor
 binary are incorrect. Check the logs to confirm.
 
 In order to run an application in a Docker container, set the following
@@ -666,6 +718,14 @@ In development environment, local images can be tagged with a repository name pr
 ```
 docker tag centos:latest localhost:5000/centos:latest
 ```
+
+Let's say you have an Ubuntu-based image with some changes in the local repository and you wish to use it.
+The following example tags the `local_ubuntu` image:
+```
+docker tag local_ubuntu local/ubuntu:latest
+```
+
+Next, you have to add `local` to `docker.trusted.registries`. The image can be referenced by using `local/ubuntu`.
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
@@ -980,6 +1040,32 @@ In yarn-env.sh, define:
 ```
 export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true
 ```
+
+Requirements when not using ENTRYPOINT (YARN mode)
+--------------------------------------------------
+There are two requirements when ENTRYPOINT is not used:
+
+1. `/bin/bash` must be available inside the image. This is generally true,
+however, tiny Docker images (eg. ones which use busybox for shell commands)
+might not have bash installed. In this case, the following error is
+displayed:
+
+    ```
+    Container id: container_1561638268473_0015_01_000002
+    Exit code: 7
+    Exception message: Launch container failed
+    Shell error output: /usr/bin/docker-current: Error response from daemon: oci runtime error: container_linux.go:235: starting container process caused "exec: \"bash\": executable file not found in $PATH".
+    Shell output: main : command provided 4
+    ```
+
+2. `find` command must also be available inside the image. Not having
+`find` causes this error:
+
+    ```
+    Container exited with a non-zero exit code 127. Error file: prelaunch.err.
+    Last 4096 bytes of prelaunch.err :
+    /tmp/hadoop-systest/nm-local-dir/usercache/hadoopuser/appcache/application_1561638268473_0017/container_1561638268473_0017_01_000002/launch_container.sh: line 44: find: command not found
+    ```
 
 Docker Container YARN SysFS Support
 -----------------------------------

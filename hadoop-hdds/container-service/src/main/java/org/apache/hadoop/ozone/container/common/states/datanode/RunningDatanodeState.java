@@ -86,7 +86,16 @@ public class RunningDatanodeState implements DatanodeState {
     for (EndpointStateMachine endpoint : connectionManager.getValues()) {
       Callable<EndpointStateMachine.EndPointStates> endpointTask
           = getEndPointTask(endpoint);
-      ecs.submit(endpointTask);
+      if (endpointTask != null) {
+        ecs.submit(endpointTask);
+      } else {
+        // This can happen if a task is taking more time than the timeOut
+        // specified for the task in await, and when it is completed the task
+        // has set the state to Shutdown, we may see the state as shutdown
+        // here. So, we need to Shutdown DatanodeStateMachine.
+        LOG.error("State is Shutdown in RunningDatanodeState");
+        context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
+      }
     }
   }
   //TODO : Cache some of these tasks instead of creating them

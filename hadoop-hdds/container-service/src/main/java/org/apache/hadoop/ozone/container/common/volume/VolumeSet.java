@@ -167,8 +167,6 @@ public class VolumeSet {
 
         checkAndSetClusterID(hddsVolume.getClusterID());
 
-        volumeMap.put(hddsVolume.getHddsRootDir().getPath(), hddsVolume);
-        volumeStateMap.get(hddsVolume.getStorageType()).add(hddsVolume);
         LOG.info("Added Volume : {} to VolumeSet",
             hddsVolume.getHddsRootDir().getPath());
 
@@ -177,6 +175,8 @@ public class VolumeSet {
           throw new IOException("Failed to create HDDS storage dir " +
               hddsVolume.getHddsRootDir());
         }
+        volumeMap.put(hddsVolume.getHddsRootDir().getPath(), hddsVolume);
+        volumeStateMap.get(hddsVolume.getStorageType()).add(hddsVolume);
       } catch (IOException e) {
         HddsVolume volume = new HddsVolume.Builder(locationString)
             .failedVolume(true).build();
@@ -185,11 +185,13 @@ public class VolumeSet {
       }
     }
 
-    checkAllVolumes();
-
+    // First checking if we have any volumes, if all volumes are failed the
+    // volumeMap size will be zero, and we throw Exception.
     if (volumeMap.size() == 0) {
       throw new DiskOutOfSpaceException("No storage locations configured");
     }
+
+    checkAllVolumes();
 
     // Ensure volume threads are stopped and scm df is saved during shutdown.
     shutdownHook = () -> {

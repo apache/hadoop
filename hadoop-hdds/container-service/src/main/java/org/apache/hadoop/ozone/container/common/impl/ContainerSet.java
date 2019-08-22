@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common
     .interfaces.ContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +69,8 @@ public class ContainerSet {
     if(containerMap.putIfAbsent(containerId, container) == null) {
       LOG.debug("Container with container Id {} is added to containerMap",
           containerId);
+      // wish we could have done this from ContainerData.setState
+      container.getContainerData().commitSpace();
       return true;
     } else {
       LOG.warn("Container already exists with container Id {}", containerId);
@@ -124,6 +127,24 @@ public class ContainerSet {
    */
   public Iterator<Container> getContainerIterator() {
     return containerMap.values().iterator();
+  }
+
+  /**
+   * Return an iterator of containers associated with the specified volume.
+   *
+   * @param  volume the HDDS volume which should be used to filter containers
+   * @return {@literal Iterator<Container>}
+   */
+  public Iterator<Container> getContainerIterator(HddsVolume volume) {
+    Preconditions.checkNotNull(volume);
+    Preconditions.checkNotNull(volume.getStorageID());
+    String volumeUuid = volume.getStorageID();
+    return containerMap.values()
+                       .stream()
+                       .filter(x -> volumeUuid.equals(
+                               x.getContainerData().getVolume()
+                                       .getStorageID()))
+                       .iterator();
   }
 
   /**

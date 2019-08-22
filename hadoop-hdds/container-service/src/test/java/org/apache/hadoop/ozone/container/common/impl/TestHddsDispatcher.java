@@ -73,13 +73,15 @@ public class TestHddsDispatcher {
   public void testContainerCloseActionWhenFull() throws IOException {
     String testDir = GenericTestUtils.getTempPath(
         TestHddsDispatcher.class.getSimpleName());
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(HDDS_DATANODE_DIR_KEY, testDir);
+    DatanodeDetails dd = randomDatanodeDetails();
+    VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+
     try {
       UUID scmId = UUID.randomUUID();
-      OzoneConfiguration conf = new OzoneConfiguration();
-      conf.set(HDDS_DATANODE_DIR_KEY, testDir);
-      DatanodeDetails dd = randomDatanodeDetails();
       ContainerSet containerSet = new ContainerSet();
-      VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+
       DatanodeStateMachine stateMachine = Mockito.mock(
           DatanodeStateMachine.class);
       StateContext context = Mockito.mock(StateContext.class);
@@ -118,6 +120,7 @@ public class TestHddsDispatcher {
           .addContainerActionIfAbsent(Mockito.any(ContainerAction.class));
 
     } finally {
+      volumeSet.shutdown();
       FileUtils.deleteDirectory(new File(testDir));
     }
 
@@ -266,7 +269,6 @@ public class TestHddsDispatcher {
         .newBuilder()
         .setContainerID(containerId)
         .setCmdType(ContainerProtos.Type.WriteChunk)
-        .setTraceID(UUID.randomUUID().toString())
         .setDatanodeUuid(datanodeId)
         .setWriteChunk(writeChunkRequest)
         .build();

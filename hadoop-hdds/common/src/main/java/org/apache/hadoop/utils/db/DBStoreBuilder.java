@@ -28,6 +28,8 @@ import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
+import org.rocksdb.Statistics;
+import org.rocksdb.StatsLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,9 @@ import java.util.Set;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DB_PROFILE;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_DB_PROFILE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF;
 
 /**
  * DBStore Builder.
@@ -57,13 +62,16 @@ public final class DBStoreBuilder {
   private List<String> tableNames;
   private Configuration configuration;
   private CodecRegistry registry;
-  private boolean readOnly = false;
+  private String rocksDbStat;
 
   private DBStoreBuilder(Configuration configuration) {
     tables = new HashSet<>();
     tableNames = new LinkedList<>();
     this.configuration = configuration;
     this.registry = new CodecRegistry();
+    this.rocksDbStat = configuration.getTrimmed(
+        OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
+        OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT);
   }
 
   public static DBStoreBuilder newBuilder(Configuration configuration) {
@@ -114,11 +122,6 @@ public final class DBStoreBuilder {
     return this;
   }
 
-  public DBStoreBuilder setReadOnly(boolean rdOnly) {
-    readOnly = rdOnly;
-    return this;
-  }
-
   /**
    * Builds a DBStore instance and returns that.
    *
@@ -137,7 +140,7 @@ public final class DBStoreBuilder {
     if (!dbFile.getParentFile().exists()) {
       throw new IOException("The DB destination directory should exist.");
     }
-    return new RDBStore(dbFile, options, tables, registry, readOnly);
+    return new RDBStore(dbFile, options, tables, registry);
   }
 
   /**
@@ -193,7 +196,13 @@ public final class DBStoreBuilder {
 
     if (option == null) {
       LOG.info("Using default options. {}", dbProfile.toString());
-      return dbProfile.getDBOptions();
+      option = dbProfile.getDBOptions();
+    }
+
+    if (!rocksDbStat.equals(OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF)) {
+      Statistics statistics = new Statistics();
+      statistics.setStatsLevel(StatsLevel.valueOf(rocksDbStat));
+      option = option.setStatistics(statistics);
     }
     return option;
   }

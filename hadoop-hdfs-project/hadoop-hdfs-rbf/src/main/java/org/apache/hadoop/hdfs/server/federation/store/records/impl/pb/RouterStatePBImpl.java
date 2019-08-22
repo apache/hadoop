@@ -182,7 +182,9 @@ public class RouterStatePBImpl extends RouterState implements PBRecord {
 
   @Override
   public void setDateModified(long time) {
-    this.translator.getBuilder().setDateModified(time);
+    if (getStatus() != RouterServiceState.EXPIRED) {
+      this.translator.getBuilder().setDateModified(time);
+    }
   }
 
   @Override
@@ -198,5 +200,15 @@ public class RouterStatePBImpl extends RouterState implements PBRecord {
   @Override
   public long getDateCreated() {
     return this.translator.getProtoOrBuilder().getDateCreated();
+  }
+
+  @Override
+  public void setAdminAddress(String adminAddress) {
+    this.translator.getBuilder().setAdminAddress(adminAddress);
+  }
+
+  @Override
+  public String getAdminAddress() {
+    return this.translator.getProtoOrBuilder().getAdminAddress();
   }
 }

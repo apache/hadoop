@@ -53,6 +53,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +64,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -78,13 +80,16 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.web.AuthFilterInitializer;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
@@ -1329,11 +1334,15 @@ public class DFSUtil {
       nsId = getOnlyNameServiceIdOrNull(conf);
     }
 
+    String webAddrBaseKey = DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+    String webAddrDefault = DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
+    if (getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY) {
+      webAddrBaseKey = DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+      webAddrDefault = DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT;
+    }
     String webAddrKey = DFSUtilClient.concatSuffixes(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nsId, nnId);
-
-    String webAddr =
-        conf.get(webAddrKey, DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
+        webAddrBaseKey, nsId, nnId);
+    String webAddr = conf.get(webAddrKey, webAddrDefault);
     return webAddr;
   }
 
@@ -1467,7 +1476,7 @@ public class DFSUtil {
         DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
     HttpConfig.Policy policy = HttpConfig.Policy.fromString(policyStr);
     if (policy == null) {
-      throw new HadoopIllegalArgumentException("Unregonized value '"
+      throw new HadoopIllegalArgumentException("Unrecognized value '"
           + policyStr + "' for " + DFSConfigKeys.DFS_HTTP_POLICY_KEY);
     }
 
@@ -1604,6 +1613,28 @@ public class DFSUtil {
       final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
       String spnegoKeytabFileKey) throws IOException {
     HttpConfig.Policy policy = getHttpPolicy(conf);
+
+    String filterInitializerConfKey = "hadoop.http.filter.initializers";
+    String initializers = conf.get(filterInitializerConfKey, "");
+
+    String[] parts = initializers.split(",");
+    Set<String> target = new LinkedHashSet<String>();
+    for (String filterInitializer : parts) {
+      filterInitializer = filterInitializer.trim();
+      if (filterInitializer.equals(
+          AuthenticationFilterInitializer.class.getName()) ||
+          filterInitializer.equals(
+          ProxyUserAuthenticationFilterInitializer.class.getName()) ||
+          filterInitializer.isEmpty()) {
+        continue;
+      }
+      target.add(filterInitializer);
+    }
+    target.add(AuthFilterInitializer.class.getName());
+    initializers = StringUtils.join(target, ",");
+    conf.set(filterInitializerConfKey, initializers);
+
+    LOG.info("Filter initializers set : " + initializers);
 
     HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
         .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))

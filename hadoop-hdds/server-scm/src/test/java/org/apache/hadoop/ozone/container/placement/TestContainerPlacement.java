@@ -80,19 +80,21 @@ public class TestContainerPlacement {
         .getStandardDeviation(), 0.001);
 
     SCMContainerPlacementCapacity capacityPlacer = new
-        SCMContainerPlacementCapacity(nodeManagerCapacity, new Configuration());
+        SCMContainerPlacementCapacity(nodeManagerCapacity, new Configuration(),
+        null, true);
     SCMContainerPlacementRandom randomPlacer = new
-        SCMContainerPlacementRandom(nodeManagerRandom, new Configuration());
+        SCMContainerPlacementRandom(nodeManagerRandom, new Configuration(),
+        null, true);
 
     for (int x = 0; x < opsCount; x++) {
       long containerSize = random.nextInt(100) * OzoneConsts.GB;
       List<DatanodeDetails> nodesCapacity =
-          capacityPlacer.chooseDatanodes(new ArrayList<>(), nodesRequired,
+          capacityPlacer.chooseDatanodes(new ArrayList<>(), null, nodesRequired,
               containerSize);
       assertEquals(nodesRequired, nodesCapacity.size());
 
       List<DatanodeDetails> nodesRandom =
-          randomPlacer.chooseDatanodes(nodesCapacity, nodesRequired,
+          randomPlacer.chooseDatanodes(nodesCapacity, null, nodesRequired,
               containerSize);
 
       // One fifth of all calls are delete

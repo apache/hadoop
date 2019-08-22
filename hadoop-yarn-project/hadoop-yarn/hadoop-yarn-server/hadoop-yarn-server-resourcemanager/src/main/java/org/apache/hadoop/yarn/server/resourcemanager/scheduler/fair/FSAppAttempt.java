@@ -926,8 +926,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     if (!isAmRunning() && !getUnmanagedAM()) {
       // Return true if we have not ask, or queue is not be able to run app's AM
       PendingAsk ask = appSchedulingInfo.getNextPendingAsk();
-      if (ask.getCount() == 0 || !getQueue().canRunAppAM(
-          ask.getPerAllocationResource())) {
+      if (ask != null && (ask.getCount() == 0 || !getQueue().canRunAppAM(
+          ask.getPerAllocationResource()))) {
         return true;
       }
     }

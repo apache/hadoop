@@ -13,8 +13,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
+ * limitations under the License
  */
+
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
@@ -29,9 +30,9 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
+      .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandResponseProto;
+      .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.scm.*;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -42,7 +43,7 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.transport.server
-    .XceiverServerSpi;
+      .XceiverServerSpi;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -61,9 +62,9 @@ import org.junit.Assert;
  * This class tests the metrics of ContainerStateMachine.
  */
 public class TestCSMMetrics {
-  static final String TEST_DIR
-      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
-
+  static final String TEST_DIR =
+      GenericTestUtils.getTestDir("dfs").getAbsolutePath()
+          + File.separator;
   @FunctionalInterface
   interface CheckedBiFunction<LEFT, RIGHT, OUT, THROWABLE extends Throwable> {
     OUT apply(LEFT left, RIGHT right) throws THROWABLE;
@@ -112,6 +113,11 @@ public class TestCSMMetrics {
       assertCounter("NumWriteStateMachineOps", 0L, metric);
       assertCounter("NumReadStateMachineOps", 0L, metric);
       assertCounter("NumApplyTransactionOps", 0L, metric);
+      assertCounter("NumBytesWrittenCount", 0L, metric);
+      assertCounter("NumBytesCommittedCount", 0L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 0L, metric);
 
       // Write Chunk
       BlockID blockID = ContainerTestHelper.getTestBlockID(ContainerTestHelper.
@@ -127,7 +133,12 @@ public class TestCSMMetrics {
       metric = getMetrics(CSMMetrics.SOURCE_NAME +
               RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 1L, metric);
+      assertCounter("NumBytesWrittenCount", 1024L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
+      assertCounter("NumBytesCommittedCount", 1024L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 1L, metric);
 
       //Read Chunk
       ContainerProtos.ContainerCommandRequestProto readChunkRequest =
@@ -139,7 +150,7 @@ public class TestCSMMetrics {
 
       metric = getMetrics(CSMMetrics.SOURCE_NAME +
           RaftGroupId.valueOf(pipeline.getId().getId()).toString());
-      assertCounter("NumReadStateMachineOps", 1L, metric);
+      assertCounter("NumQueryStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
     } finally {
       if (client != null) {

@@ -40,11 +40,9 @@ import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.tracing.StringCodec;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
-import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -58,6 +56,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.web.ozShell.OzoneShell;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -80,9 +79,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.slf4j.event.Level.TRACE;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -138,7 +140,7 @@ public class TestOzoneShell {
     baseDir = new File(path);
     baseDir.mkdirs();
 
-    shell = new Shell();
+    shell = new OzoneShell();
 
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
@@ -356,21 +358,19 @@ public class TestOzoneShell {
     String expectedError = "Incomplete command";
     String[] args = new String[] {}; //executing 'ozone sh'
 
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh [-hV] [--verbose] [-D=<String=String>]..." +
-            " [COMMAND]");
+    executeWithError(shell, args, expectedError);
 
     args = new String[] {"volume"}; //executing 'ozone sh volume'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh volume [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
 
     args = new String[] {"bucket"}; //executing 'ozone sh bucket'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh bucket [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
 
     args = new String[] {"key"}; //executing 'ozone sh key'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh key [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
   }
 
   @Test
@@ -470,32 +470,11 @@ public class TestOzoneShell {
   }
 
   /**
-   * Execute command, assert exception message and returns true if error
-   * was thrown.
+   * Execute command, assert exception message and exception class
+   * and returns true if error was thrown.
    */
   private void executeWithError(Shell ozoneShell, String[] args,
-      Class exception) {
-    if (Objects.isNull(exception)) {
-      execute(ozoneShell, args);
-    } else {
-      try {
-        execute(ozoneShell, args);
-        fail("Exception is expected from command execution " + Arrays
-            .asList(args));
-      } catch (Exception ex) {
-        LOG.error("Exception: ", ex);
-        assertTrue(ex.getCause().getClass().getCanonicalName()
-            .equals(exception.getCanonicalName()));
-      }
-    }
-  }
-
-  /**
-   * Execute command, assert exception message and returns true if error
-   * was thrown and contains the specified usage string.
-   */
-  private void executeWithError(Shell ozoneShell, String[] args,
-      String expectedError, String usage) {
+                                Class expectedException, String expectedError) {
     if (Strings.isNullOrEmpty(expectedError)) {
       execute(ozoneShell, args);
     } else {
@@ -512,15 +491,33 @@ public class TestOzoneShell {
           Assert.assertTrue(
               String.format(
                   "Error of shell code doesn't contain the " +
-                      "exception [%s] in [%s]",
+                      "expectedException [%s] in [%s]",
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
-          Assert.assertTrue(
-              exceptionToCheck instanceof MissingSubcommandException);
-          Assert.assertTrue(
-              ((MissingSubcommandException)exceptionToCheck)
-                  .getUsage().contains(usage));
+          assertTrue(ex.getClass().getCanonicalName()
+              .equals(expectedException.getCanonicalName()));
         }
+      }
+    }
+  }
+
+  /**
+   * Execute command, assert exception cause message and returns true if error
+   * was thrown.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      Class expectedCause) {
+    if (Objects.isNull(expectedCause)) {
+      execute(ozoneShell, args);
+    } else {
+      try {
+        execute(ozoneShell, args);
+        fail("Exception is expected from command execution " + Arrays
+            .asList(args));
+      } catch (Exception ex) {
+        LOG.error("Exception: ", ex);
+        assertTrue(ex.getCause().getClass().getCanonicalName()
+            .equals(expectedCause.getCanonicalName()));
       }
     }
   }
@@ -631,7 +628,8 @@ public class TestOzoneShell {
     err.reset();
     args = new String[] {"volume", "list", url + "/", "--user",
         user2, "--length", "invalid-length"};
-    executeWithError(shell, args, "For input string: \"invalid-length\"");
+    executeWithError(shell, args, "Invalid value for option " +
+        "'--length': 'invalid-length' is not an int");
   }
 
   @Test
@@ -720,50 +718,6 @@ public class TestOzoneShell {
         url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     executeWithError(shell, args,
         ResultCodes.BUCKET_NOT_FOUND);
-  }
-
-  @Test
-  public void testUpdateBucket() throws Exception {
-    LOG.info("Running testUpdateBucket");
-    OzoneVolume vol = creatVolume();
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    vol.createBucket(bucketName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    int aclSize = bucket.getAcls().size();
-
-    String[] args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--addAcl",
-        "user:frodo:rw,group:samwise:r"};
-    execute(shell, args);
-    String output = out.toString();
-    assertTrue(output.contains("createdOn")
-        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
-
-    bucket = vol.getBucket(bucketName);
-    assertEquals(2 + aclSize, bucket.getAcls().size());
-
-    OzoneAcl acl = bucket.getAcls().get(aclSize);
-    assertTrue(acl.getName().equals("frodo")
-        && acl.getType() == OzoneACLType.USER
-        && acl.getRights()== OzoneACLRights.READ_WRITE);
-
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
-        "user:frodo:rw"};
-    execute(shell, args);
-
-    bucket = vol.getBucket(bucketName);
-    acl = bucket.getAcls().get(aclSize);
-    assertEquals(1 + aclSize, bucket.getAcls().size());
-    assertTrue(acl.getName().equals("samwise")
-        && acl.getType() == OzoneACLType.GROUP
-        && acl.getRights()== OzoneACLRights.READ);
-
-    // test update bucket for a non-exist bucket
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/invalid-bucket", "--addAcl",
-        "user:frodo:rw"};
-    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test
@@ -884,6 +838,9 @@ public class TestOzoneShell {
 
   @Test
   public void testGetKey() throws Exception {
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
+        .captureLogs(StringCodec.LOG);
+    GenericTestUtils.setLogLevel(StringCodec.LOG, TRACE);
     LOG.info("Running testGetKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
@@ -895,6 +852,9 @@ public class TestOzoneShell {
         bucket.createKey(keyName, dataStr.length());
     keyOutputStream.write(dataStr.getBytes());
     keyOutputStream.close();
+    assertFalse("put key without malformed tracing",
+        logs.getOutput().contains("MalformedTracerStateString"));
+    logs.clearOutput();
 
     String tmpPath = baseDir.getAbsolutePath() + "/testfile-"
         + UUID.randomUUID().toString();
@@ -902,6 +862,9 @@ public class TestOzoneShell {
         url + "/" + volumeName + "/" + bucketName + "/" + keyName,
         tmpPath};
     execute(shell, args);
+    assertFalse("get key without malformed tracing",
+        logs.getOutput().contains("MalformedTracerStateString"));
+    logs.clearOutput();
 
     byte[] dataBytes = new byte[dataStr.length()];
     try (FileInputStream randFile = new FileInputStream(new File(tmpPath))) {
@@ -1100,11 +1063,16 @@ public class TestOzoneShell {
     }
 
     out.reset();
+    String msgText = "Listing first 3 entries of the result. " +
+        "Use --length (-l) to override max returned keys.";
     args =
         new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
             "--length", "3"};
     execute(shell, args);
     commandOutput = out.toString();
+    assertTrue("Expecting output to start with " + msgText,
+        commandOutput.contains(msgText));
+    commandOutput = commandOutput.replace(msgText, "");
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
         KeyInfo.class);
 

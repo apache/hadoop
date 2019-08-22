@@ -61,7 +61,8 @@ echo
 run rm -rf "ozone-${HDDS_VERSION}"
 run mkdir "ozone-${HDDS_VERSION}"
 run cd "ozone-${HDDS_VERSION}"
-run cp -p "${ROOT}/LICENSE.txt" .
+# Concatenate root LICENSE.txt with Recon LICENSE
+run cat "${ROOT}/LICENSE.txt" "${ROOT}/hadoop-ozone/ozone-recon/src/main/resources/webapps/recon/ozone-recon-web/LICENSE" >> ./LICENSE.txt
 run cp -p "${ROOT}/NOTICE.txt" .
 run cp -p "${ROOT}/README.txt" .
 
@@ -83,6 +84,7 @@ run mkdir -p ./bin
 run mkdir -p ./sbin
 run mkdir -p ./etc
 run mkdir -p ./libexec
+run mkdir -p ./tests
 
 run cp -r "${ROOT}/hadoop-common-project/hadoop-common/src/main/conf" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
@@ -92,9 +94,8 @@ run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/ozone-site.xml" "etc/hadoop"
 run cp -f "${ROOT}/hadoop-ozone/dist/src/main/conf/log4j.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-default.xml" "etc/hadoop"
 run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-nodegroup.xml" "etc/hadoop"
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop" "bin/"
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop.cmd" "bin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
+run cp -r "${ROOT}/hadoop-ozone/dist/src/main/dockerbin" "bin/docker"
 
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh" "libexec/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.cmd" "libexec/"
@@ -108,6 +109,9 @@ run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/workers.sh" "sb
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/start-ozone.sh" "sbin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/stop-ozone.sh" "sbin/"
 
+# fault injection tests
+run cp  -r "${ROOT}/hadoop-ozone/fault-injection-test/network-tests/src/test/blockade" tests
+
 #shaded datanode service
 run mkdir -p "./share/hadoop/ozoneplugin"
 run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}-plugin.jar" "./share/hadoop/ozoneplugin/hadoop-ozone-datanode-plugin-${HDDS_VERSION}.jar"
@@ -116,6 +120,11 @@ run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore
 cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 
 #Copy docker compose files
-run cp -p -R "${ROOT}/hadoop-ozone/dist/src/main/compose" .
+#compose files are preprocessed: properties (eg. project.version) are replaced first by maven.
+run cp -p -R "${ROOT}/hadoop-ozone/dist/target/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
-run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
+run cp -p -r "${ROOT}/hadoop-ozone/dist/target/Dockerfile" .
+
+#workaround for https://issues.apache.org/jira/browse/MRESOURCES-236
+find ./compose -name "*.sh" -exec chmod 755 {} \;

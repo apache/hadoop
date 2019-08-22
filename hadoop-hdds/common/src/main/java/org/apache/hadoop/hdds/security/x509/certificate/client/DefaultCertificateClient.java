@@ -80,6 +80,7 @@ import static org.apache.hadoop.hdds.security.x509.exceptions.CertificateExcepti
 public abstract class DefaultCertificateClient implements CertificateClient {
 
   private static final String CERT_FILE_NAME_FORMAT = "%s.crt";
+  private static final String CA_CERT_PREFIX = "CA-";
   private final Logger logger;
   private final SecurityConfig securityConfig;
   private final KeyCodec keyCodec;
@@ -452,14 +453,30 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * Stores the Certificate  for this client. Don't use this api to add trusted
    * certificates of others.
    *
-   * @param pemEncodedCert - pem encoded X509 Certificate
-   * @param force - override any existing file
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
    * @throws CertificateException - on Error.
    *
    */
   @Override
   public void storeCertificate(String pemEncodedCert, boolean force)
       throws CertificateException {
+    this.storeCertificate(pemEncodedCert, force, false);
+  }
+
+  /**
+   * Stores the Certificate  for this client. Don't use this api to add trusted
+   * certificates of others.
+   *
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
+   * @param caCert                - Is CA certificate.
+   * @throws CertificateException - on Error.
+   *
+   */
+  @Override
+  public void storeCertificate(String pemEncodedCert, boolean force,
+      boolean caCert) throws CertificateException {
     CertificateCodec certificateCodec = new CertificateCodec(securityConfig);
     try {
       Path basePath = securityConfig.getCertificateLocation();
@@ -468,6 +485,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           CertificateCodec.getX509Certificate(pemEncodedCert);
       String certName = String.format(CERT_FILE_NAME_FORMAT,
           cert.getSerialNumber().toString());
+
+      if(caCert) {
+        certName = CA_CERT_PREFIX + certName;
+      }
 
       certificateCodec.writeCertificate(basePath, certName,
           pemEncodedCert, force);

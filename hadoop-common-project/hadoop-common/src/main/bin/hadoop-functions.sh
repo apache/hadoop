@@ -585,7 +585,7 @@ function hadoop_bootstrap
 
   #
   # short-cuts. vendors may redefine these as well, preferably
-  # in hadoop-layouts.sh
+  # in hadoop-layout.sh
   #
   HADOOP_COMMON_DIR=${HADOOP_COMMON_DIR:-"share/hadoop/common"}
   HADOOP_COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR:-"share/hadoop/common/lib"}
@@ -1929,6 +1929,7 @@ function hadoop_start_secure_daemon
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
   hadoop_debug "Final JSVC_HOME: ${JSVC_HOME}"
   hadoop_debug "jsvc: ${jsvc}"
+  hadoop_debug "Final HADOOP_DAEMON_JSVC_EXTRA_OPTS: ${HADOOP_DAEMON_JSVC_EXTRA_OPTS}"
   hadoop_debug "Class name: ${class}"
   hadoop_debug "Command line options: $*"
 
@@ -1941,6 +1942,7 @@ function hadoop_start_secure_daemon
   # shellcheck disable=SC2086
   exec "${jsvc}" \
     "-Dproc_${daemonname}" \
+    ${HADOOP_DAEMON_JSVC_EXTRA_OPTS} \
     -outfile "${daemonoutfile}" \
     -errfile "${daemonerrfile}" \
     -pidfile "${daemonpidfile}" \
@@ -2530,7 +2532,7 @@ function hadoop_do_classpath_subcommand
   fi
 }
 
-## @description  generic shell script opton parser.  sets
+## @description  generic shell script option parser.  sets
 ## @description  HADOOP_PARSE_COUNTER to set number the
 ## @description  caller should shift
 ## @audience     private

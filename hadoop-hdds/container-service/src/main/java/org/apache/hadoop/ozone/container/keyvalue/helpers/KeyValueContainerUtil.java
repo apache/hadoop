@@ -39,6 +39,7 @@ import org.apache.hadoop.utils.MetadataStoreBuilder;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,22 +175,25 @@ public final class KeyValueContainerUtil {
     }
     kvContainerData.setDbFile(dbFile);
 
-    MetadataStore metadata = BlockUtils.getDB(kvContainerData, config);
-    long bytesUsed = 0;
-    List<Map.Entry<byte[], byte[]>> liveKeys = metadata
-        .getRangeKVs(null, Integer.MAX_VALUE,
-            MetadataKeyFilters.getNormalKeyFilter());
-    bytesUsed = liveKeys.parallelStream().mapToLong(e-> {
-      BlockData blockData;
-      try {
-        blockData = BlockUtils.getBlockData(e.getValue());
-        return blockData.getSize();
-      } catch (IOException ex) {
-        return 0L;
-      }
-    }).sum();
-    kvContainerData.setBytesUsed(bytesUsed);
-    kvContainerData.setKeyCount(liveKeys.size());
+    try(ReferenceCountedDB metadata =
+            BlockUtils.getDB(kvContainerData, config)) {
+      long bytesUsed = 0;
+      List<Map.Entry<byte[], byte[]>> liveKeys = metadata.getStore()
+          .getRangeKVs(null, Integer.MAX_VALUE,
+              MetadataKeyFilters.getNormalKeyFilter());
+
+      bytesUsed = liveKeys.parallelStream().mapToLong(e-> {
+        BlockData blockData;
+        try {
+          blockData = BlockUtils.getBlockData(e.getValue());
+          return blockData.getSize();
+        } catch (IOException ex) {
+          return 0L;
+        }
+      }).sum();
+      kvContainerData.setBytesUsed(bytesUsed);
+      kvContainerData.setKeyCount(liveKeys.size());
+    }
   }
 
   /**

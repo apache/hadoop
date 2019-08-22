@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -291,7 +291,7 @@
                       <param name="-oldapidir" value="${basedir}/${dev-support.relative.dir}/jdiff"/>
                       <param name="-newapidir" value="${project.build.directory}/site/jdiff/xml"/>
                       <param name="-javadocold"
-                             value="http://hadoop.apache.org/docs/r${jdiff.stable.api}/api/"/>
+                             value="https://hadoop.apache.org/docs/r${jdiff.stable.api}/api/"/>
                       <param name="-javadocnew" value="${project.build.directory}/site/api/"/>
                       <param name="-stats"/>
                       <param name="${jdiff.stability}"/>

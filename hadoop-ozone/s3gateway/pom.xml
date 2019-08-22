@@ -14,7 +14,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -55,6 +55,25 @@
       <groupId>org.glassfish.jersey.inject</groupId>
       <artifactId>jersey-hk2</artifactId>
       <version>2.27</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>hk2-api</artifactId>
+          <groupId>org.glassfish.hk2</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>hk2-utils</artifactId>
+          <groupId>org.glassfish.hk2</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>aopalliance-repackaged</artifactId>
+          <groupId>org.glassfish.hk2.external</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.hk2</groupId>
+      <artifactId>hk2-api</artifactId>
+      <version>2.5.0</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>

@@ -39,7 +39,10 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Relays FS calls to the mocked FS, allows for some extra logging with
@@ -177,7 +180,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key, long length) {
+  void finishedWrite(String key, long length, String eTag, String versionId,
+          BulkOperationState operationState) {
 
   }
 
@@ -239,6 +243,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
+  public boolean mkdirs(Path f) throws IOException {
+    event("mkdirs(%s)", f);
+    return mock.mkdirs(f);
+  }
+
+  @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     event("mkdirs(%s)", f);
     return mock.mkdirs(f, permission);
@@ -247,7 +257,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     event("getFileStatus(%s)", f);
-    return mock.getFileStatus(f);
+    return checkNotNull(mock.getFileStatus(f),
+        "Mock getFileStatus(%s) returned null", f);
   }
 
   @Override

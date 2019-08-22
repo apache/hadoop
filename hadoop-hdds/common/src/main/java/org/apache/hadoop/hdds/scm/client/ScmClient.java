@@ -189,18 +189,37 @@ public interface ScmClient extends Closeable {
   void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
 
   /**
-   * Check if SCM is in chill mode.
+   * Check if SCM is in safe mode.
    *
-   * @return Returns true if SCM is in chill mode else returns false.
+   * @return Returns true if SCM is in safe mode else returns false.
    * @throws IOException
    */
-  boolean inChillMode() throws IOException;
+  boolean inSafeMode() throws IOException;
 
   /**
-   * Force SCM out of chill mode.
+   * Force SCM out of safe mode.
    *
    * @return returns true if operation is successful.
    * @throws IOException
    */
-  boolean forceExitChillMode() throws IOException;
+  boolean forceExitSafeMode() throws IOException;
+
+  /**
+   * Start ReplicationManager.
+   */
+  void startReplicationManager() throws IOException;
+
+  /**
+   * Stop ReplicationManager.
+   */
+  void stopReplicationManager() throws IOException;
+
+  /**
+   * Returns ReplicationManager status.
+   *
+   * @return True if ReplicationManager is running, false otherwise.
+   */
+  boolean getReplicationManagerStatus() throws IOException;
+
+
 }

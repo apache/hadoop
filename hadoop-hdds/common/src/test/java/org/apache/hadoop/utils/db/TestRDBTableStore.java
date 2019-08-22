@@ -51,7 +51,8 @@ public class TestRDBTableStore {
       Arrays.asList(DFSUtil.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
           "First", "Second", "Third",
           "Fourth", "Fifth",
-          "Sixth");
+          "Sixth", "Seventh",
+          "Eighth");
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
@@ -226,6 +227,43 @@ public class TestRDBTableStore {
         Assert.assertEquals(iterCount, count);
 
       }
+    }
+  }
+
+  @Test
+  public void testIsExist() throws Exception {
+    try (Table<byte[], byte[]> testTable = rdbStore.getTable("Seventh")) {
+      byte[] key =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      byte[] value =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      testTable.put(key, value);
+      Assert.assertTrue(testTable.isExist(key));
+
+      testTable.delete(key);
+      Assert.assertFalse(testTable.isExist(key));
+
+      byte[] invalidKey =
+          RandomStringUtils.random(5).getBytes(StandardCharsets.UTF_8);
+      Assert.assertFalse(testTable.isExist(invalidKey));
+    }
+  }
+
+  @Test
+  public void testCountEstimatedRowsInTable() throws Exception {
+    try (Table<byte[], byte[]> testTable = rdbStore.getTable("Eighth")) {
+      // Add a few keys
+      final int numKeys = 12345;
+      for (int i = 0; i < numKeys; i++) {
+        byte[] key =
+            RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+        byte[] value =
+            RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+        testTable.put(key, value);
+      }
+      long keyCount = testTable.getEstimatedKeyCount();
+      // The result should be larger than zero but not exceed(?) numKeys
+      Assert.assertTrue(keyCount > 0 && keyCount <= numKeys);
     }
   }
 }

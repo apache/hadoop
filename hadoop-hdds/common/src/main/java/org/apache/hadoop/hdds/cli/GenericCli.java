@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.fs.Path;
 
 import com.google.common.annotations.VisibleForTesting;
 import picocli.CommandLine;
@@ -40,6 +41,9 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
 
   @Option(names = {"-D", "--set"})
   private Map<String, String> configurationOverrides = new HashMap<>();
+
+  @Option(names = {"-conf"})
+  private String configurationPath;
 
   private final CommandLine cmd;
 
@@ -70,19 +74,19 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     } else {
       System.err.println(error.getMessage().split("\n")[0]);
     }
-    if(error instanceof MissingSubcommandException){
-      System.err.println(((MissingSubcommandException) error).getUsage());
-    }
   }
 
   @Override
   public Void call() throws Exception {
-    throw new MissingSubcommandException(cmd.getUsageMessage());
+    throw new MissingSubcommandException(cmd);
   }
 
   @Override
   public OzoneConfiguration createOzoneConfiguration() {
     OzoneConfiguration ozoneConf = new OzoneConfiguration();
+    if (configurationPath != null) {
+      ozoneConf.addResource(new Path(configurationPath));
+    }
     if (configurationOverrides != null) {
       for (Entry<String, String> entry : configurationOverrides.entrySet()) {
         ozoneConf.set(entry.getKey(), entry.getValue());

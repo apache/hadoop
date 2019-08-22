@@ -24,7 +24,6 @@ import java.util.Hashtable;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import com.google.common.base.Preconditions;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -211,9 +210,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @throws IOException failure during create/init.
    */
   public AzureBlobFileSystem createFileSystem() throws IOException {
-    Preconditions.checkState(abfs == null,
-        "existing ABFS instance exists: %s", abfs);
-    abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    if (abfs == null) {
+      abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    }
     return abfs;
   }
 

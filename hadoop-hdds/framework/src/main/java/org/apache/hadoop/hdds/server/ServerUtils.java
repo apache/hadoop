@@ -47,23 +47,34 @@ public final class ServerUtils {
    * For example, sanitizeUserArgs(17, 3, 5, 10)
    * ensures that 17 is greater/equal than 3 * 5 and less/equal to 3 * 10.
    *
+   * @param key           - config key of the value
    * @param valueTocheck  - value to check
+   * @param baseKey       - config key of the baseValue
    * @param baseValue     - the base value that is being used.
    * @param minFactor     - range min - a 2 here makes us ensure that value
    *                        valueTocheck is at least twice the baseValue.
    * @param maxFactor     - range max
    * @return long
    */
-  public static long sanitizeUserArgs(long valueTocheck, long baseValue,
-      long minFactor, long maxFactor)
-      throws IllegalArgumentException {
-    if ((valueTocheck >= (baseValue * minFactor)) &&
-        (valueTocheck <= (baseValue * maxFactor))) {
-      return valueTocheck;
+  public static long sanitizeUserArgs(String key, long valueTocheck,
+      String baseKey, long baseValue, long minFactor, long maxFactor) {
+    long minLimit = baseValue * minFactor;
+    long maxLimit = baseValue * maxFactor;
+    if (valueTocheck < minLimit) {
+      LOG.warn(
+          "{} value = {} is smaller than min = {} based on"
+          + " the key value of {}, reset to the min value {}.",
+          key, valueTocheck, minLimit, baseKey, minLimit);
+      valueTocheck = minLimit;
+    } else if (valueTocheck > maxLimit) {
+      LOG.warn(
+          "{} value = {} is larger than max = {} based on"
+          + " the key value of {}, reset to the max value {}.",
+          key, valueTocheck, maxLimit, baseKey, maxLimit);
+      valueTocheck = maxLimit;
     }
-    String errMsg = String.format("%d is not within min = %d or max = " +
-        "%d", valueTocheck, baseValue * minFactor, baseValue * maxFactor);
-    throw new IllegalArgumentException(errMsg);
+
+    return valueTocheck;
   }
 
 
@@ -125,8 +136,8 @@ public final class ServerUtils {
    * @return
    */
   public static File getScmDbDir(Configuration conf) {
-    File metadataDir = getDirectoryFromConfig(conf, ScmConfigKeys
-        .OZONE_SCM_DB_DIRS, "SCM");
+    File metadataDir = getDirectoryFromConfig(conf,
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, "SCM");
     if (metadataDir != null) {
       return metadataDir;
     }
@@ -146,8 +157,8 @@ public final class ServerUtils {
    * @return File created from the value of the key in conf.
    */
   public static File getDirectoryFromConfig(Configuration conf,
-                                             String key,
-                                             String componentName) {
+                                            String key,
+                                            String componentName) {
     final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
 
     if (metadirs.size() > 1) {
@@ -162,10 +173,11 @@ public final class ServerUtils {
       if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
         throw new IllegalArgumentException("Unable to create directory " +
             dbDirPath + " specified in configuration setting " +
-            componentName);
+            key);
       }
       return dbDirPath;
     }
+
     return null;
   }
 
@@ -173,21 +185,15 @@ public final class ServerUtils {
    * Checks and creates Ozone Metadir Path if it does not exist.
    *
    * @param conf - Configuration
-   *
    * @return File MetaDir
+   * @throws IllegalArgumentException if the configuration setting is not set
    */
   public static File getOzoneMetaDirPath(Configuration conf) {
-    String metaDirPath = conf.getTrimmed(HddsConfigKeys.OZONE_METADATA_DIRS);
-
-    if (metaDirPath == null || metaDirPath.isEmpty()) {
+    File dirPath = getDirectoryFromConfig(conf,
+        HddsConfigKeys.OZONE_METADATA_DIRS, "Ozone");
+    if (dirPath == null) {
       throw new IllegalArgumentException(
           HddsConfigKeys.OZONE_METADATA_DIRS + " must be defined.");
-    }
-
-    File dirPath = new File(metaDirPath);
-    if (!dirPath.exists() && !dirPath.mkdirs()) {
-      throw new IllegalArgumentException("Unable to create paths. Path: " +
-          dirPath);
     }
     return dirPath;
   }
@@ -197,4 +203,25 @@ public final class ServerUtils {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, path);
   }
 
+  /**
+   * Returns with the service specific metadata directory.
+   * <p>
+   * If the directory is missing the method tries to create it.
+   *
+   * @param conf The ozone configuration object
+   * @param key The configuration key which specify the directory.
+   * @return The path of the directory.
+   */
+  public static File getDBPath(Configuration conf, String key) {
+    final File dbDirPath =
+        getDirectoryFromConfig(conf, key, "OM");
+    if (dbDirPath != null) {
+      return dbDirPath;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. "
+            + "Falling back to {} instead.", key,
+        HddsConfigKeys.OZONE_METADATA_DIRS);
+    return ServerUtils.getOzoneMetaDirPath(conf);
+  }
 }

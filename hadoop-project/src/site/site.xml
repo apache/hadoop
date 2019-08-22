@@ -81,6 +81,7 @@
       <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="NameNode HA With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="NameNode HA With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
+      <item name="Observer NameNode" href="hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="ViewFs" href="hadoop-project-dist/hadoop-hdfs/ViewFs.html"/>
       <item name="Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
@@ -162,6 +163,7 @@
       <item name="Using GPU" href="hadoop-yarn/hadoop-yarn-site/UsingGpus.html"/>
       <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
       <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
+      <item name="YARN UI2" href="hadoop-yarn/hadoop-yarn-site/YarnUI2.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -213,6 +215,7 @@
       <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="Hadoop Benchmarking" href="hadoop-project-dist/hadoop-common/Benchmarking.html"/>
+      <item name="Dynamometer" href="hadoop-dynamometer/Dynamometer.html"/>
     </menu>
 
     <menu name="Reference" inherit="top">

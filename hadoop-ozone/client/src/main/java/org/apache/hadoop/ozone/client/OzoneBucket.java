@@ -30,10 +30,13 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -69,10 +72,6 @@ public class OzoneBucket extends WithMetadata {
    * Default replication type to be used while creating keys.
    */
   private final ReplicationType defaultReplicationType;
-  /**
-   * Bucket ACLs.
-   */
-  private List<OzoneAcl> acls;
 
   /**
    * Type of storage to be used for this bucket.
@@ -100,28 +99,47 @@ public class OzoneBucket extends WithMetadata {
    */
   private String encryptionKeyName;
 
-  @SuppressWarnings("parameternumber")
-  public OzoneBucket(Configuration conf, ClientProtocol proxy,
-                     String volumeName, String bucketName,
-                     List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime,
-                     Map<String, String> metadata,
-                     String encryptionKeyName) {
+  private OzoneObj ozoneObj;
+
+
+  private OzoneBucket(Configuration conf, String volumeName,
+      String bucketName, ReplicationFactor defaultReplication,
+      ReplicationType defaultReplicationType, ClientProtocol proxy) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
-    this.proxy = proxy;
     this.volumeName = volumeName;
     this.name = bucketName;
-    this.acls = acls;
+    if (defaultReplication == null) {
+      this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
+          OzoneConfigKeys.OZONE_REPLICATION,
+          OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
+    } else {
+      this.defaultReplication = defaultReplication;
+    }
+
+    if (defaultReplicationType == null) {
+      this.defaultReplicationType = ReplicationType.valueOf(conf.get(
+          OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+          OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+    } else {
+      this.defaultReplicationType = defaultReplicationType;
+    }
+    this.proxy = proxy;
+    this.ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setBucketName(bucketName)
+        .setVolumeName(volumeName)
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE).build();
+  }
+  @SuppressWarnings("parameternumber")
+  public OzoneBucket(Configuration conf, ClientProtocol proxy,
+      String volumeName, String bucketName, StorageType storageType,
+      Boolean versioning, long creationTime, Map<String, String> metadata,
+      String encryptionKeyName) {
+    this(conf, volumeName, bucketName, null, null, proxy);
     this.storageType = storageType;
     this.versioning = versioning;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.creationTime = creationTime;
-    this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
-        OzoneConfigKeys.OZONE_REPLICATION,
-        OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
-    this.defaultReplicationType = ReplicationType.valueOf(conf.get(
-        OzoneConfigKeys.OZONE_REPLICATION_TYPE,
-        OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
     this.metadata = metadata;
     this.encryptionKeyName = encryptionKeyName;
   }
@@ -132,32 +150,19 @@ public class OzoneBucket extends WithMetadata {
    * @param proxy ClientProtocol proxy.
    * @param volumeName Name of the volume the bucket belongs to.
    * @param bucketName Name of the bucket.
-   * @param acls ACLs associated with the bucket.
    * @param storageType StorageType of the bucket.
    * @param versioning versioning status of the bucket.
    * @param creationTime creation time of the bucket.
    */
   @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
-                     String volumeName, String bucketName,
-                     List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime,
-                     Map<String, String> metadata) {
-    Preconditions.checkNotNull(proxy, "Client proxy is not set.");
-    this.proxy = proxy;
-    this.volumeName = volumeName;
-    this.name = bucketName;
-    this.acls = acls;
+      String volumeName, String bucketName, StorageType storageType,
+      Boolean versioning, long creationTime, Map<String, String> metadata) {
+    this(conf, volumeName, bucketName, null, null, proxy);
     this.storageType = storageType;
     this.versioning = versioning;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.creationTime = creationTime;
-    this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
-        OzoneConfigKeys.OZONE_REPLICATION,
-        OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
-    this.defaultReplicationType = ReplicationType.valueOf(conf.get(
-        OzoneConfigKeys.OZONE_REPLICATION_TYPE,
-        OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
     this.metadata = metadata;
   }
 
@@ -165,19 +170,23 @@ public class OzoneBucket extends WithMetadata {
   @SuppressWarnings("parameternumber")
   OzoneBucket(String volumeName, String name,
       ReplicationFactor defaultReplication,
-      ReplicationType defaultReplicationType,
-      List<OzoneAcl> acls, StorageType storageType, Boolean versioning,
-      long creationTime) {
+      ReplicationType defaultReplicationType, StorageType storageType,
+      Boolean versioning, long creationTime) {
     this.proxy = null;
     this.volumeName = volumeName;
     this.name = name;
     this.defaultReplication = defaultReplication;
     this.defaultReplicationType = defaultReplicationType;
-    this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
     this.creationTime = creationTime;
+    this.ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setBucketName(name)
+        .setVolumeName(volumeName)
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE).build();
   }
+
 
   /**
    * Returns Volume Name.
@@ -202,8 +211,8 @@ public class OzoneBucket extends WithMetadata {
    *
    * @return acls
    */
-  public List<OzoneAcl> getAcls() {
-    return acls;
+  public List<OzoneAcl> getAcls() throws IOException {
+    return proxy.getAcl(ozoneObj);
   }
 
   /**
@@ -243,23 +252,23 @@ public class OzoneBucket extends WithMetadata {
 
   /**
    * Adds ACLs to the Bucket.
-   * @param addAcls ACLs to be added
+   * @param addAcl ACL to be added
+   * @return true - if acl is successfully added, false if acl already exists
+   * for the bucket.
    * @throws IOException
    */
-  public void addAcls(List<OzoneAcl> addAcls) throws IOException {
-    proxy.addBucketAcls(volumeName, name, addAcls);
-    addAcls.stream().filter(acl -> !acls.contains(acl)).forEach(
-        acls::add);
+  public boolean addAcls(OzoneAcl addAcl) throws IOException {
+    return proxy.addAcl(ozoneObj, addAcl);
   }
 
   /**
    * Removes ACLs from the bucket.
-   * @param removeAcls ACLs to be removed
+   * @return true - if acl is successfully removed, false if acl to be
+   * removed does not exist for the bucket.
    * @throws IOException
    */
-  public void removeAcls(List<OzoneAcl> removeAcls) throws IOException {
-    proxy.removeBucketAcls(volumeName, name, removeAcls);
-    acls.removeAll(removeAcls);
+  public boolean removeAcls(OzoneAcl removeAcl) throws IOException {
+    return proxy.removeAcl(ozoneObj, removeAcl);
   }
 
   /**
@@ -465,8 +474,83 @@ public class OzoneBucket extends WithMetadata {
               partNumberMarker, maxParts);
   }
 
+  /**
+   * OzoneFS api to get file status for an entry.
+   *
+   * @param keyName Key name
+   * @throws OMException if file does not exist
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
   public OzoneFileStatus getFileStatus(String keyName) throws IOException {
     return proxy.getOzoneFileStatus(volumeName, name, keyName);
+  }
+
+  /**
+   * Ozone FS api to create a directory. Parent directories if do not exist
+   * are created for the input directory.
+   *
+   * @param keyName Key name
+   * @throws OMException if any entry in the path exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  public void createDirectory(String keyName) throws IOException {
+    proxy.createDirectory(volumeName, name, keyName);
+  }
+
+  /**
+   * OzoneFS api to creates an input stream for a file.
+   *
+   * @param keyName Key name
+   * @throws OMException if given key is not found or it is not a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  public OzoneInputStream readFile(String keyName) throws IOException {
+    return proxy.readFile(volumeName, name, keyName);
+  }
+
+  /**
+   * OzoneFS api to creates an output stream for a file.
+   *
+   * @param keyName   Key name
+   * @param overWrite if true existing file at the location will be overwritten
+   * @param recursive if true file would be created even if parent directories
+   *                    do not exist
+   * @throws OMException if given key is a directory
+   *                     if file exists and isOverwrite flag is false
+   *                     if an ancestor exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  public OzoneOutputStream createFile(String keyName, long size,
+      ReplicationType type, ReplicationFactor factor, boolean overWrite,
+      boolean recursive) throws IOException {
+    return proxy
+        .createFile(volumeName, name, keyName, size, type, factor, overWrite,
+            recursive);
+  }
+
+  /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param keyName    Absolute path of the entry to be listed
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    return proxy
+        .listStatus(volumeName, name, keyName, recursive, startKey, numEntries);
   }
 
   /**

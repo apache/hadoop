@@ -48,7 +48,7 @@ import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BatchOperation;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -198,52 +198,54 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
     }
 
     int newDeletionBlocks = 0;
-    MetadataStore containerDB = BlockUtils.getDB(containerData, conf);
-    for (Long blk : delTX.getLocalIDList()) {
-      BatchOperation batch = new BatchOperation();
-      byte[] blkBytes = Longs.toByteArray(blk);
-      byte[] blkInfo = containerDB.get(blkBytes);
-      if (blkInfo != null) {
-        byte[] deletingKeyBytes =
-            DFSUtil.string2Bytes(OzoneConsts.DELETING_KEY_PREFIX + blk);
-        byte[] deletedKeyBytes =
-            DFSUtil.string2Bytes(OzoneConsts.DELETED_KEY_PREFIX + blk);
-        if (containerDB.get(deletingKeyBytes) != null
-            || containerDB.get(deletedKeyBytes) != null) {
-          LOG.debug(String.format(
-              "Ignoring delete for block %d in container %d."
-                  + " Entry already added.", blk, containerId));
-          continue;
+    try(ReferenceCountedDB containerDB =
+            BlockUtils.getDB(containerData, conf)) {
+      for (Long blk : delTX.getLocalIDList()) {
+        BatchOperation batch = new BatchOperation();
+        byte[] blkBytes = Longs.toByteArray(blk);
+        byte[] blkInfo = containerDB.getStore().get(blkBytes);
+        if (blkInfo != null) {
+          byte[] deletingKeyBytes =
+              DFSUtil.string2Bytes(OzoneConsts.DELETING_KEY_PREFIX + blk);
+          byte[] deletedKeyBytes =
+              DFSUtil.string2Bytes(OzoneConsts.DELETED_KEY_PREFIX + blk);
+          if (containerDB.getStore().get(deletingKeyBytes) != null
+              || containerDB.getStore().get(deletedKeyBytes) != null) {
+            LOG.debug(String.format(
+                "Ignoring delete for block %d in container %d."
+                    + " Entry already added.", blk, containerId));
+            continue;
+          }
+          // Found the block in container db,
+          // use an atomic update to change its state to deleting.
+          batch.put(deletingKeyBytes, blkInfo);
+          batch.delete(blkBytes);
+          try {
+            containerDB.getStore().writeBatch(batch);
+            newDeletionBlocks++;
+            LOG.debug("Transited Block {} to DELETING state in container {}",
+                blk, containerId);
+          } catch (IOException e) {
+            // if some blocks failed to delete, we fail this TX,
+            // without sending this ACK to SCM, SCM will resend the TX
+            // with a certain number of retries.
+            throw new IOException(
+                "Failed to delete blocks for TXID = " + delTX.getTxID(), e);
+          }
+        } else {
+          LOG.debug("Block {} not found or already under deletion in"
+              + " container {}, skip deleting it.", blk, containerId);
         }
-        // Found the block in container db,
-        // use an atomic update to change its state to deleting.
-        batch.put(deletingKeyBytes, blkInfo);
-        batch.delete(blkBytes);
-        try {
-          containerDB.writeBatch(batch);
-          newDeletionBlocks++;
-          LOG.debug("Transited Block {} to DELETING state in container {}",
-              blk, containerId);
-        } catch (IOException e) {
-          // if some blocks failed to delete, we fail this TX,
-          // without sending this ACK to SCM, SCM will resend the TX
-          // with a certain number of retries.
-          throw new IOException(
-              "Failed to delete blocks for TXID = " + delTX.getTxID(), e);
-        }
-      } else {
-        LOG.debug("Block {} not found or already under deletion in"
-            + " container {}, skip deleting it.", blk, containerId);
       }
-    }
 
-    containerDB
-        .put(DFSUtil.string2Bytes(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX),
-            Longs.toByteArray(delTX.getTxID()));
-    containerData
-        .updateDeleteTransactionId(delTX.getTxID());
-    // update pending deletion blocks count in in-memory container status
-    containerData.incrPendingDeletionBlocks(newDeletionBlocks);
+      containerDB.getStore()
+          .put(DFSUtil.string2Bytes(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX),
+              Longs.toByteArray(delTX.getTxID()));
+      containerData
+          .updateDeleteTransactionId(delTX.getTxID());
+      // update pending deletion blocks count in in-memory container status
+      containerData.incrPendingDeletionBlocks(newDeletionBlocks);
+    }
   }
 
   @Override

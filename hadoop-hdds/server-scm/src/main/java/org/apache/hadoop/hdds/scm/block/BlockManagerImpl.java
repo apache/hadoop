@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -34,7 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
-import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.safemode.SafeModePrecheck;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.UniqueId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +78,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private final SCMBlockDeletingService blockDeletingService;
 
   private ObjectName mxBean;
-  private ChillModePrecheck chillModePrecheck;
+  private SafeModePrecheck safeModePrecheck;
 
   /**
    * Constructor.
@@ -116,7 +116,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
             scm.getScmNodeManager(), scm.getEventQueue(), svcInterval,
             serviceTimeout, conf);
-    chillModePrecheck = new ChillModePrecheck(conf);
+    safeModePrecheck = new SafeModePrecheck(conf);
   }
 
   /**
@@ -154,7 +154,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
-    ScmUtils.preCheck(ScmOps.allocateBlock, chillModePrecheck);
+    ScmUtils.preCheck(ScmOps.allocateBlock, safeModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
       throw new SCMException("Unsupported block size: " + size,
@@ -182,16 +182,27 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           pipelineManager
               .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
                   excludeList.getDatanodes(), excludeList.getPipelineIds());
-      Pipeline pipeline;
+      Pipeline pipeline = null;
       if (availablePipelines.size() == 0) {
         try {
           // TODO: #CLUTIL Remove creation logic when all replication types and
           // factors are handled by pipeline creator
           pipeline = pipelineManager.createPipeline(type, factor);
         } catch (IOException e) {
-          break;
+          LOG.warn("Pipeline creation failed for type:{} factor:{}. Retrying " +
+                  "get pipelines call once.", type, factor, e);
+          availablePipelines = pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
+          if (availablePipelines.size() == 0) {
+            LOG.info("Could not find available pipeline of type:{} and " +
+                "factor:{} even after retrying", type, factor);
+            break;
+          }
         }
-      } else {
+      }
+
+      if (null == pipeline) {
         // TODO: #CLUTIL Make the selection policy driven.
         pipeline = availablePipelines
             .get((int) (Math.random() * availablePipelines.size()));
@@ -232,6 +243,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           .setPipeline(pipeline);
       LOG.trace("New block allocated : {} Container ID: {}", localID,
           containerID);
+      pipelineManager.incNumBlocksAllocatedMetric(pipeline.getId());
       return abb.build();
     } catch (PipelineNotFoundException ex) {
       LOG.error("Pipeline Machine count is zero.", ex);
@@ -252,7 +264,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    */
   @Override
   public void deleteBlocks(List<BlockID> blockIDs) throws IOException {
-    ScmUtils.preCheck(ScmOps.deleteBlock, chillModePrecheck);
+    ScmUtils.preCheck(ScmOps.deleteBlock, safeModePrecheck);
 
     LOG.info("Deleting blocks {}", StringUtils.join(",", blockIDs));
     Map<Long, List<Long>> containerBlocks = new HashMap<>();
@@ -322,15 +334,15 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   }
 
   @Override
-  public void setChillModeStatus(boolean chillModeStatus) {
-    this.chillModePrecheck.setInChillMode(chillModeStatus);
+  public void setSafeModeStatus(boolean safeModeStatus) {
+    this.safeModePrecheck.setInSafeMode(safeModeStatus);
   }
 
   /**
-   * Returns status of scm chill mode determined by CHILL_MODE_STATUS event.
+   * Returns status of scm safe mode determined by SAFE_MODE_STATUS event.
    * */
-  public boolean isScmInChillMode() {
-    return this.chillModePrecheck.isInChillMode();
+  public boolean isScmInSafeMode() {
+    return this.safeModePrecheck.isInSafeMode();
   }
 
   /**
@@ -343,47 +355,4 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   /**
    * This class uses system current time milliseconds to generate unique id.
    */
-  public static final class UniqueId {
-    /*
-     * When we represent time in milliseconds using 'long' data type,
-     * the LSB bits are used. Currently we are only using 44 bits (LSB),
-     * 20 bits (MSB) are not used.
-     * We will exhaust this 44 bits only when we are in year 2525,
-     * until then we can safely use this 20 bits (MSB) for offset to generate
-     * unique id within millisecond.
-     *
-     * Year        : Mon Dec 31 18:49:04 IST 2525
-     * TimeInMillis: 17545641544247
-     * Binary Representation:
-     *   MSB (20 bits): 0000 0000 0000 0000 0000
-     *   LSB (44 bits): 1111 1111 0101 0010 1001 1011 1011 0100 1010 0011 0111
-     *
-     * We have 20 bits to run counter, we should exclude the first bit (MSB)
-     * as we don't want to deal with negative values.
-     * To be on safer side we will use 'short' data type which is of length
-     * 16 bits and will give us 65,536 values for offset.
-     *
-     */
-
-    private static volatile short offset = 0;
-
-    /**
-     * Private constructor so that no one can instantiate this class.
-     */
-    private UniqueId() {}
-
-    /**
-     * Calculate and returns next unique id based on System#currentTimeMillis.
-     *
-     * @return unique long value
-     */
-    public static synchronized long next() {
-      long utcTime = HddsUtils.getUtcTime();
-      if ((utcTime & 0xFFFF000000000000L) == 0) {
-        return utcTime << Short.SIZE | (offset++ & 0x0000FFFF);
-      }
-      throw new RuntimeException("Got invalid UTC time," +
-          " cannot generate unique Id. UTC Time: " + utcTime);
-    }
-  }
 }

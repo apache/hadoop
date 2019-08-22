@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
@@ -28,14 +30,12 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.bind.JAXBContext;
 import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -416,6 +416,10 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(FinalApplicationStatus.UNDEFINED.toString(),
       app.get("finalAppStatus"));
     assertEquals(YarnApplicationState.FINISHED.toString(), app.get("appState"));
+    assertNotNull("Aggregate resource allocation is null",
+        app.get("aggregateResourceAllocation"));
+    assertNotNull("Aggregate Preempted Resource Allocation is null",
+        app.get("aggregatePreemptedResourceAllocation"));
   }
 
   @Test
@@ -678,7 +682,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
 
     r = resource();
     response = r.path("ws").path("v1")
@@ -689,7 +693,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
   }
 
   @Test(timeout = 10000)
@@ -880,8 +884,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
         assertEquals(logInfo.getLogType(),
@@ -908,11 +912,11 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(),
+        assertThat(logInfo.getLogType()).isEqualTo(
             ContainerLogAggregationType.LOCAL.toString());
       }
     }
@@ -946,18 +950,9 @@ public class TestAHSWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), fileName);
-    assertEquals(logMeta.get(0).getFileSize(),
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+    assertThat(logMeta.get(0).getFileSize()).isEqualTo(
         String.valueOf(content.length()));
-  }
-
-  @Test
-  public void testContextFactory() throws Exception {
-    JAXBContext jaxbContext1 = ContextFactory.createContext(
-        new Class[]{}, Collections.EMPTY_MAP);
-    JAXBContext jaxbContext2 = ContextFactory.createContext(
-        new Class[]{}, Collections.EMPTY_MAP);
-    assertEquals(jaxbContext1, jaxbContext2);
   }
 
   private static String getRedirectURL(String url) {

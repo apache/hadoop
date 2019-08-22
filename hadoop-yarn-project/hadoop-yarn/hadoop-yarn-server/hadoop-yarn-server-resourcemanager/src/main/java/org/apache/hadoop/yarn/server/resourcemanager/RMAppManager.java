@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -99,6 +100,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private Configuration conf;
   private YarnAuthorizationProvider authorizer;
   private boolean timelineServiceV2Enabled;
+  private boolean nodeLabelsEnabled;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -121,6 +123,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(conf);
+    this.nodeLabelsEnabled = YarnConfiguration
+        .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
   }
 
   /**
@@ -368,7 +372,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Passing start time as -1. It will be eventually set in RMAppImpl
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
-        submissionContext, submitTime, user, false, -1);
+        submissionContext, submitTime, user, false, -1, null);
     try {
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
@@ -405,18 +409,22 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true, appState.getStartTime());
+            appState.getUser(), true, appState.getStartTime(),
+            appState.getState());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery, long startTime) throws YarnException {
+      String user, boolean isRecovery, long startTime,
+      RMAppState recoveredFinalState) throws YarnException {
 
-    ApplicationPlacementContext placementContext =
-        placeApplication(rmContext.getQueuePlacementManager(),
-            submissionContext, user, isRecovery);
+    ApplicationPlacementContext placementContext = null;
+    if (recoveredFinalState == null) {
+      placementContext = placeApplication(rmContext.getQueuePlacementManager(),
+          submissionContext, user, isRecovery);
+    }
 
     // We only replace the queue when it's a new application
     if (!isRecovery) {
@@ -602,7 +610,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         Resource maxAllocation = scheduler.getMaximumResourceCapability(queue);
         for (ResourceRequest amReq : amReqs) {
           SchedulerUtils.normalizeAndValidateRequest(amReq, maxAllocation,
-              queue, scheduler, isRecovery, rmContext, null);
+              queue, isRecovery, rmContext, null, nodeLabelsEnabled);
 
           amReq.setCapability(scheduler.getNormalizedResource(
               amReq.getCapability(), maxAllocation));

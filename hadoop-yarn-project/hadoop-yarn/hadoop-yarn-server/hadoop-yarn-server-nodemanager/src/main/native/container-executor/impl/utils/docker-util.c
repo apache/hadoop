@@ -318,7 +318,6 @@ static int validate_container_name(const char *container_name) {
     }
   }
   fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", container_name);
-  fflush(ERRORFILE);
   return INVALID_DOCKER_CONTAINER_NAME;
 }
 
@@ -722,11 +721,19 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
   }
 
   ret = add_to_args(args, DOCKER_RM_COMMAND);
-  if (ret == 0) {
-    ret = add_to_args(args, container_name);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-    }
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, "-f");
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
   }
 free_and_exit:
   free(container_name);
@@ -1454,14 +1461,22 @@ static int check_privileges(const char *user) {
     exit(INITIALIZE_USER_FAILED);
   }
 
+#ifdef __linux__
   int rc = getgrouplist(user, pw->pw_gid, groups, &ngroups);
+#else
+  int rc = getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups);
+#endif
   if (rc < 0) {
     groups = (gid_t *) alloc_and_clear_memory(ngroups, sizeof(gid_t));
     if (groups == NULL) {
       fprintf(ERRORFILE, "Failed to allocate buffer for group lookup for user %s.\n", user);
       exit(OUT_OF_MEMORY);
     }
+#ifdef __linux__
     if (getgrouplist(user, pw->pw_gid, groups, &ngroups) == -1) {
+#else
+    if (getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups) == -1) {
+#endif
       fprintf(ERRORFILE, "Fail to lookup groups for user %s.\n", user);
       ret = 2;
     }

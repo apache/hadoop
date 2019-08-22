@@ -56,19 +56,26 @@ public abstract class AbstractS3AMockTest {
 
   @Before
   public void setup() throws Exception {
+    Configuration conf = createConfiguration();
+    fs = new S3AFileSystem();
+    URI uri = URI.create(FS_S3A + "://" + BUCKET);
+    fs.initialize(uri, conf);
+    s3 = fs.getAmazonS3ClientForTesting("mocking");
+  }
+
+  public Configuration createConfiguration() {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
         S3ClientFactory.class);
-    // We explicitly disable MetadataStore even if it's configured. For unit
+    // We explicitly disable MetadataStore. For unit
     // test we don't issue request to AWS DynamoDB service.
     conf.setClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
         MetadataStore.class);
     // FS is always magic
     conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
-    fs = new S3AFileSystem();
-    URI uri = URI.create(FS_S3A + "://" + BUCKET);
-    fs.initialize(uri, conf);
-    s3 = fs.getAmazonS3ClientForTesting("mocking");
+    // use minimum multipart size for faster triggering
+    conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
+    return conf;
   }
 
   @After

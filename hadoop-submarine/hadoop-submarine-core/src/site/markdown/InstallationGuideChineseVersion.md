@@ -18,12 +18,12 @@
 
 ### 操作系统
 
-我们使用的操作系统版本是 centos-release-7-3.1611.el7.centos.x86_64, 内核版本是 3.10.0-514.el7.x86_64 ，应该是最低版本了。
+我们使用的操作系统版本是 centos-release-7-5.1804.el7.centos.x86_64, 内核版本是 3.10.0-862.el7.x86_64。
 
 | Enviroment | Verion |
 | ------ | ------ |
-| Operating System | centos-release-7-3.1611.el7.centos.x86_64 |
-| Kernal | 3.10.0-514.el7.x86_64 |
+| Operating System | centos-release-7-5.1804.el7.centos.x86_64 |
+| Kernal | 3.10.0-862.el7.x86_64 |
 
 ### User & Group
 
@@ -58,8 +58,8 @@ yum install gcc make g++
 # 方法一：
 yum install kernel-devel-$(uname -r) kernel-headers-$(uname -r)
 # 方法二：
-wget http://vault.centos.org/7.3.1611/os/x86_64/Packages/kernel-headers-3.10.0-514.el7.x86_64.rpm
-rpm -ivh kernel-headers-3.10.0-514.el7.x86_64.rpm
+wget http://vault.centos.org/7.3.1611/os/x86_64/Packages/kernel-headers-3.10.0-862.el7.x86_64.rpm
+rpm -ivh kernel-headers-3.10.0-862.el7.x86_64.rpm
 ```
 
 ### 检查 GPU 版本
@@ -155,23 +155,40 @@ https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 ### 安装 Docker
 
 ```
-yum -y update
-yum -y install yum-utils
-yum-config-manager --add-repo https://yum.dockerproject.org/repo/main/centos/7
-yum -y update
+# Remove old version docker
+sudo yum remove docker \
+                docker-client \
+                docker-client-latest \
+                docker-common \
+                docker-latest \
+                docker-latest-logrotate \
+                docker-logrotate \
+                docker-engine
 
-# 显示 available 的安装包
-yum search --showduplicates docker-engine
+# Docker version
+export DOCKER_VERSION="18.06.1.ce"
+# Setup the repository
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
 
-# 安装 1.12.5 版本 docker
-yum -y --nogpgcheck install docker-engine-1.12.5*
+# Check docker version
+yum list docker-ce --showduplicates | sort -r
+
+# Install docker with specified DOCKER_VERSION
+sudo yum install -y docker-ce-${DOCKER_VERSION} docker-ce-cli-${DOCKER_VERSION} containerd.io
+
+# Start docker
 systemctl start docker
 
 chown hadoop:netease /var/run/docker.sock
 chown hadoop:netease /usr/bin/docker
 ```
 
-Reference：https://docs.docker.com/cs-engine/1.12/
+Reference：https://docs.docker.com/install/linux/docker-ce/centos/
 
 ### 配置 Docker
 
@@ -195,46 +212,40 @@ sudo systemctl restart docker
 
 
 
-### Docker EE version
+### 检查 Docker version
 
 ```bash
 $ docker version
 
 Client:
- Version:      1.12.5
- API version:  1.24
- Go version:   go1.6.4
- Git commit:   7392c3b
- Built:        Fri Dec 16 02:23:59 2016
+ Version:      18.06.1-ce
+ API version:  1.38
+ Go version:   go1.10.3
+ Git commit:   e68fc7a
+ Built:        Tue Aug 21 17:23:03 2018
  OS/Arch:      linux/amd64
+ Experimental: false
 
 Server:
- Version:      1.12.5
- API version:  1.24
- Go version:   go1.6.4
- Git commit:   7392c3b
- Built:        Fri Dec 16 02:23:59 2016
+ Version:      18.06.1-ce
+ API version:  1.38 (minimum version 1.12)
+ Go version:   go1.10.3
+ Git commit:   e68fc7a
+ Built:        Tue Aug 21 17:23:03 2018
  OS/Arch:      linux/amd64
+ Experimental: false
 ```
 
 ### 安装 nvidia-docker
 
-Hadoop-3.2 的 submarine 使用的是 1.0 版本的 nvidia-docker
+Hadoop-3.2 的 submarine 已支持 V2 版本的 nvidia-docker
 
 ```
-wget -P /tmp https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.1/nvidia-docker-1.0.1-1.x86_64.rpm
-sudo rpm -i /tmp/nvidia-docker*.rpm
-# 启动 nvidia-docker
-sudo systemctl start nvidia-docker
-
-# 查看 nvidia-docker 状态：
-systemctl status nvidia-docker
-
-# 查看 nvidia-docker 日志：
-journalctl -u nvidia-docker
-
-# 查看 nvidia-docker-plugin 是否正常
-curl http://localhost:3476/v1.0/docker/cli
+# Add the package repositories
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+sudo yum install -y nvidia-docker2-2.0.3-1.docker18.06.1.ce
 ```
 
 在 `/var/lib/nvidia-docker/volumes/nvidia_driver/` 路径下，根据 `nvidia-driver` 的版本创建文件夹：
@@ -251,7 +262,7 @@ cp /usr/lib64/libcuda* /var/lib/nvidia-docker/volumes/nvidia_driver/390.87/lib64
 cp /usr/lib64/libnvidia* /var/lib/nvidia-docker/volumes/nvidia_driver/390.87/lib64
 
 # Test nvidia-smi
-nvidia-docker run --rm nvidia/cuda:9.0-devel nvidia-smi
+nvidia-docker run --rm nvidia/cuda:10.0-devel nvidia-smi
 ```
 
 测试 docker, nvidia-docker, nvidia-driver 安装
@@ -270,90 +281,19 @@ import tensorflow as tf
 tf.test.is_gpu_available()
 ```
 
-卸载 nvidia-docker 1.0 的方法：
-https://github.com/nvidia/nvidia-docker/wiki/Installation-(version-2.0)
+卸载 nvidia-docker V2 的方法：
+```
+sudo yum remove -y nvidia-docker2-2.0.3-1.docker18.06.1.ce
+```
 
 reference:
-https://github.com/NVIDIA/nvidia-docker/tree/1.0
+https://github.com/NVIDIA/nvidia-docker
 
 
 
 ### Tensorflow Image
 
-CUDNN 和 CUDA 其实不需要在物理机上安装，因为 Sumbmarine 中提供了已经包含了CUDNN 和 CUDA 的镜像文件，基础的Dockfile可参见WriteDockerfile.md
-
-
-上述images无法支持kerberos环境，如果需要kerberos可以使用如下Dockfile
-
-```shell
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
-
-# Pick up some TF dependencies
-RUN apt-get update && apt-get install -y --allow-downgrades --no-install-recommends \
-        build-essential \
-        cuda-command-line-tools-9-0 \
-        cuda-cublas-9-0 \
-        cuda-cufft-9-0 \
-        cuda-curand-9-0 \
-        cuda-cusolver-9-0 \
-        cuda-cusparse-9-0 \
-        curl \
-        libcudnn7=7.0.5.15-1+cuda9.0 \
-        libfreetype6-dev \
-        libpng12-dev \
-        libzmq3-dev \
-        pkg-config \
-        python \
-        python-dev \
-        rsync \
-        software-properties-common \
-        unzip \
-        && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -yq krb5-user libpam-krb5 && apt-get clean
-
-RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
-    python get-pip.py && \
-    rm get-pip.py
-
-RUN pip --no-cache-dir install \
-        Pillow \
-        h5py \
-        ipykernel \
-        jupyter \
-        matplotlib \
-        numpy \
-        pandas \
-        scipy \
-        sklearn \
-        && \
-    python -m ipykernel.kernelspec
-
-# Install TensorFlow GPU version.
-RUN pip --no-cache-dir install \
-    http://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.8.0-cp27-none-linux_x86_64.whl
-RUN apt-get update && apt-get install git -y
-
-RUN apt-get update && apt-get install -y openjdk-8-jdk wget
-# 下载 hadoop-3.1.1.tar.gz
-RUN wget http://mirrors.hust.edu.cn/apache/hadoop/common/hadoop-3.1.1/hadoop-3.1.1.tar.gz
-RUN tar zxf hadoop-3.1.1.tar.gz
-RUN mv hadoop-3.1.1 hadoop-3.1.0
-
-# 下载支持kerberos的jdk安装包
-RUN wget -qO jdk8.tar.gz 'http://${kerberos_jdk_url}/jdk-8u152-linux-x64.tar.gz'
-RUN tar xzf jdk8.tar.gz -C /opt
-RUN mv /opt/jdk* /opt/java
-RUN rm jdk8.tar.gz
-RUN update-alternatives --install /usr/bin/java java /opt/java/bin/java 100
-RUN update-alternatives --install /usr/bin/javac javac /opt/java/bin/javac 100
-
-ENV JAVA_HOME /opt/java
-ENV PATH $PATH:$JAVA_HOME/bin
-```
-
+CUDNN 和 CUDA 其实不需要在物理机上安装，因为 Submarine 中提供了已经包含了CUDNN 和 CUDA 的镜像文件，基础的Dockfile可参见WriteDockerfileTF.md
 
 ### 测试 TF 环境
 
@@ -505,12 +445,12 @@ sudo YARN_LOGFILE=registrydns.log ./yarn-daemon.sh start registrydns
 ```bash
 ./bin/yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name standalone-tf \
- --docker_image dockerfile-cpu-tf1.8.0-with-models \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name standalone-tf \
+ --docker_image tf-1.13.1-cpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-checkpoint \
  --worker_resources memory=4G,vcores=2 --verbose \
- --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --num-gpus=0"
+ --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --num-gpus=0"
 ```
 
 
@@ -531,17 +471,17 @@ sudo YARN_LOGFILE=registrydns.log ./yarn-daemon.sh start registrydns
 ```bash
 ./bin/yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name distributed-tf \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name distributed-tf \
  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
- --docker_image dockerfile-cpu-tf1.8.0-with-models \
+ --docker_image tf-1.13.1-cpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
  --worker_resources memory=4G,vcores=2 --verbose \
  --num_ps 1 \
  --ps_resources memory=4G,vcores=2 \
- --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --num-gpus=0" \
+ --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0" \
  --num_workers 4 \
- --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${${dfs_name_service}}/tmp/cifar-10-jobdir --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=0"
+ --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=0"
 ```
 
 
@@ -583,6 +523,11 @@ resourcemanager 使用的 scheduler 必须是 capacity scheduler，在 capacity-
        <name>yarn.nodemanager.resource-plugins</name>
        <value>yarn.io/gpu</value>
      </property>
+     <!--Use nvidia docker v2-->
+     <property>
+       <name>yarn.nodemanager.resource-plugins.gpu.docker-plugin</name>
+       <value>nvidia-docker-v2</value>
+     </property>
    </configuration>
    ```
 
@@ -597,6 +542,8 @@ resourcemanager 使用的 scheduler 必须是 capacity scheduler，在 capacity-
    docker.allowed.volume-drivers=/usr/bin/nvidia-docker
    docker.allowed.devices=/dev/nvidiactl,/dev/nvidia-uvm,/dev/nvidia-uvm-tools,/dev/nvidia1,/dev/nvidia0
    docker.allowed.ro-mounts=nvidia_driver_375.26
+   # Use nvidia docker v2
+   docker.allowed.runtimes=nvidia
 
    [gpu]
    module.enabled=true
@@ -615,9 +562,9 @@ Distributed-shell + GPU + cgroup
 ```bash
  ./yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
  --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name distributed-tf-gpu \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name distributed-tf-gpu \
  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
- --docker_image gpu-cuda9.0-tf1.8.0-with-models \
+ --docker_image tf-1.13.1-gpu:0.0.1 \
  --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
  --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
  --num_ps 0 \

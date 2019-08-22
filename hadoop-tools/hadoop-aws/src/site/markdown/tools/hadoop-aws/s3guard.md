@@ -98,17 +98,24 @@ This offers no metadata storage, and effectively disables S3Guard.
 
 More settings will may be added in the future.
 Currently the only Metadata Store-independent setting, besides the
-implementation class above, is the *allow authoritative* flag.
+implementation class above, are the *allow authoritative* and *fail-on-error*
+flags.
+
+#### Allow Authoritative
 
 The _authoritative_ expression in S3Guard is present in two different layers, for
 two different reasons:
 
 * Authoritative S3Guard
     * S3Guard can be set as authoritative, which means that an S3A client will
-    avoid round-trips to S3 when **getting directory listings** if there is a fully
-    cached version of the directory stored in metadata store.
+    avoid round-trips to S3 when **getting file metadata**, and **getting
+    directory listings** if there is a fully cached version of the directory
+    stored in metadata store.
     * This mode can be set as a configuration property
     `fs.s3a.metadatastore.authoritative`
+    * It can also be set only on specific directories by setting
+    `fs.s3a.authoritative.path` to one or more prefixes, for example
+    `s3a://bucket/path` or "/auth1,/auth2".
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
     the same metadata store.
     * This is independent from which metadata store implementation is used.
@@ -128,16 +135,20 @@ two different reasons:
 
 More on Authoritative S3Guard:
 
-* It is not treating the MetadataStore (e.g. dynamodb) as the source of truth
- in general.
-* It is the ability to short-circuit S3 list objects and serve listings from
-the MetadataStore in some circumstances.
+* This setting is about treating the MetadataStore (e.g. dynamodb) as the source
+ of truth in general, and also to short-circuit S3 list objects and serve
+ listings from the MetadataStore in some circumstances.
+* For S3A to skip S3's get object metadata, and serve it directly from the
+MetadataStore, the following things must all be true:
+    1. The S3A client is configured to allow MetadataStore to be authoritative
+    source of a file metadata (`fs.s3a.metadatastore.authoritative=true`).
+    1. The MetadataStore has the file metadata for the path stored in it.
 * For S3A to skip S3's list objects on some path, and serve it directly from
 the MetadataStore, the following things must all be true:
     1. The MetadataStore implementation persists the bit
     `DirListingMetadata.isAuthorititative` set when calling
     `MetadataStore#put` (`DirListingMetadata`)
-    1. The S3A client is configured to allow metadatastore to be authoritative
+    1. The S3A client is configured to allow MetadataStore to be authoritative
     source of a directory listing (`fs.s3a.metadatastore.authoritative=true`).
     1. The MetadataStore has a **full listing for path** stored in it.  This only
     happens if the FS client (s3a) explicitly has stored a full directory
@@ -154,8 +165,9 @@ recommended that you leave the default setting here:
 </property>
 ```
 
-Note that a MetadataStore MAY persist this bit. (Not MUST).
 Setting this to `true` is currently an experimental feature.
+Note that a MetadataStore MAY persist this bit in the directory listings. (Not
+MUST).
 
 Note that if this is set to true, it may exacerbate or persist existing race
 conditions around multiple concurrent modifications and listings of a given
@@ -172,10 +184,50 @@ removed on `S3AFileSystem` level.
 
 ```xml
 <property>
-    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
-    <value>3600000</value>
+    <name>fs.s3a.metadatastore.metadata.ttl</name>
+    <value>15m</value>
 </property>
 ```
+
+#### Fail on Error
+
+By default, S3AFileSystem write operations will fail when updates to
+S3Guard metadata fail. S3AFileSystem first writes the file to S3 and then
+updates the metadata in S3Guard. If the metadata write fails,
+`MetadataPersistenceException` is thrown.  The file in S3 **is not** rolled
+back.
+
+If the write operation cannot be programmatically retried, the S3Guard metadata
+for the given file can be corrected with a command like the following:
+
+```bash
+hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
+```
+
+Programmatic retries of the original operation would require overwrite=true.
+Suppose the original operation was FileSystem.create(myFile, overwrite=false).
+If this operation failed with `MetadataPersistenceException` a repeat of the
+same operation would result in `FileAlreadyExistsException` since the original
+operation successfully created the file in S3 and only failed in writing the
+metadata to S3Guard.
+
+Metadata update failures can be downgraded to ERROR logging instead of exception
+by setting the following configuration:
+
+```xml
+<property>
+    <name>fs.s3a.metadatastore.fail.on.write.error</name>
+    <value>false</value>
+</property>
+```
+
+Setting this false is dangerous as it could result in the type of issue S3Guard
+is designed to avoid.  For example, a reader may see an inconsistent listing
+after a recent write since S3Guard may not contain metadata about the recently
+written file due to a metadata write error.
+
+As with the default setting, the new/updated file is still in S3 and **is not**
+rolled back. The S3Guard metadata is likely to be out of sync.
 
 ### 3. Configure the Metadata Store.
 
@@ -202,9 +254,11 @@ this sets the table name to `my-ddb-table-name`
 </property>
 ```
 
-It is good to share a table across multiple buckets for multiple reasons.
+It is good to share a table across multiple buckets for multiple reasons,
+especially if you are *not* using on-demand DynamoDB tables, and instead
+prepaying for provisioned I/O capacity.
 
-1. You are billed for the I/O capacity allocated to the table,
+1. You are billed for the provisioned I/O capacity allocated to the table,
 *even when the table is not used*. Sharing capacity can reduce costs.
 
 1. You can share the "provision burden" across the buckets. That is, rather
@@ -216,8 +270,13 @@ lower.
 S3Guard, because there is only one table to review and configure in the
 AWS management console.
 
+1. When you don't grant the permission to create DynamoDB tables to users.
+A single pre-created table for all buckets avoids the needs for an administrator
+to create one for every bucket.
+
 When wouldn't you want to share a table?
 
+1. When you are using on-demand DynamoDB and want to keep each table isolated.
 1. When you do explicitly want to provision I/O capacity to a specific bucket
 and table, isolated from others.
 
@@ -266,53 +325,82 @@ Next, you can choose whether or not the table will be automatically created
 </property>
 ```
 
-### 7. If creating a table: Set your DynamoDB IO Capacity
+### 7. If creating a table: Choose your billing mode (and perhaps I/O Capacity)
 
-Next, you need to set the DynamoDB read and write throughput requirements you
-expect to need for your cluster.  Setting higher values will cost you more
-money.  *Note* that these settings only affect table creation when
+Next, you need to decide whether to use On-Demand DynamoDB and its
+pay-per-request billing (recommended), or to explicitly request a
+provisioned IO capacity.
+
+Before AWS offered pay-per-request billing, the sole billing mechanism,
+was "provisioned capacity". This mechanism requires you to choose 
+the DynamoDB read and write throughput requirements you
+expect to need for your expected uses of the S3Guard table.
+Setting higher values cost you more money -*even when the table was idle*
+  *Note* that these settings only affect table creation when
 `fs.s3a.s3guard.ddb.table.create` is enabled.  To change the throughput for
 an existing table, use the AWS console or CLI tool.
 
 For more details on DynamoDB capacity units, see the AWS page on [Capacity
 Unit Calculations](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#CapacityUnitCalculations).
 
-The charges are incurred per hour for the life of the table, *even when the
+Provisioned IO capacity is billed per hour for the life of the table, *even when the
 table and the underlying S3 buckets are not being used*.
 
-There are also charges incurred for data storage and for data IO outside of the
+There are also charges incurred for data storage and for data I/O outside of the
 region of the DynamoDB instance. S3Guard only stores metadata in DynamoDB: path names
 and summary details of objects —the actual data is stored in S3, so billed at S3
 rates.
 
+With provisioned I/O capacity, attempting to perform more I/O than the capacity
+requested throttles the operation and may result in operations failing.
+Larger I/O capacities cost more.
+
+With the introduction of On-Demand DynamoDB, you can now avoid paying for
+provisioned capacity by creating an on-demand table.
+With an on-demand table you are not throttled if your DynamoDB requests exceed
+any pre-provisioned limit, nor do you pay per hour even when a table is idle.
+
+You do, however, pay more per DynamoDB operation.
+Even so, the ability to cope with sudden bursts of read or write requests, combined
+with the elimination of charges for idle tables, suit the use patterns made of 
+S3Guard tables by applications interacting with S3. That is: periods when the table
+is rarely used, with intermittent high-load operations when directory trees
+are scanned (query planning and similar), or updated (rename and delete operations).
+
+
+We recommending using On-Demand DynamoDB for maximum performance in operations
+such as query planning, and lowest cost when S3 buckets are not being accessed.
+
+This is the default, as configured in the default configuration options.
+
 ```xml
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>500</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table.  This config value will only be used when
-    creating a new DynamoDB table, though later you can manually provision by
-    increasing or decreasing read capacity as needed for existing tables.
-    See DynamoDB documents for more information.
+    units for the DynamoDB table. This config value will only be used when
+    creating a new DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    If a positive integer is provided for this and the write capacity, then
+    a table with "provisioned capacity" will be created.
+    You can change the capacity of an existing provisioned-capacity table
+    through the "s3guard set-capacity" command.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>100</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.  Refer to related config
-    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+    capacity units for the DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
   </description>
 </property>
 ```
 
-Attempting to perform more IO than the capacity requested throttles the
-IO, and may result in operations failing. Larger IO capacities cost more.
-We recommending using small read and write capacities when initially experimenting
-with S3Guard.
 
 ## Authenticating with S3Guard
 
@@ -320,9 +408,7 @@ The DynamoDB metadata store takes advantage of the fact that the DynamoDB
 service uses the same authentication mechanisms as S3. S3Guard
 gets all its credentials from the S3A client that is using it.
 
-All existing S3 authentication mechanisms can be used, except for one
-exception. Credentials placed in URIs are not supported for S3Guard, for security
-reasons.
+All existing S3 authentication mechanisms can be used.
 
 ## Per-bucket S3Guard configuration
 
@@ -396,6 +482,48 @@ for two buckets with a shared table, while disabling it for the public
 bucket.
 
 
+### Out-of-band operations with S3Guard
+
+We call an operation out-of-band (OOB) when a bucket is used by a client with
+ S3Guard, and another client runs a write (e.g delete, move, rename,
+ overwrite) operation on an object in the same bucket without S3Guard.
+
+The definition of behaviour in S3AFileSystem/MetadataStore in case of OOBs:
+* A client with S3Guard
+* B client without S3Guard (Directly to S3)
+
+
+* OOB OVERWRITE, authoritative mode:
+  * A client creates F1 file
+  * B client overwrites F1 file with F2 (Same, or different file size)
+  * A client's getFileStatus returns F1 metadata
+
+* OOB OVERWRITE, NOT authoritative mode:
+  * A client creates F1 file
+  * B client overwrites F1 file with F2 (Same, or different file size)
+  * A client's getFileStatus returns F2 metadata. In not authoritative mode we
+ check S3 for the file. If the modification time of the file in S3 is greater
+ than in S3Guard, we can safely return the S3 file metadata and update the
+ cache.
+
+* OOB DELETE, authoritative mode:
+  * A client creates F file
+  * B client deletes F file
+  * A client's getFileStatus returns that the file is still there
+
+* OOB DELETE, NOT authoritative mode:
+  * A client creates F file
+  * B client deletes F file
+  * A client's getFileStatus returns that the file is still there
+
+Note: authoritative and NOT authoritative mode behaves the same at
+OOB DELETE case.
+
+The behaviour in case of getting directory listings:
+* File status in metadata store gets updated during the listing the same way
+as in getFileStatus.
+
+
 ## S3Guard Command Line Interface (CLI)
 
 Note that in some cases an AWS region or `s3a://` URI can be provided.
@@ -421,7 +549,13 @@ hadoop s3guard init -meta URI ( -region REGION | s3a://BUCKET )
 Creates and initializes an empty metadata store.
 
 A DynamoDB metadata store can be initialized with additional parameters
-pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html):
+pertaining to capacity. 
+
+If these values are both zero, then an on-demand DynamoDB table is created;
+if positive values then they set the
+[Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html)
+of the table.
+
 
 ```bash
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
@@ -437,21 +571,20 @@ metadata store will be created with these tags in DynamoDB.
 Example 1
 
 ```bash
-hadoop s3guard init -meta dynamodb://ireland-team -write 5 -read 10 s3a://ireland-1
+hadoop s3guard init -meta dynamodb://ireland-team -write 0 -read 0 s3a://ireland-1
 ```
 
-Creates a table "ireland-team" with a capacity of 5 for writes, 10 for reads,
-in the same location as the bucket "ireland-1".
+Creates an on-demand table "ireland-team",
+in the same location as the S3 bucket "ireland-1".
 
 
 Example 2
 
 ```bash
-hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
+hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1 --read 0 --write 0
 ```
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
-
 
 Example 3
 
@@ -459,7 +592,10 @@ Example 3
 hadoop s3guard init -meta dynamodb://ireland-team -tag tag1=first;tag2=second;
 ```
 
-Creates a table "ireland-team" with tags "first" and "second".
+Creates a table "ireland-team" with tags "first" and "second". The read and
+write capacity will be those of the site configuration's values of
+`fs.s3a.s3guard.ddb.table.capacity.read` and `fs.s3a.s3guard.ddb.table.capacity.write`;
+if these are both zero then it will be an on-demand table.
 
 ### Import a bucket: `s3guard import`
 
@@ -497,7 +633,7 @@ hadoop s3guard diff s3a://ireland-1
 Prints and optionally checks the s3guard and encryption status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [ -guarded ] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
+hadoop s3guard bucket-info [-guarded] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
 ```
 
 Options
@@ -530,6 +666,7 @@ Filesystem s3a://ireland-1 is using S3Guard with store DynamoDBMetadataStore{reg
 Authoritative S3Guard: fs.s3a.metadatastore.authoritative=false
 Metadata Store Diagnostics:
   ARN=arn:aws:dynamodb:eu-west-1:00000000:table/ireland-1
+  billing-mode=provisioned
   description=S3Guard metadata store in DynamoDB
   name=ireland-1
   read-capacity=20
@@ -552,9 +689,13 @@ Metadata Store Diagnostics:
 The "magic" committer is supported
 
 S3A Client
+  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
   Endpoint: fs.s3a.endpoint=s3-eu-west-1.amazonaws.com
   Encryption: fs.s3a.server-side-encryption-algorithm=none
   Input seek policy: fs.s3a.experimental.input.fadvise=normal
+  Change Detection Source: fs.s3a.change.detection.source=etag
+  Change Detection Mode: fs.s3a.change.detection.mode=server
+Delegation token support is disabled
 ```
 
 This listing includes all the information about the table supplied from
@@ -655,7 +796,7 @@ time" is older than the specified age.
 
 ```bash
 hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
-    [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
+    [-seconds SECONDS] [-tombstone] [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
 A time value of hours, minutes and/or seconds must be supplied.
@@ -665,6 +806,13 @@ A time value of hours, minutes and/or seconds must be supplied.
 in the S3 Bucket.
 1. If an S3A URI is supplied, only the entries in the table specified by the
 URI and older than a specific age are deleted.
+
+
+The `-tombstone` option instructs the operation to only purge "tombstones",
+markers of deleted files. These tombstone markers are only used briefly,
+to indicate that a recently deleted file should not be found in listings.
+As a result, there is no adverse consequences in regularly pruning old
+tombstones.
 
 Example
 
@@ -676,23 +824,24 @@ Deletes all entries in the S3Guard table for files older than seven days from
 the table associated with `s3a://ireland-1`.
 
 ```bash
-hadoop s3guard prune -days 7 s3a://ireland-1/path_prefix/
+hadoop s3guard prune -tombstone -days 7 s3a://ireland-1/path_prefix/
 ```
 
-Deletes all entries in the S3Guard table for files older than seven days from
-the table associated with `s3a://ireland-1` and with the prefix "path_prefix"
+Deletes all entries in the S3Guard table for tombstones older than seven days from
+the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 
 ```bash
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "ireland-team" in
-the region "eu-west-1".
+Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+the region `eu-west-1`.
 
 
-### Tune the IO capacity of the DynamoDB Table, `s3guard set-capacity`
+### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`
 
-Alter the read and/or write capacity of a s3guard table.
+Alter the read and/or write capacity of a s3guard table created with provisioned
+I/O capacity.
 
 ```bash
 hadoop s3guard set-capacity [--read UNIT] [--write UNIT] ( -region REGION | s3a://BUCKET )
@@ -700,6 +849,9 @@ hadoop s3guard set-capacity [--read UNIT] [--write UNIT] ( -region REGION | s3a:
 
 The `--read` and `--write` units are those of `s3guard init`.
 
+It cannot be used to change the I/O capacity of an on demand table (there is
+no need), and nor can it be used to convert an existing table to being
+on-demand. For that the AWS console must be used.
 
 Example
 
@@ -716,6 +868,7 @@ and 20 write. (This is a low number, incidentally)
 2017-08-30 16:21:26,344 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1086)) - Changing capacity of table to read: 20, write: 20
 Metadata Store Diagnostics:
   ARN=arn:aws:dynamodb:eu-west-1:00000000000:table/ireland-1
+  billing-mode=provisioned
   description=S3Guard metadata store in DynamoDB
   name=ireland-1
   read-capacity=25
@@ -737,6 +890,7 @@ write values match that already in use.
 2017-08-30 16:24:35,337 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1090)) - Table capacity unchanged at read: 20, write: 20
 Metadata Store Diagnostics:
   ARN=arn:aws:dynamodb:eu-west-1:00000000000:table/ireland-1
+  billing-mode=provisioned
   description=S3Guard metadata store in DynamoDB
   name=ireland-1
   read-capacity=20
@@ -832,12 +986,12 @@ are only made after successful file creation, deletion and rename, the
 store is *unlikely* to get out of sync, it is still something which
 merits more testing before it could be considered reliable.
 
-## Managing DynamoDB IO Capacity
+## Managing DynamoDB I/O Capacity
 
-DynamoDB is not only billed on use (data and IO requests), it is billed
-on allocated IO Capacity.
+Historically, DynamoDB has been not only billed on use (data and I/O requests)
+-but on provisioned I/O Capacity.
 
-When an application makes more requests than
+With Provisioned IO, when an application makes more requests than
 the allocated capacity permits, the request is rejected; it is up to
 the calling application to detect when it is being so throttled and
 react. S3Guard does this, but as a result: when the client is being
@@ -845,7 +999,7 @@ throttled, operations are slower. This capacity throttling is averaged
 over a few minutes: a briefly overloaded table will not be throttled,
 but the rate cannot be sustained.
 
-The load on a table isvisible in the AWS console: go to the
+The load on a table is visible in the AWS console: go to the
 DynamoDB page for the table and select the "metrics" tab.
 If the graphs of throttled read or write
 requests show that a lot of throttling has taken place, then there is not
@@ -906,22 +1060,220 @@ If operations, especially directory operations, are slow, check the AWS
 console. It is also possible to set up AWS alerts for capacity limits
 being exceeded.
 
+### <a name="on-demand"></a> On-Demand Dynamo Capacity
+
+[Amazon DynamoDB On-Demand](https://aws.amazon.com/blogs/aws/amazon-dynamodb-on-demand-no-capacity-planning-and-pay-per-request-pricing/)
+removes the need to pre-allocate I/O capacity for S3Guard tables.
+Instead the caller is _only_ charged per I/O Operation.
+
+* There are no SLA capacity guarantees. This is generally not an issue
+for S3Guard applications.
+* There's no explicit limit on I/O capacity, so operations which make
+heavy use of S3Guard tables (for example: SQL query planning) do not
+get throttled.
+* You are charged more per DynamoDB API call, in exchange for paying nothing
+when you are not interacting with DynamoDB.
+* There's no way put a limit on the I/O; you may unintentionally run up
+large bills through sustained heavy load.
+* The `s3guard set-capacity` command fails: it does not make sense any more.
+
+When idle, S3Guard tables are only billed for the data stored, not for
+any unused capacity. For this reason, there is no performance benefit
+from sharing a single S3Guard table across multiple buckets.
+
+*Creating a S3Guard Table with On-Demand Tables*
+
+The default settings for S3Guard are to create on-demand tables; this
+can also be done explicitly in the `s3guard init` command by setting the
+read and write capacities to zero.
+
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -write 0 -read 0 s3a://ireland-1
+```
+
+*Enabling DynamoDB On-Demand for an existing S3Guard table*
+
+You cannot currently convert an existing S3Guard table to being an on-demand
+table through the `s3guard` command.
+
+It can be done through the AWS console or [the CLI](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/update-table.html).
+From the Web console or the command line, switch the billing to pay-per-request.
+
+Once enabled, the read and write capacities of the table listed in the
+`hadoop s3guard bucket-info` command become "0", and the "billing-mode"
+attribute changes to "per-request":
+
+```
+> hadoop s3guard bucket-info s3a://example-bucket/
+
+Filesystem s3a://example-bucket
+Location: eu-west-1
+Filesystem s3a://example-bucket is using S3Guard with store
+  DynamoDBMetadataStore{region=eu-west-1, tableName=example-bucket,
+  tableArn=arn:aws:dynamodb:eu-west-1:11111122223333:table/example-bucket}
+Authoritative S3Guard: fs.s3a.metadatastore.authoritative=false
+Metadata Store Diagnostics:
+  ARN=arn:aws:dynamodb:eu-west-1:11111122223333:table/example-bucket
+  billing-mode=per-request
+  description=S3Guard metadata store in DynamoDB
+  name=example-bucket
+  persist.authoritative.bit=true
+  read-capacity=0
+  region=eu-west-1
+  retryPolicy=ExponentialBackoffRetry(maxRetries=9, sleepTime=250 MILLISECONDS)
+  size=66797
+  status=ACTIVE
+  table={AttributeDefinitions:
+    [{AttributeName: child,AttributeType: S},
+     {AttributeName: parent,AttributeType: S}],
+     TableName: example-bucket,
+     KeySchema: [{
+       AttributeName: parent,KeyType: HASH},
+       {AttributeName: child,KeyType: RANGE}],
+     TableStatus: ACTIVE,
+     CreationDateTime: Thu Oct 11 18:51:14 BST 2018,
+     ProvisionedThroughput: {
+       LastIncreaseDateTime: Tue Oct 30 16:48:45 GMT 2018,
+       LastDecreaseDateTime: Tue Oct 30 18:00:03 GMT 2018,
+       NumberOfDecreasesToday: 0,
+       ReadCapacityUnits: 0,
+       WriteCapacityUnits: 0},
+     TableSizeBytes: 66797,
+     ItemCount: 415,
+     TableArn: arn:aws:dynamodb:eu-west-1:11111122223333:table/example-bucket,
+     TableId: a7b0728a-f008-4260-b2a0-aaaaabbbbb,}
+  write-capacity=0
+The "magic" committer is supported
+```
+
+### <a name="autoscaling"></a> Autoscaling (Provisioned Capacity) S3Guard tables.
+
 [DynamoDB Auto Scaling](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AutoScaling.html)
 can automatically increase and decrease the allocated capacity.
-This is good for keeping capacity high when needed, but avoiding large
-bills when it is not.
+
+Before DynamoDB On-Demand was introduced, autoscaling was the sole form
+of dynamic scaling. 
 
 Experiments with S3Guard and DynamoDB Auto Scaling have shown that any Auto Scaling
 operation will only take place after callers have been throttled for a period of
 time. The clients will still need to be configured to retry when overloaded
 until any extra capacity is allocated. Furthermore, as this retrying will
-block the threads from performing other operations -including more IO, the
+block the threads from performing other operations -including more I/O, the
 the autoscale may not scale fast enough.
 
-We recommend experimenting with this, based on usage information collected
-from previous days, and and choosing a combination of
-retry counts and an interval which allow for the clients to cope with
-some throttling, but not to time out other applications.
+This is why the DynamoDB On-Demand appears is a better option for
+workloads with Hadoop, Spark, Hive and other applications.
+
+If autoscaling is to be used, we recommend experimenting with the option,
+based on usage information collected from previous days, and choosing a
+combination of retry counts and an interval which allow for the clients to cope with
+some throttling, but not to time-out other applications.
+
+## Read-After-Overwrite Consistency
+
+S3Guard provides read-after-overwrite consistency through ETags (default) or
+object versioning checked either on the server (default) or client. This works
+such that a reader reading a file after an overwrite either sees the new version
+of the file or an error. Without S3Guard, new readers may see the original
+version. Once S3 reaches eventual consistency, new readers will see the new
+version.
+
+Readers using S3Guard will usually see the new file version, but may
+in rare cases see `RemoteFileChangedException` instead. This would occur if
+an S3 object read cannot provide the version tracked in S3Guard metadata.
+
+S3Guard achieves this behavior by storing ETags and object version IDs in the
+S3Guard metadata store (e.g. DynamoDB). On opening a file, S3AFileSystem
+will look in S3 for the version of the file indicated by the ETag or object
+version ID stored in the metadata store. If that version is unavailable,
+`RemoteFileChangedException` is thrown. Whether ETag or version ID and
+server or client mode is used is determed by the
+[fs.s3a.change.detection configuration options](./index.html#Handling_Read-During-Overwrite).
+
+### No Versioning Metadata Available
+
+When the first S3AFileSystem clients are upgraded to a version of
+`S3AFileSystem` that contains these change tracking features, any existing
+S3Guard metadata will not contain ETags or object version IDs. Reads of files
+tracked in such S3Guard metadata will access whatever version of the file is
+available in S3 at the time of read. Only if the file is subsequently updated
+will S3Guard start tracking ETag and object version ID and as such generating
+`RemoteFileChangedException` if an inconsistency is detected.
+
+Similarly, when S3Guard metadata is pruned, S3Guard will no longer be able to
+detect an inconsistent read. S3Guard metadata should be retained for at least
+as long as the perceived possible read-after-overwrite temporary inconsistency
+window. That window is expected to be short, but there are no guarantees so it
+is at the administrator's discretion to weigh the risk.
+
+### Known Limitations
+
+#### S3 Select
+
+S3 Select does not provide a capability for server-side ETag or object
+version ID qualification. Whether `fs.s3a.change.detection.mode` is "client" or
+"server", S3Guard will cause a client-side check of the file version before
+opening the file with S3 Select. If the current version does not match the
+version tracked in S3Guard, `RemoteFileChangedException` is thrown.
+
+It is still possible that the S3 Select read will access a different version of
+the file, if the visible file version changes between the version check and
+the opening of the file. This can happen due to eventual consistency or
+an overwrite of the file between the version check and the open of the file.
+
+#### Rename
+
+Rename is implemented via copy in S3. With `fs.s3a.change.detection.mode` set
+to "client", a fully reliable mechansim for ensuring the copied content is the expected
+content is not possible. This is the case since there isn't necessarily a way
+to know the expected ETag or version ID to appear on the object resulting from
+the copy.
+
+Furthermore, if `fs.s3a.change.detection.mode` is "server" and a third-party S3
+implementation is used that doesn't honor the provided ETag or version ID,
+S3AFileSystem and S3Guard cannot detect it.
+
+When `fs.s3.change.detection.mode` is "client", a client-side check
+will be performed before the copy to ensure the current version of the file
+matches S3Guard metadata. If not, `RemoteFileChangedException` is thrown.
+Similar to as discussed with regard to S3 Select, this is not sufficient to
+guarantee that same version is the version copied.
+
+When `fs.s3.change.detection.mode` server, the expected version is also specified
+in the underlying S3 `CopyObjectRequest`. As long as the server honors it, the
+copied object will be correct.
+
+All this said, with the defaults of `fs.s3.change.detection.mode` of "server" and
+`fs.s3.change.detection.source` of "etag", when working with Amazon's S3, copy should in fact
+either copy the expected file version or, in the case of an eventual consistency
+anomaly, generate `RemoteFileChangedException`. The same should be true when
+`fs.s3.change.detection.source` = "versionid".
+
+#### Out of Sync Metadata
+
+The S3Guard version tracking metadata (ETag or object version ID) could become
+out of sync with the true current object metadata in S3.  For example, S3Guard
+is still tracking v1 of some file after v2 has been written.  This could occur
+for reasons such as a writer writing without utilizing S3Guard and/or
+S3AFileSystem or simply due to a write with S3AFileSystem and S3Guard that wrote
+successfully to S3, but failed in communication with S3Guard's metadata store
+(e.g. DynamoDB).
+
+If this happens, reads of the affected file(s) will result in
+`RemoteFileChangedException` until one of:
+
+* the S3Guard metadata is corrected out-of-band
+* the file is overwritten (causing an S3Guard metadata update)
+* the S3Guard metadata is pruned
+
+The S3Guard metadata for a file can be corrected with the `s3guard import`
+command as discussed above. The command can take a file URI instead of a
+bucket URI to correct the metadata for a single file. For example:
+
+```bash
+hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
+```
 
 ## Troubleshooting
 
@@ -974,20 +1326,20 @@ Consider increasing your provisioning level with the UpdateTable API.
 (Service: AmazonDynamoDBv2; Status Code: 400;
 Error Code: ProvisionedThroughputExceededException;
 ```
-The IO load of clients of the (shared) DynamoDB table was exceeded.
+The I/O load of clients of the (shared) DynamoDB table was exceeded.
 
-1. Increase the capacity of the DynamoDB table.
-1. Increase the retry count and/or sleep time of S3Guard on throttle events.
-1. Enable capacity autoscaling for the table in the AWS console.
+1. Switch to On-Demand Dynamo DB tables (AWS console)
+1. Increase the capacity of the DynamoDB table (AWS console or `s3guard set-capacity`)/
+1. Increase the retry count and/or sleep time of S3Guard on throttle events (Hadoop configuration).
 
 ### Error `Max retries exceeded`
 
 The I/O load of clients of the (shared) DynamoDB table was exceeded, and
 the number of attempts to retry the operation exceeded the configured amount.
 
+1. Switch to On-Demand Dynamo DB tables (AWS console).
 1. Increase the capacity of the DynamoDB table.
 1. Increase the retry count and/or sleep time of S3Guard on throttle events.
-1. Enable capacity autoscaling for the table in the AWS console.
 
 
 ### Error when running `set-capacity`: `org.apache.hadoop.fs.s3a.AWSServiceThrottledException: ProvisionTable`
@@ -1003,7 +1355,7 @@ Next decrease can be made at Wednesday, July 25, 2018 9:48:14 PM UTC
 ```
 
 There's are limit on how often you can change the capacity of an DynamoDB table;
-if you call set-capacity too often, it fails. Wait until the after the time indicated
+if you call `set-capacity` too often, it fails. Wait until the after the time indicated
 and try again.
 
 ### Error `Invalid region specified`
@@ -1020,6 +1372,129 @@ java.io.IOException: Invalid region specified "iceland-2":
 ```
 
 The region specified in `fs.s3a.s3guard.ddb.region` is invalid.
+
+### "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST"
+
+```
+ValidationException; One or more parameter values were invalid:
+  Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when
+  BillingMode is PAY_PER_REQUEST
+  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ValidationException)
+```
+
+On-Demand DynamoDB tables do not have any fixed capacity -it is an error
+to try to change it with the `set-capacity` command.
+
+### `MetadataPersistenceException`
+
+A filesystem write operation failed to persist metadata to S3Guard. The file was
+successfully written to S3 and now the S3Guard metadata is likely to be out of
+sync.
+
+See [Fail on Error](#fail-on-error) for more detail.
+
+### Error `RemoteFileChangedException`
+
+An exception like the following could occur for a couple of reasons:
+
+* the S3Guard metadata is out of sync with the true S3 metadata.  For
+example, the S3Guard DynamoDB table is tracking a different ETag than the ETag
+shown in the exception.  This may suggest the object was updated in S3 without
+involvement from S3Guard or there was a transient failure when S3Guard tried to
+write to DynamoDB.
+
+* S3 is exhibiting read-after-overwrite temporary inconsistency.  The S3Guard
+metadata was updated with a new ETag during a recent write, but the current read
+is not seeing that ETag due to S3 eventual consistency.  This exception prevents
+the reader from an inconsistent read where the reader sees an older version of
+the file.
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: open 's3a://my-bucket/test/file.txt':
+  Change reported by S3 while reading at position 0.
+  ETag 4e886e26c072fef250cfaf8037675405 was unavailable
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:167)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:207)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:355)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:348)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:381)
+  at java.io.FilterInputStream.read(FilterInputStream.java:83)
+```
+
+### Error `AWSClientIOException: copyFile` caused by `NullPointerException`
+
+The AWS SDK has an [issue](https://github.com/aws/aws-sdk-java/issues/1644)
+where it will throw a relatively generic `AmazonClientException` caused by
+`NullPointerException` when copying a file and specifying a precondition
+that cannot be met.  This can bubble up from `S3AFileSystem.rename()`. It
+suggests that the file in S3 is inconsistent with the metadata in S3Guard.
+
+```
+org.apache.hadoop.fs.s3a.AWSClientIOException: copyFile(test/rename-eventually2.dat, test/dest2.dat) on test/rename-eventually2.dat: com.amazonaws.AmazonClientException: Unable to complete transfer: null: Unable to complete transfer: null
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:201)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:111)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:314)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:406)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:310)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:285)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3034)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.innerRename(S3AFileSystem.java:1258)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.rename(S3AFileSystem.java:1119)
+  at org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged.lambda$testRenameEventuallyConsistentFile2$6(ITestS3ARemoteFileChanged.java:556)
+  at org.apache.hadoop.test.LambdaTestUtils.intercept(LambdaTestUtils.java:498)
+  at org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged.testRenameEventuallyConsistentFile2(ITestS3ARemoteFileChanged.java:554)
+  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:498)
+  at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+  at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+  at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+  at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+  at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+  at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+  at org.junit.rules.TestWatcher$1.evaluate(TestWatcher.java:55)
+  at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:298)
+  at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:292)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.lang.Thread.run(Thread.java:748)
+Caused by: com.amazonaws.AmazonClientException: Unable to complete transfer: null
+  at com.amazonaws.services.s3.transfer.internal.AbstractTransfer.unwrapExecutionException(AbstractTransfer.java:286)
+  at com.amazonaws.services.s3.transfer.internal.AbstractTransfer.rethrowExecutionException(AbstractTransfer.java:265)
+  at com.amazonaws.services.s3.transfer.internal.CopyImpl.waitForCopyResult(CopyImpl.java:67)
+  at org.apache.hadoop.fs.s3a.impl.CopyOutcome.waitForCopy(CopyOutcome.java:72)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$copyFile$14(S3AFileSystem.java:3047)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  ... 25 more
+Caused by: java.lang.NullPointerException
+  at com.amazonaws.services.s3.transfer.internal.CopyCallable.copyInOneChunk(CopyCallable.java:154)
+  at com.amazonaws.services.s3.transfer.internal.CopyCallable.call(CopyCallable.java:134)
+  at com.amazonaws.services.s3.transfer.internal.CopyMonitor.call(CopyMonitor.java:132)
+  at com.amazonaws.services.s3.transfer.internal.CopyMonitor.call(CopyMonitor.java:43)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+  ... 1 more
+```
+
+### Error `Attempt to change a resource which is still in use: Table is being deleted`
+
+```
+com.amazonaws.services.dynamodbv2.model.ResourceInUseException:
+  Attempt to change a resource which is still in use: Table is being deleted:
+   s3guard.test.testDynamoDBInitDestroy351245027
+    (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ResourceInUseException;)
+```
+
+You have attempted to call `hadoop s3guard destroy` on a table which is already
+being destroyed.
 
 ## Other Topics
 

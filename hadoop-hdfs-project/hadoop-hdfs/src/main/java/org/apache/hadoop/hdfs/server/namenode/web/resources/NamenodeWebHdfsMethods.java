@@ -25,7 +25,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
@@ -56,6 +55,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.QuotaUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1069,9 +1069,7 @@ public class NamenodeWebHdfsMethods {
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-        String absolutePath = path.getAbsolutePath() == null ? null :
-            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
-        return get(ugi, delegation, username, doAsUser, absolutePath,
+        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             tokenKind, tokenService, noredirect, startAfter);
@@ -1171,6 +1169,12 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(contentsummary);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETQUOTAUSAGE:
+    {
+      final QuotaUsage quotaUsage = cp.getQuotaUsage(fullpath);
+      final String js = JsonUtil.toJsonString(quotaUsage);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GETFILECHECKSUM:
     {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -1205,9 +1209,8 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      final String js = JsonUtil.toJsonString("Path",
-          FileSystem.get(conf != null ? conf : new Configuration())
-              .getHomeDirectory().toUri().getPath());
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETACLSTATUS: {
