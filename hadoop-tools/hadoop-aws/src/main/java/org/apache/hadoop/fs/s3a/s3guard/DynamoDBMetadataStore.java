@@ -566,7 +566,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * There is no check as to whether the entry exists in the table first.
    * @param path path to delete
    * @param tombstone flag to create a tombstone marker
-   * @param ancestorState ancestor state for logging
+   * @param ancestorState ancestor state for context.
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated

@@ -2106,7 +2106,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
-   * @param operationState
+   * @param operationState (nullable) operational state for a bulk update
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2149,15 +2149,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException amazon-layer failure.
    * @throws IOException other IO Exception.
    */
-  @VisibleForTesting
   @Retries.RetryMixed
   void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final List<Path> undeletedObjectsOnFailure,
       final BulkOperationState operationState)
-      throws MultiObjectDeleteException, AmazonClientException,
-      IOException {
+      throws MultiObjectDeleteException, AmazonClientException, IOException {
     undeletedObjectsOnFailure.clear();
     try(DurationInfo ignored = new DurationInfo(LOG, false, "Deleting")) {
       removeKeysS3(keysToDelete, deleteFakeDir);
@@ -2263,7 +2261,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
         throw new PathIsNotEmptyDirectoryException(f.toString());
       }
-      BulkOperationState operationState = null;
       if (status.isEmptyDirectory() == Tristate.TRUE) {
         LOG.debug("Deleting fake empty directory {}", key);
         deleteObjectAtPath(f, key, false);
@@ -2272,48 +2269,54 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // multiple object delete calls.
         // create an operation state so that the store can manage the bulk
         // operation if it needs to.
-        operationState = S3Guard.initiateBulkWrite(
+        try (BulkOperationState operationState = S3Guard.initiateBulkWrite(
             metadataStore,
-            BulkOperationState.OperationType.Delete, f);
-        LOG.debug("Getting objects for directory prefix {} to delete", key);
+            BulkOperationState.OperationType.Delete,
+            f)) {
+          LOG.debug("Getting objects for directory prefix {} to delete", key);
 
-        S3ListRequest request = createListObjectsRequest(key, null);
+          S3ListRequest request = createListObjectsRequest(key, null);
 
-        S3ListResult objects = listObjects(request);
-        List<DeleteObjectsRequest.KeyVersion> keys =
-            new ArrayList<>(objects.getObjectSummaries().size());
-        List<Path> paths =new ArrayList<>(objects.getObjectSummaries().size());
-        while (true) {
-          for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-            String k = summary.getKey();
-            keys.add(new DeleteObjectsRequest.KeyVersion(k));
-            paths.add(keyToQualifiedPath(k));
-            LOG.debug("Got object to delete {}", k);
+          S3ListResult objects = listObjects(request);
+          List<DeleteObjectsRequest.KeyVersion> keys =
+              new ArrayList<>(objects.getObjectSummaries().size());
+          List<Path> paths =new ArrayList<>(objects.getObjectSummaries().size());
+          while (true) {
+            for (S3ObjectSummary summary : objects.getObjectSummaries()) {
+              String k = summary.getKey();
+              keys.add(new DeleteObjectsRequest.KeyVersion(k));
+              paths.add(keyToQualifiedPath(k));
+              LOG.debug("Got object to delete {}", k);
 
-            if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              // delete a single page of keys
+              if (keys.size() == MAX_ENTRIES_TO_DELETE) {
+                // delete a single page of keys
+                removeKeys(keys, false, operationState);
+                metadataStore.deletePaths(paths, operationState);
+                keys.clear();
+                paths.clear();
+              }
+            }
+
+            if (objects.isTruncated()) {
+              // continue the listing
+              objects = continueListObjects(request, objects);
+            } else {
+              // there is no more data: delete the final set of entries.
               removeKeys(keys, false, operationState);
-              metadataStore.deletePaths(paths, operationState);
-              keys.clear();
-              paths.clear();
+              // don't bother with updating the parents as
+              // deleteSubtree will do this.
+              //
+              // Do: break out of the while() loop
+              break;
             }
           }
-
-          if (objects.isTruncated()) {
-            objects = continueListObjects(request, objects);
-          } else {
-            // there is no more data: delete the final set of entries.
-            removeKeys(keys, false, operationState);
-            // don't bother with updating the parents as
-            // deleteSubtree will do this.
-            break;
+          try (DurationInfo ignored =
+                   new DurationInfo(LOG, false, "Delete metastore")) {
+            metadataStore.deleteSubtree(f, operationState);
           }
         }
       }
-      try(DurationInfo ignored =
-              new DurationInfo(LOG, false, "Delete metastore")) {
-        metadataStore.deleteSubtree(f, operationState);
-      }
+
     } else {
       LOG.debug("delete: Path is a file: {}", key);
       deleteObjectAtPath(f, key, true);
