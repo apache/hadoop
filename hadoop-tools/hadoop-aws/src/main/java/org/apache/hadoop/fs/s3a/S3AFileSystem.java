@@ -3222,6 +3222,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       //  - S3Guard is asking for a specific version and it's been removed by
       //    lifecycle rules.
       //  - there's a 404 cached in S3 load balancers
+      LOG.debug("getObjectMetadata({}) failed to find an expected file",
+          srcKey, e);
       // We create an exception, but the text depends on the S3Guard state
       String message = hasMetadataStore()
           ? RemoteFileChangedException.FILE_NEVER_FOUND

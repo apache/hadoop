@@ -1029,9 +1029,10 @@ before versioning was enabled.
 See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
 for more information.
 
-### `RemoteFileChangedException`: "File to rename not found on S3 after repeated attempts"
+### `RemoteFileChangedException`: "File to rename not found on guarded S3 store after repeated attempts"
 
-A file listed in the S3Guard table could not be found even after multiple attempts.
+A file being renamed and listed in the S3Guard table could not be found
+in the S3 bucket even after multiple attempts.
 
 ```
 org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
@@ -1050,7 +1051,7 @@ operation. This is something which AWS S3 can do for short periods.
 If error occurs and the file is on S3, consider increasing the value of
 `fs.s3a.s3guard.consistency.retry.limit`.
 
-The fix here is to use S3Guard. We also recommend using applications/application
+We also recommend using applications/application
 options which do  not rename files when committing work or when copying data
 to S3, but instead write directly to the final destination.
 
@@ -1065,6 +1066,7 @@ at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(
 at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
 at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
 ```
+
 An attempt was made to rename a file in an S3 store not protected by SGuard,
 the directory list operation included the filename in its results but the
 actual operation to rename the file failed.
