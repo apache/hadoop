@@ -363,7 +363,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, String.class}, new RemoteParam(),
         clientName);
     Object result = rpcClient.invokeSequential(
-        locations, method, Boolean.class, Boolean.TRUE);
+        locations, method, Boolean.class, null);
     return (boolean) result;
   }
 
