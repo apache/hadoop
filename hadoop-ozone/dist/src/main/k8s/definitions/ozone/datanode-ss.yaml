@@ -32,9 +32,9 @@ spec:
         app: ozone
         component: datanode
       annotations:
-        prdatanodeetheus.io/scrape: "true"
-        prdatanodeetheus.io/port: "9882"
-        prdatanodeetheus.io/path: "/prom"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9882"
+        prometheus.io/path: "/prom"
     spec:
       affinity:
         podAntiAffinity:

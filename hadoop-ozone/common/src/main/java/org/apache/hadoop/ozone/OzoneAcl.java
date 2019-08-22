@@ -328,6 +328,11 @@ public class OzoneAcl {
         otherAcl.getAclScope().equals(this.getAclScope());
   }
 
+  public OzoneAcl setAclScope(AclScope scope) {
+    this.aclScope = scope;
+    return this;
+  }
+
   /**
    * Scope of ozone acl.
    * */

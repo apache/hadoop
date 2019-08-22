@@ -363,7 +363,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, String.class}, new RemoteParam(),
         clientName);
     Object result = rpcClient.invokeSequential(
-        locations, method, Boolean.class, Boolean.TRUE);
+        locations, method, Boolean.class, null);
     return (boolean) result;
   }
 
@@ -1681,8 +1681,13 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+
+    RemoteMethod method = new RemoteMethod("getReplicatedBlockStats");
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, ReplicatedBlockStats> ret = rpcClient
+        .invokeConcurrent(nss, method, true, false, ReplicatedBlockStats.class);
+    return ReplicatedBlockStats.merge(ret.values());
   }
 
   @Deprecated
@@ -1932,7 +1937,12 @@ public class RouterClientProtocol implements ClientProtocol {
         owner = ugi.getUserName();
         group = ugi.getPrimaryGroupName();
       } catch (IOException e) {
-        LOG.error("Cannot get remote user: {}", e.getMessage());
+        String msg = "Cannot get remote user: " + e.getMessage();
+        if (UserGroupInformation.isSecurityEnabled()) {
+          LOG.error(msg);
+        } else {
+          LOG.debug(msg);
+        }
       }
     }
     long inodeId = 0;

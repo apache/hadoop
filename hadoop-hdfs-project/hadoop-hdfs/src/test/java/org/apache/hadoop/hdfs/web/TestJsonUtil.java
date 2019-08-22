@@ -21,6 +21,8 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
@@ -105,6 +108,48 @@ public class TestJsonUtil {
     Assert.assertEquals(status.getErasureCodingPolicy(),
         s2.getErasureCodingPolicy());
     Assert.assertEquals(fstatus, fs2);
+  }
+
+  /**
+   * Verify isSymlink when symlink ie empty.
+   */
+  @Test
+  public void testHdfsFileStatus() throws Exception {
+    HdfsFileStatus hdfsFileStatus = new HdfsFileStatus.Builder()
+        .replication(1)
+        .blocksize(1024)
+        .perm(new FsPermission((short) 777))
+        .owner("owner")
+        .group("group")
+        .symlink(new byte[0])
+        .path(new byte[0])
+        .fileId(1010)
+        .isdir(true)
+        .build();
+
+    assertFalse(hdfsFileStatus.isSymlink());
+    LambdaTestUtils.intercept(IOException.class,
+        "Path " + hdfsFileStatus.getPath() + " is not a symbolic link",
+        () -> hdfsFileStatus.getSymlink());
+
+    String expectString = new StringBuilder()
+        .append("HdfsLocatedFileStatus")
+        .append("{")
+        .append("path=" + null)
+        .append("; isDirectory=" + true)
+        .append("; modification_time=" + 0)
+        .append("; access_time=" + 0)
+        .append("; owner=" + "owner")
+        .append("; group=" + "group")
+        .append("; permission=" + "r----x--t")
+        .append("; isSymlink=" + false)
+        .append("; hasAcl=" + false)
+        .append("; isEncrypted=" + false)
+        .append("; isErasureCoded=" + false)
+        .append("}")
+        .toString();
+
+    assertEquals(expectString, hdfsFileStatus.toString());
   }
 
   @Test

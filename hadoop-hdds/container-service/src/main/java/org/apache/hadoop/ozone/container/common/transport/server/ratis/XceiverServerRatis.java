@@ -44,7 +44,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 
 import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
@@ -609,6 +609,15 @@ public final class XceiverServerRatis extends XceiverServer {
     handlePipelineFailure(groupId, roleInfoProto);
   }
 
+  void handleApplyTransactionFailure(RaftGroupId groupId,
+      RaftProtos.RaftPeerRole role) {
+    UUID dnId = RatisHelper.toDatanodeId(getServer().getId());
+    String msg =
+        "Ratis Transaction failure in datanode " + dnId + " with role " + role
+            + " .Triggering pipeline close action.";
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.STATEMACHINE_TRANSACTION_FAILED, true);
+  }
   /**
    * The fact that the snapshot contents cannot be used to actually catch up
    * the follower, it is the reason to initiate close pipeline and

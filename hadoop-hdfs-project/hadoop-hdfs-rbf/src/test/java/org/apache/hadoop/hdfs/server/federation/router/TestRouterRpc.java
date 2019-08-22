@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -86,11 +87,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -1378,6 +1382,46 @@ public class TestRouterRpc {
         "Parent directory doesn't exist: /ns1/a/a/b",
         RouterRpcClient.processExceptionMsg(
             "Parent directory doesn't exist: /a/a/b", "/a", "/ns1/a"));
+  }
+
+  /**
+   * Create a file for each NameSpace, then find their 1st block and mark one of
+   * the replica as corrupt through BlockManager#findAndMarkBlockAsCorrupt.
+   *
+   * After all NameNode received the corrupt replica report, the
+   * replicatedBlockStats.getCorruptBlocks() should equal to the sum of
+   * corruptBlocks of all NameSpaces.
+   */
+  @Test
+  public void testGetReplicatedBlockStats() throws Exception {
+    String testFile = "/test-file";
+    for (String nsid : cluster.getNameservices()) {
+      NamenodeContext context = cluster.getNamenode(nsid, null);
+      NameNode nameNode = context.getNamenode();
+      FSNamesystem namesystem = nameNode.getNamesystem();
+      BlockManager bm = namesystem.getBlockManager();
+      FileSystem fileSystem = context.getFileSystem();
+
+      // create a test file
+      createFile(fileSystem, testFile, 1024);
+      // mark a replica as corrupt
+      LocatedBlock block = NameNodeAdapter
+          .getBlockLocations(nameNode, testFile, 0, 1024).get(0);
+      namesystem.writeLock();
+      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+          "STORAGE_ID", "TEST");
+      namesystem.writeUnlock();
+      BlockManagerTestUtil.updateState(bm);
+      DFSTestUtil.waitCorruptReplicas(fileSystem, namesystem,
+          new Path(testFile), block.getBlock(), 1);
+      // save the getReplicatedBlockStats result
+      ReplicatedBlockStats stats =
+          context.getClient().getNamenode().getReplicatedBlockStats();
+      assertEquals(1, stats.getCorruptBlocks());
+    }
+    ReplicatedBlockStats routerStat = routerProtocol.getReplicatedBlockStats();
+    assertEquals("There should be 1 corrupt blocks for each NN",
+        cluster.getNameservices().size(), routerStat.getCorruptBlocks());
   }
 
   @Test

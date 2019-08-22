@@ -394,18 +394,20 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     DBUpdatesWrapper dbUpdatesWrapper =
         impl.getDBUpdates(dbUpdatesRequest);
     for (int i = 0; i < dbUpdatesWrapper.getData().size(); i++) {
-      builder.setData(i,
-          OMPBHelper.getByteString(dbUpdatesWrapper.getData().get(i)));
+      builder.addData(OMPBHelper.getByteString(
+          dbUpdatesWrapper.getData().get(i)));
     }
+    builder.setSequenceNumber(dbUpdatesWrapper.getCurrentSequenceNumber());
     return builder.build();
   }
 
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
     List<OzoneAclInfo> acls = new ArrayList<>();
-
     List<OzoneAcl> aclList =
         impl.getAcl(OzoneObjInfo.fromProtobuf(req.getObj()));
-    aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    if (aclList != null) {
+      aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    }
     return GetAclResponse.newBuilder().addAllAcls(acls).build();
   }
 

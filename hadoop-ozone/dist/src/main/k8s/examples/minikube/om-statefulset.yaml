@@ -54,12 +54,12 @@ spec:
           tcpSocket:
             port: 9862
           initialDelaySeconds: 30
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       volumes:
       - name: data
         emptyDir: {}

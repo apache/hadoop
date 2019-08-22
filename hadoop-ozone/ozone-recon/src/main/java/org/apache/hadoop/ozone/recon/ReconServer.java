@@ -18,26 +18,15 @@
 
 package org.apache.hadoop.ozone.recon;
 
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT;
-
-import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
-import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
-import org.apache.hadoop.ozone.recon.tasks.FileSizeCountTask;
 import org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
-import org.jooq.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,13 +58,15 @@ public class ReconServer extends GenericCli {
     ConfigurationProvider.setConfiguration(ozoneConfiguration);
 
     injector =  Guice.createInjector(new
-        ReconControllerModule(), new ReconRestServletModule() {
+        ReconControllerModule(),
+        new ReconRestServletModule() {
           @Override
           protected void configureServlets() {
             rest("/api/*")
               .packages("org.apache.hadoop.ozone.recon.api");
           }
-        });
+        },
+        new ReconTaskBindingModule());
 
     //Pass on injector to listener that does the Guice - Jersey HK2 bridging.
     ReconGuiceServletContextListener.setInjector(injector);
@@ -95,14 +86,20 @@ public class ReconServer extends GenericCli {
       reconInternalSchemaDefinition.initializeSchema();
 
       LOG.info("Recon server initialized successfully!");
+
+      httpServer = injector.getInstance(ReconHttpServer.class);
+      LOG.info("Starting Recon server");
+      httpServer.start();
+
+      //Start Ozone Manager Service that pulls data from OM.
+      OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
+          .getInstance(OzoneManagerServiceProvider.class);
+      ozoneManagerServiceProvider.start();
     } catch (Exception e) {
       LOG.error("Error during initializing Recon server.", e);
+      stop();
     }
 
-    httpServer = injector.getInstance(ReconHttpServer.class);
-    LOG.info("Starting Recon server");
-    httpServer.start();
-    scheduleReconTasks();
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
         stop();
@@ -111,52 +108,6 @@ public class ReconServer extends GenericCli {
       }
     }));
     return null;
-  }
-
-  /**
-   * Schedule the tasks that is required by Recon to keep its metadata up to
-   * date.
-   */
-  private void scheduleReconTasks() {
-    OzoneConfiguration configuration = injector.getInstance(
-        OzoneConfiguration.class);
-    ContainerDBServiceProvider containerDBServiceProvider = injector
-        .getInstance(ContainerDBServiceProvider.class);
-    OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
-        .getInstance(OzoneManagerServiceProvider.class);
-    Configuration sqlConfiguration = injector.getInstance(Configuration.class);
-    long initialDelay = configuration.getTimeDuration(
-        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY,
-        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    long interval = configuration.getTimeDuration(
-        RECON_OM_SNAPSHOT_TASK_INTERVAL,
-        RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
-
-
-    scheduler.scheduleWithFixedDelay(() -> {
-      try {
-        ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot();
-        // Schedule the task to read OM DB and write the reverse mapping to
-        // Recon container DB.
-        ContainerKeyMapperTask containerKeyMapperTask =
-            new ContainerKeyMapperTask(containerDBServiceProvider,
-                ozoneManagerServiceProvider.getOMMetadataManagerInstance());
-        containerKeyMapperTask.reprocess(
-            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
-        FileSizeCountTask fileSizeCountTask = new
-            FileSizeCountTask(
-                ozoneManagerServiceProvider.getOMMetadataManagerInstance(),
-            sqlConfiguration);
-        fileSizeCountTask.reprocess(
-            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
-
-      } catch (IOException e) {
-        LOG.error("Unable to get OM " +
-            "Snapshot", e);
-      }
-    }, initialDelay, interval, TimeUnit.MILLISECONDS);
   }
 
   void stop() throws Exception {

@@ -123,5 +123,6 @@ public class SLSConfiguration {
   public static final String TASK_TYPE = TASK_CONTAINER + "type";
   public static final String TASK_EXECUTION_TYPE = TASK_CONTAINER
       + "execution.type";
-
+  public static final String TASK_ALLOCATION_ID = TASK_CONTAINER
+      + "allocation.id";
 }

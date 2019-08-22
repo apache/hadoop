@@ -251,12 +251,28 @@ public class OzoneDelegationTokenSecretManager
     }
 
     long renewTime = Math.min(id.getMaxDate(), now + getTokenRenewInterval());
-    try {
-      addToTokenStore(id, token.getPassword(),  renewTime);
-    } catch (IOException e) {
-      LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+
+    // For HA ratis will take care of updating.
+    // This will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        addToTokenStore(id, token.getPassword(), renewTime);
+      } catch (IOException e) {
+        LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+      }
     }
     return renewTime;
+  }
+
+  public void updateRenewToken(Token<OzoneTokenIdentifier> token,
+      OzoneTokenIdentifier ozoneTokenIdentifier, long expiryTime) {
+    //TODO: Instead of having in-memory map inside this class, we can use
+    // cache from table and make this table cache clean up policy NEVER. In
+    // this way, we don't need to maintain seperate in-memory map. To do this
+    // work we need to merge HA/Non-HA code.
+    TokenInfo tokenInfo = new TokenInfo(expiryTime, token.getPassword(),
+        ozoneTokenIdentifier.getTrackingId());
+    currentTokens.put(ozoneTokenIdentifier, tokenInfo);
   }
 
   /**
@@ -287,16 +303,38 @@ public class OzoneDelegationTokenSecretManager
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token " + formatTokenId(id));
     }
-    try {
-      store.removeToken(id);
-    } catch (IOException e) {
-      LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
-    }
-    TokenInfo info = currentTokens.remove(id);
-    if (info == null) {
-      throw new InvalidToken("Token not found " + formatTokenId(id));
+
+    // For HA ratis will take care of removal.
+    // This check will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        store.removeToken(id);
+      } catch (IOException e) {
+        LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
+      }
+      TokenInfo info = currentTokens.remove(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found " + formatTokenId(id));
+      }
+    } else {
+      // Check whether token is there in-memory map of tokens or not on the
+      // OM leader.
+      TokenInfo info = currentTokens.get(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found in-memory map of tokens" +
+            formatTokenId(id));
+      }
     }
     return id;
+  }
+
+  /**
+   * Remove the expired token from in-memory map.
+   * @param ozoneTokenIdentifier
+   * @throws IOException
+   */
+  public void removeToken(OzoneTokenIdentifier ozoneTokenIdentifier) {
+    currentTokens.remove(ozoneTokenIdentifier);
   }
 
   @Override
