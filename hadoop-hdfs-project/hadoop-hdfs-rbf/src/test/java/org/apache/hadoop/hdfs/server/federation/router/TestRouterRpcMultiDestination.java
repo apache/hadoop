@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -38,6 +39,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -228,6 +231,28 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     String filename1 = testDir1 + "/testrename";
     testRename(getRouterContext(), filename1, renamedFile, false);
     testRename2(getRouterContext(), filename1, renamedFile, false);
+  }
+
+  /**
+   * Test recoverLease when the result is false.
+   */
+  @Test
+  public void testRecoverLease() throws Exception {
+    Path testPath = new Path("/recovery/test_recovery_lease");
+    DistributedFileSystem routerFs =
+        (DistributedFileSystem) getRouterFileSystem();
+    FSDataOutputStream fsDataOutputStream = null;
+    try {
+      fsDataOutputStream = routerFs.create(testPath);
+      fsDataOutputStream.write("hello world".getBytes());
+      fsDataOutputStream.hflush();
+
+      boolean result = routerFs.recoverLease(testPath);
+      assertFalse(result);
+    } finally {
+      IOUtils.closeStream(fsDataOutputStream);
+      routerFs.delete(testPath, true);
+    }
   }
 
   @Test
