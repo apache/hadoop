@@ -92,10 +92,11 @@ public class S3ARetryPolicy implements RetryPolicy {
 
   // Retry policies for mapping exceptions to
 
-  /** Base policy from configuration. */
-  protected final RetryPolicy defaultRetries;
+  /** Exponential policy for the base of normal failures. */
+  protected final RetryPolicy baseExponentialRetry;
 
-  /** Rejection of all non-idempotent calls except specific failures. */
+  /** Idempotent calls which raise IOEs are retried.
+   *  */
   protected final RetryPolicy retryIdempotentCalls;
 
   /** Policy for throttle requests, which are considered repeatable, even for
@@ -105,7 +106,10 @@ public class S3ARetryPolicy implements RetryPolicy {
   /** No retry on network and tangible API issues. */
   protected final RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
 
-  /** Client connectivity: fixed retries without care for idempotency. */
+  /**
+   * Client connectivity: baseExponentialRetry without worrying about whether
+   * or not the command is idempotent.
+   */
   protected final RetryPolicy connectivityFailure;
 
   /**
@@ -121,7 +125,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     long interval = conf.getTimeDuration(RETRY_INTERVAL,
         RETRY_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    defaultRetries = exponentialBackoffRetry(
+    baseExponentialRetry = exponentialBackoffRetry(
         limit,
         interval,
         TimeUnit.MILLISECONDS);
@@ -129,10 +133,11 @@ public class S3ARetryPolicy implements RetryPolicy {
     LOG.debug("Retrying on recoverable AWS failures {} times with an"
         + " initial interval of {}ms", limit, interval);
 
-    // which is wrapped by a rejection of all non-idempotent calls except
-    // for specific failures.
+    // which is wrapped by a rejection of failures of non-idempotent calls except
+    // for specific exceptions considered recoverable.
+    // idempotent calls are retried on IOEs but not other exceptions
     retryIdempotentCalls = new FailNonIOEs(
-        new IdempotencyRetryFilter(defaultRetries));
+        new IdempotencyRetryFilter(baseExponentialRetry));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
@@ -140,7 +145,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     throttlePolicy = createThrottleRetryPolicy(conf);
 
     // client connectivity: fixed retries without care for idempotency
-    connectivityFailure = defaultRetries;
+    connectivityFailure = baseExponentialRetry;
 
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();

@@ -30,6 +30,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,7 +61,11 @@ import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
  * a source and resolved target.  Sources are resolved as children of
  * a destination directory.
  */
-abstract class CommandWithDestination extends FsCommand {  
+abstract class CommandWithDestination extends FsCommand {
+
+  protected static final Logger LOG = LoggerFactory.getLogger(
+      CommandWithDestination.class);
+
   protected PathData dst;
   private boolean overwrite = false;
   private boolean verifyChecksum = true;
@@ -220,6 +227,7 @@ abstract class CommandWithDestination extends FsCommand {
       }
     } else if (dst.exists) {
       if (!dst.stat.isDirectory() && !overwrite) {
+        LOG.debug("Destination file exists: {}", dst.stat);
         throw new PathExistsException(dst.toString());
       }
     } else if (!dst.parentExists()) {
