@@ -162,7 +162,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
     OMClientResponse omClientResponse = null;
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName, false);
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       acquireLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);

@@ -105,7 +105,7 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     OMClientResponse omClientResponse = null;
     try {
-
+      // TODO to support S3 ACL later.
       acquiredS3Lock = omMetadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
           s3BucketName);
 

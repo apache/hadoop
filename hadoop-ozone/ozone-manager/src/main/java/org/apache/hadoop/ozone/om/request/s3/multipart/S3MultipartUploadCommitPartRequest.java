@@ -109,7 +109,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
     String multipartKey = null;
     OmMultipartKeyInfo multipartKeyInfo = null;
     try {
-
+      // TODO to support S3 ACL later.
       acquiredLock =
           omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
               bucketName);

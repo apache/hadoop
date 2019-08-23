@@ -109,7 +109,7 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
     OMClientResponse omClientResponse = null;
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName, true);
+      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName);
 
       String objectKey = omMetadataManager.getOzoneKey(
           volumeName, bucketName, keyName);

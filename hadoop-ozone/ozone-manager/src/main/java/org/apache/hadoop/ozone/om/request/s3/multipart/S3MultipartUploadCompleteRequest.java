@@ -105,7 +105,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
     IOException exception = null;
     OmMultipartUploadList multipartUploadList = null;
     try {
-
+      // TODO to support S3 ACL later.
       TreeMap<Integer, String> partsMap = new TreeMap<>();
       for (OzoneManagerProtocolProtos.Part part : partsList) {
         partsMap.put(part.getPartNumber(), part.getPartName());

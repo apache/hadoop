@@ -118,7 +118,7 @@ public class OMKeyRenameRequest extends OMKeyRequest {
             OMException.ResultCodes.INVALID_KEY_NAME);
       }
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, fromKeyName, true);
+      checkKeyAcls(ozoneManager, volumeName, bucketName, fromKeyName);
 
       acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);

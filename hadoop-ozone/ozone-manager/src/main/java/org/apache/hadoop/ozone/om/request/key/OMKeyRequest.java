@@ -498,29 +498,37 @@ public abstract class OMKeyRequest extends OMClientRequest {
   }
 
   /**
-   * Check Acls for the ozone object.
+   * Check Acls for the ozone bucket.
    * @param ozoneManager
    * @param volume
    * @param bucket
    * @param key
-   * @param checkKeyAccess
+   * @throws IOException
+   */
+  protected void checkBucketAcls(OzoneManager ozoneManager, String volume,
+      String bucket, String key) throws IOException {
+    if (ozoneManager.getAclsEnabled()) {
+      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+          OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+          volume, bucket, key);
+    }
+  }
+
+
+  /**
+   * Check Acls for the ozone key.
+   * @param ozoneManager
+   * @param volume
+   * @param bucket
+   * @param key
    * @throws IOException
    */
   protected void checkKeyAcls(OzoneManager ozoneManager, String volume,
-      String bucket, String key, boolean checkKeyAccess) throws IOException {
+      String bucket, String key) throws IOException {
     if (ozoneManager.getAclsEnabled()) {
-      // If checkKeyAccess is check only acls for KEY.
-      // As for Key Create/Commit/Allocate Block the entry for key will not
-      // be in Key table.
-      if (checkKeyAccess) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volume, bucket, key);
-      } else {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volume, bucket, key);
-      }
+      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+          OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+          volume, bucket, key);
     }
   }
 

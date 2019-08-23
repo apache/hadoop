@@ -96,7 +96,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
         .setSuccess(true);
     OMClientResponse omClientResponse = null;
     try {
-
+      // TODO to support S3 ACL later.
       acquiredLock =
           omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
               bucketName);

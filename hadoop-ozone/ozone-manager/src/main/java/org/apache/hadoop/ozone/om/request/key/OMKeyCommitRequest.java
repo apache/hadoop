@@ -115,7 +115,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName, false);
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
           .getKeyLocationsList().stream()

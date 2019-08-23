@@ -169,7 +169,7 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
     OmKeyInfo omKeyInfo = null;
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName, false);
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
       validateBucketAndVolume(omMetadataManager, volumeName,
