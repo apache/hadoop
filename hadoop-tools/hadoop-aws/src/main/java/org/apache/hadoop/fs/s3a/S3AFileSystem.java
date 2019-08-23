@@ -96,6 +96,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
+import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -115,7 +116,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -245,8 +245,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Principal who created the FS; recorded during initialization. */
   private UserGroupInformation owner;
 
-  // The maximum number of entries that can be deleted in any call to s3
-  private static final int MAX_ENTRIES_TO_DELETE = 1000;
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
@@ -2199,7 +2197,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       entryPoint(INVOCATION_DELETE);
-      boolean outcome = innerDelete(innerGetFileStatus(f, true), recursive);
+      boolean outcome = new DeleteOperation(
+          createStoreContext(),
+          innerGetFileStatus(f, true),
+          recursive,
+          new DeleteOperationCallbacksImpl()).execute();
       if (outcome) {
         try {
           maybeCreateFakeParentDirectory(f);
@@ -2220,125 +2222,45 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Delete an object. See {@link #delete(Path, boolean)}.
-   * This call does not create any fake parent directory; that is
-   * left to the caller.
-   * @param status fileStatus object
-   * @param recursive if path is a directory and set to
-   * true, the directory is deleted else throws an exception. In
-   * case of a file the recursive can be set to either true or false.
-   * @return true, except in the corner cases of root directory deletion
-   * @throws IOException due to inability to delete a directory or file.
-   * @throws AmazonClientException on failures inside the AWS SDK
+   * All the callbacks used in deletions.
    */
-  @Retries.RetryMixed
-  private boolean innerDelete(S3AFileStatus status, boolean recursive)
-      throws IOException, AmazonClientException {
-    Path f = status.getPath();
-    LOG.debug("Delete path {} - recursive {}", f, recursive);
-    LOG.debug("Type = {}",
-        status.isFile() ? "File"
-            : (status.isEmptyDirectory() == Tristate.TRUE
-                ? "Empty Directory"
-                : "Directory"));
+  private class DeleteOperationCallbacksImpl implements
+      DeleteOperation.DeleteOperationCallbacks {
 
-    String key = pathToKey(f);
-
-    if (status.isDirectory()) {
-      LOG.debug("delete: Path is a directory: {}", f);
-      Preconditions.checkArgument(
-          status.isEmptyDirectory() != Tristate.UNKNOWN,
-          "File status must have directory emptiness computed");
-
-      if (!key.endsWith("/")) {
-        key = key + "/";
-      }
-
-      if (key.equals("/")) {
-        return rejectRootDirectoryDelete(status, recursive);
-      }
-
-      if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
-        throw new PathIsNotEmptyDirectoryException(f.toString());
-      }
-      if (status.isEmptyDirectory() == Tristate.TRUE) {
-        LOG.debug("Deleting fake empty directory {}", key);
-        deleteObjectAtPath(f, key, false);
-      } else {
-        // Directory delete: combine paginated list of files with single or
-        // multiple object delete calls.
-        // create an operation state so that the store can manage the bulk
-        // operation if it needs to.
-        try (BulkOperationState operationState = S3Guard.initiateBulkWrite(
-            metadataStore,
-            BulkOperationState.OperationType.Delete,
-            f)) {
-          LOG.debug("Getting objects for directory prefix {} to delete", key);
-
-          S3ListRequest request = createListObjectsRequest(key, null);
-
-          S3ListResult objects = listObjects(request);
-          List<DeleteObjectsRequest.KeyVersion> keys =
-              new ArrayList<>(objects.getObjectSummaries().size());
-          List<Path> paths =new ArrayList<>(objects.getObjectSummaries().size());
-          while (true) {
-            for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-              String k = summary.getKey();
-              keys.add(new DeleteObjectsRequest.KeyVersion(k));
-              paths.add(keyToQualifiedPath(k));
-              LOG.debug("Got object to delete {}", k);
-
-              if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-                // delete a single page of keys
-                removeKeys(keys, false, operationState);
-                metadataStore.deletePaths(paths, operationState);
-                keys.clear();
-                paths.clear();
-              }
-            }
-
-            if (objects.isTruncated()) {
-              // continue the listing
-              objects = continueListObjects(request, objects);
-            } else {
-              // there is no more data: delete the final set of entries.
-              removeKeys(keys, false, operationState);
-              // don't bother with updating the parents as
-              // deleteSubtree will do this.
-              //
-              // Do: break out of the while() loop
-              break;
-            }
-          }
-          try (DurationInfo ignored =
-                   new DurationInfo(LOG, false, "Delete metastore")) {
-            metadataStore.deleteSubtree(f, operationState);
-          }
-        }
-      }
-
-    } else {
-      LOG.debug("delete: Path is a file: {}", key);
-      deleteObjectAtPath(f, key, true);
+    @Override
+    public S3ListRequest createListObjectsRequest(final String key,
+        final String delimiter) {
+      return S3AFileSystem.this.createListObjectsRequest(key,delimiter);
     }
 
-    return true;
-  }
+    @Override
+    public void deleteObjectAtPath(final Path path,
+        final String key,
+        final boolean isFile)
+        throws AmazonClientException, IOException {
+      S3AFileSystem.this.deleteObjectAtPath(path, key, isFile);
+    }
 
-  /**
-   * Implements the specific logic to reject root directory deletion.
-   * The caller must return the result of this call, rather than
-   * attempt to continue with the delete operation: deleting root
-   * directories is never allowed.
-   * @param status filesystem status
-   * @param recursive recursive flag from command
-   * @return a return code for the operation
-   */
-  private boolean rejectRootDirectoryDelete(S3AFileStatus status,
-      boolean recursive) {
-    LOG.error("S3A: Cannot delete the {} root directory. Path: {}. Recursive: "
-            + "{}", bucket, status.getPath(), recursive);
-    return false;
+    @Override
+    public S3ListResult listObjects(final S3ListRequest request)
+        throws IOException {
+      return S3AFileSystem.this.listObjects(request);
+    }
+
+    @Override
+    public S3ListResult continueListObjects(final S3ListRequest request,
+        final S3ListResult prevResult) throws IOException {
+      return S3AFileSystem.this.continueListObjects(request,
+          prevResult);
+    }
+
+    @Override
+    public void removeKeys(final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+        final boolean deleteFakeDir,
+        final BulkOperationState operationState)
+        throws MultiObjectDeleteException, AmazonClientException, IOException {
+      S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir, operationState);
+    }
   }
 
   /**

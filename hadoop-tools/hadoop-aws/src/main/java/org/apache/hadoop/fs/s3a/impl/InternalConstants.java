@@ -57,4 +57,5 @@ public final class InternalConstants {
    * Default blocksize as used in blocksize and FS status queries: {@value}.
    */
   public static final int DEFAULT_BLOCKSIZE = 32 * 1024 * 1024;
+
 }
