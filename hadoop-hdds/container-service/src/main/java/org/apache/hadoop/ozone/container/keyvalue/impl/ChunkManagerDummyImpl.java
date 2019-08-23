@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.container.keyvalue.impl;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -28,23 +27,23 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.Dispatche
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.*;
 
-public class ChunkManagerNullImpl extends ChunkManagerImpl {
-  static final Logger LOG = LoggerFactory.getLogger(ChunkManagerNullImpl.class);
+/**
+ * Implementation of ChunkManager built for running performance tests.
+ * Chunks are not written to disk, Reads are returned with zero-filled buffers
+ */
+public class ChunkManagerDummyImpl extends ChunkManagerImpl {
+  static final Logger LOG = LoggerFactory.getLogger(ChunkManagerDummyImpl.class);
 
-  public ChunkManagerNullImpl(boolean sync) {
+  public ChunkManagerDummyImpl(boolean sync) {
     super(sync);
   }
 
@@ -70,7 +69,8 @@ public class ChunkManagerNullImpl extends ChunkManagerImpl {
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
     try {
-      KeyValueContainerData containerData = (KeyValueContainerData) container.getContainerData();
+      KeyValueContainerData containerData =
+          (KeyValueContainerData) container.getContainerData();
       HddsVolume volume = containerData.getVolume();
       VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
       int bufferSize;
@@ -79,8 +79,8 @@ public class ChunkManagerNullImpl extends ChunkManagerImpl {
       case WRITE_DATA:
         bufferSize = data.capacity();
         if (bufferSize != info.getLen()) {
-          String err = String.format("data array does not match the length " +
-                  "specified. DataLen: %d Byte Array: %d",
+          String err = String.format("data array does not match the length "
+                  + "specified. DataLen: %d Byte Array: %d",
               info.getLen(), bufferSize);
           log.error(err);
           throw new StorageContainerException(err, INVALID_WRITE_SIZE);
@@ -141,7 +141,7 @@ public class ChunkManagerNullImpl extends ChunkManagerImpl {
   }
 
   /**
-   * Delete a given chunk - Do nothing except stats
+   * Delete a given chunk - Do nothing except stats.
    *
    * @param container - Container for the chunk
    * @param blockID - ID of the block
@@ -151,7 +151,8 @@ public class ChunkManagerNullImpl extends ChunkManagerImpl {
   public void deleteChunk(Container container, BlockID blockID,
       ChunkInfo info) {
     Preconditions.checkNotNull(blockID, "Block ID cannot be null.");
-    KeyValueContainerData containerData = (KeyValueContainerData) container.getContainerData();
+    KeyValueContainerData containerData =
+        (KeyValueContainerData) container.getContainerData();
 
     if (info.getOffset() == 0) {
       containerData.decrBytesUsed(info.getLen());

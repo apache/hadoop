@@ -252,10 +252,11 @@ public final class RandomKeyGenerator implements Callable<Void> {
   @Override
   public Void call() throws Exception {
     if (ozoneConfiguration != null) {
-      if (ozoneConfiguration.getBoolean(HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA,
-          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT) == false) {
+      if (!ozoneConfiguration.getBoolean(
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA,
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT)) {
         LOG.info("Override validateWrites to false, because "
-        + HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA + " is set to false.");
+            + HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA + " is set to false.");
         validateWrites = false;
       }
       init(ozoneConfiguration);

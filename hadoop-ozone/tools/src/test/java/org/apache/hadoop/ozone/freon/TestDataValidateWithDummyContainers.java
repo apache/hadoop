@@ -27,7 +27,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestDataValidateWithNonPersistentContainers extends TestDataValidate {
+public class TestDataValidateWithDummyContainers
+    extends TestDataValidate {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDataValidate.class);
   /**

@@ -82,7 +82,7 @@ public final class ChunkManagerFactory {
       LOG.warn(HDDS_CONTAINER_PERSISTDATA
           + " is set to false. This should be used only for testing."
           + " All user data will be discarded.");
-      manager = new ChunkManagerNullImpl(sync);
+      manager = new ChunkManagerDummyImpl(sync);
     }
 
     return manager;
