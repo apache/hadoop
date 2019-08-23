@@ -114,7 +114,7 @@ public class TestOzoneManagerSnapshotProvider {
     DBCheckpoint omSnapshot = followerOM.getOmSnapshotProvider()
         .getOzoneManagerDBSnapshot(leaderOMNodeId);
 
-    long leaderSnapshotIndex = ozoneManager.loadRatisSnapshotIndex();
+    long leaderSnapshotIndex = ozoneManager.getRatisSnapshotIndex();
     long downloadedSnapshotIndex = omSnapshot.getRatisSnapshotIndex();
 
     // The snapshot index downloaded from leader OM should match the ratis

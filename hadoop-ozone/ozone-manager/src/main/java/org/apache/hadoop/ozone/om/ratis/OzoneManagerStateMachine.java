@@ -28,8 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.ozone.container.common.transport.server.ratis
-    .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
@@ -48,6 +46,7 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.RaftStorage;
+import org.apache.ratis.statemachine.SnapshotInfo;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
@@ -64,26 +63,33 @@ import org.slf4j.LoggerFactory;
 public class OzoneManagerStateMachine extends BaseStateMachine {
 
   static final Logger LOG =
-      LoggerFactory.getLogger(ContainerStateMachine.class);
+      LoggerFactory.getLogger(OzoneManagerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
   private final OzoneManager ozoneManager;
   private OzoneManagerHARequestHandler handler;
   private RaftGroupId raftGroupId;
-  private long lastAppliedIndex = 0;
+  private long lastAppliedIndex;
   private OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
+  private final OMRatisSnapshotInfo snapshotInfo;
   private final ExecutorService executorService;
   private final ExecutorService installSnapshotExecutor;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
+
+    this.snapshotInfo = ozoneManager.getSnapshotInfo();
+    updateLastAppliedIndexWithSnaphsotIndex();
+
     this.ozoneManagerDoubleBuffer =
         new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
             this::updateLastAppliedIndex);
+
     this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
         ozoneManagerDoubleBuffer);
+
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("OM StateMachine ApplyTransaction Thread - %d").build();
     this.executorService = HadoopExecutors.newSingleThreadExecutor(build);
@@ -101,6 +107,29 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       this.raftGroupId = id;
       storage.init(raftStorage);
     });
+  }
+
+  @Override
+  public SnapshotInfo getLatestSnapshot() {
+    return snapshotInfo;
+  }
+
+  /**
+   * Called to notify state machine about indexes which are processed
+   * internally by Raft Server, this currently happens when conf entries are
+   * processed in raft Server. This keep state machine to keep a track of index
+   * updates.
+   * @param term term of the current log entry
+   * @param index index which is being updated
+   */
+  @Override
+  public void notifyIndexUpdate(long term, long index) {
+    // SnapshotInfo should be updated when the term changes.
+    // The index here refers to the log entry index and the index in
+    // SnapshotInfo represents the snapshotIndex i.e. the index of the last
+    // transaction included in the snapshot. Hence, snaphsotInfo#index is not
+    // updated here.
+    snapshotInfo.updateTerm(term);
   }
 
   /**
@@ -224,7 +253,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     LOG.info("Saving Ratis snapshot on the OM.");
     if (ozoneManager != null) {
-      return ozoneManager.saveRatisSnapshot(true);
+      return ozoneManager.saveRatisSnapshot();
     }
     return 0;
   }
@@ -303,6 +332,10 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   @SuppressWarnings("HiddenField")
   public void updateLastAppliedIndex(long lastAppliedIndex) {
     this.lastAppliedIndex = lastAppliedIndex;
+  }
+
+  public void updateLastAppliedIndexWithSnaphsotIndex() {
+    this.lastAppliedIndex = snapshotInfo.getIndex();
   }
 
   /**
