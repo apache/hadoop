@@ -95,7 +95,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    doubleBuf.writeOp(op);
+    doubleBuf.writeOp(op, getCurrentLogVersion());
   }
 
   /**
@@ -121,6 +121,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     writeHeader(layoutVersion, doubleBuf.getCurrentBuf());
     setReadyToFlush();
     flush();
+    setCurrentLogVersion(layoutVersion);
   }
 
   /**
