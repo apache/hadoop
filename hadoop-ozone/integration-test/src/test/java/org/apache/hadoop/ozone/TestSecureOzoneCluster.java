@@ -104,6 +104,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.slf4j.event.Level.INFO;
 
 /**
@@ -689,11 +690,11 @@ public final class TestSecureOzoneCluster {
 
       //Creates a secret since it does not exist
       S3SecretValue firstAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //Fetches the secret from db since it was created in previous step
       S3SecretValue secondAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //secret fetched on both attempts must be same
       assertTrue(firstAttempt.getAwsSecret()
@@ -703,6 +704,13 @@ public final class TestSecureOzoneCluster {
       assertTrue(firstAttempt.getAwsAccessKey()
           .equals(secondAttempt.getAwsAccessKey()));
 
+
+      try {
+        omClient.getS3Secret("HADOOP/JOHNDOE");
+        fail("testGetS3Secret failed");
+      } catch (IOException ex) {
+        GenericTestUtils.assertExceptionContains("USER_MISMATCH", ex);
+      }
     } finally {
       if(om != null){
         om.stop();

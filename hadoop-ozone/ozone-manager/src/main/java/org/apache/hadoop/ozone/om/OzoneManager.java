@@ -2683,6 +2683,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * {@inheritDoc}
    */
   public S3SecretValue getS3Secret(String kerberosID) throws IOException{
+    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+
+    // Check whether user name passed is matching with the current user or not.
+    if (!user.getUserName().equals(kerberosID)) {
+      throw new OMException("User mismatch. Requested user name is " +
+          "mismatched " + kerberosID +", with current user " +
+          user.getUserName(), OMException.ResultCodes.USER_MISMATCH);
+    }
     return s3SecretManager.getS3Secret(kerberosID);
   }
 
