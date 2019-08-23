@@ -35,7 +35,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_D
 public final class ChunkManagerFactory {
   static final Logger LOG = LoggerFactory.getLogger(ChunkManagerFactory.class);
 
-  private static ChunkManager instance = null;
+  private static volatile ChunkManager instance = null;
   private static boolean syncChunks = false;
 
   private ChunkManagerFactory() {
@@ -63,7 +63,7 @@ public final class ChunkManagerFactory {
     boolean persist = config.getBoolean(HDDS_CONTAINER_PERSISTDATA,
         HDDS_CONTAINER_PERSISTDATA_DEFAULT);
 
-    if (persist == false) {
+    if (!persist) {
       boolean scrubber = config.getBoolean(
           HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
           HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
@@ -76,11 +76,12 @@ public final class ChunkManagerFactory {
       }
     }
 
-    if (persist == true) {
+    if (persist) {
       manager = new ChunkManagerImpl(sync);
     } else {
       LOG.warn(HDDS_CONTAINER_PERSISTDATA
-          + " is set to false. All user data will be discarded.");
+          + " is set to false. This should be used only for testing."
+          + " All user data will be discarded.");
       manager = new ChunkManagerNullImpl(sync);
     }
 
