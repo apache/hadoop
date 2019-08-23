@@ -35,6 +35,8 @@ public abstract class EditLogOutputStream implements Closeable {
   // these are statistics counters
   private long numSync;        // number of sync(s) to disk
   private long totalTimeSync;  // total time to sync
+  // The version of the current edit log
+  private int currentLogVersion;
 
   public EditLogOutputStream() throws IOException {
     numSync = totalTimeSync = 0;
@@ -146,5 +148,19 @@ public abstract class EditLogOutputStream implements Closeable {
    */
   public String generateReport() {
     return toString();
+  }
+
+  /**
+   * @return The version of the current edit log
+   */
+  public int getCurrentLogVersion() {
+    return currentLogVersion;
+  }
+
+  /**
+   * @param logVersion The version of the current edit log
+   */
+  public void setCurrentLogVersion(int logVersion) {
+    this.currentLogVersion = logVersion;
   }
 }
