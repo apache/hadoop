@@ -66,7 +66,6 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .DFS_CONTAINER_IPC_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -358,7 +357,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   public void startHddsDatanodes() {
     hddsDatanodes.forEach((datanode) -> {
       datanode.setCertificateClient(getCAClient());
-      dnatanode.start();
+      datanode.start();
     });
   }
 
