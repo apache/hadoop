@@ -18,7 +18,11 @@
 package org.apache.hadoop.ozone;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.HashMap;
 
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -65,8 +69,12 @@ public final class TestDataUtil {
   }
 
   public static void createKey(OzoneBucket bucket, String keyName,
-      String content) {
-
+      String content) throws IOException {
+    try (OutputStream stream = bucket
+        .createKey(keyName, content.length(), ReplicationType.STAND_ALONE,
+            ReplicationFactor.ONE, new HashMap<>())) {
+      stream.write(content.getBytes());
+    }
   }
 
   public static String getKey(OzoneBucket bucket, String keyName) {

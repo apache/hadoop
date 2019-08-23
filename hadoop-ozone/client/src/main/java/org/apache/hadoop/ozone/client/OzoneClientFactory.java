@@ -33,16 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory class to create different types of OzoneClients.
- * Based on <code>ozone.client.protocol</code>, it decides which
- * protocol to use for the communication.
- * Default value is
- * <code>org.apache.hadoop.ozone.client.rpc.RpcClient</code>.<br>
- * OzoneClientFactory constructs a proxy using
- * {@link OzoneClientInvocationHandler}
- * and creates OzoneClient instance with it.
- * {@link OzoneClientInvocationHandler} dispatches the call to
- * underlying {@link ClientProtocol} implementation.
+ * Factory class to create OzoneClients.
  */
 public final class OzoneClientFactory {
 
