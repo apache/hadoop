@@ -705,10 +705,12 @@ public class TestMountTableResolver {
     mountTable.removeEntry("/anothertestlocationcache");
   }
 
+  /**
+   * Test if we add a new entry, the cached locations which are children of it
+   * should be invalidate
+   */
   @Test
   public void testInvalidateCache() throws Exception {
-    // Test if we add a new entry, the cached locations which are children of it
-    // should be invalidate
     // Add the entry 1->/ and ensure cache update correctly
     Map<String, String> map1 = getMountTableEntry("1", "/");
     MountTable entry1 = MountTable.newInstance("/", map1);
