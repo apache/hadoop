@@ -53,8 +53,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   private EditsDoubleBuffer doubleBuf;
 
   EditLogBackupOutputStream(NamenodeRegistration bnReg, // backup node
-                            JournalInfo journalInfo) // active name-node
-  throws IOException {
+      JournalInfo journalInfo, int logVersion) // active name-node
+      throws IOException {
     super();
     this.bnRegistration = bnReg;
     this.journalInfo = journalInfo;
@@ -70,11 +70,12 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     }
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
+    setCurrentLogVersion(logVersion);
   }
   
   @Override // EditLogOutputStream
   public void write(FSEditLogOp op) throws IOException {
-    doubleBuf.writeOp(op);
+    doubleBuf.writeOp(op, getCurrentLogVersion());
  }
 
   @Override
@@ -89,6 +90,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   public void create(int layoutVersion) throws IOException {
     assert doubleBuf.isFlushed() : "previous data is not flushed yet";
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
+    setCurrentLogVersion(layoutVersion);
   }
 
   @Override // EditLogOutputStream

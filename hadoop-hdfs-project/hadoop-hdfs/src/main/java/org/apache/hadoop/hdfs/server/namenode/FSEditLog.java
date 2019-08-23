@@ -155,7 +155,9 @@ public class FSEditLog implements LogsPurgeable {
   
   //initialize
   private JournalSet journalSet = null;
-  private EditLogOutputStream editLogStream = null;
+
+  @VisibleForTesting
+  EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
   // All of the threads which update/increment txid are synchronized,
