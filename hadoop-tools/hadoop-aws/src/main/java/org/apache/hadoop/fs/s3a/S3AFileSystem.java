@@ -4085,6 +4085,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return instrumentation.newCommitterStatistics();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
@@ -4092,6 +4093,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     switch (validatePathCapabilityArgs(p, capability)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
+    case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER_OLD:
       // capability depends on FS configuration
       return isMagicCommitEnabled();
 

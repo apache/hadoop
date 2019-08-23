@@ -125,7 +125,7 @@ abstract class AbstractHttpFileSystem extends FileSystem {
     case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
       return true;
     default:
-      return false;
+      return super.hasPathCapability(path, capability);
     }
   }
 

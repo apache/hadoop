@@ -1029,8 +1029,7 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Fail fast on known write capabilities (append, concat),
-   * forward the rest to the viewed FS.
+   * Reject the concat operation; forward the rest to the viewed FS.
    * @param path path to query the capability of.
    * @param capability string to query the stream support for.
    * @return the capability
@@ -1045,6 +1044,7 @@ public class ViewFileSystem extends FileSystem {
       // concat is not supported, as it may be invoked across filesystems.
       return false;
     default:
+      // no break
     }
     // otherwise, check capabilities of mounted FS.
     try {

@@ -48,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
@@ -94,6 +95,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.HdfsKMSUtil;
+import org.apache.hadoop.hdfs.client.DfsPathCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -2090,33 +2092,21 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   /**
-   * This filesystem's capabilities must be in sync with that of HDFS.
-   * @param path path to query the capability of.
-   * @param capability string to query the stream support for.
-   * @return true if a capability is supported.
+   * HDFS client capabilities.
+   * Uses {@link DfsPathCapabilities} to keep in sync with HDFS.
+   * {@inheritDoc}
    */
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    switch (validatePathCapabilityArgs(p, capability)) {
-
-    case CommonPathCapabilities.FS_ACLS:
-    case CommonPathCapabilities.FS_APPEND:
-    case CommonPathCapabilities.FS_CHECKSUMS:
-    case CommonPathCapabilities.FS_CONCAT:
-    case CommonPathCapabilities.FS_PERMISSIONS:
-    case CommonPathCapabilities.FS_SNAPSHOTS:
-    case CommonPathCapabilities.FS_STORAGEPOLICY:
-    case CommonPathCapabilities.FS_XATTRS:
-      return true;
-    case CommonPathCapabilities.FS_SYMLINKS:
-      // there's no checking of the {symlinksEnabled} flag in this class,\
-      // so always return true.
-      return true;
-    default:
-      return super.hasPathCapability(p, capability);
+    Optional<Boolean> cap = DfsPathCapabilities.hasPathCapability(p,
+        capability);
+    if (cap.isPresent()) {
+      return cap.get();
     }
+    return super.hasPathCapability(p, capability);
   }
 
   /**

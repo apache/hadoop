@@ -78,7 +78,7 @@ public final class CommitConstants {
    * Value: {@value}.
    */
   public static final String STREAM_CAPABILITY_MAGIC_OUTPUT
-      = "s3a:magic.output.stream";
+      = "fs.s3a.capability.magic.output.stream";
 
   /**
    * Flag to indicate that a store supports magic committers.
@@ -86,6 +86,24 @@ public final class CommitConstants {
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_MAGIC_COMMITTER
+      = "fs.s3a.capability.magic.committer";
+
+  /**
+   * Flag to indicate whether a stream is a magic output stream;
+   * returned in {@code StreamCapabilities}
+   * Value: {@value}.
+   */
+  @Deprecated
+  public static final String STREAM_CAPABILITY_MAGIC_OUTPUT_OLD
+      = "s3a:magic.output.stream";
+
+  /**
+   * Flag to indicate that a store supports magic committers.
+   * returned in {@code PathCapabilities}
+   * Value: {@value}.
+   */
+  @Deprecated
+  public static final String STORE_CAPABILITY_MAGIC_COMMITTER_OLD
       = "s3a:magic.committer";
 
   /**

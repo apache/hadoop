@@ -68,6 +68,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
+import org.apache.hadoop.hdfs.client.DfsPathCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
@@ -3410,7 +3411,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * HDFS client capabilities.
-   * Keep {@code WebHdfsFileSystem} in sync.
+   * Uses {@link DfsPathCapabilities} to keep {@code WebHdfsFileSystem} in sync.
    * {@inheritDoc}
    */
   @Override
@@ -3418,23 +3419,11 @@ public class DistributedFileSystem extends FileSystem
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    switch (validatePathCapabilityArgs(p, capability)) {
-
-    case CommonPathCapabilities.FS_ACLS:
-    case CommonPathCapabilities.FS_APPEND:
-    case CommonPathCapabilities.FS_CHECKSUMS:
-    case CommonPathCapabilities.FS_CONCAT:
-    case CommonPathCapabilities.FS_LIST_CORRUPT_FILE_BLOCKS:
-    case CommonPathCapabilities.FS_PATHHANDLES:
-    case CommonPathCapabilities.FS_PERMISSIONS:
-    case CommonPathCapabilities.FS_SNAPSHOTS:
-    case CommonPathCapabilities.FS_STORAGEPOLICY:
-    case CommonPathCapabilities.FS_XATTRS:
-      return true;
-    case CommonPathCapabilities.FS_SYMLINKS:
-      return FileSystem.areSymlinksEnabled();
-    default:
-      return super.hasPathCapability(p, capability);
+    Optional<Boolean> cap = DfsPathCapabilities.hasPathCapability(p,
+        capability);
+    if (cap.isPresent()) {
+      return cap.get();
     }
+    return super.hasPathCapability(p, capability);
   }
 }

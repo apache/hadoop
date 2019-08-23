@@ -1373,14 +1373,6 @@ public abstract class AbstractFileSystem implements PathCapabilities {
         new CompletableFuture<>(), () -> open(path, bufferSize));
   }
 
-  /**
-   * Return the base capabilities of the filesystems
-   * may override to declare different behavior.
-   * @param path path to query the capability of.
-   * @param capability string to query the stream support for.
-   * @return true if the capability is supported under that part of the FS.
-   * @throws IOException on failure
-   */
   public boolean hasPathCapability(final Path path,
       final String capability)
       throws IOException {
