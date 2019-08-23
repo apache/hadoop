@@ -20,10 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.LambdaTestUtils;
-
 import org.junit.Test;
 
 import java.io.FileNotFoundException;

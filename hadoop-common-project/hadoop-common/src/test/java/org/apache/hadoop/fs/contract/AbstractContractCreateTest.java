@@ -25,9 +25,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -114,7 +113,6 @@ public abstract class AbstractContractCreateTest extends
    * This test catches some eventual consistency problems that blobstores exhibit,
    * as we are implicitly verifying that updates are consistent. This
    * is why different file lengths and datasets are used
-   * @throws Throwable
    */
   @Test
   public void testOverwriteExistingFile() throws Throwable {
@@ -138,10 +136,6 @@ public abstract class AbstractContractCreateTest extends
     } catch (FileAlreadyExistsException expected) {
       //expected
       handleExpectedException(expected);
-    } catch (FileNotFoundException e) {
-      handleRelaxedException("overwriting a dir with a file ",
-                             "FileAlreadyExistsException",
-                             e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
                              "FileAlreadyExistsException",
@@ -190,10 +184,6 @@ public abstract class AbstractContractCreateTest extends
     } catch (FileAlreadyExistsException expected) {
       //expected
       handleExpectedException(expected);
-    } catch (FileNotFoundException e) {
-      handleRelaxedException("overwriting a dir with a file ",
-                             "FileAlreadyExistsException",
-                             e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
                              "FileAlreadyExistsException",
@@ -337,6 +327,11 @@ public abstract class AbstractContractCreateTest extends
   @Test
   public void testCreateFileUnderFile() throws Throwable {
     describe("Verify that it is forbidden to create file/file");
+    if (isSupported(CREATE_FILE_UNDER_FILE_ALLOWED)) {
+      // object store or some file systems: downgrade to a skip so that the
+      // failure is visible in test results
+      skip("This filesystem supports creating files under files");
+    }
     Path grandparent = methodPath();
     Path parent = new Path(grandparent, "parent");
     expectCreateUnderFileFails(
@@ -348,6 +343,11 @@ public abstract class AbstractContractCreateTest extends
   @Test
   public void testCreateUnderFileSubdir() throws Throwable {
     describe("Verify that it is forbidden to create file/dir/file");
+    if (isSupported(CREATE_FILE_UNDER_FILE_ALLOWED)) {
+      // object store or some file systems: downgrade to a skip so that the
+      // failure is visible in test results
+      skip("This filesystem supports creating files under files");
+    }
     Path grandparent = methodPath();
     Path parent = new Path(grandparent, "parent");
     Path child = new Path(parent, "child");
@@ -393,16 +393,16 @@ public abstract class AbstractContractCreateTest extends
    * Expect that touch() will fail because the parent is a file.
    * @param action action for message
    * @param file filename to create
-   * @param path path under file
-   * @throws Exception
+   * @param descendant path under file
+   * @throws Exception failure
    */
   protected void expectCreateUnderFileFails(String action,
-      Path file, Path path)
+      Path file, Path descendant)
       throws Exception {
-    createFile(path);
+    createFile(file);
     try {
       // create the child
-      createFile(path);
+      createFile(descendant);
     } catch (FileAlreadyExistsException | ParentNotDirectoryException ex) {
       //expected
       handleExpectedException(ex);
@@ -414,12 +414,12 @@ public abstract class AbstractContractCreateTest extends
   }
 
   protected void expectMkdirsUnderFileFails(String action,
-      Path file, Path path)
+      Path file, Path descendant)
       throws Exception {
-    createFile(path);
+    createFile(file);
     try {
       // now mkdirs
-      mkdirs(path);
+      mkdirs(descendant);
     } catch (FileAlreadyExistsException | ParentNotDirectoryException ex) {
       //expected
       handleExpectedException(ex);
