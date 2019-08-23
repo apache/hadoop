@@ -281,9 +281,9 @@
             <exclude>webapps/static/angular-1.6.4.min.js</exclude>
             <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>webapps/static/angular-route-1.6.4.min.js</exclude>
-            <exclude>webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>webapps/static/jquery-3.3.1.min.js</exclude>
+            <exclude>webapps/static/jquery-3.4.1.min.js</exclude>
             <exclude>webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css</exclude>
