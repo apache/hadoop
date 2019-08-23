@@ -73,6 +73,7 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.RatisHelper;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.impl.RaftServerImpl;
 import org.apache.ratis.server.impl.RaftServerProxy;
@@ -873,13 +874,33 @@ public final class ContainerTestHelper {
 
   public static StateMachine getStateMachine(MiniOzoneCluster cluster)
       throws Exception {
-    XceiverServerSpi server =
-        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine().
-            getContainer().getWriteChannel();
+    return getStateMachine(cluster.getHddsDatanodes().get(0), null);
+  }
+
+  private static RaftServerImpl getRaftServerImpl(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    XceiverServerSpi server = dn.getDatanodeStateMachine().
+        getContainer().getWriteChannel();
     RaftServerProxy proxy =
         (RaftServerProxy) (((XceiverServerRatis) server).getServer());
-    RaftGroupId groupId = proxy.getGroupIds().iterator().next();
-    RaftServerImpl impl = proxy.getImpl(groupId);
-    return impl.getStateMachine();
+    RaftGroupId groupId =
+        pipeline == null ? proxy.getGroupIds().iterator().next() :
+            RatisHelper.newRaftGroup(pipeline).getGroupId();
+    return proxy.getImpl(groupId);
+  }
+
+  public static StateMachine getStateMachine(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    return getRaftServerImpl(dn, pipeline).getStateMachine();
+  }
+
+  public static boolean isRatisLeader(HddsDatanodeService dn, Pipeline pipeline)
+      throws Exception {
+    return getRaftServerImpl(dn, pipeline).isLeader();
+  }
+
+  public static boolean isRatisFollower(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    return getRaftServerImpl(dn, pipeline).isFollower();
   }
 }

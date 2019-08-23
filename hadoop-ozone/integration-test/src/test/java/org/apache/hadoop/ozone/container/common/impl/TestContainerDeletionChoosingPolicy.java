@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -35,18 +36,26 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * The class for testing container deletion choosing policy.
  */
 public class TestContainerDeletionChoosingPolicy {
   private static String path;
-  private  ContainerSet containerSet;
+  private OzoneContainer container;
+  private ContainerSet containerSet;
   private OzoneConfiguration conf;
+  private BlockDeletingService blockDeletingService;
+  // the service timeout
+  private static final int SERVICE_TIMEOUT_IN_MILLISECONDS = 0;
+  private static final int SERVICE_INTERVAL_IN_MILLISECONDS = 1000;
 
   @Before
   public void init() throws Throwable {
@@ -75,23 +84,32 @@ public class TestContainerDeletionChoosingPolicy {
       KeyValueContainerData data = new KeyValueContainerData(i,
           ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
           UUID.randomUUID().toString());
+      data.closeContainer();
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
           containerSet.getContainerMapCopy()
               .containsKey(data.getContainerID()));
     }
+    container = Mockito.mock(OzoneContainer.class);
+    Mockito.when(container.getContainerSet())
+        .thenReturn(containerSet);
+    Mockito.when(container.getWriteChannel())
+        .thenReturn(null);
+    blockDeletingService =
+        new BlockDeletingService(container, SERVICE_INTERVAL_IN_MILLISECONDS,
+            SERVICE_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS, conf);
 
     ContainerDeletionChoosingPolicy deletionPolicy =
         new RandomContainerDeletionChoosingPolicy();
     List<ContainerData> result0 =
-        containerSet.chooseContainerForBlockDeletion(5, deletionPolicy);
+        blockDeletingService.chooseContainerForBlockDeletion(5, deletionPolicy);
     Assert.assertEquals(5, result0.size());
 
     // test random choosing
-    List<ContainerData> result1 = containerSet
+    List<ContainerData> result1 = blockDeletingService
         .chooseContainerForBlockDeletion(numContainers, deletionPolicy);
-    List<ContainerData> result2 = containerSet
+    List<ContainerData> result2 = blockDeletingService
         .chooseContainerForBlockDeletion(numContainers, deletionPolicy);
 
     boolean hasShuffled = false;
@@ -137,18 +155,27 @@ public class TestContainerDeletionChoosingPolicy {
         name2Count.put(containerId, deletionBlocks);
       }
       KeyValueContainer container = new KeyValueContainer(data, conf);
+      data.closeContainer();
       containerSet.addContainer(container);
       Assert.assertTrue(
           containerSet.getContainerMapCopy().containsKey(containerId));
     }
+    container = Mockito.mock(OzoneContainer.class);
+    Mockito.when(container.getContainerSet())
+        .thenReturn(containerSet);
+    Mockito.when(container.getWriteChannel())
+        .thenReturn(null);
+    blockDeletingService =
+        new BlockDeletingService(container, SERVICE_INTERVAL_IN_MILLISECONDS,
+            SERVICE_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS, conf);
 
     ContainerDeletionChoosingPolicy deletionPolicy =
         new TopNOrderedContainerDeletionChoosingPolicy();
     List<ContainerData> result0 =
-        containerSet.chooseContainerForBlockDeletion(5, deletionPolicy);
+        blockDeletingService.chooseContainerForBlockDeletion(5, deletionPolicy);
     Assert.assertEquals(5, result0.size());
 
-    List<ContainerData> result1 = containerSet
+    List<ContainerData> result1 = blockDeletingService
         .chooseContainerForBlockDeletion(numContainers + 1, deletionPolicy);
     // the empty deletion blocks container should not be chosen
     Assert.assertEquals(numContainers, result1.size());

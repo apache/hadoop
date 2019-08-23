@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -518,7 +519,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private ByteString readStateMachineData(
-      ContainerCommandRequestProto requestProto, long term, long index) {
+      ContainerCommandRequestProto requestProto, long term, long index)
+      throws IOException {
     // the stateMachine data is not present in the stateMachine cache,
     // increment the stateMachine cache miss count
     metrics.incNumReadStateMachineMissCount();
@@ -532,18 +534,24 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setChunkData(chunkInfo);
     ContainerCommandRequestProto dataContainerCommandProto =
         ContainerCommandRequestProto.newBuilder(requestProto)
-            .setCmdType(Type.ReadChunk)
-            .setReadChunk(readChunkRequestProto)
+            .setCmdType(Type.ReadChunk).setReadChunk(readChunkRequestProto)
             .build();
     DispatcherContext context =
-        new DispatcherContext.Builder()
-            .setTerm(term)
-            .setLogIndex(index)
-            .setReadFromTmpFile(true)
-            .build();
+        new DispatcherContext.Builder().setTerm(term).setLogIndex(index)
+            .setReadFromTmpFile(true).build();
     // read the chunk
     ContainerCommandResponseProto response =
         dispatchCommand(dataContainerCommandProto, context);
+    if (response.getResult() != ContainerProtos.Result.SUCCESS) {
+      StorageContainerException sce =
+          new StorageContainerException(response.getMessage(),
+              response.getResult());
+      LOG.error("gid {} : ReadStateMachine failed. cmd {} logIndex {} msg : "
+              + "{} Container Result: {}", gid, response.getCmdType(), index,
+          response.getMessage(), response.getResult());
+      throw sce;
+    }
+
     ReadChunkResponseProto responseProto = response.getReadChunk();
 
     ByteString data = responseProto.getData();
@@ -746,7 +754,8 @@ public class ContainerStateMachine extends BaseStateMachine {
     return future;
   }
 
-  private void evictStateMachineCache() {
+  @VisibleForTesting
+  public void evictStateMachineCache() {
     stateMachineDataCache.invalidateAll();
     stateMachineDataCache.cleanUp();
   }

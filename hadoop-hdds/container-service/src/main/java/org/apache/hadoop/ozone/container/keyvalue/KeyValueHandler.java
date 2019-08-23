@@ -109,7 +109,6 @@ public class KeyValueHandler extends Handler {
   private final ContainerType containerType;
   private final BlockManager blockManager;
   private final ChunkManager chunkManager;
-  private final BlockDeletingService blockDeletingService;
   private final VolumeChoosingPolicy volumeChoosingPolicy;
   private final long maxContainerSize;
 
@@ -126,18 +125,6 @@ public class KeyValueHandler extends Handler {
         conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_KEY,
             OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_DEFAULT);
     chunkManager = new ChunkManagerImpl(doSyncWrite);
-    long svcInterval = config
-        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
-            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS);
-    long serviceTimeout = config
-        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
-            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
-            TimeUnit.MILLISECONDS);
-    this.blockDeletingService =
-        new BlockDeletingService(containerSet, svcInterval, serviceTimeout,
-            TimeUnit.MILLISECONDS, config);
-    blockDeletingService.start();
     volumeChoosingPolicy = ReflectionUtils.newInstance(conf.getClass(
         HDDS_DATANODE_VOLUME_CHOOSING_POLICY, RoundRobinVolumeChoosingPolicy
             .class, VolumeChoosingPolicy.class), conf);
@@ -160,7 +147,6 @@ public class KeyValueHandler extends Handler {
 
   @Override
   public void stop() {
-    blockDeletingService.shutdown();
   }
 
   @Override
