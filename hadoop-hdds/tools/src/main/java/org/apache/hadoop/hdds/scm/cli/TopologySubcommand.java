@@ -25,8 +25,6 @@ import org.apache.hadoop.hdds.scm.client.ScmClient;
 import picocli.CommandLine;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONED;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONING;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
@@ -57,8 +55,6 @@ public class TopologySubcommand implements Callable<Void> {
     stateArray.add(HEALTHY);
     stateArray.add(STALE);
     stateArray.add(DEAD);
-    stateArray.add(DECOMMISSIONING);
-    stateArray.add(DECOMMISSIONED);
   }
 
   @CommandLine.Option(names = {"-o", "--order"},

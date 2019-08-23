@@ -19,8 +19,6 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONED;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONING;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
@@ -132,12 +130,6 @@ public final class SCMNodeMetrics implements MetricsSource {
             .addGauge(Interns.info("DeadNodes",
                 "Number of dead datanodes"),
                 nodeCount.get(DEAD.toString()))
-            .addGauge(Interns.info("DecommissioningNodes",
-                "Number of decommissioning datanodes"),
-                nodeCount.get(DECOMMISSIONING.toString()))
-            .addGauge(Interns.info("DecommissionedNodes",
-                "Number of decommissioned datanodes"),
-                nodeCount.get(DECOMMISSIONED.toString()))
             .addGauge(Interns.info("DiskCapacity",
                 "Total disk capacity"),
                 nodeInfo.get("DISKCapacity"))

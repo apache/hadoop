@@ -75,7 +75,7 @@ public class NodeStateManager implements Runnable, Closeable {
    * Node's life cycle events.
    */
   private enum NodeLifeCycleEvent {
-    TIMEOUT, RESTORE, RESURRECT, DECOMMISSION, DECOMMISSIONED
+    TIMEOUT, RESTORE, RESURRECT
   }
 
   private static final Logger LOG = LoggerFactory
@@ -150,7 +150,6 @@ public class NodeStateManager implements Runnable, Closeable {
     this.state2EventMap = new HashMap<>();
     initialiseState2EventMap();
     Set<NodeState> finalStates = new HashSet<>();
-    finalStates.add(NodeState.DECOMMISSIONED);
     this.stateMachine = new StateMachine<>(NodeState.HEALTHY, finalStates);
     initializeStateMachine();
     heartbeatCheckerIntervalMs = HddsServerUtil
@@ -198,18 +197,6 @@ public class NodeStateManager implements Runnable, Closeable {
    * State: DEAD            -------------------> HEALTHY
    * Event:                       RESURRECT
    *
-   * State: HEALTHY         -------------------> DECOMMISSIONING
-   * Event:                     DECOMMISSION
-   *
-   * State: STALE           -------------------> DECOMMISSIONING
-   * Event:                     DECOMMISSION
-   *
-   * State: DEAD            -------------------> DECOMMISSIONING
-   * Event:                     DECOMMISSION
-   *
-   * State: DECOMMISSIONING -------------------> DECOMMISSIONED
-   * Event:                     DECOMMISSIONED
-   *
    *  Node State Flow
    *
    *  +--------------------------------------------------------+
@@ -219,19 +206,6 @@ public class NodeStateManager implements Runnable, Closeable {
    *  |   |                          |                         |
    *  V   V                          |                         |
    * [HEALTHY]------------------->[STALE]------------------->[DEAD]
-   *    |         (TIMEOUT)          |         (TIMEOUT)       |
-   *    |                            |                         |
-   *    |                            |                         |
-   *    |                            |                         |
-   *    |                            |                         |
-   *    | (DECOMMISSION)             | (DECOMMISSION)          | (DECOMMISSION)
-   *    |                            V                         |
-   *    +------------------->[DECOMMISSIONING]<----------------+
-   *                                 |
-   *                                 | (DECOMMISSIONED)
-   *                                 |
-   *                                 V
-   *                          [DECOMMISSIONED]
    *
    */
 
@@ -247,19 +221,6 @@ public class NodeStateManager implements Runnable, Closeable {
         NodeState.STALE, NodeState.HEALTHY, NodeLifeCycleEvent.RESTORE);
     stateMachine.addTransition(
         NodeState.DEAD, NodeState.HEALTHY, NodeLifeCycleEvent.RESURRECT);
-    stateMachine.addTransition(
-        NodeState.HEALTHY, NodeState.DECOMMISSIONING,
-        NodeLifeCycleEvent.DECOMMISSION);
-    stateMachine.addTransition(
-        NodeState.STALE, NodeState.DECOMMISSIONING,
-        NodeLifeCycleEvent.DECOMMISSION);
-    stateMachine.addTransition(
-        NodeState.DEAD, NodeState.DECOMMISSIONING,
-        NodeLifeCycleEvent.DECOMMISSION);
-    stateMachine.addTransition(
-        NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONED,
-        NodeLifeCycleEvent.DECOMMISSIONED);
-
   }
 
   /**
@@ -605,10 +566,6 @@ public class NodeStateManager implements Runnable, Closeable {
             updateNodeState(node, healthyNodeCondition, state,
                 NodeLifeCycleEvent.RESURRECT);
             break;
-            // We don't do anything for DECOMMISSIONING and DECOMMISSIONED in
-            // heartbeat processing.
-          case DECOMMISSIONING:
-          case DECOMMISSIONED:
           default:
           }
         }
