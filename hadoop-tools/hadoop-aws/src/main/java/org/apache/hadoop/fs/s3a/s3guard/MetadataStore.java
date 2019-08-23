@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -110,6 +111,7 @@ public interface MetadataStore extends Closeable {
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   void deleteSubtree(Path path,
       @Nullable BulkOperationState operationState)
       throws IOException;

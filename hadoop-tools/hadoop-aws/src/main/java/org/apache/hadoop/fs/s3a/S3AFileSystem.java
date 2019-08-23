@@ -97,6 +97,7 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -1737,14 +1738,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-    LOG.debug("DELETE {}", key);
-    invoker.retryUntranslated("Delete "+ bucket + ":/" + key,
-        DELETE_CONSIDERED_IDEMPOTENT,
-        ()-> {
-          incrementStatistic(OBJECT_DELETE_REQUESTS);
-          s3.deleteObject(bucket, key);
-          return null;
-        });
+    String text = "Delete " + bucket + ":/" + key;
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, false, text)) {
+      invoker.retryUntranslated(text,
+          DELETE_CONSIDERED_IDEMPOTENT,
+          ()-> {
+            incrementStatistic(OBJECT_DELETE_REQUESTS);
+            s3.deleteObject(bucket, key);
+            return null;
+          });
+    }
   }
 
   /**
@@ -2201,7 +2205,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           createStoreContext(),
           innerGetFileStatus(f, true),
           recursive,
-          new DeleteOperationCallbacksImpl()).execute();
+          new DeleteOperationCallbacksImpl(),
+          InternalConstants.MAX_ENTRIES_TO_DELETE).execute();
       if (outcome) {
         try {
           maybeCreateFakeParentDirectory(f);
