@@ -57,6 +57,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
 
     <junit.jupiter.version>5.3.1</junit.jupiter.version>
+    <guava.version>26.0-android</guava.version>
   </properties>
   <repositories>
     <repository>
@@ -249,6 +250,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
