@@ -36,7 +36,7 @@ ozone sh volume create /volume
 ozone sh bucket create /volume/bucket
 {{< /highlight >}}
 
-Once this is created, please make sure that bucket exists via the _list volume_ or _list bucket_ commands.
+Once this is created, please make sure that bucket exists via the _volume list_ or _bucket list_ commands.
 
 Please add the following entry to the core-site.xml.
 

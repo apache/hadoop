@@ -132,7 +132,7 @@ based on environment variables.
 The `docker-compose` based approach is recommended only for local test, not for multi node cluster.
 To use containers on a multi-node cluster we need a Container Orchestrator like Kubernetes.
 
-Kubernetes example files are included in `hadoop-ozone/dist/target/ozone-<version>/kubernetes` folder.
+Kubernetes example files are included in `kubernetes` folder.
 
 *Please note*: all the provided images are based the `hadoop-runner` image which contains all the
 required tool for testing in staging environments. For production we recommend to create your own,
