@@ -294,7 +294,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery-3.4.1.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/js/jquery-3.4.1.min.js</exclude>
             <exclude>src/main/resources/webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
             <exclude>src/test/resources/incorrect.checksum.container</exclude>
