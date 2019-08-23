@@ -86,8 +86,8 @@ public class TestOzoneClientProducer {
 
   @Test
   public void testGetClientFailure() throws Exception {
-    LambdaTestUtils.intercept(IOException.class, "Couldn't create", 
-            () -> producer.createClient());
+    LambdaTestUtils.intercept(IOException.class, "Couldn't create",
+        () -> producer.createClient());
   }
 
   private void setupContext() throws Exception {
