@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.s3.endpoint;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -58,6 +59,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -417,33 +419,19 @@ public class ObjectEndpoint extends EndpointBase {
 
   }
 
+  /**
+   * Initialize MultiPartUpload request.
+   * <p>
+   * Note: the specific content type is set by the HeaderPreprocessor.
+   */
   @POST
   @Produces(MediaType.APPLICATION_XML)
-  public Response multipartUpload(
+  @Consumes(HeaderPreprocessor.MULTIPART_UPLOAD_MARKER)
+  public Response initializeMultipartUpload(
       @PathParam("bucket") String bucket,
-      @PathParam("path") String key,
-      @QueryParam("uploads") String uploads,
-      @QueryParam("uploadId") @DefaultValue("") String uploadID,
-      CompleteMultipartUploadRequest request) throws IOException, OS3Exception {
-    if (!uploadID.equals("")) {
-      //Complete Multipart upload request.
-      return completeMultipartUpload(bucket, key, uploadID, request);
-    } else {
-      // Initiate Multipart upload request.
-      return initiateMultipartUpload(bucket, key);
-    }
-  }
-
-  /**
-   * Initiate Multipart upload request.
-   * @param bucket
-   * @param key
-   * @return Response
-   * @throws IOException
-   * @throws OS3Exception
-   */
-  private Response initiateMultipartUpload(String bucket, String key) throws
-      IOException, OS3Exception {
+      @PathParam("path") String key
+  )
+      throws IOException, OS3Exception {
     try {
       OzoneBucket ozoneBucket = getBucket(bucket);
       String storageType = headers.getHeaderString(STORAGE_CLASS_HEADER);
@@ -473,7 +461,6 @@ public class ObjectEndpoint extends EndpointBase {
       multipartUploadInitiateResponse.setKey(key);
       multipartUploadInitiateResponse.setUploadID(multipartInfo.getUploadID());
 
-
       return Response.status(Status.OK).entity(
           multipartUploadInitiateResponse).build();
     } catch (IOException ex) {
@@ -484,18 +471,15 @@ public class ObjectEndpoint extends EndpointBase {
   }
 
   /**
-   * Complete Multipart upload request.
-   * @param bucket
-   * @param key
-   * @param uploadID
-   * @param multipartUploadRequest
-   * @return Response
-   * @throws IOException
-   * @throws OS3Exception
+   * Complete a multipart upload.
    */
-  private Response completeMultipartUpload(String bucket, String key, String
-      uploadID, CompleteMultipartUploadRequest multipartUploadRequest) throws
-      IOException, OS3Exception {
+  @POST
+  @Produces(MediaType.APPLICATION_XML)
+  public Response completeMultipartUpload(@PathParam("bucket") String bucket,
+      @PathParam("path") String key,
+      @QueryParam("uploadId") @DefaultValue("") String uploadID,
+      CompleteMultipartUploadRequest multipartUploadRequest)
+      throws IOException, OS3Exception {
     OzoneBucket ozoneBucket = getBucket(bucket);
     Map<Integer, String> partsMap = new TreeMap<>();
     List<CompleteMultipartUploadRequest.Part> partList =
