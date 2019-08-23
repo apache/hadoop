@@ -429,6 +429,11 @@ message BucketInfo {
     optional uint64 creationTime = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
     optional BucketEncryptionInfoProto beinfo = 8;
+
+    //Flag that enabled GDPR on per bucket basis.
+    //If this flag is set to true, system will generate a symmetric key and
+    //allow client to encode data.
+    optional bool gdprEnabled = 9 [default = false];
 }
 
 enum StorageTypeProto {
