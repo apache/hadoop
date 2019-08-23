@@ -870,7 +870,7 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("isFileClosed",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, Boolean.class,
-        Boolean.TRUE);
+        null);
   }
 
   @Override
