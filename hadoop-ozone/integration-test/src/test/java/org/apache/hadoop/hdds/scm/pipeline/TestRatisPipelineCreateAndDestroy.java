@@ -39,7 +39,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 /**
  * Tests for RatisPipelineUtils.
  */
-public class TestRatisPipelineCreateAndDestory {
+public class TestRatisPipelineCreateAndDestroy {
 
   private static MiniOzoneCluster cluster;
   private OzoneConfiguration conf = new OzoneConfiguration();
@@ -63,7 +63,7 @@ public class TestRatisPipelineCreateAndDestory {
     cluster.shutdown();
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 180000)
   public void testAutomaticPipelineCreationOnPipelineDestroy()
       throws Exception {
     init(6);
@@ -79,7 +79,7 @@ public class TestRatisPipelineCreateAndDestory {
     waitForPipelines(2);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 180000)
   public void testPipelineCreationOnNodeRestart() throws Exception {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL,
         5, TimeUnit.SECONDS);
