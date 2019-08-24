@@ -87,7 +87,7 @@ public class TestOmBlockVersioning {
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
-    TestDataUtil.createVolumeAndBucket(cluster, volumeName, keyName);
+    TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
 
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -180,7 +180,7 @@ public class TestOmBlockVersioning {
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
     OzoneBucket bucket =
-        TestDataUtil.createVolumeAndBucket(cluster, volumeName, keyName);
+        TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
 
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)

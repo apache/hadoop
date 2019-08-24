@@ -18,8 +18,11 @@
 package org.apache.hadoop.ozone;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.Scanner;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -77,8 +80,11 @@ public final class TestDataUtil {
     }
   }
 
-  public static String getKey(OzoneBucket bucket, String keyName) {
-    return null;
+  public static String getKey(OzoneBucket bucket, String keyName)
+      throws IOException {
+    try (InputStream stream = bucket.readKey(keyName)) {
+      return new Scanner(stream).useDelimiter("\\A").next();
+    }
   }
 
   public static OzoneBucket createVolumeAndBucket(MiniOzoneCluster cluster)

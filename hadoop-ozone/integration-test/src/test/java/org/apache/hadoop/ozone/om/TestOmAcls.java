@@ -34,9 +34,12 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,6 +50,7 @@ import org.junit.rules.ExpectedException;
  */
 public class TestOmAcls {
 
+  public static boolean aclAllow = true;
   private static MiniOzoneCluster cluster = null;
   private static OMMetrics omMetrics;
   private static OzoneConfiguration conf;
@@ -73,6 +77,7 @@ public class TestOmAcls {
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     conf.setClass(OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizerTest.class,
         IAccessAuthorizer.class);
+    conf.setStrings(OZONE_ADMINISTRATORS, OZONE_ADMINISTRATORS_WILDCARD);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -97,47 +102,35 @@ public class TestOmAcls {
   /**
    * Tests the OM Initialization.
    */
-  @Test
-  public void testVolumeCreationPermissionDenied() throws Exception {
-    String user0 = "testListVolumes-user-0";
-    String adminUser = "testListVolumes-admin";
-    int i = 100;
-    String user0VolName = "Vol-" + user0 + "-" + i;
-
-    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
-        .setOwner(user0)
-        .setAdmin(adminUser)
-        .setQuota(i + "GB")
-        .build();
-
-    logCapturer.clearOutput();
-    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
-        () -> cluster.getClient().getObjectStore()
-            .createVolume(user0VolName, createVolumeArgs));
-    assertTrue(logCapturer.getOutput().contains("Only admin users are " +
-        "authorized to create Ozone"));
-  }
 
   @Test
   public void testBucketCreationPermissionDenied() throws Exception {
 
-    String volumeName = RandomStringUtils.randomAlphabetic(5);
-    String bucketName = RandomStringUtils.randomAlphabetic(5);
+    TestOmAcls.aclAllow = true;
+
+    String volumeName = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+    String bucketName = RandomStringUtils.randomAlphabetic(5).toLowerCase();
     cluster.getClient().getObjectStore().createVolume(volumeName);
     OzoneVolume volume =
         cluster.getClient().getObjectStore().getVolume(volumeName);
 
+    TestOmAcls.aclAllow = false;
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> volume.createBucket(bucketName));
-    assertTrue(logCapturer.getOutput().contains("Only admin users are" +
-        " authorized to create Ozone"));
+
+    assertTrue(logCapturer.getOutput()
+        .contains("doesn't have CREATE permission to access volume"));
   }
 
   @Test
   public void testFailureInKeyOp() throws Exception {
     final VolumeArgs createVolumeArgs;
 
+    TestOmAcls.aclAllow = true;
     OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    logCapturer.clearOutput();
+    ;
+    TestOmAcls.aclAllow = false;
 
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> TestDataUtil.createKey(bucket, "testKey", "testcontent"));
@@ -153,6 +146,6 @@ class OzoneAccessAuthorizerTest implements IAccessAuthorizer {
 
   @Override
   public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context) {
-    return false;
+    return TestOmAcls.aclAllow;
   }
 }
