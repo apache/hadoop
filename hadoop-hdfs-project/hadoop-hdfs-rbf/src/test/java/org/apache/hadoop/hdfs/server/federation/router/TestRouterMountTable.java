@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -252,6 +254,61 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/newdir"), true);
     }
+  }
+
+  /**
+   * Verify that the file/dir status with IOException in getMountPointStatus.
+   */
+  @Test
+  public void testGetMountPointStatusWithIOException()
+      throws IOException, InterruptedException {
+    try {
+      // Add mount table entry.
+      MountTable addEntry = MountTable.newInstance("/testA",
+          Collections.singletonMap("ns0", "/testA"));
+      assertTrue(addMountTable(addEntry));
+      addEntry = MountTable.newInstance("/testA/testB",
+          Collections.singletonMap("ns0", "/testA/testB"));
+      assertTrue(addMountTable(addEntry));
+      addEntry = MountTable.newInstance("/testB",
+          Collections.singletonMap("ns0", "/test1/testB"));
+      addEntry.setOwnerName("userB");
+      addEntry.setGroupName("groupB");
+      assertTrue(addMountTable(addEntry));
+
+      assertTrue(nnFs0.mkdirs(new Path("/test1")));
+      nnFs0.setPermission(new Path("/test1"),
+          FsPermission.createImmutable((short) 0700));
+
+      // Use mock user to getListing through router.
+      UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "mock_user", new String[] {"mock_group"});
+      LambdaTestUtils.doAs(user, () -> getListing("/testA"));
+    } finally {
+      nnFs0.delete(new Path("/test1"), true);
+    }
+  }
+
+  /**
+   * GetListing of testPath through router.
+   */
+  private void getListing(String testPath)
+      throws IOException, URISyntaxException {
+    ClientProtocol clientProtocol1 =
+        routerContext.getClient().getNamenode();
+    DirectoryListing listing = clientProtocol1.getListing(testPath,
+        HdfsFileStatus.EMPTY_NAME, false);
+
+    assertEquals(1, listing.getPartialListing().length);
+    HdfsFileStatus fileStatus = listing.getPartialListing()[0];
+    String currentOwner = fileStatus.getOwner();
+    String currentGroup = fileStatus.getGroup();
+    String currentFileName =
+        fileStatus.getFullPath(new Path("/")).getName();
+
+    assertEquals("testB", currentFileName);
+    assertEquals("userB", currentOwner);
+    assertEquals("groupB", currentGroup);
   }
 
   /**
