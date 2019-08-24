@@ -20,10 +20,14 @@ export MAVEN_OPTS="-Xmx4096m"
 mvn -B install -f pom.ozone.xml -DskipTests
 mvn -B -fn test -f pom.ozone.xml -pl :hadoop-ozone-integration-test,:hadoop-ozone-filesystem,:hadoop-ozone-tools \
   -Dtest=\!TestMiniChaosOzoneCluster
-module_failed_tests=$(find "." -name 'TEST*.xml' -print0 \
-    | xargs -0 -n1 "grep" -l -E "<failure|<error"\
-    | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}')
-if [[ -n "${module_failed_tests}" ]] ; then
+
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/integration"}
+mkdir -p "$REPORT_DIR"
+
+# shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
+source "$DIR/_mvn_unit_report.sh"
+
+if [[ -s "$REPORT_DIR/summary.txt" ]] ; then
     exit 1
 fi
 exit 0

@@ -16,8 +16,10 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-OUTPUT_FILE="$DIR/../../../target/shell-problems.txt"
-mkdir -p "$(dirname "$OUTPUT_FILE")"
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/shellcheck"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
+
 echo "" > "$OUTPUT_FILE"
 if [[ "$(uname -s)" = "Darwin" ]]; then
   find hadoop-hdds hadoop-ozone -type f -perm '-500'
@@ -26,8 +28,10 @@ else
 fi \
   | grep -v -e target/ -e node_modules/ -e '\.\(ico\|py\|yml\)$' \
   | xargs -n1 shellcheck \
-  | tee "$OUTPUT_FILE"
+  | tee "$REPORT_FILE"
 
-if [ "$(cat "$OUTPUT_FILE")" ]; then
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
    exit 1
 fi
