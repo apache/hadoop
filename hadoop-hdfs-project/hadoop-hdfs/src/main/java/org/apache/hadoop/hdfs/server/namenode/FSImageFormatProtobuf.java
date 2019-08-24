@@ -813,6 +813,8 @@ public final class FSImageFormatProtobuf {
         FSImageCompression compression, String filePath) throws IOException {
       StartupProgress prog = NameNode.getStartupProgress();
       MessageDigest digester = MD5Hash.getDigester();
+      int layoutVersion =
+          context.getSourceNamesystem().getEffectiveLayoutVersion();
 
       underlyingOutputStream = new DigestOutputStream(new BufferedOutputStream(
           fout), digester);
@@ -839,11 +841,16 @@ public final class FSImageFormatProtobuf {
       // depends on this behavior.
       context.checkCancelled();
 
+      Step step;
+
       // Erasure coding policies should be saved before inodes
-      Step step = new Step(StepType.ERASURE_CODING_POLICIES, filePath);
-      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      saveErasureCodingSection(b);
-      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+      if (NameNodeLayoutVersion.supports(
+          NameNodeLayoutVersion.Feature.ERASURE_CODING, layoutVersion)) {
+        step = new Step(StepType.ERASURE_CODING_POLICIES, filePath);
+        prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+        saveErasureCodingSection(b);
+        prog.endStep(Phase.SAVING_CHECKPOINT, step);
+      }
 
       step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);

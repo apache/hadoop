@@ -25,7 +25,7 @@ title: Ozone on Kubernetes
 {{< /requirements >}}
 
 
-As the _apache/ozone_ docker images are available from the dockerhub the deployment process is very similar Minikube deployment. The only big difference is that we have dedicated set of k8s files for hosted clusters (for example we can use one datanode per host)
+As the _apache/ozone_ docker images are available from the dockerhub the deployment process is very similar to Minikube deployment. The only big difference is that we have dedicated set of k8s files for hosted clusters (for example we can use one datanode per host)
 Deploy to kubernetes
 
 `kubernetes/examples` folder of the ozone distribution contains kubernetes deployment resource files for multiple use cases.

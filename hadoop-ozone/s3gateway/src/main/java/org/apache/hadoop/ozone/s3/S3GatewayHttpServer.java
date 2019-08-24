@@ -27,6 +27,11 @@ import org.apache.hadoop.hdds.server.BaseHttpServer;
  */
 public class S3GatewayHttpServer extends BaseHttpServer {
 
+  /**
+   * Default offset between two filters.
+   */
+  public static final int FILTER_PRIORITY_DO_AFTER = 50;
+
   public S3GatewayHttpServer(Configuration conf,
       String name) throws IOException {
     super(conf, name);

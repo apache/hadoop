@@ -255,6 +255,28 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     }
   }
 
+  /**
+   * Test isFileClosed when the result is false.
+   */
+  @Test
+  public void testIsFileClosed() throws Exception {
+    Path testPath = new Path("/is_file_closed.txt");
+    DistributedFileSystem routerFs =
+        (DistributedFileSystem) getRouterFileSystem();
+    FSDataOutputStream fsDataOutputStream = null;
+    try {
+      fsDataOutputStream = routerFs.create(testPath);
+      fsDataOutputStream.write("hello world".getBytes());
+      fsDataOutputStream.hflush();
+
+      boolean result = routerFs.isFileClosed(testPath);
+      assertFalse(result);
+    } finally {
+      IOUtils.closeStream(fsDataOutputStream);
+      routerFs.delete(testPath, true);
+    }
+  }
+
   @Test
   public void testGetContentSummaryEc() throws Exception {
     DistributedFileSystem routerDFS =

@@ -60,7 +60,7 @@ public class TestInitiateMultipartUpload {
     rest.setHeaders(headers);
     rest.setClient(client);
 
-    Response response = rest.multipartUpload(bucket, key, "", "", null);
+    Response response = rest.initializeMultipartUpload(bucket, key);
 
     assertEquals(response.getStatus(), 200);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
@@ -69,7 +69,7 @@ public class TestInitiateMultipartUpload {
     String uploadID = multipartUploadInitiateResponse.getUploadID();
 
     // Calling again should return different uploadID.
-    response = rest.multipartUpload(bucket, key, "", "", null);
+    response = rest.initializeMultipartUpload(bucket, key);
     assertEquals(response.getStatus(), 200);
     multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();

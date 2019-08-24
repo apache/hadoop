@@ -333,6 +333,39 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testListNestedMountTable() throws Exception {
+    String dir1 = "/test-ls";
+    String dir2 = "/test-ls-longger";
+    String[] nsIdList = {"ns0", "ns1", "ns2", "ns3", "ns3"};
+    String[] sourceList =
+        {dir1, dir1 + "/subdir1", dir2, dir2 + "/subdir1", dir2 + "/subdir2"};
+    String[] destList =
+        {"/test-ls", "/test-ls/subdir1", "/ls", "/ls/subdir1", "/ls/subdir2"};
+    for (int i = 0; i < nsIdList.length; i++) {
+      String[] argv =
+          new String[] {"-add", sourceList[i], nsIdList[i], destList[i]};
+      assertEquals(0, ToolRunner.run(admin, argv));
+    }
+
+    // prepare for test
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    // Test ls dir1
+    String[] argv = new String[] {"-ls", dir1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String outStr = out.toString();
+    assertTrue(out.toString().contains(dir1 + "/subdir1"));
+    assertFalse(out.toString().contains(dir2));
+
+    // Test ls dir2
+    argv = new String[] {"-ls", dir2};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(dir2 + "/subdir1"));
+    assertTrue(out.toString().contains(dir2 + "/subdir2"));
+  }
+
+  @Test
   public void testRemoveMountTable() throws Exception {
     String nsId = "ns0";
     String src = "/test-rmmounttable";
@@ -699,6 +732,8 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    getRequest = GetMountTableEntriesRequest.newInstance("/");
     getResponse =
         client.getMountTableManager().getMountTableEntries(getRequest);
 
