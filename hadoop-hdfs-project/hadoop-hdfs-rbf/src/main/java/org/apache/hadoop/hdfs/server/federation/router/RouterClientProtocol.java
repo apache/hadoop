@@ -1913,6 +1913,10 @@ public class RouterClientProtocol implements ClientProtocol {
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
         MountTable entry = mountTable.getMountPoint(mName);
         if (entry != null) {
+          permission = entry.getMode();
+          owner = entry.getOwnerName();
+          group = entry.getGroupName();
+
           RemoteMethod method = new RemoteMethod("getFileInfo",
               new Class<?>[] {String.class}, new RemoteParam());
           HdfsFileStatus fInfo = getFileInfoAll(
@@ -1922,10 +1926,6 @@ public class RouterClientProtocol implements ClientProtocol {
             owner = fInfo.getOwner();
             group = fInfo.getGroup();
             childrenNum = fInfo.getChildrenNum();
-          } else {
-            permission = entry.getMode();
-            owner = entry.getOwnerName();
-            group = entry.getGroupName();
           }
         }
       } catch (IOException e) {
