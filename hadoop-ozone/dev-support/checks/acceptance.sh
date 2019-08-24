@@ -20,7 +20,14 @@ REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target"}
 mkdir -p "$REPORT_DIR"
 
 OZONE_VERSION=$(grep "<ozone.version>" "$DIR/../../pom.xml" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
-cd "$DIR/../../dist/target/ozone-$OZONE_VERSION/compose" || exit 1
+DIST_DIR="$DIR/../../dist/target/ozone-$OZONE_VERSION"
+
+if [ ! -d "$DIST_DIR" ]; then
+    echo "Distribution dir is missing. Doing a full build"
+    "$DIR/build.sh"
+fi
+
+cd "$DIST_DIR/compose" || exit 1
 ./test-all.sh
 cp results/* "$REPORT_DIR/"
 cp "$REPORT_DIR/log.html" "$REPORT_DIR/summary.html"
