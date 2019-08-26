@@ -415,6 +415,7 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.setWriteChecksum(writeChecksum);
       targetFs.writeStreamToFile(in, tempTarget, lazyPersist, direct);
       if (!direct) {
+        targetFs.deleteOnExit(tempTarget.path);
         targetFs.rename(tempTarget, target);
       }
     } finally {

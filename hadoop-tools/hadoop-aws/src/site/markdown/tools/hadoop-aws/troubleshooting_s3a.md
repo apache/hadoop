@@ -1329,9 +1329,10 @@ paths can interfere with each other
 
 When the S3A connector attempts to open a file for which it has an entry in
 its database, it will retry if the desired file is not found. This is
-done if 
+done if:
+
 * No file is found in S3.
-* There is a file but its version or etag is not consistent with S3Guard table 
+* There is a file but its version or etag is not consistent with S3Guard table.
 
 These can be symptoms of S3's eventual consistency, hence the retries.
 They can also be caused by changes having been made to the S3 Store without
