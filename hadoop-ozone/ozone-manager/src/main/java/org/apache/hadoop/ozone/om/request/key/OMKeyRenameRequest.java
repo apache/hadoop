@@ -44,8 +44,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .RenameKeyResponse;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.cache.CacheKey;
@@ -120,11 +118,7 @@ public class OMKeyRenameRequest extends OMKeyRequest {
             OMException.ResultCodes.INVALID_KEY_NAME);
       }
       // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, fromKeyName);
-      }
+      checkKeyAcls(ozoneManager, volumeName, bucketName, fromKeyName);
 
       acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);

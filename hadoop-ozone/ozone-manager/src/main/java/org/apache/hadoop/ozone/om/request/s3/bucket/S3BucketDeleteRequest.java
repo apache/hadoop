@@ -43,8 +43,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3DeleteBucketRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
@@ -107,13 +105,7 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     OMClientResponse omClientResponse = null;
     try {
-      // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
-            OzoneObj.StoreType.S3, IAccessAuthorizer.ACLType.DELETE, null,
-            s3BucketName, null);
-      }
-
+      // TODO to support S3 ACL later.
       acquiredS3Lock = omMetadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
           s3BucketName);
 
