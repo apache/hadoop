@@ -143,7 +143,6 @@ public final class OzoneManagerRatisUtils {
     case RenewDelegationToken:
       return new OMRenewDelegationTokenRequest(omRequest);
     default:
-      // TODO: will update once all request types are implemented.
       return null;
     }
   }

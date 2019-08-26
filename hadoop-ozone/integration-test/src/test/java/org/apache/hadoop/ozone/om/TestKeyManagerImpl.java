@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.StorageUnit;
@@ -82,6 +83,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -110,8 +113,6 @@ public class TestKeyManagerImpl {
 
   private static PrefixManager prefixManager;
   private static KeyManagerImpl keyManager;
-  private static VolumeManagerImpl volumeManager;
-  private static BucketManagerImpl bucketManager;
   private static NodeManager nodeManager;
   private static StorageContainerManager scm;
   private static ScmBlockLocationProtocol mockScmBlockLocationProtocol;
@@ -134,8 +135,6 @@ public class TestKeyManagerImpl {
     conf.set(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY, "true");
     mockScmBlockLocationProtocol = Mockito.mock(ScmBlockLocationProtocol.class);
     metadataManager = new OmMetadataManagerImpl(conf);
-    volumeManager = new VolumeManagerImpl(metadataManager, conf);
-    bucketManager = new BucketManagerImpl(metadataManager);
     nodeManager = new MockNodeManager(true, 10);
     NodeSchema[] schemas = new NodeSchema[]
         {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
@@ -205,7 +204,11 @@ public class TestKeyManagerImpl {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .build();
-    bucketManager.createBucket(bucketInfo);
+
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    metadataManager.getBucketTable().put(bucketKey, bucketInfo);
+    metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
+        new CacheValue<>(Optional.of(bucketInfo), 1L));
   }
 
   private static void createVolume(String volumeName) throws IOException {
@@ -214,7 +217,10 @@ public class TestKeyManagerImpl {
         .setAdminName("bilbo")
         .setOwnerName("bilbo")
         .build();
-    volumeManager.createVolume(volumeArgs);
+    String volumeKey = metadataManager.getVolumeKey(volumeName);
+    metadataManager.getVolumeTable().put(volumeKey, volumeArgs);
+    metadataManager.getVolumeTable().addCacheEntry(new CacheKey<>(volumeKey),
+        new CacheValue<>(Optional.of(volumeArgs), 1L));
   }
 
   @Test

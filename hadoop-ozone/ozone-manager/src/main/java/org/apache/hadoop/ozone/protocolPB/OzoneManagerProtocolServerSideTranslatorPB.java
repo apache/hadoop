@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -25,6 +26,7 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -38,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -54,6 +58,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final OzoneManager ozoneManager;
   private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
   private final ProtocolMessageMetrics protocolMessageMetrics;
+  private final AtomicLong transactionIndex = new AtomicLong(0L);
 
   /**
    * Constructs an instance of the server handler.
@@ -148,9 +153,32 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         }
       }
     } else {
-      return submitRequestDirectlyToOM(request);
+      OMClientResponse omClientResponse = null;
+      long index = 0L;
+      try {
+        OMClientRequest omClientRequest =
+            OzoneManagerRatisUtils.createClientRequest(request);
+        Preconditions.checkState(omClientRequest != null, "Unrecognized " +
+            "command type request" + request.getCmdType());
+        request = omClientRequest.preExecute(ozoneManager);
+        index = transactionIndex.incrementAndGet();
+        omClientRequest = OzoneManagerRatisUtils.createClientRequest(request);
+        omClientResponse = omClientRequest.validateAndUpdateCache(
+            ozoneManager, index, ozoneManagerDoubleBuffer::add);
+      } catch(IOException ex) {
+        // As some of the preExecute returns error. So handle here.
+        return createErrorResponse(request, ex);
+      }
+      try {
+        omClientResponse.getFlushFuture().get();
+        LOG.trace("Future for {} is completed", request);
+      } catch (ExecutionException | InterruptedException ex) {
+        // Do we need to terminate OM here?
+        throw new ServiceException("Got exception during waiting for " +
+            "flush for request " + request, ex);
+      }
+      return omClientResponse.getOMResponse();
     }
-
   }
 
   /**
@@ -164,7 +192,36 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       OMRequest omRequest, IOException exception) {
     OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
     switch (cmdType) {
+    case CreateVolume:
+    case SetVolumeProperty:
+    case DeleteVolume:
     case CreateBucket:
+    case SetBucketProperty:
+    case DeleteBucket:
+    case CreateKey:
+    case RenameKey:
+    case DeleteKey:
+    case CommitKey:
+    case AllocateBlock:
+    case CreateS3Bucket:
+    case DeleteS3Bucket:
+    case InitiateMultiPartUpload:
+    case CommitMultiPartUpload:
+    case CompleteMultiPartUpload:
+    case AbortMultiPartUpload:
+    case GetS3Secret:
+    case GetDelegationToken:
+    case RenewDelegationToken:
+    case CancelDelegationToken:
+    case CreateDirectory:
+    case CreateFile:
+    case RemoveAcl:
+    case SetAcl:
+    case AddAcl:
+    case PurgeKeys:
+      // Added all write command types here, because in future if any of the
+      // preExecute is changed to return IOException, we can return the error
+      // OMResponse to the client.
       OMResponse.Builder omResponse = OMResponse.newBuilder()
           .setStatus(
               OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
@@ -174,12 +231,6 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         omResponse.setMessage(exception.getMessage());
       }
       return omResponse.build();
-    case DeleteBucket:
-    case SetBucketProperty:
-      // In these cases, we can return null. As this method is called when
-      // some error occurred in preExecute. For these request types
-      // preExecute is do nothing.
-      return null;
     default:
       // We shall never come here.
       return null;

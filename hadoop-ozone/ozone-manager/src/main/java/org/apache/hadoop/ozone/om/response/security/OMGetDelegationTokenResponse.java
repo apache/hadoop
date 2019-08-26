@@ -50,7 +50,8 @@ public class OMGetDelegationTokenResponse extends OMClientResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
     Table table = omMetadataManager.getDelegationTokenTable();
-    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+    if (ozoneTokenIdentifier != null &&
+        getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
       table.putWithBatch(batchOperation, ozoneTokenIdentifier, renewTime);
     }
   }

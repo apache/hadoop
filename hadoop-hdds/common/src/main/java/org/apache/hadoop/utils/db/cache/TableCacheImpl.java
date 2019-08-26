@@ -122,18 +122,6 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
 
   public CacheResult<CACHEVALUE> lookup(CACHEKEY cachekey) {
 
-    // TODO: Remove this check once HA and Non-HA code is merged and all
-    //  requests are converted to use cache and double buffer.
-    // This is to done as temporary instead of passing ratis enabled flag
-    // which requires more code changes. We cannot use ratis enabled flag
-    // also because some of the requests in OM HA are not modified to use
-    // double buffer and cache.
-
-    if (cache.size() == 0) {
-      return new CacheResult<>(CacheResult.CacheStatus.MAY_EXIST,
-          null);
-    }
-
     CACHEVALUE cachevalue = cache.get(cachekey);
     if (cachevalue == null) {
       if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
