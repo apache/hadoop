@@ -133,8 +133,8 @@ public class S3ARetryPolicy implements RetryPolicy {
     LOG.debug("Retrying on recoverable AWS failures {} times with an"
         + " initial interval of {}ms", limit, interval);
 
-    // which is wrapped by a rejection of failures of non-idempotent calls except
-    // for specific exceptions considered recoverable.
+    // which is wrapped by a rejection of failures of non-idempotent calls
+    // except for specific exceptions considered recoverable.
     // idempotent calls are retried on IOEs but not other exceptions
     retryIdempotentCalls = new FailNonIOEs(
         new IdempotencyRetryFilter(baseExponentialRetry));
