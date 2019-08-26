@@ -1718,7 +1718,8 @@ public class FSEditLog implements LogsPurgeable {
    * @return The constructed journal manager
    * @throws IllegalArgumentException if no class is configured for uri
    */
-  private JournalManager createJournal(URI uri) {
+  @VisibleForTesting
+  JournalManager createJournal(URI uri) {
     Class<? extends JournalManager> clazz
       = getJournalClass(conf, uri.getScheme());
 
