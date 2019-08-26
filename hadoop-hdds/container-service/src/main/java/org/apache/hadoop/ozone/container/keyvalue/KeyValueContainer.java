@@ -312,10 +312,6 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } finally {
       writeUnlock();
     }
-
-    // It is ok if this operation takes a bit of time.
-    // Quasi-close transition is not expected to be instantaneous.
-    compactDB();
   }
 
   @Override
@@ -332,10 +328,6 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } finally {
       writeUnlock();
     }
-
-    // It is ok if this operation takes a bit of time.
-    // Close container is not expected to be instantaneous.
-    compactDB();
   }
 
   /**
