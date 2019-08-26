@@ -1102,14 +1102,14 @@ public class ParentQueue extends AbstractCSQueue {
     // 3. Update absolute capacity as a float based on parent's minResource and
     // cluster resource.
     childQueue.getQueueCapacities().setAbsoluteCapacity(label,
-        (float) childQueue.getQueueCapacities().getCapacity()
-            / getQueueCapacities().getAbsoluteCapacity(label));
+        childQueue.getQueueCapacities().getCapacity(label)
+            * getQueueCapacities().getAbsoluteCapacity(label));
 
     // 4. Update absolute max-capacity as a float based on parent's maxResource
     // and cluster resource.
     childQueue.getQueueCapacities().setAbsoluteMaximumCapacity(label,
-        (float) childQueue.getQueueCapacities().getMaximumCapacity(label)
-            / getQueueCapacities().getAbsoluteMaximumCapacity(label));
+        childQueue.getQueueCapacities().getMaximumCapacity(label)
+            * getQueueCapacities().getAbsoluteMaximumCapacity(label));
 
     // Re-visit max applications for a queue based on absolute capacity if
     // needed.
