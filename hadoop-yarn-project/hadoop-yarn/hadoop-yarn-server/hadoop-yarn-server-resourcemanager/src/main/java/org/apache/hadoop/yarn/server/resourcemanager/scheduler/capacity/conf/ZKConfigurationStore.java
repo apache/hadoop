@@ -196,7 +196,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     try {
       Map<String, String> map =
           (HashMap<String, String>) deserializeObject(serializedSchedConf);
-      Configuration c = new Configuration();
+      Configuration c = new Configuration(false);
       for (Map.Entry<String, String> e : map.entrySet()) {
         c.set(e.getKey(), e.getValue());
       }
