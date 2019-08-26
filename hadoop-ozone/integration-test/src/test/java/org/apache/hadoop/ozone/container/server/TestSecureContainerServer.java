@@ -198,7 +198,7 @@ public class TestSecureContainerServer {
       XceiverClientSpi finalClient = client;
       // Validation is different for grpc and ratis client.
       if(client instanceof XceiverClientGrpc) {
-        LambdaTestUtils.-intercept(SCMSecurityException.class, "Failed to" +
+        LambdaTestUtils.intercept(SCMSecurityException.class, "Failed to" +
                 " authenticate with GRPC XceiverServer with Ozone block token",
             () -> finalClient.sendCommand(request));
       } else {

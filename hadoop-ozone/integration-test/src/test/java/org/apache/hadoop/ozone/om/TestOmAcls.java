@@ -39,7 +39,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDC
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertTrue;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,7 +49,7 @@ import org.junit.rules.ExpectedException;
  */
 public class TestOmAcls {
 
-  public static boolean aclAllow = true;
+  private static boolean aclAllow = true;
   private static MiniOzoneCluster cluster = null;
   private static OMMetrics omMetrics;
   private static OzoneConfiguration conf;
@@ -129,7 +128,7 @@ public class TestOmAcls {
     TestOmAcls.aclAllow = true;
     OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
     logCapturer.clearOutput();
-    ;
+
     TestOmAcls.aclAllow = false;
 
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
