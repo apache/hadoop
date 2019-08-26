@@ -136,15 +136,16 @@ public class TestOmAcls {
     assertTrue(logCapturer.getOutput().contains("doesn't have WRITE " +
         "permission to access key"));
   }
-}
 
-/**
- * Test implementation to negative case.
- */
-class OzoneAccessAuthorizerTest implements IAccessAuthorizer {
+  /**
+   * Test implementation to negative case.
+   */
+  static class OzoneAccessAuthorizerTest implements IAccessAuthorizer {
 
-  @Override
-  public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context) {
-    return TestOmAcls.aclAllow;
+    @Override
+    public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context) {
+      return TestOmAcls.aclAllow;
+    }
   }
+
 }
