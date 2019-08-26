@@ -98,7 +98,7 @@ public class TestOzoneFileSystemWithMocks {
         eq(omPort), eq(conf))).thenReturn(ozoneClient);
 
     UserGroupInformation ugi = mock(UserGroupInformation.class);
-    PowerMockito.mockStatic(UserGroupInformation.class);
+    PowerMockito.mockStatic(UserGroupInformation.class);1
     PowerMockito.when(UserGroupInformation.getCurrentUser()).thenReturn(ugi);
     when(ugi.getShortUserName()).thenReturn("user1");
 

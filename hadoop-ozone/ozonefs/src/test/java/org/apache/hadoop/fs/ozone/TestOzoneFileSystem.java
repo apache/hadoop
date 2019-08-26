@@ -61,7 +61,7 @@ public class TestOzoneFileSystem {
 
   private String volumeName;
   private String bucketName;
-  private String userName;
+
   private String rootPath;
 
   @Before
@@ -74,6 +74,8 @@ public class TestOzoneFileSystem {
 
     // create a volume and a bucket to be used by OzoneFileSystem
     OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    volumeName = bucket.getVolumeName();
+    bucketName = bucket.getName();
 
     rootPath = String.format("%s://%s.%s/",
         OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
