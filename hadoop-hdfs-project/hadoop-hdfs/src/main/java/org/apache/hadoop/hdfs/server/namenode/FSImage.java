@@ -300,7 +300,7 @@ public class FSImage implements Closeable {
         // triggered.
         LOG.info("Storage directory " + sd.getRoot() + " is not formatted.");
         LOG.info("Formatting ...");
-        sd.clearDirectory(); // create empty currrent dir
+        sd.clearDirectory(); // create empty current dir
         // For non-HA, no further action is needed here, as saveNamespace will
         // take care of the rest.
         if (!target.isHaEnabled()) {
