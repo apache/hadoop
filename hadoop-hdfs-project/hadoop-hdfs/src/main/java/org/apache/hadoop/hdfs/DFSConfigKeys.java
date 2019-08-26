@@ -562,6 +562,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_NAMENODE_HTTPS_PORT_DEFAULT;
   public static final String  DFS_NAMENODE_NAME_DIR_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_NAME_DIR_KEY;
+  public static final String DFS_NAMENODE_NAME_DIR_PERMISSION_KEY =
+      "dfs.namenode.storage.dir.perm";
+  public static final String DFS_NAMENODE_NAME_DIR_PERMISSION_DEFAULT =
+      "700";
   public static final String  DFS_NAMENODE_EDITS_DIR_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_EDITS_DIR_KEY;
   public static final String  DFS_NAMENODE_SHARED_EDITS_DIR_KEY = "dfs.namenode.shared.edits.dir";
@@ -1109,6 +1113,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_JOURNALNODE_RPC_PORT_DEFAULT = 8485;
   public static final String  DFS_JOURNALNODE_RPC_BIND_HOST_KEY = "dfs.journalnode.rpc-bind-host";
   public static final String  DFS_JOURNALNODE_RPC_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_JOURNALNODE_RPC_PORT_DEFAULT;
+  public static final String DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY =
+      "dfs.journalnode.edits.dir.perm";
+  public static final String DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT =
+      "700";
 
   public static final String  DFS_JOURNALNODE_HTTP_ADDRESS_KEY = "dfs.journalnode.http-address";
   public static final int     DFS_JOURNALNODE_HTTP_PORT_DEFAULT = 8480;
