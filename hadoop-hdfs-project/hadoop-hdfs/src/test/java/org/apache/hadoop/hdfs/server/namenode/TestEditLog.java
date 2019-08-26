@@ -54,6 +54,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1259,6 +1262,17 @@ public class TestEditLog {
                                       Collections.<URI>emptyList(),
                                       editUris);
     storage.format(new NamespaceInfo());
+    // Verify permissions
+    LocalFileSystem fs = LocalFileSystem.getLocal(getConf());
+    for (URI uri : editUris) {
+      String currDir = uri.getPath() + Path.SEPARATOR +
+          Storage.STORAGE_DIR_CURRENT;
+      FileStatus fileStatus = fs.getFileLinkStatus(new Path(currDir));
+      FsPermission permission = fileStatus.getPermission();
+      assertEquals(getConf().getInt(
+          DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY, 700),
+          permission.toOctal());
+    }
     FSEditLog editlog = getFSEditLog(storage);    
     // open the edit log and add two transactions
     // logGenerationStamp is used, simply because it doesn't 
