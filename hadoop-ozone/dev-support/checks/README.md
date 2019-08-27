@@ -14,7 +14,7 @@
 
 # Ozone checks
 
-This directory contains a collection of easy-to-user helper scripts to execute various type of tests on the ozone/hdds codebase.
+This directory contains a collection of easy-to-use helper scripts to execute various type of tests on the ozone/hdds codebase.
 
 The contract of the scripts are very simple:
 
