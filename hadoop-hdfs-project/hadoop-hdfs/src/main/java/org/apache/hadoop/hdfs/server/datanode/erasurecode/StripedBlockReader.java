@@ -90,6 +90,7 @@ class StripedBlockReader {
   ByteBuffer getReadBuffer() {
     if (buffer == null) {
       this.buffer = stripedReader.allocateReadBuffer();
+      this.buffer.position(0);
     }
     return buffer;
   }
