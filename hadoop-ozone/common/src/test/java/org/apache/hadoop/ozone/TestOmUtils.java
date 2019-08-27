@@ -123,7 +123,7 @@ public class TestOmUtils {
       writer.close();
 
       tarFile = OmUtils.createTarFile(Paths.get(testDirName));
-      Assert.assertNull(tarFile);
+      Assert.assertNotNull(tarFile);
 
     } finally {
       IOUtils.closeStream(fis);
