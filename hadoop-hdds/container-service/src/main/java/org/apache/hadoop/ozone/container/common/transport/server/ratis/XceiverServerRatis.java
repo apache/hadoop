@@ -609,6 +609,15 @@ public final class XceiverServerRatis extends XceiverServer {
     handlePipelineFailure(groupId, roleInfoProto);
   }
 
+  void handleApplyTransactionFailure(RaftGroupId groupId,
+      RaftProtos.RaftPeerRole role) {
+    UUID dnId = RatisHelper.toDatanodeId(getServer().getId());
+    String msg =
+        "Ratis Transaction failure in datanode " + dnId + " with role " + role
+            + " .Triggering pipeline close action.";
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.STATEMACHINE_TRANSACTION_FAILED, true);
+  }
   /**
    * The fact that the snapshot contents cannot be used to actually catch up
    * the follower, it is the reason to initiate close pipeline and
