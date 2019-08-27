@@ -300,7 +300,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
     // skip Kerberos authentication and return anonymous token.
     final String path = request.getServletPath();
     for(final String endpoint: whitelist) {
-      if (path != null && path.equals(endpoint)) {
+      if (endpoint.equals(path)) {
         return AuthenticationToken.ANONYMOUS;
       }
     }
