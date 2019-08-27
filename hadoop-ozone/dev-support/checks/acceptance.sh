@@ -32,4 +32,4 @@ cd "$DIST_DIR/compose" || exit 1
 RES=$?
 cp result/* "$REPORT_DIR/"
 cp "$REPORT_DIR/log.html" "$REPORT_DIR/summary.html"
-return $RES
+exit $RES
