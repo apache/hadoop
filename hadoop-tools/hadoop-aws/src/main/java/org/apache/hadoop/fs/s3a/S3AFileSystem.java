@@ -56,6 +56,7 @@ import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
@@ -99,6 +100,7 @@ import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
+import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -1308,17 +1310,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         createStoreContext(),
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
-        new RenameOperationCallbacksImpl());
+        new OperationCallbacksImpl());
     return renameOperation.executeRename();
   }
 
   /**
-   * All the callbacks made by the rename operation of the filesystem.
+   * The callbacks made by the rename and delete operations.
    * This separation allows the operation to be factored out and
    * still avoid knowledge of the S3AFilesystem implementation.
    */
-  private class RenameOperationCallbacksImpl implements
-      RenameOperation.RenameOperationCallbacks {
+  private class OperationCallbacksImpl implements
+      OperationCallbacks {
 
     @Override
     public S3ObjectAttributes createObjectAttributes(final Path path,
@@ -1342,18 +1344,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
+    @Retries.RetryTranslated
     public void deleteObjectAtPath(final Path path,
         final String key,
         final boolean isFile)
         throws IOException {
-      S3AFileSystem.this.deleteObjectAtPath(path, key, isFile);
+      once("delete", key, () ->
+          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile));
     }
 
     @Override
     @Retries.RetryTranslated
     public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
-        final Path path) throws IOException {
-      return S3AFileSystem.this.listFilesAndEmptyDirectories(path, true);
+        final Path path,
+        final S3AFileStatus status,
+        final boolean collectTombstones,
+        final boolean includeSelf) throws IOException {
+      return innerListFiles(
+          path,
+          true,
+          includeSelf
+              ? Listing.ACCEPT_ALL_BUT_S3N
+              : new Listing.AcceptAllButSelfAndS3nDirs(path),
+          status,
+          collectTombstones);
     }
 
     @Override
@@ -1366,13 +1380,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public void removeKeys(final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+    public Optional<DeleteObjectsResult> removeKeys(
+        final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         final boolean deleteFakeDir,
         final List<Path> undeletedObjectsOnFailure,
-        final BulkOperationState operationState)
+        final BulkOperationState operationState, boolean quiet)
         throws MultiObjectDeleteException, AmazonClientException, IOException {
-      S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir,
-          undeletedObjectsOnFailure, operationState);
+      return S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir,
+          undeletedObjectsOnFailure, operationState, quiet);
     }
 
     @Override
@@ -1387,27 +1402,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public S3ListRequest createListObjectsRequest(final String key,
-        final String delimiter) {
-      return S3AFileSystem.this.createListObjectsRequest(key, delimiter);
-    }
-
-    @Override
-    public S3ListResult listObjects(final S3ListRequest request)
-        throws IOException {
-      return S3AFileSystem.this.listObjects(request);
-    }
-
-    @Override
-    public S3ListResult continueListObjects(final S3ListRequest request,
-        final S3ListResult prevResult) throws IOException {
-      return S3AFileSystem.this.continueListObjects(request,
-          prevResult);
-    }
-
-    @Override
     public boolean allowAuthoritative(final Path p) {
       return S3AFileSystem.this.allowAuthoritative(p);
+    }
+
+    @Override
+    @Retries.RetryTranslated
+    public RemoteIterator<S3AFileStatus> listObjects(
+        final Path path,
+        final String key)
+        throws IOException {
+      return once("list", key, () ->
+          listing.createFileStatusListingIterator(path,
+              createListObjectsRequest(key, null),
+              ACCEPT_ALL,
+              Listing.ACCEPT_ALL_BUT_S3N,
+              null));
     }
   }
 
@@ -1762,10 +1772,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-    String text = String.format("Delete %s:/%s", bucket, key);
+
     try (DurationInfo ignored =
-             new DurationInfo(LOG, false, text)) {
-      invoker.retryUntranslated(text,
+             new DurationInfo(LOG, false,
+                 "deleting %s", key)) {
+      invoker.retryUntranslated(String.format("Delete %s:/%s", bucket, key),
           DELETE_CONSIDERED_IDEMPOTENT,
           ()-> {
             incrementStatistic(OBJECT_DELETE_REQUESTS);
@@ -1816,18 +1827,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * operation statistics.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param deleteRequest keys to delete on the s3-backend
+   * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted.
    * @throws AmazonClientException amazon-layer failure.
    */
   @Retries.RetryRaw
-  private void deleteObjects(DeleteObjectsRequest deleteRequest)
+  private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 deleteRequest.getKeys().size())) {
-      invoker.retryUntranslated("delete",
+      return invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
@@ -2070,6 +2082,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @param quiet should a bulk query be quiet, or should its result list
+   * all deleted keys
+   * @return the deletion result if a multi object delete was invoked
+   * and it returned without a failure.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2079,22 +2095,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException other amazon-layer failure.
    */
   @Retries.RetryRaw
-  private void removeKeysS3(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir)
+  private Optional<DeleteObjectsResult> removeKeysS3(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      boolean deleteFakeDir, boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
+    Optional<DeleteObjectsResult> result = Optional.empty();
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
-      return;
+      return result;
     }
     for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
       blockRootDelete(keyVersion.getKey());
     }
     try {
       if (enableMultiObjectsDelete) {
-        deleteObjects(new DeleteObjectsRequest(bucket)
-            .withKeys(keysToDelete)
-            .withQuiet(true));
+        result = Optional.of(
+            deleteObjects(new DeleteObjectsRequest(bucket)
+                .withKeys(keysToDelete)
+                .withQuiet(quiet)));
       } else {
         for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
           deleteObject(keyVersion.getKey());
@@ -2110,6 +2128,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw ex;
     }
     noteDeleted(keysToDelete.size(), deleteFakeDir);
+    return result;
   }
 
   /**
@@ -2148,7 +2167,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final BulkOperationState operationState)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
-    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>(), operationState);
+    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>(), operationState,
+        true);
   }
 
   /**
@@ -2168,6 +2188,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * files that were not deleted. This happens even as an exception
    * is raised.
    * @param operationState (nullable) operational state for a bulk update
+   * @param quiet should a bulk query be quiet, or should its result list
+   * all deleted keys
+   * @return the deletion result if a multi object delete was invoked
+   * and it returned without a failure.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2176,15 +2200,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException other IO Exception.
    */
   @Retries.RetryMixed
-  void removeKeys(
+  Optional<DeleteObjectsResult> removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final List<Path> undeletedObjectsOnFailure,
-      final BulkOperationState operationState)
+      final BulkOperationState operationState,
+      final boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     undeletedObjectsOnFailure.clear();
-    try(DurationInfo ignored = new DurationInfo(LOG, false, "Deleting")) {
-      removeKeysS3(keysToDelete, deleteFakeDir);
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Deleting")) {
+      return removeKeysS3(keysToDelete, deleteFakeDir, quiet);
     } catch (MultiObjectDeleteException ex) {
       LOG.debug("Partial delete failure");
       // what to do if an IOE was raised? Given an exception was being
@@ -2225,12 +2250,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       entryPoint(INVOCATION_DELETE);
-      boolean outcome = new DeleteOperation(
+      DeleteOperation deleteOperation = new DeleteOperation(
           createStoreContext(),
           innerGetFileStatus(f, true),
           recursive,
-          new RenameOperationCallbacksImpl(),
-          InternalConstants.MAX_ENTRIES_TO_DELETE).execute();
+          new OperationCallbacksImpl(),
+          InternalConstants.MAX_ENTRIES_TO_DELETE);
+      boolean outcome = deleteOperation.execute();
       if (outcome) {
         try {
           maybeCreateFakeParentDirectory(f);
@@ -3662,8 +3688,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * These are then translated into {@link LocatedFileStatus} instances.
    *
    * This is essentially a nested and wrapped set of iterators, with some
-   * generator classes; an architecture which may become less convoluted
-   * using lambda-expressions.
+   * generator classes.
    * @param f a path
    * @param recursive if the subdirectories need to be traversed recursively
    *
@@ -3673,11 +3698,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException if any I/O error occurred
    */
   @Override
-  @Retries.OnceTranslated
+  @Retries.RetryTranslated
   public RemoteIterator<LocatedFileStatus> listFiles(Path f,
       boolean recursive) throws FileNotFoundException, IOException {
     return toLocatedFileStatusIterator(innerListFiles(f, recursive,
-        new Listing.AcceptFilesOnly(qualify(f))));
+        new Listing.AcceptFilesOnly(qualify(f)), null, true));
   }
 
   private static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
@@ -3704,19 +3729,54 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
       Path f, boolean recursive) throws IOException {
-    return invoker.retry("list", f.toString(), true,
-        () -> innerListFiles(f, recursive, new Listing.AcceptAllButS3nDirs()));
+    return innerListFiles(f, recursive, Listing.ACCEPT_ALL_BUT_S3N, null, true);
   }
 
-  @Retries.OnceTranslated
-  private RemoteIterator<S3ALocatedFileStatus> innerListFiles(Path f, boolean
-      recursive, Listing.FileStatusAcceptor acceptor) throws IOException {
+  /**
+   * List files under the path.
+   * <ol>
+   *   <li>
+   *     If the path is authoritative, only S3Guard will be queried.
+   *   </li>
+   *   <li>
+   *     Otherwise, the S3Guard values are returned first, then the S3
+   *     entries will be retrieved and returned if not already listed.</li>
+   *   <li>
+   *     S3Guard tombstones will be used to filter out deleted files unless
+   *     the caller does not want this.
+   *     They MUST be used for normal listings; it is only for
+   *     deletion and low-level operations that they MAY be bypassed.
+   *   </li>
+   *   <li>
+   *     The optional status parameter will be used to skip any
+   *     proceeding getFileStatus call.
+   *   </li>
+   * </ol>
+   *
+   * @param f path
+   * @param recursive recursive listing?
+   * @param acceptor file status filter
+   * @param status optional status of path to list.
+   * @param collectTombstones should tombstones be collected from S3Guard?
+   * @return an iterator over the listing.
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  private RemoteIterator<S3ALocatedFileStatus> innerListFiles(
+      final Path f,
+      final boolean recursive,
+      final Listing.FileStatusAcceptor acceptor,
+      final S3AFileStatus status,
+      final boolean collectTombstones) throws IOException {
     entryPoint(INVOCATION_LIST_FILES);
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
     try {
-      // lookup dir triggers existence check
-      final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
+      // if a status was given, that is used, otherwise
+      // call getFileStatus, which triggers an existence check
+      final S3AFileStatus fileStatus = status != null
+          ? status
+          : (S3AFileStatus) getFileStatus(path);
       if (fileStatus.isFile()) {
         // simple case: File
         LOG.debug("Path is a file");
@@ -3762,7 +3822,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     ACCEPT_ALL,
                     acceptor,
                     cachedFilesIterator)),
-            tombstones);
+            collectTombstones ? tombstones : null);
       }
     } catch (AmazonClientException e) {
       // TODO S3Guard: retry on file not found exception
@@ -3850,7 +3910,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new S3ALocatedFileStatus(status,
         status.isFile() ?
           getFileBlockLocations(status, 0, status.getLen())
-          : null, status.getETag(), status.getVersionId());
+          : null);
   }
 
   /**

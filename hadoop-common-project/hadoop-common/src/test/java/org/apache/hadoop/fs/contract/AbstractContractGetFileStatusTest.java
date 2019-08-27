@@ -114,7 +114,9 @@ public abstract class AbstractContractGetFileStatusTest extends
         " on empty directories, expect nothing found");
     Path subfolder = createDirWithEmptySubFolder();
     FileSystem fs = getFileSystem();
-    new TreeScanResults(fs.listFiles(getContract().getTestPath(), recursive))
+    Path testPath = getContract().getTestPath();
+    fs.delete(testPath, true);
+    new TreeScanResults(fs.listFiles(testPath, recursive))
         .assertSizeEquals("listFiles(test dir, " + recursive + ")", 0, 0, 0);
     describe("Test on empty subdirectory");
     new TreeScanResults(fs.listFiles(subfolder, recursive))
@@ -128,7 +130,9 @@ public abstract class AbstractContractGetFileStatusTest extends
         " expect directories to be found");
     Path subfolder = createDirWithEmptySubFolder();
     FileSystem fs = getFileSystem();
-    new TreeScanResults(fs.listLocatedStatus(getContract().getTestPath()))
+    Path testPath = getContract().getTestPath();
+    fs.delete(testPath, true);
+    new TreeScanResults(fs.listLocatedStatus(testPath))
       .assertSizeEquals("listLocatedStatus(test dir)", 0, 1, 0);
     describe("Test on empty subdirectory");
     new TreeScanResults(fs.listLocatedStatus(subfolder))

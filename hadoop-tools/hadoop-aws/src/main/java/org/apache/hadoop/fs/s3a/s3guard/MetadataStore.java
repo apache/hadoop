@@ -164,6 +164,7 @@ public interface MetadataStore extends Closeable {
    *     in the MetadataStore.
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   DirListingMetadata listChildren(Path path) throws IOException;
 
   /**

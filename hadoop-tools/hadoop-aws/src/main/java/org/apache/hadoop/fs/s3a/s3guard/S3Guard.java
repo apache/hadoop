@@ -760,6 +760,7 @@ public final class S3Guard {
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */
+  @Retries.RetryTranslated
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
       Path path, @Nullable ITtlTimeProvider timeProvider)
       throws IOException {
