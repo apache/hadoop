@@ -29,6 +29,7 @@ fi
 
 cd "$DIST_DIR/compose" || exit 1
 ./test-all.sh
+RES=$?
 cp results/* "$REPORT_DIR/"
 cp "$REPORT_DIR/log.html" "$REPORT_DIR/summary.html"
-exit $?
+return $RES
