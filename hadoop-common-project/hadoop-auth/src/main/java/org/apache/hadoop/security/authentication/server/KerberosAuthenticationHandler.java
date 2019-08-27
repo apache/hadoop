@@ -193,8 +193,9 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
           if (ENDPOINT_PATTERN.matcher(s).matches()) {
             whitelist.add(s);
           } else {
-            throw new ServletException("The element of the whitelist: " + s +
-                " must start with '/' and must not contain special characters");
+            throw new ServletException(
+                "The element of the whitelist: " + s + " must start with '/'"
+                    + " and must not contain special characters afterwards");
           }
         }
       }
