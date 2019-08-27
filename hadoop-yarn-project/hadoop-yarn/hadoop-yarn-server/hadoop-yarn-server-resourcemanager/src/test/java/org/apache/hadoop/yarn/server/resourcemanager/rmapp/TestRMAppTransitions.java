@@ -469,6 +469,13 @@ public class TestRMAppTransitions {
         any(ApplicationStateData.class));
   }
 
+  private void assertAppStateLaunchTimeSaved(long expectedLaunchTime) {
+    ArgumentCaptor<ApplicationStateData> state =
+        ArgumentCaptor.forClass(ApplicationStateData.class);
+    verify(store, times(1)).updateApplicationState(state.capture());
+    assertEquals(expectedLaunchTime, state.getValue().getLaunchTime());
+  }
+
   private void assertKilled(RMApp application) {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
@@ -900,6 +907,21 @@ public class TestRMAppTransitions {
     verifyApplicationFinished(RMAppState.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
+  }
+
+  @Test
+  public void testAppAcceptedAccepted() throws IOException {
+    LOG.info("--- START: testAppAcceptedAccepted ---");
+
+    RMApp application = testCreateAppAccepted(null);
+    // ACCEPTED => ACCEPTED event RMAppEventType.ATTEMPT_LAUNCHED
+    RMAppEvent appAttemptLaunched =
+        new RMAppEvent(application.getApplicationId(),
+            RMAppEventType.ATTEMPT_LAUNCHED, 1234L);
+    application.handle(appAttemptLaunched);
+    rmDispatcher.await();
+    assertAppState(RMAppState.ACCEPTED, application);
+    assertAppStateLaunchTimeSaved(1234L);
   }
 
   @Test
