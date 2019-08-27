@@ -36,7 +36,6 @@ done < <(find "." -name surefire-reports -print0)
 
 ## generate summary markdown file
 export SUMMARY_FILE="$REPORT_DIR/summary.md"
-printf "# Failing tests: \n\n" > "$SUMMARY_FILE"
 for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
 
     FAILURES=$(grep FAILURE "$TEST_RESULT_FILE" | grep "Tests run" | awk '{print $18}' | sort | uniq)
@@ -48,6 +47,7 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
     done
 done
 printf "\n\n" >> "$SUMMARY_FILE"
+printf "# Failing tests: \n\n" | cat $SUMMARY_FILE > temp && mv temp "$SUMMARY_FILE"
 
 ## generate counter
 wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
