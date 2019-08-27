@@ -58,7 +58,7 @@ import static org.mockito.Mockito.when;
 public class TestMultipartUploadWithCopy {
 
   private final static ObjectEndpoint REST = new ObjectEndpoint();
-  ;
+
   private final static String BUCKET = "s3bucket";
   private final static String KEY = "key2";
   private final static String EXISTING_KEY = "key1";
@@ -137,7 +137,7 @@ public class TestMultipartUploadWithCopy {
   private String initiateMultipartUpload(String key) throws IOException,
       OS3Exception {
     setHeaders();
-    Response response = REST.multipartUpload(BUCKET, key, "", "", null);
+    Response response = REST.initializeMultipartUpload(BUCKET, key);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();
     assertNotNull(multipartUploadInitiateResponse.getUploadID());
@@ -193,7 +193,7 @@ public class TestMultipartUploadWithCopy {
       CompleteMultipartUploadRequest completeMultipartUploadRequest,
       String uploadID) throws IOException, OS3Exception {
     setHeaders();
-    Response response = REST.multipartUpload(BUCKET, key, "", uploadID,
+    Response response = REST.completeMultipartUpload(BUCKET, key, uploadID,
         completeMultipartUploadRequest);
 
     assertEquals(response.getStatus(), 200);
