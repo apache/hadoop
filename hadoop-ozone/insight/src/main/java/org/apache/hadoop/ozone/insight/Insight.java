@@ -12,8 +12,8 @@ import picocli.CommandLine;
     hidden = true, description = "Show debug information about a selected "
     + "Ozone component",
     versionProvider = HddsVersionProvider.class,
-    subcommands = {ListSubCommand.class, LogSubcommand.class, MetricsSubCommand.class,
-        ConfigurationSubCommand.class},
+    subcommands = {ListSubCommand.class, LogSubcommand.class,
+        MetricsSubCommand.class, ConfigurationSubCommand.class},
     mixinStandardHelpOptions = true)
 public class Insight extends GenericCli {
 

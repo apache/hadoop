@@ -16,7 +16,8 @@ import java.util.concurrent.Callable;
     description = "Show available insight points.",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
-public class ListSubCommand extends BaseInsightSubCommand implements Callable<Void> {
+public class ListSubCommand extends BaseInsightSubCommand
+    implements Callable<Void> {
 
   @CommandLine.Parameters(defaultValue = "")
   private String insightPrefix;
