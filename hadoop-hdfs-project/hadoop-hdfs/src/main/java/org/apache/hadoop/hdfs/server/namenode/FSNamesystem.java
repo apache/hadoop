@@ -596,7 +596,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * HDFS-14497: Concurrency control when many metaSave request to write
    * meta to same out stream after switch to read lock.
    */
-  private Object metaSaveLock = new Object();
+  private final Object metaSaveLock = new Object();
 
   /**
    * Notify that loading of this FSDirectory is complete, and
