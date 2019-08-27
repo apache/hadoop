@@ -43,7 +43,7 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
     for FAILURE in $FAILURES; do
         TEST_RESULT_LOCATION="$(realpath --relative-to="$REPORT_DIR" "$TEST_RESULT_FILE")"
         TEST_OUTPUT_LOCATION="${TEST_RESULT_LOCATION//.txt/-output.txt/}"
-        printf " * [%s](%s) ([output](%s))" "$FAILURE" "$TEST_RESULT_LOCATION" "$TEST_OUTPUT_LOCATION" >> "$SUMMARY_FILE"
+        printf " * [%s](%s) ([output](%s))" "$FAILURE" "$TEST_RESULT_LOCATION" "$TEST_OUTPUT_LOCATION\n" >> "$SUMMARY_FILE"
     done
 done
 printf "\n\n" >> "$SUMMARY_FILE"
