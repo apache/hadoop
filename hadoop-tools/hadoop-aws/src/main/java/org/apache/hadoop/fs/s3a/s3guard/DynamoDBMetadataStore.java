@@ -283,7 +283,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   static final String E_INCONSISTENT_UPDATE
       = "Duplicate and inconsistent entry in update operation";
 
-  private static ValueMap deleteTrackingValueMap =
+  private static final ValueMap DELETE_TRACKING_VALUE_MAP =
       new ValueMap().withBoolean(":false", false);
 
   /**
@@ -723,7 +723,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             .withHashKey(pathToParentKeyAttribute(path))
             .withConsistentRead(true)
             .withFilterExpression(IS_DELETED + " = :false")
-            .withValueMap(deleteTrackingValueMap);
+            .withValueMap(DELETE_TRACKING_VALUE_MAP);
         boolean hasChildren = readOp.retry("get/hasChildren",
             path.toString(),
             true,
