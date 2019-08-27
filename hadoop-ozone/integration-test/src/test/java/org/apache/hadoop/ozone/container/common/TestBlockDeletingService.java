@@ -198,13 +198,8 @@ public class TestBlockDeletingService {
     ContainerSet containerSet = new ContainerSet();
     createToDeleteBlocks(containerSet, conf, 1, 3, 1);
 
-    OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
-    Mockito.when(ozoneContainer.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(ozoneContainer.getWriteChannel())
-        .thenReturn(null);
     BlockDeletingServiceTestImpl svc =
-        new BlockDeletingServiceTestImpl(ozoneContainer, 1000, conf);
+        getBlockDeletinService(containerSet, conf, 1000);
     svc.start();
     GenericTestUtils.waitFor(() -> svc.isStarted(), 100, 3000);
 
@@ -263,13 +258,8 @@ public class TestBlockDeletingService {
     // Create 1 container with 100 blocks
     createToDeleteBlocks(containerSet, conf, 1, 100, 1);
 
-    OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
-    Mockito.when(ozoneContainer.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(ozoneContainer.getWriteChannel())
-        .thenReturn(null);
     BlockDeletingServiceTestImpl service =
-        new BlockDeletingServiceTestImpl(ozoneContainer, 1000, conf);
+        getBlockDeletinService(containerSet, conf, 1000);
     service.start();
     GenericTestUtils.waitFor(() -> service.isStarted(), 100, 3000);
 
@@ -356,6 +346,16 @@ public class TestBlockDeletingService {
     svc.shutdown();
   }
 
+  private BlockDeletingServiceTestImpl getBlockDeletinService(
+      ContainerSet containerSet, Configuration conf, int timeout) {
+    OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
+    Mockito.when(ozoneContainer.getContainerSet()).thenReturn(containerSet);
+    Mockito.when(ozoneContainer.getWriteChannel()).thenReturn(null);
+    BlockDeletingServiceTestImpl service =
+        new BlockDeletingServiceTestImpl(ozoneContainer, timeout, conf);
+    return service;
+  }
+
   @Test(timeout = 30000)
   public void testContainerThrottle() throws Exception {
     // Properties :
@@ -377,13 +377,8 @@ public class TestBlockDeletingService {
     ContainerSet containerSet = new ContainerSet();
     createToDeleteBlocks(containerSet, conf, 2, 1, 10);
 
-    OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
-    Mockito.when(ozoneContainer.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(ozoneContainer.getWriteChannel())
-        .thenReturn(null);
     BlockDeletingServiceTestImpl service =
-        new BlockDeletingServiceTestImpl(ozoneContainer, 1000, conf);
+        getBlockDeletinService(containerSet, conf, 1000);
     service.start();
 
     try {
@@ -434,12 +429,10 @@ public class TestBlockDeletingService {
     // Make sure chunks are created
     Assert.assertEquals(15, getNumberOfChunksInContainers(containerSet));
     OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
-    Mockito.when(ozoneContainer.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(ozoneContainer.getWriteChannel())
-        .thenReturn(null);
+    Mockito.when(ozoneContainer.getContainerSet()).thenReturn(containerSet);
+    Mockito.when(ozoneContainer.getWriteChannel()).thenReturn(null);
     BlockDeletingServiceTestImpl service =
-        new BlockDeletingServiceTestImpl(ozoneContainer, 1000, conf);
+        getBlockDeletinService(containerSet, conf, 1000);
     service.start();
 
     try {

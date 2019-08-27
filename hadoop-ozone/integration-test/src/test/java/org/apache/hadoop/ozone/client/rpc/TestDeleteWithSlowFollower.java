@@ -187,10 +187,12 @@ public class TestDeleteWithSlowFollower {
     }
     Assert.assertNotNull(follower);
     Assert.assertNotNull(leader);
-    //shutdown the slow follower
+    // shutdown the slow follower
     cluster.shutdownHddsDatanode(follower.getDatanodeDetails());
     key.write(testData);
     key.close();
+
+    // now move the container to the closed on the datanode.
     XceiverClientSpi xceiverClient =
         xceiverClientManager.acquireClient(pipeline);
     ContainerProtos.ContainerCommandRequestProto.Builder request =
@@ -201,6 +203,7 @@ public class TestDeleteWithSlowFollower {
     request.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
     xceiverClient.sendCommand(request.build());
+
     ContainerStateMachine stateMachine =
         (ContainerStateMachine) ContainerTestHelper
             .getStateMachine(leader, pipeline);

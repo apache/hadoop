@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
@@ -171,11 +170,17 @@ public class BlockDeletingService extends BackgroundService {
       return false;
     } else {
       if (ozoneContainer.getWriteChannel() instanceof XceiverServerRatis) {
+        XceiverServerRatis ratisServer =
+            (XceiverServerRatis) ozoneContainer.getWriteChannel();
+        PipelineID pipelineID = PipelineID
+            .valueOf(UUID.fromString(containerData.getOriginPipelineId()));
+        // in case te ratis group does not exist, just mark it for deletion.
+        if (!ratisServer.isExist(pipelineID.getProtobuf())) {
+          return true;
+        }
         try {
-          XceiverServerRatis ratisServer =
-              (XceiverServerRatis) ozoneContainer.getWriteChannel();
-          long minReplicatedIndex = ratisServer.getMinReplicatedIndex(PipelineID
-              .valueOf(UUID.fromString(containerData.getOriginPipelineId())));
+          long minReplicatedIndex =
+              ratisServer.getMinReplicatedIndex(pipelineID);
           long containerBCSID = containerData.getBlockCommitSequenceId();
           if (minReplicatedIndex >= 0 && minReplicatedIndex < containerBCSID) {
             LOG.warn("Close Container log Index {} is not replicated across all"
@@ -188,8 +193,14 @@ public class BlockDeletingService extends BackgroundService {
             return true;
           }
         } catch (IOException ioe) {
-          LOG.info(ioe.getMessage());
-          return false;
+          // in case of any exception check again whether the pipeline exist
+          // and in case the pipeline got destroyed, just mark it for deletion
+          if (!ratisServer.isExist(pipelineID.getProtobuf())) {
+            return true;
+          } else {
+            LOG.info(ioe.getMessage());
+            return false;
+          }
         }
       }
       return true;

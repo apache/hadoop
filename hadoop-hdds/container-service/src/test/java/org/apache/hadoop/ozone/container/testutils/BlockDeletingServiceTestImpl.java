@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.container.testutils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
     .BlockDeletingService;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;

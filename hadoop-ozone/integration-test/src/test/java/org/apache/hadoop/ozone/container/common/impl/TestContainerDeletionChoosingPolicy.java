@@ -49,7 +49,7 @@ import org.mockito.Mockito;
  */
 public class TestContainerDeletionChoosingPolicy {
   private static String path;
-  private OzoneContainer container;
+  private OzoneContainer ozoneContainer;
   private ContainerSet containerSet;
   private OzoneConfiguration conf;
   private BlockDeletingService blockDeletingService;
@@ -91,14 +91,7 @@ public class TestContainerDeletionChoosingPolicy {
           containerSet.getContainerMapCopy()
               .containsKey(data.getContainerID()));
     }
-    container = Mockito.mock(OzoneContainer.class);
-    Mockito.when(container.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(container.getWriteChannel())
-        .thenReturn(null);
-    blockDeletingService =
-        new BlockDeletingService(container, SERVICE_INTERVAL_IN_MILLISECONDS,
-            SERVICE_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS, conf);
+    blockDeletingService = getBlockDeletingService();
 
     ContainerDeletionChoosingPolicy deletionPolicy =
         new RandomContainerDeletionChoosingPolicy();
@@ -160,15 +153,8 @@ public class TestContainerDeletionChoosingPolicy {
       Assert.assertTrue(
           containerSet.getContainerMapCopy().containsKey(containerId));
     }
-    container = Mockito.mock(OzoneContainer.class);
-    Mockito.when(container.getContainerSet())
-        .thenReturn(containerSet);
-    Mockito.when(container.getWriteChannel())
-        .thenReturn(null);
-    blockDeletingService =
-        new BlockDeletingService(container, SERVICE_INTERVAL_IN_MILLISECONDS,
-            SERVICE_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS, conf);
 
+    blockDeletingService = getBlockDeletingService();
     ContainerDeletionChoosingPolicy deletionPolicy =
         new TopNOrderedContainerDeletionChoosingPolicy();
     List<ContainerData> result0 =
@@ -190,5 +176,16 @@ public class TestContainerDeletionChoosingPolicy {
     }
     // ensure all the container data are compared
     Assert.assertEquals(0, name2Count.size());
+  }
+
+  private BlockDeletingService getBlockDeletingService() {
+    ozoneContainer = Mockito.mock(OzoneContainer.class);
+    Mockito.when(ozoneContainer.getContainerSet()).thenReturn(containerSet);
+    Mockito.when(ozoneContainer.getWriteChannel()).thenReturn(null);
+    blockDeletingService = new BlockDeletingService(ozoneContainer,
+        SERVICE_INTERVAL_IN_MILLISECONDS, SERVICE_TIMEOUT_IN_MILLISECONDS,
+        TimeUnit.MILLISECONDS, conf);
+    return blockDeletingService;
+
   }
 }
