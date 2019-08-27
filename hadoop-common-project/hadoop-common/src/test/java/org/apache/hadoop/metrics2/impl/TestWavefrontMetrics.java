@@ -60,6 +60,7 @@ public class TestWavefrontMetrics {
     return mockWavefront;
   }
 
+  @SuppressWarnings( "deprecation" )
   @Test
   public void testPutMetrics() {
     WavefrontSink sink = new WavefrontSink();
@@ -101,6 +102,7 @@ public class TestWavefrontMetrics {
   /**
    * Assert that timestamps are converted correctly.
    */
+  @SuppressWarnings( "deprecation" )
   @Test
   public void testPutMetrics2() {
 
@@ -139,6 +141,7 @@ public class TestWavefrontMetrics {
     }
   }
 
+  @SuppressWarnings( "deprecation" )
   @Test
   public void testFailureAndPutMetrics() throws IOException {
     WavefrontSink sink = new WavefrontSink();
@@ -185,6 +188,7 @@ public class TestWavefrontMetrics {
             "Hostname=\"host\"\n"));
   }
 
+  @SuppressWarnings( "deprecation" )
   @Test
   public void testClose() {
     WavefrontSink sink = new WavefrontSink();
