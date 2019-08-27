@@ -267,6 +267,22 @@ public class ResourceManager extends CompositeService
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
+    // Set HA configuration should be done before login
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(this.conf);
+    }
+
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
+
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -285,22 +301,6 @@ public class ResourceManager extends CompositeService
     loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
-    
-    // Set HA configuration should be done before login
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
-    if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(this.conf);
-    }
-
-    // Set UGI and do login
-    // If security is enabled, use login user
-    // If security is not enabled, use current user
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
