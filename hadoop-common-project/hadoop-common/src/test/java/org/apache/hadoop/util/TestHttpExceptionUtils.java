@@ -17,14 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import com.google.gson.Gson;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,6 +27,12 @@ import java.net.HttpURLConnection;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestHttpExceptionUtils {
 
@@ -48,8 +47,8 @@ public class TestHttpExceptionUtils {
     HttpExceptionUtils.createServletExceptionResponse(response, status, ex);
     Mockito.verify(response).setStatus(status);
     Mockito.verify(response).setContentType(Mockito.eq("application/json"));
-    ObjectMapper mapper = new ObjectMapper();
-    Map json = mapper.readValue(writer.toString(), Map.class);
+    Gson gson = new Gson();
+    Map json = gson.fromJson(writer.toString(), Map.class);
     json = (Map) json.get(HttpExceptionUtils.ERROR_JSON);
     Assert.assertEquals(IOException.class.getName(),
         json.get(HttpExceptionUtils.ERROR_CLASSNAME_JSON));
@@ -122,8 +121,8 @@ public class TestHttpExceptionUtils {
     json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
     Map<String, Object> response = new HashMap<String, Object>();
     response.put(HttpExceptionUtils.ERROR_JSON, json);
-    ObjectMapper jsonMapper = new ObjectMapper();
-    String msg = jsonMapper.writeValueAsString(response);
+    Gson gson = new Gson();
+    String msg = gson.toJson(response);
     InputStream is = new ByteArrayInputStream(msg.getBytes());
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
@@ -147,8 +146,8 @@ public class TestHttpExceptionUtils {
     json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
     Map<String, Object> response = new HashMap<String, Object>();
     response.put(HttpExceptionUtils.ERROR_JSON, json);
-    ObjectMapper jsonMapper = new ObjectMapper();
-    String msg = jsonMapper.writeValueAsString(response);
+    Gson gson = new Gson();
+    String msg = gson.toJson(response);
     InputStream is = new ByteArrayInputStream(msg.getBytes());
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);

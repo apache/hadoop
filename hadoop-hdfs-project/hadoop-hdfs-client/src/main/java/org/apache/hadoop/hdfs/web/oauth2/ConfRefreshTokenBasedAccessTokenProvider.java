@@ -18,22 +18,6 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.Response;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.apache.hadoop.util.JsonSerialization;
-import org.apache.hadoop.util.Timer;
-import org.apache.http.HttpStatus;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.ACCESS_TOKEN;
@@ -43,6 +27,21 @@ import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.GRANT_TYPE;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.REFRESH_TOKEN;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.URLENCODED;
 import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
+
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.util.GsonSerialization;
+import org.apache.hadoop.util.Timer;
+import org.apache.http.HttpStatus;
 
 /**
  * Supply a access token obtained via a refresh token (provided through the
@@ -126,8 +125,8 @@ public class ConfRefreshTokenBasedAccessTokenProvider
             + responseBody.code() + ", text = " + responseBody.toString());
       }
 
-      Map<?, ?> response = JsonSerialization.mapReader().readValue(
-          responseBody.body().string());
+      Map<?, ?> response = GsonSerialization.reader().fromJson(
+          responseBody.body().string(), Map.class);
 
       String newExpiresIn = response.get(EXPIRES_IN).toString();
       accessTokenTimer.setExpiresIn(newExpiresIn);

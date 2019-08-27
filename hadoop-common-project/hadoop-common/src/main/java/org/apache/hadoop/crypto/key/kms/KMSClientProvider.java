@@ -17,40 +17,19 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
-import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.ProviderUtils;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
-import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
-import org.apache.hadoop.util.HttpExceptionUtils;
-import org.apache.hadoop.util.JsonSerialization;
-import org.apache.hadoop.util.KMSUtil;
-import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
+import static org.apache.hadoop.util.KMSUtil.checkNotNull;
+import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersion;
+import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersions;
+import static org.apache.hadoop.util.KMSUtil.parseJSONKeyVersion;
+import static org.apache.hadoop.util.KMSUtil.parseJSONMetadata;
 
-import javax.net.ssl.HttpsURLConnection;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -74,21 +53,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
-
+import javax.net.ssl.HttpsURLConnection;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-
-import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
-import static org.apache.hadoop.util.KMSUtil.checkNotNull;
-import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersion;
-import static org.apache.hadoop.util.KMSUtil.parseJSONEncKeyVersions;
-import static org.apache.hadoop.util.KMSUtil.parseJSONKeyVersion;
-import static org.apache.hadoop.util.KMSUtil.parseJSONMetadata;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.util.GsonSerialization;
+import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.KMSUtil;
+import org.apache.http.client.utils.URIBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * KMS client <code>KeyProvider</code> implementation.
@@ -252,7 +248,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static void writeJson(Object obj, OutputStream os)
       throws IOException {
     Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-    JsonSerialization.writer().writeValue(writer, obj);
+    GsonSerialization.prettyWriter().toJson(obj, obj.getClass(), writer);
   }
 
   /**
@@ -592,11 +588,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
-      ObjectMapper mapper = new ObjectMapper();
       InputStream is = null;
       try {
         is = conn.getInputStream();
-        ret = mapper.readValue(is, klass);
+        ret = GsonSerialization.reader()
+            .fromJson(new InputStreamReader(is, StandardCharsets.UTF_8), klass);
       } finally {
         IOUtils.closeStream(is);
       }

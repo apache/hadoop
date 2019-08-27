@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.fs.azure.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.util.JsonSerialization;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
+import org.apache.hadoop.util.GsonSerialization;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to parse JSON.
@@ -38,7 +36,7 @@ public final class JsonUtils {
 
   public static Map<?, ?> parse(final String jsonString) throws IOException {
     try {
-      return JsonSerialization.mapReader().readValue(jsonString);
+      return GsonSerialization.reader().fromJson(jsonString, Map.class);
     } catch (Exception e) {
       LOG.debug("JSON Parsing exception: {} while parsing {}", e.getMessage(),
           jsonString);

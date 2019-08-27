@@ -17,6 +17,31 @@
  */
 package org.apache.hadoop.conf;
 
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.conf.StorageUnit.BYTES;
+import static org.apache.hadoop.conf.StorageUnit.GB;
+import static org.apache.hadoop.conf.StorageUnit.KB;
+import static org.apache.hadoop.conf.StorageUnit.MB;
+import static org.apache.hadoop.conf.StorageUnit.TB;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import com.google.gson.Gson;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -46,25 +71,9 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
-import static java.util.concurrent.TimeUnit.*;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-
-import static org.apache.hadoop.conf.StorageUnit.BYTES;
-import static org.apache.hadoop.conf.StorageUnit.GB;
-import static org.apache.hadoop.conf.StorageUnit.KB;
-import static org.apache.hadoop.conf.StorageUnit.MB;
-import static org.apache.hadoop.conf.StorageUnit.TB;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
@@ -72,13 +81,14 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
-
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
-
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hamcrest.CoreMatchers;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
@@ -1830,7 +1840,7 @@ public class TestConfiguration {
   @Test
   public void testDumpProperty() throws IOException {
     StringWriter outWriter = new StringWriter();
-    ObjectMapper mapper = new ObjectMapper();
+    Gson gson = new Gson();
     String jsonStr = null;
     String xmlStr = null;
     try {
@@ -1851,9 +1861,8 @@ public class TestConfiguration {
       Configuration.dumpConfiguration(testConf, "test.key2", outWriter);
       jsonStr = outWriter.toString();
       outWriter.close();
-      mapper = new ObjectMapper();
       SingleJsonConfiguration jconf1 =
-          mapper.readValue(jsonStr, SingleJsonConfiguration.class);
+          gson.fromJson(jsonStr, SingleJsonConfiguration.class);
       JsonProperty jp1 = jconf1.getProperty();
       assertEquals("test.key2", jp1.getKey());
       assertEquals("value2", jp1.getValue());
@@ -1899,9 +1908,8 @@ public class TestConfiguration {
       outWriter = new StringWriter();
       Configuration.dumpConfiguration(testConf, null, outWriter);
       jsonStr = outWriter.toString();
-      mapper = new ObjectMapper();
       JsonConfiguration jconf3 =
-          mapper.readValue(jsonStr, JsonConfiguration.class);
+          gson.fromJson(jsonStr, JsonConfiguration.class);
       assertEquals(3, jconf3.getProperties().length);
 
       outWriter = new StringWriter();
@@ -1918,9 +1926,8 @@ public class TestConfiguration {
       outWriter = new StringWriter();
       Configuration.dumpConfiguration(testConf, "", outWriter);
       jsonStr = outWriter.toString();
-      mapper = new ObjectMapper();
       JsonConfiguration jconf4 =
-          mapper.readValue(jsonStr, JsonConfiguration.class);
+          gson.fromJson(jsonStr, JsonConfiguration.class);
       assertEquals(3, jconf4.getProperties().length);
 
       outWriter = new StringWriter();
@@ -1947,9 +1954,9 @@ public class TestConfiguration {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     String jsonStr = outWriter.toString();
-    ObjectMapper mapper = new ObjectMapper();
+    Gson gson = new Gson();
     JsonConfiguration jconf =
-        mapper.readValue(jsonStr, JsonConfiguration.class);
+        gson.fromJson(jsonStr, JsonConfiguration.class);
     int defaultLength = jconf.getProperties().length;
 
     // add 3 keys to the existing configuration properties
@@ -1966,8 +1973,7 @@ public class TestConfiguration {
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     jsonStr = outWriter.toString();
-    mapper = new ObjectMapper();
-    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    jconf = gson.fromJson(jsonStr, JsonConfiguration.class);
     int length = jconf.getProperties().length;
     // check for consistency in the number of properties parsed in Json format.
     assertEquals(length, defaultLength+3);
@@ -1985,8 +1991,7 @@ public class TestConfiguration {
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     jsonStr = outWriter.toString();
-    mapper = new ObjectMapper();
-    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    jconf = gson.fromJson(jsonStr, JsonConfiguration.class);
 
     // put the keys and their corresponding attributes into a hashmap for their
     // efficient retrieval
@@ -2018,8 +2023,7 @@ public class TestConfiguration {
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     jsonStr = outWriter.toString();
-    mapper = new ObjectMapper();
-    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    jconf = gson.fromJson(jsonStr, JsonConfiguration.class);
     confDump = new HashMap<String, JsonProperty>();
     for(JsonProperty prop : jconf.getProperties()) {
       confDump.put(prop.getKey(), prop);
@@ -2036,9 +2040,9 @@ public class TestConfiguration {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(config, outWriter);
     String jsonStr = outWriter.toString();
-    ObjectMapper mapper = new ObjectMapper();
+    Gson gson = new Gson();
     JsonConfiguration jconf =
-        mapper.readValue(jsonStr, JsonConfiguration.class);
+        gson.fromJson(jsonStr, JsonConfiguration.class);
 
     //ensure that no properties are loaded.
     assertEquals(0, jconf.getProperties().length);
@@ -2056,8 +2060,7 @@ public class TestConfiguration {
     outWriter = new StringWriter();
     Configuration.dumpConfiguration(config, outWriter);
     jsonStr = outWriter.toString();
-    mapper = new ObjectMapper();
-    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    jconf = gson.fromJson(jsonStr, JsonConfiguration.class);
 
     HashMap<String, JsonProperty>confDump = new HashMap<String, JsonProperty>();
     for (JsonProperty prop : jconf.getProperties()) {
