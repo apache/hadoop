@@ -118,6 +118,8 @@ function ozonecmd_case
     ;;
     freon)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.Freon
+      OZONE_FREON_OPTS="${OZONE_FREON_OPTS} -Dhadoop.log.file=ozone-freon.log -Dlog4j.configuration=file:${HADOOP_CONF_DIR}/ozone-shell-log4j.properties"
+      HADOOP_OPTS="${HADOOP_OPTS} ${OZONE_FREON_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     genesis)
@@ -137,6 +139,7 @@ function ozonecmd_case
     ;;
     sh | shell)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      HDFS_OM_SH_OPTS="${HDFS_OM_SH_OPTS} -Dhadoop.log.file=ozone-shell.log -Dlog4j.configuration=file:${HADOOP_CONF_DIR}/ozone-shell-log4j.properties"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_SH_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
