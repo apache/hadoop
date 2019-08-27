@@ -361,7 +361,7 @@ public class TestEditLog {
           readFsImage.loadEdits(editStreams, namesystem, 100, null, null);
         } catch (Exception e){
           LOG.error("There appears to be an out-of-order edit in the edit log",
-                  e.getMessage());
+              e);
           fail("no exception should be thrown");
         } finally {
           if (readFsImage != null) {
