@@ -54,7 +54,6 @@ Test ozone shell
     [arguments]     ${protocol}         ${server}       ${volume}
     ${result} =     Execute             ozone sh volume create ${protocol}${server}/${volume} --quota 100TB
                     Should not contain  ${result}       Failed
-                    Should contain      ${result}       Creating Volume: ${volume}
     ${result} =     Execute             ozone sh volume list ${protocol}${server}/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.name=="${volume}")'
                     Should contain      ${result}       creationTime
     ${result} =     Execute             ozone sh volume list | grep -Ev 'Removed|DEBUG|ERROR|INFO|TRACE|WARN' | jq -r '. | select(.name=="${volume}")'
