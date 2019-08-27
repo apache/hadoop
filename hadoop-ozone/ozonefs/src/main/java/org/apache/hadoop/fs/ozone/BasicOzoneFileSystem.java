@@ -116,11 +116,12 @@ public class BasicOzoneFileSystem extends FileSystem {
     int omPort = -1;
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      // Array length should be either 1(host) or 2(host:port)
+      // Array length should be either 1(hostname or service id) or 2(host:port)
       if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
+      // omHost is not in the service ids list
       if (parts.length == 2) {
         try {
           omPort = Integer.parseInt(parts[1]);

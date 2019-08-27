@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,26 +71,49 @@ public class OMFailoverProxyProvider implements
   private final UserGroupInformation ugi;
   private final Text delegationTokenService;
 
+  // TODO: Do we want this to be final?
+  private String omServiceId;
+
   public OMFailoverProxyProvider(OzoneConfiguration configuration,
-      UserGroupInformation ugi) throws IOException {
+      UserGroupInformation ugi, String omServiceId) throws IOException {
     this.conf = configuration;
     this.omVersion = RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     this.ugi = ugi;
-    loadOMClientConfigs(conf);
+    this.omServiceId = omServiceId;
+    loadOMClientConfigs(conf, this.omServiceId);
     this.delegationTokenService = computeDelegationTokenService();
 
     currentProxyIndex = 0;
     currentProxyOMNodeId = omNodeIDList.get(currentProxyIndex);
   }
 
-  private void loadOMClientConfigs(Configuration config) throws IOException {
+  public OMFailoverProxyProvider(OzoneConfiguration configuration,
+      UserGroupInformation ugi) throws IOException {
+    this(configuration, ugi, null);
+  }
+
+  private void loadOMClientConfigs(Configuration config, String omServiceId)
+      throws IOException {
     this.omProxies = new HashMap<>();
     this.omProxyInfos = new HashMap<>();
     this.omNodeIDList = new ArrayList<>();
 
-    Collection<String> omServiceIds = config.getTrimmedStringCollection(
-        OZONE_OM_SERVICE_IDS_KEY);
+    Collection<String> omServiceIds;
+    if (omServiceId == null) {
+      // If no omServiceId is passed in
+      // TODO: this branch will only be executed when omServiceId is not passed,
+      // which means the user-specified hostname/service id doesn't match any of
+      // ozone.om.service.ids on the client side, in this case, just treat it as
+      // non-HA, correct?  Just put an empty array?
+      omServiceIds = new ArrayList<>();
+      // The following is the original fall back to reading from config
+//      omServiceIds = config.getTrimmedStringCollection(
+//          OZONE_OM_SERVICE_IDS_KEY);
+    } else {
+      omServiceIds = Collections.singletonList(omServiceId);
+    }
 
+    // TODO: Remove this warning? Or change the message?
     if (omServiceIds.size() > 1) {
       throw new IllegalArgumentException("Multi-OM Services is not supported." +
           " Please configure only one OM Service ID in " +

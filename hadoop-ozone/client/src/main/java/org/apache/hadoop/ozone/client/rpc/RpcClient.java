@@ -137,12 +137,22 @@ public class RpcClient implements ClientProtocol {
   private Text dtService;
   private final boolean topologyAwareReadEnabled;
 
+  /**
+   * Creates RpcClient instance with the given configuration.
+   * @param conf Configuration
+   * @throws IOException
+   */
+  public RpcClient(Configuration conf) throws IOException {
+    this(conf, null);
+  }
+
    /**
     * Creates RpcClient instance with the given configuration.
-    * @param conf
+    * @param conf Configuration
+    * @param omServiceId OM HA Service ID, null if not HA
     * @throws IOException
     */
-  public RpcClient(Configuration conf) throws IOException {
+  public RpcClient(Configuration conf, String omServiceId) throws IOException {
     Preconditions.checkNotNull(conf);
     this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
@@ -152,7 +162,7 @@ public class RpcClient implements ClientProtocol {
     this.groupRights = aclConfig.getGroupDefaultRights();
 
     this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        this.conf, clientId.toString(), ugi);
+        this.conf, clientId.toString(), omServiceId, ugi);
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();

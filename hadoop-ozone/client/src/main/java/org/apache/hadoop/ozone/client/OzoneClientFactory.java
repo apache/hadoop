@@ -139,6 +139,31 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
+   * @param omServiceId
+   *        Service ID of OzoneManager HA cluster.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(String omServiceId,
+      Configuration config)
+      throws IOException {
+    Preconditions.checkNotNull(omServiceId);
+    Preconditions.checkNotNull(config);
+    // Override ozone.om.address just in case it is used later.
+    // Because if this is not overridden, the (incorrect) value from xml
+    // will be used?
+    config.set(OZONE_OM_ADDRESS_KEY, omServiceId);
+    return getClient(getClientProtocol(config, omServiceId), config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
    * @param config
    *        used for OzoneClient creation
    *
@@ -185,8 +210,24 @@ public final class OzoneClientFactory {
    */
   private static ClientProtocol getClientProtocol(Configuration config)
       throws IOException {
+    return getClientProtocol(config, null);
+  }
+
+  /**
+   * Returns an instance of Protocol class.
+   *
+   *
+   * @param config
+   *        Configuration used to initialize ClientProtocol.
+   *
+   * @return ClientProtocol
+   *
+   * @throws IOException
+   */
+  private static ClientProtocol getClientProtocol(Configuration config,
+      String omServiceId) throws IOException {
     try {
-      return new RpcClient(config);
+      return new RpcClient(config, omServiceId);
     } catch (Exception e) {
       final String message = "Couldn't create RpcClient protocol";
       LOG.error(message + " exception: ", e);

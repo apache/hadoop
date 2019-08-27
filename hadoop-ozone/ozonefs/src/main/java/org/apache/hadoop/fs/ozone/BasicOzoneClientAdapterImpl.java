@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -53,6 +54,8 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 
 /**
  * Basic Implementation of the OzoneFileSystem calls.
@@ -121,6 +124,12 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       this.securityEnabled = true;
     }
 
+    Collection<String> omServiceIds = conf.getTrimmedStringCollection(
+        OZONE_OM_SERVICE_IDS_KEY);
+    // Check if omHost matches any service ids
+    // isServiceId is true if omHost is an OM HA service id, false otherwise
+    boolean isServiceId = omServiceIds.contains(omHost);
+
     try {
       String replicationTypeConf =
           conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
@@ -129,7 +138,13 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       int replicationCountConf = conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
           OzoneConfigKeys.OZONE_REPLICATION_DEFAULT);
 
-      if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
+      if (isServiceId) {
+        // omHost is listed as one of the service ids in the config,
+        // thus we should treat omHost as omServiceId.
+        // omHost is passed in as omServiceId
+        this.ozoneClient =
+            OzoneClientFactory.getRpcClient(omHost, conf);
+      } else if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
         this.ozoneClient =
             OzoneClientFactory.getRpcClient(omHost, omPort, conf);
       } else {
