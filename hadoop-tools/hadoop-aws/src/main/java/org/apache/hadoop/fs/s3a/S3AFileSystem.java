@@ -1385,6 +1385,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         maybeCreateFakeParentDirectory(sourceRenamed);
       }
     }
+
+    @Override
+    public S3ListRequest createListObjectsRequest(final String key,
+        final String delimiter) {
+      return S3AFileSystem.this.createListObjectsRequest(key, delimiter);
+    }
+
+    @Override
+    public S3ListResult listObjects(final S3ListRequest request)
+        throws IOException {
+      return S3AFileSystem.this.listObjects(request);
+    }
+
+    @Override
+    public S3ListResult continueListObjects(final S3ListRequest request,
+        final S3ListResult prevResult) throws IOException {
+      return S3AFileSystem.this.continueListObjects(request,
+          prevResult);
+    }
+
+    @Override
+    public boolean allowAuthoritative(final Path p) {
+      return S3AFileSystem.this.allowAuthoritative(p);
+    }
   }
 
   /**
@@ -1738,7 +1762,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-    String text = "Delete " + bucket + ":/" + key;
+    String text = String.format("Delete %s:/%s", bucket, key);
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, text)) {
       invoker.retryUntranslated(text,
@@ -2205,7 +2229,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           createStoreContext(),
           innerGetFileStatus(f, true),
           recursive,
-          new DeleteOperationCallbacksImpl(),
+          new RenameOperationCallbacksImpl(),
           InternalConstants.MAX_ENTRIES_TO_DELETE).execute();
       if (outcome) {
         try {
@@ -2223,48 +2247,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return false;
     } catch (AmazonClientException e) {
       throw translateException("delete", f, e);
-    }
-  }
-
-  /**
-   * All the callbacks used in deletions.
-   */
-  private class DeleteOperationCallbacksImpl implements
-      DeleteOperation.DeleteOperationCallbacks {
-
-    @Override
-    public S3ListRequest createListObjectsRequest(final String key,
-        final String delimiter) {
-      return S3AFileSystem.this.createListObjectsRequest(key,delimiter);
-    }
-
-    @Override
-    public void deleteObjectAtPath(final Path path,
-        final String key,
-        final boolean isFile)
-        throws AmazonClientException, IOException {
-      S3AFileSystem.this.deleteObjectAtPath(path, key, isFile);
-    }
-
-    @Override
-    public S3ListResult listObjects(final S3ListRequest request)
-        throws IOException {
-      return S3AFileSystem.this.listObjects(request);
-    }
-
-    @Override
-    public S3ListResult continueListObjects(final S3ListRequest request,
-        final S3ListResult prevResult) throws IOException {
-      return S3AFileSystem.this.continueListObjects(request,
-          prevResult);
-    }
-
-    @Override
-    public void removeKeys(final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-        final boolean deleteFakeDir,
-        final BulkOperationState operationState)
-        throws MultiObjectDeleteException, AmazonClientException, IOException {
-      S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir, operationState);
     }
   }
 
@@ -2343,8 +2325,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       DirListingMetadata dirMeta =
           S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
-      boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
-          allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+      boolean allowAuthoritative = allowAuthoritative(f);
       if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
@@ -2370,6 +2351,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stats[0]= fileStatus;
       return stats;
     }
+  }
+
+  protected boolean allowAuthoritative(final Path f) {
+    return S3Guard.allowAuthoritative(f, this,
+        allowAuthoritativeMetadataStore, allowAuthoritativePaths);
   }
 
   /**
@@ -2577,8 +2563,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // dest is also a directory, there's no difference.
       // TODO After HADOOP-16085 the modification detection can be done with
       //  etags or object version instead of modTime
-      boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
-          allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+      boolean allowAuthoritative = allowAuthoritative(f);
       if (!pm.getFileStatus().isDirectory() &&
           !allowAuthoritative) {
         LOG.debug("Metadata for {} found in the non-auth metastore.", path);
@@ -3745,8 +3730,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             key, delimiter);
         final RemoteIterator<S3AFileStatus> cachedFilesIterator;
         final Set<Path> tombstones;
-        boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
-            allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+        boolean allowAuthoritative = allowAuthoritative(f);
         if (recursive) {
           final PathMetadata pm = metadataStore.get(path, true);
           // shouldn't need to check pm.isDeleted() because that will have
@@ -3839,8 +3823,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
                   listing.createProvidedFileStatusIterator(
                       S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
-                  allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+              boolean allowAuthoritative = allowAuthoritative(f);
               return (allowAuthoritative && meta != null
                   && meta.isAuthoritative())
                   ? listing.createLocatedFileStatusIterator(

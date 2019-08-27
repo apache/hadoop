@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ListRequest;
+import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -184,7 +186,7 @@ public class RenameOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Queue and object for deletion.
+   * Queue an object for deletion.
    * @param path path to the object
    * @param key key of the object.
    */
@@ -634,5 +636,44 @@ public class RenameOperation extends AbstractStoreOperation {
         final BulkOperationState operationState)
         throws MultiObjectDeleteException, AmazonClientException,
         IOException;
+
+    /**
+     * Create a {@code ListObjectsRequest} request against this bucket.
+     * @param key key for request
+     * @param delimiter any delimiter
+     * @return the request
+     */
+    S3ListRequest createListObjectsRequest(String key,
+        String delimiter);
+
+    /**
+     * Initiate a {@code listObjects} operation, incrementing metrics
+     * in the process.
+     *
+     * @param request request to initiate
+     * @return the results
+     * @throws IOException if the retry invocation raises one (it shouldn't).
+     */
+    @Retries.RetryRaw
+    S3ListResult listObjects(S3ListRequest request)
+        throws IOException;
+
+    /**
+     * List the next set of objects.
+     * @param request last list objects request to continue
+     * @param prevResult last paged result to continue from
+     * @return the next result object
+     * @throws IOException none, just there for retryUntranslated.
+     */
+    @Retries.RetryRaw
+    S3ListResult continueListObjects(S3ListRequest request,
+        S3ListResult prevResult) throws IOException;
+
+    /**
+     * Is the path for this instance authoritative?
+     * @param p path
+     * @return true iff the path is authoritative
+     */
+    boolean allowAuthoritative(Path p);
   }
 }

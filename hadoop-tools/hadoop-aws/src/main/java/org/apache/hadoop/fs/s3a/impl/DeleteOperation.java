@@ -27,18 +27,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -50,9 +50,14 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.isNullMetadataStore;
 
 /**
  * Implementation of the delete operation.
+ * For a S3Guarded store, after the list and delete of the combined store,
+ * we repeat against raw S3.
+ * This will correct for any situation where there are tombstones against
+ * files which exist or the authoritative listing is incomplete.
  */
 public class DeleteOperation extends AbstractStoreOperation {
 
@@ -69,13 +74,19 @@ public class DeleteOperation extends AbstractStoreOperation {
 
   private final boolean recursive;
 
-  private final DeleteOperationCallbacks callbacks;
+  private final RenameOperation.RenameOperationCallbacks callbacks;
 
   private final int pageSize;
 
   private final MetadataStore metadataStore;
 
   private final ListeningExecutorService executor;
+
+  private List<DeleteObjectsRequest.KeyVersion> keys;
+
+  private List<Path> paths;
+
+  private CompletableFuture<Void> deleteFuture;
 
   /**
    * Constructor.
@@ -88,7 +99,7 @@ public class DeleteOperation extends AbstractStoreOperation {
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
       final boolean recursive,
-      final DeleteOperationCallbacks callbacks, int pageSize) {
+      final RenameOperation.RenameOperationCallbacks callbacks, int pageSize) {
 
     super(context);
     this.status = status;
@@ -159,79 +170,148 @@ public class DeleteOperation extends AbstractStoreOperation {
         throw new PathIsNotEmptyDirectoryException(path.toString());
       }
       if (status.isEmptyDirectory() == Tristate.TRUE) {
+        LOG.debug("deleting empty directory {}", path);
         deleteObjectAtPath(path, key, false);
       } else {
-        // Directory delete: combine paginated list of files with single or
-        // multiple object delete calls.
-        // create an operation state so that the store can manage the bulk
-        // operation if it needs to.
-        try (BulkOperationState operationState =
-                 S3Guard.initiateBulkWrite(
-                     metadataStore,
-                     BulkOperationState.OperationType.Delete,
-                     path);
-             DurationInfo ignored =
-                 new DurationInfo(LOG, false, "Delete Tree")) {
-          LOG.debug("Getting objects for directory prefix {} to delete", key);
-
-          S3ListRequest request = callbacks.createListObjectsRequest(key, null);
-
-          S3ListResult objects = callbacks.listObjects(request);
-          List<S3ObjectSummary> summaries = objects.getObjectSummaries();
-          List<DeleteObjectsRequest.KeyVersion> keys =
-              new ArrayList<>(summaries.size());
-          List<Path> paths = new ArrayList<>(summaries.size());
-          CompletableFuture<Void> deleteFuture = null;
-          while (true) {
-            for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-              String k = summary.getKey();
-              keys.add(new DeleteObjectsRequest.KeyVersion(k));
-              paths.add(context.keyToPath(k));
-              LOG.debug("Got object to delete {}", k);
-
-              if (keys.size() == pageSize) {
-                // delete a single page of keys and the metadata.
-                // block for any previous batch.
-                maybeAwaitCompletion(deleteFuture);
-
-                // delete the current page of keys and paths
-                deleteFuture = submitDelete(keys, paths, operationState);
-                // reset the references so a new list can be built up.
-                keys = new ArrayList<>(summaries.size());
-                paths = new ArrayList<>(summaries.size());
-              }
-            }
-
-            if (objects.isTruncated()) {
-              // continue the listing.
-              // This will probe S3 and may be slow; any ongoing delete will overlap
-              objects = callbacks.continueListObjects(request, objects);
-            } else {
-              // there is no more data:
-              // await any ongoing operation
-              maybeAwaitCompletion(deleteFuture);
-
-              // delete the final set of entries.
-              maybeAwaitCompletion(submitDelete(keys, paths, operationState));
-
-
-              // Do: break out of the while() loop
-              break;
-            }
-          }
-          // TODO: now enum and delete all remaining files in the store, as these
-          // represent files the listing missed due to inconsistency issues.
-          try (DurationInfo ignored2 =
-                   new DurationInfo(LOG, false, "Delete metastore")) {
-            metadataStore.deleteSubtree(path, operationState);
-          }
-        }
+        deleteDirectory(path, key);
       }
 
     } else {
+      // simple file.
+      LOG.debug("deleting simple file {}", path);
       deleteObjectAtPath(path, key, true);
     }
     return true;
+  }
+
+  /**
+   *  Directory delete: combine paginated list of files with single or
+   *  multiple object delete calls.
+   *
+   * @param path directory path
+   * @param dirKey directory key
+   * @throws IOException failure
+   */
+  protected void deleteDirectory(final Path path,
+      final String dirKey) throws IOException {
+    StoreContext storeContext = getStoreContext();
+    // create an operation state so that the store can manage the bulk
+    //   *      operation if it needs to
+    try (BulkOperationState operationState =
+             S3Guard.initiateBulkWrite(
+                 metadataStore,
+                 BulkOperationState.OperationType.Delete,
+                 path);
+         DurationInfo ignored =
+             new DurationInfo(LOG, false, "Delete Tree")) {
+      LOG.debug("Getting objects for directory prefix {} to delete", dirKey);
+
+
+      resetDeleteList();
+      deleteFuture = null;
+      final RemoteIterator<S3ALocatedFileStatus> iterator =
+          callbacks.listFilesAndEmptyDirectories(path);
+      while (iterator.hasNext()) {
+        // get the next entry in the listing.
+        S3ALocatedFileStatus child = iterator.next();
+        // convert it to an S3 key.
+        String k = storeContext.pathToKey(child.getPath());
+        // possibly adding a "/" if it represents directory and it does
+        // not have a trailing slash already.
+        String key = (child.isDirectory() && !k.endsWith("/"))
+            ? k + "/"
+            : k;
+        // the source object to copy as a path.
+        queueForDeletion(operationState, key, child.getPath());
+      }
+      // if s3guard is on we follow up with a bulk list and delete process
+      // on S3 this helps recover from any situation where S3 and S3Guard have become inconsistent.
+
+      S3ListResult objects = null;
+      if (!isNullMetadataStore(getStoreContext().getMetadataStore())) {
+        LOG.debug("Path is guarded; listing files on S3 for completeness");
+        int extraFilesDeleted = 0;
+        S3ListRequest request = callbacks.createListObjectsRequest(dirKey,
+            null);
+        objects = callbacks.listObjects(request);
+        while (objects != null) {
+          for (S3ObjectSummary summary : objects.getObjectSummaries()) {
+            // we only care about S3 here
+            extraFilesDeleted++;
+            queueForDeletion(operationState, summary.getKey(), null);
+          }
+
+          if (objects.isTruncated()) {
+            // continue the listing.
+            // This will probe S3 and may be slow; any ongoing delete will overlap
+            objects = callbacks.continueListObjects(request, objects);
+          } else {
+            objects = null;
+          }
+        }
+        if (extraFilesDeleted > 0) {
+          LOG.info("Raw S3 Scan found {} extra file(s) to delete",
+              extraFilesDeleted);
+        }
+      }
+      // there is no more data:
+      // await any ongoing operation
+      deleteNextBatch(operationState);
+      maybeAwaitCompletion(deleteFuture);
+      try (DurationInfo ignored2 =
+               new DurationInfo(LOG, false, "Delete metastore")) {
+        metadataStore.deleteSubtree(path, operationState);
+      }
+    }
+  }
+
+  /**
+   * Queue keys for deletion; once a page of keys are ready to delete this
+   * call is submitted to the executor, after waiting for the previous run to
+   * complete.
+   *
+   * @param operationState operation
+   * @param key key to delete
+   * @param deletePath nullable path of the key
+   * @throws IOException failure.
+   */
+  protected void queueForDeletion(final BulkOperationState operationState,
+      final String key,
+      @Nullable final Path deletePath) throws IOException {
+    LOG.debug("Got object to delete {}", key);
+    keys.add(new DeleteObjectsRequest.KeyVersion(key));
+    if (deletePath!= null) {
+      paths.add(deletePath);
+    }
+
+    if (keys.size() == pageSize) {
+      deleteNextBatch(operationState);
+    }
+  }
+
+  /**
+   * Wait for the previous batch to finish then submit this page.
+   * The lists of keys and pages are reset here.
+   * complete.
+   *
+   * @param operationState operation
+   * @throws IOException failure.
+   */
+  protected void deleteNextBatch(final BulkOperationState operationState)
+      throws IOException {
+    // delete a single page of keys and the metadata.
+    // block for any previous batch.
+    maybeAwaitCompletion(deleteFuture);
+
+    // delete the current page of keys and paths
+    deleteFuture = submitDelete(keys, paths, operationState);
+    // reset the references so a new list can be built up.
+    resetDeleteList();
+  }
+
+  protected void resetDeleteList() {
+    keys = new ArrayList<>(pageSize);
+    paths = new ArrayList<>(pageSize);
   }
 
   /**
@@ -250,25 +330,33 @@ public class DeleteOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Delete a single page of keys and the metadata.
+   * Delete a single page of keys and optionally the metadata.
    * For a large page, it is the metadata size which dominates.
+   * Its possible to invoke this with empty lists of keys or paths.
+   * If both lists are empty no work is submitted.
+   *
    * @param keys keys to delete.
-   * @param paths paths to update the metastore with
+   * @param paths paths to update the metastore with.
    * @param operationState ongoing operation state
-   * @return the submitted future
+   * @return the submitted future or null
    */
   protected CompletableFuture<Void> submitDelete(
       final List<DeleteObjectsRequest.KeyVersion> keys,
       final List<Path> paths, final BulkOperationState operationState) {
 
-    if (keys.isEmpty()) {
+    if (keys.isEmpty() && paths.isEmpty())  {
       return null;
     }
     return submit(executor, () -> {
       try (DurationInfo ignored =
                new DurationInfo(LOG, false, "Delete page of keys")) {
-        callbacks.removeKeys(keys, false, operationState);
-        metadataStore.deletePaths(paths, operationState);
+        List<Path> undeletedObjects = new ArrayList<>();
+        if (!keys.isEmpty()) {
+          callbacks.removeKeys(keys, false, undeletedObjects, operationState);
+        }
+        if (!paths.isEmpty()) {
+          metadataStore.deletePaths(paths, operationState);
+        }
       }
       return null;
     });
@@ -277,94 +365,20 @@ public class DeleteOperation extends AbstractStoreOperation {
   /**
    * Block awaiting completion for any non-null future passed in;
    * No-op if a null arg was supplied.
-   * @param deleteFuture future
+   * @param future future
    * @return null, always
    * @throws IOException any exception raised in the callable
    */
   protected CompletableFuture<Void> maybeAwaitCompletion(
-      @Nullable final CompletableFuture<Void> deleteFuture)
+      @Nullable final CompletableFuture<Void> future)
       throws IOException {
-    if (deleteFuture != null) {
+    if (future != null) {
       try (DurationInfo ignored =
                new DurationInfo(LOG, false, "delete completion")){
-        waitForCompletion(deleteFuture);
+        waitForCompletion(future);
       }
     }
     return null;
-  }
-
-  /**
-   * These are all the callbacks which the delete operation needs,
-   * derived from the appropriate S3AFileSystem methods.
-   */
-  public interface DeleteOperationCallbacks {
-
-    /**
-     * Create a {@code ListObjectsRequest} request against this bucket.
-     * @param key key for request
-     * @param delimiter any delimiter
-     * @return the request
-     */
-    S3ListRequest createListObjectsRequest(String key,
-        String delimiter);
-
-    /**
-     * Delete an object, also updating the metastore.
-     * This call does <i>not</i> create any mock parent entries.
-     * @param path path path to delete
-     * @param key key of entry
-     * @param isFile is the path a file (used for instrumentation only)
-     * @throws AmazonClientException problems working with S3
-     * @throws IOException IO failure in the metastore
-     */
-    @Retries.RetryMixed
-    void deleteObjectAtPath(Path path, String key, boolean isFile)
-        throws AmazonClientException, IOException;
-
-    /**
-     * Initiate a {@code listObjects} operation, incrementing metrics
-     * in the process.
-     *
-     * @param request request to initiate
-     * @return the results
-     * @throws IOException if the retry invocation raises one (it shouldn't).
-     */
-    @Retries.RetryRaw
-    S3ListResult listObjects(S3ListRequest request)
-        throws IOException;
-
-    /**
-     * List the next set of objects.
-     * @param request last list objects request to continue
-     * @param prevResult last paged result to continue from
-     * @return the next result object
-     * @throws IOException none, just there for retryUntranslated.
-     */
-    @Retries.RetryRaw
-    S3ListResult continueListObjects(S3ListRequest request,
-        S3ListResult prevResult) throws IOException;
-
-    /**
-     * RemoveKeys from S3 with handling of {@code MultiObjectDeleteException}.
-     *
-     * @param keysToDelete collection of keys to delete on the s3-backend.
-     *        if empty, no request is made of the object store.
-     * @param deleteFakeDir indicates whether this is for deleting fake dirs
-     * @param operationState (nullable) operational state for a bulk update
-     * @throws InvalidRequestException if the request was rejected due to
-     * a mistaken attempt to delete the root directory.
-     * @throws MultiObjectDeleteException one or more of the keys could not
-     * be deleted in a multiple object delete operation.
-     * @throws AmazonClientException amazon-layer failure.
-     * @throws IOException other IO Exception.
-     */
-    @Retries.RetryMixed
-    void removeKeys(
-        final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-        final boolean deleteFakeDir,
-        final BulkOperationState operationState)
-        throws MultiObjectDeleteException, AmazonClientException,
-        IOException;
   }
 
 }
