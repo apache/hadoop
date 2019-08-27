@@ -1050,6 +1050,12 @@ public class RMAppImpl implements RMApp, Recoverable {
                 app.getApplicationId()+", attemptId: "+
                 app.getCurrentAppAttempt().getAppAttemptId()+
                 "launchTime: "+event.getTimestamp());
+        ApplicationStateData appState = ApplicationStateData.newInstance(
+            app.submitTime, app.startTime, app.submissionContext, app.user,
+            app.callerContext);
+        appState.setApplicationTimeouts(app.getApplicationTimeouts());
+        appState.setLaunchTime(event.getTimestamp());
+        app.rmContext.getStateStore().updateApplicationState(appState);
         app.launchTime = event.getTimestamp();
       }
     }
