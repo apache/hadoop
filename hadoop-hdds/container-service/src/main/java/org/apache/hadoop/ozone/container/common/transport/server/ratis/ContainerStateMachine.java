@@ -34,7 +34,6 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroupId;
-import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.impl.RaftServerProxy;
 import org.apache.ratis.server.protocol.TermIndex;
@@ -84,7 +83,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -149,7 +147,6 @@ public class ContainerStateMachine extends BaseStateMachine {
   private final Cache<Long, ByteString> stateMachineDataCache;
   private final boolean isBlockTokenEnabled;
   private final TokenVerifier tokenVerifier;
-  private final AtomicBoolean isStateMachineHealthy;
 
   private final Semaphore applyTransactionSemaphore;
   /**
@@ -187,7 +184,6 @@ public class ContainerStateMachine extends BaseStateMachine {
         ScmConfigKeys.
             DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT);
     applyTransactionSemaphore = new Semaphore(maxPendingApplyTransactions);
-    isStateMachineHealthy = new AtomicBoolean(true);
     this.executors = new ExecutorService[numContainerOpExecutors];
     for (int i = 0; i < numContainerOpExecutors; i++) {
       final int index = i;
@@ -269,14 +265,6 @@ public class ContainerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     TermIndex ti = getLastAppliedTermIndex();
     long startTime = Time.monotonicNow();
-    if (!isStateMachineHealthy.get()) {
-      String msg =
-          "Failed to take snapshot " + " for " + gid + " as the stateMachine"
-              + " is unhealthy. The last applied index is at " + ti;
-      StateMachineException sme = new StateMachineException(msg);
-      LOG.error(msg);
-      throw sme;
-    }
     if (ti != null && ti.getIndex() != RaftLog.INVALID_LOG_INDEX) {
       final File snapshotFile =
           storage.getSnapshotFile(ti.getTerm(), ti.getIndex());
@@ -287,12 +275,12 @@ public class ContainerStateMachine extends BaseStateMachine {
         // make sure the snapshot file is synced
         fos.getFD().sync();
       } catch (IOException ioe) {
-        LOG.error("{}: Failed to write snapshot at:{} file {}", gid, ti,
+        LOG.info("{}: Failed to write snapshot at:{} file {}", gid, ti,
             snapshotFile);
         throw ioe;
       }
-      LOG.info("{}: Finished taking a snapshot at:{} file:{} time:{}", gid, ti,
-          snapshotFile, (Time.monotonicNow() - startTime));
+      LOG.info("{}: Finished taking a snapshot at:{} file:{} time:{}",
+          gid, ti, snapshotFile, (Time.monotonicNow() - startTime));
       return ti.getIndex();
     }
     return -1;
@@ -397,10 +385,15 @@ public class ContainerStateMachine extends BaseStateMachine {
     return response;
   }
 
-  private ContainerCommandResponseProto runCommand(
+  private ContainerCommandResponseProto runCommandGetResponse(
       ContainerCommandRequestProto requestProto,
       DispatcherContext context) {
     return dispatchCommand(requestProto, context);
+  }
+
+  private Message runCommand(ContainerCommandRequestProto requestProto,
+      DispatcherContext context) {
+    return runCommandGetResponse(requestProto, context)::toByteString;
   }
 
   private ExecutorService getCommandExecutor(
@@ -432,7 +425,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     // thread.
     CompletableFuture<ContainerCommandResponseProto> writeChunkFuture =
         CompletableFuture.supplyAsync(() ->
-            runCommand(requestProto, context), chunkExecutor);
+            runCommandGetResponse(requestProto, context), chunkExecutor);
 
     CompletableFuture<Message> raftFuture = new CompletableFuture<>();
 
@@ -509,8 +502,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       metrics.incNumQueryStateMachineOps();
       final ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(request.getContent());
-      return CompletableFuture
-          .completedFuture(runCommand(requestProto, null)::toByteString);
+      return CompletableFuture.completedFuture(runCommand(requestProto, null));
     } catch (IOException e) {
       metrics.incNumQueryStateMachineFails();
       return completeExceptionally(e);
@@ -682,58 +674,30 @@ public class ContainerStateMachine extends BaseStateMachine {
       if (cmdType == Type.WriteChunk || cmdType ==Type.PutSmallFile) {
         builder.setCreateContainerSet(createContainerSet);
       }
-      CompletableFuture<Message> applyTransactionFuture =
-          new CompletableFuture<>();
       // Ensure the command gets executed in a separate thread than
       // stateMachineUpdater thread which is calling applyTransaction here.
-      CompletableFuture<ContainerCommandResponseProto> future =
-          CompletableFuture.supplyAsync(
-              () -> runCommand(requestProto, builder.build()),
+      CompletableFuture<Message> future = CompletableFuture
+          .supplyAsync(() -> runCommand(requestProto, builder.build()),
               getCommandExecutor(requestProto));
-      future.thenApply(r -> {
+
+      future.thenAccept(m -> {
         if (trx.getServerRole() == RaftPeerRole.LEADER) {
           long startTime = (long) trx.getStateMachineContext();
           metrics.incPipelineLatency(cmdType,
               Time.monotonicNowNanos() - startTime);
         }
-        if (r.getResult() != ContainerProtos.Result.SUCCESS) {
-          StorageContainerException sce =
-              new StorageContainerException(r.getMessage(), r.getResult());
-          LOG.error(
-              "gid {} : ApplyTransaction failed. cmd {} logIndex {} msg : "
-                  + "{} Container Result: {}", gid, r.getCmdType(), index,
-              r.getMessage(), r.getResult());
-          metrics.incNumApplyTransactionsFails();
-          // Since the applyTransaction now is completed exceptionally,
-          // before any further snapshot is taken , the exception will be
-          // caught in stateMachineUpdater in Ratis and ratis server will
-          // shutdown.
-          applyTransactionFuture.completeExceptionally(sce);
-          isStateMachineHealthy.compareAndSet(true, false);
-          ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
-        } else {
-          LOG.debug(
-              "gid {} : ApplyTransaction completed. cmd {} logIndex {} msg : "
-                  + "{} Container Result: {}", gid, r.getCmdType(), index,
-              r.getMessage(), r.getResult());
-          applyTransactionFuture.complete(r::toByteString);
-          if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
-            metrics.incNumBytesCommittedCount(
-                requestProto.getWriteChunk().getChunkData().getLen());
-          }
-          // add the entry to the applyTransactionCompletionMap only if the
-          // stateMachine is healthy i.e, there has been no applyTransaction
-          // failures before.
-          if (isStateMachineHealthy.get()) {
-            final Long previous = applyTransactionCompletionMap
+
+        final Long previous =
+            applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
-            Preconditions.checkState(previous == null);
-            updateLastApplied();
-          }
+        Preconditions.checkState(previous == null);
+        if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
+          metrics.incNumBytesCommittedCount(
+              requestProto.getWriteChunk().getChunkData().getLen());
         }
-        return applyTransactionFuture;
+        updateLastApplied();
       }).whenComplete((r, t) -> applyTransactionSemaphore.release());
-      return applyTransactionFuture;
+      return future;
     } catch (IOException | InterruptedException e) {
       metrics.incNumApplyTransactionsFails();
       return completeExceptionally(e);

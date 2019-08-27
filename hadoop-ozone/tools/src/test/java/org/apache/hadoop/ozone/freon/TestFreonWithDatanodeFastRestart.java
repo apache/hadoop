@@ -22,7 +22,13 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.transport
+    .server.XceiverServerSpi;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis
+    .XceiverServerRatis;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.server.impl.RaftServerImpl;
+import org.apache.ratis.server.impl.RaftServerProxy;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.statemachine.StateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
@@ -121,6 +127,13 @@ public class TestFreonWithDatanodeFastRestart {
   }
 
   private StateMachine getStateMachine() throws Exception {
-    return ContainerTestHelper.getStateMachine(cluster);
+    XceiverServerSpi server =
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine().
+            getContainer().getWriteChannel();
+    RaftServerProxy proxy =
+        (RaftServerProxy)(((XceiverServerRatis)server).getServer());
+    RaftGroupId groupId = proxy.getGroupIds().iterator().next();
+    RaftServerImpl impl = proxy.getImpl(groupId);
+    return impl.getStateMachine();
   }
 }
