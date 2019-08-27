@@ -24,7 +24,7 @@ mvn -B -fn test -f pom.ozone.xml -pl :hadoop-ozone-integration-test,:hadoop-ozon
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/integration"}
 mkdir -p "$REPORT_DIR"
 
-# shellcheck source=_mvn_unit_report.sh
+# shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
 source "$DIR/_mvn_unit_report.sh"
 
 if [[ -s "$REPORT_DIR/summary.txt" ]] ; then
