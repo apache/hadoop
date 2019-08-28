@@ -207,7 +207,8 @@ public class ChunkManagerImpl implements ChunkManager {
 
         // In case the chunk file does not exist but tmp chunk file exist,
         // read from tmp chunk file if readFromTmpFile is set to true
-        if (!chunkFile.exists() && dispatcherContext.isReadFromTmpFile()) {
+        if (!chunkFile.exists() && dispatcherContext != null
+            && dispatcherContext.isReadFromTmpFile()) {
           chunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
         }
         data = ChunkUtils.readData(chunkFile, info, volumeIOStats);

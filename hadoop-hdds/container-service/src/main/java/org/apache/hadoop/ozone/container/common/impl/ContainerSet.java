@@ -27,16 +27,15 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common
-    .interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
+import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -165,6 +164,10 @@ public class ContainerSet {
     return ImmutableMap.copyOf(containerMap);
   }
 
+  public Map<Long, Container> getContainerMap() {
+    return Collections.unmodifiableMap(containerMap);
+  }
+
   /**
    * A simple interface for container Iterations.
    * <p>
@@ -230,18 +233,6 @@ public class ContainerSet {
     }
 
     return crBuilder.build();
-  }
-
-  public List<ContainerData> chooseContainerForBlockDeletion(int count,
-      ContainerDeletionChoosingPolicy deletionPolicy)
-      throws StorageContainerException {
-    Map<Long, ContainerData> containerDataMap = containerMap.entrySet().stream()
-        .filter(e -> deletionPolicy.isValidContainerType(
-            e.getValue().getContainerType()))
-        .collect(Collectors.toMap(Map.Entry::getKey,
-            e -> e.getValue().getContainerData()));
-    return deletionPolicy
-        .chooseContainerForBlockDeletion(count, containerDataMap);
   }
 
   public Set<Long> getMissingContainerSet() {

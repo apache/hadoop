@@ -544,4 +544,9 @@ public abstract class ContainerData {
    * @return Protocol Buffer Message
    */
   public abstract ContainerProtos.ContainerDataProto getProtoBufMessage();
+
+  /**
+   * Returns the blockCommitSequenceId.
+   */
+  public abstract long getBlockCommitSequenceId();
 }
