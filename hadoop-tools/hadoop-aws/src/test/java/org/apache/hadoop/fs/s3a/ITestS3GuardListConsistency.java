@@ -218,8 +218,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     Path inconsistentPath =
         path("a/b/dir3-" + DEFAULT_DELAY_KEY_SUBSTRING);
 
-    Path[] testDirs = {path("a/b/dir1"),
-        path("a/b/dir2"),
+    Path dir1 = path("a/b/dir1");
+    Path dir2 = path("a/b/dir2");
+    Path[] testDirs = {
+        dir1,
+        dir2,
         inconsistentPath};
 
     for (Path path : testDirs) {
@@ -237,8 +240,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     }
     Assertions.assertThat(list)
         .describedAs("Expected deleted files to be excluded")
-        .doesNotContain(path("a/b/dir1"))
-        .doesNotContain(path("a/b/dir2"))
+        .doesNotContain(dir1)
+        .doesNotContain(dir2)
         .doesNotContain(inconsistentPath);
   }
 

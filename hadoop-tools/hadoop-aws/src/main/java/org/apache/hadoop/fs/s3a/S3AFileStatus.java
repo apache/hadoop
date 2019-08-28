@@ -101,7 +101,7 @@ public class S3AFileStatus extends FileStatus {
    * @param isDir is this a directory?
    * @param isemptydir is this an empty directory?
    * @param length file length
-   * @param modification_time mod time
+   * @param modificationTime mod time
    * @param blockSize block size
    * @param owner owner
    * @param eTag eTag of the S3 object if available, else null
@@ -111,12 +111,12 @@ public class S3AFileStatus extends FileStatus {
       boolean isDir,
       Tristate isemptydir,
       long length,
-      long modification_time,
+      long modificationTime,
       long blockSize,
       String owner,
       String eTag,
       String versionId) {
-    super(length, isDir, 1, blockSize, modification_time,
+    super(length, isDir, 1, blockSize, modificationTime,
         0, null, owner, owner, null,
         path, false, true, false);
     this.isEmptyDirectory = isemptydir;

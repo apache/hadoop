@@ -112,11 +112,11 @@ public abstract class AbstractContractGetFileStatusTest extends
   private void listFilesOnEmptyDir(boolean recursive) throws IOException {
     describe("Invoke listFiles(recursive=" + recursive + ")" +
         " on empty directories, expect nothing found");
-    Path subfolder = createDirWithEmptySubFolder();
     FileSystem fs = getFileSystem();
-    Path testPath = getContract().getTestPath();
-    fs.delete(testPath, true);
-    new TreeScanResults(fs.listFiles(testPath, recursive))
+    Path path = getContract().getTestPath();
+    fs.delete(path, true);
+    Path subfolder = createDirWithEmptySubFolder();
+    new TreeScanResults(fs.listFiles(path, recursive))
         .assertSizeEquals("listFiles(test dir, " + recursive + ")", 0, 0, 0);
     describe("Test on empty subdirectory");
     new TreeScanResults(fs.listFiles(subfolder, recursive))
@@ -128,11 +128,11 @@ public abstract class AbstractContractGetFileStatusTest extends
   public void testListLocatedStatusEmptyDirectory() throws IOException {
     describe("Invoke listLocatedStatus() on empty directories;" +
         " expect directories to be found");
-    Path subfolder = createDirWithEmptySubFolder();
     FileSystem fs = getFileSystem();
-    Path testPath = getContract().getTestPath();
-    fs.delete(testPath, true);
-    new TreeScanResults(fs.listLocatedStatus(testPath))
+    Path path = getContract().getTestPath();
+    fs.delete(path, true);
+    Path subfolder = createDirWithEmptySubFolder();
+    new TreeScanResults(fs.listLocatedStatus(path))
       .assertSizeEquals("listLocatedStatus(test dir)", 0, 1, 0);
     describe("Test on empty subdirectory");
     new TreeScanResults(fs.listLocatedStatus(subfolder))

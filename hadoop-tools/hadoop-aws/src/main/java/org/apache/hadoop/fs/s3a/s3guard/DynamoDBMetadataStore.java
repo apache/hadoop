@@ -645,7 +645,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void deletePaths(Collection<Path> paths,
       final BulkOperationState operationState)
       throws IOException {
-    deleteEntries(new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()), operationState);
+    deleteEntries(
+        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+        operationState);
   }
 
   /**

@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
-import java.util.Optional;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -151,17 +150,16 @@ public interface OperationCallbacks {
    * @param quiet should a bulk query be quiet, or should its result list
    * all deleted keys
    * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure.
+   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted in a multiple object delete operation.
    * @throws AmazonClientException amazon-layer failure.
    * @throws IOException other IO Exception.
-   * @return
    */
   @Retries.RetryMixed
-  Optional<DeleteObjectsResult> removeKeys(
+  DeleteObjectsResult removeKeys(
       List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean deleteFakeDir,
       List<Path> undeletedObjectsOnFailure,

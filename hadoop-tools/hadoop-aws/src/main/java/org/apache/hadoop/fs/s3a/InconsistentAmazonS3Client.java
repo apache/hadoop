@@ -486,7 +486,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
             .filter(result -> result.getKey().equals(key))
             .findFirst()
             .orElse(null);
-        delayedDeletes.put(key, new Delete(System.currentTimeMillis(), summary));
+        delayedDeletes.put(key, new Delete(System.currentTimeMillis(),
+            summary));
       }
     }
   }

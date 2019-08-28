@@ -60,7 +60,8 @@ public class Listing {
   private final S3AFileSystem owner;
   private static final Logger LOG = S3AFileSystem.LOG;
 
-  static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N = new AcceptAllButS3nDirs();
+  static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
+      new AcceptAllButS3nDirs();
 
   public Listing(S3AFileSystem owner) {
     this.owner = owner;

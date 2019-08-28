@@ -1380,7 +1380,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public Optional<DeleteObjectsResult> removeKeys(
+    public DeleteObjectsResult removeKeys(
         final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         final boolean deleteFakeDir,
         final List<Path> undeletedObjectsOnFailure,
@@ -2083,7 +2083,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
    * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys
+   * all deleted keys?
    * @return the deletion result if a multi object delete was invoked
    * and it returned without a failure.
    * @throws InvalidRequestException if the request was rejected due to
@@ -2095,11 +2095,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException other amazon-layer failure.
    */
   @Retries.RetryRaw
-  private Optional<DeleteObjectsResult> removeKeysS3(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir, boolean quiet)
+  private DeleteObjectsResult removeKeysS3(
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      boolean deleteFakeDir,
+      boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
-    Optional<DeleteObjectsResult> result = Optional.empty();
+    DeleteObjectsResult result = null;
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return result;
@@ -2109,10 +2111,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     try {
       if (enableMultiObjectsDelete) {
-        result = Optional.of(
-            deleteObjects(new DeleteObjectsRequest(bucket)
+        result = deleteObjects(
+            new DeleteObjectsRequest(bucket)
                 .withKeys(keysToDelete)
-                .withQuiet(quiet)));
+                .withQuiet(quiet));
       } else {
         for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
           deleteObject(keyVersion.getKey());
@@ -2172,7 +2174,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Invoke {@link #removeKeysS3(List, boolean)} with handling of
+   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
    * {@code MultiObjectDeleteException} before the exception is rethrown.
    * Specifically:
    * <ol>
@@ -2191,7 +2193,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param quiet should a bulk query be quiet, or should its result list
    * all deleted keys
    * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure.
+   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2200,7 +2202,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException other IO Exception.
    */
   @Retries.RetryMixed
-  Optional<DeleteObjectsResult> removeKeys(
+  DeleteObjectsResult removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final List<Path> undeletedObjectsOnFailure,

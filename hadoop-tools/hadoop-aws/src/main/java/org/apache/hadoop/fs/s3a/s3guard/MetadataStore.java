@@ -122,7 +122,6 @@ public interface MetadataStore extends Closeable {
    * deleted in the order passed in.
    * @param paths paths to delete.
    * @param operationState Nullable operation state
-   * @param ttlTimeProvider time provider
    * @throws IOException failure
    */
 

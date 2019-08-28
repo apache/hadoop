@@ -61,8 +61,7 @@ final class InternalIterators {
   }
 
   /**
-   * From a classic java.util.Iterator, build a Hadoop remote iterator with
-   * the expanded
+   * From a classic java.util.Iterator, build a Hadoop remote iterator.
    * @param <T> type of iterated value.
    */
   static final class RemoteIteratorFromIterator<T> implements

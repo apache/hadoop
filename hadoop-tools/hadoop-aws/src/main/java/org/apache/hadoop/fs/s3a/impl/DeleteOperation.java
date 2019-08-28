@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -400,7 +399,7 @@ public class DeleteOperation extends AbstractStoreOperation {
     return submit(executor, () -> {
       try (DurationInfo ignored =
                new DurationInfo(LOG, false, "Delete page of keys")) {
-        Optional<DeleteObjectsResult> result = Optional.empty();
+        DeleteObjectsResult result = null;
         List<Path> undeletedObjects = new ArrayList<>();
         if (!keyList.isEmpty()) {
           result = callbacks.removeKeys(keyList, false, undeletedObjects,
@@ -410,10 +409,9 @@ public class DeleteOperation extends AbstractStoreOperation {
         if (!pathList.isEmpty()) {
           metadataStore.deletePaths(pathList, operationState);
         }
-        if (AUDIT_DELETED_KEYS && result.isPresent()) {
+        if (AUDIT_DELETED_KEYS && result != null) {
           // audit the deleted keys
-          List<DeleteObjectsResult.DeletedObject> deletedObjects = result.get()
-              .getDeletedObjects();
+          List<DeleteObjectsResult.DeletedObject> deletedObjects = result.getDeletedObjects();
           if (deletedObjects.size() != keyList.size()) {
             // size mismatch
             LOG.warn("Size mismatch in deletion operation. "
