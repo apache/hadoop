@@ -34,14 +34,14 @@ Check volume from ozonefs
 
 Run ozoneFS tests
                         Execute               ozone fs -mkdir -p o3fs://bucket1.fstest/testdir/deep
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain    ${result}         testdir/deep
                         Execute               ozone fs -copyFromLocal NOTICE.txt o3fs://bucket1.fstest/testdir/deep/
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain    ${result}         NOTICE.txt
 
                         Execute               ozone fs -put NOTICE.txt o3fs://bucket1.fstest/testdir/deep/PUTFILE.txt
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain    ${result}         PUTFILE.txt
 
     ${result} =         Execute               ozone fs -ls o3fs://bucket1.fstest/testdir/deep/
@@ -49,13 +49,13 @@ Run ozoneFS tests
                         Should contain    ${result}         PUTFILE.txt
 
                         Execute               ozone fs -mv o3fs://bucket1.fstest/testdir/deep/NOTICE.txt o3fs://bucket1.fstest/testdir/deep/MOVED.TXT
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain    ${result}         MOVED.TXT
                         Should not contain  ${result}       NOTICE.txt
 
                         Execute               ozone fs -mkdir -p o3fs://bucket1.fstest/testdir/deep/subdir1
                         Execute               ozone fs -cp o3fs://bucket1.fstest/testdir/deep/MOVED.TXT o3fs://bucket1.fstest/testdir/deep/subdir1/NOTICE.txt
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain    ${result}         subdir1/NOTICE.txt
 
     ${result} =         Execute               ozone fs -ls o3fs://bucket1.fstest/testdir/deep/subdir1/
@@ -65,19 +65,19 @@ Run ozoneFS tests
                         Should not contain  ${result}       Failed
 
                         Execute               ozone fs -rm o3fs://bucket1.fstest/testdir/deep/subdir1/NOTICE.txt
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should not contain  ${result}       NOTICE.txt
 
     ${result} =         Execute               ozone fs -rmdir o3fs://bucket1.fstest/testdir/deep/subdir1/
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should not contain  ${result}       subdir1
 
                         Execute               ozone fs -touch o3fs://bucket1.fstest/testdir/TOUCHFILE.txt
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should contain  ${result}       TOUCHFILE.txt
 
                         Execute               ozone fs -rm -r o3fs://bucket1.fstest/testdir/
-    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute               ozone sh key list o3://om/fstest/bucket1 | grep -v WARN | jq -r '.name'
                         Should not contain  ${result}       testdir
 
                         Execute               rm -Rf localdir1

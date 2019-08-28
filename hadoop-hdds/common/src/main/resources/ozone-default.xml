@@ -462,19 +462,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.protocol</name>
-    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
-    <tag>OZONE, CLIENT, MANAGEMENT</tag>
-    <description>Protocol class to be used by the client to connect to ozone
-      cluster.
-      The build-in implementation includes:
-      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
-      org.apache.hadoop.ozone.client.rest.RestClient for REST
-      The default is the RpClient. Please do not change this unless you have a
-      very good understanding of what you are doing.
-    </description>
-  </property>
-  <property>
     <name>ozone.client.socket.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, CLIENT</tag>
@@ -1261,7 +1248,7 @@
 
   <property>
     <name>hdds.datanode.plugins</name>
-    <value>org.apache.hadoop.ozone.web.OzoneHddsDatanodeService</value>
+    <value></value>
     <description>
       Comma-separated list of HDDS datanode plug-ins to be activated when
       HDDS service starts as part of datanode.
