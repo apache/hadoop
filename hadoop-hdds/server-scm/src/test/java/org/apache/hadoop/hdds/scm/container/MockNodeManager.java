@@ -250,6 +250,16 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
+   * Get the count of pipelines a datanodes is associated with.
+   * @param datanodeDetails DatanodeDetails
+   * @return The number of pipelines
+   */
+  @Override
+  public int getPipelinesCount(DatanodeDetails datanodeDetails) {
+    return node2PipelineMap.getPipelinesCount(datanodeDetails.getUuid());
+  }
+
+  /**
    * Add pipeline information in the NodeManager.
    * @param pipeline - Pipeline to be added
    */
@@ -486,6 +496,11 @@ public class MockNodeManager implements NodeManager {
   @Override
   public DatanodeDetails getNodeByAddress(String address) {
     return getNodeByUuid(dnsToUuidMap.get(address));
+  }
+
+  @Override
+  public NetworkTopology getClusterMap() {
+    return clusterMap;
   }
 
   public void setNetworkTopology(NetworkTopology topology) {

@@ -284,6 +284,15 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Get the count of pipelines associated to single datanode.
+   * @param datanodeDetails single datanode
+   * @return number of pipelines associated with it
+   */
+  public int getPipelinesCount(DatanodeDetails datanodeDetails) {
+    return node2PipelineMap.getPipelinesCount(datanodeDetails.getUuid());
+  }
+
+  /**
    * Get information about the node.
    *
    * @param datanodeDetails DatanodeDetails

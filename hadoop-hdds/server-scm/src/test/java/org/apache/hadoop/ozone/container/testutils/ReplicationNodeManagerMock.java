@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -161,6 +162,16 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   @Override
   public Set<PipelineID> getPipelines(DatanodeDetails dnId) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  /**
+   * Get the count of pipelines a datanodes is associated with.
+   * @param dnId DatanodeDetails
+   * @return The number of pipelines
+   */
+  @Override
+  public int getPipelinesCount(DatanodeDetails dnId) {
     throw new UnsupportedOperationException("Not yet implemented");
   }
 
@@ -324,6 +335,11 @@ public class ReplicationNodeManagerMock implements NodeManager {
 
   @Override
   public DatanodeDetails getNodeByAddress(String address) {
+    return null;
+  }
+
+  @Override
+  public NetworkTopology getClusterMap() {
     return null;
   }
 }

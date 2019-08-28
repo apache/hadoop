@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -118,6 +119,13 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   Set<PipelineID> getPipelines(DatanodeDetails datanodeDetails);
 
   /**
+   * Get the count of pipelines a datanodes is associated with.
+   * @param datanodeDetails DatanodeDetails
+   * @return The number of pipelines
+   */
+  int getPipelinesCount(DatanodeDetails datanodeDetails);
+
+  /**
    * Add pipeline information in the NodeManager.
    * @param pipeline - Pipeline to be added
    */
@@ -199,4 +207,10 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @return the given datanode, or null if not found
    */
   DatanodeDetails getNodeByAddress(String address);
+
+  /**
+   * Get cluster map as in network topology for this node manager.
+   * @return cluster map
+   */
+  NetworkTopology getClusterMap();
 }
