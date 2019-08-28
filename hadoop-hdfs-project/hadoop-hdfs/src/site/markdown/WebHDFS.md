@@ -832,6 +832,34 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getConten
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getQuotaUsage
 
+### Set Quota
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETQUOTA
+                                      &namespacequota=<QUOTA>[&storagespacequota=<QUOTA>]"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setQuota
+
+### Set Quota By Storage Type
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETQUOTABYSTORAGETYPE
+                                      &storagetype=<STORAGETYPE>&storagespacequota=<QUOTA>"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setQuotaByStorageType
+
 ### Get File Checksum
 
 * Submit a HTTP GET request.
@@ -3178,6 +3206,42 @@ See also: [Authentication](#Authentication)
 | Syntax | true |
 
 See also: [Create and Write to a File](#Create_and_Write_to_a_File)
+
+### Namespace Quota
+
+| Name | `namespacequota` |
+|:---- |:---- |
+| Description | Limit on the namespace usage, i.e., number of files/directories, under a directory. |
+| Type | String |
+| Default Value | Long.MAX_VALUE |
+| Valid Values | \> 0. |
+| Syntax | Any integer. |
+
+See also: [`SETQUOTA`](#Set_Quota)
+
+### Storage Space Quota
+
+| Name | `storagespacequota` |
+|:---- |:---- |
+| Description | Limit on storage space usage (in bytes, including replication) under a directory. |
+| Type | String |
+| Default Value | Long.MAX_VALUE |
+| Valid Values | \> 0. |
+| Syntax | Any integer. |
+
+See also: [`SETQUOTA`](#Set_Quota), [`SETQUOTABYSTORAGETYPE`](#Set_Quota_By_Storage_Type)
+
+### Storage Type
+
+| Name | `storagetype` |
+|:---- |:---- |
+| Description | Storage type of the specific storage type quota to be modified. |
+| Type | String |
+| Default Value | \<empty\> |
+| Valid Values | Any valid storage type. |
+| Syntax | Any string. |
+
+See also: [`SETQUOTABYSTORAGETYPE`](#Set_Quota_By_Storage_Type)
 
 ### Storage Policy
 
