@@ -22,6 +22,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.utils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -50,12 +51,15 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestCertificateCodec {
   private static OzoneConfiguration conf = new OzoneConfiguration();
+  private static final String COMPONENT = "test";
+  private SecurityConfig securityConfig;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void init() throws IOException {
     conf.set(OZONE_METADATA_DIRS, temporaryFolder.newFolder().toString());
+    securityConfig = new SecurityConfig(conf);
   }
 
   /**
@@ -88,7 +92,7 @@ public class TestCertificateCodec {
             .setKey(keyGenerator.generateKey())
             .makeCA()
             .build();
-    CertificateCodec codec = new CertificateCodec(conf);
+    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
     String pemString = codec.getPEMEncodedString(cert);
     assertTrue(pemString.startsWith(CertificateCodec.BEGIN_CERT));
     assertTrue(pemString.endsWith(CertificateCodec.END_CERT + "\n"));
@@ -131,7 +135,7 @@ public class TestCertificateCodec {
             .setKey(keyGenerator.generateKey())
             .makeCA()
             .build();
-    CertificateCodec codec = new CertificateCodec(conf);
+    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
     String pemString = codec.getPEMEncodedString(cert);
     File basePath = temporaryFolder.newFolder();
     if (!basePath.exists()) {
@@ -172,7 +176,7 @@ public class TestCertificateCodec {
             .setKey(keyGenerator.generateKey())
             .makeCA()
             .build();
-    CertificateCodec codec = new CertificateCodec(conf);
+    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
     codec.writeCertificate(cert);
     X509CertificateHolder certHolder = codec.readCertificate();
     assertNotNull(certHolder);

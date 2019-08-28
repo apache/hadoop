@@ -60,6 +60,7 @@ import static org.apache.hadoop.test.GenericTestUtils.*;
  */
 public class TestSecureOzoneManager {
 
+  private static final String COMPONENT = "om";
   private MiniOzoneCluster cluster = null;
   private OzoneConfiguration conf;
   private String clusterId;
@@ -151,7 +152,7 @@ public class TestSecureOzoneManager {
 
     // Case 3: When public key as well as certificate is missing.
     client = new OMCertificateClient(securityConfig);
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
             " initialization failed",
@@ -164,9 +165,9 @@ public class TestSecureOzoneManager {
 
     // Case 4: When private key and certificate is missing.
     client = new OMCertificateClient(securityConfig);
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    KeyCodec keyCodec = new KeyCodec(securityConfig);
+    KeyCodec keyCodec = new KeyCodec(securityConfig, COMPONENT);
     keyCodec.writePublicKey(publicKey);
     LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
             " initialization failed",
@@ -178,9 +179,10 @@ public class TestSecureOzoneManager {
     omLogs.clearOutput();
 
     // Case 5: When only certificate is present.
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    CertificateCodec certCodec = new CertificateCodec(securityConfig);
+    CertificateCodec certCodec =
+        new CertificateCodec(securityConfig, COMPONENT);
     X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
         "CN=Test", new KeyPair(publicKey, privateKey), 10,
         securityConfig.getSignatureAlgo());
@@ -201,7 +203,7 @@ public class TestSecureOzoneManager {
     // Case 6: When private key and certificate is present.
     client = new OMCertificateClient(securityConfig,
         x509Certificate.getSerialNumber().toString());
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyCodec.writePrivateKey(privateKey);
     OzoneManager.initializeSecurity(conf, omStorage);

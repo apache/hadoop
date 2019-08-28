@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.security.x509;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
@@ -247,22 +248,11 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the File path to where keys are stored.
-   *
-   * @return path Key location.
-   */
-  public Path getKeyLocation() {
-    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
-        + " null. Please check configs.");
-    return Paths.get(metadatDir, keyDir);
-  }
-
-  /**
    * Returns the File path to where keys are stored with an additional component
    * name inserted in between.
    *
    * @param component - Component Name - String.
-   * @return Path location.
+   * @return Path Key location.
    */
   public Path getKeyLocation(String component) {
     Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
@@ -271,18 +261,8 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the File path to where keys are stored.
-   *
-   * @return path Key location.
-   */
-  public Path getCertificateLocation() {
-    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
-        + " null. Please check configs.");
-    return Paths.get(metadatDir, certificateDir);
-  }
-
-  /**
-   * Returns the File path to where keys are stored with an addition component
+   * Returns the File path to where certificates are stored with an addition
+   * component
    * name inserted in between.
    *
    * @param component - Component Name - String.
@@ -381,12 +361,33 @@ public class SecurityConfig {
 
   /**
    * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
+   * authentication) for the given component.
+   * @param component name of the component.
+   * @return the TLS-enabled gRPC client private key file.
+   */
+  public File getClientPrivateKeyFile(String component) {
+    return Paths.get(getKeyLocation(component).toString(),
+        "client." + privateKeyFileName).toFile();
+  }
+
+  /**
+   * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
    * authentication).
    * @return the TLS-enabled gRPC client private key file.
    */
   public File getClientPrivateKeyFile() {
-    return Paths.get(getKeyLocation().toString(),
-        "client." + privateKeyFileName).toFile();
+    return getClientPrivateKeyFile(StringUtils.EMPTY);
+  }
+
+  /**
+   * Returns the TLS-enabled gRPC server private key file for the given
+   * component.
+   * @param component name of the component.
+   * @return the TLS-enabled gRPC server private key file.
+   */
+  public File getServerPrivateKeyFile(String component) {
+    return Paths.get(getKeyLocation(component).toString(),
+        "server." + privateKeyFileName).toFile();
   }
 
   /**
@@ -394,8 +395,19 @@ public class SecurityConfig {
    * @return the TLS-enabled gRPC server private key file.
    */
   public File getServerPrivateKeyFile() {
-    return Paths.get(getKeyLocation().toString(),
-        "server." + privateKeyFileName).toFile();
+    return getServerPrivateKeyFile(StringUtils.EMPTY);
+  }
+
+  /**
+   * Get the trusted CA certificate file for the given component. (CA
+   * certificate)
+   * @param component name of the component.
+   * @return the trusted CA certificate.
+   */
+  public File getTrustStoreFile(String component) {
+    return Paths.get(getKeyLocation(component).toString(),
+        trustStoreFileName).
+        toFile();
   }
 
   /**
@@ -403,7 +415,19 @@ public class SecurityConfig {
    * @return the trusted CA certificate.
    */
   public File getTrustStoreFile() {
-    return Paths.get(getKeyLocation().toString(), trustStoreFileName).
+    return getTrustStoreFile(StringUtils.EMPTY);
+  }
+
+  /**
+   * Get the TLS-enabled gRPC Client certificate chain file for the given
+   * component (only needed for
+   * mutual authentication).
+   * @param component name of the component.
+   * @return the TLS-enabled gRPC Server certificate chain file.
+   */
+  public File getClientCertChainFile(String component) {
+    return Paths.get(getKeyLocation(component).toString(),
+        clientCertChainFileName).
         toFile();
   }
 
@@ -413,7 +437,18 @@ public class SecurityConfig {
    * @return the TLS-enabled gRPC Server certificate chain file.
    */
   public File getClientCertChainFile() {
-    return Paths.get(getKeyLocation().toString(), clientCertChainFileName).
+    return getClientCertChainFile(StringUtils.EMPTY);
+  }
+
+  /**
+   * Get the TLS-enabled gRPC Server certificate chain file for the given
+   * component.
+   * @param component name of the component.
+   * @return the TLS-enabled gRPC Server certificate chain file.
+   */
+  public File getServerCertChainFile(String component) {
+    return Paths.get(getKeyLocation(component).toString(),
+        serverCertChainFileName).
         toFile();
   }
 
@@ -422,8 +457,7 @@ public class SecurityConfig {
    * @return the TLS-enabled gRPC Server certificate chain file.
    */
   public File getServerCertChainFile() {
-    return Paths.get(getKeyLocation().toString(), serverCertChainFileName).
-        toFile();
+    return getServerCertChainFile(StringUtils.EMPTY);
   }
 
   /**
@@ -437,7 +471,7 @@ public class SecurityConfig {
 
   /**
    * Return true if using test certificates with authority as localhost.
-   * This should be used only for unit test where certifiates are generated
+   * This should be used only for unit test where certificates are generated
    * by openssl with localhost as DN and should never use for production as it
    * will bypass the hostname/ip matching verification.
    * @return true if using test certificates.
@@ -464,7 +498,7 @@ public class SecurityConfig {
 
   /**
    * Returns max date for which S3 tokens will be valid.
-   * */
+   */
   public long getS3TokenMaxDate() {
     return getConfiguration().getTimeDuration(
         OzoneConfigKeys.OZONE_S3_TOKEN_MAX_LIFETIME_KEY,
