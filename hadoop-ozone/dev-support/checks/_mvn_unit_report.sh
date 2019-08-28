@@ -20,6 +20,9 @@ find "." -name 'TEST*.xml' -print0 \
     | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}' \
     | tee "$REPORT_DIR/summary.txt"
 
+#Copy heap dump and dump leftovers
+find "." -name "*.hprof" -exec cp {} "$REPORT_DIR/" \;
+find "." -name "*.dump" -exec cp {} "$REPORT_DIR/" \;
 
 #Collect of all of the report failes of FAILED tests
 while IFS= read -r -d '' dir; do
