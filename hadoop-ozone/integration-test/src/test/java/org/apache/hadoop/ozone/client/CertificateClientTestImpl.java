@@ -61,7 +61,7 @@ public class CertificateClientTestImpl implements CertificateClient {
             .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
             .setClusterID("cluster1")
             .setKey(keyPair)
-            .setSubject("TestCertSub")
+            .setSubject("localhost")
             .setConfiguration(config)
             .setScmID("TestScmId1")
             .makeCA();
