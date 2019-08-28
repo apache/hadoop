@@ -48,7 +48,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.ozone.ozShell.TestOzoneShell;
 import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
@@ -97,7 +96,7 @@ public class TestBlockDeletion {
     GenericTestUtils.setLogLevel(SCMBlockDeletingService.LOG, Level.DEBUG);
 
     String path =
-        GenericTestUtils.getTempPath(TestOzoneShell.class.getSimpleName());
+        GenericTestUtils.getTempPath(TestBlockDeletion.class.getSimpleName());
     File baseDir = new File(path);
     baseDir.mkdirs();
 

@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.ozone.om;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.UUID;
+
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -29,25 +32,20 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.UUID;
-
+import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
+import org.junit.After;
+import org.junit.Assert;
 import static org.junit.Assert.fail;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * Test some client operations after cluster starts. And perform restart and
@@ -55,7 +53,6 @@ import static org.junit.Assert.fail;
  */
 public class TestOzoneManagerRestart {
   private MiniOzoneCluster cluster = null;
-  private UserArgs userArgs;
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
@@ -86,8 +83,7 @@ public class TestOzoneManagerRestart {
         .setOmId(omId)
         .build();
     cluster.waitForClusterToBeReady();
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
+
   }
 
   /**

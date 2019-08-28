@@ -20,13 +20,12 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -64,8 +63,7 @@ public class InfoKeyHandler extends Handler {
     OzoneBucket bucket = vol.getBucket(bucketName);
     OzoneKeyDetails key = bucket.getKey(keyName);
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(OzoneClientUtils.asKeyInfoDetails(key))));
+    ObjectPrinter.printObjectAsJson(key);
     return null;
   }
 }

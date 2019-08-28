@@ -17,13 +17,10 @@
  */
 package org.apache.hadoop.ozone.ozShell;
 
-import com.google.common.base.Strings;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileUtil;
@@ -31,19 +28,19 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.client.rest.RestClient;
-import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import com.google.common.base.Strings;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -53,13 +50,9 @@ import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunLast;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
-import static org.junit.Assert.fail;
-
 /**
  * This test class specified for testing Ozone datanode shell command.
  */
-@RunWith(value = Parameterized.class)
 public class TestOzoneDatanodeShell {
 
   private static final Logger LOG =
@@ -81,17 +74,6 @@ public class TestOzoneDatanodeShell {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> clientProtocol() {
-    Object[][] params = new Object[][]{
-        {RpcClient.class},
-        {RestClient.class}};
-    return Arrays.asList(params);
-  }
-
-  @Parameterized.Parameter
-  @SuppressWarnings("visibilitymodifier")
-  public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone
    * handler type.
@@ -103,7 +85,7 @@ public class TestOzoneDatanodeShell {
     conf = new OzoneConfiguration();
 
     String path = GenericTestUtils.getTempPath(
-        TestOzoneShell.class.getSimpleName());
+        TestOzoneDatanodeShell.class.getSimpleName());
     baseDir = new File(path);
     baseDir.mkdirs();
 
