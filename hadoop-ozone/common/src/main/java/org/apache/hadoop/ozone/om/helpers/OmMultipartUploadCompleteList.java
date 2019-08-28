@@ -34,8 +34,8 @@ public class OmMultipartUploadCompleteList {
   private final TreeMap<Integer, String> multipartMap;
 
   /**
-   * Construct OmMultipartUploadCompleteList which holds multipart map which contains
-   * part number and part name.
+   * Construct OmMultipartUploadCompleteList which holds multipart map which
+   * contains part number and part name.
    * @param partMap
    */
   public OmMultipartUploadCompleteList(Map<Integer, String> partMap) {
