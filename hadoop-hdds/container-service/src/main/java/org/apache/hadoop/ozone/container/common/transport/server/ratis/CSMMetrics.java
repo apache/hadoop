@@ -60,7 +60,8 @@ public class CSMMetrics {
   private @Metric MutableCounterLong numStartTransactionVerifyFailures;
   private @Metric MutableCounterLong numContainerNotOpenVerifyFailures;
 
-  private @Metric MutableRate applyTransactionLatency;
+  private @Metric MutableRate applyTransaction;
+  private @Metric MutableRate writeStateMachineData;
 
   public CSMMetrics() {
     int numCmdTypes = ContainerProtos.Type.values().length;
@@ -183,7 +184,6 @@ public class CSMMetrics {
     return numBytesCommittedCount.value();
   }
 
-  @VisibleForTesting
   public MutableRate getApplyTransactionLatency() {
     return applyTransactionLatency;
   }
@@ -201,8 +201,12 @@ public class CSMMetrics {
     numContainerNotOpenVerifyFailures.incr();
   }
 
-  public void recordApplyTransactionLatency(long latencyNanos) {
-    applyTransactionLatency.add(latencyNanos);
+  public void recordApplyTransactionCompletion(long latencyNanos) {
+    applyTransaction.add(latencyNanos);
+  }
+
+  public void recordWriteStateMachineCompletion(long latencyNanos) {
+    writeStateMachineData.add(latencyNanos);
   }
 
   public void unRegister() {
