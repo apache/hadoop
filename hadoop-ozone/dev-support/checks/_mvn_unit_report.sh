@@ -51,3 +51,8 @@ printf "# Failing tests: \n\n" | cat $SUMMARY_FILE > temp && mv temp "$SUMMARY_F
 
 ## generate counter
 wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+#We may have oom errors in the log which are not included as we run with mvn -fn
+if [ ! -s "$REPORT_DIR/summary.txt" ] && [ "$(grep "There are test failures." "$REPORT_DIR/output.log")" ]; then
+    grep "\[ERROR\]" "$REPORT_DIR/output.log" > "$REPORT_DIR/summary.txt"
+fi
