@@ -83,6 +83,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdds.utils.HddsVersionInfo;
 import org.junit.Assert;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -90,8 +92,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -100,12 +100,7 @@ import com.google.common.collect.Maps;
  * Test class that exercises the StorageContainerManager.
  */
 public class TestStorageContainerManager {
-  private static XceiverClientManager xceiverClientManager =
-      new XceiverClientManager(
-      new OzoneConfiguration());
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestStorageContainerManager.class);
-
+  private static XceiverClientManager xceiverClientManager;
   /**
    * Set the timeout for every test.
    */
@@ -120,6 +115,18 @@ public class TestStorageContainerManager {
 
   @Rule
   public TemporaryFolder folder= new TemporaryFolder();
+
+  @BeforeClass
+  public static void setup() throws IOException {
+    xceiverClientManager = new XceiverClientManager(new OzoneConfiguration());
+  }
+
+  @AfterClass
+  public static void cleanup() {
+    if (xceiverClientManager != null) {
+      xceiverClientManager.close();
+    }
+  }
 
   @Test
   public void testRpcPermission() throws Exception {

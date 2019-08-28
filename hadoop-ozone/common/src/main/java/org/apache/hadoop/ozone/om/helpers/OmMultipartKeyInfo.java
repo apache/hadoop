@@ -16,14 +16,11 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;

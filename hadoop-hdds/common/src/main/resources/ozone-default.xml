@@ -1838,37 +1838,10 @@
     <description>HDDS GRPC server TLS provider.</description>
   </property>
   <property>
-    <name>hdds.client.cert.chain.file.name</name>
-    <value>client.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Client certificate file name. It is an optional
-      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
-      is set to true .</description>
-  </property>
-  <property>
-    <name>hdds.grpc.mutual.tls.required</name>
-    <value>false</value>
-    <tag>OZONE, HDDS, SECURITY, TLS</tag>
-    <description>If mutual tls check is enabled for GRPC.
-    Considered only if hdds.grpc.tls.enabled is set to true.</description>
-  </property>
-  <property>
     <name>hdds.grpc.tls.enabled</name>
     <value>false</value>
     <tag>OZONE, HDDS, SECURITY, TLS</tag>
     <description>If HDDS GRPC server TLS is enabled.</description>
-  </property>
-  <property>
-    <name>hdds.server.cert.chain.file.name</name>
-    <value>server.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Hdds server certificate file name.</description>
-  </property>
-  <property>
-    <name>hdds.trust.cert.collection.file.name</name>
-    <value>ca.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>HDDS Certificate Authority trust store file name.</description>
   </property>
   <property>
     <name>hdds.x509.default.duration</name>

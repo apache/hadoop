@@ -117,6 +117,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
@@ -240,6 +241,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private OzoneDelegationTokenSecretManager delegationTokenMgr;
   private OzoneBlockTokenSecretManager blockTokenMgr;
   private CertificateClient certClient;
+  private String caCertPem = null;
   private static boolean testSecureOmFlag = false;
   private final Text omRpcAddressTxt;
   private final OzoneConfiguration configuration;
@@ -1254,6 +1256,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     metadataManager.start(configuration);
     startSecretManagerIfNecessary();
 
+    if (certClient != null) {
+      caCertPem = CertificateCodec.getPEMEncodedString(
+          certClient.getCACertificate());
+    }
     // Set metrics and start metrics back ground thread
     metrics.setNumVolumes(metadataManager.countRowsInTable(metadataManager
         .getVolumeTable()));
@@ -2589,6 +2595,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // handle exception in this method, we need to incorporate
     // metrics.incNumGetServiceListFails()
     return services;
+  }
+
+  @Override
+  public ServiceInfoEx getServiceInfo() throws IOException {
+    return new ServiceInfoEx(getServiceList(), caCertPem);
   }
 
   @Override

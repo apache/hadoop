@@ -761,10 +761,12 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       throws IOException {
     ServiceListResponse.Builder resp = ServiceListResponse.newBuilder();
 
-    resp.addAllServiceInfo(impl.getServiceList().stream()
+    resp.addAllServiceInfo(impl.getServiceInfo().getServiceInfoList().stream()
         .map(ServiceInfo::getProtobuf)
         .collect(Collectors.toList()));
-
+    if (impl.getServiceInfo().getCaCertificate() != null) {
+      resp.setCaCertificate(impl.getServiceInfo().getCaCertificate());
+    }
     return resp.build();
   }
 

@@ -45,12 +45,10 @@ import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
 import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
-import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -112,21 +110,9 @@ public final class XceiverServerGrpc extends XceiverServer {
     }
 
     if (getSecConfig().isGrpcTlsEnabled()) {
-      File privateKeyFilePath =
-          getSecurityConfig().getServerPrivateKeyFile(COMPONENT);
-      File serverCertChainFilePath =
-          getSecurityConfig().getServerCertChainFile(COMPONENT);
-      File clientCertChainFilePath =
-          getSecurityConfig().getClientCertChainFile(COMPONENT);
       try {
         SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
-            serverCertChainFilePath, privateKeyFilePath);
-        if (getSecurityConfig().isGrpcMutualTlsRequired() &&
-            clientCertChainFilePath != null) {
-          // Only needed for mutual TLS
-          sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
-          sslClientContextBuilder.trustManager(clientCertChainFilePath);
-        }
+            caClient.getPrivateKey(), caClient.getCertificate());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslClientContextBuilder, getSecurityConfig().getGrpcSslProvider());
         nettyServerBuilder.sslContext(sslContextBuilder.build());

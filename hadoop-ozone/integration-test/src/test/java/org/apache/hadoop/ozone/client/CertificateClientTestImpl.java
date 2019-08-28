@@ -61,7 +61,7 @@ public class CertificateClientTestImpl implements CertificateClient {
             .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
             .setClusterID("cluster1")
             .setKey(keyPair)
-            .setSubject("TestCertSub")
+            .setSubject("localhost")
             .setConfiguration(config)
             .setScmID("TestScmId1")
             .makeCA();
@@ -95,6 +95,11 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public X509Certificate getCertificate() {
+    return x509Certificate;
+  }
+
+  @Override
+  public X509Certificate getCACertificate() {
     return x509Certificate;
   }
 
