@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -35,6 +36,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -84,15 +87,18 @@ public class TestKeyManagerUnit {
   private void createBucket(OmMetadataManagerImpl omMetadataManager,
       String volume, String bucket)
       throws IOException {
+    String bucketKey = omMetadataManager.getBucketKey(volume, bucket);
+    OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+        .setVolumeName(volume)
+        .setBucketName(bucket)
+        .setStorageType(StorageType.DISK)
+        .setIsVersionEnabled(false)
+        .setAcls(new ArrayList<>())
+        .build();
     omMetadataManager.getBucketTable()
-        .put(omMetadataManager.getBucketKey(volume, bucket),
-            OmBucketInfo.newBuilder()
-                .setVolumeName(volume)
-                .setBucketName(bucket)
-                .setStorageType(StorageType.DISK)
-                .setIsVersionEnabled(false)
-                .setAcls(new ArrayList<>())
-                .build());
+        .put(bucketKey, omBucketInfo);
+    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
   }
 
   private OmMultipartInfo initMultipartUpload(KeyManagerImpl omtest,
