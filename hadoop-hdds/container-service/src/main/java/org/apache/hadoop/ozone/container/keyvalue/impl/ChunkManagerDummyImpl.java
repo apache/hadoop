@@ -41,7 +41,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
  * Chunks are not written to disk, Reads are returned with zero-filled buffers
  */
 public class ChunkManagerDummyImpl extends ChunkManagerImpl {
-  static final Logger LOG = LoggerFactory.getLogger(ChunkManagerDummyImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      ChunkManagerDummyImpl.class);
 
   public ChunkManagerDummyImpl(boolean sync) {
     super(sync);
