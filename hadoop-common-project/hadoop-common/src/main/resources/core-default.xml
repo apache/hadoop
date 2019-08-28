@@ -2495,6 +2495,19 @@
   </description>
 </property>
 
+  <property>
+    <name>hadoop.http.authentication.kerberos.endpoint.whitelist</name>
+    <value></value>
+    <description>
+      The comma-separated list of the endpoints that skips Kerberos
+      authentication. The endpoint must start with '/' and must not
+      contain special characters afterwards. This parameter is for
+      the monitoring tools that do not support Kerberos authentication.
+      Administrator must configure this parameter very carefully
+      because it allows unauthenticated access to the daemons.
+    </description>
+  </property>
+
 <!-- HTTP CORS support -->
 <property>
   <name>hadoop.http.cross-origin.enabled</name>
