@@ -1283,8 +1283,6 @@ public class KeyManagerImpl implements KeyManager {
       String bucketName, String prefix) throws OMException {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(bucketName);
-    String multipartKey = metadataManager.getMultipartKey(volumeName,
-        bucketName, prefix, "");
 
     metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
