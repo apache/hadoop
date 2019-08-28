@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.om.ha;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.Text;
@@ -68,6 +69,7 @@ public class OMFailoverProxyProvider implements
   private final Configuration conf;
   private final long omVersion;
   private final UserGroupInformation ugi;
+  private final Text delegationTokenService;
 
   public OMFailoverProxyProvider(OzoneConfiguration configuration,
       UserGroupInformation ugi) throws IOException {
@@ -75,6 +77,7 @@ public class OMFailoverProxyProvider implements
     this.omVersion = RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     this.ugi = ugi;
     loadOMClientConfigs(conf);
+    this.delegationTokenService = computeDelegationTokenService();
 
     currentProxyIndex = 0;
     currentProxyOMNodeId = omNodeIDList.get(currentProxyIndex);
@@ -179,8 +182,28 @@ public class OMFailoverProxyProvider implements
   }
 
   public synchronized Text getCurrentProxyDelegationToken() {
-    return omProxyInfos.get(currentProxyOMNodeId).getDelegationTokenService();
+    return delegationTokenService;
   }
+
+  private Text computeDelegationTokenService() {
+    // For HA, this will return "," separated address of all OM's.
+    StringBuilder rpcAddress = new StringBuilder();
+    int count = 0;
+    for (Map.Entry<String, OMProxyInfo> omProxyInfoSet :
+        omProxyInfos.entrySet()) {
+      count++;
+      rpcAddress =
+          rpcAddress.append(omProxyInfoSet.getValue().toString());
+
+      if (omProxyInfos.size() != count) {
+        rpcAddress.append(",");
+      }
+    }
+
+    return new Text(rpcAddress.toString());
+  }
+
+
 
   /**
    * Called whenever an error warrants failing over. It is determined by the
