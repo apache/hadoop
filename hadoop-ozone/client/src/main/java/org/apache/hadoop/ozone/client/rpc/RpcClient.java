@@ -32,14 +32,11 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -67,21 +64,14 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
-import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB
     .OzoneManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -97,7 +87,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -116,8 +105,6 @@ public class RpcClient implements ClientProtocol {
       LoggerFactory.getLogger(RpcClient.class);
 
   private final OzoneConfiguration conf;
-  private final StorageContainerLocationProtocol
-      storageContainerLocationClient;
   private final OzoneManagerProtocol ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
@@ -136,7 +123,7 @@ public class RpcClient implements ClientProtocol {
   private final long retryInterval;
   private Text dtService;
 
-   /**
+  /**
     * Creates RpcClient instance with the given configuration.
     * @param conf
     * @throws IOException
@@ -155,21 +142,14 @@ public class RpcClient implements ClientProtocol {
             this.conf, clientId.toString(), ugi),
         OzoneManagerProtocol.class, conf
     );
-    long scmVersion =
-        RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
-    InetSocketAddress scmAddress = getScmAddressForClient();
-    RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
-        ProtobufRpcEngine.class);
 
-    StorageContainerLocationProtocolClientSideTranslatorPB client =
-        new StorageContainerLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
-                scmAddress, ugi, conf, NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
-    this.storageContainerLocationClient =
-        TracingUtil.createProxy(client, StorageContainerLocationProtocol.class,
-            conf);
-    this.xceiverClientManager = new XceiverClientManager(conf);
+    ServiceInfoEx serviceInfoEx = ozoneManagerClient.getServiceInfo();
+    String caCertPem = null;
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+      caCertPem = serviceInfoEx.getCaCertificate();
+    }
+
+    this.xceiverClientManager = new XceiverClientManager(conf, caCertPem);
 
     int configuredChunkSize = (int) conf
         .getStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
@@ -232,15 +212,6 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
     ByteStringHelper.init(isUnsafeByteOperationsEnabled);
-  }
-
-  private InetSocketAddress getScmAddressForClient() throws IOException {
-    List<ServiceInfo> services = ozoneManagerClient.getServiceList();
-    ServiceInfo scmInfo = services.stream().filter(
-        a -> a.getNodeType().equals(HddsProtos.NodeType.SCM))
-        .collect(Collectors.toList()).get(0);
-    return NetUtils.createSocketAddr(
-        scmInfo.getServiceAddress(ServicePort.Type.RPC));
   }
 
   @Override
@@ -777,7 +748,6 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public void close() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
     IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
     IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
   }

@@ -837,6 +837,9 @@ message ServiceListRequest {
 message ServiceListResponse {
 
     repeated ServiceInfo serviceInfo = 2;
+    // When security is enabled, return SCM CA certificate to Ozone client
+    // to set up gRPC TLS for client to authenticate server(DN).
+    optional string caCertificate = 3;
 }
 
 message ServicePort {

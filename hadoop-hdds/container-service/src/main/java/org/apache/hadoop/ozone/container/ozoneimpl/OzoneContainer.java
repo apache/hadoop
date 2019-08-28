@@ -203,6 +203,7 @@ public class OzoneContainer {
     this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
+    ContainerMetrics.remove();
   }
 
 

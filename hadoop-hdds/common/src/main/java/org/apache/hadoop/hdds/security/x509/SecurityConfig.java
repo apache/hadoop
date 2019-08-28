@@ -20,7 +20,6 @@
 package org.apache.hadoop.hdds.security.x509;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
@@ -28,7 +27,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Provider;
@@ -47,14 +45,6 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT_DEFAULT;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_MUTUAL_TLS_REQUIRED;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_TRUST_STORE_FILE_NAME;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_TRUST_STORE_FILE_NAME_DEFAULT;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME;
@@ -106,12 +96,8 @@ public class SecurityConfig {
   private final String certificateFileName;
   private final boolean grpcTlsEnabled;
   private boolean grpcTlsUseTestCert;
-  private String trustStoreFileName;
-  private String serverCertChainFileName;
-  private String clientCertChainFileName;
   private final Duration defaultCertDuration;
   private final boolean isSecurityEnabled;
-  private boolean grpcMutualTlsRequired;
 
   /**
    * Constructs a SecurityConfig.
@@ -158,20 +144,6 @@ public class SecurityConfig {
         HDDS_GRPC_TLS_ENABLED_DEFAULT);
 
     if (grpcTlsEnabled) {
-      this.grpcMutualTlsRequired = configuration.getBoolean(
-          HDDS_GRPC_MUTUAL_TLS_REQUIRED, HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT);
-
-      this.trustStoreFileName = this.configuration.get(
-          HDDS_TRUST_STORE_FILE_NAME, HDDS_TRUST_STORE_FILE_NAME_DEFAULT);
-
-      this.clientCertChainFileName = this.configuration.get(
-          HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME,
-          HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT);
-
-      this.serverCertChainFileName = this.configuration.get(
-          HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME,
-          HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT);
-
       this.grpcTlsUseTestCert = this.configuration.getBoolean(
           HDDS_GRPC_TLS_TEST_CERT, HDDS_GRPC_TLS_TEST_CERT_DEFAULT);
     }
@@ -349,115 +321,6 @@ public class SecurityConfig {
    */
   public boolean isGrpcTlsEnabled() {
     return this.grpcTlsEnabled;
-  }
-
-  /**
-   * Returns true if TLS mutual authentication is enabled for gRPC services.
-   * @return true if TLS is enabled for gRPC services.
-   */
-  public boolean isGrpcMutualTlsRequired() {
-    return this.grpcMutualTlsRequired;
-  }
-
-  /**
-   * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
-   * authentication) for the given component.
-   * @param component name of the component.
-   * @return the TLS-enabled gRPC client private key file.
-   */
-  public File getClientPrivateKeyFile(String component) {
-    return Paths.get(getKeyLocation(component).toString(),
-        "client." + privateKeyFileName).toFile();
-  }
-
-  /**
-   * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
-   * authentication).
-   * @return the TLS-enabled gRPC client private key file.
-   */
-  public File getClientPrivateKeyFile() {
-    return getClientPrivateKeyFile(StringUtils.EMPTY);
-  }
-
-  /**
-   * Returns the TLS-enabled gRPC server private key file for the given
-   * component.
-   * @param component name of the component.
-   * @return the TLS-enabled gRPC server private key file.
-   */
-  public File getServerPrivateKeyFile(String component) {
-    return Paths.get(getKeyLocation(component).toString(),
-        "server." + privateKeyFileName).toFile();
-  }
-
-  /**
-   * Returns the TLS-enabled gRPC server private key file.
-   * @return the TLS-enabled gRPC server private key file.
-   */
-  public File getServerPrivateKeyFile() {
-    return getServerPrivateKeyFile(StringUtils.EMPTY);
-  }
-
-  /**
-   * Get the trusted CA certificate file for the given component. (CA
-   * certificate)
-   * @param component name of the component.
-   * @return the trusted CA certificate.
-   */
-  public File getTrustStoreFile(String component) {
-    return Paths.get(getKeyLocation(component).toString(),
-        trustStoreFileName).
-        toFile();
-  }
-
-  /**
-   * Get the trusted CA certificate file. (CA certificate)
-   * @return the trusted CA certificate.
-   */
-  public File getTrustStoreFile() {
-    return getTrustStoreFile(StringUtils.EMPTY);
-  }
-
-  /**
-   * Get the TLS-enabled gRPC Client certificate chain file for the given
-   * component (only needed for
-   * mutual authentication).
-   * @param component name of the component.
-   * @return the TLS-enabled gRPC Server certificate chain file.
-   */
-  public File getClientCertChainFile(String component) {
-    return Paths.get(getKeyLocation(component).toString(),
-        clientCertChainFileName).
-        toFile();
-  }
-
-  /**
-   * Get the TLS-enabled gRPC Client certificate chain file (only needed for
-   * mutual authentication).
-   * @return the TLS-enabled gRPC Server certificate chain file.
-   */
-  public File getClientCertChainFile() {
-    return getClientCertChainFile(StringUtils.EMPTY);
-  }
-
-  /**
-   * Get the TLS-enabled gRPC Server certificate chain file for the given
-   * component.
-   * @param component name of the component.
-   * @return the TLS-enabled gRPC Server certificate chain file.
-   */
-  public File getServerCertChainFile(String component) {
-    return Paths.get(getKeyLocation(component).toString(),
-        serverCertChainFileName).
-        toFile();
-  }
-
-  /**
-   * Get the TLS-enabled gRPC Server certificate chain file.
-   * @return the TLS-enabled gRPC Server certificate chain file.
-   */
-  public File getServerCertChainFile() {
-    return getServerCertChainFile(StringUtils.EMPTY);
   }
 
   /**

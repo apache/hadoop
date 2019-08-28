@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,30 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdds.scm.pipeline;
+package org.apache.hadoop.ozone.om.helpers;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
-
-import java.io.IOException;
+import java.util.List;
 
 /**
- * Mock Ratis Pipeline Provider for Mock Nodes.
+ * Wrapper class for service discovery, design for broader usage such as
+ * security, etc.
  */
-public class MockRatisPipelineProvider extends RatisPipelineProvider {
+public class ServiceInfoEx {
 
-  public MockRatisPipelineProvider(NodeManager nodeManager,
-                            PipelineStateManager stateManager,
-                            Configuration conf) {
-    super(nodeManager, stateManager, conf, null);
+  private List<ServiceInfo> infoList;
+
+  // PEM encoded string of SCM CA certificate.
+  private String caCertificate;
+
+  public ServiceInfoEx(List<ServiceInfo> infoList,
+      String caCertificate) {
+    this.infoList = infoList;
+    this.caCertificate = caCertificate;
   }
 
-  protected void initializePipeline(Pipeline pipeline) throws IOException {
-    // do nothing as the datanodes do not exists
+  public List<ServiceInfo> getServiceInfoList() {
+    return infoList;
   }
 
-  @Override
-  public void shutdown() {
-    // Do nothing.
+  public String getCaCertificate() {
+    return caCertificate;
   }
 }

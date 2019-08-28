@@ -108,7 +108,7 @@ public final class DistributedStorageHandler implements StorageHandler {
    */
   public DistributedStorageHandler(OzoneConfiguration conf,
       StorageContainerLocationProtocol storageContainerLocation,
-      OzoneManagerProtocol ozoneManagerClient) {
+      OzoneManagerProtocol ozoneManagerClient) throws IOException {
     this.ozoneManagerClient = ozoneManagerClient;
     this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);

@@ -27,6 +27,8 @@ import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -34,6 +36,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +69,7 @@ public class XceiverClientManager implements Closeable {
   private final Configuration conf;
   private final Cache<String, XceiverClientSpi> clientCache;
   private final boolean useRatis;
+  private X509Certificate caCert;
 
   private static XceiverClientMetrics metrics;
   private boolean isSecurityEnabled;
@@ -74,7 +79,12 @@ public class XceiverClientManager implements Closeable {
    *
    * @param conf configuration
    */
-  public XceiverClientManager(Configuration conf) {
+  public XceiverClientManager(Configuration conf) throws IOException {
+    this(conf, null);
+  }
+
+  public XceiverClientManager(Configuration conf, String caCertPem)
+      throws IOException {
     Preconditions.checkNotNull(conf);
     int maxSize = conf.getInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY,
         SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT);
@@ -86,6 +96,16 @@ public class XceiverClientManager implements Closeable {
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
     this.conf = conf;
     this.isSecurityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
+    if (isSecurityEnabled) {
+      Preconditions.checkNotNull(caCertPem);
+      try {
+        this.caCert = CertificateCodec.getX509Cert(caCertPem);
+      } catch (CertificateException ex) {
+        throw new SCMSecurityException("Error: Fail to get SCM CA certificate",
+            ex);
+      }
+    }
+
     this.clientCache = CacheBuilder.newBuilder()
         .expireAfterAccess(staleThresholdMs, TimeUnit.MILLISECONDS)
         .maximumSize(maxSize)
@@ -210,11 +230,12 @@ public class XceiverClientManager implements Closeable {
             XceiverClientSpi client = null;
             switch (type) {
             case RATIS:
-              client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf);
+              client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf,
+                  caCert);
               client.connect();
               break;
             case STAND_ALONE:
-              client = new XceiverClientGrpc(pipeline, conf);
+              client = new XceiverClientGrpc(pipeline, conf, caCert);
               break;
             case CHAINED:
             default:
