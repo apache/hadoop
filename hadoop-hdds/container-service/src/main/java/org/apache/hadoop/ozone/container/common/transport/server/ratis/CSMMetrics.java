@@ -60,6 +60,8 @@ public class CSMMetrics {
   private @Metric MutableCounterLong numStartTransactionVerifyFailures;
   private @Metric MutableCounterLong numContainerNotOpenVerifyFailures;
 
+  private @Metric MutableRate applyTransactionLatency;
+
   public CSMMetrics() {
     int numCmdTypes = ContainerProtos.Type.values().length;
     this.opsLatency = new MutableRate[numCmdTypes];
@@ -181,6 +183,11 @@ public class CSMMetrics {
     return numBytesCommittedCount.value();
   }
 
+  @VisibleForTesting
+  public MutableRate getApplyTransactionLatency() {
+    return applyTransactionLatency;
+  }
+
   public void incPipelineLatency(ContainerProtos.Type type, long latencyNanos) {
     opsLatency[type.ordinal()].add(latencyNanos);
     transactionLatency.add(latencyNanos);
@@ -194,6 +201,9 @@ public class CSMMetrics {
     numContainerNotOpenVerifyFailures.incr();
   }
 
+  public void recordApplyTransactionLatency(long latencyNanos) {
+    applyTransactionLatency.add(latencyNanos);
+  }
 
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();

@@ -665,6 +665,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setTerm(trx.getLogEntry().getTerm())
             .setLogIndex(index);
 
+    long applyTxnStartTime = Time.monotonicNowNanos();
     try {
       applyTransactionSemaphore.acquire();
       metrics.incNumApplyTransactionsOps();
@@ -732,7 +733,11 @@ public class ContainerStateMachine extends BaseStateMachine {
           }
         }
         return applyTransactionFuture;
-      }).whenComplete((r, t) -> applyTransactionSemaphore.release());
+      }).whenComplete((r, t) ->  {
+        applyTransactionSemaphore.release();
+        metrics.recordApplyTransactionLatency(
+            Time.monotonicNowNanos() - applyTxnStartTime);
+      });
       return applyTransactionFuture;
     } catch (IOException | InterruptedException e) {
       metrics.incNumApplyTransactionsFails();
