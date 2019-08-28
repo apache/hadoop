@@ -16,16 +16,14 @@
  */
 package org.apache.hadoop.ozone.security;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
@@ -35,7 +33,6 @@ public class GDPRSymmetricKey {
 
   private SecretKeySpec secretKey;
   private Cipher cipher;
-  private int length;
   private String algorithm;
   private String secret;
 
@@ -49,54 +46,37 @@ public class GDPRSymmetricKey {
 
   /**
    * Default constructor creates key with default values.
-   * @throws UnsupportedEncodingException
-   * @throws NoSuchAlgorithmException
-   * @throws NoSuchPaddingException
+   * @throws Exception
    */
-  public GDPRSymmetricKey()
-      throws UnsupportedEncodingException, NoSuchAlgorithmException,
-      NoSuchPaddingException {
-    length = OzoneConsts.GDPR_RANDOM_SECRET_LENGTH;
+  public GDPRSymmetricKey() throws Exception {
     algorithm = OzoneConsts.GDPR_ALGORITHM_NAME;
-    secret = RandomStringUtils.randomAlphabetic(length);
-    byte[] key = fixSecret(secret, length);
-    this.secretKey = new SecretKeySpec(key, algorithm);
+    secret = RandomStringUtils
+        .randomAlphabetic(OzoneConsts.GDPR_RANDOM_SECRET_LENGTH);
+    this.secretKey = new SecretKeySpec(
+        secret.substring(0, OzoneConsts.GDPR_RANDOM_SECRET_LENGTH)
+            .getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);
   }
 
   /**
    * Overloaded constructor creates key with specified values.
-   * @throws UnsupportedEncodingException
-   * @throws NoSuchAlgorithmException
-   * @throws NoSuchPaddingException
+   * @throws Exception
    */
-  public GDPRSymmetricKey(String secret, int len, String algorithm)
-      throws UnsupportedEncodingException, NoSuchAlgorithmException,
-      NoSuchPaddingException {
+  public GDPRSymmetricKey(String secret, String algorithm) throws Exception {
+    Preconditions.checkArgument(secret.length() == 32,
+        "Secret must be exactly 32 characters");
     this.secret = secret;
-    this.length = len;
     this.algorithm = algorithm;
-    byte[] key = fixSecret(secret, length);
-    this.secretKey = new SecretKeySpec(key, algorithm);
+    this.secretKey = new SecretKeySpec(
+        secret.substring(0, OzoneConsts.GDPR_RANDOM_SECRET_LENGTH)
+            .getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);
-  }
-
-  private byte[] fixSecret(String s, int len)
-      throws UnsupportedEncodingException {
-    if (s.length() < len) {
-      int missingLength = len - s.length();
-      for (int i = 0; i < missingLength; i++) {
-        s += " ";
-      }
-    }
-    return s.substring(0, len).getBytes(OzoneConsts.GDPR_CHARSET);
   }
 
   public Map<String, String> getKeyDetails() {
     Map<String, String> keyDetail = new HashMap<>();
     keyDetail.put(OzoneConsts.GDPR_SECRET, this.secret);
     keyDetail.put(OzoneConsts.GDPR_ALGORITHM, this.algorithm);
-    keyDetail.put(OzoneConsts.GDPR_LENGTH, String.valueOf(this.length));
     return keyDetail;
   }
 

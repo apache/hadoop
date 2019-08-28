@@ -37,8 +37,9 @@ public class TestGDPRSymmetricKey {
   }
 
   @Test
-  public void testKeyGenerationWithInput() throws Exception {
-    GDPRSymmetricKey gkey = new GDPRSymmetricKey("hakunamatata", 16,
+  public void testKeyGenerationWithValidInput() throws Exception {
+    GDPRSymmetricKey gkey = new GDPRSymmetricKey(
+        "ApacheHadoopOzoneIsAnObjectStore",
         OzoneConsts.GDPR_ALGORITHM_NAME);
 
     Assert.assertTrue(gkey.getCipher().getAlgorithm()
@@ -47,4 +48,19 @@ public class TestGDPRSymmetricKey {
     gkey.getKeyDetails().forEach(
         (k, v) -> Assert.assertTrue(v.length() > 0));
   }
+
+  @Test
+  public void testKeyGenerationWithInvalidInput() throws Exception {
+    GDPRSymmetricKey gkey = null;
+    try{
+      gkey = new GDPRSymmetricKey("ozone",
+          OzoneConsts.GDPR_ALGORITHM_NAME);
+    } catch (IllegalArgumentException ex) {
+      Assert.assertTrue(ex.getMessage()
+          .equalsIgnoreCase("Secret must be exactly 32 characters"));
+      Assert.assertTrue(gkey == null);
+    }
+  }
+
+
 }
