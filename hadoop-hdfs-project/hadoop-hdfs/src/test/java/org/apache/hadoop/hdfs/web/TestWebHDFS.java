@@ -55,6 +55,7 @@ import java.util.Random;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1129,8 +1130,65 @@ public class TestWebHDFS {
         cluster.shutdown();
       }
     }
-
   }
+
+  @Test
+  public void testSetQuota() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/TestDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final long nsQuota = 100;
+      final long spaceQuota = 1024;
+
+      webHdfs.mkdirs(path);
+
+      webHdfs.setQuota(path, nsQuota, spaceQuota);
+      QuotaUsage quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(nsQuota, quotaUsage.getQuota());
+      assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuota(path,
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuotaByStorageType(path, StorageType.DISK, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.ARCHIVE, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.SSD, spaceQuota);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.ARCHIVE));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.SSD));
+
+      // Test invalid parameters
+
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, -100, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, 100, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, null, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100));
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   @Test
   public void testWebHdfsPread() throws Exception {
