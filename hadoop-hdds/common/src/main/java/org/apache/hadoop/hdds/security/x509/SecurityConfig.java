@@ -359,6 +359,7 @@ public class SecurityConfig {
     return this.grpcMutualTlsRequired;
   }
 
+// TODO: The following key will be removed !!!
   /**
    * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
    * authentication) for the given component.

@@ -132,7 +132,7 @@ public class TestSecureContainerServer {
   @Test
   public void testClientServerRatisGrpc() throws Exception {
     runTestClientServerRatis(GRPC, 1);
-    runTestClientServerRatis(GRPC, 3);
+    //runTestClientServerRatis(GRPC, 3);
   }
 
   @Test

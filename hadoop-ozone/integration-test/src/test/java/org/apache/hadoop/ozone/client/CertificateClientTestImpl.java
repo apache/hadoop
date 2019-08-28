@@ -99,6 +99,11 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
+  public X509Certificate getCACertificate() {
+    return x509Certificate;
+  }
+
+  @Override
   public boolean verifyCertificate(X509Certificate certificate) {
     return true;
   }

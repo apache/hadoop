@@ -55,9 +55,10 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclRequest;
@@ -1209,6 +1210,24 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
           .map(ServiceInfo::getFromProtobuf)
           .collect(Collectors.toList());
 
+  }
+
+  @Override
+  public ServiceInfoEx getServiceInfo() throws IOException {
+    ServiceListRequest req = ServiceListRequest.newBuilder().build();
+
+    OMRequest omRequest = createOMRequest(Type.ServiceList)
+        .setServiceListRequest(req)
+        .build();
+
+    final ServiceListResponse resp = handleError(submitRequest(omRequest))
+        .getServiceListResponse();
+
+    return new ServiceInfoEx(
+        resp.getServiceInfoList().stream()
+            .map(ServiceInfo::getFromProtobuf)
+            .collect(Collectors.toList()),
+        resp.getCaCertificate());
   }
 
   /**
