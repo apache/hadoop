@@ -1301,19 +1301,6 @@ public class KeyManagerImpl implements KeyManager {
 
         HddsProtos.ReplicationType replicationType = null;
 
-        //if there are no parts, use the replicationType from the open key.
-        if (partKeyInfoMap.size() == 0) {
-          OmKeyInfo omKeyInfo =
-              metadataManager.getOpenKeyTable().get(multipartKey);
-
-          if (omKeyInfo == null) {
-            throw new IllegalStateException(
-                "Open key is missing for multipart upload " + multipartKey);
-          }
-
-          replicationType = omKeyInfo.getType();
-        }
-
         int count = 0;
         List<OmPartInfo> omPartInfoList = new ArrayList<>();
 
@@ -1337,6 +1324,20 @@ public class KeyManagerImpl implements KeyManager {
           }
         }
 
+        if (replicationType == null) {
+          //if there are no parts, use the replicationType from the open key.
+
+          OmKeyInfo omKeyInfo =
+              metadataManager.getOpenKeyTable().get(multipartKey);
+
+          if (omKeyInfo == null) {
+            throw new IllegalStateException(
+                "Open key is missing for multipart upload " + multipartKey);
+          }
+
+          replicationType = omKeyInfo.getType();
+
+        }
         Preconditions.checkNotNull(replicationType,
             "Replication type can't be identified");
 
