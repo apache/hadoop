@@ -56,7 +56,7 @@ public class OzoneDelegationTokenSelector
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
       if (OzoneTokenIdentifier.KIND_NAME.equals(token.getKind())
-          && service.toString().contains(token.getService().toString())) {
+          && token.getService().toString().contains(service.toString())) {
         return (Token<OzoneTokenIdentifier>) token;
       }
     }
