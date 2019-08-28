@@ -2222,7 +2222,9 @@ public class LeafQueue extends AbstractCSQueue {
         / DateUtils.MILLIS_PER_SECOND;
     metrics.updatePreemptedMemoryMBSeconds(mbSeconds);
     metrics.updatePreemptedVcoreSeconds(vcSeconds);
+    metrics.updatePreemptedResources(containerResource);
     metrics.updatePreemptedSecondsForCustomResources(containerResource,
         usedSeconds);
+    metrics.updatePreemptedForCustomResources(containerResource);
   }
 }
