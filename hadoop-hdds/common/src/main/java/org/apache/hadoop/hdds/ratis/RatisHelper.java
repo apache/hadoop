@@ -242,4 +242,10 @@ public interface RatisHelper {
         .retryUpToMaximumCountWithFixedSleep(maxRetryCount, sleepDuration);
     return retryPolicy;
   }
+
+  static Long getMinReplicatedIndex(
+      Collection<RaftProtos.CommitInfoProto> commitInfos) {
+    return commitInfos.stream().map(RaftProtos.CommitInfoProto::getCommitIndex)
+        .min(Long::compareTo).orElse(null);
+  }
 }

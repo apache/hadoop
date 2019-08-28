@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.conf.Configuration;
@@ -76,8 +75,6 @@ import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.impl.BlockManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
-import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
-    .BlockDeletingService;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -86,15 +83,8 @@ import com.google.common.base.Preconditions;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import static org.apache.hadoop.hdds.HddsConfigKeys
     .HDDS_DATANODE_VOLUME_CHOOSING_POLICY;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.*;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    Result.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +99,6 @@ public class KeyValueHandler extends Handler {
   private final ContainerType containerType;
   private final BlockManager blockManager;
   private final ChunkManager chunkManager;
-  private final BlockDeletingService blockDeletingService;
   private final VolumeChoosingPolicy volumeChoosingPolicy;
   private final long maxContainerSize;
 
@@ -126,18 +115,6 @@ public class KeyValueHandler extends Handler {
         conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_KEY,
             OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_DEFAULT);
     chunkManager = new ChunkManagerImpl(doSyncWrite);
-    long svcInterval = config
-        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
-            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS);
-    long serviceTimeout = config
-        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
-            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
-            TimeUnit.MILLISECONDS);
-    this.blockDeletingService =
-        new BlockDeletingService(containerSet, svcInterval, serviceTimeout,
-            TimeUnit.MILLISECONDS, config);
-    blockDeletingService.start();
     volumeChoosingPolicy = ReflectionUtils.newInstance(conf.getClass(
         HDDS_DATANODE_VOLUME_CHOOSING_POLICY, RoundRobinVolumeChoosingPolicy
             .class, VolumeChoosingPolicy.class), conf);
@@ -160,7 +137,6 @@ public class KeyValueHandler extends Handler {
 
   @Override
   public void stop() {
-    blockDeletingService.shutdown();
   }
 
   @Override
