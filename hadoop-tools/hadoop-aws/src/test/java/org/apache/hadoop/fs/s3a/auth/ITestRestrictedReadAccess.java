@@ -77,7 +77,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * This test creates a client with no read access to the underlying
  * filesystem and then tries to perform various read operations on it.
- * S3Guard in auth mode always goes to the FS, so we parameterize the
+ * S3Guard in non-auth mode always goes to the FS, so we parameterize the
  * test for S3Guard + Auth to see how failures move around.
  * <ol>
  *   <li>Tests only run if an assumed role is provided.</li>
