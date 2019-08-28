@@ -20,9 +20,6 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import java.util.List;
 
-import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-
 /**
  * List of in-flight MPU uploads.
  */

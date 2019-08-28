@@ -236,6 +236,7 @@ public class OzoneContainer {
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
     blockDeletingService.shutdown();
+    ContainerMetrics.remove();
   }
 
 

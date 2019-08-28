@@ -52,8 +52,8 @@ import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -80,6 +80,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   private boolean closed = false;
   private SecurityConfig secConfig;
   private final boolean topologyAwareRead;
+  private X509Certificate caCert;
 
   /**
    * Constructs a client that can communicate with the Container framework on
@@ -87,8 +88,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    *
    * @param pipeline - Pipeline that defines the machines.
    * @param config   -- Ozone Config
+   * @param caCert   - SCM ca certificate.
    */
-  public XceiverClientGrpc(Pipeline pipeline, Configuration config) {
+  public XceiverClientGrpc(Pipeline pipeline, Configuration config,
+      X509Certificate caCert) {
     super();
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkNotNull(config);
@@ -103,6 +106,18 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.topologyAwareRead = config.getBoolean(
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
+    this.caCert = caCert;
+  }
+
+  /**
+   * Constructs a client that can communicate with the Container framework on
+   * data nodes.
+   *
+   * @param pipeline - Pipeline that defines the machines.
+   * @param config   -- Ozone Config
+   */
+  public XceiverClientGrpc(Pipeline pipeline, Configuration config) {
+    this(pipeline, config, null);
   }
 
   /**
@@ -151,19 +166,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             .intercept(new ClientCredentialInterceptor(userName, encodedToken),
                 new GrpcClientInterceptor());
     if (secConfig.isGrpcTlsEnabled()) {
-      File trustCertCollectionFile = secConfig.getTrustStoreFile(COMPONENT);
-      File privateKeyFile = secConfig.getClientPrivateKeyFile(COMPONENT);
-      File clientCertChainFile = secConfig.getClientCertChainFile(COMPONENT);
-
       SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-      if (trustCertCollectionFile != null) {
-        sslContextBuilder.trustManager(trustCertCollectionFile);
+      if (caCert != null) {
+        sslContextBuilder.trustManager(caCert);
       }
-      if (secConfig.isGrpcMutualTlsRequired() && clientCertChainFile != null
-          && privateKeyFile != null) {
-        sslContextBuilder.keyManager(clientCertChainFile, privateKeyFile);
-      }
-
       if (secConfig.useTestCert()) {
         channelBuilder.overrideAuthority("localhost");
       }

@@ -176,34 +176,18 @@ public final class HddsConfigKeys {
   private HddsConfigKeys() {
   }
 
+  // Enable TLS for GRPC clients/server in ozone.
   public static final String HDDS_GRPC_TLS_ENABLED = "hdds.grpc.tls.enabled";
   public static final boolean HDDS_GRPC_TLS_ENABLED_DEFAULT = false;
 
-  public static final String HDDS_GRPC_MUTUAL_TLS_REQUIRED =
-      "hdds.grpc.mutual.tls.required";
-  public static final boolean HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT = false;
-
+  // Choose TLS provider the default is set to OPENSSL for better performance.
   public static final String HDDS_GRPC_TLS_PROVIDER = "hdds.grpc.tls.provider";
   public static final String HDDS_GRPC_TLS_PROVIDER_DEFAULT = "OPENSSL";
 
-  public static final String HDDS_TRUST_STORE_FILE_NAME =
-      "hdds.trust.cert.collection.file.name";
-  public static final String HDDS_TRUST_STORE_FILE_NAME_DEFAULT = "ca.crt";
-
-  public static final String
-      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME =
-      "hdds.server.cert.chain.file.name";
-  public static final String
-      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "server.crt";
-
-  public static final String
-      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME =
-      "hdds.client.cert.chain.file.name";
-  public static final String
-      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "client.crt";
-
+  // Test only settings for using test signed certificate, authority assume to
+  // be localhost.
   public static final String HDDS_GRPC_TLS_TEST_CERT = "hdds.grpc.tls" +
-      ".test_cert";
+      ".test.cert";
   public static final boolean HDDS_GRPC_TLS_TEST_CERT_DEFAULT = false;
 
   // Comma separated acls (users, groups) allowing clients accessing
