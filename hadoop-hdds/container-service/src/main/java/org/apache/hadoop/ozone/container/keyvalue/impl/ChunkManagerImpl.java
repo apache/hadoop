@@ -142,18 +142,12 @@ public class ChunkManagerImpl implements ChunkManager {
         // the same term and log index appended as the current transaction
         commitChunk(tmpChunkFile, chunkFile);
         // Increment container stats here, as we commit the data.
-        containerData.incrBytesUsed(info.getLen());
-        containerData.incrWriteCount();
-        containerData.incrWriteBytes(info.getLen());
+        updateContainerWriteStats(container, info, isOverwrite);
         break;
       case COMBINED:
         // directly write to the chunk file
         ChunkUtils.writeData(chunkFile, info, data, volumeIOStats, doSyncWrite);
-        if (!isOverwrite) {
-          containerData.incrBytesUsed(info.getLen());
-        }
-        containerData.incrWriteCount();
-        containerData.incrWriteBytes(info.getLen());
+        updateContainerWriteStats(container, info, isOverwrite);
         break;
       default:
         throw new IOException("Can not identify write operation.");
@@ -174,6 +168,18 @@ public class ChunkManagerImpl implements ChunkManager {
       throw new StorageContainerException("Internal error: ", e,
           CONTAINER_INTERNAL_ERROR);
     }
+  }
+
+  protected void updateContainerWriteStats(Container container, ChunkInfo info,
+      boolean isOverwrite) {
+    KeyValueContainerData containerData = (KeyValueContainerData) container
+        .getContainerData();
+
+    if (!isOverwrite) {
+      containerData.incrBytesUsed(info.getLen());
+    }
+    containerData.incrWriteCount();
+    containerData.incrWriteBytes(info.getLen());
   }
 
   /**

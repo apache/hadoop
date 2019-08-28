@@ -238,6 +238,12 @@ public final class HddsConfigKeys {
   public static final String HDDS_SECURITY_CLIENT_SCM_CERTIFICATE_PROTOCOL_ACL =
       "hdds.security.client.scm.certificate.protocol.acl";
 
+  // Determines if the Container Chunk Manager will write user data to disk
+  // Set to false only for specific performance tests
+  public static final String HDDS_CONTAINER_PERSISTDATA =
+      "hdds.container.chunk.persistdata";
+  public static final boolean HDDS_CONTAINER_PERSISTDATA_DEFAULT = true;
+
   public static final String HDDS_DATANODE_HTTP_ENABLED_KEY =
       "hdds.datanode.http.enabled";
   public static final String HDDS_DATANODE_HTTP_BIND_HOST_KEY =
