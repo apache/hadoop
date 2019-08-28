@@ -15,7 +15,6 @@
 # limitations under the License.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
-set -x
 
 export MAVEN_OPTS="-Xmx4096m"
 mvn -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem,\!:hadoop-ozone-tools
