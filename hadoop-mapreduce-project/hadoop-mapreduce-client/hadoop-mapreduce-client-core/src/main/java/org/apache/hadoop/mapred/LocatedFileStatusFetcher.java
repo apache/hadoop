@@ -99,8 +99,8 @@ public class LocatedFileStatusFetcher {
    * @throws IOException
    */
   public LocatedFileStatusFetcher(Configuration conf, Path[] dirs,
-      boolean recursive, PathFilter inputFilter, boolean newApi) throws InterruptedException,
-      IOException {
+      boolean recursive, PathFilter inputFilter, boolean newApi)
+      throws InterruptedException, IOException {
     int numThreads = conf.getInt(FileInputFormat.LIST_STATUS_NUM_THREADS,
         FileInputFormat.DEFAULT_LIST_STATUS_NUM_THREADS);
     LOG.debug("Instantiated LocatedFileStatusFetcher with {} threads",
