@@ -1640,6 +1640,7 @@ public class CapacityScheduler extends
         / DateUtils.MILLIS_PER_SECOND;
     qMetrics.updatePreemptedMemoryMBSeconds(mbSeconds);
     qMetrics.updatePreemptedVcoreSeconds(vcSeconds);
+    qMetrics.updatePreemptedResources(containerResource);
   }
   
   @Override
