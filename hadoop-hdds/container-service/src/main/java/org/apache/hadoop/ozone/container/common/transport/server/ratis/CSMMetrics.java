@@ -185,7 +185,7 @@ public class CSMMetrics {
   }
 
   public MutableRate getApplyTransactionLatency() {
-    return applyTransactionLatency;
+    return applyTransaction;
   }
 
   public void incPipelineLatency(ContainerProtos.Type type, long latencyNanos) {
