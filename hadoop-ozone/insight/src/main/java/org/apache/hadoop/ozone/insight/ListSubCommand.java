@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import picocli.CommandLine;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 /**
@@ -46,10 +47,10 @@ public class ListSubCommand extends BaseInsightSubCommand
 
     Map<String, InsightPoint> insightPoints =
         createInsightPoints(new OzoneConfiguration());
-    for (String key : insightPoints.keySet()) {
-      if (insightPrefix == null || key.startsWith(insightPrefix)) {
-        System.out.println(String.format("  %-33s    %s", key,
-            insightPoints.get(key).getDescription()));
+    for (Entry<String, InsightPoint> entry : insightPoints.entrySet()) {
+      if (insightPrefix == null || entry.getKey().startsWith(insightPrefix)) {
+        System.out.println(String.format("  %-33s    %s", entry.getKey(),
+            entry.getValue().getDescription()));
       }
     }
     return null;
