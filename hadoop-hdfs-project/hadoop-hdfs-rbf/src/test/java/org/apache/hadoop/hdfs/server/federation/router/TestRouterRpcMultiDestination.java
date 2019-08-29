@@ -188,6 +188,31 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
         requiredPaths.size(), partialListing.length);
   }
 
+  /**
+   * Verify the metric ProxyOp with RemoteException.
+   */
+  @Test
+  public void testProxyOpWithRemoteException() throws IOException {
+    final String testPath = "/proxy_op/remote_exception.txt";
+    final FederationRPCMetrics metrics = getRouterContext().
+        getRouter().getRpcServer().getRPCMetrics();
+    String ns1 = getCluster().getNameservices().get(1);
+    final FileSystem fileSystem1 = getCluster().
+        getNamenode(ns1, null).getFileSystem();
+
+    try {
+      // Create the test file in ns1.
+      createFile(fileSystem1, testPath, 32);
+
+      long beforeProxyOp = metrics.getProxyOps();
+      // First retry nn0 with remoteException then nn1.
+      getRouterProtocol().getBlockLocations(testPath, 0, 1);
+      assertEquals(2, metrics.getProxyOps() - beforeProxyOp);
+    } finally {
+      fileSystem1.delete(new Path(testPath), true);
+    }
+  }
+
   @Override
   public void testProxyListFiles() throws IOException, InterruptedException,
       URISyntaxException, NoSuchMethodException, SecurityException {
