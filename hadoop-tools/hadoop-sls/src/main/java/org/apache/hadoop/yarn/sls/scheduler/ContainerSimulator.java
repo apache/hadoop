@@ -38,6 +38,8 @@ public class ContainerSimulator implements Delayed {
   private long endTime;
   // life time (ms)
   private long lifeTime;
+  // time(ms) after which container would be requested by AM
+  private long requestDelay;
   // host name
   private String hostname;
   // priority
@@ -63,21 +65,24 @@ public class ContainerSimulator implements Delayed {
    */
   public ContainerSimulator(Resource resource, long lifeTime,
       String hostname, int priority, String type, ExecutionType executionType) {
-    this(resource, lifeTime, hostname, priority, type, executionType, -1);
+    this(resource, lifeTime, hostname, priority, type,
+        executionType, -1, 0);
   }
 
   /**
    * invoked when AM schedules containers to allocate.
    */
+  @SuppressWarnings("checkstyle:parameternumber")
   public ContainerSimulator(Resource resource, long lifeTime,
       String hostname, int priority, String type, ExecutionType executionType,
-      long allocationId) {
+      long allocationId, long requestDelay) {
     this.resource = resource;
     this.lifeTime = lifeTime;
     this.hostname = hostname;
     this.priority = priority;
     this.type = type;
     this.executionType = executionType;
+    this.requestDelay = requestDelay;
     this.allocationId = allocationId;
   }
 
@@ -147,5 +152,9 @@ public class ContainerSimulator implements Delayed {
 
   public long getAllocationId() {
     return allocationId;
+  }
+
+  public long getRequestDelay() {
+    return requestDelay;
   }
 }

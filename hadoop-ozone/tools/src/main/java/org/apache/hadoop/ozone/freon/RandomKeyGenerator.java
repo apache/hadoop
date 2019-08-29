@@ -40,6 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Scope;
 import io.opentracing.util.GlobalTracer;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -251,6 +252,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
   @Override
   public Void call() throws Exception {
     if (ozoneConfiguration != null) {
+      if (!ozoneConfiguration.getBoolean(
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA,
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT)) {
+        LOG.info("Override validateWrites to false, because "
+            + HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA + " is set to false.");
+        validateWrites = false;
+      }
       init(ozoneConfiguration);
     } else {
       init(freon.createOzoneConfiguration());
@@ -282,6 +290,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     LOG.info("Number of Keys per Bucket: {}.", numOfKeys);
     LOG.info("Key size: {} bytes", keySize);
     LOG.info("Buffer size: {} bytes", bufferSize);
+    LOG.info("validateWrites : {}", validateWrites);
     for (int i = 0; i < numOfThreads; i++) {
       executor.submit(new ObjectCreator());
     }
@@ -548,7 +557,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
    */
   @VisibleForTesting
   long getUnsuccessfulValidationCount() {
-    return writeValidationFailureCount;
+    return validateWrites ? writeValidationFailureCount : 0;
   }
 
   /**

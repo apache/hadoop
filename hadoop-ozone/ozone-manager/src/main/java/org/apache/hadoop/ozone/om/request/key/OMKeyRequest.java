@@ -32,12 +32,17 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.PrefixManager;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +83,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
@@ -248,7 +254,9 @@ public abstract class OMKeyRequest extends OMClientRequest {
       FileEncryptionInfo encryptionInfo, @Nullable IOException exception,
       long clientID, long transactionLogIndex, @Nonnull String volumeName,
       @Nonnull String bucketName, @Nonnull String keyName,
-      @Nonnull OzoneManager ozoneManager, @Nonnull OMAction omAction) {
+      @Nonnull OzoneManager ozoneManager, @Nonnull OMAction omAction,
+      @Nonnull PrefixManager prefixManager,
+      @Nullable OmBucketInfo omBucketInfo) {
 
     OMResponse.Builder omResponse = OMResponse.newBuilder()
         .setStatus(OzoneManagerProtocolProtos.Status.OK);
@@ -263,7 +271,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
         // version 0
         omKeyInfo = createKeyInfo(keyArgs, locations, keyArgs.getFactor(),
             keyArgs.getType(), keyArgs.getDataSize(),
-            encryptionInfo);
+            encryptionInfo, prefixManager, omBucketInfo);
       }
 
       long openVersion = omKeyInfo.getLatestVersionLocations().getVersion();
@@ -335,12 +343,15 @@ public abstract class OMKeyRequest extends OMClientRequest {
    * Create OmKeyInfo object.
    * @return OmKeyInfo
    */
+  @SuppressWarnings("parameterNumber")
   protected OmKeyInfo createKeyInfo(@Nonnull KeyArgs keyArgs,
       @Nonnull List<OmKeyLocationInfo> locations,
       @Nonnull HddsProtos.ReplicationFactor factor,
       @Nonnull HddsProtos.ReplicationType type, long size,
-      @Nullable FileEncryptionInfo encInfo) {
-    OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
+      @Nullable FileEncryptionInfo encInfo,
+      @Nonnull PrefixManager prefixManager,
+      @Nullable OmBucketInfo omBucketInfo) {
+    return new OmKeyInfo.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
@@ -351,11 +362,46 @@ public abstract class OMKeyRequest extends OMClientRequest {
         .setDataSize(size)
         .setReplicationType(type)
         .setReplicationFactor(factor)
-        .setFileEncryptionInfo(encInfo);
+        .setFileEncryptionInfo(encInfo)
+        .setAcls(getAclsForKey(keyArgs, omBucketInfo, prefixManager)).build();
+  }
+
+  private List< OzoneAcl > getAclsForKey(KeyArgs keyArgs,
+      OmBucketInfo bucketInfo, PrefixManager prefixManager) {
+    List<OzoneAcl> acls = new ArrayList<>();
+
     if(keyArgs.getAclsList() != null) {
-      builder.setAcls(OzoneAclUtil.fromProtobuf(keyArgs.getAclsList()));
+      acls.addAll(OzoneAclUtil.fromProtobuf(keyArgs.getAclsList()));
     }
-    return builder.build();
+
+    // Inherit DEFAULT acls from prefix.
+    if(prefixManager != null) {
+      List< OmPrefixInfo > prefixList = prefixManager.getLongestPrefixPath(
+          OZONE_URI_DELIMITER +
+              keyArgs.getVolumeName() + OZONE_URI_DELIMITER +
+              keyArgs.getBucketName() + OZONE_URI_DELIMITER +
+              keyArgs.getKeyName());
+
+      if(prefixList.size() > 0) {
+        // Add all acls from direct parent to key.
+        OmPrefixInfo prefixInfo = prefixList.get(prefixList.size() - 1);
+        if(prefixInfo  != null) {
+          if (OzoneAclUtil.inheritDefaultAcls(acls, prefixInfo.getAcls())) {
+            return acls;
+          }
+        }
+      }
+    }
+
+    // Inherit DEFAULT acls from bucket only if DEFAULT acls for
+    // prefix are not set.
+    if (bucketInfo != null) {
+      if (OzoneAclUtil.inheritDefaultAcls(acls, bucketInfo.getAcls())) {
+        return acls;
+      }
+    }
+
+    return acls;
   }
 
   /**
@@ -363,16 +409,18 @@ public abstract class OMKeyRequest extends OMClientRequest {
    * @return OmKeyInfo
    * @throws IOException
    */
+  @SuppressWarnings("parameternumber")
   protected OmKeyInfo prepareKeyInfo(
       @Nonnull OMMetadataManager omMetadataManager,
       @Nonnull KeyArgs keyArgs, @Nonnull String dbKeyName, long size,
       @Nonnull List<OmKeyLocationInfo> locations,
-      @Nullable FileEncryptionInfo encInfo)
+      @Nullable FileEncryptionInfo encInfo,
+      @Nonnull PrefixManager prefixManager, @Nullable OmBucketInfo omBucketInfo)
       throws IOException {
     OmKeyInfo keyInfo = null;
     if (keyArgs.getIsMultipartKey()) {
       keyInfo = prepareMultipartKeyInfo(omMetadataManager, keyArgs, size,
-          locations, encInfo);
+          locations, encInfo, prefixManager, omBucketInfo);
       //TODO args.getMetadata
     } else if (omMetadataManager.getKeyTable().isExist(dbKeyName)) {
       // TODO: Need to be fixed, as when key already exists, we are
@@ -400,7 +448,8 @@ public abstract class OMKeyRequest extends OMClientRequest {
       @Nonnull OMMetadataManager omMetadataManager,
       @Nonnull KeyArgs args, long size,
       @Nonnull List<OmKeyLocationInfo> locations,
-      FileEncryptionInfo encInfo) throws IOException {
+      FileEncryptionInfo encInfo,  @Nonnull PrefixManager prefixManager,
+      @Nullable OmBucketInfo omBucketInfo) throws IOException {
     HddsProtos.ReplicationFactor factor;
     HddsProtos.ReplicationType type;
 
@@ -427,7 +476,8 @@ public abstract class OMKeyRequest extends OMClientRequest {
     }
     // For this upload part we don't need to check in KeyTable. As this
     // is not an actual key, it is a part of the key.
-    return createKeyInfo(args, locations, factor, type, size, encInfo);
+    return createKeyInfo(args, locations, factor, type, size, encInfo,
+        prefixManager, omBucketInfo);
   }
 
 
@@ -444,6 +494,41 @@ public abstract class OMKeyRequest extends OMClientRequest {
       omResponse.setCmdType(CreateKey);
       return new OMKeyCreateResponse(null, -1L,
           createErrorOMResponse(omResponse, exception));
+    }
+  }
+
+  /**
+   * Check Acls for the ozone bucket.
+   * @param ozoneManager
+   * @param volume
+   * @param bucket
+   * @param key
+   * @throws IOException
+   */
+  protected void checkBucketAcls(OzoneManager ozoneManager, String volume,
+      String bucket, String key) throws IOException {
+    if (ozoneManager.getAclsEnabled()) {
+      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+          OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+          volume, bucket, key);
+    }
+  }
+
+
+  /**
+   * Check Acls for the ozone key.
+   * @param ozoneManager
+   * @param volume
+   * @param bucket
+   * @param key
+   * @throws IOException
+   */
+  protected void checkKeyAcls(OzoneManager ozoneManager, String volume,
+      String bucket, String key) throws IOException {
+    if (ozoneManager.getAclsEnabled()) {
+      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+          OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+          volume, bucket, key);
     }
   }
 

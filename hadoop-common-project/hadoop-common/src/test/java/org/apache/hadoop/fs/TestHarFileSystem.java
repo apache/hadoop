@@ -118,6 +118,8 @@ public class TestHarFileSystem {
     public void processDeleteOnExit();
     public ContentSummary getContentSummary(Path f);
     public QuotaUsage getQuotaUsage(Path f);
+    void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
+    void setQuotaByStorageType(Path f, StorageType type, long quota);
     public FsStatus getStatus();
     public FileStatus[] listStatus(Path f, PathFilter filter);
     public FileStatus[] listStatusBatch(Path f, byte[] token);

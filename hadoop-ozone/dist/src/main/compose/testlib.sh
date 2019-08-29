@@ -39,7 +39,7 @@ count_datanodes() {
   else
     docker-compose -f "${compose_file}" exec -T scm curl -s "${jmx_url}"
   fi \
-    | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value'
+    | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value' || true
 }
 
 ## @description wait until datanodes are up (or 30 seconds)
@@ -82,9 +82,14 @@ start_docker_env(){
   local -i datanode_count=${1:-3}
 
   docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}"
-  wait_for_datanodes "$COMPOSE_FILE" "${datanode_count}"
-  sleep 10
+  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}" \
+    && wait_for_datanodes "$COMPOSE_FILE" "${datanode_count}" \
+    && sleep 10
+
+  if [[ $? -gt 0 ]]; then
+    docker-compose -f "$COMPOSE_FILE" down
+    return 1
+  fi
 }
 
 ## @description  Execute robot tests in a specific container.

@@ -125,4 +125,7 @@ public class SLSConfiguration {
       + "execution.type";
   public static final String TASK_ALLOCATION_ID = TASK_CONTAINER
       + "allocation.id";
+  public static final String TASK_REQUEST_DELAY = TASK_CONTAINER
+      + "request.delay";
+
 }

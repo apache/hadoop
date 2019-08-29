@@ -563,10 +563,18 @@ public class SLSRunner extends Configured implements Tool {
         allocationId = Long.parseLong(
             jsonTask.get(SLSConfiguration.TASK_ALLOCATION_ID).toString());
       }
+
+      long requestDelay = 0;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_REQUEST_DELAY)) {
+        requestDelay = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_REQUEST_DELAY).toString());
+      }
+      requestDelay = Math.max(requestDelay, 0);
+
       for (int i = 0; i < count; i++) {
         containers.add(
             new ContainerSimulator(res, duration, hostname, priority, type,
-                executionType, allocationId));
+                executionType, allocationId, requestDelay));
       }
     }
 

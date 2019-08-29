@@ -75,6 +75,7 @@ import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -1871,6 +1872,48 @@ public class WebHdfsFileSystem extends FileSystem
         return JsonUtilClient.toQuotaUsage(json);
       }
     }.run();
+  }
+
+  @Override
+  public void setQuota(Path p, final long namespaceQuota,
+      final long storagespaceQuota) throws IOException {
+    // sanity check
+    if ((namespaceQuota <= 0 &&
+        namespaceQuota != HdfsConstants.QUOTA_RESET) ||
+        (storagespaceQuota < 0 &&
+            storagespaceQuota != HdfsConstants.QUOTA_RESET)) {
+      throw new IllegalArgumentException("Invalid values for quota : " +
+          namespaceQuota + " and " + storagespaceQuota);
+    }
+
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_QUOTA_USAGE);
+
+    final HttpOpParam.Op op = PutOpParam.Op.SETQUOTA;
+    new FsPathRunner(op, p, new NameSpaceQuotaParam(namespaceQuota),
+        new StorageSpaceQuotaParam(storagespaceQuota)).run();
+  }
+
+  @Override
+  public void setQuotaByStorageType(Path path, StorageType type, long quota)
+      throws IOException {
+    if (quota <= 0 && quota != HdfsConstants.QUOTA_RESET) {
+      throw new IllegalArgumentException("Invalid values for quota :" + quota);
+    }
+    if (type == null) {
+      throw new IllegalArgumentException("Invalid storage type (null)");
+    }
+    if (!type.supportTypeQuota()) {
+      throw new IllegalArgumentException(
+          "Quota for storage type '" + type.toString() + "' is not supported");
+    }
+
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_QUOTA_BYTSTORAGEYPE);
+
+    final HttpOpParam.Op op = PutOpParam.Op.SETQUOTABYSTORAGETYPE;
+    new FsPathRunner(op, path, new StorageTypeParam(type.name()),
+        new StorageSpaceQuotaParam(quota)).run();
   }
 
   @Override

@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -70,7 +72,9 @@ class JNStorage extends Storage {
       StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
-    sd = new StorageDirectory(logDir);
+    sd = new StorageDirectory(logDir, null, false, new FsPermission(conf.get(
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY,
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT)));
     this.addStorageDir(sd);
     this.fjm = new FileJournalManager(conf, sd, errorReporter);
 

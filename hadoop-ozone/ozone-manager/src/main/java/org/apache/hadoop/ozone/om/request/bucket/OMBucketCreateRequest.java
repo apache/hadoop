@@ -19,8 +19,14 @@
 package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,8 +152,11 @@ public class OMBucketCreateRequest extends OMClientRequest {
           volumeName);
       acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);
+
+      OmVolumeArgs omVolumeArgs =
+          metadataManager.getVolumeTable().get(volumeKey);
       //Check if the volume exists
-      if (metadataManager.getVolumeTable().get(volumeKey) == null) {
+      if (omVolumeArgs == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.VOLUME_NOT_FOUND);
@@ -159,6 +168,9 @@ public class OMBucketCreateRequest extends OMClientRequest {
         throw new OMException("Bucket already exist",
             OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
+
+      // Add default acls from volume.
+      addDefaultAcls(omBucketInfo, omVolumeArgs);
 
       // Update table cache.
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
@@ -202,6 +214,29 @@ public class OMBucketCreateRequest extends OMClientRequest {
           bucketName, volumeName, exception);
       return omClientResponse;
     }
+  }
+
+
+  /**
+   * Add default acls for bucket. These acls are inherited from volume
+   * default acl list.
+   * @param omBucketInfo
+   * @param omVolumeArgs
+   */
+  private void addDefaultAcls(OmBucketInfo omBucketInfo,
+      OmVolumeArgs omVolumeArgs) {
+    // Add default acls from volume.
+    List<OzoneAcl> acls = new ArrayList<>();
+    if (omBucketInfo.getAcls() != null) {
+      acls.addAll(omBucketInfo.getAcls());
+    }
+
+    List<OzoneAcl> defaultVolumeAclList = omVolumeArgs.getAclMap()
+        .getDefaultAclList().stream().map(OzoneAcl::fromProtobuf)
+        .collect(Collectors.toList());
+
+    OzoneAclUtil.inheritDefaultAcls(acls, defaultVolumeAclList);
+    omBucketInfo.setAcls(acls);
   }
 
 

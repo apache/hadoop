@@ -155,6 +155,9 @@ public class TestKeyValueContainerMarkUnhealthy {
    */
   @Test
   public void testMarkQuasiClosedContainerAsUnhealthy() throws IOException {
+    // We need to create the container so the sync-on-quasi-close operation
+    // does not NPE.
+    keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
     keyValueContainer.quasiClose();
     keyValueContainer.markContainerUnhealthy();
     assertThat(keyValueContainerData.getState(), is(UNHEALTHY));

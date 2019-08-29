@@ -36,7 +36,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -67,7 +66,6 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .DFS_CONTAINER_IPC_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -210,18 +208,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   @Override
   public OzoneClient getRpcClient() throws IOException {
     return OzoneClientFactory.getRpcClient(conf);
-  }
-
-  /**
-   * Creates an {@link OzoneClient} connected to this cluster's REST
-   * service. Callers take ownership of the client and must close it when done.
-   *
-   * @return OzoneRestClient connected to this cluster's REST service
-   * @throws OzoneException if Ozone encounters an error creating the client
-   */
-  @Override
-  public OzoneClient getRestClient() throws IOException {
-    return OzoneClientFactory.getRestClient(conf);
   }
 
   /**
@@ -619,8 +605,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     private void configureHddsDatanodes() {
       conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      conf.set(HDDS_DATANODE_PLUGINS_KEY,
-          "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
           randomContainerPort);
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,

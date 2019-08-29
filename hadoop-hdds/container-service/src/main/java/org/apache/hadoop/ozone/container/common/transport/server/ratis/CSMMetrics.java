@@ -175,6 +175,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumReadStateMachineOps() {
+    return numReadStateMachineOps.value();
+  }
+
+  @VisibleForTesting
   public long getNumBytesWrittenCount() {
     return numBytesWrittenCount.value();
   }

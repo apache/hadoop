@@ -23,7 +23,7 @@ summary:  Storage Container Manager or SCM is the core metadata service of Ozone
 
 Storage container manager provides multiple critical functions for the Ozone
 cluster.  SCM acts as the cluster manager, Certificate authority, Block
-manager and the replica manager.
+manager and the Replica manager.
 
 {{<card title="Cluster Management" icon="tasks">}}
 SCM is in charge of creating an Ozone cluster. When an SCM is booted up via <kbd>init</kbd> command, SCM creates the cluster identity and root certificates needed for the SCM certificate authority. SCM manages the life cycle of a data node in the cluster.
