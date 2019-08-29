@@ -244,11 +244,11 @@ public class TestAMSimulator {
 
     containerSimulators.clear();
     s1 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType, 1);
+        "/default-rack/h1", priority, type, execType, 1, 0);
     s2 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType, 2);
+        "/default-rack/h1", priority, type, execType, 2, 0);
     s3 = new ContainerSimulator(resource, 100,
-        "/default-rack/h2", priority, type, execType, 1);
+        "/default-rack/h2", priority, type, execType, 1, 0);
 
     containerSimulators.add(s1);
     containerSimulators.add(s2);
