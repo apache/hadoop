@@ -206,7 +206,7 @@ public class BaseFreonGenerator {
   }
 
   /**
-   * Print out reports from the excuted tests.
+   * Print out reports from the executed tests.
    */
   public void printReport() {
     ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).build();
