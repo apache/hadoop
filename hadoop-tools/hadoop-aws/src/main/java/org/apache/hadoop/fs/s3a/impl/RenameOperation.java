@@ -290,7 +290,7 @@ public class RenameOperation extends AbstractStoreOperation {
         false);
     bytesCopied.addAndGet(sourceStatus.getLen());
     // delete the source
-    callbacks.deleteObjectAtPath(sourcePath, sourceKey, true);
+    callbacks.deleteObjectAtPath(sourcePath, sourceKey, true, null);
     // and update the tracker
     renameTracker.sourceObjectsDeleted(Lists.newArrayList(sourcePath));
   }
@@ -323,7 +323,7 @@ public class RenameOperation extends AbstractStoreOperation {
       // marker.
       LOG.debug("Deleting fake directory marker at destination {}",
           destStatus.getPath());
-      callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false);
+      callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
 
     Path parentPath = storeContext.keyToPath(srcKey);

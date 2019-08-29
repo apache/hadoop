@@ -93,11 +93,15 @@ public interface OperationCallbacks {
    * @param path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
+   * @param operationState (nullable) operational state for a bulk update
    * @throws AmazonClientException problems working with S3
    * @throws IOException IO failure in the metastore
    */
   @Retries.RetryTranslated
-  void deleteObjectAtPath(Path path, String key, boolean isFile)
+  void deleteObjectAtPath(Path path,
+      String key,
+      boolean isFile,
+      BulkOperationState operationState)
       throws IOException;
 
   /**
@@ -163,21 +167,24 @@ public interface OperationCallbacks {
       List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean deleteFakeDir,
       List<Path> undeletedObjectsOnFailure,
-      BulkOperationState operationState, boolean quiet)
+      BulkOperationState operationState,
+      boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException;
 
   /**
-   * Is the path for this instance authoritative?
+   * Is the path for this instance considered authoritative on the client,
+   * that is: will listing/status operations only be handled by the metastore,
+   * with no fallback to S3.
    * @param p path
-   * @return true iff the path is authoritative
+   * @return true iff the path is authoritative on the client.
    */
   boolean allowAuthoritative(Path p);
 
   /**
    * Create an iterator over objects in S3 only; S3Guard
    * is not involved.
-   * The listing includes the key itself, if found
+   * The listing includes the key itself, if found.
    * @param path  path of the listing.
    * @param key object key
    * @return iterator with the first listing completed.

@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -50,10 +51,66 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
 /**
  * Implementation of the delete operation.
- * For an authoritative S3Guarded store, after the list and delete of the
- * combined store, we repeat against raw S3.
- * This will correct for any situation where the authoritative listing is
- * incomplete.
+ * <p>
+ * How S3Guard/Store inconsistency is handled:
+ * <ol>
+ *   <li>
+ *     The list operation does not ask for tombstone markers; objects
+ *     under tombstones will be found and deleted.
+ *     The {@code extraFilesDeleted} counter will be incremented here.
+ *   </li>
+ *   <li>
+ *     That may result in recently deleted files being found and
+ *     duplicate delete requests issued. This is mostly harmless.
+ *   </li>
+ *   <li>
+ *     If a path is considered authoritative on the client, so only S3Guard
+ *     is used for listings, we wrap up the delete with a scan of raw S3.
+ *     This will find and eliminate OOB additions.
+ *   </li>
+ *   <li>
+ *     Exception 1: simple directory markers of the form PATH + "/".
+ *     These are treated as a signal that there are no children; no
+ *     listing is made.
+ *   </li>
+ *   <li>
+ *     Exception 2: delete(path, true) where path has a tombstone in S3Guard.
+ *     Here the delete is downgraded to a no-op even before this operation
+ *     is created. Thus: no listings of S3.
+ *   </li>
+ * </ol>
+ * If this class is logged at debug, requests will be audited:
+ * the response to a bulk delete call will be reviewed to see if there
+ * were fewer files deleted than requested; that will be printed
+ * at WARN level. This is independent of handling rejected delete
+ * requests which raise exceptions -those are processed lower down.
+ * <p>
+ * Performance tuning:
+ * <p>
+ * The operation to POST a delete request (or issue many individual
+ * DELETE calls) then update the S3Guard table is done in an async
+ * operation so that it can overlap with the LIST calls for data.
+ * However, only one single operation is queued at a time.
+ * Executing more than one batch delete is possible, it just
+ * adds complexity in terms of error handling as well as in
+ * the datastructures used to track outstanding operations.
+ * If this is done, then it may be good to experiment with different
+ * page sizes. The default value is
+ * {@link InternalConstants#MAX_ENTRIES_TO_DELETE}, the maximum a single
+ * POST permits.
+ * <p>
+ * 1. Smaller pages executed in parallel may have different
+ * performance characteristics when deleting very large directories,
+ * because it will be the DynamoDB calls which will come to dominate.
+ * Any exploration of options here MUST be done with performance
+ * measurements taken from test runs in EC2 against local DDB and S3 stores,
+ * so as to ensure network latencies do not skew the results.
+ * 2. Note that as the DDB thread/connection pools will be shared across
+ * all active delete operations, speedups will be minimal unless
+ * those pools are large enough to cope the extra load.
+ * There are also some opportunities to explore in
+ * {@code DynamoDBMetadataStore} with batching delete requests
+ * in the DDB APIS.
  */
 public class DeleteOperation extends AbstractStoreOperation {
 
@@ -61,37 +118,70 @@ public class DeleteOperation extends AbstractStoreOperation {
       DeleteOperation.class);
 
   /**
-   * This is a switch to turn on when trying to debug
-   * deletion problems; it requests the results of
-   * the delete call from AWS then audits them.
-   */
-  private static final boolean AUDIT_DELETED_KEYS = true;
-
-  /**
    * Used to stop any re-entrancy of the rename.
    * This is an execute-once operation.
    */
   private final AtomicBoolean executed = new AtomicBoolean(false);
 
+  /**
+   * pre-fetched source status.
+   */
   private final S3AFileStatus status;
 
+  /**
+   * recursive delete?
+   */
   private final boolean recursive;
 
+  /**
+   * callback provider.
+   */
   private final OperationCallbacks callbacks;
 
+  /**
+   * number of entries in a page.
+   */
   private final int pageSize;
 
+  /**
+   * metastore -never null but may be the NullMetadataStore.
+   */
   private final MetadataStore metadataStore;
 
+  /**
+   * Executor for async operations.
+   */
   private final ListeningExecutorService executor;
 
+  /**
+   * List of keys built up for the next delete batch.
+   */
   private List<DeleteObjectsRequest.KeyVersion> keys;
 
+  /**
+   * List of paths built up for deletion.
+   */
   private List<Path> paths;
 
+  /**
+   * The single async delete operation, or null.
+   */
   private CompletableFuture<Void> deleteFuture;
 
+  /**
+   * Bulk Operation state if this is a bulk operation.
+   */
+  private BulkOperationState operationState;
+
+  /**
+   * Counter of deleted files.
+   */
   private long filesDeleted;
+
+  /**
+   * Counter of files found in the S3 Store during a raw scan of the store
+   * after the previous listing was in auth-mode.
+   */
   private long extraFilesDeleted;
 
   /**
@@ -105,14 +195,15 @@ public class DeleteOperation extends AbstractStoreOperation {
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
       final boolean recursive,
-      final OperationCallbacks callbacks, int pageSize) {
+      final OperationCallbacks callbacks,
+      final int pageSize) {
 
     super(context);
     this.status = status;
     this.recursive = recursive;
     this.callbacks = callbacks;
     checkArgument(pageSize > 0
-        && pageSize <=InternalConstants.MAX_ENTRIES_TO_DELETE,
+            && pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
         "page size out of range: %d", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
@@ -129,6 +220,7 @@ public class DeleteOperation extends AbstractStoreOperation {
 
   /**
    * Delete a file or directory tree.
+   * <p>
    * This call does not create any fake parent directory; that is
    * left to the caller.
    * The actual delete call is done in a separate thread.
@@ -139,10 +231,6 @@ public class DeleteOperation extends AbstractStoreOperation {
    * potentially slow part of the process is somewhat speeded up.
    * The extra parallelization here is to list files from the store/DDB while
    * that delete operation is in progress.
-   * <p>
-   * Note that DDB is not used for listing objects here, even if the
-   * store is marked as auth: that actually means that newly created files
-   * may not get found for the delete.
    *
    * @return true, except in the corner cases of root directory deletion
    * @throws PathIsNotEmptyDirectoryException if the path is a dir and this
@@ -201,8 +289,8 @@ public class DeleteOperation extends AbstractStoreOperation {
   }
 
   /**
-   *  Directory delete: combine paginated list of files with single or
-   *  multiple object delete calls.
+   * Directory delete: combine paginated list of files with single or
+   * multiple object delete calls.
    *
    * @param path directory path
    * @param dirKey directory key
@@ -212,12 +300,11 @@ public class DeleteOperation extends AbstractStoreOperation {
       final String dirKey) throws IOException {
     // create an operation state so that the store can manage the bulk
     // operation if it needs to
-    try (BulkOperationState operationState =
-             S3Guard.initiateBulkWrite(
-                 metadataStore,
-                 BulkOperationState.OperationType.Delete,
-                 path);
-         DurationInfo ignored =
+    operationState = S3Guard.initiateBulkWrite(
+        metadataStore,
+        BulkOperationState.OperationType.Delete,
+        path);
+    try (DurationInfo ignored =
              new DurationInfo(LOG, false, "deleting %s", dirKey)) {
 
       // init the lists of keys and paths to delete
@@ -235,10 +322,10 @@ public class DeleteOperation extends AbstractStoreOperation {
       while (locatedFiles.hasNext()) {
         // get the next entry in the listing.
         S3AFileStatus child = locatedFiles.next().toS3AFileStatus();
-        queueForDeletion(operationState, child);
+        queueForDeletion(child);
       }
       LOG.debug("Deleting final batch of listed files");
-      deleteNextBatch(operationState);
+      deleteNextBatch();
       maybeAwaitCompletion(deleteFuture);
 
       // if s3guard is authoritative we follow up with a bulk list and
@@ -262,16 +349,14 @@ public class DeleteOperation extends AbstractStoreOperation {
         while (objects.hasNext()) {
           // get the next entry in the listing.
           extraFilesDeleted++;
-          queueForDeletion(operationState,
-              deletionKey(objects.next()),
-              null);
+          queueForDeletion(deletionKey(objects.next()), null);
         }
         if (extraFilesDeleted > 0) {
           LOG.debug("Raw S3 Scan found {} file(s) to delete",
               extraFilesDeleted);
           // there is no more data:
           // await any ongoing operation
-          deleteNextBatch(operationState);
+          deleteNextBatch();
           maybeAwaitCompletion(deleteFuture);
         }
       }
@@ -283,6 +368,8 @@ public class DeleteOperation extends AbstractStoreOperation {
                new DurationInfo(LOG, false, "Delete metastore")) {
         metadataStore.deleteSubtree(path, operationState);
       }
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, operationState);
     }
     LOG.debug("Delete \"{}\" completed; deleted {} objects", path,
         filesDeleted);
@@ -301,14 +388,12 @@ public class DeleteOperation extends AbstractStoreOperation {
 
   /**
    * Queue for deletion.
-   * @param operationState operation
    * @param stat status to queue
    * @throws IOException failure of the previous batch of deletions.
    */
   private void queueForDeletion(
-      final BulkOperationState operationState,
       final S3AFileStatus stat) throws IOException {
-    queueForDeletion(operationState, deletionKey(stat), stat.getPath());
+    queueForDeletion(deletionKey(stat), stat.getPath());
   }
 
   /**
@@ -316,13 +401,11 @@ public class DeleteOperation extends AbstractStoreOperation {
    * call is submitted to the executor, after waiting for the previous run to
    * complete.
    *
-   * @param operationState operation
    * @param key key to delete
    * @param deletePath nullable path of the key
    * @throws IOException failure of the previous batch of deletions.
    */
-  protected void queueForDeletion(final BulkOperationState operationState,
-      final String key,
+  protected void queueForDeletion(final String key,
       @Nullable final Path deletePath) throws IOException {
     LOG.debug("Got object to delete: \"{}\"", key);
     keys.add(new DeleteObjectsRequest.KeyVersion(key));
@@ -331,7 +414,7 @@ public class DeleteOperation extends AbstractStoreOperation {
     }
 
     if (keys.size() == pageSize) {
-      deleteNextBatch(operationState);
+      deleteNextBatch();
     }
   }
 
@@ -340,17 +423,16 @@ public class DeleteOperation extends AbstractStoreOperation {
    * The lists of keys and pages are reset here.
    * complete.
    *
-   * @param operationState operation
    * @throws IOException failure of the previous batch of deletions.
    */
-  protected void deleteNextBatch(final BulkOperationState operationState)
+  protected void deleteNextBatch()
       throws IOException {
     // delete a single page of keys and the metadata.
     // block for any previous batch.
     maybeAwaitCompletion(deleteFuture);
 
     // delete the current page of keys and paths
-    deleteFuture = submitDelete(keys, paths, operationState);
+    deleteFuture = submitDelete(keys, paths);
     // reset the references so a new list can be built up.
     resetDeleteList();
   }
@@ -369,11 +451,12 @@ public class DeleteOperation extends AbstractStoreOperation {
    */
   @Retries.RetryTranslated
   protected void deleteObjectAtPath(final Path path,
-      final String key, boolean isFile)
+      final String key,
+      final boolean isFile)
       throws IOException {
-    LOG.debug("delete: {} {}", isFile? "file": "dir marker", key);
+    LOG.debug("delete: {} {}", isFile ? "file" : "dir marker", key);
     filesDeleted++;
-    callbacks.deleteObjectAtPath(path, key, isFile);
+    callbacks.deleteObjectAtPath(path, key, isFile, operationState);
   }
 
   /**
@@ -384,52 +467,73 @@ public class DeleteOperation extends AbstractStoreOperation {
    *
    * @param keyList keys to delete.
    * @param pathList paths to update the metastore with.
-   * @param operationState ongoing operation state
    * @return the submitted future or null
    */
   protected CompletableFuture<Void> submitDelete(
       final List<DeleteObjectsRequest.KeyVersion> keyList,
-      final List<Path> pathList,
-      final BulkOperationState operationState) {
+      final List<Path> pathList) {
 
-    if (keyList.isEmpty() && pathList.isEmpty())  {
+    if (keyList.isEmpty() && pathList.isEmpty()) {
       return null;
     }
     filesDeleted += keyList.size();
     return submit(executor, () -> {
-      try (DurationInfo ignored =
-               new DurationInfo(LOG, false, "Delete page of keys")) {
-        DeleteObjectsResult result = null;
-        List<Path> undeletedObjects = new ArrayList<>();
-        if (!keyList.isEmpty()) {
-          result = callbacks.removeKeys(keyList, false, undeletedObjects,
-          operationState,
-          !AUDIT_DELETED_KEYS);
-        }
-        if (!pathList.isEmpty()) {
-          metadataStore.deletePaths(pathList, operationState);
-        }
-        if (AUDIT_DELETED_KEYS && result != null) {
-          // audit the deleted keys
-          List<DeleteObjectsResult.DeletedObject> deletedObjects = result.getDeletedObjects();
-          if (deletedObjects.size() != keyList.size()) {
-            // size mismatch
-            LOG.warn("Size mismatch in deletion operation. "
-                + "Expected count of deleted files: {}; "
-                + "actual: {}",
-                keyList.size(), deletedObjects.size());
-            // strip out the deleted keys
-            for (DeleteObjectsResult.DeletedObject del : deletedObjects) {
-              keyList.removeIf(kv ->kv.getKey() .equals(del.getKey()));
-            }
-            for (DeleteObjectsRequest.KeyVersion kv : keyList) {
-              LOG.info("{}", kv.getKey());
-            }
+      asyncDeleteAction(operationState,
+          keyList,
+          pathList,
+          LOG.isDebugEnabled());
+      return null;
+    });
+  }
+
+  /**
+   * The action called in the asynchronous thread to delete
+   * the keys from S3 and paths from S3Guard.
+   *
+   * @param state ongoing operation state
+   * @param keyList keys to delete.
+   * @param pathList paths to update the metastore with.
+   * @param auditDeletedKeys should the results be audited and undeleted
+   * entries logged?
+   * @throws IOException failure
+   */
+  private void asyncDeleteAction(
+      final BulkOperationState state,
+      final List<DeleteObjectsRequest.KeyVersion> keyList,
+      final List<Path> pathList,
+      final boolean auditDeletedKeys)
+      throws IOException {
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, false, "Delete page of keys")) {
+      DeleteObjectsResult result = null;
+      List<Path> undeletedObjects = new ArrayList<>();
+      if (!keyList.isEmpty()) {
+        result = callbacks.removeKeys(keyList, false, undeletedObjects,
+            state, !auditDeletedKeys);
+      }
+      if (!pathList.isEmpty()) {
+        metadataStore.deletePaths(pathList, state);
+      }
+      if (auditDeletedKeys && result != null) {
+        // audit the deleted keys
+        List<DeleteObjectsResult.DeletedObject> deletedObjects =
+            result.getDeletedObjects();
+        if (deletedObjects.size() != keyList.size()) {
+          // size mismatch
+          LOG.warn("Size mismatch in deletion operation. "
+                  + "Expected count of deleted files: {}; "
+                  + "actual: {}",
+              keyList.size(), deletedObjects.size());
+          // strip out the deleted keys
+          for (DeleteObjectsResult.DeletedObject del : deletedObjects) {
+            keyList.removeIf(kv -> kv.getKey().equals(del.getKey()));
+          }
+          for (DeleteObjectsRequest.KeyVersion kv : keyList) {
+            LOG.debug("{}", kv.getKey());
           }
         }
       }
-      return null;
-    });
+    }
   }
 
   /**
@@ -443,7 +547,7 @@ public class DeleteOperation extends AbstractStoreOperation {
       throws IOException {
     if (future != null) {
       try (DurationInfo ignored =
-               new DurationInfo(LOG, false, "delete completion")){
+               new DurationInfo(LOG, false, "delete completion")) {
         waitForCompletion(future);
       }
     }

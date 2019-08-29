@@ -260,6 +260,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private ITtlTimeProvider ttlTimeProvider;
 
+  /**
+   * Specific operations used by rename and delete operations.
+   */
+  private final S3AFileSystem.OperationCallbacksImpl
+      operationCallbacks = new OperationCallbacksImpl();
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -1310,7 +1316,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         createStoreContext(),
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
-        new OperationCallbacksImpl());
+        operationCallbacks);
     return renameOperation.executeRename();
   }
 
@@ -1319,8 +1325,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This separation allows the operation to be factored out and
    * still avoid knowledge of the S3AFilesystem implementation.
    */
-  private class OperationCallbacksImpl implements
-      OperationCallbacks {
+  private class OperationCallbacksImpl implements OperationCallbacks {
 
     @Override
     public S3ObjectAttributes createObjectAttributes(final Path path,
@@ -1332,7 +1337,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public S3ObjectAttributes createObjectAttributes(final S3AFileStatus fileStatus) {
+    public S3ObjectAttributes createObjectAttributes(
+        final S3AFileStatus fileStatus) {
       return S3AFileSystem.this.createObjectAttributes(fileStatus);
     }
 
@@ -1347,10 +1353,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Retries.RetryTranslated
     public void deleteObjectAtPath(final Path path,
         final String key,
-        final boolean isFile)
+        final boolean isFile,
+        final BulkOperationState operationState)
         throws IOException {
       once("delete", key, () ->
-          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile));
+          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile,
+              operationState));
     }
 
     @Override
@@ -1384,7 +1392,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         final boolean deleteFakeDir,
         final List<Path> undeletedObjectsOnFailure,
-        final BulkOperationState operationState, boolean quiet)
+        final BulkOperationState operationState,
+        final boolean quiet)
         throws MultiObjectDeleteException, AmazonClientException, IOException {
       return S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir,
           undeletedObjectsOnFailure, operationState, quiet);
@@ -1412,7 +1421,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final Path path,
         final String key)
         throws IOException {
-      return once("list", key, () ->
+      return once("listObjects", key, () ->
           listing.createFileStatusListingIterator(path,
               createListObjectsRequest(key, null),
               ACCEPT_ALL,
@@ -1772,7 +1781,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-
     try (DurationInfo ignored =
              new DurationInfo(LOG, false,
                  "deleting %s", key)) {
@@ -1793,11 +1801,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param f path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
+   * @param operationState (nullable) operational state for a bulk update
    * @throws AmazonClientException problems working with S3
    * @throws IOException IO failure in the metastore
    */
   @Retries.RetryMixed
-  void deleteObjectAtPath(Path f, String key, boolean isFile)
+  void deleteObjectAtPath(Path f,
+      String key,
+      boolean isFile,
+      @Nullable final BulkOperationState operationState)
       throws AmazonClientException, IOException {
     if (isFile) {
       instrumentation.fileDeleted(1);
@@ -1805,7 +1817,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f, null);
+    metadataStore.delete(f, operationState);
   }
 
   /**
@@ -2226,7 +2238,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       throw ex;
     } catch (AmazonClientException | IOException ex) {
-      List<Path> paths = new MultiObjectDeleteSupport(createStoreContext(),
+      List<Path> paths = new MultiObjectDeleteSupport(
+          createStoreContext(),
           operationState)
           .processDeleteFailureGenericException(ex, keysToDelete);
       // other failures. Assume nothing was deleted
@@ -2256,7 +2269,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           createStoreContext(),
           innerGetFileStatus(f, true),
           recursive,
-          new OperationCallbacksImpl(),
+          operationCallbacks,
           InternalConstants.MAX_ENTRIES_TO_DELETE);
       boolean outcome = deleteOperation.execute();
       if (outcome) {
@@ -2381,8 +2394,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
-  protected boolean allowAuthoritative(final Path f) {
-    return S3Guard.allowAuthoritative(f, this,
+  /**
+   * Is a path to be considered as authoritative?
+   * True iff there is an authoritative metastore or if there
+   * is a non-auth store with the supplied path under
+   * one of the paths declared as authoritative.
+   * @param path path
+   * @return true if the path is auth
+   */
+  protected boolean allowAuthoritative(final Path path) {
+    return S3Guard.allowAuthoritative(path, this,
         allowAuthoritativeMetadataStore, allowAuthoritativePaths);
   }
 
@@ -3738,20 +3759,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * List files under the path.
    * <ol>
    *   <li>
-   *     If the path is authoritative, only S3Guard will be queried.
+   *     If the path is authoritative on the client,
+   *     only S3Guard will be queried.
    *   </li>
    *   <li>
    *     Otherwise, the S3Guard values are returned first, then the S3
    *     entries will be retrieved and returned if not already listed.</li>
    *   <li>
-   *     S3Guard tombstones will be used to filter out deleted files unless
-   *     the caller does not want this.
+   *     when collectTombstones} is true, S3Guard tombstones will
+   *     be used to filter out deleted files.
    *     They MUST be used for normal listings; it is only for
    *     deletion and low-level operations that they MAY be bypassed.
    *   </li>
    *   <li>
-   *     The optional status parameter will be used to skip any
-   *     proceeding getFileStatus call.
+   *     The optional {@code status} parameter will be used to skip the
+   *     initial getFileStatus call.
    *   </li>
    * </ol>
    *

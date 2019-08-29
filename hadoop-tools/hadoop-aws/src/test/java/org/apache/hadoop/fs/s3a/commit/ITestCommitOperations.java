@@ -510,7 +510,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     SinglePendingCommit commit = new SinglePendingCommit();
     commit.setDestinationKey(fs.pathToKey(destFile));
     fullThrottle();
-    actions.revertCommit(commit);
+    actions.revertCommit(commit, null);
     resetFailures();
     assertPathExists("parent of reverted commit", destFile.getParent());
   }
@@ -524,7 +524,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     SinglePendingCommit commit = new SinglePendingCommit();
     commit.setDestinationKey(fs.pathToKey(destFile));
     fullThrottle();
-    actions.revertCommit(commit);
+    actions.revertCommit(commit, null);
     assertPathExists("parent of reverted (nonexistent) commit",
         destFile.getParent());
   }

@@ -527,17 +527,18 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
   @Test
   public void testInconsistentS3ClientDeletes() throws Throwable {
+    describe("Verify that delete adds tombstones which block entries"
+        + " returned in (inconsistent) listings");
     // Test only implemented for v2 S3 list API
-    Assume.assumeTrue(getConfiguration()
-        .getInt(LIST_VERSION, DEFAULT_LIST_VERSION) == 2);
+    assumeV2ListAPI();
 
     S3AFileSystem fs = getFileSystem();
-    Path root = path("testInconsistentClient-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path root = path("testInconsistentS3ClientDeletes-" + DEFAULT_DELAY_KEY_SUBSTRING);
     for (int i = 0; i < 3; i++) {
-      fs.mkdirs(new Path(root, "dir" + i));
-      touch(fs, new Path(root, "file" + i));
+      fs.mkdirs(new Path(root, "dir-" + i));
+      touch(fs, new Path(root, "file-" + i));
       for (int j = 0; j < 3; j++) {
-        touch(fs, new Path(new Path(root, "dir" + i), "file" + i + "-" + j));
+        touch(fs, new Path(new Path(root, "dir-" + i), "file-" + i + "-" + j));
       }
     }
     clearInconsistency(fs);
@@ -548,8 +549,9 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     ListObjectsV2Result preDeleteDelimited = listObjectsV2(fs, key, "/");
     ListObjectsV2Result preDeleteUndelimited = listObjectsV2(fs, key, null);
 
+    LOG.info("Deleting the directory {}", root);
     fs.delete(root, true);
-    LOG.info("Delete completed; listing results which must excluded deleted"
+    LOG.info("Delete completed; listing results which must exclude deleted"
         + " paths");
 
     ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");
@@ -577,6 +579,60 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         preDeleteUndelimited.getCommonPrefixes(),
         postDeleteUndelimited.getCommonPrefixes()
     );
+  }
+
+  /**
+   * Require the v2 S3 list API.
+   */
+  protected void assumeV2ListAPI() {
+    Assume.assumeTrue(getConfiguration()
+        .getInt(LIST_VERSION, DEFAULT_LIST_VERSION) == 2);
+  }
+
+  /**
+   * Verify that delayed S3 listings doesn't stop the FS from deleting
+   * a directory tree. This has not always been the case; this test
+   * verifies the fix and prevents regression.
+   */
+  @Test
+  public void testDeleteUsesS3Guard() throws Throwable {
+    describe("Verify that delete() uses S3Guard to get a consistent"
+        + " listing of its directory structure");
+    assumeV2ListAPI();
+    S3AFileSystem fs = getFileSystem();
+    Path root = path(
+        "testDeleteUsesS3Guard-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    for (int i = 0; i < 3; i++) {
+      Path path = new Path(root, "file-" + i);
+      touch(fs, path);
+    }
+    // we now expect the listing to miss these
+    String key = fs.pathToKey(root) + "/";
+
+    // verify that the inconsistent listing does not show these
+    LOG.info("Listing objects before executing delete()");
+    List<Path> preDeletePaths = objectsToPaths(listObjectsV2(fs, key, null));
+    Assertions.assertThat(preDeletePaths)
+        .isEmpty();
+    // do the delete
+    fs.delete(root, true);
+
+    // now go through every file and verify that it is not there.
+    // if you comment out the delete above and run this test case,
+    // the assertion will fail; this is how the validity of the assertions
+    // were verified.
+    clearInconsistency(fs);
+    List<Path> postDeletePaths =
+        objectsToPaths(listObjectsV2(fs, key, null));
+    Assertions.assertThat(postDeletePaths)
+        .isEmpty();
+  }
+
+  private List<Path> objectsToPaths(ListObjectsV2Result r) {
+    S3AFileSystem fs = getFileSystem();
+    return r.getObjectSummaries().stream()
+        .map(s -> fs.keyToQualifiedPath(s.getKey()))
+        .collect(Collectors.toList());
   }
 
   /**
