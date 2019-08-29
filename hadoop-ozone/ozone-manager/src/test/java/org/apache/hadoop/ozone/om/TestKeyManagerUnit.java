@@ -69,6 +69,8 @@ public class TestKeyManagerUnit {
         "omtest",
         Mockito.mock(OzoneBlockTokenSecretManager.class)
     );
+
+    startDate = Instant.now();
   }
 
   @Test
@@ -116,6 +118,8 @@ public class TestKeyManagerUnit {
     Assert.assertEquals("dir/key1", uploads.get(0).getKeyName());
     Assert.assertEquals("dir/key2", uploads.get(1).getKeyName());
 
+    Assert.assertNotNull(uploads.get(1));
+    Assert.assertNotNull(uploads.get(1).getCreationTime());
     Assert.assertTrue("Creation date is too old",
         uploads.get(1).getCreationTime().compareTo(startDate) > 0);
   }

@@ -201,7 +201,6 @@ Test Multipart Upload with the simplified aws s3 cp API
                         Execute AWSS3Cli        rm s3://${BUCKET}/mpyawscli
                         Compare files           /tmp/part1        /tmp/part1.result
 
-<<<<<<< HEAD
 Test Multipart Upload Put With Copy
     Run Keyword         Create Random file      5
     ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key copytest/source --body /tmp/part1
