@@ -58,7 +58,10 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
     done
 done
 printf "\n\n" >> "$SUMMARY_FILE"
-printf "# Failing tests: \n\n" | cat "$SUMMARY_FILE" > temp && mv temp "$SUMMARY_FILE"
+
+if [ ! -s "$SUMMARY_FILE" ]; then
+   printf "# Failing tests: \n\n" | cat - "$SUMMARY_FILE" > temp && mv temp "$SUMMARY_FILE"
+fi
 
 ## generate counter
 wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
