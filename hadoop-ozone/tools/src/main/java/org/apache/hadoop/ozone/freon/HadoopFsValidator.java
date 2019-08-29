@@ -75,7 +75,7 @@ public class HadoopFsValidator extends BaseFreonGenerator
       referenceDigest = getDigest(stream);
     }
 
-    timer = getMetrics().timer("gile-read");
+    timer = getMetrics().timer("file-read");
 
     runTests(this::validateFile);
 
