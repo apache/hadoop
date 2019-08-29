@@ -889,16 +889,19 @@ public class KeyValueHandler extends Handler {
   @Override
   public void markContainerForClose(Container container)
       throws IOException {
+    container.writeLock();
     // Move the container to CLOSING state only if it's OPEN
     if (container.getContainerState() == State.OPEN) {
       container.markContainerForClose();
       sendICR(container);
     }
+    container.writeUnlock();
   }
 
   @Override
   public void markContainerUnhealthy(Container container)
       throws IOException {
+    container.writeLock();
     if (container.getContainerState() != State.UNHEALTHY) {
       try {
         container.markContainerUnhealthy();
@@ -912,11 +915,13 @@ public class KeyValueHandler extends Handler {
         sendICR(container);
       }
     }
+    container.writeUnlock();
   }
 
   @Override
   public void quasiCloseContainer(Container container)
       throws IOException {
+    container.writeLock();
     final State state = container.getContainerState();
     // Quasi close call is idempotent.
     if (state == State.QUASI_CLOSED) {
@@ -932,11 +937,13 @@ public class KeyValueHandler extends Handler {
     }
     container.quasiClose();
     sendICR(container);
+    container.writeUnlock();
   }
 
   @Override
   public void closeContainer(Container container)
       throws IOException {
+    container.writeLock();
     final State state = container.getContainerState();
     // Close call is idempotent.
     if (state == State.CLOSED) {
@@ -958,6 +965,7 @@ public class KeyValueHandler extends Handler {
     }
     container.close();
     sendICR(container);
+    container.writeUnlock();
   }
 
   @Override
