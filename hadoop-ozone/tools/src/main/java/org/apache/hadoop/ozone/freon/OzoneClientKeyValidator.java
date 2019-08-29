@@ -79,7 +79,7 @@ public class OzoneClientKeyValidator extends BaseFreonGenerator
       referenceDigest = getDigest(stream);
     }
 
-    timer = getMetrics().timer("key-create");
+    timer = getMetrics().timer("key-validate");
 
     runTests(this::validateKey);
 
