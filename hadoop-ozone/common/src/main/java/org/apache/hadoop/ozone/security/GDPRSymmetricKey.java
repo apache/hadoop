@@ -53,8 +53,7 @@ public class GDPRSymmetricKey {
     secret = RandomStringUtils
         .randomAlphabetic(OzoneConsts.GDPR_RANDOM_SECRET_LENGTH);
     this.secretKey = new SecretKeySpec(
-        secret.substring(0, OzoneConsts.GDPR_RANDOM_SECRET_LENGTH)
-            .getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
+        secret.getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);
   }
 
@@ -68,8 +67,7 @@ public class GDPRSymmetricKey {
     this.secret = secret;
     this.algorithm = algorithm;
     this.secretKey = new SecretKeySpec(
-        secret.substring(0, OzoneConsts.GDPR_RANDOM_SECRET_LENGTH)
-            .getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
+        secret.getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);
   }
 
