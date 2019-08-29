@@ -87,11 +87,15 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
-  private static final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
-      "should be one of the following formats: " +
-      "o3fs://bucket.volume/key  OR " +
-      "o3fs://bucket.volume.om-host.example.com/key  OR " +
-      "o3fs://bucket.volume.om-host.example.com:5678/key";
+  private String getUriExceptionText(Configuration conf) {
+    final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
+        "should be one of the following formats: " +
+        "o3fs://bucket.volume/key  OR " +
+        "o3fs://bucket.volume.om-host.example.com/key  OR " +
+        "o3fs://bucket.volume.om-host.example.com:" +
+        OmUtils.getOmRpcPort(conf) + "/key";
+    return URI_EXCEPTION_TEXT;
+  }
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
@@ -106,7 +110,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
     if (!matcher.matches()) {
-      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      throw new IllegalArgumentException(getUriExceptionText(conf));
     }
     String bucketStr = matcher.group(1);
     String volumeStr = matcher.group(2);
@@ -118,14 +122,14 @@ public class BasicOzoneFileSystem extends FileSystem {
       String[] parts = remaining.split(":");
       // Array length should be either 1(host) or 2(host:port)
       if (parts.length > 2) {
-        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+        throw new IllegalArgumentException(getUriExceptionText(conf));
       }
       omHost = parts[0];
       if (parts.length == 2) {
         try {
           omPort = Integer.parseInt(parts[1]);
         } catch (NumberFormatException e) {
-          throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+          throw new IllegalArgumentException(getUriExceptionText(conf));
         }
       } else {
         // If port number is not specified, read it from config
