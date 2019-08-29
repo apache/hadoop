@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+REPORT_DIR=${REPORT_DIR:-$PWD}
+
 ## generate summary txt file
 find "." -name 'TEST*.xml' -print0 \
     | xargs -n1 -0 "grep" -l -E "<failure|<error" \
@@ -50,12 +52,14 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
     done
 done
 printf "\n\n" >> "$SUMMARY_FILE"
-printf "# Failing tests: \n\n" | cat $SUMMARY_FILE > temp && mv temp "$SUMMARY_FILE"
+printf "# Failing tests: \n\n" | cat "$SUMMARY_FILE" > temp && mv temp "$SUMMARY_FILE"
 
 ## generate counter
 wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
 
 #We may have oom errors in the log which are not included as we run with mvn -fn
-if [ ! -s "$REPORT_DIR/summary.txt" ] && [ "$(grep "There are test failures." "$REPORT_DIR/output.log")" ]; then
+if grep -q "There are test failures." "$REPORT_DIR/output.log" ; then
+   if [ ! -s "$REPORT_DIR/summary.txt" ]; then
     grep "\[ERROR\]" "$REPORT_DIR/output.log" > "$REPORT_DIR/summary.txt"
+  fi
 fi
