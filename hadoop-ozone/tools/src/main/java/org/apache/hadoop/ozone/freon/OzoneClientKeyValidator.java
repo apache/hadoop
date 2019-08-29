@@ -36,7 +36,7 @@ import picocli.CommandLine.Option;
  */
 @Command(name = "ockv",
     aliases = "ozone-client-key-validator",
-    description = "Generate keys with the help of the ozone clients.",
+    description = "Validate keys with the help of the ozone clients.",
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true,
     showDefaultValues = true)
