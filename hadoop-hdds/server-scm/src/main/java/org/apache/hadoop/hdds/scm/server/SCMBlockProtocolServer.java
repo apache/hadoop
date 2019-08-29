@@ -54,8 +54,6 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.protocolPB
     .ScmBlockLocationProtocolServerSideTranslatorPB;
-
-import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +69,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
     .startRpcServer;
 
@@ -120,9 +119,9 @@ public class SCMBlockProtocolServer implements
             blockProtoPbService,
             handlerCount);
     blockRpcAddress =
-        updateRPCListenPort(
-            conf, OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
-            blockRpcServer.getListenerAddress());
+        updateRPCListenAddress(
+            conf, OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, scmBlockAddress,
+            blockRpcServer);
     if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
       blockRpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
