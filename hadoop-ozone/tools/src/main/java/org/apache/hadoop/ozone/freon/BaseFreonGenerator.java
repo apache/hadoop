@@ -265,6 +265,7 @@ public class BaseFreonGenerator {
         if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND) {
           volume.createBucket(bucketName);
         }
+        throw ex;
       }
     }
   }

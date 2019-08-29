@@ -50,8 +50,7 @@ public class OzoneClientKeyValidator extends BaseFreonGenerator
   private String volumeName;
 
   @Option(names = {"-b", "--bucket"},
-      description = "Name of the bucket which contains the test data. Will be"
-          + " created if missing.",
+      description = "Name of the bucket which contains the test data.",
       defaultValue = "bucket1")
   private String bucketName;
 
