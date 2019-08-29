@@ -64,4 +64,4 @@ class NavBar extends React.Component<NavBarProps> {
   }
 }
 
-export default withRouter<NavBarProps>(NavBar);
+export default withRouter(NavBar);
