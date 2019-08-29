@@ -47,41 +47,17 @@ public class OzoneConfiguration extends Configuration {
   }
 
   public OzoneConfiguration() {
-    this(false);
-  }
-
-  private OzoneConfiguration(boolean justTheDefaults) {
     OzoneConfiguration.activate();
     loadDefaults();
-    if (!justTheDefaults) {
-      loadConfigFiles();
-    }
-  }
-
-  private void loadConfigFiles() {
-    addResource("ozone-global.xml");
-    addResource("ozone-site.xml");
   }
 
   public OzoneConfiguration(Configuration conf) {
-    this(conf, false);
-  }
-
-  private OzoneConfiguration(Configuration conf, boolean justTheDefaults) {
     super(conf);
     //load the configuration from the classloader of the original conf.
     setClassLoader(conf.getClassLoader());
     if (!(conf instanceof OzoneConfiguration)) {
       loadDefaults();
-      //here we load the REAL configuration.
-      if (!justTheDefaults) {
-        loadConfigFiles();
-      }
     }
-  }
-
-  public static OzoneConfiguration createWithDefaultsOnly() {
-    return new OzoneConfiguration(true);
   }
 
   private void loadDefaults() {
@@ -98,6 +74,7 @@ public class OzoneConfiguration extends Configuration {
     } catch (IOException e) {
       e.printStackTrace();
     }
+    addResource("ozone-site.xml");
   }
 
   public List<Property> readPropertyFromXml(URL url) throws JAXBException {
@@ -338,10 +315,5 @@ public class OzoneConfiguration extends Configuration {
       }
     }
     return props;
-  }
-
-  @Override
-  public synchronized Properties getProps() {
-    return super.getProps();
   }
 }

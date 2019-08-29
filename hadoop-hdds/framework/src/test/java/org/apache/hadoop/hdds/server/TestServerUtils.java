@@ -23,14 +23,11 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.test.PathUtils;
-
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
-import java.net.InetSocketAddress;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -123,18 +120,4 @@ public class TestServerUtils {
     ServerUtils.getOzoneMetaDirPath(conf);
   }
 
-  @Test
-  public void updateRpcListenPort() {
-    OzoneConfiguration conf = new OzoneConfiguration();
-
-    conf.set("test1", "localhost:0");
-    ServerUtils.updateRPCListenPort(conf, "test1",
-        new InetSocketAddress("0.0.0.0", 1234));
-    Assert.assertEquals("localhost:1234", conf.get("test1"));
-
-    conf.set("test2", "localhost");
-    ServerUtils.updateRPCListenPort(conf, "test2",
-        new InetSocketAddress("0.0.0.0", 1234));
-    Assert.assertEquals("localhost:1234", conf.get("test2"));
-  }
 }
