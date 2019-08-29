@@ -60,6 +60,9 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
@@ -70,6 +73,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -990,4 +994,54 @@ public class TestApplicationMasterService {
         app1.getApplicationId()).getOriginalTrackingUrl());
     rm.stop();
   }
+
+  @Test(timeout = 120000)
+  public void testRepeatedFinishApplicationMaster() throws Exception {
+
+    CountingDispatcher dispatcher = new CountingDispatcher();
+    MockRM rm = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
+
+    try {
+      rm.start();
+      // Register node1
+      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+      // Submit an application
+      RMApp app1 = rm.submitApp(2048);
+      MockAM am1 = MockRM.launchAM(app1, rm, nm1);
+      am1.registerAppAttempt();
+      FinishApplicationMasterRequest req = FinishApplicationMasterRequest
+          .newInstance(FinalApplicationStatus.FAILED, "", "");
+      for (int i = 0; i < 10; i++) {
+        am1.unregisterAppAttempt(req, false);
+      }
+      Assert.assertEquals("Expecting only one event", 1,
+          dispatcher.getEventCount());
+    } finally {
+      rm.stop();
+    }
+  }
+
+  static class CountingDispatcher extends DrainDispatcher {
+    private int eventreceived = 0;
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    protected void dispatch(Event event) {
+      if (event.getType() == RMAppAttemptEventType.UNREGISTERED) {
+        eventreceived++;
+      } else {
+        super.dispatch(event);
+      }
+    }
+
+    public int getEventCount() {
+      return eventreceived;
+    }
+  }
+
 }
