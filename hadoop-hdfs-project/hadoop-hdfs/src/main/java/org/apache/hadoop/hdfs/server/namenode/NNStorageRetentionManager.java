@@ -184,27 +184,26 @@ public class NNStorageRetentionManager {
    * @return the transaction ID corresponding to the oldest checkpoint
    * that should be retained. 
    */
-  private long getImageTxIdToRetain(FSImageTransactionalStorageInspector inspector) {
-      
-    List<FSImageFile> images = inspector.getFoundImages();
-    TreeSet<Long> imageTxIds = Sets.newTreeSet();
+  private long getImageTxIdToRetain(
+      FSImageTransactionalStorageInspector inspector) {
+
+    final List<FSImageFile> images = inspector.getFoundImages();
+    if (images.isEmpty()) {
+      return 0L;
+    }
+
+    TreeSet<Long> imageTxIds = Sets.newTreeSet(Collections.reverseOrder());
     for (FSImageFile image : images) {
       imageTxIds.add(image.getCheckpointTxId());
     }
-    
+
     List<Long> imageTxIdsList = Lists.newArrayList(imageTxIds);
-    if (imageTxIdsList.isEmpty()) {
-      return 0;
-    }
-    
-    Collections.reverse(imageTxIdsList);
-    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());    
+    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());
     long minTxId = imageTxIdsList.get(toRetain - 1);
-    LOG.info("Going to retain " + toRetain + " images with txid >= " +
-        minTxId);
+    LOG.info("Going to retain {} images with txid >= {}", toRetain, minTxId);
     return minTxId;
   }
-  
+
   /**
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
