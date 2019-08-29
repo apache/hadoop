@@ -57,9 +57,8 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
         printf " * [%s](%s) ([output](%s))\n" "$FAILURE" "$TEST_RESULT_LOCATION" "$TEST_OUTPUT_LOCATION" >> "$SUMMARY_FILE"
     done
 done
-printf "\n\n" >> "$SUMMARY_FILE"
 
-if [ ! -s "$SUMMARY_FILE" ]; then
+if [ -s "$SUMMARY_FILE" ]; then
    printf "# Failing tests: \n\n" | cat - "$SUMMARY_FILE" > temp && mv temp "$SUMMARY_FILE"
 fi
 
