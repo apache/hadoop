@@ -26,6 +26,12 @@ find "." -name 'TEST*.xml' -print0 \
 find "." -name "*.hprof" -exec cp {} "$REPORT_DIR/" \;
 find "." -name "*.dump" -exec cp {} "$REPORT_DIR/" \;
 
+## Add the tests where the JVM is crashed
+grep -A1 'Crashed tests' ${REPORT_DIR}/output.log \
+  | grep -v -e 'Crashed tests' -e '--' \
+  | cut -f2- -d' ' \
+  | sort -u >> "${REPORT_DIR}/summary.txt"
+
 #Collect of all of the report failes of FAILED tests
 while IFS= read -r -d '' dir; do
    while IFS=$'\n' read -r file; do
@@ -56,10 +62,3 @@ printf "# Failing tests: \n\n" | cat "$SUMMARY_FILE" > temp && mv temp "$SUMMARY
 
 ## generate counter
 wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
-
-#We may have oom errors in the log which are not included as we run with mvn -fn
-if grep -q "There are test failures." "$REPORT_DIR/output.log" ; then
-   if [ ! -s "$REPORT_DIR/summary.txt" ]; then
-    grep "\[ERROR\]" "$REPORT_DIR/output.log" > "$REPORT_DIR/summary.txt"
-  fi
-fi
