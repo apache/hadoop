@@ -36,7 +36,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 public class SCMPlacementMetrics implements MetricsSource {
   public static final String SOURCE_NAME =
       SCMPlacementMetrics.class.getSimpleName();
-  private static final MetricsInfo recordInfo = Interns.info(SOURCE_NAME,
+  private static final MetricsInfo RECORD_INFO = Interns.info(SOURCE_NAME,
       "SCM Placement Metrics");
   private static MetricsRegistry registry;
 
@@ -54,7 +54,7 @@ public class SCMPlacementMetrics implements MetricsSource {
 
   public static SCMPlacementMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    registry = new MetricsRegistry(recordInfo);
+    registry = new MetricsRegistry(RECORD_INFO);
     return ms.register(SOURCE_NAME, "SCM Placement Metrics",
         new SCMPlacementMetrics());
   }

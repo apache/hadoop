@@ -122,7 +122,7 @@ public class TestSCMContainerPlacementPolicyMetrics {
     List<DatanodeDetails> nodes = targetPipeline.getNodes();
     manager.finalizeAndDestroyPipeline(pipelines.get(0), true);
 
-    // kill datanodes to trigger under-replicated container replication
+    // kill datanode to trigger under-replicated container replication
     cluster.shutdownHddsDatanode(nodes.get(0));
     try {
       Thread.sleep(5 * 1000);

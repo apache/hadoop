@@ -214,7 +214,7 @@ public class TestSCMContainerPlacementRackAware {
     Assert.assertTrue(totalRequest == nodeNum);
     Assert.assertTrue(successCount == nodeNum);
     Assert.assertTrue(tryCount > nodeNum);
-    Assert.assertTrue(compromiseCount == 1);
+    Assert.assertTrue(compromiseCount >= 1);
   }
 
   @Test
