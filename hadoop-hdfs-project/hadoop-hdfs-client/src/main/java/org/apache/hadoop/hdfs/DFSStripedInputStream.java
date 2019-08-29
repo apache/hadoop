@@ -146,10 +146,6 @@ public class DFSStripedInputStream extends DFSInputStream {
     return src;
   }
 
-  protected DFSClient getDFSClient() {
-    return dfsClient;
-  }
-
   protected LocatedBlocks getLocatedBlocks() {
     return locatedBlocks;
   }
@@ -282,7 +278,7 @@ public class DFSStripedInputStream extends DFSInputStream {
               "block" + block.getBlock(), e);
           // re-fetch the block in case the block has been moved
           fetchBlockAt(block.getStartOffset());
-          addToDeadNodes(dnInfo.info);
+          addToLocalDeadNodes(dnInfo.info);
         }
       }
       if (reader != null) {

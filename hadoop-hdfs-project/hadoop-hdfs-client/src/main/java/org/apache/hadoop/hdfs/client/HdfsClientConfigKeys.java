@@ -149,6 +149,10 @@ public interface HdfsClientConfigKeys {
   long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
               TimeUnit.DAYS.toMillis(10); // 10 days
 
+  String DFS_CLIENT_DEAD_NODE_DETECT_ENABLED_KEY =
+          "dfs.client.deadnode.detect.enabled";
+  boolean DFS_CLIENT_DEAD_NODE_DETECT_ENABLED_DEFAULT = false;
+
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";
