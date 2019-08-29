@@ -313,7 +313,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
   /**
    * This class is capable to de-compress BZip2 data in two modes;
-   * CONTINOUS and BYBLOCK.  BYBLOCK mode makes it possible to
+   * CONTINUOUS and BYBLOCK.  BYBLOCK mode makes it possible to
    * do decompression starting any arbitrary position in the stream.
    *
    * So this facility can easily be used to parallelize decompression
