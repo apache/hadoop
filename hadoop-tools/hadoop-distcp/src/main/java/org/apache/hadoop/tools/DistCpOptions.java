@@ -702,10 +702,6 @@ public class DistCpOptions {
           "mutually exclusive");
     }
 
-    if (!syncFolder && skipCRC) {
-      throw new IllegalArgumentException("Skip CRC is valid only with update options");
-    }
-
     if (!syncFolder && append) {
       throw new IllegalArgumentException(
           "Append is valid only with update options");
