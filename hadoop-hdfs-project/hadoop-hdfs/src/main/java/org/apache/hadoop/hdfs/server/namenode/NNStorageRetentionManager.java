@@ -207,21 +207,22 @@ public class NNStorageRetentionManager {
   /**
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
-  static interface StoragePurger {
+  interface StoragePurger {
     void purgeLog(EditLogFile log);
     void purgeImage(FSImageFile image);
+    void markStale(EditLogFile log);
   }
   
   static class DeletionStoragePurger implements StoragePurger {
     @Override
     public void purgeLog(EditLogFile log) {
-      LOG.info("Purging old edit log " + log);
+      LOG.info("Purging old edit log {}", log);
       deleteOrWarn(log.getFile());
     }
 
     @Override
     public void purgeImage(FSImageFile image) {
-      LOG.info("Purging old image " + image);
+      LOG.info("Purging old image {}", image);
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }
@@ -230,8 +231,18 @@ public class NNStorageRetentionManager {
       if (!file.delete()) {
         // It's OK if we fail to delete something -- we'll catch it
         // next time we swing through this directory.
-        LOG.warn("Could not delete " + file);
+        LOG.warn("Could not delete {}", file);
       }      
+    }
+
+    public void markStale(EditLogFile log){
+      try {
+        log.moveAsideStaleInprogressFile();
+      } catch (IOException e) {
+        // It is ok to just log the rename failure and go on, we will try next
+        // time just as with deletions.
+        LOG.warn("Could not mark {} as stale", log, e);
+      }
     }
   }
 
