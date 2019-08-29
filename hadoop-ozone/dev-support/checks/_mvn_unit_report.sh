@@ -19,7 +19,7 @@ REPORT_DIR=${REPORT_DIR:-$PWD}
 ## generate summary txt file
 find "." -name 'TEST*.xml' -print0 \
     | xargs -n1 -0 "grep" -l -E "<failure|<error" \
-    | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}' \
+    | awk -F/ '{sub("'"TEST-"'",""); sub(".xml",""); print $NF}' \
     | tee "$REPORT_DIR/summary.txt"
 
 #Copy heap dump and dump leftovers
