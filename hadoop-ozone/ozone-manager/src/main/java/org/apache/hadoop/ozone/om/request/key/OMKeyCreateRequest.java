@@ -47,8 +47,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.UniqueId;
 
@@ -164,11 +162,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
     OMClientResponse omClientResponse = null;
     try {
       // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, keyName);
-      }
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       acquireLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);
@@ -184,17 +178,19 @@ public class OMKeyCreateRequest extends OMKeyRequest {
 
       omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
           omMetadataManager.getOzoneKey(volumeName, bucketName, keyName),
-          keyArgs.getDataSize(), locations, encryptionInfo.orNull());
+          keyArgs.getDataSize(), locations, encryptionInfo.orNull(),
+          ozoneManager.getPrefixManager(), bucketInfo);
       omClientResponse = prepareCreateKeyResponse(keyArgs, omKeyInfo,
           locations, encryptionInfo.orNull(), exception,
           createKeyRequest.getClientID(), transactionLogIndex, volumeName,
-          bucketName, keyName, ozoneManager, OMAction.ALLOCATE_KEY);
+          bucketName, keyName, ozoneManager, OMAction.ALLOCATE_KEY,
+          ozoneManager.getPrefixManager(), bucketInfo);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
           encryptionInfo.orNull(), exception, createKeyRequest.getClientID(),
           transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
-          OMAction.ALLOCATE_KEY);
+          OMAction.ALLOCATE_KEY, ozoneManager.getPrefixManager(), null);
     } finally {
       if (omClientResponse != null) {
         omClientResponse.setFlushFuture(

@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.ozone.s3;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.mockito.Mockito;
-
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriInfo;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.ozone.s3.AWSAuthParser.AUTHORIZATION_HEADER;
 import static org.apache.hadoop.ozone.s3.AWSAuthParser.CONTENT_MD5;
@@ -42,6 +37,10 @@ import static org.apache.hadoop.ozone.s3.AWSAuthParser.CONTENT_TYPE;
 import static org.apache.hadoop.ozone.s3.AWSAuthParser.HOST_HEADER;
 import static org.apache.hadoop.ozone.s3.AWSAuthParser.X_AMAZ_DATE;
 import static org.apache.hadoop.ozone.s3.AWSAuthParser.X_AMZ_CONTENT_SHA256;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 
 /**
  * Test class for @{@link OzoneClientProducer}.
@@ -87,8 +86,8 @@ public class TestOzoneClientProducer {
 
   @Test
   public void testGetClientFailure() throws Exception {
-    LambdaTestUtils.intercept(IOException.class, "Couldn't create" +
-        " protocol ", () -> producer.createClient());
+    LambdaTestUtils.intercept(IOException.class, "Couldn't create",
+        () -> producer.createClient());
   }
 
   private void setupContext() throws Exception {

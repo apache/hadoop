@@ -39,7 +39,7 @@ count_datanodes() {
   else
     docker-compose -f "${compose_file}" exec -T scm curl -s "${jmx_url}"
   fi \
-    | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value'
+    | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value' || true
 }
 
 ## @description wait until datanodes are up (or 30 seconds)

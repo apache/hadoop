@@ -66,6 +66,7 @@ public class TestHddsSecureDatanodeInit {
   private static KeyCodec keyCodec;
   private static CertificateCodec certCodec;
   private static X509CertificateHolder certHolder;
+  private final static String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -93,8 +94,8 @@ public class TestHddsSecureDatanodeInit {
       service.initializeCertificateClient(conf);
       return null;
     });
-    certCodec = new CertificateCodec(securityConfig);
-    keyCodec = new KeyCodec(securityConfig);
+    certCodec = new CertificateCodec(securityConfig, DN_COMPONENT);
+    keyCodec = new KeyCodec(securityConfig, DN_COMPONENT);
     dnLogs.clearOutput();
     privateKey = service.getCertificateClient().getPrivateKey();
     publicKey = service.getCertificateClient().getPublicKey();
@@ -115,12 +116,14 @@ public class TestHddsSecureDatanodeInit {
   @Before
   public void setUpDNCertClient(){
 
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        securityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        securityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        securityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        securityConfig.getPublicKeyFileName()).toFile());
     FileUtils.deleteQuietly(Paths.get(securityConfig
-        .getCertificateLocation().toString(),
+        .getCertificateLocation(DN_COMPONENT).toString(),
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
     client = new DNCertificateClient(securityConfig,

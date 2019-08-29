@@ -263,7 +263,8 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteLocation createLocation = null;
     try {
       createLocation = rpcServer.getCreateLocation(src);
-      return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
+      return rpcClient.invokeSingle(createLocation, method,
+          HdfsFileStatus.class);
     } catch (IOException ioe) {
       final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
           method, src, ioe, createLocation, locations);
@@ -299,7 +300,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * locations to retry in. This is used by fault tolerant mount points.
    * @param method Method that failed and might be retried.
    * @param src Path where the method was invoked.
-   * @param e Exception that was triggered.
+   * @param ioe Exception that was triggered.
    * @param excludeLoc Location that failed and should be excluded.
    * @param locations All the locations to retry.
    * @return The locations where we should retry (excluding the failed ones).
@@ -441,14 +442,19 @@ public class RouterClientProtocol implements ClientProtocol {
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
     RemoteMethod method = new RemoteMethod("addBlock",
         new Class<?>[] {String.class, String.class, ExtendedBlock.class,
             DatanodeInfo[].class, long.class, String[].class,
             EnumSet.class},
         new RemoteParam(), clientName, previous, excludedNodes, fileId,
         favoredNodes, addBlockFlags);
+
+    if (previous != null) {
+      return rpcClient.invokeSingle(previous, method, LocatedBlock.class);
+    }
+
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, true);
     // TODO verify the excludedNodes and favoredNodes are acceptable to this NN
     return rpcClient.invokeSequential(
         locations, method, LocatedBlock.class, null);
@@ -466,14 +472,19 @@ public class RouterClientProtocol implements ClientProtocol {
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
     RemoteMethod method = new RemoteMethod("getAdditionalDatanode",
         new Class<?>[] {String.class, long.class, ExtendedBlock.class,
             DatanodeInfo[].class, String[].class,
             DatanodeInfo[].class, int.class, String.class},
         new RemoteParam(), fileId, blk, existings, existingStorageIDs, excludes,
         numAdditionalNodes, clientName);
+
+    if (blk != null) {
+      return rpcClient.invokeSingle(blk, method, LocatedBlock.class);
+    }
+
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, false);
     return rpcClient.invokeSequential(
         locations, method, LocatedBlock.class, null);
   }
@@ -495,12 +506,17 @@ public class RouterClientProtocol implements ClientProtocol {
       long fileId) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
     RemoteMethod method = new RemoteMethod("complete",
         new Class<?>[] {String.class, String.class, ExtendedBlock.class,
             long.class},
         new RemoteParam(), clientName, last, fileId);
+
+    if (last != null) {
+      return rpcClient.invokeSingle(last, method, Boolean.class);
+    }
+
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, true);
     // Complete can return true/false, so don't expect a result
     return rpcClient.invokeSequential(locations, method, Boolean.class, null);
   }
@@ -513,7 +529,7 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("updateBlockForPipeline",
         new Class<?>[] {ExtendedBlock.class, String.class},
         block, clientName);
-    return (LocatedBlock) rpcClient.invokeSingle(block, method);
+    return rpcClient.invokeSingle(block, method, LocatedBlock.class);
   }
 
   /**
@@ -638,7 +654,7 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("concat",
         new Class<?>[] {String.class, String[].class},
         targetDestination.getDest(), sourceDestinations);
-    rpcClient.invokeSingle(targetDestination, method);
+    rpcClient.invokeSingle(targetDestination, method, Void.class);
   }
 
   @Override
@@ -705,7 +721,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     final RemoteLocation firstLocation = locations.get(0);
     try {
-      return (boolean) rpcClient.invokeSingle(firstLocation, method);
+      return rpcClient.invokeSingle(firstLocation, method, Boolean.class);
     } catch (IOException ioe) {
       final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
           method, src, ioe, firstLocation, locations);

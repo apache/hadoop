@@ -56,6 +56,8 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -509,14 +511,24 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
           .DEFAULT) final StoragePolicyParam policyName,
       @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam
-              .DEFAULT) final ECPolicyParam ecpolicy
-      ) throws IOException, InterruptedException {
+              .DEFAULT) final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+      final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+      final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME)
+      @DefaultValue(StorageTypeParam.DEFAULT)
+      final StorageTypeParam storageType
+  ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
-        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy);
+        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
   }
 
   /** Validate all required params. */
@@ -598,15 +610,23 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
           .DEFAULT) final StoragePolicyParam policyName,
       @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam.DEFAULT)
-      final ECPolicyParam ecpolicy
+          final ECPolicyParam ecpolicy,
+      @QueryParam(NameSpaceQuotaParam.NAME)
+      @DefaultValue(NameSpaceQuotaParam.DEFAULT)
+          final NameSpaceQuotaParam namespaceQuota,
+      @QueryParam(StorageSpaceQuotaParam.NAME)
+      @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
+          final StorageSpaceQuotaParam storagespaceQuota,
+      @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
+          final StorageTypeParam storageType
       ) throws IOException, InterruptedException {
-
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         delegationTokenArgument, aclPermission, xattrName, xattrValue,
         xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes,
-        createFlagParam, noredirect, policyName);
+        createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -618,7 +638,8 @@ public class NamenodeWebHdfsMethods {
               renameOptions, createParent, delegationTokenArgument,
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect, policyName, ecpolicy);
+              createFlagParam, noredirect, policyName, ecpolicy,
+              namespaceQuota, storagespaceQuota, storageType);
       }
     });
   }
@@ -654,7 +675,10 @@ public class NamenodeWebHdfsMethods {
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName,
-      final ECPolicyParam ecpolicy
+      final ECPolicyParam ecpolicy,
+      final NameSpaceQuotaParam namespaceQuota,
+      final StorageSpaceQuotaParam storagespaceQuota,
+      final StorageTypeParam storageType
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final ClientProtocol cp = getRpcClientProtocol();
@@ -830,6 +854,17 @@ public class NamenodeWebHdfsMethods {
     case SETECPOLICY:
       validateOpParams(op, ecpolicy);
       cp.setErasureCodingPolicy(fullpath, ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTA:
+      validateOpParams(op, namespaceQuota, storagespaceQuota);
+      cp.setQuota(fullpath, namespaceQuota.getValue(),
+          storagespaceQuota.getValue(), null);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    case SETQUOTABYSTORAGETYPE:
+      validateOpParams(op, storagespaceQuota, storageType);
+      cp.setQuota(fullpath, HdfsConstants.QUOTA_DONT_SET,
+          storagespaceQuota.getValue(),
+          StorageType.parseStorageType(storageType.getValue()));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");

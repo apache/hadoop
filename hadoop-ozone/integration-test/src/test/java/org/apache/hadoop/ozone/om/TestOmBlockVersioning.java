@@ -16,50 +16,39 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.KeyArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Assert;
 import org.junit.rules.ExpectedException;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This class tests the versioning of blocks from OM side.
  */
 public class TestOmBlockVersioning {
   private static MiniOzoneCluster cluster = null;
-  private static UserArgs userArgs;
   private static OzoneConfiguration conf;
   private static OzoneManager ozoneManager;
-  private static StorageHandler storageHandler;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -76,9 +65,6 @@ public class TestOmBlockVersioning {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
     ozoneManager = cluster.getOzoneManager();
   }
 
@@ -101,14 +87,7 @@ public class TestOmBlockVersioning {
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
-    createVolumeArgs.setUserName(userName);
-    createVolumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs);
-
-    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setStorageType(StorageType.DISK);
-    storageHandler.createBucket(bucketArgs);
+    TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
 
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -200,14 +179,8 @@ public class TestOmBlockVersioning {
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
-    createVolumeArgs.setUserName(userName);
-    createVolumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs);
-
-    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
-    bucketArgs.setStorageType(StorageType.DISK);
-    storageHandler.createBucket(bucketArgs);
+    OzoneBucket bucket =
+        TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
 
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -218,48 +191,30 @@ public class TestOmBlockVersioning {
         .build();
 
     String dataString = RandomStringUtils.randomAlphabetic(100);
-    KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
-    keyArgs.setUserName(userName);
-    // this write will create 1st version with one block
-    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
-      stream.write(dataString.getBytes());
-    }
-    byte[] data = new byte[dataString.length()];
-    try (InputStream in = storageHandler.newKeyReader(keyArgs)) {
-      in.read(data);
-    }
+
+    TestDataUtil.createKey(bucket, keyName, dataString);
+    assertEquals(dataString, TestDataUtil.getKey(bucket, keyName));
     OmKeyInfo keyInfo = ozoneManager.lookupKey(omKeyArgs);
-    assertEquals(dataString, DFSUtil.bytes2String(data));
     assertEquals(0, keyInfo.getLatestVersionLocations().getVersion());
     assertEquals(1,
         keyInfo.getLatestVersionLocations().getLocationList().size());
 
     // this write will create 2nd version, 2nd version will contain block from
     // version 1, and add a new block
-    dataString = RandomStringUtils.randomAlphabetic(10);
-    data = new byte[dataString.length()];
-    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
-      stream.write(dataString.getBytes());
-    }
-    try (InputStream in = storageHandler.newKeyReader(keyArgs)) {
-      in.read(data);
-    }
+    TestDataUtil.createKey(bucket, keyName, dataString);
+
+
     keyInfo = ozoneManager.lookupKey(omKeyArgs);
-    assertEquals(dataString, DFSUtil.bytes2String(data));
+    assertEquals(dataString, TestDataUtil.getKey(bucket, keyName));
     assertEquals(1, keyInfo.getLatestVersionLocations().getVersion());
     assertEquals(2,
         keyInfo.getLatestVersionLocations().getLocationList().size());
 
     dataString = RandomStringUtils.randomAlphabetic(200);
-    data = new byte[dataString.length()];
-    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
-      stream.write(dataString.getBytes());
-    }
-    try (InputStream in = storageHandler.newKeyReader(keyArgs)) {
-      in.read(data);
-    }
+    TestDataUtil.createKey(bucket, keyName, dataString);
+
     keyInfo = ozoneManager.lookupKey(omKeyArgs);
-    assertEquals(dataString, DFSUtil.bytes2String(data));
+    assertEquals(dataString, TestDataUtil.getKey(bucket, keyName));
     assertEquals(2, keyInfo.getLatestVersionLocations().getVersion());
     assertEquals(3,
         keyInfo.getLatestVersionLocations().getLocationList().size());

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
@@ -211,6 +212,7 @@ public class OzoneBucket extends WithMetadata {
    *
    * @return acls
    */
+  @JsonIgnore
   public List<OzoneAcl> getAcls() throws IOException {
     return proxy.getAcl(ozoneObj);
   }

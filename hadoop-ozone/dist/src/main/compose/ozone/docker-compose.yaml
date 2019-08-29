@@ -25,6 +25,8 @@ services:
         - 9864
         - 9882
       command: ["/opt/hadoop/bin/ozone","datanode"]
+      environment:
+        OZONE-SITE.XML_ozone.scm.names: scm
       env_file:
         - ./docker-config
    om:
@@ -36,6 +38,7 @@ services:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+         OZONE-SITE.XML_ozone.scm.names: scm
       env_file:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
@@ -49,5 +52,19 @@ services:
       env_file:
           - ./docker-config
       environment:
-          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+        ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+        OZONE-SITE.XML_ozone.scm.names: scm
+        OZONE-SITE.XML_ozone.om.address: om
+        OZONE-SITE.XML_ozone.om.http-address: om:9874
+        OZONE-SITE.XML_ozone.enabled: "true"
+        OZONE-SITE.XML_ozone.scm.datanode.id.dir: /data
+        OZONE-SITE.XML_ozone.scm.block.client.address: scm
+        OZONE-SITE.XML_ozone.metadata.dirs: /data/metadata
+        OZONE-SITE.XML_ozone.handler.type: distributed
+        OZONE-SITE.XML_ozone.scm.client.address: scm
+        OZONE-SITE.XML_ozone.replication: 1
+        OZONE-SITE.XML_hdds.datanode.dir: /data/hdds
+        OZONE-SITE.XML_hdds.profiler.endpoint.enabled: "true"
+        HDFS-SITE.XML_rpc.metrics.quantile.enable: "true"
+        HDFS-SITE.XML_rpc.metrics.percentiles.intervals: 60,300
       command: ["/opt/hadoop/bin/ozone","scm"]

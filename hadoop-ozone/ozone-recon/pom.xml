@@ -189,7 +189,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-reconcodegen</artifactId>
-      <version>${version}</version>
+      <version>${ozone.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

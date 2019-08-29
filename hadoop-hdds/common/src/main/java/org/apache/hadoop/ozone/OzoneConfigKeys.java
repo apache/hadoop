@@ -125,9 +125,6 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
 
-  public static final String OZONE_CLIENT_PROTOCOL =
-      "ozone.client.protocol";
-
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
       "ozone.client.stream.buffer.flush.size";
 

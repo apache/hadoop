@@ -742,8 +742,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
             if (currentINode.isLastReference()) {
               // if this is the last reference, the created list can be
               // destroyed.
-         //     priorDiff.getChildrenDiff().destroyCreatedList(
-         //         reclaimContext, currentINode);
+              priorDiff.getChildrenDiff().destroyCreatedList(
+                  reclaimContext, currentINode);
             } else {
               // we only check the node originally in prior's created list
               for (INode cNode : priorDiff.diff.getCreatedUnmodifiable()) {
