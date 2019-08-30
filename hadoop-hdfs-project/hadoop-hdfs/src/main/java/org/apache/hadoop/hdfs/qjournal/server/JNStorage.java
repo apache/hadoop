@@ -52,12 +52,7 @@ class JNStorage extends Storage {
   private final StorageDirectory sd;
   private StorageState state;
 
-  private static final List<Pattern> CURRENT_DIR_PURGE_REGEXES =
-      ImmutableList.of(
-        Pattern.compile("edits_\\d+-(\\d+)"),
-        Pattern.compile("edits_inprogress_(\\d+)(?:\\..*)?"));
-  
-  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES = 
+  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES =
       ImmutableList.of(Pattern.compile("(\\d+)"));
 
   private static final String STORAGE_EDITS_SYNC = "edits.sync";
@@ -181,8 +176,8 @@ class JNStorage extends Storage {
    * the given txid.
    */
   void purgeDataOlderThan(long minTxIdToKeep) throws IOException {
-    purgeMatching(sd.getCurrentDir(),
-        CURRENT_DIR_PURGE_REGEXES, minTxIdToKeep);
+    fjm.purgeLogsOlderThan(minTxIdToKeep);
+
     purgeMatching(getOrCreatePaxosDir(),
         PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
   }

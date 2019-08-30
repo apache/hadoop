@@ -15,30 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.discovery;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
+package org.apache.hadoop.ozone.insight;
 
 /**
- * JAXB representation of Hadoop Configuration.
+ * Framework to collect log/metrics and configuration for specified ozone
+ * components.
  */
-@XmlRootElement(name = "configuration")
-public class ConfigurationXml {
-
-  private List<ConfigurationXmlEntry> property = new ArrayList<>();
-
-  public List<ConfigurationXmlEntry> getProperty() {
-    return property;
-  }
-
-  public void setProperty(
-      List<ConfigurationXmlEntry> property) {
-    this.property = property;
-  }
-
-  public void addConfiguration(String key, String name) {
-    property.add(new ConfigurationXmlEntry(key, name));
-  }
-}

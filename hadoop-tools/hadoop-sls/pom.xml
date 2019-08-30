@@ -139,6 +139,7 @@
             <exclude>src/test/resources/nodes-with-resources.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
             <exclude>src/test/resources/ongoing-invariants.txt</exclude>
+            <exclude>src/test/resources/sls_dag.json</exclude>
           </excludes>
         </configuration>
       </plugin>

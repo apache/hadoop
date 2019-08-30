@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.discovery.DiscoveryUtil;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
@@ -141,12 +140,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       StringUtils
           .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
     }
-    OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
-    if (DiscoveryUtil.loadGlobalConfig(ozoneConfiguration)) {
-      //reload the configuration with the downloaded new configs.
-      ozoneConfiguration = createOzoneConfiguration();
-    }
-    start(ozoneConfiguration);
+    start(createOzoneConfiguration());
     join();
     return null;
   }

@@ -26,6 +26,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
@@ -93,8 +93,9 @@ public abstract class BaseHttpServer {
       httpServer = builder.build();
       httpServer.addServlet("conf", "/conf", HddsConfServlet.class);
 
+      httpServer.addServlet("logstream", "/logstream", LogStreamServlet.class);
       prometheusSupport =
-          conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, false);
+          conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, true);
 
       profilerSupport =
           conf.getBoolean(HddsConfigKeys.HDDS_PROFILER_ENABLED, false);
@@ -126,18 +127,6 @@ public abstract class BaseHttpServer {
   protected void addServlet(String servletName, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     httpServer.addServlet(servletName, pathSpec, clazz);
-  }
-
-  /**
-   * Add a servlet to BaseHttpServer.
-   *
-   * @param servletName The name of the servlet
-   * @param pathSpec    The path spec for the servlet
-   * @param clazz       The servlet class
-   */
-  protected void addInternalServlet(String servletName, String pathSpec,
-      Class<? extends HttpServlet> clazz, Map<String, String> initParams) {
-    httpServer.addInternalServlet(servletName, pathSpec, clazz, initParams);
   }
 
   /**

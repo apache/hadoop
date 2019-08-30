@@ -432,8 +432,11 @@ public class RouterRpcClient {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpComplete(true);
           }
+          RemoteException re = (RemoteException) ioe;
+          ioe = re.unwrapRemoteException();
+          ioe = getCleanException(ioe);
           // RemoteException returned by NN
-          throw (RemoteException) ioe;
+          throw ioe;
         } else if (ioe instanceof ConnectionNullException) {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureCommunicate();
@@ -553,11 +556,6 @@ public class RouterRpcClient {
             throw new StandbyException(ioe.getMessage());
           }
         } else {
-          if (ioe instanceof RemoteException) {
-            RemoteException re = (RemoteException) ioe;
-            ioe = re.unwrapRemoteException();
-            ioe = getCleanException(ioe);
-          }
           throw ioe;
         }
       } else {

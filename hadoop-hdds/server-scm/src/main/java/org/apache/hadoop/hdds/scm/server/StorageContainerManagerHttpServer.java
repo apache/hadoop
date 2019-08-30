@@ -17,33 +17,20 @@
 
 package org.apache.hadoop.hdds.scm.server;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.server.BaseHttpServer;
 
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import java.io.IOException;
 
 /**
  * HttpServer2 wrapper for the Ozone Storage Container Manager.
  */
 public class StorageContainerManagerHttpServer extends BaseHttpServer {
 
-  public static final String CONFIG_CONTEXT_ATTRIBUTE = "ozone.configuration";
-
   public StorageContainerManagerHttpServer(Configuration conf)
       throws IOException {
     super(conf, "scm");
-    Map<String, String> initParameters = new HashMap<>();
-    initParameters.put("com.sun.jersey.config.property.packages",
-        "org.apache.hadoop.hdds.discovery");
-    addInternalServlet("rest", "/discovery/*", ServletContainer.class,
-        initParameters);
-    getWebAppContext().setAttribute(CONFIG_CONTEXT_ATTRIBUTE, conf);
-
   }
 
   @Override protected String getHttpAddressKey() {

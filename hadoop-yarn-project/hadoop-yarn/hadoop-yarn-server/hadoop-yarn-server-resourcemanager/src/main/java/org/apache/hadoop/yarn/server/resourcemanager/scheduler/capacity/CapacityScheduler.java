@@ -1518,6 +1518,11 @@ public class CapacityScheduler extends
     if (getNode(node.getNodeID()) != node) {
       LOG.error("Trying to schedule on a removed node, please double check, "
           + "nodeId=" + node.getNodeID());
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
+          ActivityDiagnosticConstant.INIT_CHECK_SINGLE_NODE_REMOVED);
+      ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+          node);
       return null;
     }
 
@@ -1527,12 +1532,9 @@ public class CapacityScheduler extends
     RMContainer reservedContainer = node.getReservedContainer();
     if (reservedContainer != null) {
       allocateFromReservedContainer(node, withNodeHeartbeat, reservedContainer);
-    }
-
-    // Do not schedule if there are any reservations to fulfill on the node
-    if (node.getReservedContainer() != null) {
+      // Do not schedule if there are any reservations to fulfill on the node
       LOG.debug("Skipping scheduling since node {} is reserved by"
-          + " application {}", node.getNodeID(), node.getReservedContainer().
+          + " application {}", node.getNodeID(), reservedContainer.
           getContainerId().getApplicationAttemptId());
       return null;
     }
@@ -1543,8 +1545,14 @@ public class CapacityScheduler extends
     if (calculator.computeAvailableContainers(Resources
             .add(node.getUnallocatedResource(), node.getTotalKillableResources()),
         minimumAllocation) <= 0) {
-      LOG.debug("This node or node partition doesn't have available or" +
-          " preemptible resource");
+      LOG.debug("This node " + node.getNodeID() + " doesn't have sufficient "
+          + "available or preemptible resource for minimum allocation");
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
+          ActivityDiagnosticConstant.
+              INIT_CHECK_SINGLE_NODE_RESOURCE_INSUFFICIENT);
+      ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+          node);
       return null;
     }
 
@@ -1594,12 +1602,12 @@ public class CapacityScheduler extends
       ActivitiesLogger.NODE.finishAllocatedNodeAllocation(activitiesManager,
           node, reservedContainer.getContainerId(),
           AllocationState.ALLOCATED_FROM_RESERVED);
-    } else{
+    } else if (assignment.getAssignmentInformation().getNumReservations() > 0) {
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
           queue.getParent().getQueueName(), queue.getQueueName(),
-          ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
+          ActivityState.RE_RESERVED, ActivityDiagnosticConstant.EMPTY);
       ActivitiesLogger.NODE.finishAllocatedNodeAllocation(activitiesManager,
-          node, reservedContainer.getContainerId(), AllocationState.SKIPPED);
+          node, reservedContainer.getContainerId(), AllocationState.RESERVED);
     }
 
     assignment.setSchedulingMode(
@@ -1685,12 +1693,14 @@ public class CapacityScheduler extends
           allocateFromReservedContainer(node, false, reservedContainer);
         }
       }
-      LOG.debug("This node or this node partition doesn't have available or "
-          + "killable resource");
+      LOG.debug("This partition '{}' doesn't have available or "
+          + "killable resource", candidates.getPartition());
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, null,
           "", getRootQueue().getQueueName(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + " "
-              + candidates.getPartition());
+          ActivityDiagnosticConstant.
+              INIT_CHECK_PARTITION_RESOURCE_INSUFFICIENT);
+      ActivitiesLogger.NODE
+          .finishSkippedNodeAllocation(activitiesManager, null);
       return null;
     }
 
@@ -1721,13 +1731,13 @@ public class CapacityScheduler extends
       assignment = allocateContainerOnSingleNode(candidates,
           node, withNodeHeartbeat);
       ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
-          node.getNodeID());
+          node.getNodeID(), candidates.getPartition());
     } else{
       ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
           ActivitiesManager.EMPTY_NODE_ID);
       assignment = allocateContainersOnMultiNodes(candidates);
       ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
-          ActivitiesManager.EMPTY_NODE_ID);
+          ActivitiesManager.EMPTY_NODE_ID, candidates.getPartition());
     }
 
     if (assignment != null && assignment.getAssignmentInformation() != null

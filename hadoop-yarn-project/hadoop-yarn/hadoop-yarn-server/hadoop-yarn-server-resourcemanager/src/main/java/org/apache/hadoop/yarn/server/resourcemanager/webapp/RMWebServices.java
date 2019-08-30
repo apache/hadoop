@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -756,9 +757,27 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
       Set<RMWSConsts.AppActivitiesRequiredAction> requiredActions;
       try {
-        requiredActions = parseAppActivitiesRequiredActions(actions);
+        requiredActions =
+            parseAppActivitiesRequiredActions(getFlatSet(actions));
       } catch (IllegalArgumentException e) {
         return new AppActivitiesInfo(e.getMessage(), appId);
+      }
+
+      Set<Integer> parsedRequestPriorities;
+      try {
+        parsedRequestPriorities = getFlatSet(requestPriorities).stream()
+            .map(e -> Integer.valueOf(e)).collect(Collectors.toSet());
+      } catch (NumberFormatException e) {
+        return new AppActivitiesInfo("request priorities must be integers!",
+            appId);
+      }
+      Set<Long> parsedAllocationRequestIds;
+      try {
+        parsedAllocationRequestIds = getFlatSet(allocationRequestIds).stream()
+            .map(e -> Long.valueOf(e)).collect(Collectors.toSet());
+      } catch (NumberFormatException e) {
+        return new AppActivitiesInfo(
+            "allocation request Ids must be integers!", appId);
       }
 
       int limitNum = -1;
@@ -795,12 +814,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         if (requiredActions
             .contains(RMWSConsts.AppActivitiesRequiredAction.GET)) {
           AppActivitiesInfo appActivitiesInfo = activitiesManager
-              .getAppActivitiesInfo(applicationId, requestPriorities,
-                  allocationRequestIds, activitiesGroupBy, limitNum,
+              .getAppActivitiesInfo(applicationId, parsedRequestPriorities,
+                  parsedAllocationRequestIds, activitiesGroupBy, limitNum,
                   summarize, maxTime);
           return appActivitiesInfo;
         }
-        return new AppActivitiesInfo("Successfully notified actions: "
+        return new AppActivitiesInfo("Successfully received "
+            + (actions.size() == 1 ? "action: " : "actions: ")
             + StringUtils.join(',', actions), appId);
       } catch (Exception e) {
         String errMessage = "Cannot find application with given appId";
@@ -810,6 +830,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     }
     return null;
+  }
+
+  private Set<String> getFlatSet(Set<String> set) {
+    if (set == null) {
+      return null;
+    }
+    return set.stream()
+        .flatMap(e -> Arrays.asList(e.split(StringUtils.COMMA_STR)).stream())
+        .collect(Collectors.toSet());
   }
 
   private Set<RMWSConsts.AppActivitiesRequiredAction>
