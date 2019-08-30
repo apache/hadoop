@@ -86,7 +86,7 @@ run mkdir -p ./etc
 run mkdir -p ./libexec
 run mkdir -p ./tests
 
-run cp -r "${ROOT}/hadoop-common-project/hadoop-common/src/main/conf" "etc/hadoop"
+run cp -r "${ROOT}/hadoop-hdds/common/src/main/conf/" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/dn-audit-log4j2.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/scm-audit-log4j2.properties" "etc/hadoop"
@@ -97,15 +97,15 @@ run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-nodegroup
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
 run cp -r "${ROOT}/hadoop-ozone/dist/src/main/dockerbin" "bin/docker"
 
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh" "libexec/"
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.cmd" "libexec/"
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh" "libexec/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-config.sh" "libexec/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-config.cmd" "libexec/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-functions.sh" "libexec/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone-config.sh" "libexec/"
 run cp -r "${ROOT}/hadoop-ozone/common/src/main/shellprofile.d" "libexec/"
 
 
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-daemons.sh" "sbin/"
-run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/workers.sh" "sbin/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-daemons.sh" "sbin/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/workers.sh" "sbin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/start-ozone.sh" "sbin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/stop-ozone.sh" "sbin/"
 
