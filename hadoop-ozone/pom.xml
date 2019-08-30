@@ -293,6 +293,7 @@
             <exclude>**/node_modules/**</exclude>
             <exclude>**/yarn.lock</exclude>
             <exclude>**/ozone-recon-web/build/**</exclude>
+            <exclude>src/main/license/**</exclude>
           </excludes>
         </configuration>
       </plugin>
