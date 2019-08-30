@@ -102,7 +102,7 @@ public class TestOzoneRpcClientForAclAuditLog {
    */
   @BeforeClass
   public static void init() throws Exception {
-    System.setProperty("log4j.configurationFile", "log4j2.properties");
+    System.setProperty("log4j.configurationFile", "auditlog.properties");
     ugi = UserGroupInformation.getCurrentUser();
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
