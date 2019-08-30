@@ -63,4 +63,8 @@
     <name>hdds.datanode.storage.utilization.critical.threshold</name>
     <value>0.99</value>
   </property>
+  <property>
+    <name>hdds.prometheus.endpoint.enabled</name>
+    <value>true</value>
+  </property>
 </configuration>

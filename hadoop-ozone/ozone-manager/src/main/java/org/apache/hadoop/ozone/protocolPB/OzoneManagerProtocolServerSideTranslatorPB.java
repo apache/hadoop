@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
-
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -54,6 +53,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final boolean isRatisEnabled;
   private final OzoneManager ozoneManager;
   private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
+  private final ProtocolMessageMetrics protocolMessageMetrics;
 
   /**
    * Constructs an instance of the server handler.
@@ -61,12 +61,15 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * @param impl OzoneManagerProtocolPB
    */
   public OzoneManagerProtocolServerSideTranslatorPB(
-      OzoneManager impl, OzoneManagerRatisServer ratisServer,
+      OzoneManager impl,
+      OzoneManagerRatisServer ratisServer,
+      ProtocolMessageMetrics metrics,
       boolean enableRatis) {
     this.ozoneManager = impl;
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
     this.isRatisEnabled = enableRatis;
+    this.protocolMessageMetrics = metrics;
     this.ozoneManagerDoubleBuffer =
         new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(), (i) -> {
           // Do nothing.
@@ -82,48 +85,77 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * translator for OM protocol.
    */
   @Override
-   public OMResponse submitRequest(RpcController controller,
+  public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
     Scope scope = TracingUtil
         .importAndCreateScope(request.getCmdType().name(),
             request.getTraceID());
     try {
-      if (isRatisEnabled) {
-        // Check if the request is a read only request
-        if (OmUtils.isReadOnly(request)) {
-          return submitReadRequestToOM(request);
-        } else {
-          if (omRatisServer.isLeader()) {
-            try {
-              OMClientRequest omClientRequest =
-                  OzoneManagerRatisUtils.createClientRequest(request);
-              if (omClientRequest != null) {
-                request = omClientRequest.preExecute(ozoneManager);
-              }
-            } catch(IOException ex) {
-              // As some of the preExecute returns error. So handle here.
-              return createErrorResponse(request, ex);
-            }
-            return submitRequestToRatis(request);
-          } else {
-            // throw not leader exception. This is being done, so to avoid
-            // unnecessary execution of preExecute on follower OM's. This
-            // will be helpful in the case like where we we reduce the
-            // chance of allocate blocks on follower OM's. Right now our
-            // leader status is updated every 1 second.
-            throw createNotLeaderException();
-          }
-        }
-      } else {
-        return submitRequestDirectlyToOM(request);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(
+            "OzoneManagerProtocol {} request is received: <json>{}</json>",
+            request.getCmdType().toString(),
+            request.toString().replaceAll("\n", "\\\\n"));
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("OzoneManagerProtocol {} request is received",
+            request.getCmdType().toString());
       }
+      protocolMessageMetrics.increment(request.getCmdType());
+
+      OMResponse omResponse = processRequest(request);
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(
+            "OzoneManagerProtocol {} request is processed. Response: "
+                + "<json>{}</json>",
+            request.getCmdType().toString(),
+            omResponse.toString().replaceAll("\n", "\\\\n"));
+      }
+      return omResponse;
+
     } finally {
       scope.close();
     }
   }
 
+  private OMResponse processRequest(OMRequest request) throws
+      ServiceException {
+
+    if (isRatisEnabled) {
+      // Check if the request is a read only request
+      if (OmUtils.isReadOnly(request)) {
+        return submitReadRequestToOM(request);
+      } else {
+        if (omRatisServer.isLeader()) {
+          try {
+            OMClientRequest omClientRequest =
+                OzoneManagerRatisUtils.createClientRequest(request);
+            if (omClientRequest != null) {
+              request = omClientRequest.preExecute(ozoneManager);
+            }
+          } catch (IOException ex) {
+            // As some of the preExecute returns error. So handle here.
+            return createErrorResponse(request, ex);
+          }
+          return submitRequestToRatis(request);
+        } else {
+          // throw not leader exception. This is being done, so to avoid
+          // unnecessary execution of preExecute on follower OM's. This
+          // will be helpful in the case like where we we reduce the
+          // chance of allocate blocks on follower OM's. Right now our
+          // leader status is updated every 1 second.
+          throw createNotLeaderException();
+        }
+      }
+    } else {
+      return submitRequestDirectlyToOM(request);
+    }
+
+  }
+
   /**
    * Create OMResponse from the specified OMRequest and exception.
+   *
    * @param omRequest
    * @param exception
    * @return OMResponse
@@ -153,6 +185,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       return null;
     }
   }
+
   /**
    * Submits request to OM's Ratis server.
    */

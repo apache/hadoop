@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Objects;
 
 import org.apache.commons.codec.digest.DigestUtils;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -82,9 +83,11 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.ratis.OMRatisSnapshotInfo;
 import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -150,6 +153,7 @@ import org.apache.hadoop.utils.db.DBUpdatesWrapper;
 import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
+
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.FileUtils;
 import org.apache.ratis.util.LifeCycle;
@@ -253,6 +257,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private S3BucketManager s3BucketManager;
 
   private final OMMetrics metrics;
+  private final ProtocolMessageMetrics omClientProtocolMetrics;
   private OzoneManagerHttpServer httpServer;
   private final OMStorage omStorage;
   private final ScmBlockLocationProtocol scmBlockClient;
@@ -294,13 +299,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   // execution, we can get from ozoneManager.
   private long maxUserVolumeCount;
 
-
   private final ScmClient scmClient;
   private final long scmBlockSize;
   private final int preallocateBlocksMax;
   private final boolean grpcBlockTokenEnabled;
   private final boolean useRatisForReplication;
-
 
   private OzoneManager(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
@@ -411,6 +414,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     metrics = OMMetrics.create();
+
+    omClientProtocolMetrics = ProtocolMessageMetrics
+        .create("OmClientProtocol", "Ozone Manager RPC endpoint",
+            OzoneManagerProtocolProtos.Type.values());
 
     // Start Om Rpc Server.
     omRpcServer = getRpcServer(conf);
@@ -984,10 +991,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     StorageContainerLocationProtocol scmContainerClient =
         TracingUtil.createProxy(
             new StorageContainerLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
-                scmAddr, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf))),
+                RPC.getProxy(StorageContainerLocationProtocolPB.class,
+                    scmVersion,
+                    scmAddr, UserGroupInformation.getCurrentUser(), conf,
+                    NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf))),
             StorageContainerLocationProtocol.class, conf);
     return scmContainerClient;
   }
@@ -1253,6 +1261,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public void start() throws IOException {
 
+    omClientProtocolMetrics.register();
+
     LOG.info(buildRpcServerStartMessage("OzoneManager RPC server",
         omRpcAddress));
 
@@ -1377,7 +1387,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
     this.omServerProtocol = new OzoneManagerProtocolServerSideTranslatorPB(
-        this, omRatisServer, isRatisEnabled);
+        this, omRatisServer, omClientProtocolMetrics, isRatisEnabled);
 
     BlockingService omService = newReflectiveBlockingService(omServerProtocol);
 
@@ -1471,6 +1481,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
       metadataManager.stop();
       metrics.unRegister();
+      omClientProtocolMetrics.unregister();
       unregisterMXBean();
       if (jvmPauseMonitor != null) {
         jvmPauseMonitor.stop();
