@@ -205,6 +205,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_F
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODE_ID_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
@@ -613,6 +614,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             " addresses that match local node's address. Please configure the" +
             " system with " + OZONE_OM_SERVICE_IDS_KEY + " and " +
             OZONE_OM_ADDRESS_KEY;
+        throw new OzoneIllegalArgumentException(msg);
+      } else if (found == 0) {
+        String msg = "Incorrect configuration. Unable to find OzoneManager" +
+            " node address for service id " + serviceId + ". Please" +
+            " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
+            ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY;
         throw new OzoneIllegalArgumentException(msg);
       }
     }

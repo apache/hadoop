@@ -42,6 +42,10 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
+
 /**
  * Tests OM related configurations.
  */
@@ -276,6 +280,61 @@ public class TestOzoneManagerConfiguration {
       GenericTestUtils.assertExceptionContains("Configuration has no " +
           OMConfigKeys.OZONE_OM_ADDRESS_KEY + " address that matches local " +
           "node's address.", e);
+    }
+  }
+
+  /**
+   * Test a wrong configuration for OM HA. A configuration with an empty
+   * node list while service ID is configured should throw an error.
+   * @throws Exception
+   */
+  @Test
+  public void testWrongConfigurationNoOMNodes() throws Exception {
+    String omServiceId = "om-service-test1";
+    conf.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, omServiceId);
+    // Deliberately skip OZONE_OM_NODES_KEY and OZONE_OM_ADDRESS_KEY config
+
+    try {
+      startCluster();
+      Assert.fail("OM initialization should have failed.");
+    } catch (OzoneIllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Incorrect configuration. Unable to find OzoneManager" +
+          " node address for service id " + omServiceId + ". Please" +
+          " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
+          ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY, e);
+    }
+  }
+
+  /**
+   * Test a wrong configuration for OM HA. A configuration with no OM addresses
+   * while service ID is configured should throw an error.
+   * @throws Exception
+   */
+  @Test
+  public void testWrongConfigurationNoOMAddrs() throws Exception {
+    String omServiceId = "om-service-test1";
+
+    String omNode1Id = "omNode1";
+    String omNode2Id = "omNode2";
+    String omNode3Id = "omNode3";
+    String omNodesKeyValue = omNode1Id + "," + omNode2Id + "," + omNode3Id;
+    String omNodesKey = OmUtils.addKeySuffixes(
+        OMConfigKeys.OZONE_OM_NODES_KEY, omServiceId);
+
+    conf.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, omServiceId);
+    conf.set(omNodesKey, omNodesKeyValue);
+    // Deliberately skip OZONE_OM_ADDRESS_KEY config
+
+    try {
+      startCluster();
+      Assert.fail("OM initialization should have failed.");
+    } catch (OzoneIllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Incorrect configuration. Unable to find OzoneManager" +
+              " node address for service id " + omServiceId + ". Please" +
+              " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
+              ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY, e);
     }
   }
 
