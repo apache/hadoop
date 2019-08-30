@@ -653,6 +653,7 @@ public class TestRMAppTransitions {
     RMAppEvent finishedEvent = new RMAppEvent(application.getApplicationId(),
         RMAppEventType.ATTEMPT_FINISHED, diagnostics);
     application.handle(finishedEvent);
+    rmDispatcher.await();
 
     //only run this verification if we created a finishing app
     if (submissionContext == null) {
