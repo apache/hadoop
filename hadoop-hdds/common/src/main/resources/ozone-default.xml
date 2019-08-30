@@ -1387,16 +1387,6 @@
   </property>
 
   <property>
-    <name>hdds.container.chunk.persistdata</name>
-    <value>true</value>
-    <tag>DATANODE</tag>
-    <description>
-      Determines if the Container Chunk Manager will write user data to disk.
-      Set to false only for specific performance tests.
-    </description>
-  </property>
-
-  <property>
     <name>hdds.pipeline.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
