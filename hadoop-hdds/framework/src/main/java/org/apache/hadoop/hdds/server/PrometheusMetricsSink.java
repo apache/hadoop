@@ -112,6 +112,10 @@ public class PrometheusMetricsSink implements MetricsSink {
 
     String baseName = StringUtils.capitalize(recordName)
         + StringUtils.capitalize(metricName);
+    return normalizeName(baseName);
+  }
+
+  public static String normalizeName(String baseName) {
     String[] parts = SPLIT_PATTERN.split(baseName);
     String result = String.join("_", parts).toLowerCase();
     return REPLACE_PATTERN.matcher(result).replaceAll("_");
