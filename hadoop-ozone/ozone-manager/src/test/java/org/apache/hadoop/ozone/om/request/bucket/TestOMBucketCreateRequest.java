@@ -21,9 +21,6 @@ package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.util.UUID;
 
-import com.google.common.base.Optional;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -202,11 +199,7 @@ public class TestOMBucketCreateRequest extends TestBucketRequest {
         OmVolumeArgs.newBuilder().setCreationTime(Time.now())
             .setVolume(volumeName).setAdminName(UUID.randomUUID().toString())
             .setOwnerName(UUID.randomUUID().toString()).build();
-
-    // Add to cache.
-    omMetadataManager.getVolumeTable().addCacheEntry(
-        new CacheKey<>(omMetadataManager.getVolumeKey(volumeName)),
-        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+    TestOMRequestUtils.addVolumeToOM(omMetadataManager, omVolumeArgs);
   }
 
 }

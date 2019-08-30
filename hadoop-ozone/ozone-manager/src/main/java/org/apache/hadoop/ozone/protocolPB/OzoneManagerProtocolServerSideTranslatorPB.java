@@ -35,6 +35,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import io.opentracing.Scope;
 import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.util.ExitUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,9 +136,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           try {
             OMClientRequest omClientRequest =
                 OzoneManagerRatisUtils.createClientRequest(request);
-            if (omClientRequest != null) {
-              request = omClientRequest.preExecute(ozoneManager);
-            }
+            Preconditions.checkState(omClientRequest != null,
+                "Unrecognized write command type request" + request.toString());
+            request = omClientRequest.preExecute(ozoneManager);
           } catch (IOException ex) {
             // As some of the preExecute returns error. So handle here.
             return createErrorResponse(request, ex);
@@ -153,31 +154,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         }
       }
     } else {
-      OMClientResponse omClientResponse = null;
-      long index = 0L;
-      try {
-        OMClientRequest omClientRequest =
-            OzoneManagerRatisUtils.createClientRequest(request);
-        Preconditions.checkState(omClientRequest != null, "Unrecognized " +
-            "command type request" + request.getCmdType());
-        request = omClientRequest.preExecute(ozoneManager);
-        index = transactionIndex.incrementAndGet();
-        omClientRequest = OzoneManagerRatisUtils.createClientRequest(request);
-        omClientResponse = omClientRequest.validateAndUpdateCache(
-            ozoneManager, index, ozoneManagerDoubleBuffer::add);
-      } catch(IOException ex) {
-        // As some of the preExecute returns error. So handle here.
-        return createErrorResponse(request, ex);
-      }
-      try {
-        omClientResponse.getFlushFuture().get();
-        LOG.trace("Future for {} is completed", request);
-      } catch (ExecutionException | InterruptedException ex) {
-        // Do we need to terminate OM here?
-        throw new ServiceException("Got exception during waiting for " +
-            "flush for request " + request, ex);
-      }
-      return omClientResponse.getOMResponse();
+      return submitRequestDirectlyToOM(request);
     }
   }
 
@@ -191,50 +168,18 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private OMResponse createErrorResponse(
       OMRequest omRequest, IOException exception) {
     OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
-    switch (cmdType) {
-    case CreateVolume:
-    case SetVolumeProperty:
-    case DeleteVolume:
-    case CreateBucket:
-    case SetBucketProperty:
-    case DeleteBucket:
-    case CreateKey:
-    case RenameKey:
-    case DeleteKey:
-    case CommitKey:
-    case AllocateBlock:
-    case CreateS3Bucket:
-    case DeleteS3Bucket:
-    case InitiateMultiPartUpload:
-    case CommitMultiPartUpload:
-    case CompleteMultiPartUpload:
-    case AbortMultiPartUpload:
-    case GetS3Secret:
-    case GetDelegationToken:
-    case RenewDelegationToken:
-    case CancelDelegationToken:
-    case CreateDirectory:
-    case CreateFile:
-    case RemoveAcl:
-    case SetAcl:
-    case AddAcl:
-    case PurgeKeys:
-      // Added all write command types here, because in future if any of the
-      // preExecute is changed to return IOException, we can return the error
-      // OMResponse to the client.
-      OMResponse.Builder omResponse = OMResponse.newBuilder()
-          .setStatus(
-              OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
-          .setCmdType(cmdType)
-          .setSuccess(false);
-      if (exception.getMessage() != null) {
-        omResponse.setMessage(exception.getMessage());
-      }
-      return omResponse.build();
-    default:
-      // We shall never come here.
-      return null;
+    // Added all write command types here, because in future if any of the
+    // preExecute is changed to return IOException, we can return the error
+    // OMResponse to the client.
+    OMResponse.Builder omResponse = OMResponse.newBuilder()
+        .setStatus(
+            OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
+        .setCmdType(cmdType)
+        .setSuccess(false);
+    if (exception.getMessage() != null) {
+      omResponse.setMessage(exception.getMessage());
     }
+    return omResponse.build();
   }
 
   /**
@@ -281,7 +226,37 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * Submits request directly to OM.
    */
   private OMResponse submitRequestDirectlyToOM(OMRequest request) {
-    return handler.handle(request);
+    OMClientResponse omClientResponse = null;
+    long index = 0L;
+    try {
+      if (OmUtils.isReadOnly(request)) {
+        return handler.handle(request);
+      } else {
+        OMClientRequest omClientRequest =
+            OzoneManagerRatisUtils.createClientRequest(request);
+        Preconditions.checkState(omClientRequest != null,
+            "Unrecognized write command type request" + request.toString());
+        request = omClientRequest.preExecute(ozoneManager);
+        index = transactionIndex.incrementAndGet();
+        omClientRequest = OzoneManagerRatisUtils.createClientRequest(request);
+        omClientResponse = omClientRequest.validateAndUpdateCache(
+            ozoneManager, index, ozoneManagerDoubleBuffer::add);
+      }
+    } catch(IOException ex) {
+      // As some of the preExecute returns error. So handle here.
+      return createErrorResponse(request, ex);
+    }
+    try {
+      omClientResponse.getFlushFuture().get();
+      LOG.trace("Future for {} is completed", request);
+    } catch (ExecutionException | InterruptedException ex) {
+      // terminate OM. As if we are in this stage means, while getting
+      // response from flush future, we got an exception.
+      String errorMessage = "Got error during waiting for flush to be " +
+          "completed for " + "request" + request.toString();
+      ExitUtils.terminate(1, errorMessage, ex, LOG);
+    }
+    return omClientResponse.getOMResponse();
   }
 
   public void stop() {

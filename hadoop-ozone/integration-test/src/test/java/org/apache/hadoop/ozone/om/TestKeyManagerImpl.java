@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import com.google.common.base.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.StorageUnit;
@@ -72,6 +71,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -83,8 +83,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -205,10 +203,7 @@ public class TestKeyManagerImpl {
         .setBucketName(bucketName)
         .build();
 
-    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-    metadataManager.getBucketTable().put(bucketKey, bucketInfo);
-    metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(bucketInfo), 1L));
+    TestOMRequestUtils.addBucketToOM(metadataManager, bucketInfo);
   }
 
   private static void createVolume(String volumeName) throws IOException {
@@ -217,10 +212,7 @@ public class TestKeyManagerImpl {
         .setAdminName("bilbo")
         .setOwnerName("bilbo")
         .build();
-    String volumeKey = metadataManager.getVolumeKey(volumeName);
-    metadataManager.getVolumeTable().put(volumeKey, volumeArgs);
-    metadataManager.getVolumeTable().addCacheEntry(new CacheKey<>(volumeKey),
-        new CacheValue<>(Optional.of(volumeArgs), 1L));
+    TestOMRequestUtils.addVolumeToOM(metadataManager, volumeArgs);
   }
 
   @Test

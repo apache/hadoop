@@ -496,4 +496,37 @@ public final class TestOMRequestUtils {
         .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
         .setClientId(UUID.randomUUID().toString()).build();
   }
+
+  /**
+   * Add the Bucket information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omBucketInfo
+   * @throws IOException
+   */
+  public static void addBucketToOM(OMMetadataManager omMetadataManager,
+      OmBucketInfo omBucketInfo) throws IOException {
+    String dbBucketKey =
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().put(dbBucketKey, omBucketInfo);
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(dbBucketKey),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+  }
+
+  /**
+   * Add the Volume information to OzoneManager DB and Cache.
+   * @param omMetadataManager
+   * @param omVolumeArgs
+   * @throws IOException
+   */
+  public static void addVolumeToOM(OMMetadataManager omMetadataManager,
+      OmVolumeArgs omVolumeArgs) throws IOException {
+    String dbVolumeKey =
+        omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+    omMetadataManager.getVolumeTable().put(dbVolumeKey, omVolumeArgs);
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(dbVolumeKey),
+        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+  }
 }

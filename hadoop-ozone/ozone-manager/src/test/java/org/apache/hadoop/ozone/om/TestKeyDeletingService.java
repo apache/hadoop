@@ -27,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.server.ServerUtils;
@@ -35,6 +34,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.db.DBConfigFromFile;
 
@@ -42,8 +42,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -179,20 +177,17 @@ public class TestKeyDeletingService {
       // cheat here, just create a volume and bucket entry so that we can
       // create the keys, we put the same data for key and value since the
       // system does not decode the object
-      keyManager.getMetadataManager().getVolumeTable().addCacheEntry(
-          new CacheKey<>(volumeBytes),
-          new CacheValue<>(Optional.of(OmVolumeArgs.newBuilder()
+      TestOMRequestUtils.addVolumeToOM(keyManager.getMetadataManager(),
+          OmVolumeArgs.newBuilder()
               .setOwnerName("o")
               .setAdminName("a")
               .setVolume(volumeName)
-              .build()), 1L));
+              .build());
 
-      keyManager.getMetadataManager().getBucketTable().addCacheEntry(
-          new CacheKey<>(bucketBytes),
-          new CacheValue<>(Optional.of(OmBucketInfo.newBuilder()
-              .setVolumeName(volumeName)
+      TestOMRequestUtils.addBucketToOM(keyManager.getMetadataManager(),
+          OmBucketInfo.newBuilder().setVolumeName(volumeName)
               .setBucketName(bucketName)
-              .build()), 1L));
+              .build());
 
       OmKeyArgs arg =
           new OmKeyArgs.Builder()

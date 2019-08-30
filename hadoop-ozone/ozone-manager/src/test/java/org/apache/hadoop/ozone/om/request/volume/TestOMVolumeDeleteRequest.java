@@ -20,15 +20,12 @@ package org.apache.hadoop.ozone.om.request.volume;
 
 import java.util.UUID;
 
-import com.google.common.base.Optional;
 import org.junit.Assert;;
 import org.junit.Test;
 
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteVolumeRequest;
@@ -138,8 +135,7 @@ public class TestOMVolumeDeleteRequest extends TestOMVolumeRequest {
 
     OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName(volumeName).setBucketName(bucketName).build();
-    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+    TestOMRequestUtils.addBucketToOM(omMetadataManager, omBucketInfo);
 
     // Add user and volume to DB.
     TestOMRequestUtils.addUserToDB(volumeName, ownerName, omMetadataManager);

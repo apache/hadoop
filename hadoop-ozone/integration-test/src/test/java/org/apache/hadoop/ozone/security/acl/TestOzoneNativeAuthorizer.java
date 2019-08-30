@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
-import com.google.common.base.Optional;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -40,12 +39,11 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -211,10 +209,7 @@ public class TestOzoneNativeAuthorizer {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .build();
-    metadataManager.getBucketTable().addCacheEntry(
-        new CacheKey<>(metadataManager.getBucketKey(
-            bucketInfo.getVolumeName(), bucketInfo.getBucketName())),
-        new CacheValue<>(Optional.of(bucketInfo), 1L));
+    TestOMRequestUtils.addBucketToOM(metadataManager, bucketInfo);
     buckObj = new OzoneObjInfo.Builder()
         .setVolumeName(vol)
         .setBucketName(buck)
@@ -229,9 +224,7 @@ public class TestOzoneNativeAuthorizer {
         .setAdminName("bilbo")
         .setOwnerName("bilbo")
         .build();
-    metadataManager.getVolumeTable().addCacheEntry(
-        new CacheKey<>(metadataManager.getVolumeKey(volumeName)),
-        new CacheValue<>(Optional.of(volumeArgs), 1L));
+    TestOMRequestUtils.addVolumeToOM(metadataManager, volumeArgs);
     volObj = new OzoneObjInfo.Builder()
         .setVolumeName(vol)
         .setResType(VOLUME)

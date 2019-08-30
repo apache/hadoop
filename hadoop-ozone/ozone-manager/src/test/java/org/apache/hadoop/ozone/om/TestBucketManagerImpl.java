@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.om;
 import java.io.File;
 import java.io.IOException;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -31,8 +30,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.*;
 
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -215,11 +213,8 @@ public class TestBucketManagerImpl {
   }
 
   private void createBucket(OMMetadataManager metadataManager,
-      OmBucketInfo bucketInfo) {
-    metadataManager.getBucketTable().addCacheEntry(
-        new CacheKey<>(metadataManager.getBucketKey(bucketInfo.getVolumeName(),
-            bucketInfo.getBucketName())),
-        new CacheValue<>(Optional.of(bucketInfo), 1L));
+      OmBucketInfo bucketInfo) throws IOException {
+    TestOMRequestUtils.addBucketToOM(metadataManager, bucketInfo);
   }
 
   @Test
