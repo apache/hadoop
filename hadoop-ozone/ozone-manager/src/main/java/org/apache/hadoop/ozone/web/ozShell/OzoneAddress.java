@@ -93,7 +93,7 @@ public class OzoneAddress {
     } else if (scheme.equals(OZONE_RPC_SCHEME)) {
       if (ozoneURI.getHost() != null && !ozoneURI.getAuthority()
           .equals(EMPTY_HOST)) {
-        if (OmUtils.isOmHAEnabled(conf, ozoneURI.getHost())) {
+        if (OmUtils.isOmHAServiceId(conf, ozoneURI.getHost())) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost(), conf);
         } else if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());

@@ -130,7 +130,7 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       int replicationCountConf = conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
           OzoneConfigKeys.OZONE_REPLICATION_DEFAULT);
 
-      if (OmUtils.isOmHAEnabled(conf, omHost)) {
+      if (OmUtils.isOmHAServiceId(conf, omHost)) {
         // omHost is listed as one of the service ids in the config,
         // thus we should treat omHost as omServiceId
         this.ozoneClient =

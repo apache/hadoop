@@ -138,24 +138,23 @@ public final class OmUtils {
   }
 
   /**
-   * Returns true if HA for OzoneManager is configured.
-   * This defines "OM HA is enabled" = OZONE_OM_SERVICE_IDS_KEY exist in config,
-   * even if the value is empty string.
-   * TODO: Double check conf.get() returns null when config value is empty.
+   * Returns true if OZONE_OM_SERVICE_IDS_KEY is defined and not empty.
    * @param conf Configuration
-   * @return true if HA is configured in the configuration; else false.
+   * @return true if OZONE_OM_SERVICE_IDS_KEY is defined and not empty;
+   * else false.
    */
-  public static boolean isOmHAEnabled(Configuration conf) {
-    return conf.get(OZONE_OM_SERVICE_IDS_KEY) != null;
+  public static boolean isServiceIdsDefined(Configuration conf) {
+    String val = conf.get(OZONE_OM_SERVICE_IDS_KEY);
+    return val != null && val.length() > 0;
   }
 
   /**
    * Returns true if HA for OzoneManager is configured for the given service id.
    * @param conf Configuration
-   * @param serviceId Service ID
+   * @param serviceId OM HA cluster service ID
    * @return true if HA is configured in the configuration; else false.
    */
-  public static boolean isOmHAEnabled(Configuration conf, String serviceId) {
+  public static boolean isOmHAServiceId(Configuration conf, String serviceId) {
     Collection<String> omServiceIds = conf.getTrimmedStringCollection(
         OZONE_OM_SERVICE_IDS_KEY);
     return omServiceIds.contains(serviceId);
