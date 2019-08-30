@@ -208,9 +208,10 @@ public class NNStorageRetentionManager {
   /**
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
-  static interface StoragePurger {
+  interface StoragePurger {
     void purgeLog(EditLogFile log);
     void purgeImage(FSImageFile image);
+    void markStale(EditLogFile log);
   }
   
   static class DeletionStoragePurger implements StoragePurger {
@@ -233,6 +234,16 @@ public class NNStorageRetentionManager {
         // next time we swing through this directory.
         LOG.warn("Could not delete " + file);
       }      
+    }
+
+    public void markStale(EditLogFile log){
+      try {
+        log.moveAsideStaleInprogressFile();
+      } catch (IOException e) {
+        // It is ok to just log the rename failure and go on, we will try next
+        // time just as with deletions.
+        LOG.warn("Could not mark " + log + " as stale", e);
+      }
     }
   }
 
