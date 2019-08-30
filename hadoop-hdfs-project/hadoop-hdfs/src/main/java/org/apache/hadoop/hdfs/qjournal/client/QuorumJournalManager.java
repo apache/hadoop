@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJourna
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
@@ -632,13 +633,22 @@ public class QuorumJournalManager implements JournalManager {
 
         // If it's bounded by durable Txns, endTxId could not be larger
         // than committedTxnId. This ensures the consistency.
+        // An older version JN may not return the field committedTxnId,
+        // in which case it is set to INVALID_TXID.
         if (onlyDurableTxns && inProgressOk) {
-          endTxId = Math.min(endTxId, committedTxnId);
-          if (endTxId < remoteLog.getStartTxId()) {
-            LOG.warn("Found endTxId (" + endTxId + ") that is less than " +
-                "the startTxId (" + remoteLog.getStartTxId() +
-                ") - setting it to startTxId.");
+          if (committedTxnId == HdfsServerConstants.INVALID_TXID) {
+            LOG.warn("Received undefined committed txn id, "
+                + " NN and JN are on different version? "
+                + "- seting to startTxId");
             endTxId = remoteLog.getStartTxId();
+          } else {
+            endTxId = Math.min(endTxId, committedTxnId);
+            if (endTxId < remoteLog.getStartTxId()) {
+              LOG.warn("Found endTxId (" + endTxId + ") that is less than " +
+                  "the startTxId (" + remoteLog.getStartTxId() +
+                  ") - setting it to startTxId.");
+              endTxId = remoteLog.getStartTxId();
+            }
           }
         }
 

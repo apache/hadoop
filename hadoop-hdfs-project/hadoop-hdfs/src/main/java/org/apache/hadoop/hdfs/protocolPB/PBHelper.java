@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -292,8 +293,13 @@ public class PBHelper {
     for (RemoteEditLogProto l : manifest.getLogsList()) {
       logs.add(convert(l));
     }
-    return new RemoteEditLogManifest(logs,
-            manifest.getCommittedTxnId());
+    long committedId = HdfsServerConstants.INVALID_TXID;
+    if (manifest.hasCommittedTxnId()) {
+      // An older version JN may not have this field, in which case committedId
+      // is set to INVALID_TXID.
+      committedId = manifest.getCommittedTxnId();
+    }
+    return new RemoteEditLogManifest(logs, committedId);
   }
 
   public static CheckpointCommandProto convert(CheckpointCommand cmd) {
