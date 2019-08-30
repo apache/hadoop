@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
@@ -104,9 +106,13 @@ public class PutKeyHandler extends Handler {
         conf.get(OZONE_REPLICATION_TYPE, OZONE_REPLICATION_TYPE_DEFAULT));
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
+    Map<String, String> keyMetadata = new HashMap<>();
+    if(Boolean.valueOf(bucket.getMetadata().get(OzoneConsts.GDPR_FLAG))){
+      keyMetadata.put(OzoneConsts.GDPR_FLAG, Boolean.TRUE.toString());
+    }
     OzoneOutputStream outputStream = bucket
         .createKey(keyName, dataFile.length(), replicationType,
-            replicationFactor, new HashMap<>());
+            replicationFactor, keyMetadata);
     FileInputStream fileInputStream = new FileInputStream(dataFile);
     IOUtils.copyBytes(fileInputStream, outputStream, (int) conf
         .getStorageSize(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT,
