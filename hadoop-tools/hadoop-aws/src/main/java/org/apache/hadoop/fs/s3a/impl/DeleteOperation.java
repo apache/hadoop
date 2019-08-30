@@ -110,7 +110,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
  * those pools are large enough to cope the extra load.
  * There are also some opportunities to explore in
  * {@code DynamoDBMetadataStore} with batching delete requests
- * in the DDB APIS.
+ * in the DDB APIs.
  */
 public class DeleteOperation extends AbstractStoreOperation {
 
@@ -405,7 +405,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * @param deletePath nullable path of the key
    * @throws IOException failure of the previous batch of deletions.
    */
-  protected void queueForDeletion(final String key,
+  private void queueForDeletion(final String key,
       @Nullable final Path deletePath) throws IOException {
     LOG.debug("Got object to delete: \"{}\"", key);
     keys.add(new DeleteObjectsRequest.KeyVersion(key));
@@ -425,7 +425,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    *
    * @throws IOException failure of the previous batch of deletions.
    */
-  protected void deleteNextBatch()
+  private void deleteNextBatch()
       throws IOException {
     // delete a single page of keys and the metadata.
     // block for any previous batch.
@@ -437,7 +437,7 @@ public class DeleteOperation extends AbstractStoreOperation {
     resetDeleteList();
   }
 
-  protected void resetDeleteList() {
+  private void resetDeleteList() {
     keys = new ArrayList<>(pageSize);
     paths = new ArrayList<>(pageSize);
   }
@@ -450,7 +450,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  protected void deleteObjectAtPath(final Path path,
+  private void deleteObjectAtPath(final Path path,
       final String key,
       final boolean isFile)
       throws IOException {
@@ -469,7 +469,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * @param pathList paths to update the metastore with.
    * @return the submitted future or null
    */
-  protected CompletableFuture<Void> submitDelete(
+  private CompletableFuture<Void> submitDelete(
       final List<DeleteObjectsRequest.KeyVersion> keyList,
       final List<Path> pathList) {
 
@@ -542,7 +542,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * @param future future
    * @throws IOException any exception raised in the callable
    */
-  protected void maybeAwaitCompletion(
+  private void maybeAwaitCompletion(
       @Nullable final CompletableFuture<Void> future)
       throws IOException {
     if (future != null) {
