@@ -60,6 +60,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KE
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,6 +135,30 @@ public final class OmUtils {
 
     return NetUtils.createSocketAddr(
         host.get() + ":" + getOmRpcPort(conf));
+  }
+
+  /**
+   * Returns true if HA for OzoneManager is configured.
+   * This defines "OM HA is enabled" = OZONE_OM_SERVICE_IDS_KEY exist in config,
+   * even if the value is empty string.
+   * TODO: Double check conf.get() returns null when config value is empty.
+   * @param conf Configuration
+   * @return true if HA is configured in the configuration; else false.
+   */
+  public static boolean isOmHAEnabled(Configuration conf) {
+    return conf.get(OZONE_OM_SERVICE_IDS_KEY) != null;
+  }
+
+  /**
+   * Returns true if HA for OzoneManager is configured for the given service id.
+   * @param conf Configuration
+   * @param serviceId Service ID
+   * @return true if HA is configured in the configuration; else false.
+   */
+  public static boolean isOmHAEnabled(Configuration conf, String serviceId) {
+    Collection<String> omServiceIds = conf.getTrimmedStringCollection(
+        OZONE_OM_SERVICE_IDS_KEY);
+    return omServiceIds.contains(serviceId);
   }
 
   public static int getOmRpcPort(Configuration conf) {
