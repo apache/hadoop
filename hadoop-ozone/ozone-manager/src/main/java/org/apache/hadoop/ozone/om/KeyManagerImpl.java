@@ -483,7 +483,6 @@ public class KeyManagerImpl implements KeyManager {
     OmKeyInfo keyInfo = null;
     if (keyArgs.getIsMultipartKey()) {
       keyInfo = prepareMultipartKeyInfo(keyArgs, size, locations, encInfo);
-      //TODO args.getMetadata
     } else if (metadataManager.getKeyTable().isExist(dbKeyName)) {
       keyInfo = metadataManager.getKeyTable().get(dbKeyName);
       // the key already exist, the new blocks will be added as new version
@@ -491,6 +490,9 @@ public class KeyManagerImpl implements KeyManager {
       // as its previous version
       keyInfo.addNewVersion(locations, true);
       keyInfo.setDataSize(size + keyInfo.getDataSize());
+    }
+    if(keyInfo != null) {
+      keyInfo.setMetadata(keyArgs.getMetadata());
     }
     return keyInfo;
   }
@@ -556,8 +558,13 @@ public class KeyManagerImpl implements KeyManager {
         .setDataSize(size)
         .setReplicationType(type)
         .setReplicationFactor(factor)
-        .setFileEncryptionInfo(encInfo);
+        .setFileEncryptionInfo(encInfo)
+        .addAllMetadata(keyArgs.getMetadata());
     builder.setAcls(getAclsForKey(keyArgs, omBucketInfo));
+
+    if(Boolean.valueOf(omBucketInfo.getMetadata().get(OzoneConsts.GDPR_FLAG))) {
+      builder.addMetadata(OzoneConsts.GDPR_FLAG, Boolean.TRUE.toString());
+    }
     return builder.build();
   }
 

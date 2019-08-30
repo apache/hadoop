@@ -313,6 +313,7 @@ public final class OzoneConsts {
   public static final int S3_BUCKET_MAX_LENGTH = 64;
 
   //GDPR
+  public static final String GDPR_FLAG = "gdprEnabled";
   public static final String GDPR_ALGORITHM_NAME = "AES";
   public static final int GDPR_RANDOM_SECRET_LENGTH = 32;
   public static final String GDPR_CHARSET = "UTF-8";
