@@ -67,6 +67,7 @@ public class Node2ObjectsMap<T> {
    * @param datanodeID   -- Datanode UUID
    * @param containerIDs - List of ContainerIDs.
    */
+  @VisibleForTesting
   public void insertNewDatanode(UUID datanodeID, Set<T> containerIDs)
       throws SCMException {
     Preconditions.checkNotNull(containerIDs);
@@ -83,7 +84,8 @@ public class Node2ObjectsMap<T> {
    *
    * @param datanodeID - Datanode ID.
    */
-  void removeDatanode(UUID datanodeID) {
+  @VisibleForTesting
+  public void removeDatanode(UUID datanodeID) {
     Preconditions.checkNotNull(datanodeID);
     dn2ObjectMap.computeIfPresent(datanodeID, (k, v) -> null);
   }

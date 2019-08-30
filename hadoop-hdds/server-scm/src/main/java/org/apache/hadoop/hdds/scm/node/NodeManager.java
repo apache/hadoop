@@ -212,5 +212,5 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * Get cluster map as in network topology for this node manager.
    * @return cluster map
    */
-  NetworkTopology getClusterMap();
+  NetworkTopology getClusterNetworkTopologyMap();
 }

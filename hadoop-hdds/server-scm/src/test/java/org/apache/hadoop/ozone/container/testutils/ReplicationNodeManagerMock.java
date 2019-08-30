@@ -339,7 +339,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   @Override
-  public NetworkTopology getClusterMap() {
+  public NetworkTopology getClusterNetworkTopologyMap() {
     return null;
   }
 }

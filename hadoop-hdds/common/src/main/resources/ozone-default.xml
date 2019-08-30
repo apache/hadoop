@@ -849,6 +849,13 @@
     </description>
   </property>
   <property>
+    <name>ozone.scm.datanode.max.pipeline.engagement</name>
+    <value>5</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>Max number of pipelines per datanode can be engaged in.
+    </description>
+  </property>
+  <property>
     <name>ozone.scm.container.size</name>
     <value>5GB</value>
     <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>

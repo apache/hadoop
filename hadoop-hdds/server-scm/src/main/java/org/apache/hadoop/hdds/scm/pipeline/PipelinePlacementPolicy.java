@@ -42,10 +42,8 @@ import java.util.stream.Collectors;
  * and network topology to supply pipeline creation.
  * <p>
  * 1. get a list of healthy nodes
- * 2. filter out viable nodes that either don't have enough size left
- * or are too heavily engaged in other pipelines
- * 3. Choose an anchor node among the viable nodes which follows the algorithm
- * described @SCMContainerPlacementCapacity
+ * 2. filter out nodes that are not too heavily engaged in other pipelines
+ * 3. Choose an anchor node among the viable nodes.
  * 4. Choose other nodes around the anchor node based on network topology
  */
 public final class PipelinePlacementPolicy extends SCMCommonPolicy {
@@ -57,8 +55,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
   private final int heavyNodeCriteria;
 
   /**
-   * Constructs a Container Placement with considering only capacity.
-   * That is this policy tries to place containers based on node weight.
+   * Constructs a pipeline placement with considering network topology,
+   * load balancing and rack awareness.
    *
    * @param nodeManager Node Manager
    * @param conf        Configuration
@@ -79,31 +77,25 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
    * @param datanodeDetails DatanodeDetails
    * @return true if we have enough space.
    */
+  @VisibleForTesting
   boolean meetCriteria(DatanodeDetails datanodeDetails,
-                       long sizeRequired) {
-    SCMNodeMetric nodeMetric = nodeManager.getNodeStat(datanodeDetails);
-    boolean hasEnoughSpace = (nodeMetric != null) && (nodeMetric.get() != null)
-        && nodeMetric.get().getRemaining().hasResources(sizeRequired);
-    boolean loadNotTooHeavy =
-        (nodeManager.getPipelinesCount(datanodeDetails) <= heavyNodeCriteria);
-    return hasEnoughSpace && loadNotTooHeavy;
+                       long heavyNodeLimit) {
+    return (nodeManager.getPipelinesCount(datanodeDetails) <= heavyNodeLimit);
   }
 
   /**
    * Filter out viable nodes based on
    * 1. nodes that are healthy
-   * 2. nodes that have enough space
-   * 3. nodes that are not too heavily engaged in other pipelines
+   * 2. nodes that are not too heavily engaged in other pipelines
    *
    * @param excludedNodes - excluded nodes
    * @param nodesRequired - number of datanodes required.
-   * @param sizeRequired  - size required for the container or block.
    * @return a list of viable nodes
    * @throws SCMException when viable nodes are not enough in numbers
    */
   List<DatanodeDetails> filterViableNodes(
-      List<DatanodeDetails> excludedNodes, int nodesRequired,
-      final long sizeRequired) throws SCMException {
+      List<DatanodeDetails> excludedNodes, int nodesRequired)
+      throws SCMException {
     // get nodes in HEALTHY state
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
@@ -112,14 +104,14 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
     }
     String msg;
     if (healthyNodes.size() == 0) {
-      msg = "No healthy node found to allocate container.";
+      msg = "No healthy node found to allocate pipeline.";
       LOG.error(msg);
       throw new SCMException(msg, SCMException.ResultCodes
           .FAILED_TO_FIND_HEALTHY_NODES);
     }
 
     if (healthyNodes.size() < nodesRequired) {
-      msg = String.format("Not enough healthy nodes to allocate container. %d "
+      msg = String.format("Not enough healthy nodes to allocate pipeline. %d "
               + " datanodes required. Found %d",
           nodesRequired, healthyNodes.size());
       LOG.error(msg);
@@ -127,18 +119,19 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
     }
 
-    // filter nodes that meet the size and pipeline engagement criteria
+    // filter nodes that meet the size and pipeline engagement criteria.
+    // Pipeline placement doesn't take node space left into account.
     List<DatanodeDetails> healthyList = healthyNodes.stream().filter(d ->
-        meetCriteria(d, sizeRequired)).collect(Collectors.toList());
+        meetCriteria(d, heavyNodeCriteria)).collect(Collectors.toList());
 
     if (healthyList.size() < nodesRequired) {
-      msg = String.format("Unable to find enough nodes that meet the space " +
-              "requirement of %d bytes in healthy node set." +
+      msg = String.format("Unable to find enough nodes that meet " +
+              "the criteria that cannot engage in more than %d pipelines." +
               " Nodes required: %d Found: %d",
-          sizeRequired, nodesRequired, healthyList.size());
+          heavyNodeCriteria, nodesRequired, healthyList.size());
       LOG.error(msg);
       throw new SCMException(msg,
-          SCMException.ResultCodes.FAILED_TO_FIND_NODES_WITH_SPACE);
+          SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
     }
     return healthyList;
   }
@@ -159,7 +152,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
       int nodesRequired, final long sizeRequired) throws SCMException {
     // get a list of viable nodes based on criteria
     List<DatanodeDetails> healthyNodes =
-        filterViableNodes(excludedNodes, nodesRequired, sizeRequired);
+        filterViableNodes(excludedNodes, nodesRequired);
 
     List<DatanodeDetails> results = new ArrayList<>();
 
@@ -181,6 +174,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
           chooseNextNode(healthyNodes, excludedNodes, anchor);
       if (pick != null) {
         results.add(pick);
+        // exclude the picked node for next time
+        excludedNodes.add(pick);
       }
     }
 
@@ -227,21 +222,30 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
     return datanodeDetails;
   }
 
-  private DatanodeDetails chooseNodeFromNetworkTopology(
+  /**
+   * Choose node based on network topology.
+   * @param networkTopology network topology
+   * @param anchor anchor datanode to start with
+   * @param excludedNodes excluded datanodes
+   * @return chosen datanode
+   */
+  @VisibleForTesting
+  protected DatanodeDetails chooseNodeFromNetworkTopology(
       NetworkTopology networkTopology, DatanodeDetails anchor,
       List<DatanodeDetails> excludedNodes) {
+    if (networkTopology == null) {
+      return null;
+    }
+
     if (excludedNodes == null) {
       return (DatanodeDetails)networkTopology.chooseRandom(
-          anchor.getNetworkFullPath(), new ArrayList<>());
+          anchor.getNetworkLocation(), new ArrayList<>());
     }
 
     Collection<Node> excluded = new ArrayList<>();
-    excluded.addAll(excludedNodes);
+    excluded.add(anchor);
     Node pick = networkTopology.chooseRandom(
-        anchor.getNetworkFullPath(), excluded);
-    if (pick == null) {
-      return null;
-    }
+        anchor.getNetworkLocation(), excluded);
     DatanodeDetails pickedNode = (DatanodeDetails) pick;
     // exclude the picked node for next time
     excludedNodes.add(pickedNode);
@@ -261,11 +265,13 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
       List<DatanodeDetails> healthyNodes, List<DatanodeDetails> excludedNodes,
       DatanodeDetails anchor) {
     // if network topology is not present,
-    // simply choose next node the same way as choosing anchor
-    if (nodeManager.getClusterMap() == null) {
+    // simply choose next node the same way as choosing anchor.
+    if (nodeManager.getClusterNetworkTopologyMap() == null) {
       return chooseNode(healthyNodes);
     }
+    // anchor should be excluded.
+    excludedNodes.add(anchor);
     return chooseNodeFromNetworkTopology(
-        nodeManager.getClusterMap(), anchor, excludedNodes);
+        nodeManager.getClusterNetworkTopologyMap(), anchor, excludedNodes);
   }
 }

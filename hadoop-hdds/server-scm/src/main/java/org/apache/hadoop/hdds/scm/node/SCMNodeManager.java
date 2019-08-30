@@ -620,7 +620,7 @@ public class SCMNodeManager implements NodeManager {
    * @return cluster map
    */
   @Override
-  public NetworkTopology getClusterMap() {
+  public NetworkTopology getClusterNetworkTopologyMap() {
     return clusterMap;
   }
 
