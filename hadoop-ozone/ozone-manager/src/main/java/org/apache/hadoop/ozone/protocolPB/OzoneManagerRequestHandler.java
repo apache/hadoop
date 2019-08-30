@@ -29,6 +29,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -585,6 +586,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
         .setAcls(keyArgs.getAclsList().stream().map(a ->
             OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyArgs.getMetadataList()))
         .build();
     if (keyArgs.hasDataSize()) {
       omKeyArgs.setDataSize(keyArgs.getDataSize());
