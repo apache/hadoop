@@ -170,7 +170,10 @@ public class RenameOperation extends AbstractStoreOperation {
   /**
    * Wait for the active copies to complete then reset the list.
    * @param reason for messages
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
    */
+  @Retries.OnceTranslated
   private void completeActiveCopies(String reason) throws IOException {
     LOG.debug("Waiting for {} active copies to complete: {}",
         activeCopies.size(), reason);
@@ -194,6 +197,7 @@ public class RenameOperation extends AbstractStoreOperation {
    * @param reason reason for logs
    * @throws IOException failure.
    */
+  @Retries.RetryTranslated
   private void completeActiveCopiesAndDeleteSources(String reason)
       throws IOException {
     completeActiveCopies(reason);
@@ -330,7 +334,8 @@ public class RenameOperation extends AbstractStoreOperation {
     final RemoteIterator<S3ALocatedFileStatus> iterator =
         callbacks.listFilesAndEmptyDirectories(parentPath,
             sourceStatus,
-            true, true);
+            true,
+            true);
     while (iterator.hasNext()) {
       // get the next entry in the listing.
       S3ALocatedFileStatus child = iterator.next();
@@ -476,7 +481,7 @@ public class RenameOperation extends AbstractStoreOperation {
    * @param paths list of paths matching the keys to delete 1:1.
    * @throws IOException failure
    */
-  @Retries.RetryMixed
+  @Retries.RetryTranslated
   private void removeSourceObjects(
       final List<DeleteObjectsRequest.KeyVersion> keys,
       final List<Path> paths)
@@ -486,8 +491,12 @@ public class RenameOperation extends AbstractStoreOperation {
       // remove the keys
       // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
-      callbacks.removeKeys(keys, false, undeletedObjects,
-          renameTracker.getOperationState(), true);
+      callbacks.removeKeys(
+          keys,
+          false,
+          undeletedObjects,
+          renameTracker.getOperationState(),
+          true);
       // and clear the list.
     } catch (AmazonClientException | IOException e) {
       // Failed.
@@ -495,7 +504,8 @@ public class RenameOperation extends AbstractStoreOperation {
       // removeKeys will have already purged the metastore of
       // all keys it has known to delete; this is just a final
       // bit of housekeeping and a chance to tune exception
-      // reporting
+      // reporting.
+      // The returned IOE is rethrown.
       throw renameTracker.deleteFailed(e, paths, undeletedObjects);
     }
     renameTracker.sourceObjectsDeleted(paths);

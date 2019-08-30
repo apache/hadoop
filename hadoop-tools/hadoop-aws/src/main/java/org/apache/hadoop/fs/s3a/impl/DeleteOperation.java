@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -50,7 +51,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
 /**
- * Implementation of the delete operation.
+ * Implementation of the delete() operation.
  * <p>
  * How S3Guard/Store inconsistency is handled:
  * <ol>
@@ -91,6 +92,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
  * DELETE calls) then update the S3Guard table is done in an async
  * operation so that it can overlap with the LIST calls for data.
  * However, only one single operation is queued at a time.
+ * <p>
  * Executing more than one batch delete is possible, it just
  * adds complexity in terms of error handling as well as in
  * the datastructures used to track outstanding operations.
@@ -105,9 +107,11 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
  * Any exploration of options here MUST be done with performance
  * measurements taken from test runs in EC2 against local DDB and S3 stores,
  * so as to ensure network latencies do not skew the results.
+ * <p>
  * 2. Note that as the DDB thread/connection pools will be shared across
  * all active delete operations, speedups will be minimal unless
  * those pools are large enough to cope the extra load.
+ * <p>
  * There are also some opportunities to explore in
  * {@code DynamoDBMetadataStore} with batching delete requests
  * in the DDB APIs.
@@ -124,27 +128,27 @@ public class DeleteOperation extends AbstractStoreOperation {
   private final AtomicBoolean executed = new AtomicBoolean(false);
 
   /**
-   * pre-fetched source status.
+   * Pre-fetched source status.
    */
   private final S3AFileStatus status;
 
   /**
-   * recursive delete?
+   * Recursive delete?
    */
   private final boolean recursive;
 
   /**
-   * callback provider.
+   * Callback provider.
    */
   private final OperationCallbacks callbacks;
 
   /**
-   * number of entries in a page.
+   * Number of entries in a page.
    */
   private final int pageSize;
 
   /**
-   * metastore -never null but may be the NullMetadataStore.
+   * Metastore -never null but may be the NullMetadataStore.
    */
   private final MetadataStore metadataStore;
 
@@ -207,7 +211,7 @@ public class DeleteOperation extends AbstractStoreOperation {
         "page size out of range: %d", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
-    executor = context.createThrottledExecutor(2);
+    executor = context.createThrottledExecutor(1);
   }
 
   public long getFilesDeleted() {
@@ -276,7 +280,7 @@ public class DeleteOperation extends AbstractStoreOperation {
         LOG.debug("deleting empty directory {}", path);
         deleteObjectAtPath(path, key, false);
       } else {
-        deleteDirectory(path, key);
+        deleteDirectoryTree(path, key);
       }
 
     } else {
@@ -289,14 +293,28 @@ public class DeleteOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Directory delete: combine paginated list of files with single or
-   * multiple object delete calls.
-   *
+   * Delete a directory tree.
+   * <p>
+   * This is done by asking the filesystem for a list of all objects under
+   * the directory path, without using any S3Guard tombstone markers to hide
+   * objects which may be returned in S3 listings but which are considered
+   * deleted.
+   * <p>
+   * Once the first {@link #pageSize} worth of objects has been listed, a batch
+   * delete is queued for execution in a separate thread; subsequent batches
+   * block waiting for the first call to complete or fail before again,
+   * being deleted in the separate thread.
+   * <p>
+   * After all listed objects are queued for deletion,
+   * if the path is considered authoritative in the client, a final scan
+   * of S3 <i>without S3Guard</i> is executed, so as to find and delete
+   * any out-of-band objects in the tree.
    * @param path directory path
    * @param dirKey directory key
    * @throws IOException failure
    */
-  protected void deleteDirectory(final Path path,
+  @Retries.RetryTranslated
+  protected void deleteDirectoryTree(final Path path,
       final String dirKey) throws IOException {
     // create an operation state so that the store can manage the bulk
     // operation if it needs to
@@ -325,7 +343,7 @@ public class DeleteOperation extends AbstractStoreOperation {
         queueForDeletion(child);
       }
       LOG.debug("Deleting final batch of listed files");
-      deleteNextBatch();
+      submitNextBatch();
       maybeAwaitCompletion(deleteFuture);
 
       // if s3guard is authoritative we follow up with a bulk list and
@@ -352,18 +370,17 @@ public class DeleteOperation extends AbstractStoreOperation {
           queueForDeletion(deletionKey(objects.next()), null);
         }
         if (extraFilesDeleted > 0) {
-          LOG.debug("Raw S3 Scan found {} file(s) to delete",
+          LOG.debug("Raw S3 Scan found {} extra file(s) to delete",
               extraFilesDeleted);
           // there is no more data:
           // await any ongoing operation
-          deleteNextBatch();
+          submitNextBatch();
           maybeAwaitCompletion(deleteFuture);
         }
       }
 
       // final cleanup of the directory tree in the metastore, including the
       // directory entry itself.
-
       try (DurationInfo ignored2 =
                new DurationInfo(LOG, false, "Delete metastore")) {
         metadataStore.deleteSubtree(path, operationState);
@@ -376,7 +393,7 @@ public class DeleteOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Build an S3 key for a delete request.
+   * Build an S3 key for a delete request,
    * possibly adding a "/" if it represents directory and it does
    * not have a trailing slash already.
    * @param stat status to build the key from
@@ -407,25 +424,24 @@ public class DeleteOperation extends AbstractStoreOperation {
    */
   private void queueForDeletion(final String key,
       @Nullable final Path deletePath) throws IOException {
-    LOG.debug("Got object to delete: \"{}\"", key);
+    LOG.debug("Adding object to delete: \"{}\"", key);
     keys.add(new DeleteObjectsRequest.KeyVersion(key));
     if (deletePath != null) {
       paths.add(deletePath);
     }
 
     if (keys.size() == pageSize) {
-      deleteNextBatch();
+      submitNextBatch();
     }
   }
 
   /**
    * Wait for the previous batch to finish then submit this page.
    * The lists of keys and pages are reset here.
-   * complete.
    *
    * @throws IOException failure of the previous batch of deletions.
    */
-  private void deleteNextBatch()
+  private void submitNextBatch()
       throws IOException {
     // delete a single page of keys and the metadata.
     // block for any previous batch.
@@ -437,24 +453,29 @@ public class DeleteOperation extends AbstractStoreOperation {
     resetDeleteList();
   }
 
+  /**
+   * Reset the lists of keys and paths so that a new batch of
+   * entries can built up.
+   */
   private void resetDeleteList() {
     keys = new ArrayList<>(pageSize);
     paths = new ArrayList<>(pageSize);
   }
 
   /**
-   * Delete file or dir marker.
+   * Delete a file or directory marker.
    * @param path path
    * @param key key
    * @param isFile is this a file?
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  private void deleteObjectAtPath(final Path path,
+  private void deleteObjectAtPath(
+      final Path path,
       final String key,
       final boolean isFile)
       throws IOException {
-    LOG.debug("delete: {} {}", isFile ? "file" : "dir marker", key);
+    LOG.debug("delete: {} {}", (isFile ? "file" : "dir marker"), key);
     filesDeleted++;
     callbacks.deleteObjectAtPath(path, key, isFile, operationState);
   }
@@ -463,7 +484,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * Delete a single page of keys and optionally the metadata.
    * For a large page, it is the metadata size which dominates.
    * Its possible to invoke this with empty lists of keys or paths.
-   * If both lists are empty no work is submitted.
+   * If both lists are empty no work is submitted and null is returned.
    *
    * @param keyList keys to delete.
    * @param pathList paths to update the metastore with.
@@ -497,6 +518,7 @@ public class DeleteOperation extends AbstractStoreOperation {
    * entries logged?
    * @throws IOException failure
    */
+  @Retries.RetryTranslated
   private void asyncDeleteAction(
       final BulkOperationState state,
       final List<DeleteObjectsRequest.KeyVersion> keyList,
@@ -508,8 +530,14 @@ public class DeleteOperation extends AbstractStoreOperation {
       DeleteObjectsResult result = null;
       List<Path> undeletedObjects = new ArrayList<>();
       if (!keyList.isEmpty()) {
-        result = callbacks.removeKeys(keyList, false, undeletedObjects,
-            state, !auditDeletedKeys);
+        result = Invoker.once("Remove S3 Keys",
+            status.getPath().toString(),
+            () -> callbacks.removeKeys(
+                keyList,
+                false,
+                undeletedObjects,
+                state,
+                !auditDeletedKeys));
       }
       if (!pathList.isEmpty()) {
         metadataStore.deletePaths(pathList, state);
@@ -540,7 +568,8 @@ public class DeleteOperation extends AbstractStoreOperation {
    * Block awaiting completion for any non-null future passed in;
    * No-op if a null arg was supplied.
    * @param future future
-   * @throws IOException any exception raised in the callable
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
    */
   private void maybeAwaitCompletion(
       @Nullable final CompletableFuture<Void> future)
