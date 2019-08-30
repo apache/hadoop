@@ -110,7 +110,6 @@ public class PutKeyHandler extends Handler {
     Map<String, String> keyMetadata = new HashMap<>();
     if(Boolean.valueOf(bucket.getMetadata().get(OzoneConsts.GDPR_FLAG))){
       keyMetadata.put(OzoneConsts.GDPR_FLAG, Boolean.TRUE.toString());
-      keyMetadata.putAll(new GDPRSymmetricKey().getKeyDetails());
     }
     OzoneOutputStream outputStream = bucket
         .createKey(keyName, dataFile.length(), replicationType,
