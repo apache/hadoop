@@ -17,17 +17,21 @@
  */
 package org.apache.hadoop.metrics2.sink;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.lib.Interns;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +51,8 @@ public class PrometheusMetricsSink implements MetricsSink {
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
   private static final Pattern DELIMITERS = Pattern.compile("[^a-zA-Z0-9]+");
+  private static final Pattern OP = Pattern.compile("op=([a-zA-Z]+)\\.");
+  private static final Pattern USER = Pattern.compile("user=(.+)\\.count");
 
   public PrometheusMetricsSink() {
   }
@@ -57,8 +63,17 @@ public class PrometheusMetricsSink implements MetricsSink {
       if (metrics.type() == MetricType.COUNTER
           || metrics.type() == MetricType.GAUGE) {
 
-        String key = prometheusName(
-            metricsRecord.name(), metrics.name());
+        final String recordName = metricsRecord.name();
+        final String metricsName = metrics.name();
+        final Collection<MetricsTag> recordTags = metricsRecord.tags();
+
+        String key;
+        // Move window_ms, op, user from metrics name to metrics tag
+        if (recordName.startsWith("NNTopUserOpCounts")) {
+          key = moveNameToTagsForNNTopMetric(recordName, metricsName, recordTags);
+        } else {
+          key = prometheusName(recordName, metrics.name());
+        }
 
         StringBuilder builder = new StringBuilder();
         builder.append("# TYPE ")
@@ -71,7 +86,7 @@ public class PrometheusMetricsSink implements MetricsSink {
         String sep = "";
 
         //add tags
-        for (MetricsTag tag : metricsRecord.tags()) {
+        for (MetricsTag tag : recordTags) {
           String tagName = tag.name().toLowerCase();
 
           //ignore specific tag which includes sub-hierarchy
@@ -90,6 +105,39 @@ public class PrometheusMetricsSink implements MetricsSink {
         metricLines.put(key, builder.toString());
 
       }
+    }
+  }
+
+  /**
+   *  Move window_ms, op, and user from metrics name to metrics labels
+   *  for better support of Prometheus.
+   */
+  @VisibleForTesting
+  String moveNameToTagsForNNTopMetric(
+      String recordName, String metricsName, Collection<MetricsTag> recordTags) {
+    // Get window_ms
+    final int pos = recordName.indexOf("=");
+    final String window = recordName.substring(pos+1);
+    recordTags.add(
+        Interns.tag(Interns.info("window_ms", "window_ms"), window));
+    // Get op
+    final Matcher opMatcher = OP.matcher(metricsName);
+    if (opMatcher.find()) {
+      final String op = opMatcher.group(1);
+      recordTags.add(Interns.tag(Interns.info("op", "op"), op));
+    }
+
+    if (metricsName.endsWith(".count")) {
+      // counts for each user
+      final Matcher userMatcher = USER.matcher(metricsName);
+      if (userMatcher.find()) {
+        final String user = userMatcher.group(1);
+        recordTags.add(Interns.tag(Interns.info("user", "user"), user));
+      }
+      return "NNTopUserOpCountsUser";
+    } else {
+      // total count of op
+      return "NNTopUserOpCountsTotal";
     }
   }
 

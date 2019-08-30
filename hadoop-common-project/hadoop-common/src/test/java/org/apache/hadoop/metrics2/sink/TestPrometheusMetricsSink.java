@@ -20,13 +20,18 @@ package org.apache.hadoop.metrics2.sink;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Collection;
+import java.util.HashSet;
 
 import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -119,6 +124,28 @@ public class TestPrometheusMetricsSink {
     Assert.assertEquals(
         "jvm_metrics_gc_count_g1_old_generation",
         sink.prometheusName(recordName, metricName));
+  }
+
+  @Test
+  public void testNNTopMetrics() {
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+    // op total metric
+    String recordName = "NNTopUserOpCounts.windowMs=100000";
+    String metricName = "op=liststatus.TotalCount";
+    Collection<MetricsTag> tags = new HashSet<>();
+    sink.moveNameToTagsForNNTopMetric(recordName, metricName, tags);
+    MetricsTag windowTag =
+        Interns.tag(Interns.info("window_ms", "window_ms"), "100000");
+    MetricsTag opTag = Interns.tag(Interns.info("op", "op"), "liststatus");
+    Assertions.assertThat(tags).contains(windowTag, opTag);
+
+    tags.clear();
+
+    // op user metric
+    metricName = "op=liststatus.user=alice.count";
+    sink.moveNameToTagsForNNTopMetric(recordName, metricName, tags);
+    MetricsTag userTag = Interns.tag(Interns.info("user", "user"), "alice");
+    Assertions.assertThat(tags).contains(windowTag, opTag, userTag);
   }
 
   /**
