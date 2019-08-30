@@ -32,8 +32,7 @@ class ReplicationWork extends BlockReconstructionWork {
     assert getSrcNodes().length == 1 :
         "There should be exactly 1 source node that have been selected";
     getSrcNodes()[0].incrementPendingReplicationWithoutTargets();
-    BlockManager.LOG
-        .debug("Creating a ReplicationWork to reconstruct " + block);
+    LOG.debug("Creating a ReplicationWork to reconstruct " + block);
   }
 
   @Override
