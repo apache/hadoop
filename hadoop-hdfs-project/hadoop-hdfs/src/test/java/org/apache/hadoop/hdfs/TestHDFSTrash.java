@@ -172,13 +172,13 @@ public class TestHDFSTrash {
 
   /**
    * Return a {@link Trash} instance using giving configuration.
-   * The trash root directory is set to an unique directory under
+   * The trash root directory is set to a unique directory under
    * {@link #TRASH_ROOT}. Use this method to isolate trash
    * directories for different users.
    */
   private Trash getPerUserTrash(UserGroupInformation ugi,
       FileSystem fileSystem, Configuration config) throws IOException {
-    // generate an unique path per instance
+    // generate a unique path per instance
     UUID trashId = UUID.randomUUID();
     StringBuffer sb = new StringBuffer()
         .append(ugi.getUserName())
