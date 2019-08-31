@@ -83,7 +83,7 @@ public class WebServer extends AbstractService {
           + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
     }
 
-    // Always load pseudo authentication filter to parse "user.name" in an URL
+    // Always load pseudo authentication filter to parse "user.name" in a URL
     // to identify an HTTP request's user.
     boolean hasHadoopAuthFilterInitializer = false;
     String filterInitializerConfKey = "hadoop.http.filter.initializers";

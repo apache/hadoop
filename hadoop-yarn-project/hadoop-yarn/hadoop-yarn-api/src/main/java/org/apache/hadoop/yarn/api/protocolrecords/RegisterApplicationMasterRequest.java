@@ -127,7 +127,7 @@ public abstract class RegisterApplicationMasterRequest {
    * default to http.
    * </p>
    * <p>
-   * Empty, null, "N/A" strings are all valid besides a real URL. In case an url
+   * Empty, null, "N/A" strings are all valid besides a real URL. In case a url
    * isn't explicitly passed, it defaults to "N/A" on the ResourceManager.
    * <p>
    *

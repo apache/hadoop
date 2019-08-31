@@ -3060,7 +3060,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Object resource = wrapper.getResource();
     boolean isRestricted = wrapper.isParserRestricted();
     XMLStreamReader2 reader = null;
-    if (resource instanceof URL) {                  // an URL resource
+    if (resource instanceof URL) {                  // a URL resource
       reader  = (XMLStreamReader2)parse((URL)resource, isRestricted);
     } else if (resource instanceof String) {        // a CLASSPATH resource
       URL url = getResource((String)resource);
