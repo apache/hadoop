@@ -463,9 +463,9 @@ public abstract class ChecksumFs extends FilterFs {
 
   @Override
   public void renameInternal(Path src, Path dst, boolean overwrite)
-    throws AccessControlException, FileAlreadyExistsException,
-    FileNotFoundException, ParentNotDirectoryException,
-    UnresolvedLinkException, IOException {
+      throws AccessControlException, FileAlreadyExistsException,
+      FileNotFoundException, ParentNotDirectoryException,
+      UnresolvedLinkException, IOException {
     Options.Rename renameOpt = Options.Rename.NONE;
     if (overwrite) {
       renameOpt = Options.Rename.OVERWRITE;

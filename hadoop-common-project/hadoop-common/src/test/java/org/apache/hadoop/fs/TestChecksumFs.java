@@ -30,6 +30,9 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/**
+ * This class tests the functionality of ChecksumFs.
+ */
 public class TestChecksumFs {
   private Configuration conf;
   private Path testRootDirPath;
@@ -39,7 +42,8 @@ public class TestChecksumFs {
   public void setUp() throws Exception {
     conf = getTestConfiguration();
     fc = FileContext.getFileContext(conf);
-    testRootDirPath = new Path(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+    testRootDirPath = new Path(GenericTestUtils.getRandomizedTestDir()
+        .getAbsolutePath());
     mkdirs(testRootDirPath);
   }
 
@@ -51,14 +55,14 @@ public class TestChecksumFs {
   public void testRenameFileToFile() throws Exception {
     Path srcPath = new Path(testRootDirPath, "testRenameSrc");
     Path dstPath = new Path(testRootDirPath, "testRenameDst");
-    verifyRename(srcPath, dstPath, false, false);
+    verifyRename(srcPath, dstPath, false);
   }
 
   @Test
   public void testRenameFileToFileWithOverwrite() throws Exception {
     Path srcPath = new Path(testRootDirPath, "testRenameSrc");
     Path dstPath = new Path(testRootDirPath, "testRenameDst");
-    verifyRename(srcPath, dstPath, false, true);
+    verifyRename(srcPath, dstPath, true);
   }
 
   @Test
@@ -66,7 +70,7 @@ public class TestChecksumFs {
     Path srcPath = new Path(testRootDirPath, "testRenameSrc");
     Path dstPath = new Path(testRootDirPath, "testRenameDir/testRenameDst");
     mkdirs(dstPath);
-    verifyRename(srcPath, dstPath, false, false);
+    verifyRename(srcPath, dstPath, false);
   }
 
   @Test
@@ -74,36 +78,30 @@ public class TestChecksumFs {
     Path srcPath = new Path(testRootDirPath, "testRenameSrc");
     Path dstPath = new Path(testRootDirPath, "testRenameDir/testRenameDst");
     mkdirs(dstPath);
-    verifyRename(srcPath, dstPath, false, true);
+    verifyRename(srcPath, dstPath, true);
   }
 
-  private void verifyRename(Path srcPath, Path dstPath, boolean dstIsDir, boolean overwrite)
-      throws Exception {
+  private void verifyRename(Path srcPath, Path dstPath,
+      boolean overwrite) throws Exception {
     AbstractFileSystem fs = fc.getDefaultFileSystem();
     assertTrue(fs instanceof LocalFs);
     ChecksumFs checksumFs = (ChecksumFs) fs;
 
-    fs.delete(srcPath,true);
-    fs.delete(dstPath,true);
-
-    Path realDstPath = dstPath;
-    if (dstIsDir) {
-      fc.mkdir(dstPath, FileContext.DEFAULT_PERM, true);
-      realDstPath = new Path(dstPath, srcPath.getName());
-    }
+    fs.delete(srcPath, true);
+    fs.delete(dstPath, true);
 
     Options.Rename renameOpt = Options.Rename.NONE;
     if (overwrite) {
       renameOpt = Options.Rename.OVERWRITE;
-      createTestFile(checksumFs, realDstPath, 2);
+      createTestFile(checksumFs, dstPath, 2);
     }
 
     // ensure file + checksum are moved
     createTestFile(checksumFs, srcPath, 1);
     assertTrue(fc.util().exists(checksumFs.getChecksumFile(srcPath)));
     checksumFs.rename(srcPath, dstPath, renameOpt);
-    assertTrue(fc.util().exists(checksumFs.getChecksumFile(realDstPath)));
-    try (FSDataInputStream is = fs.open(realDstPath)) {
+    assertTrue(fc.util().exists(checksumFs.getChecksumFile(dstPath)));
+    try (FSDataInputStream is = fs.open(dstPath)) {
       assertEquals(1, is.readInt());
     }
   }
@@ -117,8 +115,10 @@ public class TestChecksumFs {
     return conf;
   }
 
-  private void createTestFile(ChecksumFs fs, Path path, int content) throws IOException {
-    try (FSDataOutputStream fout = fs.create(path, EnumSet.of(CREATE, OVERWRITE),
+  private void createTestFile(ChecksumFs fs, Path path, int content)
+      throws IOException {
+    try (FSDataOutputStream fout = fs.create(path,
+        EnumSet.of(CREATE, OVERWRITE),
         Options.CreateOpts.perms(FsPermission.getDefault()))) {
       fout.writeInt(content);
     }
