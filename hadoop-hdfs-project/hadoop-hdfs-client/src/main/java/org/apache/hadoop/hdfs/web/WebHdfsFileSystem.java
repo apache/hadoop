@@ -619,7 +619,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   /**
-   * This class is for initialing a HTTP connection, connecting to server,
+   * This class is for initialing an HTTP connection, connecting to server,
    * obtaining a response, and also handling retry on failures.
    */
   abstract class AbstractRunner<T> {
@@ -672,7 +672,7 @@ public class WebHdfsFileSystem extends FileSystem
      * Two-step requests redirected to a DN
      *
      * Create/Append:
-     * Step 1) Submit a Http request with neither auto-redirect nor data.
+     * Step 1) Submit an Http request with neither auto-redirect nor data.
      * Step 2) Submit another Http request with the URL from the Location header
      * with data.
      *

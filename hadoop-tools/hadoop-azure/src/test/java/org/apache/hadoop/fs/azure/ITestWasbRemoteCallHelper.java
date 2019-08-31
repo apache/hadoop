@@ -520,7 +520,7 @@ public class ITestWasbRemoteCallHelper
     };
   }
 
-  /** Check that a HttpGet request is with given remote host. */
+  /** Check that an HttpGet request is with given remote host. */
   private static boolean checkHttpGetMatchHost(HttpGet g, String h) {
     return g != null && g.getURI().getHost().equals(h);
   }

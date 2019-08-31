@@ -49,8 +49,8 @@ import org.junit.Test;
  * HadoopTestCase class) and it starts a servlet engine that hosts
  * a servlet that will receive the notification of job finalization.
  *
- * The notification servlet returns a HTTP 400 the first time is called
- * and a HTTP 200 the second time, thus testing retry.
+ * The notification servlet returns an HTTP 400 the first time is called
+ * and an HTTP 200 the second time, thus testing retry.
  *
  * In both cases local file system is used (this is irrelevant for
  * the tested functionality)

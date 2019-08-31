@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletRequest;
  * authenticated {@link HttpServletRequest}s
  * <p>
  * The token can be serialized/deserialized to and from a string as it is sent
- * and received in HTTP client responses and requests as a HTTP cookie (this is
+ * and received in HTTP client responses and requests as an HTTP cookie (this is
  * done by the {@link AuthenticationFilter}).
  */
 public class AuthenticationToken extends AuthToken {

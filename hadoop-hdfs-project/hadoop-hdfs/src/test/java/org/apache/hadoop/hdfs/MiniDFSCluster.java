@@ -2636,7 +2636,7 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /**
-   * @return a http URL
+   * @return an http URL
    */
   public String getHttpUri(int nnIndex) {
     return "http://"

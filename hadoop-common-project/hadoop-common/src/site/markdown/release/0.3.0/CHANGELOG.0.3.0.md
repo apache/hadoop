@@ -28,7 +28,7 @@
 |:---- |:---- | :--- |:---- |:---- |:---- |
 | [HADOOP-209](https://issues.apache.org/jira/browse/HADOOP-209) | Add a program to recursively copy directories across file systems |  Major | fs | Milind Bhandarkar |  |
 | [HADOOP-115](https://issues.apache.org/jira/browse/HADOOP-115) | permit reduce input types to differ from reduce output types |  Major | . | Runping Qi | Runping Qi |
-| [HADOOP-233](https://issues.apache.org/jira/browse/HADOOP-233) | add a http status server for the task trackers |  Major | . | Owen O'Malley | Owen O'Malley |
+| [HADOOP-233](https://issues.apache.org/jira/browse/HADOOP-233) | add an http status server for the task trackers |  Major | . | Owen O'Malley | Owen O'Malley |
 | [HADOOP-222](https://issues.apache.org/jira/browse/HADOOP-222) | Set replication from dfsshell |  Trivial | . | Johan Oskarsson | Johan Oskarsson |
 | [HADOOP-256](https://issues.apache.org/jira/browse/HADOOP-256) | Implement a C api for hadoop dfs |  Major | . | Arun C Murthy | Arun C Murthy |
 

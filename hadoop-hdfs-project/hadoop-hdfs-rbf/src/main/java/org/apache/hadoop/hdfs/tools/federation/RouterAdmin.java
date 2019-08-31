@@ -361,7 +361,7 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
     } catch (RemoteException e) {
-      // This is a error returned by the server.
+      // This is an error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       debugException = e;

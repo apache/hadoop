@@ -467,7 +467,7 @@
 | [HADOOP-10503](https://issues.apache.org/jira/browse/HADOOP-10503) | Move junit up to v 4.11 |  Minor | build | Steve Loughran | Chris Nauroth |
 | [HDFS-6274](https://issues.apache.org/jira/browse/HDFS-6274) | Cleanup javadoc warnings in HDFS code |  Major | . | Suresh Srinivas | Suresh Srinivas |
 | [HDFS-6275](https://issues.apache.org/jira/browse/HDFS-6275) | Fix warnings - type arguments can be inferred and redudant local variable |  Major | . | Suresh Srinivas | Suresh Srinivas |
-| [HDFS-6217](https://issues.apache.org/jira/browse/HDFS-6217) | Webhdfs PUT operations may not work via a http proxy |  Major | webhdfs | Daryn Sharp | Daryn Sharp |
+| [HDFS-6217](https://issues.apache.org/jira/browse/HDFS-6217) | Webhdfs PUT operations may not work via an http proxy |  Major | webhdfs | Daryn Sharp | Daryn Sharp |
 | [HDFS-6276](https://issues.apache.org/jira/browse/HDFS-6276) | Remove unnecessary conditions and null check |  Major | . | Suresh Srinivas | Suresh Srinivas |
 | [HDFS-6210](https://issues.apache.org/jira/browse/HDFS-6210) | Support GETACLSTATUS operation in WebImageViewer |  Major | tools | Akira Ajisaka | Akira Ajisaka |
 | [HDFS-5865](https://issues.apache.org/jira/browse/HDFS-5865) | Update OfflineImageViewer document |  Minor | documentation | Akira Ajisaka | Akira Ajisaka |

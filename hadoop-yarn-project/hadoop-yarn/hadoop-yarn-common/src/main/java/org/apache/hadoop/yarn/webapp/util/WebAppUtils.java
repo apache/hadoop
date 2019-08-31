@@ -610,7 +610,7 @@ public class WebAppUtils {
   }
 
   /**
-   * Add the query params from a HttpServletRequest to the target uri passed.
+   * Add the query params from an HttpServletRequest to the target uri passed.
    * @param request HttpServletRequest with the request details
    * @param targetUri the uri to which the query params must be added
    * @return URL encoded string containing the targetUri + "?" + query string

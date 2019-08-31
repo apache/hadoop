@@ -22,7 +22,7 @@ Out of the box HttpFS supports both pseudo authentication and Kerberos HTTP SPNE
 
 ### Pseudo Authentication
 
-With pseudo authentication the user name must be specified in the `user.name=<USERNAME>` query string parameter of a HttpFS URL. For example:
+With pseudo authentication the user name must be specified in the `user.name=<USERNAME>` query string parameter of an HttpFS URL. For example:
 
     $ curl "http://<HTTFS_HOST>:14000/webhdfs/v1?op=homedir&user.name=babu"
 

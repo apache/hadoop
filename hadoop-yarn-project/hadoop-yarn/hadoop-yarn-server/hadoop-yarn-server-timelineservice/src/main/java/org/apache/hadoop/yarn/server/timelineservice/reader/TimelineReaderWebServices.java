@@ -318,7 +318,7 @@ public class TimelineReaderWebServices {
    *     fromId. fromId should be taken from the value associated with FROM_ID
    *     info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
    *     is returned.<br>
    *     On failures,<br>
@@ -474,7 +474,7 @@ public class TimelineReaderWebServices {
    *     fromId. fromId should be taken from the value associated with FROM_ID
    *     info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
    *     is returned.<br>
    *     On failures,<br>
@@ -597,7 +597,7 @@ public class TimelineReaderWebServices {
    *     fromId. fromId should be taken from the value associated with FROM_ID
    *     info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
    *     is returned.<br>
    *     On failures,<br>
@@ -712,7 +712,7 @@ public class TimelineReaderWebServices {
    * @param metricsTimeEnd If specified, returned metrics for the entity would
    *     not contain metric values after this timestamp(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
@@ -822,7 +822,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *     If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -902,7 +902,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *     If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -984,7 +984,7 @@ public class TimelineReaderWebServices {
    * @param metricsToRetrieve If specified, defines which metrics to retrieve
    *     and send back in response.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
    *     metrics for the flow run will be returned.<br>
    *     On failures,<br>
@@ -1058,7 +1058,7 @@ public class TimelineReaderWebServices {
    * @param metricsToRetrieve If specified, defines which metrics to retrieve
    *     and send back in response.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
    *     metrics for the flow run will be returned.<br>
    *     On failures,<br>
@@ -1098,7 +1098,7 @@ public class TimelineReaderWebServices {
    * @param metricsToRetrieve If specified, defines which metrics to retrieve
    *     and send back in response.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
    *     metrics for the flow run will be returned.<br>
    *     On failures,<br>
@@ -1195,7 +1195,7 @@ public class TimelineReaderWebServices {
    *     specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
    *     returned.<br>
    *     On failures,<br>
@@ -1292,7 +1292,7 @@ public class TimelineReaderWebServices {
    *     specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
    *     returned.<br>
    *     On failures,<br>
@@ -1352,7 +1352,7 @@ public class TimelineReaderWebServices {
    *     specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
    *     returned.<br>
    *     On failures,<br>
@@ -1450,7 +1450,7 @@ public class TimelineReaderWebServices {
    *     fromId should be taken from the value associated with FROM_ID info key
    *     in flow entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -1501,7 +1501,7 @@ public class TimelineReaderWebServices {
    *     fromId should be taken from the value associated with FROM_ID info key
    *     in flow entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -1594,7 +1594,7 @@ public class TimelineReaderWebServices {
    * @param metricsTimeEnd If specified, returned metrics for the apps would
    *     not contain metric values after this timestamp(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
@@ -1698,7 +1698,7 @@ public class TimelineReaderWebServices {
    * @param metricsTimeEnd If specified, returned metrics for the app would
    *     not contain metric values after this timestamp(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -1769,7 +1769,7 @@ public class TimelineReaderWebServices {
    * @param metricsTimeEnd If specified, returned metrics for the app would
    *     not contain metric values after this timestamp(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -1902,7 +1902,7 @@ public class TimelineReaderWebServices {
    *     of specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
    *     returned.<br>
    *     On failures,<br>
@@ -2049,7 +2049,7 @@ public class TimelineReaderWebServices {
    *     of specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
    *     returned.<br>
    *     On failures,<br>
@@ -2161,7 +2161,7 @@ public class TimelineReaderWebServices {
    *     of specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
    *     returned.<br>
    *     On failures,<br>
@@ -2272,7 +2272,7 @@ public class TimelineReaderWebServices {
    *     of specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
    *     returned.<br>
    *     On failures,<br>
@@ -2381,7 +2381,7 @@ public class TimelineReaderWebServices {
    *     of specified fromId. fromId should be taken from the value associated
    *     with FROM_ID info key in entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
    *     returned.<br>
    *     On failures,<br>
@@ -2503,7 +2503,7 @@ public class TimelineReaderWebServices {
    *         be taken from the value associated with FROM_ID info key in
    *         entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the app-attempt
    *         entity type is returned.<br>
    *         On failures,<br>
@@ -2627,7 +2627,7 @@ public class TimelineReaderWebServices {
    *         be taken from the value associated with FROM_ID info key in
    *         entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the app-attempts
    *         entity type is returned.<br>
    *         On failures,<br>
@@ -2721,7 +2721,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         <cite>TimelineEntity</cite> instance is returned.<br>
    *         On failures,<br>
    *         If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -2802,7 +2802,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         <cite>TimelineEntity</cite> instance is returned.<br>
    *         On failures,<br>
    *         If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -2919,7 +2919,7 @@ public class TimelineReaderWebServices {
    *         be taken from the value associated with FROM_ID info key in
    *         entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the containers
    *         belongs to given application attempt id.<br>
    *         On failures,<br>
@@ -3045,7 +3045,7 @@ public class TimelineReaderWebServices {
    *         be taken from the value associated with FROM_ID info key in
    *         entity response which was sent earlier.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the containers
    *         belongs to given application attempt id.<br>
    *         On failures,<br>
@@ -3152,7 +3152,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   * @return If successful, an HTTP 200(OK) response having a JSON representing
    *         <cite>TimelineEntity</cite> instance is returned.<br>
    *         On failures,<br>
    *         If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -3233,7 +3233,7 @@ public class TimelineReaderWebServices {
    * @param entityIdPrefix Defines the id prefix for the entity to be fetched.
    *          If specified, then entity retrieval will be faster.
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *         <cite>TimelineEntity</cite> instance is returned.<br>
    *         On failures,<br>
    *         If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -3284,7 +3284,7 @@ public class TimelineReaderWebServices {
    *     param).
    * @param userId User id which should match for the app(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     list contains all timeline entity types is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
@@ -3324,7 +3324,7 @@ public class TimelineReaderWebServices {
    *     param).
    * @param userId User id which should match for the app(Optional query param).
    *
-   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   * @return If successful, an HTTP 200(OK) response having a JSON representing a
    *     list contains all timeline entity types is returned.<br>
    *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is

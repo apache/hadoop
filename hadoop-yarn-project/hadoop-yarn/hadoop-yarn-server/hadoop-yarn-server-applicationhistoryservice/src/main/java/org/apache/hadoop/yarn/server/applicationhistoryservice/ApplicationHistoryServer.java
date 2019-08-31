@@ -237,7 +237,7 @@ public class ApplicationHistoryServer extends CompositeService {
   private void startWebApp() {
     Configuration conf = getConfig();
     // Always load pseudo authentication filter to parse "user.name" in an URL
-    // to identify a HTTP request's user in insecure mode.
+    // to identify an HTTP request's user in insecure mode.
     // When Kerberos authentication type is set (i.e., secure mode is turned on),
     // the customized filter will be loaded by the timeline server to do Kerberos
     // + DT authentication.

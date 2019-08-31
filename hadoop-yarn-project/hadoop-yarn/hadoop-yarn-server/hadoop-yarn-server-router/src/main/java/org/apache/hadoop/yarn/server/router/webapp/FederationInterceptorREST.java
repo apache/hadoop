@@ -742,7 +742,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * Get a copy of a HTTP request. This is for thread safety.
+   * Get a copy of an HTTP request. This is for thread safety.
    * @param hsr HTTP servlet request to copy.
    * @return Copy of the HTTP request.
    */

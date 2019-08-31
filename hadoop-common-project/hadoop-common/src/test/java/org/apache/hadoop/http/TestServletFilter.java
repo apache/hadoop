@@ -103,7 +103,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
     
-    //start a http server with CountingFilter
+    //start an http server with CountingFilter
     conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         SimpleFilter.Initializer.class.getName());
     HttpServer2 http = createTestServer(conf);
@@ -167,7 +167,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   @Test
   public void testServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
-    // start a http server with ErrorFilter
+    // start an http server with ErrorFilter
     conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         ErrorFilter.Initializer.class.getName());
     HttpServer2 http = createTestServer(conf);

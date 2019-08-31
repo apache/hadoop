@@ -34650,7 +34650,7 @@ is serialized as
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
       <doc>
-      <![CDATA[Returns if delegation token is transmitted as a HTTP header.
+      <![CDATA[Returns if delegation token is transmitted as an HTTP header.
 
  @return <code>TRUE</code> if the token is transmitted in the URL query
  string, <code>FALSE</code> if the delegation token is transmitted using the

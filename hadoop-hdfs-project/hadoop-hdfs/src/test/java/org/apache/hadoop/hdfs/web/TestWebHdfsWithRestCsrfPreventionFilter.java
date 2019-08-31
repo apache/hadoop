@@ -124,7 +124,7 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
 
   @Test
   public void testCreate() throws Exception {
-    // create is a HTTP PUT that redirects from NameNode to DataNode, so we
+    // create is an HTTP PUT that redirects from NameNode to DataNode, so we
     // expect CSRF prevention on either server to block an unconfigured client.
     if ((nnRestCsrf || dnRestCsrf) && !clientRestCsrf) {
       expectException();

@@ -24,7 +24,7 @@ The Offline Image Viewer is a tool to dump the contents of hdfs fsimage files to
 
 The Offline Image Viewer provides several output processors:
 
-1.  Web is the default output processor. It launches a HTTP server
+1.  Web is the default output processor. It launches an HTTP server
     that exposes read-only WebHDFS API. Users can investigate the namespace
     interactively by using HTTP REST API. It does not support secure mode, nor
     HTTPS.
@@ -71,7 +71,7 @@ Usage
 
 ### Web Processor
 
-Web processor launches a HTTP server which exposes read-only WebHDFS API. Users can specify the address to listen by -addr option (default by localhost:5978).
+Web processor launches an HTTP server which exposes read-only WebHDFS API. Users can specify the address to listen by -addr option (default by localhost:5978).
 
        bash$ bin/hdfs oiv -i fsimage
        14/04/07 13:25:14 INFO offlineImageViewer.WebImageViewer: WebImageViewer

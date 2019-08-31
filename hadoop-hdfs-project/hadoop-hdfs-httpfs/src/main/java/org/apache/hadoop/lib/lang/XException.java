@@ -94,7 +94,7 @@ public class XException extends Exception {
   }
 
   /**
-   * Creates a message using a error message template and arguments.
+   * Creates a message using an error message template and arguments.
    * <p>
    * The template must be in JDK <code>MessageFormat</code> syntax
    * (using {#} positional parameters).

@@ -54,7 +54,7 @@ public class HttpExceptionUtils {
   private static final String ENTER = System.getProperty("line.separator");
 
   /**
-   * Creates a HTTP servlet response serializing the exception in it as JSON.
+   * Creates an HTTP servlet response serializing the exception in it as JSON.
    *
    * @param response the servlet response
    * @param status the error code to set in the response
@@ -79,7 +79,7 @@ public class HttpExceptionUtils {
   }
 
   /**
-   * Creates a HTTP JAX-RPC response serializing the exception in it as JSON.
+   * Creates an HTTP JAX-RPC response serializing the exception in it as JSON.
    *
    * @param status the error code to set in the response
    * @param ex the exception to serialize in the response

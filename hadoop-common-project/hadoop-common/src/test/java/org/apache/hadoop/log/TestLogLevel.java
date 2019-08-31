@@ -362,7 +362,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
           false);
-      fail("A HTTPS Client should not have succeeded in connecting to a " +
+      fail("An HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "
@@ -383,7 +383,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
           true);
-      fail("A HTTPS Client should not have succeeded in connecting to a " +
+      fail("An HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "
@@ -405,7 +405,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
           false);
-      fail("A HTTP Client should not have succeeded in connecting to a " +
+      fail("An HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     } catch (SocketException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "
@@ -427,7 +427,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
           true);
-      fail("A HTTP Client should not have succeeded in connecting to a " +
+      fail("An HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     }  catch (SocketException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "

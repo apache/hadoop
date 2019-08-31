@@ -137,7 +137,7 @@ public class JournalNodeHttpServer {
    */
   URI getServerURI() {
     // getHttpClientScheme() only returns https for HTTPS_ONLY policy. This
-    // matches the behavior that the first connector is a HTTPS connector only
+    // matches the behavior that the first connector is an HTTPS connector only
     // for HTTPS_ONLY policy.
     InetSocketAddress addr = httpServer.getConnectorAddress(0);
     return URI.create(DFSUtil.getHttpClientScheme(conf) + "://"
