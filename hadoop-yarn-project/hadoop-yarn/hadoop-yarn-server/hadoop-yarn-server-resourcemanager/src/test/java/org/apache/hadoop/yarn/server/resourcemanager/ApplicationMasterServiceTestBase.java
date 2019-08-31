@@ -382,6 +382,7 @@ public abstract class ApplicationMasterServiceTestBase {
       for (int i = 0; i < 10; i++) {
         am1.unregisterAppAttempt(req, false);
       }
+      rm.drainEvents();
       Assert.assertEquals("Expecting only one event", 1,
           dispatcher.getEventCount());
     } finally {
