@@ -48,8 +48,8 @@
     <module>datanode</module>
     <module>s3gateway</module>
     <module>dist</module>
-    <module>ozone-recon</module>
-    <module>ozone-recon-codegen</module>
+    <module>recon</module>
+    <module>recon-codegen</module>
     <module>upgrade</module>
     <module>csi</module>
     <module>fault-injection-test</module>
@@ -291,7 +291,7 @@
             <exclude>**/dependency-reduced-pom.xml</exclude>
             <exclude>**/node_modules/**</exclude>
             <exclude>**/yarn.lock</exclude>
-            <exclude>**/ozone-recon-web/build/**</exclude>
+            <exclude>**/recon-web/build/**</exclude>
             <exclude>src/main/license/**</exclude>
           </excludes>
         </configuration>
@@ -351,7 +351,7 @@
         <configuration>
           <excludes>
             <exclude>**/node_modules/*</exclude>
-            <exclude>**/ozone-recon-web/**</exclude>
+            <exclude>**/recon-web/**</exclude>
           </excludes>
         </configuration>
         <executions>
