@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.CheckedBiFunction;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -457,20 +458,7 @@ public abstract class ChecksumFs extends FilterFs {
   @Override
   public void renameInternal(Path src, Path dst) 
     throws IOException, UnresolvedLinkException {
-    if (isDirectory(src)) {
-      getMyFs().rename(src, dst);
-    } else {
-      getMyFs().rename(src, dst);
-
-      Path checkFile = getChecksumFile(src);
-      if (exists(checkFile)) { //try to rename checksum
-        if (isDirectory(dst)) {
-          getMyFs().rename(checkFile, dst);
-        } else {
-          getMyFs().rename(checkFile, getChecksumFile(dst));
-        }
-      }
-    }
+    renameInternal(src, dst, (s, d) -> getMyFs().rename(s, d));
   }
 
   @Override
@@ -482,18 +470,23 @@ public abstract class ChecksumFs extends FilterFs {
     if (overwrite) {
       renameOpt = Options.Rename.OVERWRITE;
     }
+    final Options.Rename opt = renameOpt;
+    renameInternal(src, dst, (s, d) -> getMyFs().rename(s, d, opt));
+  }
 
+  private void renameInternal(Path src, Path dst,
+      CheckedBiFunction<Path, Path, IOException> renameFn) throws IOException {
     if (isDirectory(src)) {
-      getMyFs().rename(src, dst, renameOpt);
+      renameFn.apply(src, dst);
     } else {
-      getMyFs().rename(src, dst, renameOpt);
+      renameFn.apply(src, dst);
 
       Path checkFile = getChecksumFile(src);
       if (exists(checkFile)) { //try to rename checksum
         if (isDirectory(dst)) {
-          getMyFs().rename(checkFile, dst, renameOpt);
+          renameFn.apply(checkFile, dst);
         } else {
-          getMyFs().rename(checkFile, getChecksumFile(dst), renameOpt);
+          renameFn.apply(checkFile, getChecksumFile(dst));
         }
       }
     }
