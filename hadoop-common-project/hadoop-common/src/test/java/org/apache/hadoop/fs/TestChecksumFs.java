@@ -1,0 +1,130 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.fs;
+
+import java.io.IOException;
+import java.util.EnumSet;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.local.LocalFs;
+import org.apache.hadoop.fs.permission.FsPermission;
+import static org.apache.hadoop.fs.CreateFlag.*;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class TestChecksumFs {
+  private Configuration conf;
+  private Path testRootDirPath;
+  private FileContext fc;
+
+  @Before
+  public void setUp() throws Exception {
+    conf = getTestConfiguration();
+    fc = FileContext.getFileContext(conf);
+    testRootDirPath = new Path(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+    mkdirs(testRootDirPath);
+  }
+
+  public void tearDown() throws Exception {
+    fc.delete(testRootDirPath, true);
+  }
+
+  @Test
+  public void testRenameFileToFile() throws Exception {
+    Path srcPath = new Path(testRootDirPath, "testRenameSrc");
+    Path dstPath = new Path(testRootDirPath, "testRenameDst");
+    verifyRename(srcPath, dstPath, false, false);
+  }
+
+  @Test
+  public void testRenameFileToFileWithOverwrite() throws Exception {
+    Path srcPath = new Path(testRootDirPath, "testRenameSrc");
+    Path dstPath = new Path(testRootDirPath, "testRenameDst");
+    verifyRename(srcPath, dstPath, false, true);
+  }
+
+  @Test
+  public void testRenameFileIntoDirFile() throws Exception {
+    Path srcPath = new Path(testRootDirPath, "testRenameSrc");
+    Path dstPath = new Path(testRootDirPath, "testRenameDir/testRenameDst");
+    mkdirs(dstPath);
+    verifyRename(srcPath, dstPath, false, false);
+  }
+
+  @Test
+  public void testRenameFileIntoDirFileWithOverwrite() throws Exception {
+    Path srcPath = new Path(testRootDirPath, "testRenameSrc");
+    Path dstPath = new Path(testRootDirPath, "testRenameDir/testRenameDst");
+    mkdirs(dstPath);
+    verifyRename(srcPath, dstPath, false, true);
+  }
+
+  private void verifyRename(Path srcPath, Path dstPath, boolean dstIsDir, boolean overwrite)
+      throws Exception {
+    AbstractFileSystem fs = fc.getDefaultFileSystem();
+    assertTrue(fs instanceof LocalFs);
+    ChecksumFs checksumFs = (ChecksumFs) fs;
+
+    fs.delete(srcPath,true);
+    fs.delete(dstPath,true);
+
+    Path realDstPath = dstPath;
+    if (dstIsDir) {
+      fc.mkdir(dstPath, FileContext.DEFAULT_PERM, true);
+      realDstPath = new Path(dstPath, srcPath.getName());
+    }
+
+    Options.Rename renameOpt = Options.Rename.NONE;
+    if (overwrite) {
+      renameOpt = Options.Rename.OVERWRITE;
+      createTestFile(checksumFs, realDstPath, 2);
+    }
+
+    // ensure file + checksum are moved
+    createTestFile(checksumFs, srcPath, 1);
+    assertTrue(fc.util().exists(checksumFs.getChecksumFile(srcPath)));
+    checksumFs.rename(srcPath, dstPath, renameOpt);
+    assertTrue(fc.util().exists(checksumFs.getChecksumFile(realDstPath)));
+    try (FSDataInputStream is = fs.open(realDstPath)) {
+      assertEquals(1, is.readInt());
+    }
+  }
+
+  private static Configuration getTestConfiguration() {
+    Configuration conf = new Configuration(false);
+    conf.set("fs.defaultFS", "file:///");
+    conf.setClass("fs.AbstractFileSystem.file.impl",
+        org.apache.hadoop.fs.local.LocalFs.class,
+        org.apache.hadoop.fs.AbstractFileSystem.class);
+    return conf;
+  }
+
+  private void createTestFile(ChecksumFs fs, Path path, int content) throws IOException {
+    try (FSDataOutputStream fout = fs.create(path, EnumSet.of(CREATE, OVERWRITE),
+        Options.CreateOpts.perms(FsPermission.getDefault()))) {
+      fout.writeInt(content);
+    }
+  }
+
+  private void mkdirs(Path dirPath) throws IOException {
+    fc.mkdir(dirPath, FileContext.DEFAULT_PERM, true);
+  }
+}
