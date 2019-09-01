@@ -261,7 +261,8 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getMaximumLifetimePerQueue((getQueuePath()));
       defaultApplicationLifetime =
           conf.getDefaultLifetimePerQueue((getQueuePath()));
-      if (defaultApplicationLifetime > maxApplicationLifetime) {
+      if (maxApplicationLifetime > 0 &&
+          defaultApplicationLifetime > maxApplicationLifetime) {
         throw new YarnRuntimeException(
             "Default lifetime" + defaultApplicationLifetime
                 + " can't exceed maximum lifetime " + maxApplicationLifetime);
