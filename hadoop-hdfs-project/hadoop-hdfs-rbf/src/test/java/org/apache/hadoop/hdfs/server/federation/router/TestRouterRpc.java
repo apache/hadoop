@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterConte
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -1616,6 +1617,27 @@ public class TestRouterRpc {
     // Reset the registrations again
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
+  }
+
+  @Test
+  public void testRBFMetricsMethodsRelayOnStateStore() {
+    assertNull(router.getRouter().getStateStore());
+
+    RBFMetrics metrics = router.getRouter().getMetrics();
+    assertEquals("{}", metrics.getNamenodes());
+    assertEquals("[]", metrics.getMountTable());
+    assertEquals("{}", metrics.getRouters());
+    assertEquals(0, metrics.getNumNamenodes());
+    assertEquals(0, metrics.getNumExpiredNamenodes());
+
+    // These 2 methods relays on {@link RBFMetrics#getNamespaceInfo()}
+    assertEquals("[]", metrics.getClusterId());
+    assertEquals("[]", metrics.getBlockPoolId());
+
+    // These methods relays on
+    // {@link RBFMetrics#getActiveNamenodeRegistration()}
+    assertEquals("{}", metrics.getNameservices());
+    assertEquals(0, metrics.getNumLiveNodes());
   }
 
   @Test
