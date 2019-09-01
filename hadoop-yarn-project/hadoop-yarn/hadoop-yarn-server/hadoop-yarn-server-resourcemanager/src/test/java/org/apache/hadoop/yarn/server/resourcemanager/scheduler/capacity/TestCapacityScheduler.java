@@ -5171,7 +5171,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
     Assert.assertEquals(defaultLifetime,
         cs.checkAndGetApplicationLifetime("default", -1));
-    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
     Assert.assertEquals(maxLifetime,
         cs.getMaximumApplicationLifetime("default"));
 
@@ -5191,8 +5192,10 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     defaultLifetime = 0;
     cs = setUpCSQueue(maxLifetime, defaultLifetime);
     Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
-    Assert.assertEquals(-1, cs.checkAndGetApplicationLifetime("default", -1));
-    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
 
     maxLifetime = 10;
     defaultLifetime = -1;
@@ -5213,6 +5216,16 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
       Assert.assertTrue(
           ye.getMessage().contains("can't exceed maximum lifetime"));
     }
+
+    maxLifetime = -1;
+    defaultLifetime = 10;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(100,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
   }
 
   private CapacityScheduler setUpCSQueue(long maxLifetime,
