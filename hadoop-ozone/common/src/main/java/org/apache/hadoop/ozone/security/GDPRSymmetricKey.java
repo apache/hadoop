@@ -62,8 +62,10 @@ public class GDPRSymmetricKey {
    * @throws Exception
    */
   public GDPRSymmetricKey(String secret, String algorithm) throws Exception {
+    Preconditions.checkNotNull(secret, "Secret cannot be null");
     Preconditions.checkArgument(secret.length() == 32,
         "Secret must be exactly 32 characters");
+    Preconditions.checkNotNull(algorithm, "Algorithm cannot be null");
     this.secret = secret;
     this.algorithm = algorithm;
     this.secretKey = new SecretKeySpec(

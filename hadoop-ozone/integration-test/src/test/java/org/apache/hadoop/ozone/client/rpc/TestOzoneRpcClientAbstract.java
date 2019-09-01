@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -84,7 +83,6 @@ import org.apache.hadoop.ozone.om.ha.OMProxyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
@@ -2683,13 +2681,15 @@ public abstract class TestOzoneRpcClientAbstract {
     OzoneBucket bucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, bucket.getName());
     Assert.assertNotNull(bucket.getMetadata());
-    Assert.assertEquals("true", bucket.getMetadata().get(OzoneConsts.GDPR_FLAG));
+    Assert.assertEquals("true",
+        bucket.getMetadata().get(OzoneConsts.GDPR_FLAG));
 
     //Step 2
     String text = "hello world";
+    Map<String, String> keyMetadata = new HashMap<>();
+    keyMetadata.put(OzoneConsts.GDPR_FLAG, "true");
     OzoneOutputStream out = bucket.createKey(keyName,
-        text.getBytes().length, STAND_ALONE,
-        ONE, new HashMap<>());
+        text.getBytes().length, STAND_ALONE, ONE, keyMetadata);
     out.write(text.getBytes());
     out.close();
 
@@ -2698,7 +2698,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
     Assert.assertEquals(keyName, key.getName());
     Assert.assertEquals("true", key.getMetadata().get(OzoneConsts.GDPR_FLAG));
-    Assert.assertEquals("AES", key.getMetadata().get(OzoneConsts.GDPR_ALGORITHM));
+    Assert.assertEquals("AES",
+        key.getMetadata().get(OzoneConsts.GDPR_ALGORITHM));
     Assert.assertTrue(key.getMetadata().get(OzoneConsts.GDPR_SECRET) != null);
 
     OzoneInputStream is = bucket.readKey(keyName);

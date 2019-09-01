@@ -606,12 +606,15 @@ public class RpcClient implements ClientProtocol {
     HddsClientUtils.checkNotNull(keyName, type, factor);
     String requestId = UUID.randomUUID().toString();
 
-    try{
-      GDPRSymmetricKey gKey = new GDPRSymmetricKey();
-      metadata.putAll(gKey.getKeyDetails());
-    }catch (Exception e) {
-      throw new IOException(e);
+    if(Boolean.valueOf(metadata.get(OzoneConsts.GDPR_FLAG))){
+      try{
+        GDPRSymmetricKey gKey = new GDPRSymmetricKey();
+        metadata.putAll(gKey.getKeyDetails());
+      }catch (Exception e) {
+        throw new IOException(e);
+      }
     }
+
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
