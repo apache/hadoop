@@ -105,7 +105,7 @@ enum NodeState {
 enum NodeOperationalState {
     IN_SERVICE = 1;
     DECOMMISSIONING = 2;
-    DEOMMISSIONED = 3;
+    DECOMMISSIONED = 3;
     ENTERING_MAINTENANCE = 4;
     IN_MAINTENANCE = 5;
 }

@@ -23,7 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -78,13 +80,23 @@ public class NodeStateManager implements Runnable, Closeable {
     TIMEOUT, RESTORE, RESURRECT
   }
 
+  private enum NodeOperationStateEvent {
+    START_DECOMMISSION, COMPLETE_DECOMMISSION, START_MAINTENANCE,
+    ENTER_MAINTENANE, RETURN_TO_SERVICE
+  }
+
   private static final Logger LOG = LoggerFactory
       .getLogger(NodeStateManager.class);
 
   /**
    * StateMachine for node lifecycle.
    */
-  private final StateMachine<NodeState, NodeLifeCycleEvent> stateMachine;
+  private final StateMachine<NodeState, NodeLifeCycleEvent> nodeHealthSM;
+  /**
+   * StateMachine for node operational state.
+   */
+  private final StateMachine<HddsProtos.NodeOperationalState,
+      NodeOperationStateEvent> nodeOpStateSM;
   /**
    * This is the map which maintains the current state of all datanodes.
    */
@@ -150,8 +162,11 @@ public class NodeStateManager implements Runnable, Closeable {
     this.state2EventMap = new HashMap<>();
     initialiseState2EventMap();
     Set<NodeState> finalStates = new HashSet<>();
-    this.stateMachine = new StateMachine<>(NodeState.HEALTHY, finalStates);
-    initializeStateMachine();
+    Set<HddsProtos.NodeOperationalState> opStateFinalStates = new HashSet<>();
+    this.nodeHealthSM = new StateMachine<>(NodeState.HEALTHY, finalStates);
+    this.nodeOpStateSM = new StateMachine<>(
+        NodeOperationalState.IN_SERVICE, opStateFinalStates);
+    initializeStateMachines();
     heartbeatCheckerIntervalMs = HddsServerUtil
         .getScmheartbeatCheckerInterval(conf);
     staleNodeIntervalMs = HddsServerUtil.getStaleNodeInterval(conf);
@@ -212,15 +227,45 @@ public class NodeStateManager implements Runnable, Closeable {
   /**
    * Initializes the lifecycle of node state machine.
    */
-  private void initializeStateMachine() {
-    stateMachine.addTransition(
+  private void initializeStateMachines() {
+    nodeHealthSM.addTransition(
         NodeState.HEALTHY, NodeState.STALE, NodeLifeCycleEvent.TIMEOUT);
-    stateMachine.addTransition(
+    nodeHealthSM.addTransition(
         NodeState.STALE, NodeState.DEAD, NodeLifeCycleEvent.TIMEOUT);
-    stateMachine.addTransition(
+    nodeHealthSM.addTransition(
         NodeState.STALE, NodeState.HEALTHY, NodeLifeCycleEvent.RESTORE);
-    stateMachine.addTransition(
+    nodeHealthSM.addTransition(
         NodeState.DEAD, NodeState.HEALTHY, NodeLifeCycleEvent.RESURRECT);
+
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.IN_SERVICE, NodeOperationalState.DECOMMISSIONING,
+        NodeOperationStateEvent.START_DECOMMISSION);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.DECOMMISSIONING, NodeOperationalState.IN_SERVICE,
+        NodeOperationStateEvent.RETURN_TO_SERVICE);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.DECOMMISSIONING,
+        NodeOperationalState.DECOMMISSIONED,
+        NodeOperationStateEvent.COMPLETE_DECOMMISSION);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.DECOMMISSIONED, NodeOperationalState.IN_SERVICE,
+        NodeOperationStateEvent.RETURN_TO_SERVICE);
+
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.IN_SERVICE,
+        NodeOperationalState.ENTERING_MAINTENANCE,
+        NodeOperationStateEvent.START_MAINTENANCE);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.ENTERING_MAINTENANCE,
+        NodeOperationalState.IN_SERVICE,
+        NodeOperationStateEvent.RETURN_TO_SERVICE);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.ENTERING_MAINTENANCE,
+        NodeOperationalState.IN_MAINTENANCE,
+        NodeOperationStateEvent.ENTER_MAINTENANE);
+    nodeOpStateSM.addTransition(
+        NodeOperationalState.IN_MAINTENANCE, NodeOperationalState.IN_SERVICE,
+        NodeOperationStateEvent.RETURN_TO_SERVICE);
   }
 
   /**
@@ -232,7 +277,8 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public void addNode(DatanodeDetails datanodeDetails)
       throws NodeAlreadyExistsException {
-    nodeStateMap.addNode(datanodeDetails, stateMachine.getInitialState());
+    nodeStateMap.addNode(datanodeDetails, new NodeStatus(
+        nodeOpStateSM.getInitialState(), nodeHealthSM.getInitialState()));
     eventPublisher.fireEvent(SCMEvents.NEW_NODE, datanodeDetails);
   }
 
@@ -280,7 +326,7 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public NodeState getNodeState(DatanodeDetails datanodeDetails)
       throws NodeNotFoundException {
-    return nodeStateMap.getNodeState(datanodeDetails.getUuid());
+    return nodeStateMap.getNodeStatus(datanodeDetails.getUuid()).getHealth();
   }
 
   /**
@@ -319,7 +365,9 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public List<DatanodeInfo> getNodes(NodeState state) {
     List<DatanodeInfo> nodes = new ArrayList<>();
-    nodeStateMap.getNodes(state).forEach(
+    // TODO - For now decommission is not implemented, so hardcode IN_SERVICE
+    nodeStateMap.getNodes(
+        new NodeStatus(NodeOperationalState.IN_SERVICE, state)).forEach(
         uuid -> {
           try {
             nodes.add(nodeStateMap.getNodeInfo(uuid));
@@ -398,7 +446,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return node count
    */
   public int getNodeCount(NodeState state) {
-    return nodeStateMap.getNodeCount(state);
+    // TODO - for now decommission is not implemented so hard-code IN-Service
+    return nodeStateMap.getNodeCount(
+        new NodeStatus(NodeOperationalState.IN_SERVICE, state));
   }
 
   /**
@@ -540,7 +590,11 @@ public class NodeStateManager implements Runnable, Closeable {
         (lastHbTime) -> lastHbTime < staleNodeDeadline;
     try {
       for (NodeState state : NodeState.values()) {
-        List<UUID> nodes = nodeStateMap.getNodes(state);
+        // TODO - decommission not implemented so hard code inservice
+        // TODO - why not just 'get all nodes' here, instead of getting them
+        //        state by state?
+        List<UUID> nodes = nodeStateMap.getNodes(
+            new NodeStatus(NodeOperationalState.IN_SERVICE, state));
         for (UUID id : nodes) {
           DatanodeInfo node = nodeStateMap.getNodeInfo(id);
           switch (state) {
@@ -637,8 +691,10 @@ public class NodeStateManager implements Runnable, Closeable {
       throws NodeNotFoundException {
     try {
       if (condition.test(node.getLastHeartbeatTime())) {
-        NodeState newState = stateMachine.getNextState(state, lifeCycleEvent);
-        nodeStateMap.updateNodeState(node.getUuid(), state, newState);
+        NodeState newState = nodeHealthSM.getNextState(state, lifeCycleEvent);
+        // TODO - hardcoded IN_SERVICE
+        nodeStateMap.updateNodeState(node.getUuid(),
+            new NodeStatus(NodeOperationalState.IN_SERVICE, newState));
         if (state2EventMap.containsKey(newState)) {
           eventPublisher.fireEvent(state2EventMap.get(newState), node);
         }

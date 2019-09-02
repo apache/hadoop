@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +44,7 @@ public class NodeStateMap {
   /**
    * Represents the current state of node.
    */
-  private final ConcurrentHashMap<NodeState, Set<UUID>> stateMap;
+  private final ConcurrentHashMap<UUID, NodeStatus> stateMap;
   /**
    * Node to set of containers on the node.
    */
@@ -59,27 +60,17 @@ public class NodeStateMap {
     nodeMap = new ConcurrentHashMap<>();
     stateMap = new ConcurrentHashMap<>();
     nodeToContainer = new ConcurrentHashMap<>();
-    initStateMap();
-  }
-
-  /**
-   * Initializes the state map with available states.
-   */
-  private void initStateMap() {
-    for (NodeState state : NodeState.values()) {
-      stateMap.put(state, new HashSet<>());
-    }
   }
 
   /**
    * Adds a node to NodeStateMap.
    *
    * @param datanodeDetails DatanodeDetails
-   * @param nodeState initial NodeState
+   * @param nodeStatus initial NodeStatus
    *
    * @throws NodeAlreadyExistsException if the node already exist
    */
-  public void addNode(DatanodeDetails datanodeDetails, NodeState nodeState)
+  public void addNode(DatanodeDetails datanodeDetails, NodeStatus nodeStatus)
       throws NodeAlreadyExistsException {
     lock.writeLock().lock();
     try {
@@ -89,7 +80,7 @@ public class NodeStateMap {
       }
       nodeMap.put(id, new DatanodeInfo(datanodeDetails));
       nodeToContainer.put(id, Collections.emptySet());
-      stateMap.get(nodeState).add(id);
+      stateMap.put(id, nodeStatus);
     } finally {
       lock.writeLock().unlock();
     }
@@ -99,22 +90,16 @@ public class NodeStateMap {
    * Updates the node state.
    *
    * @param nodeId Node Id
-   * @param currentState current state
    * @param newState new state
    *
    * @throws NodeNotFoundException if the node is not present
    */
-  public void updateNodeState(UUID nodeId, NodeState currentState,
-                              NodeState newState)throws NodeNotFoundException {
+  public void updateNodeState(UUID nodeId, NodeStatus newState)
+      throws NodeNotFoundException {
     lock.writeLock().lock();
     try {
       checkIfNodeExist(nodeId);
-      if (stateMap.get(currentState).remove(nodeId)) {
-        stateMap.get(newState).add(nodeId);
-      } else {
-        throw new NodeNotFoundException("Node UUID: " + nodeId +
-            ", not found in state: " + currentState);
-      }
+      stateMap.put(nodeId, newState);
     } finally {
       lock.writeLock().unlock();
     }
@@ -143,14 +128,21 @@ public class NodeStateMap {
   /**
    * Returns the list of node ids which are in the specified state.
    *
-   * @param state NodeState
+   * @param state NodeStatus
    *
    * @return list of node ids
    */
-  public List<UUID> getNodes(NodeState state) {
+  public List<UUID> getNodes(NodeStatus state) {
+    // TODO - do we need stateMap to be state -> Set as it used to be?
     lock.readLock().lock();
+    ArrayList<UUID> nodes = new ArrayList<>();
     try {
-      return new ArrayList<>(stateMap.get(state));
+      for(Map.Entry<UUID, NodeStatus> entry : stateMap.entrySet()) {
+        if (entry.getValue().equals(state)) {
+          nodes.add(entry.getKey());
+        }
+      }
+      return nodes;
     } finally {
       lock.readLock().unlock();
     }
@@ -173,14 +165,14 @@ public class NodeStateMap {
   /**
    * Returns the count of nodes in the specified state.
    *
-   * @param state NodeState
+   * @param state NodeStatus
    *
    * @return Number of nodes in the specified state
    */
-  public int getNodeCount(NodeState state) {
+  public int getNodeCount(NodeStatus state) {
     lock.readLock().lock();
     try {
-      return stateMap.get(state).size();
+      return getNodes(state).size();
     } finally {
       lock.readLock().unlock();
     }
@@ -209,17 +201,16 @@ public class NodeStateMap {
    *
    * @throws NodeNotFoundException if the node is not found
    */
-  public NodeState getNodeState(UUID uuid) throws NodeNotFoundException {
+  public NodeStatus getNodeStatus(UUID uuid) throws NodeNotFoundException {
     lock.readLock().lock();
     try {
       checkIfNodeExist(uuid);
-      for (Map.Entry<NodeState, Set<UUID>> entry : stateMap.entrySet()) {
-        if (entry.getValue().contains(uuid)) {
-          return entry.getKey();
-        }
+      NodeStatus nodeStatus = stateMap.get(uuid);
+      if (nodeStatus == null) {
+        throw new NodeNotFoundException("Node not found in node state map." +
+            " UUID: " + uuid);
       }
-      throw new NodeNotFoundException("Node not found in node state map." +
-          " UUID: " + uuid);
+      return nodeStatus;
     } finally {
       lock.readLock().unlock();
     }
@@ -289,12 +280,13 @@ public class NodeStateMap {
    */
   @Override
   public String toString() {
+    // TODO - fix this method to include the commented out values
     StringBuilder builder = new StringBuilder();
     builder.append("Total number of nodes: ").append(getTotalNodeCount());
-    for (NodeState state : NodeState.values()) {
-      builder.append("Number of nodes in ").append(state).append(" state: ")
-          .append(getNodeCount(state));
-    }
+   // for (NodeState state : NodeState.values()) {
+   //   builder.append("Number of nodes in ").append(state).append(" state: ")
+   //       .append(getNodeCount(state));
+   // }
     return builder.toString();
   }
 
