@@ -325,13 +325,22 @@ class BlockSender implements java.io.Closeable {
             // storage.  The header is important for determining the checksum
             // type later when lazy persistence copies the block to non-transient
             // storage and computes the checksum.
+            int expectedHeaderSize = BlockMetadataHeader.getHeaderSize();
             if (!replica.isOnTransientStorage() &&
-                metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
+                metaIn.getLength() >= expectedHeaderSize) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, IO_FILE_BUFFER_SIZE));
-  
+
               csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
               keepMetaInOpen = true;
+            } else if (!replica.isOnTransientStorage() &&
+                metaIn.getLength() < expectedHeaderSize) {
+              LOG.warn("The meta file length {} is less than the expected " +
+                  "header length {}, indicating the meta file is corrupt",
+                  metaIn.getLength(), expectedHeaderSize);
+              throw new CorruptMetaHeaderException("The meta file length "+
+                  metaIn.getLength()+" is less than the expected length "+
+                  expectedHeaderSize);
             }
           } else {
             LOG.warn("Could not find metadata file for " + block);

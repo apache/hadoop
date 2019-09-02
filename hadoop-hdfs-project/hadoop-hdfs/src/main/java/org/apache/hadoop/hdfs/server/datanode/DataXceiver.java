@@ -647,6 +647,12 @@ class DataXceiver extends Receiver implements Runnable {
             dnR, block, remoteAddress, ioe);
         incrDatanodeNetworkErrors();
       }
+      // Normally the client reports a bad block to the NN. However if the
+      // meta file is corrupt or an disk error occurs (EIO), then the client
+      // never gets a chance to do validation, and hence will never report
+      // the block as bad. For some classes of IO exception, the DN should
+      // report the block as bad, via the handleBadBlock() method
+      datanode.handleBadBlock(block, ioe, false);
       throw ioe;
     } finally {
       IOUtils.closeStream(blockSender);
@@ -1118,6 +1124,12 @@ class DataXceiver extends Receiver implements Runnable {
       isOpSuccess = false;
       LOG.info("opCopyBlock {} received exception {}", block, ioe.toString());
       incrDatanodeNetworkErrors();
+      // Normally the client reports a bad block to the NN. However if the
+      // meta file is corrupt or an disk error occurs (EIO), then the client
+      // never gets a chance to do validation, and hence will never report
+      // the block as bad. For some classes of IO exception, the DN should
+      // report the block as bad, via the handleBadBlock() method
+      datanode.handleBadBlock(block, ioe, false);
       throw ioe;
     } finally {
       dataXceiverServer.balanceThrottler.release();
