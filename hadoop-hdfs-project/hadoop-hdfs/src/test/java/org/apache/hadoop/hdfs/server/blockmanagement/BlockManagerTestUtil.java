@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.curator.shaded.com.google.common.collect.Iterators;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -62,7 +63,9 @@ public class BlockManagerTestUtil {
     try {
       DatanodeDescriptor dn =
           ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
-      return dn.getBlockIterator(startBlock);
+      Iterator<BlockInfo> iter = dn.getBlockIterator();
+      Iterators.advance(iter, startBlock);
+      return iter;
     } finally {
       ns.readUnlock();
     }
