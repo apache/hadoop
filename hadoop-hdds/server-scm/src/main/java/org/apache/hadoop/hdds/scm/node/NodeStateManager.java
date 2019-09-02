@@ -368,16 +368,16 @@ public class NodeStateManager implements Runnable, Closeable {
     // TODO - For now decommission is not implemented, so hardcode IN_SERVICE
     nodeStateMap.getNodes(
         new NodeStatus(NodeOperationalState.IN_SERVICE, state)).forEach(
-        uuid -> {
-          try {
-            nodes.add(nodeStateMap.getNodeInfo(uuid));
-          } catch (NodeNotFoundException e) {
-            // This should not happen unless someone else other than
-            // NodeStateManager is directly modifying NodeStateMap and removed
-            // the node entry after we got the list of UUIDs.
-            LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
-          }
-        });
+            uuid -> {
+              try {
+                nodes.add(nodeStateMap.getNodeInfo(uuid));
+              } catch (NodeNotFoundException e) {
+                // This should not happen unless someone else other than
+                // NodeStateManager is directly modifying NodeStateMap and
+                // removed the node entry after we got the list of UUIDs.
+                LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
+              }
+            });
     return nodes;
   }
 
