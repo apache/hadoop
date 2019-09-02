@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 FROM apache/ozone-runner
-RUN sudo apt-get update && sudo apt-get install -y openssh-server
+RUN sudo yum install -y openssh-clients openssh-server
 
+RUN sudo ssh-keygen -A
 RUN sudo mkdir -p /run/sshd
 RUN sudo sed -i "s/.*UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config
 RUN sudo sed -i "s/.*PermitUserEnvironment.*/PermitUserEnvironment yes/g" /etc/ssh/sshd_config
@@ -29,5 +30,5 @@ RUN sudo chown hadoop /opt
 RUN sudo chmod 600 /opt/.ssh/*
 RUN sudo chmod 700 /opt/.ssh
 
-RUN sudo sh -c 'echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64/" >> /etc/profile'
+RUN sudo sh -c 'echo "export JAVA_HOME=/usr/lib/jvm/jre/" >> /etc/profile'
 CMD ["sudo","/usr/sbin/sshd","-D"]

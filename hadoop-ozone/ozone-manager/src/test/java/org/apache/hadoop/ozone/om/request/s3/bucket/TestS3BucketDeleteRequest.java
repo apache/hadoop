@@ -22,22 +22,9 @@ package org.apache.hadoop.ozone.om.request.s3.bucket;
 import java.util.UUID;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.audit.AuditLogger;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -47,43 +34,11 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests S3BucketDelete Request.
  */
-public class TestS3BucketDeleteRequest {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
-
-
-  @Before
-  public void setup() throws Exception {
-
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-  }
-
-  @After
-  public void stop() {
-    omMetrics.unRegister();
-    Mockito.framework().clearInlineMocks();
-  }
+public class TestS3BucketDeleteRequest extends TestS3BucketRequest {
 
   @Test
   public void testPreExecute() throws Exception {
@@ -104,7 +59,8 @@ public class TestS3BucketDeleteRequest {
         new S3BucketDeleteRequest(omRequest);
 
     OMClientResponse s3BucketDeleteResponse =
-        s3BucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1L);
+        s3BucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         s3BucketDeleteResponse.getOMResponse().getStatus());
@@ -120,7 +76,8 @@ public class TestS3BucketDeleteRequest {
         new S3BucketDeleteRequest(omRequest);
 
     OMClientResponse s3BucketDeleteResponse =
-        s3BucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1L);
+        s3BucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.S3_BUCKET_NOT_FOUND,
         s3BucketDeleteResponse.getOMResponse().getStatus());

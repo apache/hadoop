@@ -106,7 +106,7 @@
   </property>
   <property>
     <name>dfs.container.ratis.log.purge.gap</name>
-    <value>1000000000</value>
+    <value>1000000</value>
     <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
     <description>Purge gap between the last purged commit index
       and the current index, when the leader decides to purge its log.
@@ -184,6 +184,15 @@
     <tag>OZONE, RATIS</tag>
     <description>Number of transactions after which a ratis snapshot should be
       taken.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.statemachine.max.pending.apply-transactions</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Maximum number of pending apply transactions in a data
+      pipeline. The default value is kept same as default snapshot threshold
+      dfs.ratis.snapshot.threshold.
     </description>
   </property>
   <property>
@@ -322,7 +331,7 @@
 
   <property>
     <name>hdds.prometheus.endpoint.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>Enable prometheus compatible metric page on the HTTP
       servers.
@@ -453,19 +462,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.protocol</name>
-    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
-    <tag>OZONE, CLIENT, MANAGEMENT</tag>
-    <description>Protocol class to be used by the client to connect to ozone
-      cluster.
-      The build-in implementation includes:
-      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
-      org.apache.hadoop.ozone.client.rest.RestClient for REST
-      The default is the RpClient. Please do not change this unless you have a
-      very good understanding of what you are doing.
-    </description>
-  </property>
-  <property>
     <name>ozone.client.socket.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, CLIENT</tag>
@@ -541,7 +537,7 @@
   </property>
   <property>
     <name>ozone.om.address</name>
-    <value/>
+    <value>0.0.0.0:9862</value>
     <tag>OM, REQUIRED</tag>
     <description>
       The address of the Ozone OM service. This allows clients to discover
@@ -603,7 +599,7 @@
     <description>
       The actual address the OM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.om.http-address.
+      ozone.om.https-address.
     </description>
   </property>
   <property>
@@ -1031,7 +1027,7 @@
     <description>
       The actual address the SCM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.scm.http-address.
+      ozone.scm.https-address.
     </description>
   </property>
   <property>
@@ -1252,7 +1248,7 @@
 
   <property>
     <name>hdds.datanode.plugins</name>
-    <value>org.apache.hadoop.ozone.web.OzoneHddsDatanodeService</value>
+    <value></value>
     <description>
       Comma-separated list of HDDS datanode plug-ins to be activated when
       HDDS service starts as part of datanode.
@@ -1516,7 +1512,7 @@
     <value>5m</value>
     <tag>OZONE, OM</tag>
     <description>Time interval used to store the omMetrics in to a
-      file. Background thread perodically stores the OM metrics in to a
+      file. Background thread periodically stores the OM metrics in to a
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
@@ -1810,7 +1806,7 @@
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>hdds.scm.http.kerberos.keytab.file</name>
+    <name>hdds.scm.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
@@ -1822,7 +1818,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.http.kerberos.keytab.file</name>
+    <name>ozone.om.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
       OzoneManager http server kerberos keytab.
@@ -2354,7 +2350,7 @@
     </description>
   </property>
   <property>
-    <name>dfs.network.topology.aware.read.enable</name>
+    <name>ozone.network.topology.aware.read</name>
     <value>false</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>

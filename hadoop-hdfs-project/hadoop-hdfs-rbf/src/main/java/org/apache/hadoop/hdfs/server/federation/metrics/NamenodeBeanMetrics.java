@@ -838,6 +838,11 @@ public class NamenodeBeanMetrics
     return null;
   }
 
+  @Override
+  public long getCurrentTokensCount() {
+    return 0;
+  }
+
   private Router getRouter() throws IOException {
     if (this.router == null) {
       throw new IOException("Router is not initialized");

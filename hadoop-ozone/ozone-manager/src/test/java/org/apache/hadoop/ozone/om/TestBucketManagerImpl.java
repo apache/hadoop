@@ -18,8 +18,6 @@ package org.apache.hadoop.ozone.om;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
@@ -28,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.*;
@@ -41,9 +38,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
-import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.*;
 
 /**
  * Tests BucketManagerImpl, mocks OMMetadataManager for testing.
@@ -212,83 +206,6 @@ public class TestBucketManagerImpl {
     Assert.assertEquals(StorageType.DISK,
         result.getStorageType());
     Assert.assertEquals(false, result.getIsVersionEnabled());
-    metaMgr.getStore().close();
-  }
-
-  @Test
-  public void testSetBucketPropertyAddACL() throws Exception {
-    OmMetadataManagerImpl metaMgr = createSampleVol();
-
-    List<OzoneAcl> acls = new LinkedList<>();
-    OzoneAcl ozoneAcl = new OzoneAcl(ACLIdentityType.USER,
-        "root", ACLType.READ, ACCESS);
-    acls.add(ozoneAcl);
-    BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-    OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
-        .setVolumeName("sampleVol")
-        .setBucketName("bucketOne")
-        .setAcls(acls)
-        .setStorageType(StorageType.DISK)
-        .setIsVersionEnabled(false)
-        .build();
-    bucketManager.createBucket(bucketInfo);
-    OmBucketInfo result = bucketManager.getBucketInfo(
-        "sampleVol", "bucketOne");
-    Assert.assertEquals("sampleVol", result.getVolumeName());
-    Assert.assertEquals("bucketOne", result.getBucketName());
-    Assert.assertEquals(1, result.getAcls().size());
-    List<OzoneAcl> addAcls = new LinkedList<>();
-    OzoneAcl newAcl = new OzoneAcl(ACLIdentityType.USER,
-        "ozone", ACLType.READ, ACCESS);
-    addAcls.add(newAcl);
-    OmBucketArgs bucketArgs = OmBucketArgs.newBuilder()
-        .setVolumeName("sampleVol")
-        .setBucketName("bucketOne")
-        .setAddAcls(addAcls)
-        .build();
-    bucketManager.setBucketProperty(bucketArgs);
-    OmBucketInfo updatedResult = bucketManager.getBucketInfo(
-        "sampleVol", "bucketOne");
-    Assert.assertEquals(2, updatedResult.getAcls().size());
-    Assert.assertTrue(updatedResult.getAcls().contains(newAcl));
-    metaMgr.getStore().close();
-  }
-
-  @Test
-  public void testSetBucketPropertyRemoveACL() throws Exception {
-    OmMetadataManagerImpl metaMgr = createSampleVol();
-
-    List<OzoneAcl> acls = new LinkedList<>();
-    OzoneAcl aclOne = new OzoneAcl(ACLIdentityType.USER,
-        "root", ACLType.READ, ACCESS);
-    OzoneAcl aclTwo = new OzoneAcl(ACLIdentityType.USER,
-        "ozone", ACLType.READ, ACCESS);
-    acls.add(aclOne);
-    acls.add(aclTwo);
-    BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-    OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
-        .setVolumeName("sampleVol")
-        .setBucketName("bucketOne")
-        .setAcls(acls)
-        .setStorageType(StorageType.DISK)
-        .setIsVersionEnabled(false)
-        .build();
-    bucketManager.createBucket(bucketInfo);
-    OmBucketInfo result = bucketManager.getBucketInfo(
-        "sampleVol", "bucketOne");
-    Assert.assertEquals(2, result.getAcls().size());
-    List<OzoneAcl> removeAcls = new LinkedList<>();
-    removeAcls.add(aclTwo);
-    OmBucketArgs bucketArgs = OmBucketArgs.newBuilder()
-        .setVolumeName("sampleVol")
-        .setBucketName("bucketOne")
-        .setRemoveAcls(removeAcls)
-        .build();
-    bucketManager.setBucketProperty(bucketArgs);
-    OmBucketInfo updatedResult = bucketManager.getBucketInfo(
-        "sampleVol", "bucketOne");
-    Assert.assertEquals(1, updatedResult.getAcls().size());
-    Assert.assertFalse(updatedResult.getAcls().contains(aclTwo));
     metaMgr.getStore().close();
   }
 

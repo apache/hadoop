@@ -510,10 +510,10 @@
 
 <property>
   <name>dfs.namenode.acls.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Set to true to enable support for HDFS ACLs (Access Control Lists).  By
-    default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
+    default, ACLs are enabled.  When ACLs are disabled, the NameNode rejects
     all RPCs related to setting or getting ACLs.
   </description>
 </property>
@@ -990,7 +990,7 @@
 
 <property>
   <name>dfs.datanode.balance.bandwidthPerSec</name>
-  <value>10m</value>
+  <value>100m</value>
   <description>
         Specifies the maximum amount of bandwidth that each datanode
         can utilize for the balancing purpose in term of
@@ -1386,6 +1386,57 @@
 </property>
 
 <property>
+  <name>dfs.image.parallel.load</name>
+  <value>true</value>
+  <description>
+        If true, write sub-section entries to the fsimage index so it can
+        be loaded in parallel. Also controls whether parallel loading
+        will be used for an image previously created with sub-sections.
+        If the image contains sub-sections and this is set to false,
+        parallel loading will not be used.
+        Parallel loading is not compatible with image compression,
+        so if dfs.image.compress is set to true this setting will be
+        ignored and no parallel loading will occur.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.target.sections</name>
+  <value>12</value>
+  <description>
+        Controls the number of sub-sections that will be written to
+        fsimage for each section. This should be larger than
+        dfs.image.parallel.threads, otherwise all threads will not be
+        used when loading. Ideally, have at least twice the number
+        of target sections as threads, so each thread must load more
+        than one section to avoid one long running section affecting
+        the load time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.inode.threshold</name>
+  <value>1000000</value>
+  <description>
+        If the image contains less inodes than this setting, then
+        do not write sub-sections and hence disable parallel loading.
+        This is because small images load very quickly in serial and
+        parallel loading is not needed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.threads</name>
+  <value>4</value>
+  <description>
+        The number of threads to use when dfs.image.parallel.load is
+        enabled. This setting should be less than
+        dfs.image.parallel.target.sections. The optimal number of
+        threads will depend on the hardware and environment.
+  </description>
+</property>
+
+<property>
   <name>dfs.edit.log.transfer.timeout</name>
   <value>30000</value>
   <description>
@@ -1662,9 +1713,25 @@
   <name>dfs.ha.tail-edits.period</name>
   <value>60s</value>
   <description>
-    How often, in seconds, the StandbyNode should check for new
-    finalized log segments in the shared edits log.
-    Support multiple time unit suffix(case insensitive), as described
+    How often, the StandbyNode and ObserverNode should check if there are new
+    edit log entries ready to be consumed. This is the minimum period between
+    checking; exponential backoff will be applied if no edits are found and
+    dfs.ha.tail-edits.period.backoff-max is configured. By default, no
+    backoff is applied.
+    Supports multiple time unit suffix (case insensitive), as described
+    in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.period.backoff-max</name>
+  <value>0</value>
+  <description>
+    The maximum time the tailer should wait between checking for new edit log
+    entries. Exponential backoff will be applied when an edit log tail is
+    performed but no edits are available to be read. Values less than or
+    equal to zero disable backoff entirely; this is the default behavior.
+    Supports multiple time unit suffix (case insensitive), as described
     in dfs.heartbeat.interval.
   </description>
 </property>
@@ -2114,6 +2181,15 @@
     A switch to turn on/off tracking DataNode peer statistics.
   </description>
 </property>
+
+  <property>
+    <name>dfs.datanode.peer.metrics.min.outlier.detection.samples</name>
+    <value>1000</value>
+    <description>
+      Minimum number of packet send samples which are required to qualify for outlier detection.
+      If the number of samples is below this then outlier detection is skipped.
+    </description>
+  </property>
 
 <property>
   <name>dfs.datanode.outliers.report.interval</name>
@@ -3655,6 +3731,23 @@
 </property>
 
 <property>
+  <name>dfs.balancer.service.interval</name>
+  <value>5m</value>
+  <description>
+    The schedule interval of balancer when running as a long service.
+  </description>
+</property>
+
+<property>
+  <name>dfs.balancer.service.retries.on.exception</name>
+  <value>5</value>
+  <description>
+    When the balancer is executed as a long-running service, it will retry upon encountering an exception. This
+    configuration determines how many times it will retry before considering the exception to be fatal and quitting.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.misreplication.processing.limit</name>
   <value>10000</value>
   <description>
@@ -3730,10 +3823,10 @@
   <name>dfs.client.failover.proxy.provider</name>
   <value></value>
   <description>
-    The prefix (plus a required nameservice ID) for the class name of the
-    configured Failover proxy provider for the host.  For more detailed
-    information, please consult the "Configuration Details" section of
-    the HDFS High Availability documentation.
+    The prefix (plus a required nameservice ID) for the class name of the configured
+    Failover proxy provider for the host. For normal HA mode, please consult
+    the "Configuration Details" section of the HDFS High Availability documentation.
+    For observer reading mode, please choose a custom class--ObserverReadProxyProvider.
   </description>
 </property>
 
@@ -4035,7 +4128,7 @@
 
 <property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
-  <value>50</value>
+  <value>100</value>
   <description>
     Maximum number of threads for Datanode balancer pending moves.  This
     value is reconfigurable via the "dfsadmin -reconfig" command.
@@ -5360,6 +5453,26 @@
     <value>1024</value>
     <description>
       The queue size of BlockReportProcessingThread in BlockManager.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.storage.dir.perm</name>
+    <value>700</value>
+    <description>
+      Permissions for the directories on on the local filesystem where
+      the DFS namenode stores the fsImage. The permissions can either be
+      octal or symbolic.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.journalnode.edits.dir.perm</name>
+    <value>700</value>
+    <description>
+      Permissions for the directories on on the local filesystem where
+      the DFS journal node stores the edits. The permissions can either be
+      octal or symbolic.
     </description>
   </property>
 </configuration>

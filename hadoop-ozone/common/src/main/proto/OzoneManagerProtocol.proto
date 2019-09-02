@@ -73,6 +73,7 @@ enum Type {
   ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
+  DBUpdates = 53;
 
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
@@ -136,10 +137,13 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+  optional DBUpdatesRequest                  dbUpdatesRequest              = 53;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
+  optional UpdateGetDelegationTokenRequest updateGetDelegationTokenRequest = 64;
+  optional UpdateRenewDelegationTokenRequest updatedRenewDelegationTokenRequest = 65;
 
   optional GetFileStatusRequest             getFileStatusRequest           = 70;
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
@@ -152,6 +156,8 @@ message OMRequest {
   optional GetAclRequest                    getAclRequest                  = 78;
 
   optional PurgeKeysRequest                 purgeKeysRequest               = 81;
+
+  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
 }
 
 message OMResponse {
@@ -202,6 +208,7 @@ message OMResponse {
   optional MultipartUploadListPartsResponse listMultipartUploadPartsResponse = 50;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
+  optional DBUpdatesResponse                 dbUpdatesResponse             = 52;
 
   optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
   optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
@@ -280,6 +287,11 @@ enum Status {
     S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
 
     RATIS_ERROR = 52;
+
+    INVALID_PATH_IN_ACL_REQUEST = 53; // Invalid path name in acl request.
+
+    USER_MISMATCH = 54; // Error code when requested user name passed is
+    // different from remote user.
 }
 
 
@@ -302,6 +314,25 @@ message UserInfo {
     optional string remoteAddress = 3;
 }
 
+/**
+  This will be used during OM HA, once leader generates token sends this
+  request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating token across a quorum of OMs.
+*/
+message UpdateGetDelegationTokenRequest {
+    required GetDelegationTokenResponseProto getDelegationTokenResponse = 1;
+}
+
+/**
+  This will be used during OM HA, once leader renews token, sends this
+   request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating renewed token information across a quorum of OMs.
+*/
+message UpdateRenewDelegationTokenRequest {
+    required hadoop.common.RenewDelegationTokenRequestProto
+    renewDelegationTokenRequest = 1;
+    required RenewDelegationTokenResponseProto renewDelegationTokenResponse = 2;
+}
 
 /**
     Creates a volume
@@ -464,8 +495,6 @@ message DataEncryptionKeyProto {
 message BucketArgs {
     required string volumeName = 1;
     required string bucketName = 2;
-    repeated OzoneAclInfo addAcls = 3;
-    repeated OzoneAclInfo removeAcls = 4;
     optional bool isVersionEnabled = 5;
     optional StorageTypeProto storageType = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
@@ -612,6 +641,7 @@ message KeyArgs {
     // value is used in setting creation/modification time depending on the
     // request type.
     optional uint64 modificationTime = 13;
+    optional bool sortDatanodes = 14;
 }
 
 message KeyLocation {
@@ -836,9 +866,18 @@ message AllocateBlockResponse {
 message ServiceListRequest {
 }
 
+message DBUpdatesRequest {
+    required uint64 sequenceNumber = 1;
+}
+
 message ServiceListResponse {
 
     repeated ServiceInfo serviceInfo = 2;
+}
+
+message DBUpdatesResponse {
+    required uint64 sequenceNumber = 1;
+    repeated bytes data = 2;
 }
 
 message ServicePort {
@@ -1014,6 +1053,15 @@ message GetS3SecretRequest {
 
 message GetS3SecretResponse {
     required S3Secret s3Secret = 2;
+}
+
+/**
+  This will be used internally by OM to replicate S3 Secret across quorum of
+  OM's.
+*/
+message UpdateGetS3SecretRequest {
+    required string kerberosID = 1;
+    required string awsSecret = 2;
 }
 
 /**

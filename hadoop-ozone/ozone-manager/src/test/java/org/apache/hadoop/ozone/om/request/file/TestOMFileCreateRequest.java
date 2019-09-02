@@ -140,7 +140,8 @@ public class TestOMFileCreateRequest extends TestOMKeyRequest {
     omFileCreateRequest = new OMFileCreateRequest(modifiedOmRequest);
 
     OMClientResponse omFileCreateResponse =
-        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omFileCreateResponse.getOMResponse().getStatus());
@@ -193,7 +194,8 @@ public class TestOMFileCreateRequest extends TestOMKeyRequest {
 
 
     OMClientResponse omFileCreateResponse =
-        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
     Assert.assertEquals(BUCKET_NOT_FOUND,
         omFileCreateResponse.getOMResponse().getStatus());
 
@@ -299,7 +301,8 @@ public class TestOMFileCreateRequest extends TestOMKeyRequest {
     omFileCreateRequest = new OMFileCreateRequest(modifiedOmRequest);
 
     OMClientResponse omFileCreateResponse =
-        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     if (fail) {
       Assert.assertTrue(omFileCreateResponse.getOMResponse()

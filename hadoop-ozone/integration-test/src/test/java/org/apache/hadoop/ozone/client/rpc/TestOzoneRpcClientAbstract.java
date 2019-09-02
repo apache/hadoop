@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -58,6 +58,7 @@ import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
@@ -67,7 +68,6 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -101,7 +101,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 
 import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
-import static org.apache.hadoop.hdds.client.ReplicationFactor.THREE;
 import static org.apache.hadoop.hdds.client.ReplicationType.STAND_ALONE;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
@@ -120,6 +119,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -143,14 +143,15 @@ public abstract class TestOzoneRpcClientAbstract {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static String remoteUserName = "remoteUser";
+  private static String remoteGroupName = "remoteGroup";
   private static OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
       READ, DEFAULT);
-  private static OzoneAcl defaultGroupAcl = new OzoneAcl(GROUP, remoteUserName,
+  private static OzoneAcl defaultGroupAcl = new OzoneAcl(GROUP, remoteGroupName,
       READ, DEFAULT);
   private static OzoneAcl inheritedUserAcl = new OzoneAcl(USER, remoteUserName,
       READ, ACCESS);
   private static OzoneAcl inheritedGroupAcl = new OzoneAcl(GROUP,
-      remoteUserName, READ, ACCESS);
+      remoteGroupName, READ, ACCESS);
 
   private static String scmId = UUID.randomUUID().toString();
 
@@ -239,7 +240,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testSetVolumeQuota()
-      throws IOException, OzoneException {
+      throws IOException {
     String volumeName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
     store.getVolume(volumeName).setQuota(
@@ -263,7 +264,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateVolumeWithMetadata()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     VolumeArgs volumeArgs = VolumeArgs.newBuilder()
         .addMetadata("key1", "val1")
@@ -277,7 +278,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithMetadata()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
@@ -296,7 +297,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucket()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
@@ -311,7 +312,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateS3Bucket()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String userName = UserGroupInformation.getCurrentUser().getUserName();
     String bucketName = UUID.randomUUID().toString();
@@ -344,7 +345,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testListS3Buckets()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String userName = "ozone100";
     String bucketName1 = UUID.randomUUID().toString();
     String bucketName2 = UUID.randomUUID().toString();
@@ -362,7 +363,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testListS3BucketsFail()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String userName = "randomUser";
     Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
         null);
@@ -401,7 +402,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateS3BucketMapping()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String userName = "ozone";
     String bucketName = UUID.randomUUID().toString();
@@ -420,7 +421,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithVersioning()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -435,7 +436,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithStorageType()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -450,7 +451,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithAcls()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -469,7 +470,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithAllArgument()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -506,7 +507,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testAddBucketAcl()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -515,7 +516,9 @@ public abstract class TestOzoneRpcClientAbstract {
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(new OzoneAcl(USER, "test", ACLType.ALL, ACCESS));
     OzoneBucket bucket = volume.getBucket(bucketName);
-    bucket.addAcls(acls);
+    for (OzoneAcl acl : acls) {
+      assertTrue(bucket.addAcls(acl));
+    }
     OzoneBucket newBucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, newBucket.getName());
     Assert.assertTrue(bucket.getAcls().contains(acls.get(0)));
@@ -523,7 +526,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testRemoveBucketAcl()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -536,15 +539,49 @@ public abstract class TestOzoneRpcClientAbstract {
     builder.setAcls(acls);
     volume.createBucket(bucketName, builder.build());
     OzoneBucket bucket = volume.getBucket(bucketName);
-    bucket.removeAcls(acls);
+    for (OzoneAcl acl : acls) {
+      assertTrue(bucket.removeAcls(acl));
+    }
     OzoneBucket newBucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, newBucket.getName());
     Assert.assertTrue(!bucket.getAcls().contains(acls.get(0)));
   }
 
   @Test
+  public void testRemoveBucketAclUsingRpcClientRemoveAcl()
+      throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    OzoneAcl userAcl = new OzoneAcl(USER, "test",
+        ACLType.ALL, ACCESS);
+    List<OzoneAcl> acls = new ArrayList<>();
+    acls.add(userAcl);
+    acls.add(new OzoneAcl(USER, "test1",
+        ACLType.ALL, ACCESS));
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs.Builder builder = BucketArgs.newBuilder();
+    builder.setAcls(acls);
+    volume.createBucket(bucketName, builder.build());
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setBucketName(bucketName)
+        .setVolumeName(volumeName)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setResType(OzoneObj.ResourceType.BUCKET).build();
+
+    // Remove the 2nd acl added to the list.
+    boolean remove = store.removeAcl(ozoneObj, acls.get(1));
+    Assert.assertTrue(remove);
+    Assert.assertFalse(store.getAcl(ozoneObj).contains(acls.get(1)));
+
+    remove = store.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertTrue(remove);
+    Assert.assertFalse(store.getAcl(ozoneObj).contains(acls.get(0)));
+  }
+
+  @Test
   public void testSetBucketVersioning()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -558,8 +595,30 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
   @Test
+  public void testAclsAfterCallingSetBucketProperty() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+
+    OzoneBucket ozoneBucket = volume.getBucket(bucketName);
+    List<OzoneAcl> currentAcls = ozoneBucket.getAcls();
+
+    ozoneBucket.setVersioning(true);
+
+    OzoneBucket newBucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, newBucket.getName());
+    Assert.assertEquals(true, newBucket.getVersioning());
+
+    List<OzoneAcl> aclsAfterSet = newBucket.getAcls();
+    Assert.assertEquals(currentAcls, aclsAfterSet);
+
+  }
+
+  @Test
   public void testSetBucketStorageType()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -619,7 +678,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testPutKey()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -685,84 +744,9 @@ public abstract class TestOzoneRpcClientAbstract {
     Assert.assertEquals(value.getBytes().length, keyInfo.getDataSize());
   }
 
-  /**
-   * Tests get the information of key with network topology awareness enabled.
-   * @throws IOException
-   */
-  @Test
-  public void testGetKeyAndFileWithNetworkTopology() throws IOException {
-    String volumeName = UUID.randomUUID().toString();
-    String bucketName = UUID.randomUUID().toString();
-
-    String value = "sample value";
-    store.createVolume(volumeName);
-    OzoneVolume volume = store.getVolume(volumeName);
-    volume.createBucket(bucketName);
-    OzoneBucket bucket = volume.getBucket(bucketName);
-    String keyName = UUID.randomUUID().toString();
-
-    // Write data into a key
-    OzoneOutputStream out = bucket.createKey(keyName,
-        value.getBytes().length, ReplicationType.RATIS,
-        THREE, new HashMap<>());
-    out.write(value.getBytes());
-    out.close();
-
-    // Since the rpc client is outside of cluster, then getFirstNode should be
-    // equal to getClosestNode.
-    OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
-    builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName).setRefreshPipeline(true);
-
-    // read key with topology aware read enabled(default)
-    try {
-      OzoneInputStream is = bucket.readKey(keyName);
-      byte[] b = new byte[value.getBytes().length];
-      is.read(b);
-      Assert.assertTrue(Arrays.equals(b, value.getBytes()));
-    } catch (OzoneChecksumException e) {
-      fail("Reading key should success");
-    }
-    // read file with topology aware read enabled(default)
-    try {
-      OzoneInputStream is = bucket.readFile(keyName);
-      byte[] b = new byte[value.getBytes().length];
-      is.read(b);
-      Assert.assertTrue(Arrays.equals(b, value.getBytes()));
-    } catch (OzoneChecksumException e) {
-      fail("Reading file should success");
-    }
-
-    // read key with topology aware read disabled
-    Configuration conf = cluster.getConf();
-    conf.set(ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED, "false");
-    OzoneClient newClient = OzoneClientFactory.getRpcClient(conf);
-    ObjectStore newStore = newClient.getObjectStore();
-    OzoneBucket newBucket =
-        newStore.getVolume(volumeName).getBucket(bucketName);
-    try {
-      OzoneInputStream is = newBucket.readKey(keyName);
-      byte[] b = new byte[value.getBytes().length];
-      is.read(b);
-      Assert.assertTrue(Arrays.equals(b, value.getBytes()));
-    } catch (OzoneChecksumException e) {
-      fail("Reading key should success");
-    }
-    // read file with topology aware read disabled
-
-    try {
-      OzoneInputStream is = newBucket.readFile(keyName);
-      byte[] b = new byte[value.getBytes().length];
-      is.read(b);
-      Assert.assertTrue(Arrays.equals(b, value.getBytes()));
-    } catch (OzoneChecksumException e) {
-      fail("Reading file should success");
-    }
-  }
-
   @Test
   public void testPutKeyRatisOneNode()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -797,7 +781,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testPutKeyRatisThreeNodes()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -992,7 +976,7 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
   @Test
-  public void testGetKeyDetails() throws IOException, OzoneException {
+  public void testGetKeyDetails() throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -2292,11 +2276,11 @@ public abstract class TestOzoneRpcClientAbstract {
       }
     }
     List<OzoneAcl> acls = store.getAcl(parentObj);
-    assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+    assertTrue("Current acls: " + StringUtils.join(",", acls) +
+            " inheritedUserAcl: " + inheritedUserAcl,
         acls.contains(defaultUserAcl));
-    assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+    assertTrue("Current acls: " + StringUtils.join(",", acls) +
+            " inheritedGroupAcl: " + inheritedGroupAcl,
         acls.contains(defaultGroupAcl));
 
     acls = store.getAcl(childObj);
@@ -2304,7 +2288,7 @@ public abstract class TestOzoneRpcClientAbstract {
             " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(inheritedUserAcl));
     assertTrue("Current acls:" + StringUtils.join(",", acls) +
-            " inheritedUserAcl:" + inheritedUserAcl,
+            " inheritedGroupAcl:" + inheritedGroupAcl,
         acls.contains(inheritedGroupAcl));
   }
 
@@ -2491,31 +2475,30 @@ public abstract class TestOzoneRpcClientAbstract {
           ACLType.READ_ACL, ACCESS);
       // Verify that operation successful.
       assertTrue(store.addAcl(ozObj, newAcl));
-      List<OzoneAcl> acls = store.getAcl(ozObj);
 
-      assertTrue(acls.size() == expectedAcls.size());
-      boolean aclVerified = false;
-      for(OzoneAcl acl: acls) {
-        if(acl.getName().equals(newAcl.getName())) {
-          assertTrue(acl.getAclList().contains(ACLType.READ_ACL));
-          aclVerified = true;
-        }
-      }
-      assertTrue("New acl expected but not found.", aclVerified);
-      aclVerified = false;
+      assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
+      final Optional<OzoneAcl> readAcl = store.getAcl(ozObj).stream()
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
+          .findFirst();
+      assertTrue("New acl expected but not found.", readAcl.isPresent());
+      assertTrue("READ_ACL should exist in current acls:"
+          + readAcl.get(),
+          readAcl.get().getAclList().contains(ACLType.READ_ACL));
+
 
       // Case:2 Remove newly added acl permission.
       assertTrue(store.removeAcl(ozObj, newAcl));
-      acls = store.getAcl(ozObj);
-      assertTrue(acls.size() == expectedAcls.size());
-      for(OzoneAcl acl: acls) {
-        if(acl.getName().equals(newAcl.getName())) {
-          assertFalse("READ_ACL should not exist in current acls:" +
-              acls, acl.getAclList().contains(ACLType.READ_ACL));
-          aclVerified = true;
-        }
-      }
-      assertTrue("New acl expected but not found.", aclVerified);
+
+      assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
+      final Optional<OzoneAcl> nonReadAcl = store.getAcl(ozObj).stream()
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
+          .findFirst();
+      assertTrue("New acl expected but not found.", nonReadAcl.isPresent());
+      assertFalse("READ_ACL should not exist in current acls:"
+              + nonReadAcl.get(),
+          nonReadAcl.get().getAclList().contains(ACLType.READ_ACL));
     } else {
       fail("Default acl should not be empty.");
     }
@@ -2528,17 +2511,17 @@ public abstract class TestOzoneRpcClientAbstract {
       store.removeAcl(ozObj, a);
     }
     List<OzoneAcl> newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == 0);
+    assertEquals(0, newAcls.size());
 
     // Add acl's and then call getAcl.
     int aclCount = 0;
     for (OzoneAcl a : expectedAcls) {
       aclCount++;
       assertTrue(store.addAcl(ozObj, a));
-      assertTrue(store.getAcl(ozObj).size() == aclCount);
+      assertEquals(aclCount, store.getAcl(ozObj).size());
     }
     newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == expectedAcls.size());
+    assertEquals(expectedAcls.size(), newAcls.size());
     List<OzoneAcl> finalNewAcls = newAcls;
     expectedAcls.forEach(a -> assertTrue(finalNewAcls.contains(a)));
 
@@ -2549,7 +2532,7 @@ public abstract class TestOzoneRpcClientAbstract {
         ACLType.ALL, ACCESS);
     store.setAcl(ozObj, Arrays.asList(ua, ug));
     newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == 2);
+    assertEquals(2, newAcls.size());
     assertTrue(newAcls.contains(ua));
     assertTrue(newAcls.contains(ug));
   }

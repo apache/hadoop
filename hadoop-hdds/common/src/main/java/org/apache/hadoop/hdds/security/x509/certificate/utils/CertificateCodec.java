@@ -19,9 +19,7 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -70,7 +68,7 @@ public class CertificateCodec {
       Stream.of(OWNER_READ, OWNER_WRITE, OWNER_EXECUTE)
           .collect(Collectors.toSet());
   /**
-   * Creates an CertificateCodec.
+   * Creates a CertificateCodec with component name.
    *
    * @param config - Security Config.
    * @param component - Component String.
@@ -78,27 +76,6 @@ public class CertificateCodec {
   public CertificateCodec(SecurityConfig config, String component) {
     this.securityConfig = config;
     this.location = securityConfig.getCertificateLocation(component);
-  }
-
-  /**
-   * Creates an CertificateCodec.
-   *
-   * @param config - Security Config.
-   */
-  public CertificateCodec(SecurityConfig config) {
-    this.securityConfig = config;
-    this.location = securityConfig.getCertificateLocation();
-  }
-
-  /**
-   * Creates an CertificateCodec.
-   *
-   * @param configuration - Configuration
-   */
-  public CertificateCodec(Configuration configuration) {
-    Preconditions.checkNotNull(configuration, "Config cannot be null");
-    this.securityConfig = new SecurityConfig(configuration);
-    this.location = securityConfig.getCertificateLocation();
   }
 
   /**

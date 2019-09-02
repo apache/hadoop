@@ -269,12 +269,18 @@ public class RouterAdminServer extends AbstractService
       UpdateMountTableEntryRequest request) throws IOException {
     UpdateMountTableEntryResponse response =
         getMountTableStore().updateMountTableEntry(request);
-
-    MountTable mountTable = request.getEntry();
-    if (mountTable != null && router.isQuotaEnabled()) {
-      synchronizeQuota(mountTable.getSourcePath(),
-          mountTable.getQuota().getQuota(),
-          mountTable.getQuota().getSpaceQuota());
+    try {
+      MountTable mountTable = request.getEntry();
+      if (mountTable != null && router.isQuotaEnabled()) {
+        synchronizeQuota(mountTable.getSourcePath(),
+            mountTable.getQuota().getQuota(),
+            mountTable.getQuota().getSpaceQuota());
+      }
+    } catch (Exception e) {
+      // Ignore exception, if any while reseting quota. Specifically to handle
+      // if the actual destination doesn't exist.
+      LOG.warn("Unable to reset quota at the destinations for {}: {}",
+          request.getEntry().toString(), e.getMessage());
     }
     return response;
   }

@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
@@ -73,6 +74,10 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.server.impl.RaftServerImpl;
+import org.apache.ratis.server.impl.RaftServerProxy;
+import org.apache.ratis.statemachine.StateMachine;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -865,5 +870,37 @@ public final class ContainerTestHelper {
       }
       index++;
     }
+  }
+
+  public static StateMachine getStateMachine(MiniOzoneCluster cluster)
+      throws Exception {
+    return getStateMachine(cluster.getHddsDatanodes().get(0), null);
+  }
+
+  private static RaftServerImpl getRaftServerImpl(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    XceiverServerSpi server = dn.getDatanodeStateMachine().
+        getContainer().getWriteChannel();
+    RaftServerProxy proxy =
+        (RaftServerProxy) (((XceiverServerRatis) server).getServer());
+    RaftGroupId groupId =
+        pipeline == null ? proxy.getGroupIds().iterator().next() :
+            RatisHelper.newRaftGroup(pipeline).getGroupId();
+    return proxy.getImpl(groupId);
+  }
+
+  public static StateMachine getStateMachine(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    return getRaftServerImpl(dn, pipeline).getStateMachine();
+  }
+
+  public static boolean isRatisLeader(HddsDatanodeService dn, Pipeline pipeline)
+      throws Exception {
+    return getRaftServerImpl(dn, pipeline).isLeader();
+  }
+
+  public static boolean isRatisFollower(HddsDatanodeService dn,
+      Pipeline pipeline) throws Exception {
+    return getRaftServerImpl(dn, pipeline).isFollower();
   }
 }

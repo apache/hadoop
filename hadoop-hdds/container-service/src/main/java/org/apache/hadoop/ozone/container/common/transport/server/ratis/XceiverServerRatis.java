@@ -22,15 +22,11 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-        .StorageContainerDatanodeProtocolProtos.PipelineReport;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -44,20 +40,13 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 
 import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.netty.NettyConfigKeys;
-import org.apache.ratis.protocol.RaftClientRequest;
-import org.apache.ratis.protocol.Message;
-import org.apache.ratis.protocol.RaftClientReply;
-import org.apache.ratis.protocol.ClientId;
-import org.apache.ratis.protocol.NotLeaderException;
-import org.apache.ratis.protocol.StateMachineException;
-import org.apache.ratis.protocol.RaftPeerId;
-import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.protocol.*;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
@@ -74,11 +63,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Collections;
 import java.util.UUID;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -139,10 +128,10 @@ public final class XceiverServerRatis extends XceiverServer {
         TimeUnit.MILLISECONDS);
     this.dispatcher = dispatcher;
 
-    RaftServer.Builder builder = RaftServer.newBuilder()
-        .setServerId(RatisHelper.toRaftPeerId(dd))
-        .setProperties(serverProperties)
-        .setStateMachineRegistry(this::getStateMachine);
+    RaftServer.Builder builder =
+        RaftServer.newBuilder().setServerId(RatisHelper.toRaftPeerId(dd))
+            .setProperties(serverProperties)
+            .setStateMachineRegistry(this::getStateMachine);
     if (tlsConfig != null) {
       builder.setParameters(GrpcFactory.newRaftParameters(tlsConfig));
     }
@@ -507,6 +496,13 @@ public final class XceiverServerRatis extends XceiverServer {
         null);
   }
 
+  private GroupInfoRequest createGroupInfoRequest(
+      HddsProtos.PipelineID pipelineID) {
+    return new GroupInfoRequest(clientId, server.getId(),
+        RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
+        nextCallId());
+  }
+
   private void handlePipelineFailure(RaftGroupId groupId,
       RoleInfoProto roleInfoProto) {
     String msg;
@@ -558,7 +554,7 @@ public final class XceiverServerRatis extends XceiverServer {
     if (triggerHB) {
       context.getParent().triggerHeartbeat();
     }
-    LOG.debug(
+    LOG.error(
         "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
   }
@@ -609,6 +605,15 @@ public final class XceiverServerRatis extends XceiverServer {
     handlePipelineFailure(groupId, roleInfoProto);
   }
 
+  void handleApplyTransactionFailure(RaftGroupId groupId,
+      RaftProtos.RaftPeerRole role) {
+    UUID dnId = RatisHelper.toDatanodeId(getServer().getId());
+    String msg =
+        "Ratis Transaction failure in datanode " + dnId + " with role " + role
+            + " .Triggering pipeline close action.";
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.STATEMACHINE_TRANSACTION_FAILED, true);
+  }
   /**
    * The fact that the snapshot contents cannot be used to actually catch up
    * the follower, it is the reason to initiate close pipeline and
@@ -644,5 +649,13 @@ public final class XceiverServerRatis extends XceiverServer {
 
     triggerPipelineClose(groupId, msg,
         ClosePipelineInfo.Reason.PIPELINE_LOG_FAILED, true);
+  }
+
+  public long getMinReplicatedIndex(PipelineID pipelineID) throws IOException {
+    Long minIndex;
+    GroupInfoReply reply = getServer()
+        .getGroupInfo(createGroupInfoRequest(pipelineID.getProtobuf()));
+    minIndex = RatisHelper.getMinReplicatedIndex(reply.getCommitInfos());
+    return minIndex == null ? -1 : minIndex.longValue();
   }
 }

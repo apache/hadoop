@@ -42,6 +42,11 @@ HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/ozone-config.sh" ]]; then
   # shellcheck disable=SC1090
   . "${HADOOP_LIBEXEC_DIR}/ozone-config.sh"
+elif [[ -f "${bin}/../libexec/ozone-config.sh" ]]; then
+  HADOOP_HOME="${bin}/../"
+  HADOOP_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
+  . "${HADOOP_LIBEXEC_DIR}/ozone-config.sh"
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/ozone-config.sh." 2>&1
   exit 1

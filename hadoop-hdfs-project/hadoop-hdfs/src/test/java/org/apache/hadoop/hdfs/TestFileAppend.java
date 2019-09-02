@@ -667,7 +667,6 @@ public class TestFileAppend{
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
-    conf.setInt("dfs.min.replication", 1);
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(1).build();
@@ -693,7 +692,6 @@ public class TestFileAppend{
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
-    conf.setInt("dfs.min.replication", 1);
 
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)

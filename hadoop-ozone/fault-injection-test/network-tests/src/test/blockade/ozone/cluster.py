@@ -19,7 +19,9 @@ import logging
 import os
 import re
 import subprocess
+import sys
 import yaml
+import time
 
 
 from os import environ
@@ -146,10 +148,16 @@ class OzoneCluster(object):
         """
         Start Ozone Cluster in docker containers.
         """
-        # check if proper env $HDDS_VERSION and $HADOOP_RUNNER_VERSION
-        # are set.
 
         # check if docker is up.
+
+        if "HADOOP_RUNNER_VERSION" not in os.environ:
+            self.__logger__.error("HADOOP_RUNNER_VERSION is not set.")
+            sys.exit(1)
+
+        if "HDDS_VERSION" not in os.environ:
+            self.__logger__.error("HDDS_VERSION is not set.")
+            sys.exit(1)
 
         self.__logger__.info("Starting Ozone Cluster")
         if Blockade.blockade_status() == 0:
@@ -162,7 +170,7 @@ class OzoneCluster(object):
               "datanode=" + str(self.conf.datanode_count)])
         self.__logger__.info("Waiting 10s for cluster start up...")
         # Remove the sleep and wait only till the cluster is out of safemode
-        # time.sleep(10)
+        time.sleep(10)
         output = subprocess.check_output([Command.docker_compose, "-f",
                                           self.docker_compose_file, "ps"])
         node_list = []
@@ -230,6 +238,16 @@ class OzoneCluster(object):
             raise ContainerNotFoundError(container_id)
         return Container(container_id, self)
 
+    def is_container_replica_exist(self, container_id, datanode):
+        container_parent_path = "%s/hdds/%s/current/containerDir0" % \
+                                (self.datanode_dir, self.scm_uuid)
+        command = "find %s -type f -name '%s.container'" % (container_parent_path, container_id)
+        exit_code, output = util.run_docker_command(command, datanode)
+        container_path = output.strip()
+        if not container_path:
+            return False
+        return True
+
     def get_containers_on_datanode(self, datanode):
         """
         Returns all the container on given datanode.
@@ -284,7 +302,7 @@ class OzoneCluster(object):
                                     (self.datanode_dir, self.scm_uuid)
             command = "find %s -type f -name '%s.container'" % (container_parent_path, container_id)
             exit_code, output = util.run_docker_command(command, datanode)
-            if exit_code == 0:
+            if output.strip():
                 result.append(datanode)
         return result
 

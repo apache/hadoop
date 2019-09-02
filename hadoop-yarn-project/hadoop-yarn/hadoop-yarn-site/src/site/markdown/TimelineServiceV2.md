@@ -487,8 +487,7 @@ order. Each event contains one id and a map to store related information and is
 associated with one timestamp.
 * configs: A map from a string (config name) to a string (config value) representing all
 configs associated with the entity. Users can post the whole config or a part of it in the
-configs field. Supported for application and generic entities. Supported for application and
-generic entities.
+configs field. Supported for application and generic entities.
 * metrics: A set of metrics related to this entity. There are two types of metrics: single
 value metric and time series metric. Each metric item contains metric name (id), value, and what
 kind of aggregation operation should be performed in this metric (no­op by default). Supported for

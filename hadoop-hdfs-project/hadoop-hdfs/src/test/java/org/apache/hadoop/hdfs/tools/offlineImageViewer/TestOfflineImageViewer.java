@@ -55,7 +55,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -288,6 +287,16 @@ public class TestOfflineImageViewer {
       // blocks fields to the fileDiff entry.
       hdfs.truncate(file1, 1);
       writtenFiles.put(file1.toString(), hdfs.getFileStatus(file1));
+
+      // HDFS-14148: Create a second snapshot-enabled directory. This can cause
+      // TestOfflineImageViewer#testReverseXmlRoundTrip to fail before the patch
+      final Path snapshotDir2 = new Path("/snapshotDir2");
+      hdfs.mkdirs(snapshotDir2);
+      // Simply enable snapshot on it, no need to create one
+      hdfs.allowSnapshot(snapshotDir2);
+      dirCount++;
+      writtenFiles.put(snapshotDir2.toString(),
+          hdfs.getFileStatus(snapshotDir2));
 
       // Set XAttrs so the fsimage contains XAttr ops
       final Path xattr = new Path("/xattr");
@@ -1015,28 +1024,12 @@ public class TestOfflineImageViewer {
     return output.toString();
   }
 
-  private String readExpectedFile(String fileName) throws IOException {
-    File file = new File(System.getProperty(
-        "test.cache.data", "build/test/cache"), fileName);
-    BufferedReader reader = new BufferedReader(new FileReader(file));
-    String line;
-    StringBuilder s = new StringBuilder();
-    while ((line = reader.readLine()) != null) {
-      line = line.trim();
-      if (line.length() <= 0 || line.startsWith("#")) {
-        continue;
-      }
-      s.append(line);
-      s.append("\n");
-    }
-    return s.toString();
-  }
-
   @Test
   public void testCorruptionDetectionSingleFileCorruption() throws Exception {
     List<Long> corruptions = Collections.singletonList(FILE_NODE_ID_1);
     String result = testCorruptionDetectorRun(1, corruptions, "");
-    String expected = readExpectedFile("testSingleFileCorruption.csv");
+    String expected = DFSTestUtil.readResoucePlainFile(
+        "testSingleFileCorruption.csv");
     assertEquals(expected, result);
     result = testCorruptionDetectorRun(2, corruptions,
         new FileSystemTestHelper().getTestRootDir() + "/corruption2.db");
@@ -1048,7 +1041,8 @@ public class TestOfflineImageViewer {
     List<Long> corruptions = Arrays.asList(FILE_NODE_ID_1, FILE_NODE_ID_2,
         FILE_NODE_ID_3);
     String result = testCorruptionDetectorRun(3, corruptions, "");
-    String expected = readExpectedFile("testMultipleFileCorruption.csv");
+    String expected = DFSTestUtil.readResoucePlainFile(
+        "testMultipleFileCorruption.csv");
     assertEquals(expected, result);
     result = testCorruptionDetectorRun(4, corruptions,
         new FileSystemTestHelper().getTestRootDir() + "/corruption4.db");
@@ -1059,7 +1053,8 @@ public class TestOfflineImageViewer {
   public void testCorruptionDetectionSingleFolderCorruption() throws Exception {
     List<Long> corruptions = Collections.singletonList(DIR_NODE_ID);
     String result = testCorruptionDetectorRun(5, corruptions, "");
-    String expected = readExpectedFile("testSingleFolderCorruption.csv");
+    String expected = DFSTestUtil.readResoucePlainFile(
+        "testSingleFolderCorruption.csv");
     assertEquals(expected, result);
     result = testCorruptionDetectorRun(6, corruptions,
         new FileSystemTestHelper().getTestRootDir() + "/corruption6.db");
@@ -1071,7 +1066,8 @@ public class TestOfflineImageViewer {
     List<Long> corruptions = Arrays.asList(FILE_NODE_ID_1, FILE_NODE_ID_2,
         FILE_NODE_ID_3, DIR_NODE_ID);
     String result = testCorruptionDetectorRun(7, corruptions, "");
-    String expected = readExpectedFile("testMultipleCorruption.csv");
+    String expected = DFSTestUtil.readResoucePlainFile(
+        "testMultipleCorruption.csv");
     assertEquals(expected, result);
     result = testCorruptionDetectorRun(8, corruptions,
         new FileSystemTestHelper().getTestRootDir() + "/corruption8.db");

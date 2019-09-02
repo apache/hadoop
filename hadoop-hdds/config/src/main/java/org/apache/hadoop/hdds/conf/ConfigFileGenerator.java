@@ -93,21 +93,21 @@ public class ConfigFileGenerator extends AbstractProcessor {
           }
 
         }
-        FileObject resource = filer
-            .createResource(StandardLocation.CLASS_OUTPUT, "",
-                OUTPUT_FILE_NAME);
-
-        try (Writer writer = new OutputStreamWriter(
-            resource.openOutputStream(), StandardCharsets.UTF_8)) {
-          appender.write(writer);
-        }
       }
+      FileObject resource = filer
+          .createResource(StandardLocation.CLASS_OUTPUT, "",
+              OUTPUT_FILE_NAME);
+
+      try (Writer writer = new OutputStreamWriter(
+          resource.openOutputStream(), StandardCharsets.UTF_8)) {
+        appender.write(writer);
+      }
+
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Kind.ERROR,
           "Can't generate the config file from annotation: " + e.getMessage());
     }
     return false;
   }
-
 
 }

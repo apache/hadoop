@@ -46,6 +46,7 @@ public class TestDisableRouterQuota {
         .quota(false) //set false to verify the quota disabled in Router
         .rpc()
         .build();
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "0.0.0.0:0");
     router.init(routerConf);
     router.setRouterId("TestRouterId");
     router.start();

@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.junit.After;
@@ -65,7 +66,11 @@ public class TestOMDirectoryCreateRequest {
   private OMMetrics omMetrics;
   private OMMetadataManager omMetadataManager;
   private AuditLogger auditLogger;
-
+  // Just setting ozoneManagerDoubleBuffer which does nothing.
+  private OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
+      ((response, transactionIndex) -> {
+        return null;
+      });
 
   @Before
   public void setup() throws Exception {
@@ -136,7 +141,8 @@ public class TestOMDirectoryCreateRequest {
     omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
 
     OMClientResponse omClientResponse =
-        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.OK);
@@ -167,7 +173,8 @@ public class TestOMDirectoryCreateRequest {
     omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
 
     OMClientResponse omClientResponse =
-        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND);
@@ -207,7 +214,8 @@ public class TestOMDirectoryCreateRequest {
     omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
 
     OMClientResponse omClientResponse =
-        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.OK);
@@ -251,7 +259,8 @@ public class TestOMDirectoryCreateRequest {
     omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
 
     OMClientResponse omClientResponse =
-        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.OK);
@@ -295,7 +304,8 @@ public class TestOMDirectoryCreateRequest {
     omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
 
     OMClientResponse omClientResponse =
-        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.FILE_ALREADY_EXISTS);

@@ -23,6 +23,9 @@ import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketAddAclRequest;
+import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketSetAclRequest;
 import org.apache.hadoop.ozone.om.request.file.OMDirectoryCreateRequest;
 import org.apache.hadoop.ozone.om.request.file.OMFileCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMAllocateBlockRequest;
@@ -31,18 +34,31 @@ import org.apache.hadoop.ozone.om.request.key.OMKeyCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyDeleteRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyPurgeRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRenameRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeyAddAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeyRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeySetAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixAddAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixSetAclRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUploadRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequest;
+import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.om.request.security.OMCancelDelegationTokenRequest;
+import org.apache.hadoop.ozone.om.request.security.OMGetDelegationTokenRequest;
+import org.apache.hadoop.ozone.om.request.security.OMRenewDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeSetAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 
@@ -114,9 +130,59 @@ public final class OzoneManagerRatisUtils {
       return new S3MultipartUploadCommitPartRequest(omRequest);
     case AbortMultiPartUpload:
       return new S3MultipartUploadAbortRequest(omRequest);
+    case CompleteMultiPartUpload:
+      return new S3MultipartUploadCompleteRequest(omRequest);
+    case AddAcl:
+    case RemoveAcl:
+    case SetAcl:
+      return getOMAclRequest(omRequest);
+    case GetDelegationToken:
+      return new OMGetDelegationTokenRequest(omRequest);
+    case CancelDelegationToken:
+      return new OMCancelDelegationTokenRequest(omRequest);
+    case RenewDelegationToken:
+      return new OMRenewDelegationTokenRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;
+    }
+  }
+
+  private static OMClientRequest getOMAclRequest(OMRequest omRequest) {
+    Type cmdType = omRequest.getCmdType();
+    if (Type.AddAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeAddAclRequest(omRequest);
+      } else if (ObjectType.BUCKET == type) {
+        return new OMBucketAddAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeyAddAclRequest(omRequest);
+      } else {
+        return new OMPrefixAddAclRequest(omRequest);
+      }
+    } else if (Type.RemoveAcl == cmdType) {
+      ObjectType type = omRequest.getRemoveAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeRemoveAclRequest(omRequest);
+      } else if (ObjectType.BUCKET == type) {
+        return new OMBucketRemoveAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeyRemoveAclRequest(omRequest);
+      } else {
+        return new OMPrefixRemoveAclRequest(omRequest);
+      }
+    } else {
+      ObjectType type = omRequest.getSetAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeSetAclRequest(omRequest);
+      } else if (ObjectType.BUCKET == type) {
+        return new OMBucketSetAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeySetAclRequest(omRequest);
+      } else {
+        return new OMPrefixSetAclRequest(omRequest);
+      }
     }
   }
 

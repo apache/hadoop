@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
@@ -91,7 +92,7 @@ public class TestLargeBlockReport {
 
   @Test
   public void testBlockReportSucceedsWithLargerLengthLimit() throws Exception {
-    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, 128 * 1024 * 1024); // 128 MB
+    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT * 2);
     initCluster();
     StorageBlockReport[] reports = createReports(6000000);
     nnProxy.blockReport(bpRegistration, bpId, reports,

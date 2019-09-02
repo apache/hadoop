@@ -18,20 +18,16 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -88,27 +84,26 @@ public class ListKeyHandler extends Handler {
     OzoneBucket bucket = vol.getBucket(bucketName);
     Iterator<? extends OzoneKey> keyIterator = bucket.listKeys(prefix,
         startKey);
-    List<KeyInfo> keyInfos = new ArrayList<>();
 
     int maxKeyLimit = maxKeys;
+
+    int counter = 0;
     while (maxKeys > 0 && keyIterator.hasNext()) {
-      KeyInfo key = OzoneClientUtils.asKeyInfo(keyIterator.next());
-      keyInfos.add(key);
+      OzoneKey ozoneKey = keyIterator.next();
+      ObjectPrinter.printObjectAsJson(ozoneKey);
       maxKeys -= 1;
+      counter++;
     }
 
     // More keys were returned notify about max length
     if (keyIterator.hasNext()) {
       System.out.println("Listing first " + maxKeyLimit + " entries of the " +
           "result. Use --length (-l) to override max returned keys.");
+    } else if (isVerbose()) {
+      System.out.printf("Found : %d keys for bucket %s in volume : %s ",
+          counter, bucketName, volumeName);
     }
 
-    if (isVerbose()) {
-      System.out.printf("Found : %d keys for bucket %s in volume : %s ",
-          keyInfos.size(), bucketName, volumeName);
-    }
-    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(keyInfos)));
     return null;
   }
 

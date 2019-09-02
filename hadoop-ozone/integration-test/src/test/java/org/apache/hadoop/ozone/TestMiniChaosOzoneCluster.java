@@ -83,8 +83,15 @@ public class TestMiniChaosOzoneCluster implements Runnable {
     for (int i = 0; i < numClients; i++) {
       ozoneBuckets.add(volume.getBucket(bucketName));
     }
+
+    String agedBucketName =
+        RandomStringUtils.randomAlphabetic(10).toLowerCase();
+
+    volume.createBucket(agedBucketName);
+    OzoneBucket agedLoadBucket = volume.getBucket(agedBucketName);
     loadGenerator =
-        new MiniOzoneLoadGenerator(ozoneBuckets, numThreads, numBuffers);
+        new MiniOzoneLoadGenerator(ozoneBuckets, agedLoadBucket, numThreads,
+            numBuffers);
   }
 
   /**

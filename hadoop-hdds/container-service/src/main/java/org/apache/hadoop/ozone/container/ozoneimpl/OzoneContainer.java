@@ -42,6 +42,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 
+import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
 import org.apache.hadoop.ozone.container.replication
     .OnDemandContainerReplicationSource;
@@ -53,6 +54,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 
 /**
  * Ozone main class sets up the network servers and initializes the container
@@ -72,6 +76,7 @@ public class OzoneContainer {
   private final XceiverServerSpi readChannel;
   private final ContainerController controller;
   private ContainerScrubber scrubber;
+  private final BlockDeletingService blockDeletingService;
 
   /**
    * Construct OzoneContainer object.
@@ -111,7 +116,17 @@ public class OzoneContainer {
     this.readChannel = new XceiverServerGrpc(
         datanodeDetails, config, hddsDispatcher, certClient,
         createReplicationService());
-
+    long svcInterval = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    long serviceTimeout = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    this.blockDeletingService =
+        new BlockDeletingService(this, svcInterval, serviceTimeout,
+            TimeUnit.MILLISECONDS, config);
   }
 
   private GrpcReplicationService createReplicationService() {
@@ -189,6 +204,7 @@ public class OzoneContainer {
     readChannel.start();
     hddsDispatcher.init();
     hddsDispatcher.setScmId(scmId);
+    blockDeletingService.start();
   }
 
   /**
@@ -203,6 +219,7 @@ public class OzoneContainer {
     this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
+    blockDeletingService.shutdown();
   }
 
 

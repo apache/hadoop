@@ -527,8 +527,7 @@ public class TestStorageContainerManager {
       for (DatanodeDetails node : allNodes) {
         DatanodeInfo datanodeInfo = (DatanodeInfo) scm.getScmNodeManager()
             .getNodeByUuid(node.getUuidString());
-        Assert.assertTrue((datanodeInfo.getLastHeartbeatTime() - start)
-            >= heartbeatCheckerIntervalMs);
+        Assert.assertTrue(datanodeInfo.getLastHeartbeatTime() > start);
         Assert.assertEquals(datanodeInfo.getUuidString(),
             datanodeInfo.getNetworkName());
         Assert.assertEquals("/rack1", datanodeInfo.getNetworkLocation());

@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
@@ -38,34 +40,44 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 
 /**
- * Allocate GPU resources according to requirements
+ * Allocate GPU resources according to requirements.
  */
 public class GpuResourceAllocator {
   final static Logger LOG = LoggerFactory.
       getLogger(GpuResourceAllocator.class);
+
   private static final int WAIT_MS_PER_LOOP = 1000;
 
   private Set<GpuDevice> allowedGpuDevices = new TreeSet<>();
   private Map<GpuDevice, ContainerId> usedDevices = new TreeMap<>();
   private Context nmContext;
+  private final int waitPeriodForResource;
 
   public GpuResourceAllocator(Context ctx) {
     this.nmContext = ctx;
+    // Wait for a maximum of 120 seconds if no available GPU are there which
+    // are yet to be released.
+    this.waitPeriodForResource = 120 * WAIT_MS_PER_LOOP;
+  }
+
+  @VisibleForTesting
+  GpuResourceAllocator(Context ctx, int waitPeriodForResource) {
+    this.nmContext = ctx;
+    this.waitPeriodForResource = waitPeriodForResource;
   }
 
   /**
-   * Contains allowed and denied devices
+   * Contains allowed and denied devices.
    * Denied devices will be useful for cgroups devices module to do blacklisting
    */
   static class GpuAllocation {
@@ -91,18 +103,11 @@ public class GpuResourceAllocator {
   }
 
   /**
-   * Add GPU to allowed list
+   * Add GPU to the allowed list of GPUs.
    * @param gpuDevice gpu device
    */
   public synchronized void addGpu(GpuDevice gpuDevice) {
     allowedGpuDevices.add(gpuDevice);
-  }
-
-  private String getResourceHandlerExceptionMessage(int numRequestedGpuDevices,
-      ContainerId containerId) {
-    return "Failed to find enough GPUs, requestor=" + containerId
-        + ", #RequestedGPUs=" + numRequestedGpuDevices + ", #availableGpus="
-        + getAvailableGpus();
   }
 
   @VisibleForTesting
@@ -113,10 +118,10 @@ public class GpuResourceAllocator {
   public synchronized void recoverAssignedGpus(ContainerId containerId)
       throws ResourceHandlerException {
     Container c = nmContext.getContainers().get(containerId);
-    if (null == c) {
+    if (c == null) {
       throw new ResourceHandlerException(
-          "This shouldn't happen, cannot find container with id="
-              + containerId);
+          "Cannot find container with id=" + containerId +
+              ", this should not occur under normal circumstances!");
     }
 
     LOG.info("Starting recovery of GpuDevice for {}.", containerId);
@@ -125,7 +130,8 @@ public class GpuResourceAllocator {
       if (!(gpuDeviceSerializable instanceof GpuDevice)) {
         throw new ResourceHandlerException(
             "Trying to recover device id, however it"
-                + " is not GpuDevice, this shouldn't happen");
+                + " is not an instance of " + GpuDevice.class.getName()
+                + ", this should not occur under normal circumstances!");
       }
 
       GpuDevice gpuDevice = (GpuDevice) gpuDeviceSerializable;
@@ -134,8 +140,8 @@ public class GpuResourceAllocator {
       if (!allowedGpuDevices.contains(gpuDevice)) {
         throw new ResourceHandlerException(
             "Try to recover device = " + gpuDevice
-                + " however it is not in allowed device list:" + StringUtils
-                .join(",", allowedGpuDevices));
+                + " however it is not in the allowed device list:" +
+                StringUtils.join(",", allowedGpuDevices));
       }
 
       // Make sure it is not occupied by anybody else
@@ -168,7 +174,7 @@ public class GpuResourceAllocator {
   }
 
   /**
-   * Assign GPU to requestor
+   * Assign GPU to the specified container.
    * @param container container to allocate
    * @return allocation results.
    * @throws ResourceHandlerException When failed to assign GPUs.
@@ -177,12 +183,11 @@ public class GpuResourceAllocator {
       throws ResourceHandlerException {
     GpuAllocation allocation = internalAssignGpus(container);
 
-    // Wait for a maximum of 120 seconds if no available GPU are there which
-    // are yet to be released.
-    final int timeoutMsecs = 120 * WAIT_MS_PER_LOOP;
+    // Wait for a maximum of waitPeriodForResource seconds if no
+    // available GPU are there which are yet to be released.
     int timeWaiting = 0;
     while (allocation == null) {
-      if (timeWaiting >= timeoutMsecs) {
+      if (timeWaiting >= waitPeriodForResource) {
         break;
       }
 
@@ -196,6 +201,8 @@ public class GpuResourceAllocator {
         allocation = internalAssignGpus(container);
       } catch (InterruptedException e) {
         // On any interrupt, break the loop and continue execution.
+        Thread.currentThread().interrupt();
+        LOG.warn("Interrupted while waiting for available GPU");
         break;
       }
     }
@@ -215,8 +222,15 @@ public class GpuResourceAllocator {
     Resource requestedResource = container.getResource();
     ContainerId containerId = container.getContainerId();
     int numRequestedGpuDevices = getRequestedGpus(requestedResource);
-    // Assign Gpus to container if requested some.
+
+    // Assign GPUs to container if requested some.
     if (numRequestedGpuDevices > 0) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Trying to assign %d GPUs to container: %s" +
+            ", #AvailableGPUs=%d, #ReleasingGPUs=%d",
+            numRequestedGpuDevices, containerId,
+            getAvailableGpus(), getReleasingGpus()));
+      }
       if (numRequestedGpuDevices > getAvailableGpus()) {
         // If there are some devices which are getting released, wait for few
         // seconds to get it.
@@ -227,8 +241,9 @@ public class GpuResourceAllocator {
 
       if (numRequestedGpuDevices > getAvailableGpus()) {
         throw new ResourceHandlerException(
-            getResourceHandlerExceptionMessage(numRequestedGpuDevices,
-                containerId));
+            "Failed to find enough GPUs, requestor=" + containerId +
+                ", #RequestedGPUs=" + numRequestedGpuDevices +
+                ", #AvailableGPUs=" + getAvailableGpus());
       }
 
       Set<GpuDevice> assignedGpus = new TreeSet<>();
@@ -250,7 +265,7 @@ public class GpuResourceAllocator {
           nmContext.getNMStateStore().storeAssignedResources(container, GPU_URI,
               new ArrayList<>(assignedGpus));
         } catch (IOException e) {
-          cleanupAssignGpus(containerId);
+          unassignGpus(containerId);
           throw new ResourceHandlerException(e);
         }
       }
@@ -276,35 +291,34 @@ public class GpuResourceAllocator {
   }
 
   /**
-   * Clean up all Gpus assigned to containerId
+   * Clean up all GPUs assigned to containerId.
    * @param containerId containerId
    */
-  public synchronized void cleanupAssignGpus(ContainerId containerId) {
-    Iterator<Map.Entry<GpuDevice, ContainerId>> iter =
-        usedDevices.entrySet().iterator();
-    while (iter.hasNext()) {
-      if (iter.next().getValue().equals(containerId)) {
-        iter.remove();
-      }
+  public synchronized void unassignGpus(ContainerId containerId) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Trying to unassign GPU device from container " + containerId);
     }
+    usedDevices.entrySet().removeIf(entry ->
+        entry.getValue().equals(containerId));
   }
 
   @VisibleForTesting
-  public synchronized Map<GpuDevice, ContainerId> getDeviceAllocationMappingCopy() {
-    return new HashMap<>(usedDevices);
+  public synchronized Map<GpuDevice, ContainerId> getDeviceAllocationMapping() {
+    return ImmutableMap.copyOf(usedDevices);
   }
 
-  public synchronized List<GpuDevice> getAllowedGpusCopy() {
-    return new ArrayList<>(allowedGpuDevices);
+  public synchronized List<GpuDevice> getAllowedGpus() {
+    return ImmutableList.copyOf(allowedGpuDevices);
   }
 
-  public synchronized List<AssignedGpuDevice> getAssignedGpusCopy() {
-    List<AssignedGpuDevice> assigns = new ArrayList<>();
-    for (Map.Entry<GpuDevice, ContainerId> entry : usedDevices.entrySet()) {
-      assigns.add(new AssignedGpuDevice(entry.getKey().getIndex(),
-          entry.getKey().getMinorNumber(), entry.getValue()));
-    }
-    return assigns;
+  public synchronized List<AssignedGpuDevice> getAssignedGpus() {
+    return usedDevices.entrySet().stream()
+        .map(e -> {
+          final GpuDevice gpu = e.getKey();
+          ContainerId containerId = e.getValue();
+          return new AssignedGpuDevice(gpu.getIndex(), gpu.getMinorNumber(),
+              containerId);
+        }).collect(Collectors.toList());
   }
 
   @Override

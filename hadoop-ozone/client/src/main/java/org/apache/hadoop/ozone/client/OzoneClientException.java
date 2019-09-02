@@ -17,38 +17,27 @@
  */
 package org.apache.hadoop.ozone.client;
 
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-
 /**
  * This exception is thrown by the Ozone Clients.
  */
-public class OzoneClientException extends OzoneException {
-  /**
-   * Constructor that allows the shortMessage.
-   *
-   * @param shortMessage Short Message
-   */
-  public OzoneClientException(String shortMessage) {
-    super(0, shortMessage, shortMessage);
+public class OzoneClientException extends Exception {
+  public OzoneClientException() {
   }
 
-  /**
-   * Constructor that allows a shortMessage and an exception.
-   *
-   * @param shortMessage short message
-   * @param ex exception
-   */
-  public OzoneClientException(String shortMessage, Exception ex) {
-    super(0, shortMessage, shortMessage, ex);
+  public OzoneClientException(String s) {
+    super(s);
   }
 
-  /**
-   * Constructor that allows the shortMessage and a longer message.
-   *
-   * @param shortMessage Short Message
-   * @param message long error message
-   */
-  public OzoneClientException(String shortMessage, String message) {
-    super(0, shortMessage, message);
+  public OzoneClientException(String s, Throwable throwable) {
+    super(s, throwable);
+  }
+
+  public OzoneClientException(Throwable throwable) {
+    super(throwable);
+  }
+
+  public OzoneClientException(String s, Throwable throwable, boolean b,
+      boolean b1) {
+    super(s, throwable, b, b1);
   }
 }

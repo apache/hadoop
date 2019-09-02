@@ -78,6 +78,11 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
 
   /**
    *
+   * @param cfIndex
+   * @param keyBytes
+   * @param valueBytes
+   * @param action
+   * @throws IOException
    */
   private void processEvent(int cfIndex, byte[] keyBytes, byte[]
       valueBytes, OMDBUpdateEvent.OMDBUpdateAction action)
@@ -100,8 +105,8 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
 
       builder.setAction(action);
       OMDBUpdateEvent event = builder.build();
-      LOG.info("Generated OM update Event for table : " + event.getTable()
-          + ", Key = " + event.getKey());
+      LOG.debug("Generated OM update Event for table : " + event.getTable()
+          + ", Key = " + event.getKey() + ", action = " + event.getAction());
       // Temporarily adding to an event buffer for testing. In subsequent JIRAs,
       // a Recon side class will be implemented that requests delta updates
       // from OM and calls on this handler. In that case, we will fill up

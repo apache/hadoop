@@ -21,25 +21,12 @@ package org.apache.hadoop.ozone.om.request.volume;
 import java.util.UUID;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeRequest;
@@ -48,43 +35,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeInfo;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
  * Tests create volume request.
  */
-public class TestOMVolumeCreateRequest {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
 
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
+public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
 
-
-  @Before
-  public void setup() throws Exception {
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    when(ozoneManager.getMaxUserVolumeCount()).thenReturn(10L);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-  }
-
-  @After
-  public void stop() {
-    omMetrics.unRegister();
-    Mockito.framework().clearInlineMocks();
-  }
 
   @Test
   public void testPreExecute() throws Exception {
@@ -113,7 +71,8 @@ public class TestOMVolumeCreateRequest {
 
     try {
       OMClientResponse omClientResponse =
-          omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+          omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+              ozoneManagerDoubleBufferHelper);
     } catch (IllegalArgumentException ex){
       GenericTestUtils.assertExceptionContains("should be greater than zero",
           ex);
@@ -147,7 +106,8 @@ public class TestOMVolumeCreateRequest {
     omVolumeCreateRequest = new OMVolumeCreateRequest(modifiedRequest);
 
     OMClientResponse omClientResponse =
-        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
 
     OzoneManagerProtocolProtos.OMResponse omResponse =
         omClientResponse.getOMResponse();
@@ -187,7 +147,8 @@ public class TestOMVolumeCreateRequest {
     modifiedRequest = omVolumeCreateRequest.preExecute(ozoneManager);
 
     omClientResponse =
-        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 2L);
+        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 2L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omClientResponse.getOMResponse().getStatus());
@@ -219,7 +180,8 @@ public class TestOMVolumeCreateRequest {
     omVolumeCreateRequest = new OMVolumeCreateRequest(modifiedRequest);
 
     OMClientResponse omClientResponse =
-        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
 
     OzoneManagerProtocolProtos.OMResponse omResponse =
         omClientResponse.getOMResponse();

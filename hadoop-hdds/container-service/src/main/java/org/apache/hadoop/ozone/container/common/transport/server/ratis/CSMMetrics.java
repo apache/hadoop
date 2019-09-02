@@ -52,6 +52,7 @@ public class CSMMetrics {
 
   // Failure Metrics
   private @Metric MutableCounterLong numWriteStateMachineFails;
+  private @Metric MutableCounterLong numWriteDataFails;
   private @Metric MutableCounterLong numQueryStateMachineFails;
   private @Metric MutableCounterLong numApplyTransactionFails;
   private @Metric MutableCounterLong numReadStateMachineFails;
@@ -95,6 +96,10 @@ public class CSMMetrics {
 
   public void incNumWriteStateMachineFails() {
     numWriteStateMachineFails.incr();
+  }
+
+  public void incNumWriteDataFails() {
+    numWriteDataFails.incr();
   }
 
   public void incNumQueryStateMachineFails() {
@@ -142,6 +147,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumWriteDataFails() {
+    return numWriteDataFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumQueryStateMachineFails() {
     return numQueryStateMachineFails.value();
   }
@@ -159,6 +169,11 @@ public class CSMMetrics {
   @VisibleForTesting
   public long getNumReadStateMachineMissCount() {
     return numReadStateMachineMissCount.value();
+  }
+
+  @VisibleForTesting
+  public long getNumReadStateMachineOps() {
+    return numReadStateMachineOps.value();
   }
 
   @VisibleForTesting

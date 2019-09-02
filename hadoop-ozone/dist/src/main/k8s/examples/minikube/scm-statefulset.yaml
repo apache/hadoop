@@ -46,12 +46,12 @@ spec:
         - ozone
         - scm
         - --init
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       containers:
       - name: scm
         image: '@docker.image@'
@@ -62,12 +62,12 @@ spec:
           tcpSocket:
             port: 9861
           initialDelaySeconds: 30
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       volumes:
       - name: data
         emptyDir: {}

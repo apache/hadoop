@@ -122,6 +122,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenReque
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
+
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -298,6 +301,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
             request.getServiceListRequest());
         responseBuilder.setServiceListResponse(serviceListResponse);
         break;
+      case DBUpdates:
+        DBUpdatesResponse dbUpdatesResponse = getOMDBUpdates(
+            request.getDbUpdatesRequest());
+        responseBuilder.setDbUpdatesResponse(dbUpdatesResponse);
+        break;
       case GetDelegationToken:
         GetDelegationTokenResponseProto getDtResp = getDelegationToken(
             request.getGetDelegationTokenRequest());
@@ -377,12 +385,29 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return responseBuilder.build();
   }
 
+  private DBUpdatesResponse getOMDBUpdates(
+      DBUpdatesRequest dbUpdatesRequest)
+      throws SequenceNumberNotFoundException {
+
+    DBUpdatesResponse.Builder builder = DBUpdatesResponse
+        .newBuilder();
+    DBUpdatesWrapper dbUpdatesWrapper =
+        impl.getDBUpdates(dbUpdatesRequest);
+    for (int i = 0; i < dbUpdatesWrapper.getData().size(); i++) {
+      builder.addData(OMPBHelper.getByteString(
+          dbUpdatesWrapper.getData().get(i)));
+    }
+    builder.setSequenceNumber(dbUpdatesWrapper.getCurrentSequenceNumber());
+    return builder.build();
+  }
+
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
     List<OzoneAclInfo> acls = new ArrayList<>();
-
     List<OzoneAcl> aclList =
         impl.getAcl(OzoneObjInfo.fromProtobuf(req.getObj()));
-    aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    if (aclList != null) {
+      aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    }
     return GetAclResponse.newBuilder().addAllAcls(acls).build();
   }
 
@@ -583,6 +608,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .build();
     OmKeyInfo keyInfo = impl.lookupKey(omKeyArgs);
     resp.setKeyInfo(keyInfo.getProtobuf());
@@ -1030,6 +1056,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .build();
     return LookupFileResponse.newBuilder()
         .setKeyInfo(impl.lookupFile(omKeyArgs).getProtobuf())

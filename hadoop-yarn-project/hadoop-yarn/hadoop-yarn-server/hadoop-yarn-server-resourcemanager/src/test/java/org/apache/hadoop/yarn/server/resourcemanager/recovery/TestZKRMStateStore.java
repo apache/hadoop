@@ -453,6 +453,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
+    stateStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
     acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 1);
     verifyZKACL("world", "anyone", Perms.ALL, acls);
@@ -463,6 +464,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
+    stateStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
     acls = stateStore.getACL(rootPath);
     assertThat(acls).hasSize(2);
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);

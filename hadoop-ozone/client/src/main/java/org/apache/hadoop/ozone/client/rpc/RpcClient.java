@@ -64,9 +64,10 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB
     .OzoneManagerProtocolClientSideTranslatorPB;
@@ -134,6 +135,7 @@ public class RpcClient implements ClientProtocol {
   private final int maxRetryCount;
   private final long retryInterval;
   private Text dtService;
+  private final boolean topologyAwareReadEnabled;
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -228,6 +230,9 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
     ByteStringHelper.init(isUnsafeByteOperationsEnabled);
+    topologyAwareReadEnabled = conf.getBoolean(
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
@@ -384,7 +389,9 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void createBucket(String volumeName, String bucketName)
       throws IOException {
-    createBucket(volumeName, bucketName, BucketArgs.newBuilder().build());
+    // Set acls of current user.
+    createBucket(volumeName, bucketName,
+        BucketArgs.newBuilder().build());
   }
 
   @Override
@@ -434,34 +441,8 @@ public class RpcClient implements ClientProtocol {
    * @return listOfAcls
    * */
   private List<OzoneAcl> getAclList() {
-    return OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
+    return OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
         userRights, groupRights);
-  }
-
-  @Override
-  public void addBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> addAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(addAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setAddAcls(addAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
-  }
-
-  @Override
-  public void removeBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> removeAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(removeAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setRemoveAcls(removeAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   /**
@@ -582,7 +563,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucketInfo.getVolumeName(),
         bucketInfo.getBucketName(),
-        bucketInfo.getAcls(),
         bucketInfo.getStorageType(),
         bucketInfo.getIsVersionEnabled(),
         bucketInfo.getCreationTime(),
@@ -603,7 +583,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
@@ -658,6 +637,7 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return createInputStream(keyInfo);
@@ -721,6 +701,7 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
 
@@ -788,7 +769,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
@@ -981,6 +961,7 @@ public class RpcClient implements ClientProtocol {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupFile(keyArgs);
     return createInputStream(keyInfo);

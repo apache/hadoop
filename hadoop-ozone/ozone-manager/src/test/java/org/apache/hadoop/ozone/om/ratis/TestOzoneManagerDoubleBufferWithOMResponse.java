@@ -64,9 +64,9 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
 
   private OMMetadataManager omMetadataManager;
   private OzoneManagerDoubleBuffer doubleBuffer;
-  private AtomicLong trxId = new AtomicLong(0);
+  private final AtomicLong trxId = new AtomicLong(0);
   private OzoneManagerRatisSnapshot ozoneManagerRatisSnapshot;
-  private long lastAppliedIndex;
+  private volatile long lastAppliedIndex;
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -345,21 +345,23 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
       }
 
       // We are doing +1 for volume transaction.
-      GenericTestUtils.waitFor(() ->
-              doubleBuffer.getFlushedTransactionCount() ==
-                  (bucketCount + 1) * iterations, 100,
-          120000);
+      long expectedTransactions = (bucketCount + 1) * iterations;
+      GenericTestUtils.waitFor(() -> lastAppliedIndex == expectedTransactions,
+          100, 120000);
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getVolumeTable()) == iterations);
+      Assert.assertEquals(expectedTransactions,
+          doubleBuffer.getFlushedTransactionCount()
+      );
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getBucketTable()) == (bucketCount) * iterations);
+      Assert.assertEquals(iterations,
+          omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable())
+      );
+
+      Assert.assertEquals(bucketCount * iterations,
+          omMetadataManager.countRowsInTable(omMetadataManager.getBucketTable())
+      );
 
       Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
-
-      // Check lastAppliedIndex is updated correctly or not.
-      Assert.assertEquals((bucketCount + 1) * iterations, lastAppliedIndex);
     } finally {
       stop();
     }

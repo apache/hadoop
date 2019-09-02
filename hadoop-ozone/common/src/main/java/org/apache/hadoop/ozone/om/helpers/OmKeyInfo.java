@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
 
@@ -54,7 +54,7 @@ public final class OmKeyInfo extends WithMetadata {
   /**
    * ACL Information.
    */
-  private List<OzoneAclInfo> acls;
+  private List<OzoneAcl> acls;
 
   @SuppressWarnings("parameternumber")
   OmKeyInfo(String volumeName, String bucketName, String keyName,
@@ -63,7 +63,7 @@ public final class OmKeyInfo extends WithMetadata {
       HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor,
       Map<String, String> metadata,
-      FileEncryptionInfo encInfo, List<OzoneAclInfo> acls) {
+      FileEncryptionInfo encInfo, List<OzoneAcl> acls) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -231,8 +231,20 @@ public final class OmKeyInfo extends WithMetadata {
     return encInfo;
   }
 
-  public List<OzoneAclInfo> getAcls() {
+  public List<OzoneAcl> getAcls() {
     return acls;
+  }
+
+  public boolean addAcl(OzoneAcl acl) {
+    return OzoneAclUtil.addAcl(acls, acl);
+  }
+
+  public boolean removeAcl(OzoneAcl acl) {
+    return OzoneAclUtil.removeAcl(acls, acl);
+  }
+
+  public boolean setAcls(List<OzoneAcl> newAcls) {
+    return OzoneAclUtil.setAcl(acls, newAcls);
   }
 
   /**
@@ -251,11 +263,12 @@ public final class OmKeyInfo extends WithMetadata {
     private HddsProtos.ReplicationFactor factor;
     private Map<String, String> metadata;
     private FileEncryptionInfo encInfo;
-    private List<OzoneAclInfo> acls;
+    private List<OzoneAcl> acls;
 
     public Builder() {
       this.metadata = new HashMap<>();
       omKeyLocationInfoGroups = new ArrayList<>();
+      acls = new ArrayList<>();
     }
 
     public Builder setVolumeName(String volume) {
@@ -319,8 +332,10 @@ public final class OmKeyInfo extends WithMetadata {
       return this;
     }
 
-    public Builder setAcls(List<OzoneAclInfo> listOfAcls) {
-      this.acls = listOfAcls;
+    public Builder setAcls(List<OzoneAcl> listOfAcls) {
+      if (listOfAcls != null) {
+        this.acls.addAll(listOfAcls);
+      }
       return this;
     }
 
@@ -348,33 +363,32 @@ public final class OmKeyInfo extends WithMetadata {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
-        .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
+        .addAllAcls(OzoneAclUtil.toProtobuf(acls));
     if (encInfo != null) {
       kb.setFileEncryptionInfo(OMPBHelper.convert(encInfo));
-    }
-    if(acls != null) {
-      kb.addAllAcls(acls);
     }
     return kb.build();
   }
 
   public static OmKeyInfo getFromProtobuf(KeyInfo keyInfo) {
-    return new OmKeyInfo(
-        keyInfo.getVolumeName(),
-        keyInfo.getBucketName(),
-        keyInfo.getKeyName(),
-        keyInfo.getKeyLocationListList().stream()
+    return new OmKeyInfo.Builder()
+        .setVolumeName(keyInfo.getVolumeName())
+        .setBucketName(keyInfo.getBucketName())
+        .setKeyName(keyInfo.getKeyName())
+        .setOmKeyLocationInfos(keyInfo.getKeyLocationListList().stream()
             .map(OmKeyLocationInfoGroup::getFromProtobuf)
-            .collect(Collectors.toList()),
-        keyInfo.getDataSize(),
-        keyInfo.getCreationTime(),
-        keyInfo.getModificationTime(),
-        keyInfo.getType(),
-        keyInfo.getFactor(),
-        KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()),
-        keyInfo.hasFileEncryptionInfo() ? OMPBHelper.convert(keyInfo
-            .getFileEncryptionInfo()): null,
-        keyInfo.getAclsList());
+            .collect(Collectors.toList()))
+        .setDataSize(keyInfo.getDataSize())
+        .setCreationTime(keyInfo.getCreationTime())
+        .setModificationTime(keyInfo.getModificationTime())
+        .setReplicationType(keyInfo.getType())
+        .setReplicationFactor(keyInfo.getFactor())
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()))
+        .setFileEncryptionInfo(keyInfo.hasFileEncryptionInfo() ?
+            OMPBHelper.convert(keyInfo.getFileEncryptionInfo()): null)
+        .setAcls(OzoneAclUtil.fromProtobuf(keyInfo.getAclsList()))
+        .build();
   }
 
   @Override
@@ -396,7 +410,8 @@ public final class OmKeyInfo extends WithMetadata {
             .equals(keyLocationVersions, omKeyInfo.keyLocationVersions) &&
         type == omKeyInfo.type &&
         factor == omKeyInfo.factor &&
-        Objects.equals(metadata, omKeyInfo.metadata);
+        Objects.equals(metadata, omKeyInfo.metadata) &&
+        Objects.equals(acls, omKeyInfo.acls);
   }
 
   @Override

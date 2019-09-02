@@ -319,7 +319,7 @@ Configuration Parameters
 *   `dfs.namenode.acls.enabled = true`
 
     Set to true to enable support for HDFS ACLs (Access Control Lists). By
-    default, ACLs are disabled. When ACLs are disabled, the NameNode rejects
+    default, ACLs are enabled. When ACLs are disabled, the NameNode rejects
     all attempts to set an ACL.
 
 *   `dfs.namenode.posix.acl.inheritance.enabled`

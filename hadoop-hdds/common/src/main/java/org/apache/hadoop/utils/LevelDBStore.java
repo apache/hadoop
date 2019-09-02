@@ -241,6 +241,12 @@ public class LevelDBStore implements MetadataStore {
   }
 
   @Override
+  public void flushDB(boolean sync) {
+    // TODO: Implement flush for level db
+    // do nothing
+  }
+
+  @Override
   public void writeBatch(BatchOperation operation) throws IOException {
     List<BatchOperation.SingleOperation> operations =
         operation.getOperations();

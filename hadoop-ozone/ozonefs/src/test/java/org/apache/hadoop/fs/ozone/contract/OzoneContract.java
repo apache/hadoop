@@ -18,26 +18,21 @@
 
 package org.apache.hadoop.fs.ozone.contract;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.junit.Assert;
 
-import java.io.IOException;
+import org.junit.Assert;
 
 /**
  * The contract of Ozone: only enabled if the test bucket is provided.
@@ -45,7 +40,6 @@ import java.io.IOException;
 class OzoneContract extends AbstractFSContract {
 
   private static MiniOzoneCluster cluster;
-  private static StorageHandler storageHandler;
   private static final String CONTRACT_XML = "contract/ozone.xml";
 
   OzoneContract(Configuration conf) {
@@ -75,7 +69,6 @@ class OzoneContract extends AbstractFSContract {
     } catch (Exception e) {
       throw new IOException(e);
     }
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 
   private void copyClusterConfigs(String configKey) {
@@ -87,27 +80,10 @@ class OzoneContract extends AbstractFSContract {
     //assumes cluster is not null
     Assert.assertNotNull("cluster not created", cluster);
 
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-
-
-    UserArgs userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
-    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
-    volumeArgs.setUserName(userName);
-    volumeArgs.setAdminName(adminName);
-    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
-    try {
-      storageHandler.createVolume(volumeArgs);
-      storageHandler.createBucket(bucketArgs);
-    } catch (OzoneException e) {
-      throw new IOException(e.getMessage());
-    }
+    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
 
     String uri = String.format("%s://%s.%s/",
-        OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
+        OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
     getConf().set("fs.defaultFS", uri);
     copyClusterConfigs(OMConfigKeys.OZONE_OM_ADDRESS_KEY);
     copyClusterConfigs(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);

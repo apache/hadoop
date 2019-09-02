@@ -770,6 +770,20 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Remove any values from the test bucket and the base values too.
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBaseAndBucketOverrides(
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf, options);
+  }
+
+  /**
    * Call a function; any exception raised is logged at info.
    * This is for test teardowns.
    * @param log log to use.

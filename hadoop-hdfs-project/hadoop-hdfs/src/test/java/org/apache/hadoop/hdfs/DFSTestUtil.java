@@ -368,6 +368,25 @@ public class DFSTestUtil {
     createFiles(fs, topdir, (short)3);
   }
 
+  public static String readResoucePlainFile(
+      String fileName) throws IOException {
+    File file = new File(System.getProperty(
+        "test.cache.data", "build/test/cache"), fileName);
+    StringBuilder s = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        line = line.trim();
+        if (line.length() <= 0 || line.startsWith("#")) {
+          continue;
+        }
+        s.append(line);
+        s.append("\n");
+      }
+    }
+    return s.toString();
+  }
+
   public static byte[] readFileAsBytes(FileSystem fs, Path fileName) throws IOException {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       IOUtils.copyBytes(fs.open(fileName), os, 1024);

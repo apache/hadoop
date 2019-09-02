@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.container.common.utils;
 
 import com.google.common.base.Preconditions;
+
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,20 +54,18 @@ public class ReferenceCountedDB implements Closeable {
 
   public void incrementReference() {
     this.referenceCount.incrementAndGet();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("IncRef {} to refCnt {} \n", containerDBPath,
-          referenceCount.get());
-      new Exception().printStackTrace();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("IncRef {} to refCnt {}, stackTrace: {}", containerDBPath,
+          referenceCount.get(), ExceptionUtils.getStackTrace(new Throwable()));
     }
   }
 
   public void decrementReference() {
     int refCount = this.referenceCount.decrementAndGet();
     Preconditions.checkArgument(refCount >= 0, "refCount:", refCount);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
-          referenceCount.get());
-      new Exception().printStackTrace();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("DecRef {} to refCnt {}, stackTrace: {}", containerDBPath,
+          referenceCount.get(), ExceptionUtils.getStackTrace(new Throwable()));
     }
   }
 

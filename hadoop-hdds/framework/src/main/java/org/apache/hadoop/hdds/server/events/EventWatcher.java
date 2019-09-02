@@ -143,14 +143,15 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
   protected synchronized void handleCompletion(COMPLETION_PAYLOAD
       completionPayload, EventPublisher publisher) throws
       LeaseNotFoundException {
-    metrics.incrementCompletedEvents();
     long id = completionPayload.getId();
     leaseManager.release(id);
     TIMEOUT_PAYLOAD payload = trackedEventsByID.remove(id);
-    trackedEvents.remove(payload);
-    long originalTime = startTrackingTimes.remove(id);
-    metrics.updateFinishingTime(System.currentTimeMillis() - originalTime);
-    onFinished(publisher, payload);
+    if (trackedEvents.remove(payload)) {
+      metrics.incrementCompletedEvents();
+      long originalTime = startTrackingTimes.remove(id);
+      metrics.updateFinishingTime(System.currentTimeMillis() - originalTime);
+      onFinished(publisher, payload);
+    }
   }
 
   private synchronized void handleTimeout(EventPublisher publisher,

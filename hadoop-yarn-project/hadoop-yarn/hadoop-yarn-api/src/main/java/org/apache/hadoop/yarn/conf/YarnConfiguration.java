@@ -1370,6 +1370,11 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_RETAIN_SECONDS = YARN_PREFIX
       + "log-aggregation.retain-seconds";
   public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
+
+  public static final String LOG_AGGREGATION_DEBUG_FILESIZE = YARN_PREFIX
+      + "log-aggregation.debug.filesize";
+  public static final long DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE
+      = 100 * 1024 * 1024;
   
   /**
    * How long to wait between aggregated log retention checks. If set to
@@ -1641,6 +1646,20 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String NM_RESOURCE_PLUGINS =
       NM_PREFIX + "resource-plugins";
+
+
+  /**
+   * Specifies whether the initialization of the Node Manager should continue
+   * if a certain device (GPU, FPGA, etc) was not found in the system. If set
+   * to "true", then an exception will be thrown if a device is missing or
+   * an error occurred during discovery.
+   */
+  @Private
+  public static final String NM_RESOURCE_PLUGINS_FAIL_FAST =
+      NM_RESOURCE_PLUGINS + ".fail-fast";
+
+  @Private
+  public static final boolean DEFAULT_NM_RESOURCE_PLUGINS_FAIL_FAST = true;
 
   /**
    * This setting controls if pluggable device plugin framework is enabled.
@@ -4047,6 +4066,12 @@ public class YarnConfiguration extends Configuration {
       RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_PREFIX + "max-queue-length";
   public static final int
       DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH = 100;
+
+  /**
+   * Containers launcher implementation to use.
+   */
+  public static final String NM_CONTAINERS_LAUNCHER_CLASS =
+      NM_PREFIX + "containers-launcher.class";
 
   public YarnConfiguration() {
     super();

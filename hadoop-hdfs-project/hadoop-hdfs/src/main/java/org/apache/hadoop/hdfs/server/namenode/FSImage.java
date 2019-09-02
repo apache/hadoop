@@ -300,7 +300,7 @@ public class FSImage implements Closeable {
         // triggered.
         LOG.info("Storage directory " + sd.getRoot() + " is not formatted.");
         LOG.info("Formatting ...");
-        sd.clearDirectory(); // create empty currrent dir
+        sd.clearDirectory(); // create empty current dir
         // For non-HA, no further action is needed here, as saveNamespace will
         // take care of the rest.
         if (!target.isHaEnabled()) {
@@ -893,7 +893,8 @@ public class FSImage implements Closeable {
     StartupProgress prog = NameNode.getStartupProgress();
     prog.beginPhase(Phase.LOADING_EDITS);
     
-    long prevLastAppliedTxId = lastAppliedTxId;  
+    long prevLastAppliedTxId = lastAppliedTxId;
+    long remainingReadTxns = maxTxnsToRead;
     try {    
       FSEditLogLoader loader = new FSEditLogLoader(target, lastAppliedTxId);
       
@@ -910,8 +911,8 @@ public class FSImage implements Closeable {
               (lastAppliedTxId + 1) + logSuppressed);
         }
         try {
-          loader.loadFSEdits(editIn, lastAppliedTxId + 1, maxTxnsToRead,
-              startOpt, recovery);
+          remainingReadTxns -= loader.loadFSEdits(editIn, lastAppliedTxId + 1,
+                  remainingReadTxns, startOpt, recovery);
         } finally {
           // Update lastAppliedTxId even in case of error, since some ops may
           // have been successfully applied before the error.
@@ -921,6 +922,9 @@ public class FSImage implements Closeable {
         if (editIn.getLastTxId() != HdfsServerConstants.INVALID_TXID
             && recovery != null) {
           lastAppliedTxId = editIn.getLastTxId();
+        }
+        if (remainingReadTxns <= 0) {
+          break;
         }
       }
     } finally {
@@ -985,7 +989,8 @@ public class FSImage implements Closeable {
     File newFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE_NEW, txid);
     File dstFile = NNStorage.getStorageFile(sd, dstType, txid);
     
-    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context);
+    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context,
+        conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     long numErrors = saver.save(newFile, compression);
     if (numErrors > 0) {

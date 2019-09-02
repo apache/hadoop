@@ -16,28 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.scm.cli.SQLCLI;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.KeyArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -52,11 +31,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.scm.cli.SQLCLI;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * This class tests the CLI that transforms om.db into SQLite DB files.
@@ -64,8 +58,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class TestOmSQLCli {
   private MiniOzoneCluster cluster = null;
-  private StorageHandler storageHandler;
-  private UserArgs userArgs;
+
   private OzoneConfiguration conf;
   private SQLCLI cli;
 
@@ -108,48 +101,17 @@ public class TestOmSQLCli {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
-    cluster.waitForClusterToBeReady();
+    OzoneBucket bucket0 =
+        TestDataUtil.createVolumeAndBucket(cluster, volumeName0, bucketName0);
+    OzoneBucket bucket1 =
+        TestDataUtil.createVolumeAndBucket(cluster, volumeName1, bucketName1);
+    OzoneBucket bucket2 =
+        TestDataUtil.createVolumeAndBucket(cluster, volumeName0, bucketName2);
 
-    VolumeArgs createVolumeArgs0 = new VolumeArgs(volumeName0, userArgs);
-    createVolumeArgs0.setUserName(userName);
-    createVolumeArgs0.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs0);
-    VolumeArgs createVolumeArgs1 = new VolumeArgs(volumeName1, userArgs);
-    createVolumeArgs1.setUserName(userName);
-    createVolumeArgs1.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs1);
-
-    BucketArgs bucketArgs0 = new BucketArgs(volumeName0, bucketName0, userArgs);
-    storageHandler.createBucket(bucketArgs0);
-    BucketArgs bucketArgs1 = new BucketArgs(volumeName1, bucketName1, userArgs);
-    storageHandler.createBucket(bucketArgs1);
-    BucketArgs bucketArgs2 = new BucketArgs(volumeName0, bucketName2, userArgs);
-    storageHandler.createBucket(bucketArgs2);
-
-    KeyArgs keyArgs0 =
-        new KeyArgs(volumeName0, bucketName0, keyName0, userArgs);
-    keyArgs0.setSize(100);
-    KeyArgs keyArgs1 =
-        new KeyArgs(volumeName1, bucketName1, keyName1, userArgs);
-    keyArgs1.setSize(200);
-    KeyArgs keyArgs2 =
-        new KeyArgs(volumeName0, bucketName2, keyName2, userArgs);
-    keyArgs2.setSize(300);
-    KeyArgs keyArgs3 =
-        new KeyArgs(volumeName0, bucketName2, keyName3, userArgs);
-    keyArgs3.setSize(400);
-
-    OutputStream stream = storageHandler.newKeyWriter(keyArgs0);
-    stream.close();
-    stream = storageHandler.newKeyWriter(keyArgs1);
-    stream.close();
-    stream = storageHandler.newKeyWriter(keyArgs2);
-    stream.close();
-    stream = storageHandler.newKeyWriter(keyArgs3);
-    stream.close();
+    TestDataUtil.createKey(bucket0, keyName0, "");
+    TestDataUtil.createKey(bucket1, keyName1, "");
+    TestDataUtil.createKey(bucket2, keyName2, "");
+    TestDataUtil.createKey(bucket2, keyName3, "");
 
     cluster.getOzoneManager().stop();
     cluster.getStorageContainerManager().stop();

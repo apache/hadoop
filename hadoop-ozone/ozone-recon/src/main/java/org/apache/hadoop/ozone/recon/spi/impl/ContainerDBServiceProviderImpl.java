@@ -37,6 +37,7 @@ import javax.inject.Singleton;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
@@ -74,6 +75,9 @@ public class ContainerDBServiceProviderImpl
   private Configuration sqlConfiguration;
 
   @Inject
+  private ReconUtils reconUtils;
+
+  @Inject
   public ContainerDBServiceProviderImpl(DBStore dbStore,
                                         Configuration sqlConfiguration) {
     globalStatsDao = new GlobalStatsDao(sqlConfiguration);
@@ -101,7 +105,8 @@ public class ContainerDBServiceProviderImpl
       throws IOException {
 
     File oldDBLocation = containerDbStore.getDbLocation();
-    containerDbStore = ReconContainerDBProvider.getNewDBStore(configuration);
+    containerDbStore = ReconContainerDBProvider
+        .getNewDBStore(configuration, reconUtils);
     containerKeyTable = containerDbStore.getTable(CONTAINER_KEY_TABLE,
         ContainerKeyPrefix.class, Integer.class);
 

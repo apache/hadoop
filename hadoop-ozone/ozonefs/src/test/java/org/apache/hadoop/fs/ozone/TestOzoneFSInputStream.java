@@ -18,32 +18,29 @@
 
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
 
 /**
  * Test OzoneFSInputStream by reading through multiple interfaces.
@@ -51,7 +48,6 @@ import java.util.Arrays;
 public class TestOzoneFSInputStream {
   private static MiniOzoneCluster cluster = null;
   private static FileSystem fs;
-  private static StorageHandler storageHandler;
   private static Path filePath = null;
   private static byte[] data = null;
 
@@ -71,22 +67,9 @@ public class TestOzoneFSInputStream {
         .setNumDatanodes(10)
         .build();
     cluster.waitForClusterToBeReady();
-    storageHandler =
-        new ObjectStoreHandler(conf).getStorageHandler();
 
     // create a volume and a bucket to be used by OzoneFileSystem
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    UserArgs userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
-    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
-    volumeArgs.setUserName(userName);
-    volumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(volumeArgs);
-    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
-    storageHandler.createBucket(bucketArgs);
+    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
 
     // Fetch the host and port for File System init
     DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
@@ -94,7 +77,7 @@ public class TestOzoneFSInputStream {
 
     // Set the fs.defaultFS and start the filesystem
     String uri = String.format("%s://%s.%s/",
-        OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
+        OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, uri);
     fs =  FileSystem.get(conf);
     int fileLen = 100 * 1024 * 1024;
@@ -111,7 +94,6 @@ public class TestOzoneFSInputStream {
   @AfterClass
   public static void shutdown() throws IOException {
     fs.close();
-    storageHandler.close();
     cluster.shutdown();
   }
 
