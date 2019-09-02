@@ -300,19 +300,22 @@ public class TestRouterAdminCLI {
     stateStore.loadCache(MountTableStoreImpl.class, true);
     argv = new String[] {"-ls", src};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
+    String response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
 
     // Test with not-normalized src input
     argv = new String[] {"-ls", srcWithSlash};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
+    response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
 
     // Test with wrong number of arguments
     argv = new String[] {"-ls", srcWithSlash, "check", "check2"};
     System.setErr(new PrintStream(err));
     ToolRunner.run(admin, argv);
-    assertTrue(
-        err.toString().contains("Too many arguments, Max=1 argument allowed"));
+    response = err.toString();
+    assertTrue("Wrong response: " + response,
+        response.contains("Too many arguments, Max=2 argument allowed"));
 
     out.reset();
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -324,12 +327,39 @@ public class TestRouterAdminCLI {
     // mount table under root path.
     argv = new String[] {"-ls"};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
-    String outStr = out.toString();
+    response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
     // verify if all the mount table are listed
-    for(MountTable entry: getResponse.getEntries()) {
-      assertTrue(outStr.contains(entry.getSourcePath()));
+    for (MountTable entry : getResponse.getEntries()) {
+      assertTrue("Wrong response: " + response,
+          response.contains(entry.getSourcePath()));
     }
+  }
+
+  @Test
+  public void testListWithDetails() throws Exception {
+    // Create mount entry.
+    String[] argv = new String[] {"-add", "/testLsWithDetails", "ns0,ns1",
+        "/dest", "-order", "HASH_ALL", "-readonly", "-faulttolerant"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    // Test list with detail for a mount entry.
+    argv = new String[] {"-ls", "-d", "/testLsWithDetails"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response =  out.toString();
+    assertTrue(response.contains("Read-Only"));
+    assertTrue(response.contains("Fault-Tolerant"));
+    out.reset();
+
+    // Test list with detail without path.
+    argv = new String[] {"-ls", "-d"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    response =  out.toString();
+    assertTrue("Wrong response: " + response, response.contains("Read-Only"));
+    assertTrue("Wrong response: " + response,
+        response.contains("Fault-Tolerant"));
   }
 
   @Test
@@ -627,7 +657,7 @@ public class TestRouterAdminCLI {
         + " [-faulttolerant true|false] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
-        + "\t[-ls <path>]\n"
+        + "\t[-ls [-d] <path>]\n"
         + "\t[-getDestination <path>]\n"
         + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
         + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"

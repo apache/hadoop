@@ -435,7 +435,7 @@ Usage:
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
-          [-ls <path>]
+          [-ls [-d] <path>]
           [-getDestination <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
           [-clrQuota <path>]
@@ -450,7 +450,7 @@ Usage:
 | `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
 | `-update` *source* *nameservices* *destination* | Update a mount table entry attribures. |
 | `-rm` *source* | Remove mount point of specified path. |
-| `-ls` *path* | List mount points under specified path. |
+| `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|
 | `-getDestination` *path* | Get the subcluster where a file is or should be created. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-clrQuota` *path* | Clear quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
