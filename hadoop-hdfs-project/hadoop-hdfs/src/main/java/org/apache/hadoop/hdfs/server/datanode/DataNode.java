@@ -207,7 +207,6 @@ import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.util.InvalidChecksumSizeException;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
@@ -3438,7 +3437,7 @@ public class DataNode extends ReconfigurableBase
   void handleBadBlock(ExtendedBlock block, IOException e, boolean fromScanner) {
 
     boolean isBadBlock = fromScanner || (e instanceof DiskFileCorruptException
-        || e instanceof InvalidChecksumSizeException);
+        || e instanceof CorruptMetaHeaderException);
 
     if (!isBadBlock) {
       return;
