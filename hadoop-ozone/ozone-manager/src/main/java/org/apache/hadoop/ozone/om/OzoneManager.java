@@ -3418,4 +3418,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return delegationTokenMgr;
   }
 
+  /**
+   * Return list of OzoneAdministrators.
+   */
+  public Collection<String> getOzoneAdmins() {
+    return ozAdmins;
+  }
+
 }

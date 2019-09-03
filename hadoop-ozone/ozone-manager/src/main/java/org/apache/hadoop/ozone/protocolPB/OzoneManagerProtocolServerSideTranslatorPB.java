@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -25,6 +26,7 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -33,11 +35,14 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import io.opentracing.Scope;
 import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.util.ExitUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -54,6 +59,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final OzoneManager ozoneManager;
   private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
   private final ProtocolMessageMetrics protocolMessageMetrics;
+  private final AtomicLong transactionIndex = new AtomicLong(0L);
 
   /**
    * Constructs an instance of the server handler.
@@ -130,9 +136,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           try {
             OMClientRequest omClientRequest =
                 OzoneManagerRatisUtils.createClientRequest(request);
-            if (omClientRequest != null) {
-              request = omClientRequest.preExecute(ozoneManager);
-            }
+            Preconditions.checkState(omClientRequest != null,
+                "Unrecognized write command type request" + request.toString());
+            request = omClientRequest.preExecute(ozoneManager);
           } catch (IOException ex) {
             // As some of the preExecute returns error. So handle here.
             return createErrorResponse(request, ex);
@@ -150,7 +156,6 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     } else {
       return submitRequestDirectlyToOM(request);
     }
-
   }
 
   /**
@@ -163,27 +168,18 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private OMResponse createErrorResponse(
       OMRequest omRequest, IOException exception) {
     OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
-    switch (cmdType) {
-    case CreateBucket:
-      OMResponse.Builder omResponse = OMResponse.newBuilder()
-          .setStatus(
-              OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
-          .setCmdType(cmdType)
-          .setSuccess(false);
-      if (exception.getMessage() != null) {
-        omResponse.setMessage(exception.getMessage());
-      }
-      return omResponse.build();
-    case DeleteBucket:
-    case SetBucketProperty:
-      // In these cases, we can return null. As this method is called when
-      // some error occurred in preExecute. For these request types
-      // preExecute is do nothing.
-      return null;
-    default:
-      // We shall never come here.
-      return null;
+    // Added all write command types here, because in future if any of the
+    // preExecute is changed to return IOException, we can return the error
+    // OMResponse to the client.
+    OMResponse.Builder omResponse = OMResponse.newBuilder()
+        .setStatus(
+            OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
+        .setCmdType(cmdType)
+        .setSuccess(false);
+    if (exception.getMessage() != null) {
+      omResponse.setMessage(exception.getMessage());
     }
+    return omResponse.build();
   }
 
   /**
@@ -230,7 +226,37 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * Submits request directly to OM.
    */
   private OMResponse submitRequestDirectlyToOM(OMRequest request) {
-    return handler.handle(request);
+    OMClientResponse omClientResponse = null;
+    long index = 0L;
+    try {
+      if (OmUtils.isReadOnly(request)) {
+        return handler.handle(request);
+      } else {
+        OMClientRequest omClientRequest =
+            OzoneManagerRatisUtils.createClientRequest(request);
+        Preconditions.checkState(omClientRequest != null,
+            "Unrecognized write command type request" + request.toString());
+        request = omClientRequest.preExecute(ozoneManager);
+        index = transactionIndex.incrementAndGet();
+        omClientRequest = OzoneManagerRatisUtils.createClientRequest(request);
+        omClientResponse = omClientRequest.validateAndUpdateCache(
+            ozoneManager, index, ozoneManagerDoubleBuffer::add);
+      }
+    } catch(IOException ex) {
+      // As some of the preExecute returns error. So handle here.
+      return createErrorResponse(request, ex);
+    }
+    try {
+      omClientResponse.getFlushFuture().get();
+      LOG.trace("Future for {} is completed", request);
+    } catch (ExecutionException | InterruptedException ex) {
+      // terminate OM. As if we are in this stage means, while getting
+      // response from flush future, we got an exception.
+      String errorMessage = "Got error during waiting for flush to be " +
+          "completed for " + "request" + request.toString();
+      ExitUtils.terminate(1, errorMessage, ex, LOG);
+    }
+    return omClientResponse.getOMResponse();
   }
 
   public void stop() {

@@ -186,7 +186,7 @@ public class OMVolumeSetOwnerRequest extends OMVolumeRequest {
         omMetadataManager.getLock().releaseMultiUserLock(newOwner, oldOwner);
       }
       if (acquiredVolumeLock) {
-        omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
       }
     }
 

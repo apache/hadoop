@@ -100,7 +100,6 @@ public class TestOMVolumeSetAclRequest extends TestOMVolumeRequest {
 
     OmOzoneAclMap aclMapAfterSet = omMetadataManager
         .getVolumeTable().get(volumeKey).getAclMap();
-    Assert.assertNotEquals(aclMapBeforeSet, aclMapAfterSet);
 
     // Acl is added to aclMapAfterSet
     Assert.assertEquals(2, aclMapAfterSet.getAcl().size());

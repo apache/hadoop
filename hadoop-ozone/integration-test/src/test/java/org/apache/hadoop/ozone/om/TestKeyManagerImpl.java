@@ -71,6 +71,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -110,8 +111,6 @@ public class TestKeyManagerImpl {
 
   private static PrefixManager prefixManager;
   private static KeyManagerImpl keyManager;
-  private static VolumeManagerImpl volumeManager;
-  private static BucketManagerImpl bucketManager;
   private static NodeManager nodeManager;
   private static StorageContainerManager scm;
   private static ScmBlockLocationProtocol mockScmBlockLocationProtocol;
@@ -134,8 +133,6 @@ public class TestKeyManagerImpl {
     conf.set(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY, "true");
     mockScmBlockLocationProtocol = Mockito.mock(ScmBlockLocationProtocol.class);
     metadataManager = new OmMetadataManagerImpl(conf);
-    volumeManager = new VolumeManagerImpl(metadataManager, conf);
-    bucketManager = new BucketManagerImpl(metadataManager);
     nodeManager = new MockNodeManager(true, 10);
     NodeSchema[] schemas = new NodeSchema[]
         {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
@@ -205,7 +202,8 @@ public class TestKeyManagerImpl {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .build();
-    bucketManager.createBucket(bucketInfo);
+
+    TestOMRequestUtils.addBucketToOM(metadataManager, bucketInfo);
   }
 
   private static void createVolume(String volumeName) throws IOException {
@@ -214,7 +212,7 @@ public class TestKeyManagerImpl {
         .setAdminName("bilbo")
         .setOwnerName("bilbo")
         .build();
-    volumeManager.createVolume(volumeArgs);
+    TestOMRequestUtils.addVolumeToOM(metadataManager, volumeArgs);
   }
 
   @Test
