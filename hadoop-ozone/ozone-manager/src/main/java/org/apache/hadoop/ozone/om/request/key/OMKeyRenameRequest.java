@@ -191,6 +191,7 @@ public class OMKeyRenameRequest extends OMKeyRequest {
           toKeyName);
       return omClientResponse;
     } else {
+      ozoneManager.getMetrics().incNumKeyRenameFails();
       LOG.error(
           "Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}. "
               + "Key: {} not found.", volumeName, bucketName, fromKeyName,

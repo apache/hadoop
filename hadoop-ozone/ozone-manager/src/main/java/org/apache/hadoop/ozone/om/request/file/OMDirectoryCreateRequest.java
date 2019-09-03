@@ -94,7 +94,7 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
         createDirectoryRequest.toBuilder().setKeyArgs(newKeyArgs);
 
     return getOmRequest().toBuilder().setCreateDirectoryRequest(
-        newCreateDirectoryRequest).build();
+        newCreateDirectoryRequest).setUserInfo(getUserInfo()).build();
 
   }
 

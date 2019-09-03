@@ -25,8 +25,6 @@ import java.io.File;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.om.BucketManager;
-import org.apache.hadoop.ozone.om.BucketManagerImpl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -67,12 +65,16 @@ public class TestReconOmMetadataManagerImpl {
             .build();
     omMetadataManager.getVolumeTable().put(volumeKey, args);
 
-    BucketManager bucketManager = new BucketManagerImpl(omMetadataManager);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .build();
-    bucketManager.createBucket(bucketInfo);
+
+    String bucketKey =
+        omMetadataManager.getBucketKey(bucketInfo.getVolumeName(),
+            bucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().put(bucketKey, bucketInfo);
+
 
     omMetadataManager.getKeyTable().put("/sampleVol/bucketOne/key_one",
         new OmKeyInfo.Builder()
@@ -121,11 +123,18 @@ public class TestReconOmMetadataManagerImpl {
     //Now, the tables should have been initialized.
     Assert.assertNotNull(reconOMMetadataManager.getBucketTable());
 
+    // Check volume and bucket entries.
+    Assert.assertNotNull(reconOMMetadataManager.getVolumeTable()
+        .get(volumeKey));
+    Assert.assertNotNull(reconOMMetadataManager.getBucketTable()
+        .get(bucketKey));
+
     //Verify Keys inserted in OM DB are available in Recon OM DB.
     Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_one"));
     Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_two"));
+
   }
 
 }

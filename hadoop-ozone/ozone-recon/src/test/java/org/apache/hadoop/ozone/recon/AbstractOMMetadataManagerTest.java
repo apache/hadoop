@@ -32,8 +32,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.ozone.om.BucketManager;
-import org.apache.hadoop.ozone.om.BucketManagerImpl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -77,12 +75,15 @@ public abstract class AbstractOMMetadataManagerTest {
             .build();
     omMetadataManager.getVolumeTable().put(volumeKey, args);
 
-    BucketManager bucketManager = new BucketManagerImpl(omMetadataManager);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .build();
-    bucketManager.createBucket(bucketInfo);
+
+    String bucketKey = omMetadataManager.getBucketKey(
+        bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+
+    omMetadataManager.getBucketTable().put(bucketKey, bucketInfo);
 
     return omMetadataManager;
   }

@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs.Builder;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -84,15 +85,14 @@ public class TestKeyManagerUnit {
   private void createBucket(OmMetadataManagerImpl omMetadataManager,
       String volume, String bucket)
       throws IOException {
-    omMetadataManager.getBucketTable()
-        .put(omMetadataManager.getBucketKey(volume, bucket),
-            OmBucketInfo.newBuilder()
-                .setVolumeName(volume)
-                .setBucketName(bucket)
-                .setStorageType(StorageType.DISK)
-                .setIsVersionEnabled(false)
-                .setAcls(new ArrayList<>())
-                .build());
+    OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+        .setVolumeName(volume)
+        .setBucketName(bucket)
+        .setStorageType(StorageType.DISK)
+        .setIsVersionEnabled(false)
+        .setAcls(new ArrayList<>())
+        .build();
+    TestOMRequestUtils.addBucketToOM(metadataManager, omBucketInfo);
   }
 
   private OmMultipartInfo initMultipartUpload(KeyManagerImpl omtest,
