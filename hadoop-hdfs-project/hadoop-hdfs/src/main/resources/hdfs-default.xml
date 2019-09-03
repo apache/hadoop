@@ -756,7 +756,8 @@
   <value>0s</value>
   <description>
     Delay for first block report in seconds. Support multiple time unit
-    suffix(case insensitive), as described in dfs.heartbeat.interval.
+    suffix(case insensitive), as described in dfs.heartbeat.interval.If
+    no time unit is specified then seconds is assumed
   </description>
 </property>
 
@@ -801,7 +802,8 @@
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
   Support multiple time unit suffix(case insensitive), as described
-  in dfs.heartbeat.interval.
+  in dfs.heartbeat.interval.If no time unit is specified then seconds
+  is assumed.
   </description>
 </property>
 
@@ -842,6 +844,7 @@
     ms(millis), s(sec), m(min), h(hour), d(day)
     to specify the time (such as 2s, 2m, 1h, etc.).
     Or provide complete number in seconds (such as 30 for 30 seconds).
+    If no time unit is specified then seconds is assumed.
   </description>
 </property>
 
@@ -1051,6 +1054,7 @@
   <description>Namenode periodicity in seconds to check if
     decommission or maintenance is complete. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.
+    If no time unit is specified then seconds is assumed.
   </description>
 </property>
 
@@ -1181,7 +1185,8 @@
   <description>
     The number of seconds between two periodic checkpoints.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -1200,7 +1205,8 @@
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
-  as described in dfs.heartbeat.interval.
+  as described in dfs.heartbeat.interval.If no time unit is specified then
+  seconds is assumed.
   </description>
 </property>
 
@@ -1636,7 +1642,8 @@
     The notification is sent by a datanode when it is being shutdown
     using the shutdownDatanode admin command with the upgrade option.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -1705,7 +1712,8 @@
     often the logs are rolled. Note that failover triggers a log roll
     so the StandbyNode will be up to date before it becomes active.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -3413,7 +3421,8 @@
     datanode is not yet registered with the namenode. This wait time
     reduces initial request failures after datanode restart.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
