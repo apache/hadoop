@@ -549,15 +549,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
 
   // converts the String to an ApplicationId or null if conversion failed
   private static ApplicationId parseApplicationId(String appIdStr) {
-    ApplicationId appId = null;
-    if (appIdStr.startsWith(ApplicationId.appIdStrPrefix)) {
-      try {
-        appId = ApplicationId.fromString(appIdStr);
-      } catch (IllegalArgumentException e) {
-        appId = null;
-      }
+    try {
+      return ApplicationId.fromString(appIdStr);
+    } catch (IllegalArgumentException e) {
+      return null;
     }
-    return appId;
   }
 
   private static ClassLoader createPluginClassLoader(

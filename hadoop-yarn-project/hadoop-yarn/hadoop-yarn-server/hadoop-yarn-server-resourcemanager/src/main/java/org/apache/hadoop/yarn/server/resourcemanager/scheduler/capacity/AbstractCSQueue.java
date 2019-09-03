@@ -629,8 +629,8 @@ public abstract class AbstractCSQueue implements CSQueue {
             && parentState != QueueState.RUNNING) {
           throw new IllegalArgumentException(
               "The parent queue:" + parent.getQueueName()
-              + " state is STOPPED, child queue:" + queueName
-              + " state cannot be RUNNING.");
+              + " cannot be STOPPED as the child queue:" + queueName
+              + " is in RUNNING state.");
         } else {
           updateQueueState(configuredState);
         }

@@ -280,12 +280,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       String keyPrefix = CapacitySchedulerConfiguration.PREFIX
           + queuePath + CapacitySchedulerConfiguration.DOT;
       for (Map.Entry<String, String> kv : updateInfo.getParams().entrySet()) {
-        if (kv.getValue() == null) {
+        String keyValue = kv.getValue();
+        if (keyValue == null || keyValue.isEmpty()) {
+          keyValue = null;
           proposedConf.unset(keyPrefix + kv.getKey());
         } else {
-          proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
+          proposedConf.set(keyPrefix + kv.getKey(), keyValue);
         }
-        confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+        confUpdate.put(keyPrefix + kv.getKey(), keyValue);
       }
     }
   }

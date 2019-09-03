@@ -47,7 +47,7 @@ HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
 HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
 CORE-SITE.XML_dfs.data.transfer.protection=authentication
 CORE-SITE.XML_hadoop.security.authentication=kerberos
-COER-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*@EXAMPLE.COM)s/@.*///L
+CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*@EXAMPLE.COM)s/@.*///L
 CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
 
 #temporary disable authorization as org.apache.hadoop.yarn.server.api.ResourceTrackerPB is not properly annotated to support it

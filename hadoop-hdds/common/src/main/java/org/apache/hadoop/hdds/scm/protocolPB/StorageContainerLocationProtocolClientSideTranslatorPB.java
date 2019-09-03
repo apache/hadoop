@@ -20,6 +20,8 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ActivatePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.DeactivatePipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
@@ -334,6 +336,36 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         list.add(fromProtobuf);
       }
       return list;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    try {
+      ActivatePipelineRequestProto request =
+          ActivatePipelineRequestProto.newBuilder()
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .setPipelineID(pipelineID)
+              .build();
+      rpcProxy.activatePipeline(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    try {
+      DeactivatePipelineRequestProto request =
+          DeactivatePipelineRequestProto.newBuilder()
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .setPipelineID(pipelineID)
+              .build();
+      rpcProxy.deactivatePipeline(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

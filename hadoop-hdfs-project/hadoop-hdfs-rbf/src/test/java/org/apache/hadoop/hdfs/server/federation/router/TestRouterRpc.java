@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterConte
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -1574,6 +1575,13 @@ public class TestRouterRpc {
         .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
   }
 
+  /*
+   * This case is used to test NameNodeMetrics on 2 purposes:
+   * 1. NameNodeMetrics should be cached, since the cost of gathering the
+   * metrics is expensive
+   * 2. Metrics cache should updated regularly
+   * 3. Without any subcluster available, we should return an empty list
+   */
   @Test
   public void testNamenodeMetrics() throws Exception {
     final NamenodeBeanMetrics metrics =
@@ -1605,17 +1613,42 @@ public class TestRouterRpc {
     MockResolver resolver =
         (MockResolver) router.getRouter().getNamenodeResolver();
     resolver.cleanRegistrations();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return !jsonString2.equals(metrics.getLiveNodes());
-      }
-    }, 500, 5 * 1000);
-    assertEquals("{}", metrics.getLiveNodes());
+    resolver.setDisableRegistration(true);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return !jsonString2.equals(metrics.getLiveNodes());
+        }
+      }, 500, 5 * 1000);
+      assertEquals("{}", metrics.getLiveNodes());
+    } finally {
+      // Reset the registrations again
+      resolver.setDisableRegistration(false);
+      cluster.registerNamenodes();
+      cluster.waitNamenodeRegistration();
+    }
+  }
 
-    // Reset the registrations again
-    cluster.registerNamenodes();
-    cluster.waitNamenodeRegistration();
+  @Test
+  public void testRBFMetricsMethodsRelayOnStateStore() {
+    assertNull(router.getRouter().getStateStore());
+
+    RBFMetrics metrics = router.getRouter().getMetrics();
+    assertEquals("{}", metrics.getNamenodes());
+    assertEquals("[]", metrics.getMountTable());
+    assertEquals("{}", metrics.getRouters());
+    assertEquals(0, metrics.getNumNamenodes());
+    assertEquals(0, metrics.getNumExpiredNamenodes());
+
+    // These 2 methods relays on {@link RBFMetrics#getNamespaceInfo()}
+    assertEquals("[]", metrics.getClusterId());
+    assertEquals("[]", metrics.getBlockPoolId());
+
+    // These methods relays on
+    // {@link RBFMetrics#getActiveNamenodeRegistration()}
+    assertEquals("{}", metrics.getNameservices());
+    assertEquals(0, metrics.getNumLiveNodes());
   }
 
   @Test

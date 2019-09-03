@@ -1885,8 +1885,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     vStr = StringUtils.toLowerCase(vStr);
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
-      logDeprecation("No unit for " + name + "(" + vStr + ") assuming " +
-          defaultUnit);
       vUnit = ParsedTimeDuration.unitFor(defaultUnit);
     } else {
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));

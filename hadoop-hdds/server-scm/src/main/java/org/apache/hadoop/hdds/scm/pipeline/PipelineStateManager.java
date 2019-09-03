@@ -137,4 +137,28 @@ class PipelineStateManager {
     }
     return pipeline;
   }
+
+  /**
+   * Activates a dormant pipeline.
+   *
+   * @param pipelineID ID of the pipeline to activate.
+   * @throws IOException in case of any Exception
+   */
+  public void activatePipeline(PipelineID pipelineID)
+      throws IOException {
+    pipelineStateMap
+        .updatePipelineState(pipelineID, PipelineState.OPEN);
+  }
+
+  /**
+   * Deactivates an active pipeline.
+   *
+   * @param pipelineID ID of the pipeline to deactivate.
+   * @throws IOException in case of any Exception
+   */
+  public void deactivatePipeline(PipelineID pipelineID)
+      throws IOException {
+    pipelineStateMap
+        .updatePipelineState(pipelineID, PipelineState.DORMANT);
+  }
 }
