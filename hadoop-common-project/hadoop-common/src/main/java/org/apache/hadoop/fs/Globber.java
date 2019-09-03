@@ -102,7 +102,7 @@ public class Globber {
     this.pathPattern = pathPattern;
     this.filter = filter;
     this.resolveSymlinks = resolveSymlinks;
-    this.tracer = FsTracer.get(fs.getConf());
+    this.tracer = fc.getTracer();
     LOG.debug("Created Globber path={}, symlinks={}",
         pathPattern, resolveSymlinks);
   }
