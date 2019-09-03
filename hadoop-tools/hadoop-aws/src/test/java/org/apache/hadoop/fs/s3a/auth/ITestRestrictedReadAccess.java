@@ -375,10 +375,11 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
       accessDenied(() ->
           ContractTestUtils.readUTF8(readonlyFS, emptyFile, 0));
     } else {
-      // auth mode doesn't just not check the store,
-      // because it knows the file length is zero,
+      // auth mode doesn't check the store.
+      // Furthermore, because it knows the file length is zero,
       // it returns -1 without even opening the file.
-      // see: HADOOP-16464
+      // This means that permissions on the file do not get checked.
+      // See: HADOOP-16464.
       try (FSDataInputStream is = readonlyFS.open(emptyFile)) {
         Assertions.assertThat(is.read())
             .describedAs("read of empty file")
