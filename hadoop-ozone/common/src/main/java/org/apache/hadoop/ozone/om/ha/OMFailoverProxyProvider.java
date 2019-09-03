@@ -181,7 +181,7 @@ public class OMFailoverProxyProvider implements
     }
   }
 
-  public synchronized Text getCurrentProxyDelegationToken() {
+  public Text getCurrentProxyDelegationToken() {
     return delegationTokenService;
   }
 
