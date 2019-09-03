@@ -411,7 +411,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private CompletableFuture<Message> handleWriteChunk(
-      ContainerCommandRequestProto requestProto, long entryIndex, long term) {
+      ContainerCommandRequestProto requestProto, long entryIndex, long term,
+      long startTime) {
     final WriteChunkRequestProto write = requestProto.getWriteChunk();
     RaftServer server = ratisServer.getServer();
     Preconditions.checkState(server instanceof RaftServerProxy);
@@ -461,6 +462,8 @@ public class ContainerStateMachine extends BaseStateMachine {
             write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
             write.getChunkData().getChunkName());
         raftFuture.complete(r::toByteString);
+        metrics.recordWriteStateMachineCompletion(
+            Time.monotonicNowNanos() - startTime);
       }
 
       writeChunkFutureMap.remove(entryIndex);
@@ -477,6 +480,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   public CompletableFuture<Message> writeStateMachineData(LogEntryProto entry) {
     try {
       metrics.incNumWriteStateMachineOps();
+      long writeStateMachineStartTime = Time.monotonicNowNanos();
       ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(
               entry.getStateMachineLogEntry().getLogData());
@@ -493,7 +497,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       switch (cmdType) {
       case WriteChunk:
         return handleWriteChunk(requestProto, entry.getIndex(),
-            entry.getTerm());
+            entry.getTerm(), writeStateMachineStartTime);
       default:
         throw new IllegalStateException("Cmd Type:" + cmdType
             + " should not have state machine data");
@@ -673,6 +677,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setTerm(trx.getLogEntry().getTerm())
             .setLogIndex(index);
 
+    long applyTxnStartTime = Time.monotonicNowNanos();
     try {
       applyTransactionSemaphore.acquire();
       metrics.incNumApplyTransactionsOps();
@@ -740,7 +745,11 @@ public class ContainerStateMachine extends BaseStateMachine {
           }
         }
         return applyTransactionFuture;
-      }).whenComplete((r, t) -> applyTransactionSemaphore.release());
+      }).whenComplete((r, t) ->  {
+        applyTransactionSemaphore.release();
+        metrics.recordApplyTransactionCompletion(
+            Time.monotonicNowNanos() - applyTxnStartTime);
+      });
       return applyTransactionFuture;
     } catch (IOException | InterruptedException e) {
       metrics.incNumApplyTransactionsFails();
