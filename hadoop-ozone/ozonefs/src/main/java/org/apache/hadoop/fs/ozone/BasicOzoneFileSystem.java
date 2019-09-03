@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -87,14 +88,19 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
+  private OzoneConfiguration getOzoneConf(Configuration conf) {
+
+    return (conf instanceof OzoneConfiguration) ?
+        (OzoneConfiguration) conf : new OzoneConfiguration(conf);
+  }
+
   private String getUriExceptionText(Configuration conf) {
-    final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
-        "should be one of the following formats: " +
-        "o3fs://bucket.volume/key  OR " +
-        "o3fs://bucket.volume.om-host.example.com/key  OR " +
-        "o3fs://bucket.volume.om-host.example.com:" +
-        OmUtils.getOmRpcPort(conf) + "/key";
-    return URI_EXCEPTION_TEXT;
+
+    return "Ozone file system URL should be one of the following formats: "
+        + "o3fs://bucket.volume/key  OR "
+        + "o3fs://bucket.volume.om-host.example.com/key  OR "
+        + "o3fs://bucket.volume.om-host.example.com:"
+        + OmUtils.getOmRpcPort(getOzoneConf(conf)) + "/key";
   }
 
   @Override
