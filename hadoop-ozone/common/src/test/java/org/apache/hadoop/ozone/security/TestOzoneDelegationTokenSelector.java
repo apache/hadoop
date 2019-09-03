@@ -55,8 +55,8 @@ public class TestOzoneDelegationTokenSelector {
     Text service = new Text("om1:9862");
 
     Token<OzoneTokenIdentifier> selectedToken =
-       ozoneDelegationTokenSelector.selectToken(service,
-           Collections.singletonList(tokenIdentifierToken));
+        ozoneDelegationTokenSelector.selectToken(service,
+            Collections.singletonList(tokenIdentifierToken));
 
 
     Assert.assertNotNull(selectedToken);
