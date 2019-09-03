@@ -21,19 +21,21 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.local.LocalFs;
-import org.apache.hadoop.fs.permission.FsPermission;
-import static org.apache.hadoop.fs.CreateFlag.*;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.HadoopTestBase;
+
+import static org.apache.hadoop.fs.CreateFlag.*;
 
 /**
  * This class tests the functionality of ChecksumFs.
  */
-public class TestChecksumFs {
+public class TestChecksumFs extends HadoopTestBase {
   private Configuration conf;
   private Path testRootDirPath;
   private FileContext fc;
@@ -47,8 +49,11 @@ public class TestChecksumFs {
     mkdirs(testRootDirPath);
   }
 
+  @After
   public void tearDown() throws Exception {
-    fc.delete(testRootDirPath, true);
+    if (fc != null) {
+      fc.delete(testRootDirPath, true);
+    }
   }
 
   @Test
@@ -83,9 +88,7 @@ public class TestChecksumFs {
 
   private void verifyRename(Path srcPath, Path dstPath,
       boolean overwrite) throws Exception {
-    AbstractFileSystem fs = fc.getDefaultFileSystem();
-    assertTrue(fs instanceof LocalFs);
-    ChecksumFs checksumFs = (ChecksumFs) fs;
+    ChecksumFs fs = (ChecksumFs) fc.getDefaultFileSystem();
 
     fs.delete(srcPath, true);
     fs.delete(dstPath, true);
@@ -93,14 +96,16 @@ public class TestChecksumFs {
     Options.Rename renameOpt = Options.Rename.NONE;
     if (overwrite) {
       renameOpt = Options.Rename.OVERWRITE;
-      createTestFile(checksumFs, dstPath, 2);
+      createTestFile(fs, dstPath, 2);
     }
 
     // ensure file + checksum are moved
-    createTestFile(checksumFs, srcPath, 1);
-    assertTrue(fc.util().exists(checksumFs.getChecksumFile(srcPath)));
-    checksumFs.rename(srcPath, dstPath, renameOpt);
-    assertTrue(fc.util().exists(checksumFs.getChecksumFile(dstPath)));
+    createTestFile(fs, srcPath, 1);
+    assertTrue("Checksum file doesn't exist for source file - " + srcPath,
+        fc.util().exists(fs.getChecksumFile(srcPath)));
+    fs.rename(srcPath, dstPath, renameOpt);
+    assertTrue("Checksum file doesn't exist for dest file - " + srcPath,
+        fc.util().exists(fs.getChecksumFile(dstPath)));
     try (FSDataInputStream is = fs.open(dstPath)) {
       assertEquals(1, is.readInt());
     }
