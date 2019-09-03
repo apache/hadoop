@@ -67,6 +67,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDistCpUtils {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpUtils.class);
@@ -98,39 +99,39 @@ public class TestDistCpUtils {
   public void testGetRelativePathRoot() {
     Path root = new Path("/");
     Path child = new Path("/a");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/a");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/a");
   }
 
   @Test
   public void testGetRelativePath() {
     Path root = new Path("/tmp/abc");
     Path child = new Path("/tmp/abc/xyz/file");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/xyz/file");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/xyz/file");
   }
 
   @Test
   public void testPackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.noneOf(FileAttribute.class);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("");
 
     attributes.add(FileAttribute.REPLICATION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "R");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("R");
 
     attributes.add(FileAttribute.BLOCKSIZE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RB");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RB");
 
     attributes.add(FileAttribute.USER);
     attributes.add(FileAttribute.CHECKSUMTYPE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUC");
 
     attributes.add(FileAttribute.GROUP);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGC");
 
     attributes.add(FileAttribute.PERMISSION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPC");
 
     attributes.add(FileAttribute.TIMES);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPCT");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPCT");
   }
 
   @Test
