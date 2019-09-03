@@ -2149,18 +2149,6 @@ public class TestRenameWithSnapshots {
     assertTrue(hdfs.exists(newfoo));
     INode fooRefNode = fsdir.getINode4Write(newfoo.toString());
     assertTrue(fooRefNode instanceof INodeReference.DstReference);
-    INodeDirectory fooNode = fooRefNode.asDirectory();
-    // fooNode should be still INodeDirectory (With Snapshot) since we call
-    // recordModification before the rename
-    //assertTrue(fooNode.isWithSnapshot());
-    //assertTrue(fooNode.getDiffs().asList().isEmpty());
-    //INodeDirectory barNode = fooNode.getChildrenList(Snapshot.CURRENT_STATE_ID)
-    //    .get(0).asDirectory();
-    // bar should also be INodeDirectory (With Snapshot), and both of its diff 
-    // list and children list are empty 
-    //assertTrue(barNode.getDiffs().asList().isEmpty());
-    //assertTrue(barNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
-    
     restartClusterAndCheckImage(true);
   }
   

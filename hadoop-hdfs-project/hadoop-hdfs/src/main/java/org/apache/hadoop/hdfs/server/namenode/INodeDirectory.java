@@ -838,9 +838,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
     // there is snapshot data
     if (sf != null) {
       sf.cleanDirectory(reclaimContext, this, snapshotId, priorSnapshotId);
-      // If the inode has empty diff list and sf is not a DirectorySnapshottableFeature,
-      // remove the feature to save heap.
-      if (sf.getDiffs().isEmpty() && !(sf instanceof DirectorySnapshottableFeature)) {
+      // If the inode has empty diff list and sf is not a
+      // DirectorySnapshottableFeature, remove the feature to save heap.
+      if (sf.getDiffs().isEmpty() &&
+          !(sf instanceof DirectorySnapshottableFeature)) {
         this.removeFeature(sf);
       }
     } else {
