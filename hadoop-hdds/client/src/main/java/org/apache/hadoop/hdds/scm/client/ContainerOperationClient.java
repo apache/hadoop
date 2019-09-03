@@ -227,6 +227,18 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.activatePipeline(pipelineID);
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.deactivatePipeline(pipelineID);
+  }
+
+  @Override
   public void closePipeline(HddsProtos.PipelineID pipelineID)
       throws IOException {
     storageContainerLocationClient.closePipeline(pipelineID);

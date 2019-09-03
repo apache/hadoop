@@ -49,6 +49,14 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ActivatePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ActivatePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeactivatePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeactivatePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
@@ -252,6 +260,32 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
         builder.addPipelines(protobufMessage);
       }
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ActivatePipelineResponseProto activatePipeline(
+      RpcController controller, ActivatePipelineRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil
+        .importAndCreateScope("activatePipeline", request.getTraceID())) {
+      impl.activatePipeline(request.getPipelineID());
+      return ActivatePipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DeactivatePipelineResponseProto deactivatePipeline(
+      RpcController controller, DeactivatePipelineRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil
+        .importAndCreateScope("deactivatePipeline", request.getTraceID())) {
+      impl.deactivatePipeline(request.getPipelineID());
+      return DeactivatePipelineResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
