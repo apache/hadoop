@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 
@@ -35,6 +36,8 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
 
   public  ITestAzureBlobFileSystemCLI() throws Exception {
     super();
+    final AbfsConfiguration conf = getConfiguration();
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
   }
 
   /**
