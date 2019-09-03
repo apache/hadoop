@@ -1145,11 +1145,11 @@ public interface ClientProtocol {
    * Sets the modification and access time of the file to the specified time.
    * @param src The string representation of the path
    * @param mtime The number of milliseconds since Jan 1, 1970.
-   *              Setting mtime to -1 means that modification time should not
+   *              Setting negative mtime means that modification time should not
    *              be set by this call.
    * @param atime The number of milliseconds since Jan 1, 1970.
-   *              Setting atime to -1 means that access time should not be set
-   *              by this call.
+   *              Setting negative atime means that access time should not be
+   *              set by this call.
    *
    * @throws org.apache.hadoop.security.AccessControlException permission denied
    * @throws java.io.FileNotFoundException file <code>src</code> is not found

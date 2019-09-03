@@ -374,7 +374,7 @@ class PipelineStateMap {
     if (updatedPipeline.getPipelineState() == PipelineState.OPEN) {
       // for transition to OPEN state add pipeline to query2OpenPipelines
       query2OpenPipelines.get(query).add(updatedPipeline);
-    } else if (updatedPipeline.getPipelineState() == PipelineState.CLOSED) {
+    } else {
       // for transition from OPEN to CLOSED state remove pipeline from
       // query2OpenPipelines
       query2OpenPipelines.get(query).remove(pipeline);

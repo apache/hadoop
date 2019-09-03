@@ -31,7 +31,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DataStreamer.LastExceptionInStreamer;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -371,41 +369,6 @@ public class TestDFSOutputStream {
     IOUtils.copyBytes(is, os, bytes.length);
     os.hsync();
     os.close();
-  }
-
-  /**
-   * If dfs.client.recover-on-close-exception.enable is set and exception
-   * happens in close, the local lease should be closed and lease in namenode
-   * should be recovered.
-   */
-  @Test
-  public void testExceptionInClose() throws Exception {
-    String testStr = "Test exception in close";
-    DistributedFileSystem fs = cluster.getFileSystem();
-    Path testFile = new Path("/closeexception");
-    fs.getConf().setBoolean(
-        HdfsClientConfigKeys.Write.RECOVER_ON_CLOSE_EXCEPTION_KEY, true);
-    FSDataOutputStream os = fs.create(testFile);
-    DFSOutputStream dos =
-        (DFSOutputStream) FieldUtils.readField(os, "wrappedStream", true);
-    dos.setExceptionInClose(true);
-    os.write(testStr.getBytes());
-    try {
-      dos.close();
-      // There should be exception
-      Assert.assertTrue(false);
-    } catch (IOException ioe) {
-      GenericTestUtils.waitFor(() -> {
-        boolean closed;
-        try {
-          closed = fs.isFileClosed(testFile);
-        } catch (IOException e) {
-          return false;
-        }
-        return closed;
-      }, 1000, 5000);
-      Assert.assertTrue(fs.isFileClosed(testFile));
-    }
   }
 
   @AfterClass

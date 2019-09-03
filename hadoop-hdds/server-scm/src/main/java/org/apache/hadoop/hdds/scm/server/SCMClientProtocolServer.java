@@ -404,6 +404,24 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        SCMAction.ACTIVATE_PIPELINE, null));
+    scm.getPipelineManager().activatePipeline(
+        PipelineID.getFromProtobuf(pipelineID));
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        SCMAction.DEACTIVATE_PIPELINE, null));
+    scm.getPipelineManager().deactivatePipeline(
+        PipelineID.getFromProtobuf(pipelineID));
+  }
+
+  @Override
   public void closePipeline(HddsProtos.PipelineID pipelineID)
       throws IOException {
     Map<String, String> auditMap = Maps.newHashMap();
