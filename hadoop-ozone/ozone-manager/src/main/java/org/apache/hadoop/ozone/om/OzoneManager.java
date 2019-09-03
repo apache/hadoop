@@ -615,7 +615,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             " system with " + OZONE_OM_SERVICE_IDS_KEY + " and " +
             OZONE_OM_ADDRESS_KEY;
         throw new OzoneIllegalArgumentException(msg);
-      } else if (found == 0) {
+      } else if (!isOMAddressSet && found == 0) {
         String msg = "Incorrect configuration. Unable to find OzoneManager" +
             " node address for service id " + serviceId + ". Please" +
             " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
