@@ -302,6 +302,10 @@ public class StoreContext {
     return createThrottledExecutor(executorCapacity);
   }
 
+  /**
+   * Get the owner of the filesystem.
+   * @return the user who created this filesystem.
+   */
   public UserGroupInformation getOwner() {
     return owner;
   }
