@@ -162,6 +162,20 @@ public class NodeStateMap {
   }
 
   /**
+   * Returns the list of all the nodes as DatanodeInfo objects.
+   *
+   * @return list of all the node ids
+   */
+  public List<DatanodeInfo> getAllDatanodeInfos() {
+    try {
+      lock.readLock().lock();
+      return new ArrayList<>(nodeMap.values());
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
    * Returns the count of nodes in the specified state.
    *
    * @param state NodeStatus

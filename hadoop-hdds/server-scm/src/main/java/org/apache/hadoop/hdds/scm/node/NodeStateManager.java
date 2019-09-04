@@ -82,7 +82,7 @@ public class NodeStateManager implements Runnable, Closeable {
 
   private enum NodeOperationStateEvent {
     START_DECOMMISSION, COMPLETE_DECOMMISSION, START_MAINTENANCE,
-    ENTER_MAINTENANE, RETURN_TO_SERVICE
+    ENTER_MAINTENANCE, RETURN_TO_SERVICE
   }
 
   private static final Logger LOG = LoggerFactory
@@ -262,7 +262,7 @@ public class NodeStateManager implements Runnable, Closeable {
     nodeOpStateSM.addTransition(
         NodeOperationalState.ENTERING_MAINTENANCE,
         NodeOperationalState.IN_MAINTENANCE,
-        NodeOperationStateEvent.ENTER_MAINTENANE);
+        NodeOperationStateEvent.ENTER_MAINTENANCE);
     nodeOpStateSM.addTransition(
         NodeOperationalState.IN_MAINTENANCE, NodeOperationalState.IN_SERVICE,
         NodeOperationStateEvent.RETURN_TO_SERVICE);
@@ -324,9 +324,9 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @throws NodeNotFoundException if the node is not present
    */
-  public NodeState getNodeState(DatanodeDetails datanodeDetails)
+  public NodeStatus getNodeStatus(DatanodeDetails datanodeDetails)
       throws NodeNotFoundException {
-    return nodeStateMap.getNodeStatus(datanodeDetails.getUuid()).getHealth();
+    return nodeStateMap.getNodeStatus(datanodeDetails.getUuid());
   }
 
   /**
@@ -335,7 +335,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of healthy nodes
    */
   public List<DatanodeInfo> getHealthyNodes() {
-    return getNodes(NodeState.HEALTHY);
+    // TODO - fix hard coded IN_SERVICE
+    return getNodes(new NodeStatus(
+        NodeOperationalState.IN_SERVICE, NodeState.HEALTHY));
   }
 
   /**
@@ -344,7 +346,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of stale nodes
    */
   public List<DatanodeInfo> getStaleNodes() {
-    return getNodes(NodeState.STALE);
+    // TODO - fix hard coded IN_SERVICE
+    return getNodes(new NodeStatus(
+        NodeOperationalState.IN_SERVICE, NodeState.STALE));
   }
 
   /**
@@ -353,31 +357,31 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of dead nodes
    */
   public List<DatanodeInfo> getDeadNodes() {
-    return getNodes(NodeState.DEAD);
+    // TODO - fix hard coded IN_SERVICE
+    return getNodes(new NodeStatus(
+        NodeOperationalState.IN_SERVICE, NodeState.DEAD));
   }
 
   /**
-   * Returns all the node which are in the specified state.
+   * Returns all the nodes with the specified status.
    *
-   * @param state NodeState
+   * @param status NodeStatus
    *
    * @return list of nodes
    */
-  public List<DatanodeInfo> getNodes(NodeState state) {
+  public List<DatanodeInfo> getNodes(NodeStatus status) {
     List<DatanodeInfo> nodes = new ArrayList<>();
-    // TODO - For now decommission is not implemented, so hardcode IN_SERVICE
-    nodeStateMap.getNodes(
-        new NodeStatus(NodeOperationalState.IN_SERVICE, state)).forEach(
-            uuid -> {
-              try {
-                nodes.add(nodeStateMap.getNodeInfo(uuid));
-              } catch (NodeNotFoundException e) {
-                // This should not happen unless someone else other than
-                // NodeStateManager is directly modifying NodeStateMap and
-                // removed the node entry after we got the list of UUIDs.
-                LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
-              }
-            });
+    nodeStateMap.getNodes(status).forEach(
+        uuid -> {
+          try {
+            nodes.add(nodeStateMap.getNodeInfo(uuid));
+          } catch (NodeNotFoundException e) {
+            // This should not happen unless someone else other than
+            // NodeStateManager is directly modifying NodeStateMap and
+            // removed the node entry after we got the list of UUIDs.
+            LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
+          }
+        });
     return nodes;
   }
 
@@ -388,18 +392,7 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public List<DatanodeInfo> getAllNodes() {
     List<DatanodeInfo> nodes = new ArrayList<>();
-    nodeStateMap.getAllNodes().forEach(
-        uuid -> {
-          try {
-            nodes.add(nodeStateMap.getNodeInfo(uuid));
-          } catch (NodeNotFoundException e) {
-            // This should not happen unless someone else other than
-            // NodeStateManager is directly modifying NodeStateMap and removed
-            // the node entry after we got the list of UUIDs.
-            LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
-          }
-        });
-    return nodes;
+    return nodeStateMap.getAllDatanodeInfos();
   }
 
   /**
@@ -417,7 +410,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return healthy node count
    */
   public int getHealthyNodeCount() {
-    return getNodeCount(NodeState.HEALTHY);
+    // TODO - hard coded IN_SERVICE
+    return getNodeCount(
+        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.HEALTHY));
   }
 
   /**
@@ -426,7 +421,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return stale node count
    */
   public int getStaleNodeCount() {
-    return getNodeCount(NodeState.STALE);
+    // TODO - hard coded IN_SERVICE
+    return getNodeCount(
+        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.STALE));
   }
 
   /**
@@ -435,20 +432,20 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return dead node count
    */
   public int getDeadNodeCount() {
-    return getNodeCount(NodeState.DEAD);
+    // TODO - hard coded IN_SERVICE
+    return getNodeCount(
+        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.DEAD));
   }
 
   /**
-   * Returns the count of nodes in specified state.
+   * Returns the count of nodes in specified status.
    *
-   * @param state NodeState
+   * @param status NodeState
    *
    * @return node count
    */
-  public int getNodeCount(NodeState state) {
-    // TODO - for now decommission is not implemented so hard-code IN-Service
-    return nodeStateMap.getNodeCount(
-        new NodeStatus(NodeOperationalState.IN_SERVICE, state));
+  public int getNodeCount(NodeStatus status) {
+    return nodeStateMap.getNodeCount(status);
   }
 
   /**
@@ -547,7 +544,8 @@ public class NodeStateManager implements Runnable, Closeable {
     scheduleNextHealthCheck();
   }
 
-  private void checkNodesHealth() {
+  @VisibleForTesting
+  public void checkNodesHealth() {
 
     /*
      *
@@ -589,39 +587,33 @@ public class NodeStateManager implements Runnable, Closeable {
     Predicate<Long> deadNodeCondition =
         (lastHbTime) -> lastHbTime < staleNodeDeadline;
     try {
-      for (NodeState state : NodeState.values()) {
-        // TODO - decommission not implemented so hard code inservice
-        // TODO - why not just 'get all nodes' here, instead of getting them
-        //        state by state?
-        List<UUID> nodes = nodeStateMap.getNodes(
-            new NodeStatus(NodeOperationalState.IN_SERVICE, state));
-        for (UUID id : nodes) {
-          DatanodeInfo node = nodeStateMap.getNodeInfo(id);
-          switch (state) {
-          case HEALTHY:
-            // Move the node to STALE if the last heartbeat time is less than
-            // configured stale-node interval.
-            updateNodeState(node, staleNodeCondition, state,
-                  NodeLifeCycleEvent.TIMEOUT);
-            break;
-          case STALE:
-            // Move the node to DEAD if the last heartbeat time is less than
-            // configured dead-node interval.
-            updateNodeState(node, deadNodeCondition, state,
-                NodeLifeCycleEvent.TIMEOUT);
-            // Restore the node if we have received heartbeat before configured
-            // stale-node interval.
-            updateNodeState(node, healthyNodeCondition, state,
-                NodeLifeCycleEvent.RESTORE);
-            break;
-          case DEAD:
-            // Resurrect the node if we have received heartbeat before
-            // configured stale-node interval.
-            updateNodeState(node, healthyNodeCondition, state,
-                NodeLifeCycleEvent.RESURRECT);
-            break;
-          default:
-          }
+      for(DatanodeInfo node : nodeStateMap.getAllDatanodeInfos()) {
+        NodeState state =
+            nodeStateMap.getNodeStatus(node.getUuid()).getHealth();
+        switch (state) {
+        case HEALTHY:
+          // Move the node to STALE if the last heartbeat time is less than
+          // configured stale-node interval.
+          updateNodeState(node, staleNodeCondition, state,
+              NodeLifeCycleEvent.TIMEOUT);
+          break;
+        case STALE:
+          // Move the node to DEAD if the last heartbeat time is less than
+          // configured dead-node interval.
+          updateNodeState(node, deadNodeCondition, state,
+              NodeLifeCycleEvent.TIMEOUT);
+          // Restore the node if we have received heartbeat before configured
+          // stale-node interval.
+          updateNodeState(node, healthyNodeCondition, state,
+              NodeLifeCycleEvent.RESTORE);
+          break;
+        case DEAD:
+          // Resurrect the node if we have received heartbeat before
+          // configured stale-node interval.
+          updateNodeState(node, healthyNodeCondition, state,
+              NodeLifeCycleEvent.RESURRECT);
+          break;
+        default:
         }
       }
     } catch (NodeNotFoundException e) {

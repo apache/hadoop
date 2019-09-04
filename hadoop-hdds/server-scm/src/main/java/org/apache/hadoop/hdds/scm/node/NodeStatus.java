@@ -32,10 +32,25 @@ public class NodeStatus {
   private HddsProtos.NodeOperationalState operationalState;
   private HddsProtos.NodeState health;
 
-  NodeStatus(HddsProtos.NodeOperationalState operationalState,
+  public NodeStatus(HddsProtos.NodeOperationalState operationalState,
              HddsProtos.NodeState health) {
     this.operationalState = operationalState;
     this.health = health;
+  }
+
+  public static NodeStatus inServiceHealthy() {
+    return new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE,
+        HddsProtos.NodeState.HEALTHY);
+  }
+
+  public static NodeStatus inServiceStale() {
+    return new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE,
+        HddsProtos.NodeState.STALE);
+  }
+
+  public static NodeStatus inServiceDead() {
+    return new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE,
+        HddsProtos.NodeState.DEAD);
   }
 
   public HddsProtos.NodeState getHealth() {
@@ -44,17 +59,6 @@ public class NodeStatus {
 
   public HddsProtos.NodeOperationalState getOperationalState() {
     return operationalState;
-  }
-
-  public void setOperationalState(
-      HddsProtos.NodeOperationalState newOperationalState) {
-    assert newOperationalState != null;
-    operationalState = newOperationalState;
-  }
-
-  public void setHealth(HddsProtos.NodeState newHealth) {
-    assert newHealth != null;
-    health = newHealth;
   }
 
   @Override

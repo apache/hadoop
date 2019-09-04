@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
@@ -57,9 +58,20 @@ public class DatanodeInfo extends DatanodeDetails {
    * Updates the last heartbeat time with current time.
    */
   public void updateLastHeartbeatTime() {
+    updateLastHeartbeatTime(Time.monotonicNow());
+  }
+
+  /**
+   * Sets the last heartbeat time to a given value. Intended to be used
+   * only for tests.
+   *
+   * @param milliSecondsSinceEpoch - ms since Epoch to set as the heartbeat time
+   */
+  @VisibleForTesting
+  public void updateLastHeartbeatTime(long milliSecondsSinceEpoch) {
     try {
       lock.writeLock().lock();
-      lastHeartbeatTime = Time.monotonicNow();
+      lastHeartbeatTime = milliSecondsSinceEpoch;
     } finally {
       lock.writeLock().unlock();
     }

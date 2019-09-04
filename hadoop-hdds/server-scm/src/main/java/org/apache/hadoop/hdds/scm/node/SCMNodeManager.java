@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
@@ -151,7 +152,9 @@ public class SCMNodeManager implements NodeManager {
    */
   @Override
   public List<DatanodeDetails> getNodes(NodeState nodestate) {
-    return nodeStateManager.getNodes(nodestate).stream()
+    return nodeStateManager.getNodes(
+        new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE, nodestate))
+        .stream()
         .map(node -> (DatanodeDetails)node).collect(Collectors.toList());
   }
 
@@ -173,7 +176,9 @@ public class SCMNodeManager implements NodeManager {
    */
   @Override
   public int getNodeCount(NodeState nodestate) {
-    return nodeStateManager.getNodeCount(nodestate);
+    // TODO: hardcoded IN_SERVICE
+    return nodeStateManager.getNodeCount(
+        new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE, nodestate));
   }
 
   /**
@@ -185,7 +190,7 @@ public class SCMNodeManager implements NodeManager {
   @Override
   public NodeState getNodeState(DatanodeDetails datanodeDetails) {
     try {
-      return nodeStateManager.getNodeState(datanodeDetails);
+      return nodeStateManager.getNodeStatus(datanodeDetails).getHealth();
     } catch (NodeNotFoundException e) {
       // TODO: should we throw NodeNotFoundException?
       return null;
@@ -365,9 +370,9 @@ public class SCMNodeManager implements NodeManager {
     final Map<DatanodeDetails, SCMNodeStat> nodeStats = new HashMap<>();
 
     final List<DatanodeInfo> healthyNodes =  nodeStateManager
-        .getNodes(NodeState.HEALTHY);
+        .getHealthyNodes();
     final List<DatanodeInfo> staleNodes = nodeStateManager
-        .getNodes(NodeState.STALE);
+        .getStaleNodes();
     final List<DatanodeInfo> datanodes = new ArrayList<>(healthyNodes);
     datanodes.addAll(staleNodes);
 
@@ -436,10 +441,8 @@ public class SCMNodeManager implements NodeManager {
     long ssdUsed = 0L;
     long ssdRemaining = 0L;
 
-    List<DatanodeInfo> healthyNodes =  nodeStateManager
-        .getNodes(NodeState.HEALTHY);
-    List<DatanodeInfo> staleNodes = nodeStateManager
-        .getNodes(NodeState.STALE);
+    List<DatanodeInfo> healthyNodes =  nodeStateManager.getHealthyNodes();
+    List<DatanodeInfo> staleNodes = nodeStateManager.getStaleNodes();
 
     List<DatanodeInfo> datanodes = new ArrayList<>(healthyNodes);
     datanodes.addAll(staleNodes);
