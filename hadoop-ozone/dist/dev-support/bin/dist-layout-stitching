@@ -61,7 +61,6 @@ echo
 run rm -rf "ozone-${HDDS_VERSION}"
 run mkdir "ozone-${HDDS_VERSION}"
 run cd "ozone-${HDDS_VERSION}"
-
 run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/NOTICE.txt" "NOTICE.txt"
 run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/LICENSE.txt" "LICENSE.txt"
 run cp -pr "${ROOT}/hadoop-ozone/dist/src/main/license/bin/licenses" "licenses"
