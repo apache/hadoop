@@ -169,7 +169,7 @@ The following properties control OAuth2 authentication.
 SSL Configurations for SWebHDFS
 -------------------------------------------------------
 
-To use SWebHDFS FileSystem (i.e. using the swebhdfs protocol), a SSL configuration
+To use SWebHDFS FileSystem (i.e. using the swebhdfs protocol), an SSL configuration
 file needs to be specified on the client side. This must specify 3 parameters:
 
 | SSL property | Description |
