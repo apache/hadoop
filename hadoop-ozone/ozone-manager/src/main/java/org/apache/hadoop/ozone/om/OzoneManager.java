@@ -615,20 +615,27 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             " system with " + OZONE_OM_SERVICE_IDS_KEY + " and " +
             OZONE_OM_ADDRESS_KEY;
         throw new OzoneIllegalArgumentException(msg);
-      } else if (!isOMAddressSet && found == 0) {
-        String msg = "Incorrect configuration. Unable to find OzoneManager" +
-            " node address for service id " + serviceId + ". Please" +
-            " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
-            ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY;
-        throw new OzoneIllegalArgumentException(msg);
       }
     }
-
+/*
+    if (found == 0) {
+      String msg = "Incorrect configuration. Unable to perform" +
+          " self-discovery for current OzoneManager node. Please" +
+          " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
+          ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY;
+      throw new OzoneIllegalArgumentException(msg);
+    }
+*/
     if (!isOMAddressSet) {
       // No OM address is set. Fallback to default
       InetSocketAddress omAddress = OmUtils.getOmAddress(conf);
       int ratisPort = conf.getInt(OZONE_OM_RATIS_PORT_KEY,
           OZONE_OM_RATIS_PORT_DEFAULT);
+      // HDDS-2064: this.peerNodes would be null at this point because
+      // it is not initialized, we want to initialize it as an empty list
+      // to prevent NPE in OzoneManagerRatisServer#newOMRatisServer.
+      assert(this.peerNodes == null);
+      this.peerNodes = new ArrayList<>();
 
       LOG.info("Configuration either no {} set. Falling back to the default " +
           "OM address {}", OZONE_OM_ADDRESS_KEY, omAddress);
