@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
-    .SCMPlacementMetrics;
+    .SCMContainerPlacementMetrics;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -84,7 +84,7 @@ public class TestSCMContainerPlacementPolicyMetrics {
         .setNumDatanodes(4)
         .build();
     cluster.waitForClusterToBeReady();
-    metrics = getMetrics(SCMPlacementMetrics.class.getSimpleName());
+    metrics = getMetrics(SCMContainerPlacementMetrics.class.getSimpleName());
     ozClient = OzoneClientFactory.getRpcClient(conf);
     store = ozClient.getObjectStore();
   }
@@ -136,13 +136,13 @@ public class TestSCMContainerPlacementPolicyMetrics {
     }
 
     long totalRequest = getLongCounter("DatanodeRequestCount", metrics);
-    long tryCount = getLongCounter("DatanodeAllocationTryCount", metrics);
+    long tryCount = getLongCounter("DatanodeChooseAttemptCount", metrics);
     long sucessCount =
-        getLongCounter("DatanodeAllocationSuccessCount", metrics);
+        getLongCounter("DatanodeChooseSuccessCount", metrics);
     long compromiseCount =
-        getLongCounter("DatanodeAllocationCompromiseCount", metrics);
+        getLongCounter("DatanodeChooseFallbackCount", metrics);
 
-    // Seems no under-replicated close containers get replicated
+    // Seems no under-replicated closed containers get replicated
     Assert.assertTrue(totalRequest == 0);
     Assert.assertTrue(tryCount == 0);
     Assert.assertTrue(sucessCount == 0);

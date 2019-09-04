@@ -30,49 +30,53 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 /**
- * This class is for maintaining Topology aware placement statistics.
+ * This class is for maintaining Topology aware container placement statistics.
  */
-@Metrics(about="SCM Placement Metrics", context = "ozone")
-public class SCMPlacementMetrics implements MetricsSource {
+@Metrics(about="SCM Container Placement Metrics", context = "ozone")
+public class SCMContainerPlacementMetrics implements MetricsSource {
   public static final String SOURCE_NAME =
-      SCMPlacementMetrics.class.getSimpleName();
+      SCMContainerPlacementMetrics.class.getSimpleName();
   private static final MetricsInfo RECORD_INFO = Interns.info(SOURCE_NAME,
       "SCM Placement Metrics");
   private static MetricsRegistry registry;
 
   // total datanode allocation request count
   @Metric private MutableCounterLong datanodeRequestCount;
-  // datanode allocation tried count, including success, fallback and failed
-  @Metric private MutableCounterLong datanodeAllocationTryCount;
+  // datanode allocation attempt count, including success, fallback and failed
+  @Metric private MutableCounterLong datanodeChooseAttemptCount;
   // datanode successful allocation count
-  @Metric private MutableCounterLong datanodeAllocationSuccessCount;
+  @Metric private MutableCounterLong datanodeChooseSuccessCount;
   // datanode allocated with some allocation constrains compromised
-  @Metric private MutableCounterLong datanodeAllocationCompromiseCount;
+  @Metric private MutableCounterLong datanodeChooseFallbackCount;
 
-  public SCMPlacementMetrics() {
+  public SCMContainerPlacementMetrics() {
   }
 
-  public static SCMPlacementMetrics create() {
+  public static SCMContainerPlacementMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     registry = new MetricsRegistry(RECORD_INFO);
     return ms.register(SOURCE_NAME, "SCM Placement Metrics",
-        new SCMPlacementMetrics());
+        new SCMContainerPlacementMetrics());
   }
 
   public void incrDatanodeRequestCount(long count) {
+    System.out.println("request + 1");
     this.datanodeRequestCount.incr(count);
   }
 
-  public void incrDatanodeAllocationSuccessCount() {
-    this.datanodeAllocationSuccessCount.incr(1);
+  public void incrDatanodeChooseSuccessCount() {
+    System.out.println("success + 1");
+    this.datanodeChooseSuccessCount.incr(1);
   }
 
-  public void incrDatanodeAllocationCompromiseCount() {
-    this.datanodeAllocationCompromiseCount.incr(1);
+  public void incrDatanodeChooseFallbackCount() {
+    System.out.println("fallback + 1");
+    this.datanodeChooseFallbackCount.incr(1);
   }
 
-  public void incrDatanodeAllocationTryCount() {
-    this.datanodeAllocationTryCount.incr(1);
+  public void incrDatanodeChooseAttemptCount() {
+    System.out.println("attempt + 1");
+    this.datanodeChooseAttemptCount.incr(1);
   }
 
   public void unRegister() {
@@ -86,18 +90,18 @@ public class SCMPlacementMetrics implements MetricsSource {
   }
 
   @VisibleForTesting
-  public long getDatanodeAllocationSuccessCount() {
-    return this.datanodeAllocationSuccessCount.value();
+  public long getDatanodeChooseSuccessCount() {
+    return this.datanodeChooseSuccessCount.value();
   }
 
   @VisibleForTesting
-  public long getDatanodeAllocationCompromiseCount() {
-    return this.datanodeAllocationCompromiseCount.value();
+  public long getDatanodeChooseFallbackCount() {
+    return this.datanodeChooseFallbackCount.value();
   }
 
   @VisibleForTesting
-  public long getDatanodeAllocationTryCount() {
-    return this.datanodeAllocationTryCount.value();
+  public long getDatanodeChooseAttemptCount() {
+    return this.datanodeChooseAttemptCount.value();
   }
 
   @Override

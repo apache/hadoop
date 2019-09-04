@@ -53,7 +53,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
   private boolean fallback;
   private static final int RACK_LEVEL = 1;
   private static final int MAX_RETRY= 3;
-  private final SCMPlacementMetrics metrics;
+  private final SCMContainerPlacementMetrics metrics;
 
   /**
    * Constructs a Container Placement with rack awareness.
@@ -67,7 +67,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
    */
   public SCMContainerPlacementRackAware(final NodeManager nodeManager,
       final Configuration conf, final NetworkTopology networkTopology,
-      final boolean fallback, final SCMPlacementMetrics metrics) {
+      final boolean fallback, final SCMContainerPlacementMetrics metrics) {
     super(nodeManager, conf);
     this.networkTopology = networkTopology;
     this.fallback = fallback;
@@ -247,7 +247,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
     while(true) {
       Node node = networkTopology.chooseRandom(NetConstants.ROOT, null,
           excludedNodes, affinityNode, ancestorGen);
-      metrics.incrDatanodeAllocationTryCount();
+      metrics.incrDatanodeChooseAttemptCount();
       if (node == null) {
         // cannot find the node which meets all constrains
         LOG.warn("Failed to find the datanode. excludedNodes:" +
@@ -272,14 +272,14 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.debug("Datanode {} is chosen. Required size is {}",
+        LOG.warn("Datanode {} is chosen. Required size is {}",
             node.toString(), sizeRequired);
         if (excludedNodes != null && excludedNodesForCapacity != null) {
           excludedNodes.removeAll(excludedNodesForCapacity);
         }
-        metrics.incrDatanodeAllocationSuccessCount();
+        metrics.incrDatanodeChooseSuccessCount();
         if (isFallbacked) {
-          metrics.incrDatanodeAllocationCompromiseCount();
+          metrics.incrDatanodeChooseFallbackCount();
         }
         return node;
       } else {

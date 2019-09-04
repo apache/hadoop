@@ -101,7 +101,7 @@ public class TestContainerPlacementFactory {
 
     ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
         .getPolicy(conf, nodeManager, cluster, true,
-            SCMPlacementMetrics.create());
+            SCMContainerPlacementMetrics.create());
 
     int nodeNum = 3;
     List<DatanodeDetails> datanodeDetails =

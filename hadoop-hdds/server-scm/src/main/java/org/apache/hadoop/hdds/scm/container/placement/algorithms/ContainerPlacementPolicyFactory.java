@@ -43,7 +43,7 @@ public final class ContainerPlacementPolicyFactory {
 
   public static ContainerPlacementPolicy getPolicy(Configuration conf,
       final NodeManager nodeManager, NetworkTopology clusterMap,
-      final boolean fallback, SCMPlacementMetrics metrics)
+      final boolean fallback, SCMContainerPlacementMetrics metrics)
       throws SCMException{
     final Class<? extends ContainerPlacementPolicy> placementClass = conf
         .getClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
@@ -53,7 +53,7 @@ public final class ContainerPlacementPolicyFactory {
     try {
       constructor = placementClass.getDeclaredConstructor(NodeManager.class,
           Configuration.class, NetworkTopology.class, boolean.class,
-          SCMPlacementMetrics.class);
+          SCMContainerPlacementMetrics.class);
       LOG.info("Create container placement policy of type " +
           placementClass.getCanonicalName());
     } catch (NoSuchMethodException e) {
