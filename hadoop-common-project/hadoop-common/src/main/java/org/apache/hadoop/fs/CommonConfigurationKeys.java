@@ -109,6 +109,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_COST_PROVIDER_KEY = "cost-provider.impl";
   public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
   public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
+  // Callqueue overflow trigger failover for stateless servers.
+  public static final String IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE =
+      "callqueue.overflow.trigger.failover";
+  public static final boolean IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT =
+      false;
 
   /**
    * IPC scheduler priority levels.
