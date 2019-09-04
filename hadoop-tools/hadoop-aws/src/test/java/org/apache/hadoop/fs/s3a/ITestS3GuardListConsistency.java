@@ -533,7 +533,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assumeV2ListAPI();
 
     S3AFileSystem fs = getFileSystem();
-    Path root = path("testInconsistentS3ClientDeletes-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path root = path("testInconsistentS3ClientDeletes-"
+        + DEFAULT_DELAY_KEY_SUBSTRING);
     for (int i = 0; i < 3; i++) {
       fs.mkdirs(new Path(root, "dir-" + i));
       touch(fs, new Path(root, "file-" + i));

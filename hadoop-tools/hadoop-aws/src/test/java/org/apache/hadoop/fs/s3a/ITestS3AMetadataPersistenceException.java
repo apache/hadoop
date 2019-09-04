@@ -113,7 +113,7 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
         MetadataPersistenceException thrown =
             intercept(
                 MetadataPersistenceException.class,
-                () -> { outputStream.close(); });
+                outputStream::close);
         assertEquals("cause didn't match original exception",
             ioException, thrown.getCause());
       } else {
