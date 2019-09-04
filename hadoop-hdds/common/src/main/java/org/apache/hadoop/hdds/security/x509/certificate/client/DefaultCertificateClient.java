@@ -44,7 +44,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.slf4j.Logger;
 
-import javax.ws.rs.HEAD;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
