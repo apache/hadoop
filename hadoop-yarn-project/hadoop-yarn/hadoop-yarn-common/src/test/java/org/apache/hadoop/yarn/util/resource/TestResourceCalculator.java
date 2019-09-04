@@ -186,6 +186,7 @@ public class TestResourceCalculator {
       testCompareDefault(cluster);
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       testCompareDominant(cluster);
+      testCompareDominantZeroValueResource();
     }
   }
 
@@ -199,6 +200,28 @@ public class TestResourceCalculator {
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 2), 1);
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 0, 0), 1);
+  }
+
+  /**
+   * Verify compare when one or all the resource are zero.
+   */
+  private void testCompareDominantZeroValueResource(){
+    Resource cluster = newResource(4L, 4, 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(1, 2, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(2, 2, 2), 0);
+    assertComparison(cluster, newResource(0, 2, 1), newResource(0, 2, 2), 0);
+    assertComparison(cluster, newResource(0, 1, 2), newResource(1, 1, 2), -1);
+    assertComparison(cluster, newResource(1, 1, 2), newResource(2, 1, 2), -1);
+
+    // cluster resource zero
+    cluster = newResource(0, 0, 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 1), 0);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 1, 2), -1);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 2, 1), -1);
   }
 
   private void testCompareDominant(Resource cluster) {
