@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.net.*;
 import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,7 +51,7 @@ public class TestPipelinePlacementPolicy {
   }
 
   @Test
-  public void testChooseNextNodeBasedOnNetworkTopology() {
+  public void testChooseNodeBasedOnNetworkTopology() {
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
     DatanodeDetails anchor = placementPolicy.chooseNode(healthyNodes);
@@ -59,8 +60,8 @@ public class TestPipelinePlacementPolicy {
 
     List<DatanodeDetails> excludedNodes =
         new ArrayList<>(PIPELINE_PLACEMENT_MAX_NODES_COUNT);
-    DatanodeDetails nextNode = placementPolicy.chooseNextNode(
-        healthyNodes, excludedNodes, anchor);
+    DatanodeDetails nextNode = placementPolicy.chooseNodeFromNetworkTopology(
+        nodeManager.getClusterNetworkTopologyMap(), anchor, excludedNodes);
     // excludedNodes should contain nextNode after being chosen.
     Assert.assertTrue(excludedNodes.contains(nextNode));
     // nextNode should not be the same as anchor.
@@ -68,11 +69,62 @@ public class TestPipelinePlacementPolicy {
   }
 
   @Test
+  public void testChooseNodeBasedOnRackAwareness() {
+    List<DatanodeDetails> healthyNodes = overWriteLocationInNodes(
+        nodeManager.getNodes(HddsProtos.NodeState.HEALTHY));
+    DatanodeDetails anchor = placementPolicy.chooseNode(healthyNodes);
+    NetworkTopology topologyWithDifRacks =
+        createNetworkTopologyOnDifRacks();
+    DatanodeDetails nextNode = placementPolicy.chooseNodeBasedOnRackAwareness(
+        healthyNodes, new ArrayList<>(PIPELINE_PLACEMENT_MAX_NODES_COUNT),
+        topologyWithDifRacks, anchor);
+    Assert.assertFalse(topologyWithDifRacks.isSameParent(anchor, nextNode));
+  }
+
+  private final static Node[] NODES = new NodeImpl[] {
+      new NodeImpl("h1", "/r1", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h2", "/r1", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h3", "/r1", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h4", "/r1", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h5", "/r2", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h6", "/r2", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h7", "/r2", NetConstants.NODE_COST_DEFAULT),
+      new NodeImpl("h8", "/r2", NetConstants.NODE_COST_DEFAULT),
+  };
+
+
+  private NetworkTopology createNetworkTopologyOnDifRacks() {
+    NetworkTopology topology = new NetworkTopologyImpl(new Configuration());
+    for (Node n : NODES) {
+      topology.add(n);
+    }
+    return topology;
+  }
+
+  private List<DatanodeDetails> overWriteLocationInNodes(
+      List<DatanodeDetails> datanodes) {
+    List<DatanodeDetails> results = new ArrayList<>(datanodes.size());
+    for (int i = 0; i < datanodes.size(); i++) {
+      DatanodeDetails datanode = datanodes.get(i);
+      DatanodeDetails result = DatanodeDetails.newBuilder()
+          .setUuid(datanode.getUuidString())
+          .setHostName(datanode.getHostName())
+          .setIpAddress(datanode.getIpAddress())
+          .addPort(datanode.getPort(DatanodeDetails.Port.Name.STANDALONE))
+          .addPort(datanode.getPort(DatanodeDetails.Port.Name.RATIS))
+          .addPort(datanode.getPort(DatanodeDetails.Port.Name.REST))
+          .setNetworkLocation(NODES[i].getNetworkLocation()).build();
+      results.add(result);
+    }
+    return results;
+  }
+
+  @Test
   public void testHeavyNodeShouldBeExcluded() throws SCMException{
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
     int nodesRequired = healthyNodes.size()/2;
-    // only minority of healthy nodes are heavily engaged in pipelines.
+    // only minority of healthy NODES are heavily engaged in pipelines.
     int minorityHeavy = healthyNodes.size()/2 - 1;
     List<DatanodeDetails> pickedNodes1 = placementPolicy.chooseDatanodes(
         new ArrayList<>(PIPELINE_PLACEMENT_MAX_NODES_COUNT),
@@ -80,12 +132,12 @@ public class TestPipelinePlacementPolicy {
         nodesRequired, 0);
     // modify node to pipeline mapping.
     insertHeavyNodesIntoNodeManager(healthyNodes, minorityHeavy);
-    // nodes should be sufficient.
+    // NODES should be sufficient.
     Assert.assertEquals(nodesRequired, pickedNodes1.size());
-    // make sure pipeline placement policy won't select duplicated nodes.
+    // make sure pipeline placement policy won't select duplicated NODES.
     Assert.assertTrue(checkDuplicateNodesUUID(pickedNodes1));
 
-    // majority of healthy nodes are heavily engaged in pipelines.
+    // majority of healthy NODES are heavily engaged in pipelines.
     int majorityHeavy = healthyNodes.size()/2 + 2;
     insertHeavyNodesIntoNodeManager(healthyNodes, majorityHeavy);
     boolean thrown = false;
@@ -99,7 +151,7 @@ public class TestPipelinePlacementPolicy {
       Assert.assertFalse(thrown);
       thrown = true;
     }
-    // nodes should NOT be sufficient and exception should be thrown.
+    // NODES should NOT be sufficient and exception should be thrown.
     Assert.assertNull(pickedNodes2);
     Assert.assertTrue(thrown);
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -61,8 +62,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
    * @param nodeManager Node Manager
    * @param conf        Configuration
    */
-  public PipelinePlacementPolicy(final NodeManager nodeManager,
-                                 final Configuration conf) {
+  public PipelinePlacementPolicy(
+      final NodeManager nodeManager, final Configuration conf) {
     super(nodeManager, conf);
     this.nodeManager = nodeManager;
     this.conf = conf;
@@ -78,8 +79,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
    * @return true if we have enough space.
    */
   @VisibleForTesting
-  boolean meetCriteria(DatanodeDetails datanodeDetails,
-                       long heavyNodeLimit) {
+  boolean meetCriteria(DatanodeDetails datanodeDetails, long heavyNodeLimit) {
     return (nodeManager.getPipelinesCount(datanodeDetails) <= heavyNodeLimit);
   }
 
@@ -156,6 +156,27 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
 
     List<DatanodeDetails> results = new ArrayList<>();
 
+    // Randomly picks nodes when all nodes are equal.
+    // This happens when network topology is absent or
+    // all nodes are on the same rack.
+    if (checkAllNodesAreEqual(nodeManager.getClusterNetworkTopologyMap())) {
+      LOG.info("All nodes are considered equal. Now randomly pick nodes. " +
+          "Required nodes: {}", nodesRequired);
+      results = super.getResultSet(nodesRequired, healthyNodes);
+      if (results.size() < nodesRequired) {
+        LOG.error("Unable to find the required number of healthy nodes that " +
+                "meet the criteria. Required nodes: {}, Found nodes: {}",
+            nodesRequired, results.size());
+        throw new SCMException("Unable to find required number of nodes.",
+            SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
+      }
+      return results;
+    }
+
+    // Since nodes are widely distributed, the results should be selected
+    // base on distance in topology, rack awareness and load balancing.
+    List<DatanodeDetails> exclude = new ArrayList<>();
+    exclude.addAll(excludedNodes);
     // First choose an anchor nodes randomly
     DatanodeDetails anchor = chooseNode(healthyNodes);
     if (anchor == null) {
@@ -167,15 +188,34 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
     }
 
     results.add(anchor);
+    exclude.add(anchor);
     nodesRequired--;
+
+    // Choose the second node on different racks from anchor.
+    DatanodeDetails nodeOnDifferentRack = chooseNodeBasedOnRackAwareness(
+        healthyNodes, excludedNodes,
+        nodeManager.getClusterNetworkTopologyMap(), anchor);
+    if (nodeOnDifferentRack == null) {
+      LOG.error("Unable to find nodes on different racks that " +
+              "meet the criteria. Required nodes: {}, Found nodes: {}",
+          nodesRequired, results.size());
+      throw new SCMException("Unable to find required number of nodes.",
+          SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
+    }
+
+    results.add(nodeOnDifferentRack);
+    exclude.add(nodeOnDifferentRack);
+    nodesRequired--;
+
+    // Then choose nodes close to anchor based on network topology
     for (int x = 0; x < nodesRequired; x++) {
       // invoke the choose function defined in the derived classes.
-      DatanodeDetails pick =
-          chooseNextNode(healthyNodes, excludedNodes, anchor);
+      DatanodeDetails pick = chooseNodeFromNetworkTopology(
+          nodeManager.getClusterNetworkTopologyMap(), anchor, exclude);
       if (pick != null) {
         results.add(pick);
         // exclude the picked node for next time
-        excludedNodes.add(pick);
+        exclude.add(pick);
       }
     }
 
@@ -187,7 +227,6 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
     }
     return results;
-
   }
 
   /**
@@ -218,8 +257,54 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
       datanodeDetails = firstNodeMetric.isGreater(secondNodeMetric.get())
           ? firstNodeDetails : secondNodeDetails;
     }
+    // the pick is decided and it should be removed from candidates.
     healthyNodes.remove(datanodeDetails);
     return datanodeDetails;
+  }
+
+  /**
+   * Choose node on different racks as anchor is on based on rack awareness.
+   * If a node on different racks cannot be found, then return a random node.
+   * @param healthyNodes healthy nodes
+   * @param excludedNodes excluded nodes
+   * @param networkTopology network topology
+   * @param anchor anchor node
+   * @return a node on different rack
+   */
+  @VisibleForTesting
+  protected DatanodeDetails chooseNodeBasedOnRackAwareness(
+      List<DatanodeDetails> healthyNodes,  List<DatanodeDetails> excludedNodes,
+      NetworkTopology networkTopology, DatanodeDetails anchor) {
+    Preconditions.checkArgument(networkTopology != null);
+    if (checkAllNodesAreEqual(networkTopology)) {
+      return null;
+    }
+
+    for (DatanodeDetails node : healthyNodes) {
+      if (excludedNodes.contains(node)
+          || networkTopology.isSameParent(anchor, node)) {
+        continue;
+      } else {
+        // the pick is decided and it should be removed from candidates.
+        healthyNodes.remove(node);
+        return node;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if all nodes are equal in topology.
+   * They are equal when network topology is absent or there are on
+   * the same rack.
+   * @param topology network topology
+   * @return true when all nodes are equal
+   */
+  private boolean checkAllNodesAreEqual(NetworkTopology topology) {
+    if (topology == null) {
+      return true;
+    }
+    return (topology.getNumOfNodes(topology.getMaxLevel() - 1) == 1);
   }
 
   /**
@@ -233,45 +318,21 @@ public final class PipelinePlacementPolicy extends SCMCommonPolicy {
   protected DatanodeDetails chooseNodeFromNetworkTopology(
       NetworkTopology networkTopology, DatanodeDetails anchor,
       List<DatanodeDetails> excludedNodes) {
-    if (networkTopology == null) {
-      return null;
-    }
-
-    if (excludedNodes == null) {
-      return (DatanodeDetails)networkTopology.chooseRandom(
-          anchor.getNetworkLocation(), new ArrayList<>());
-    }
+    Preconditions.checkArgument(networkTopology != null);
 
     Collection<Node> excluded = new ArrayList<>();
+    if (excludedNodes != null && excludedNodes.size() != 0) {
+      excluded.addAll(excludedNodes);
+    }
     excluded.add(anchor);
+
     Node pick = networkTopology.chooseRandom(
         anchor.getNetworkLocation(), excluded);
     DatanodeDetails pickedNode = (DatanodeDetails) pick;
     // exclude the picked node for next time
-    excludedNodes.add(pickedNode);
-    return pickedNode;
-  }
-
-  /**
-   * Choose node next to the anchor node based on network topology.
-   * And chosen node will be put in excludeNodes.
-   *
-   * @param healthyNodes  - Set of healthy nodes we can choose from.
-   * @param excludedNodes - excluded nodes
-   * @param anchor        - anchor node to start with
-   * @return chosen datanodDetails
-   */
-  public DatanodeDetails chooseNextNode(
-      List<DatanodeDetails> healthyNodes, List<DatanodeDetails> excludedNodes,
-      DatanodeDetails anchor) {
-    // if network topology is not present,
-    // simply choose next node the same way as choosing anchor.
-    if (nodeManager.getClusterNetworkTopologyMap() == null) {
-      return chooseNode(healthyNodes);
+    if (excludedNodes != null) {
+      excludedNodes.add(pickedNode);
     }
-    // anchor should be excluded.
-    excludedNodes.add(anchor);
-    return chooseNodeFromNetworkTopology(
-        nodeManager.getClusterNetworkTopologyMap(), anchor, excludedNodes);
+    return pickedNode;
   }
 }
