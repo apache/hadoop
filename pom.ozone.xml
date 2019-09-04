@@ -78,6 +78,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <shell-executable>bash</shell-executable>
 
   </properties>
