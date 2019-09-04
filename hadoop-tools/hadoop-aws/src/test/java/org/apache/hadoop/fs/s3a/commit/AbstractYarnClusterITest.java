@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,7 +41,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.deployService;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.JAVA_IO_TMPDIR;
 
 /**
  * Full integration test MR jobs.
@@ -245,6 +248,11 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return mrJob;
   }
 
+  /**
+   * Patch the (job) configuration for this committer.
+   * @param jobConf configuration to patch
+   * @return a configuration which will run this configuration.
+   */
   protected Configuration patchConfigurationForCommitter(
       final Configuration jobConf) {
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
@@ -254,6 +262,11 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
         committerName());
     // pass down the scale test flag
     jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
+    // and fix the commit dir to the local FS across all workers.
+    File tmpDir = new File(System.getProperty(JAVA_IO_TMPDIR));
+    String tmpDirStr = tmpDir.toURI().toString();
+    LOG.info("Staging temp dir is {}", tmpDirStr);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, tmpDirStr);
     return jobConf;
   }
 

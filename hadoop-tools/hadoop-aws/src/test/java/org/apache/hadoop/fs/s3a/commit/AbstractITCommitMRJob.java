@@ -165,7 +165,9 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
     Collections.sort(actualFiles);
 
     SuccessData successData = validateSuccessFile(outputPath, committerName(),
-        fs, "MR job");
+        fs,
+        "MR job",
+        1);
     List<String> successFiles = successData.getFilenames();
     String commitData = successData.toString();
     assertFalse("No filenames in " + commitData,

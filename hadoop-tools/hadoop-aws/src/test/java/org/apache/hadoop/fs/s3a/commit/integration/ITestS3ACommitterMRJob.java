@@ -330,8 +330,11 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     waitForConsistency();
     Path successPath = new Path(outputPath, _SUCCESS);
-    SuccessData successData = validateSuccessFile(outputPath, committerName(),
-        fs, "MR job " + jobID);
+    SuccessData successData = validateSuccessFile(outputPath,
+        committerName(),
+        fs,
+        "MR job " + jobID,
+        1);
     String commitData = successData.toString();
 
     FileStatus[] results = fs.listStatus(outputPath,

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.terasort;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -44,8 +45,11 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.JAVA_IO_TMPDIR;
 
 /**
  * Runs Terasort against S3A.
@@ -130,6 +134,7 @@ public abstract class AbstractCommitTerasortIT extends
    * @param dest destination directory -the _SUCCESS File will be expected here.
    * @param tool tool to run.
    * @param args args for the tool.
+   * @param minimumFileCount minimum number of files to have been created
    * @throws Exception any failure
    */
   private Optional<DurationInfo> executeStage(
@@ -137,7 +142,8 @@ public abstract class AbstractCommitTerasortIT extends
       final JobConf jobConf,
       final Path dest,
       final Tool tool,
-      final String[] args) throws Exception {
+      final String[] args,
+      int minimumFileCount) throws Exception {
     int result;
     DurationInfo d = new DurationInfo(LOG, stage);
     try {
@@ -145,10 +151,12 @@ public abstract class AbstractCommitTerasortIT extends
     } finally {
       d.close();
     }
+    dumpOutputTree(dest);
     assertEquals(stage
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
-    validateSuccessFile(dest, committerName(), getFileSystem(), stage);
+    validateSuccessFile(dest, committerName(), getFileSystem(), stage,
+        minimumFileCount);
     return Optional.of(d);
   }
 
@@ -174,7 +182,8 @@ public abstract class AbstractCommitTerasortIT extends
         jobConf,
         sortInput,
         new TeraGen(),
-        new String[]{Integer.toString(SCALE_TEST_KEYS), sortInput.toString()});
+        new String[]{Integer.toString(SCALE_TEST_KEYS), sortInput.toString()},
+        1);
   }
 
   @Test
@@ -191,7 +200,7 @@ public abstract class AbstractCommitTerasortIT extends
         jobConf,
         sortOutput,
         new TeraSort(),
-        new String[]{sortInput.toString(), sortOutput.toString()});
+        new String[]{sortInput.toString(), sortOutput.toString()}, 1);
   }
 
   @Test
@@ -205,7 +214,7 @@ public abstract class AbstractCommitTerasortIT extends
         jobConf,
         sortValidate,
         new TeraValidate(),
-        new String[]{sortOutput.toString(), sortValidate.toString()});
+        new String[]{sortOutput.toString(), sortValidate.toString()}, 0);
   }
 
   /**
@@ -251,5 +260,14 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_200_directory_deletion() throws Throwable {
     getFileSystem().delete(terasortPath, true);
+  }
+
+  protected void dumpOutputTree(Path path) throws Exception {
+    LOG.info("Files under output directory {}", path);
+    try {
+      lsR(getFileSystem(), path, true);
+    } catch (FileNotFoundException e) {
+      LOG.info("Output directory not found");
+    }
   }
 }
