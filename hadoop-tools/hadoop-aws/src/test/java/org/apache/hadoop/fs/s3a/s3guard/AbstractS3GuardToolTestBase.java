@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -336,6 +337,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testPruneCommandNoPath() throws Exception {
+    runToFailure(INVALID_ARGUMENT,
+        S3GuardTool.Prune.NAME,
+        "-" + S3GuardTool.Prune.TOMBSTONE,
+        "-seconds", "0");
+  }
+
+  @Test
   public void testPruneCommandConf() throws Exception {
     getConfiguration().setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
         TimeUnit.SECONDS.toMillis(PRUNE_MAX_AGE_SECS));
@@ -476,7 +485,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     for (Class<? extends S3GuardTool> tool : tools) {
       S3GuardTool cmdR = makeBindedTool(tool);
       describe("Calling " + cmdR.getName() + " without any arguments.");
-      assertExitCode(S3GuardTool.INVALID_ARGUMENT,
+      assertExitCode(INVALID_ARGUMENT,
           intercept(ExitUtil.ExitException.class,
               () -> cmdR.run(new String[]{tool.getName()})));
     }
