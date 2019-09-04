@@ -111,10 +111,13 @@ public class CloseContainerCommandHandler implements CommandHandler {
         return;
       }
       // If we reach here, there is no active pipeline for this container.
-      if (!closeCommand.getForce()) {
-        // QUASI_CLOSE the container.
-        controller.quasiCloseContainer(containerId);
-      } else {
+      if (container.getContainerState() == ContainerProtos.ContainerDataProto
+          .State.OPEN || container.getContainerState() ==
+          ContainerProtos.ContainerDataProto.State.CLOSING) {
+        // Container should not exist in OPEN or CLOSING state without a
+        // pipeline.
+        controller.markContainerUnhealthy(containerId);
+      } else if (closeCommand.getForce()) {
         // SCM told us to force close the container.
         controller.closeContainer(containerId);
       }

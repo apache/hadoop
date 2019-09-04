@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -149,8 +150,9 @@ public class TestSecureContainerServer {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis
-        .newXceiverServerRatis(dn, conf, dispatcher, null, caClient);
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        caClient, null);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
