@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -62,6 +63,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
 
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 
 /**
  * Helper class to test OMClientRequest classes.
@@ -88,8 +91,10 @@ public final class TestOMRequestUtils {
         OmBucketInfo.newBuilder().setVolumeName(volumeName)
             .setBucketName(bucketName).setCreationTime(Time.now()).build();
 
-    omMetadataManager.getBucketTable().put(
-        omMetadataManager.getBucketKey(volumeName, bucketName), omBucketInfo);
+    // Add to cache.
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getBucketKey(volumeName, bucketName)),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
   }
 
   /**
@@ -190,6 +195,11 @@ public final class TestOMRequestUtils {
             .setOwnerName(ownerName).build();
     omMetadataManager.getVolumeTable().put(
         omMetadataManager.getVolumeKey(volumeName), omVolumeArgs);
+
+    // Add to cache.
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getVolumeKey(volumeName)),
+            new CacheValue<>(Optional.of(omVolumeArgs), 1L));
   }
 
 
@@ -450,5 +460,73 @@ public final class TestOMRequestUtils {
         .setCompleteMultiPartUploadRequest(multipartUploadCompleteRequest)
         .build();
 
+  }
+
+  /**
+   * Create OMRequest for create volume.
+   * @param volumeName
+   * @param adminName
+   * @param ownerName
+   * @return OMRequest
+   */
+  public static OMRequest createVolumeRequest(String volumeName,
+      String adminName, String ownerName) {
+    OzoneManagerProtocolProtos.VolumeInfo volumeInfo =
+        OzoneManagerProtocolProtos.VolumeInfo.newBuilder().setVolume(volumeName)
+        .setAdminName(adminName).setOwnerName(ownerName).build();
+    OzoneManagerProtocolProtos.CreateVolumeRequest createVolumeRequest =
+        OzoneManagerProtocolProtos.CreateVolumeRequest.newBuilder()
+            .setVolumeInfo(volumeInfo).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
+        .setCreateVolumeRequest(createVolumeRequest).build();
+  }
+
+  /**
+   * Create OMRequest for delete bucket.
+   * @param volumeName
+   * @param bucketName
+   */
+  public static OMRequest createDeleteBucketRequest(String volumeName,
+      String bucketName) {
+    return OMRequest.newBuilder().setDeleteBucketRequest(
+        OzoneManagerProtocolProtos.DeleteBucketRequest.newBuilder()
+            .setBucketName(bucketName).setVolumeName(volumeName))
+        .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  /**
+   * Add the Bucket information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omBucketInfo
+   * @throws IOException
+   */
+  public static void addBucketToOM(OMMetadataManager omMetadataManager,
+      OmBucketInfo omBucketInfo) throws IOException {
+    String dbBucketKey =
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().put(dbBucketKey, omBucketInfo);
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(dbBucketKey),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+  }
+
+  /**
+   * Add the Volume information to OzoneManager DB and Cache.
+   * @param omMetadataManager
+   * @param omVolumeArgs
+   * @throws IOException
+   */
+  public static void addVolumeToOM(OMMetadataManager omMetadataManager,
+      OmVolumeArgs omVolumeArgs) throws IOException {
+    String dbVolumeKey =
+        omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+    omMetadataManager.getVolumeTable().put(dbVolumeKey, omVolumeArgs);
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(dbVolumeKey),
+        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
   }
 }

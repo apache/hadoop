@@ -358,12 +358,12 @@ public final class OzoneConfigKeys {
       HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD =
       "hdds.datanode.storage.utilization.warning.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.95;
+      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.75;
   public static final String
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD =
       "hdds.datanode.storage.utilization.critical.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
+      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.95;
 
   public static final String OZONE_SECURITY_ENABLED_KEY =
       "ozone.security.enabled";

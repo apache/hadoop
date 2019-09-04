@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.util.UUID;
 
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -200,8 +199,7 @@ public class TestOMBucketCreateRequest extends TestBucketRequest {
         OmVolumeArgs.newBuilder().setCreationTime(Time.now())
             .setVolume(volumeName).setAdminName(UUID.randomUUID().toString())
             .setOwnerName(UUID.randomUUID().toString()).build();
-    omMetadataManager.getVolumeTable().put(
-        omMetadataManager.getVolumeKey(volumeName), omVolumeArgs);
+    TestOMRequestUtils.addVolumeToOM(omMetadataManager, omVolumeArgs);
   }
 
 }

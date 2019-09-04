@@ -147,6 +147,22 @@ public interface StorageContainerLocationProtocol extends Closeable {
   List<Pipeline> listPipelines() throws IOException;
 
   /**
+   * Activates a dormant pipeline.
+   *
+   * @param pipelineID ID of the pipeline to activate.
+   * @throws IOException in case of any Exception
+   */
+  void activatePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
+   * Deactivates an active pipeline.
+   *
+   * @param pipelineID ID of the pipeline to deactivate.
+   * @throws IOException in case of any Exception
+   */
+  void deactivatePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
    * Closes a pipeline given the pipelineID.
    *
    * @param pipelineID ID of the pipeline to demolish

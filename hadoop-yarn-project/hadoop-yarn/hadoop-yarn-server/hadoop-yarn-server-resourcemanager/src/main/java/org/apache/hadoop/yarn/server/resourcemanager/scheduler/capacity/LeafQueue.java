@@ -259,7 +259,8 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getMaximumLifetimePerQueue((getQueuePath()));
       defaultApplicationLifetime =
           conf.getDefaultLifetimePerQueue((getQueuePath()));
-      if (defaultApplicationLifetime > maxApplicationLifetime) {
+      if (maxApplicationLifetime > 0 &&
+          defaultApplicationLifetime > maxApplicationLifetime) {
         throw new YarnRuntimeException(
             "Default lifetime" + defaultApplicationLifetime
                 + " can't exceed maximum lifetime " + maxApplicationLifetime);
@@ -831,8 +832,7 @@ public class LeafQueue extends AbstractCSQueue {
               + " AM node-partition name " + partitionName);
         }
 
-        if (!Resources.lessThanOrEqual(resourceCalculator, lastClusterResource,
-            amIfStarted, amLimit)) {
+        if (!resourceCalculator.fitsIn(amIfStarted, amLimit)) {
           if (getNumActiveApplications() < 1 || (Resources.lessThanOrEqual(
               resourceCalculator, lastClusterResource,
               queueUsage.getAMUsed(partitionName), Resources.none()))) {
@@ -864,8 +864,7 @@ public class LeafQueue extends AbstractCSQueue {
             application.getAMResource(partitionName),
             user.getConsumedAMResources(partitionName));
 
-        if (!Resources.lessThanOrEqual(resourceCalculator, lastClusterResource,
-            userAmIfStarted, userAMLimit)) {
+        if (!resourceCalculator.fitsIn(userAmIfStarted, userAMLimit)) {
           if (getNumActiveApplications() < 1 || (Resources.lessThanOrEqual(
               resourceCalculator, lastClusterResource,
               queueUsage.getAMUsed(partitionName), Resources.none()))) {

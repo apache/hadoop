@@ -167,6 +167,22 @@ message ListPipelineResponseProto {
   repeated Pipeline pipelines = 1;
 }
 
+message ActivatePipelineRequestProto {
+  required PipelineID pipelineID = 1;
+  optional string traceID = 2;
+}
+
+message ActivatePipelineResponseProto {
+}
+
+message DeactivatePipelineRequestProto {
+  required PipelineID pipelineID = 1;
+  optional string traceID = 2;
+}
+
+message DeactivatePipelineResponseProto {
+}
+
 message ClosePipelineRequestProto {
   required PipelineID pipelineID = 1;
   optional string traceID = 2;
@@ -273,6 +289,12 @@ service StorageContainerLocationProtocolService {
    */
   rpc listPipelines(ListPipelineRequestProto)
       returns (ListPipelineResponseProto);
+
+  rpc activatePipeline(ActivatePipelineRequestProto)
+      returns (ActivatePipelineResponseProto);
+
+  rpc deactivatePipeline(DeactivatePipelineRequestProto)
+      returns (DeactivatePipelineResponseProto);
 
   /**
    * Closes a pipeline.

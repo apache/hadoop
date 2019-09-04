@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUpload
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.om.request.s3.security.S3GetSecretRequest;
 import org.apache.hadoop.ozone.om.request.security.OMCancelDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMGetDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMRenewDelegationTokenRequest;
@@ -142,8 +143,9 @@ public final class OzoneManagerRatisUtils {
       return new OMCancelDelegationTokenRequest(omRequest);
     case RenewDelegationToken:
       return new OMRenewDelegationTokenRequest(omRequest);
+    case GetS3Secret:
+      return new S3GetSecretRequest(omRequest);
     default:
-      // TODO: will update once all request types are implemented.
       return null;
     }
   }

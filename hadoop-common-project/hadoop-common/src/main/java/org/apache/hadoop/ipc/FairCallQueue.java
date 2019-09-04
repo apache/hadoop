@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -77,6 +78,8 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   /* Statistic tracking */
   private final ArrayList<AtomicLong> overflowedCalls;
 
+  /* Failover if queue is filled up */
+  private boolean serverFailOverEnabled;
   /**
    * Create a FairCallQueue.
    * @param capacity the total size of all sub-queues
@@ -108,6 +111,10 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       }
       this.overflowedCalls.add(new AtomicLong(0));
     }
+    this.serverFailOverEnabled = conf.getBoolean(
+        ns + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT);
 
     this.multiplexer = new WeightedRoundRobinMultiplexer(numQueues, ns, conf);
     // Make this the active source of metrics
@@ -158,10 +165,18 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
     final int priorityLevel = e.getPriorityLevel();
     // try offering to all queues.
     if (!offerQueues(priorityLevel, e, true)) {
-      // only disconnect the lowest priority users that overflow the queue.
-      throw (priorityLevel == queues.size() - 1)
-          ? CallQueueOverflowException.DISCONNECT
-          : CallQueueOverflowException.KEEPALIVE;
+
+      CallQueueOverflowException ex;
+      if (serverFailOverEnabled) {
+        // Signal clients to failover and try a separate server.
+        ex = CallQueueOverflowException.FAILOVER;
+      } else if (priorityLevel == queues.size() - 1){
+        // only disconnect the lowest priority users that overflow the queue.
+        ex = CallQueueOverflowException.DISCONNECT;
+      } else {
+        ex = CallQueueOverflowException.KEEPALIVE;
+      }
+      throw ex;
     }
     return true;
   }

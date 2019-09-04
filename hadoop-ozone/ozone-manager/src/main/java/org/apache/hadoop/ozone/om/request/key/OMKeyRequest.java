@@ -307,7 +307,6 @@ public abstract class OMKeyRequest extends OMClientRequest {
 
 
         if (omAction == OMAction.CREATE_FILE) {
-          ozoneManager.getMetrics().incNumCreateFile();
           omResponse.setCreateFileResponse(CreateFileResponse.newBuilder()
                   .setKeyInfo(omKeyInfo.getProtobuf())
                   .setID(clientID)
@@ -316,7 +315,6 @@ public abstract class OMKeyRequest extends OMClientRequest {
           omClientResponse = new OMFileCreateResponse(omKeyInfo, clientID,
               omResponse.build());
         } else {
-          ozoneManager.getMetrics().incNumKeyAllocates();
           omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
               .setKeyInfo(omKeyInfo.getProtobuf())
               .setID(clientID).setOpenVersion(openVersion)
@@ -508,7 +506,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
   protected void checkBucketAcls(OzoneManager ozoneManager, String volume,
       String bucket, String key) throws IOException {
     if (ozoneManager.getAclsEnabled()) {
-      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+      checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
           OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
           volume, bucket, key);
     }
