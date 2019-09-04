@@ -284,35 +284,27 @@ public class TestOzoneManagerConfiguration {
   }
 
   /**
-   * Test a wrong configuration for OM HA. A configuration with an empty
-   * node list while service ID is configured should throw an error.
+   * A configuration with an empty node list while service ID is configured
+   * Should successfully start with no NPEs.
    * @throws Exception
    */
   @Test
-  public void testWrongConfigurationNoOMNodes() throws Exception {
+  public void testNoOMNodes() throws Exception {
     String omServiceId = "om-service-test1";
     conf.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, omServiceId);
     // Deliberately skip OZONE_OM_NODES_KEY and OZONE_OM_ADDRESS_KEY config
 
-    try {
-      startCluster();
-      Assert.fail("OM initialization should have failed.");
-    } catch (OzoneIllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Incorrect configuration. Unable to find OzoneManager" +
-          " node address for service id " + omServiceId + ". Please" +
-          " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
-          ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY, e);
-    }
+    // Should successfully start with no NPEs
+    startCluster();
   }
 
   /**
-   * Test a wrong configuration for OM HA. A configuration with no OM addresses
-   * while service ID is configured should throw an error.
+   * A configuration with no OM addresses while service ID is configured.
+   * Should successfully start with no NPEs.
    * @throws Exception
    */
   @Test
-  public void testWrongConfigurationNoOMAddrs() throws Exception {
+  public void testNoOMAddrs() throws Exception {
     String omServiceId = "om-service-test1";
 
     String omNode1Id = "omNode1";
@@ -326,16 +318,8 @@ public class TestOzoneManagerConfiguration {
     conf.set(omNodesKey, omNodesKeyValue);
     // Deliberately skip OZONE_OM_ADDRESS_KEY config
 
-    try {
-      startCluster();
-      Assert.fail("OM initialization should have failed.");
-    } catch (OzoneIllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Incorrect configuration. Unable to find OzoneManager" +
-              " node address for service id " + omServiceId + ". Please" +
-              " check and reconfigure: " + OZONE_OM_SERVICE_IDS_KEY +
-              ", " + OZONE_OM_NODES_KEY + " and " + OZONE_OM_ADDRESS_KEY, e);
-    }
+    // Should successfully start with no NPEs
+    startCluster();
   }
 
   /**
