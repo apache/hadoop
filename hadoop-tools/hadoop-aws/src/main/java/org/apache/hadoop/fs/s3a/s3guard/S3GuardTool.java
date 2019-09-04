@@ -1529,8 +1529,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         initS3AFileSystem(s3Path);
       } catch (Exception e) {
         errorln("Failed to initialize S3AFileSystem from path: " + s3Path);
-        errorln(USAGE);
-        return ERROR;
+        throw e;
       }
 
       URI uri = toUri(s3Path);
@@ -1557,7 +1556,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
       if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
-        s3GuardFsck.compareS3RootToMs(fs.qualify(root));
+        try {
+          s3GuardFsck.compareS3ToMs(fs.qualify(root));
+        } catch (IOException e) {
+          errorln("Error while running the check: compareS3ToMs");
+          throw e;
+        }
       } else {
         errorln("No supported operation is selected.");
         errorln(USAGE);

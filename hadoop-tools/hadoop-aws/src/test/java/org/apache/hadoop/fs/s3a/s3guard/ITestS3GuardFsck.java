@@ -113,7 +113,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two.", 2,
           comparePairs.size());
@@ -150,7 +150,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
               + "child.", 2, comparePairs.size());
@@ -200,7 +200,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
               + "child.", 2, comparePairs.size());
@@ -250,7 +250,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
               + "child.", 2, comparePairs.size());
@@ -289,7 +289,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pair should be one. Only the cwd.", 1,
           comparePairs.size());
@@ -328,7 +328,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two", 2,
           comparePairs.size());
@@ -403,9 +403,9 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       awaitFileStatus(rawFS, fileIc2);
 
       final List<S3GuardFsck.ComparePair> pairsCorrect =
-          s3GuardFsck.compareS3RootToMs(cwdCorrect);
+          s3GuardFsck.compareS3ToMs(cwdCorrect);
       final List<S3GuardFsck.ComparePair> pairsIncorrect =
-          s3GuardFsck.compareS3RootToMs(cwdIncorrect);
+          s3GuardFsck.compareS3ToMs(cwdIncorrect);
 
       // check the parent that it does not contain LENGTH_MISMATCH
       final S3GuardFsck.ComparePair cwdPair = pairsCorrect.stream()
@@ -457,7 +457,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
               + "child.", 2, comparePairs.size());
@@ -513,7 +513,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
               + "child.", 2, comparePairs.size());
@@ -563,7 +563,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
           + "child.", 2, comparePairs.size());
@@ -613,7 +613,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be two. The cwd (parent) and the "
           + "child.", 2, comparePairs.size());
@@ -670,7 +670,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           new S3GuardFsck(rawFS, metadataStore);
 
       final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3RootToMs(cwd);
+          s3GuardFsck.compareS3ToMs(cwd);
 
       assertEquals("Number of pairs should be 3. The cwd (parent) and the "
           + "2 children.", 3, comparePairs.size());

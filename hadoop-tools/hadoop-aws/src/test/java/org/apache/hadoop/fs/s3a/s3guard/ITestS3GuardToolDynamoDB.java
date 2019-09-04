@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -301,5 +302,19 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "s3a://" + getFileSystem().getBucket());
     assertEquals("The result should be success when fsck is running with "
         + "correct parameters.", SUCCESS, result);
+  }
+
+  @Test
+  public void testCLIFsckWithParamParentOfRoot() throws Exception {
+    intercept(IOException.class, "Invalid URI",
+        () -> run(S3GuardTool.Fsck.NAME, "-check",
+        "s3a://" + getFileSystem().getBucket() + "/.."));
+  }
+
+  @Test
+  public void testCLIFsckFailInitializeFs() throws Exception {
+    intercept(FileNotFoundException.class, "does not exist",
+            () -> run(S3GuardTool.Fsck.NAME, "-check",
+                    "s3a://this-bucket-does-not-exist-" + UUID.randomUUID()));
   }
 }

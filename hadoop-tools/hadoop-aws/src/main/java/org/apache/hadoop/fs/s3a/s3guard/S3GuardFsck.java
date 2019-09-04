@@ -20,8 +20,11 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+
+import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -88,82 +92,91 @@ public class S3GuardFsck {
    * @throws IOException
    * @return a list of {@link ComparePair}
    */
-  public List<ComparePair> compareS3RootToMs(Path p) throws IOException {
+  public List<ComparePair> compareS3ToMs(Path p) throws IOException {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    int scannedItems = 0;
+
     final Path rootPath = rawFS.qualify(p);
-    final S3AFileStatus root =
-        (S3AFileStatus) rawFS.getFileStatus(rootPath);
+    S3AFileStatus root = null;
+    try {
+      root = (S3AFileStatus) rawFS.getFileStatus(rootPath);
+    } catch (AWSBadRequestException e) {
+      throw new IOException(e.getMessage());
+    }
     final List<ComparePair> comparePairs = new ArrayList<>();
     final Queue<S3AFileStatus> queue = new ArrayDeque<>();
     queue.add(root);
 
     while (!queue.isEmpty()) {
-      // pop front node from the queue
       final S3AFileStatus currentDir = queue.poll();
+      scannedItems++;
 
-      // Get a listing of that dir from s3 and add just the files.
-      // (Each directory will be added as a root.)
-      // Files should be casted to S3AFileStatus instead of plain FileStatus
-      // to get the VersionID and Etag.
       final Path currentDirPath = currentDir.getPath();
+      List<FileStatus> s3DirListing = Arrays.asList(rawFS.listStatus(currentDirPath));
 
-      final FileStatus[] s3DirListing = rawFS.listStatus(currentDirPath);
-      final List<S3AFileStatus> children =
-          Arrays.asList(s3DirListing).stream()
+      // DIRECTORIES
+      // Check directory authoritativeness consistency
+      compareAuthoritativeDirectoryFlag(comparePairs, currentDirPath, s3DirListing);
+      // Add all descendant directory to the queue
+      s3DirListing.stream().filter(pm -> pm.isDirectory())
+              .map(S3AFileStatus.class::cast)
+              .forEach(pm -> queue.add(pm));
+
+      // FILES
+      // check files for consistency
+      final List<S3AFileStatus> children = s3DirListing.stream()
               .filter(status -> !status.isDirectory())
               .map(S3AFileStatus.class::cast).collect(toList());
-
-      // Compare the directory contents if the listing is authoritative
-      final DirListingMetadata msDirListing =
-          metadataStore.listChildren(currentDirPath);
-      if (msDirListing != null && msDirListing.isAuthoritative()) {
-        final ComparePair cP =
-            compareAuthDirListing(s3DirListing, msDirListing);
-        if (cP.containsViolation()) {
-          comparePairs.add(cP);
-        }
-      }
-
-      // Compare directory and contents, but not the listing
       final List<ComparePair> compareResult =
           compareS3DirToMs(currentDir, children).stream()
               .filter(comparePair -> comparePair.containsViolation())
               .collect(toList());
       comparePairs.addAll(compareResult);
-
-      // Add each dir to queue
-      children.stream().filter(pm -> pm.isDirectory())
-          .forEach(pm -> queue.add(pm));
+      scannedItems += children.size();
     }
+    stopwatch.stop();
 
     // Create a handler and handle each violated pairs
     S3GuardFsckViolationHandler handler =
         new S3GuardFsckViolationHandler(rawFS, metadataStore);
     comparePairs.forEach(handler::handle);
 
+    LOG.info("Total scan time: {}s", stopwatch.elapsed(TimeUnit.SECONDS));
+    LOG.info("Scanned entries: {}", scannedItems);
+
     return comparePairs;
   }
 
-  private ComparePair compareAuthDirListing(FileStatus[] s3DirListing,
-      DirListingMetadata msDirListing) {
-    ComparePair cP = new ComparePair(s3DirListing, msDirListing);
+  /**
+   * Compare the directory contents if the listing is authoritative
+   * @param comparePairs the list of compare pairs to add to if it contains a violation
+   * @param currentDirPath the current directory path
+   * @param s3DirListing the s3 directory listing to compare with
+   * @throws IOException
+   */
+  private void compareAuthoritativeDirectoryFlag(List<ComparePair> comparePairs, Path currentDirPath,
+                                                 List<FileStatus> s3DirListing) throws IOException {
+    final DirListingMetadata msDirListing =
+        metadataStore.listChildren(currentDirPath);
+    if (msDirListing != null && msDirListing.isAuthoritative()) {
+      ComparePair cP = new ComparePair(s3DirListing, msDirListing);
 
-    if (!msDirListing.isAuthoritative()) {
-      return cP;
-    }
-
-    if (s3DirListing.length != msDirListing.numEntries()) {
-      cP.violations.add(Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
-    } else {
-      final Set<Path> msPaths = msDirListing.getListing().stream()
-              .map(pm -> pm.getFileStatus().getPath()).collect(toSet());
-      final Set<Path> s3Paths = Arrays.stream(s3DirListing)
-              .map(pm -> pm.getPath()).collect(toSet());
-      if (!s3Paths.equals(msPaths)) {
+      if (s3DirListing.size() != msDirListing.numEntries()) {
         cP.violations.add(Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
+      } else {
+        final Set<Path> msPaths = msDirListing.getListing().stream()
+                .map(pm -> pm.getFileStatus().getPath()).collect(toSet());
+        final Set<Path> s3Paths = s3DirListing.stream()
+                .map(pm -> pm.getPath()).collect(toSet());
+        if (!s3Paths.equals(msPaths)) {
+          cP.violations.add(Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
+        }
+      }
+
+      if (cP.containsViolation()) {
+        comparePairs.add(cP);
       }
     }
-
-    return cP;
   }
 
   protected List<ComparePair> compareS3DirToMs(S3AFileStatus s3CurrentDir,
@@ -199,7 +212,17 @@ public class S3GuardFsck {
       S3AFileStatus s3FileStatus,
       PathMetadata msPathMetadata) throws IOException {
     final Path path = s3FileStatus.getPath();
-    System.out.println("== Path: " + path);
+
+    if(msPathMetadata != null) {
+      LOG.info("Path: {} - Length S3: {}, MS: {} - Etag S3: {}, MS: {}",
+              path,
+              s3FileStatus.getLen(), msPathMetadata.getFileStatus().getLen(),
+              s3FileStatus.getETag(), msPathMetadata.getFileStatus().getETag());
+    } else {
+      LOG.info("Path: {} - Length S3: {} - Etag S3: {}, no record in MS.",
+              path, s3FileStatus.getLen(), s3FileStatus.getETag());
+    }
+
     ComparePair comparePair = new ComparePair(s3FileStatus, msPathMetadata);
 
     if (!path.equals(path(ROOT_PATH_STRING))) {
@@ -217,7 +240,7 @@ public class S3GuardFsck {
         }
       }
     } else {
-      LOG.info("Entry is in the root, so there's no parent");
+      LOG.debug("Entry is in the root, so there's no parent");
     }
 
     if (msPathMetadata == null) {
@@ -288,8 +311,8 @@ public class S3GuardFsck {
       this.path = status.getPath();
     }
 
-    ComparePair(FileStatus[] s3DirListing, DirListingMetadata msDirListing) {
-      this.s3DirListing = Arrays.asList(s3DirListing);
+    ComparePair(List<FileStatus> s3DirListing, DirListingMetadata msDirListing) {
+      this.s3DirListing = s3DirListing;
       this.msDirListing = msDirListing;
       this.s3FileStatus = null;
       this.msPathMetadata = null;
