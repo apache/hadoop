@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License. See accompanying LICENSE file.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>3.1.3-SNAPSHOT</version>
+    <relativePath>../../hadoop-project</relativePath>
+  </parent>
+  <artifactId>hadoop-client-check-test-invariants</artifactId>
+  <version>3.1.3-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <description>
+  Enforces our invariants for the test client modules.
+  E.g. that modules have a specific set of transitive dependencies
+  and shaded artifacts only contain classes that are in particular
+  packages. Does the enforcement through the maven-enforcer-plugin
+  and an integration test.
+  </description>
+  <name>Apache Hadoop Client Packaging Invariants for Test</name>
+
+  <properties>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-runtime</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-minicluster</artifactId>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>extra-enforcer-rules</artifactId>
+            <version>1.0-beta-3</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>enforce-banned-dependencies</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <banTransitiveDependencies>
+<!--
+                  <message>
+    Our client-facing artifacts are not supposed to have additional dependencies
+    and one or more of them do. The output from the enforcer plugin should give
+    specifics.
+                  </message>
+-->
+                  <excludes>
+                    <!-- annotations is provided, and both artifacts exclude the tools transitive,
+                         but enforcer still sees it.
+                    -->
+                    <exclude>org.apache.hadoop:hadoop-annotations</exclude>
+                    <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
+                    <exclude>org.apache.htrace:htrace-core4</exclude>
+                    <!-- Leave slf4j unshaded so downstream users can configure logging. -->
+                    <exclude>org.slf4j:slf4j-api</exclude>
+                    <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
+                    <exclude>commons-logging:commons-logging</exclude>
+                    <!-- Leave log4j unshaded so downstream users can configure logging. -->
+                    <exclude>log4j:log4j</exclude>
+                    <!-- Leave JUnit unshaded so downstream can use our test helper classes -->
+                    <exclude>junit:junit</exclude>
+                    <!-- JUnit brings in hamcrest -->
+                    <exclude> org.hamcrest:hamcrest-core</exclude>
+                    <!-- Leave javax annotations we need exposed -->
+                    <exclude>com.google.code.findbugs:jsr305</exclude>
+                  </excludes>
+                </banTransitiveDependencies>
+                <banDuplicateClasses>
+                  <findAllDuplicates>true</findAllDuplicates>
+                  <dependencies>
+                    <dependency>
+                      <groupId>org.apache.hadoop</groupId>
+                      <artifactId>hadoop-annotations</artifactId>
+                      <ignoreClasses>
+                        <ignoreClass>*</ignoreClass>
+                      </ignoreClasses>
+                    </dependency>
+                  </dependencies>
+                </banDuplicateClasses>
+              </rules>
+<!-- TODO we need a rule for "the constants in this set of classes haven't been shaded / don't have this prefix"
+     Manually checking the set of Keys that look like packages we relocate:
+
+      cat `find . \( -name '*Keys.java' -o -name '*KeysPublic.java' \) -a -path '*/src/main/*'`  | grep -E "\"(io\.|org\.|com\.|net\.)" | grep -v "^package" | grep -v "^import" | grep -v "\"org.apache.hadoop"
+
+     Manually check the set of shaded artifacts to see if the Keys constants have been relocated:
+
+     for clazz in `find . \( -name '*Keys.java' -o -name '*KeysPublic.java' \) -a -path '*/src/main/*'`; do
+       clazz=${clazz#*src/main/java/}
+       clazz="${clazz%.java}"
+       javap -cp hadoop-client-modules/hadoop-client-api/target/hadoop-client-api-3.0.0-alpha2-SNAPSHOT.jar:hadoop-client-modules/hadoop-client-runtime/target/hadoop-client-runtime-3.0.0-alpha2-SNAPSHOT.jar:hadoop-client-modules/hadoop-client-minicluster/target/hadoop-client-minicluster-3.0.0-alpha2-SNAPSHOT.jar \
+           -constants "${clazz//\//.}" | grep "org.apache.hadoop.shaded"
+     done
+-->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>test-resources</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>testResources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- create a maven pom property that has all of our dependencies.
+         below in the integration-test phase we'll pass this list
+         of paths to our jar checker script.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>put-client-artifacts-in-a-property</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <!-- these two get covered in our non-test invariant check -->
+              <excludeArtifactIds>hadoop-client-api,hadoop-client-runtime</excludeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <pathSeparator>;</pathSeparator>
+              <outputProperty>hadoop-client-artifacts</outputProperty>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Check that we actually relocated everything we included.
+        It's critical that we don't ship third party dependencies that haven't
+        been relocated under our pacakge space, since this will lead to
+        difficult to debug classpath errors for downstream. Unfortunately, that
+        means inspecting all the jars.
+        -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-jar-contents</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${shell-executable}</executable>
+              <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
+              <requiresOnline>false</requiresOnline>
+              <arguments>
+                <argument>ensure-jars-have-correct-contents.sh</argument>
+                <argument>${hadoop-client-artifacts}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+

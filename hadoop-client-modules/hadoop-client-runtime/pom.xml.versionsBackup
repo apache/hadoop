@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License. See accompanying LICENSE file.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+<parent>
+   <groupId>org.apache.hadoop</groupId>
+   <artifactId>hadoop-project</artifactId>
+   <version>3.1.3-SNAPSHOT</version>
+   <relativePath>../../hadoop-project</relativePath>
+</parent>
+  <artifactId>hadoop-client-runtime</artifactId>
+  <version>3.1.3-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <description>Apache Hadoop Client</description>
+  <name>Apache Hadoop Client Runtime</name>
+
+  <properties>
+    <shaded.dependency.prefix>org.apache.hadoop.shaded</shaded.dependency.prefix>
+    <!-- We contain no source -->
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <!-- We list this as optional because as a type-pom it won't get included in the shading.
+           Marking it optional means it doesn't count as a transitive dependency of this artifact.
+        -->
+      <optional>true</optional>
+      <exclusions>
+        <!-- these APIs are a part of the SE JDK -->
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>xml-apis</groupId>
+          <artifactId>xml-apis</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- At runtime anyone using us must have the api present -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- This comes from our parent pom. If we don't expressly change it here to get included,
+         downstream will get warnings at compile time. -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>jdk.tools</groupId>
+          <artifactId>jdk.tools</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Since hadoop-client is listed as optional, we have to list transitive
+         dependencies that we still want to show up.
+         * HTrace
+         * Slf4j API
+         * commons-logging
+      -->
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- Move log4j to optional, since it is needed for some pieces folks might not use:
+         * one of the three custom log4j appenders we have
+      -->
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+  <profiles>
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property><name>!skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- We contain no source -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+              <configuration>
+                <skipSource>true</skipSource>
+              </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <dependencies>
+              <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-maven-plugins</artifactId>
+                <version>${project.version}</version>
+              </dependency>
+            </dependencies>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <artifactSet>
+                    <excludes>
+                      <!-- We need a filter that matches just those things that aer included in the api jar -->
+                      <exclude>org.apache.hadoop:hadoop-client-api</exclude>
+                      <!-- Leave HTrace as an unshaded dependency on purpose, since a static class member is used to trace within a given JVM instance -->
+                      <exclude>org.apache.htrace:htrace-core4</exclude>
+                      <!-- Leave slf4j unshaded so downstream users can configure logging. -->
+                      <exclude>org.slf4j:slf4j-api</exclude>
+                      <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
+                      <exclude>commons-logging:commons-logging</exclude>
+                      <!-- Leave log4j unshaded so downstream users can configure logging. -->
+                      <exclude>log4j:log4j</exclude>
+                      <!-- Leave javax APIs that are stable -->
+                      <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
+                      <exclude>com.google.code.findbugs:jsr305</exclude>
+                    </excludes>
+                  </artifactSet>
+                  <filters>
+                    <!-- We need a filter that matches just those things that are included in the api jar -->
+                    <filter>
+                      <artifact>org.apache.hadoop:*</artifact>
+                      <excludes>
+                        <exclude>**/*</exclude>
+                        <exclude>*</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Some of our dependencies include source, so remove it. -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/*.java</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- We only want one copy of the Localizer class. So long as we keep jasper compiler and runtime on the same version, which one doesn't matter -->
+                    <filter>
+                      <artifact>tomcat:jasper-compiler</artifact>
+                      <excludes>
+                        <exclude>org/apache/jasper/compiler/Localizer.class</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- We rely on jersey for our web interfaces. We want to use its java services stuff only internal to jersey -->
+                    <filter>
+                      <artifact>com.sun.jersey:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/services/javax.*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip french localization -->
+                      <artifact>org.apache.commons:commons-math3</artifact>
+                      <excludes>
+                        <exclude>assets/org/apache/commons/math3/**/*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip docs on formats used in kerby -->
+                      <artifact>org.apache.kerby:kerb-util</artifact>
+                      <excludes>
+                        <exclude>keytab.txt</exclude>
+                        <exclude>ccache.txt</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                  <relocations>
+                    <relocation>
+                      <pattern>org/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.org.</shadedPattern>
+                      <excludes>
+                        <exclude>org/apache/hadoop/*</exclude>
+                        <exclude>org/apache/hadoop/**/*</exclude>
+                        <!-- Our non-shaded htrace and logging libraries -->
+                        <exclude>org/apache/htrace/*</exclude>
+                        <exclude>org/apache/htrace/**/*</exclude>
+                        <exclude>org/slf4j/*</exclude>
+                        <exclude>org/slf4j/**/*</exclude>
+                        <exclude>org/apache/commons/logging/*</exclude>
+                        <exclude>org/apache/commons/logging/**/*</exclude>
+                        <exclude>org/apache/log4j/*</exclude>
+                        <exclude>org/apache/log4j/**/*</exclude>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Not the org/ packages that are a part of the jdk -->
+                        <exclude>org/ietf/jgss/*</exclude>
+                        <exclude>org/omg/**/*</exclude>
+                        <exclude>org/w3c/dom/*</exclude>
+                        <exclude>org/w3c/dom/**/*</exclude>
+                        <exclude>org/xml/sax/*</exclude>
+                        <exclude>org/xml/sax/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>com/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Not the com/ packages that are a part of particular jdk implementations -->
+                        <exclude>com/sun/tools/*</exclude>
+                        <exclude>com/sun/javadoc/*</exclude>
+                        <exclude>com/sun/security/*</exclude>
+                        <exclude>com/sun/jndi/*</exclude>
+                        <exclude>com/sun/management/*</exclude>
+                        <exclude>com/sun/tools/**/*</exclude>
+                        <exclude>com/sun/javadoc/**/*</exclude>
+                        <exclude>com/sun/security/**/*</exclude>
+                        <exclude>com/sun/jndi/**/*</exclude>
+                        <exclude>com/sun/management/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>io/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.io.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Exclude config keys for Hadoop that look like package names -->
+                        <exclude>io/compression/*</exclude>
+                        <exclude>io/compression/**/*</exclude>
+                        <exclude>io/mapfile/*</exclude>
+                        <exclude>io/mapfile/**/*</exclude>
+                        <exclude>io/map/index/*</exclude>
+                        <exclude>io/seqfile/*</exclude>
+                        <exclude>io/seqfile/**/*</exclude>
+                        <exclude>io/file/buffer/size</exclude>
+                        <exclude>io/skip/checksum/errors</exclude>
+                        <exclude>io/sort/*</exclude>
+                        <exclude>io/serializations</exclude>
+                      </excludes>
+                    </relocation>
+                    <!-- JSRs that haven't made it to inclusion in J2SE -->
+                    <relocation>
+                      <pattern>javax/el/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/cache/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.cache.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/servlet/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/ws/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>net/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.net.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Exclude config keys for Hadoop that look like package names -->
+                        <exclude>net/topology/*</exclude>
+                        <exclude>net/topology/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <!-- okio declares a top level package instead of nested -->
+                    <relocation>
+                      <pattern>okio/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.okio.</shadedPattern>
+                    </relocation>
+                    <!-- probably not. -->
+    <!--
+                    <relocation>
+                      <pattern>javax/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+    -->
+                  </relocations>
+                  <transformers>
+                    <!-- Needed until MSHADE-182 -->
+                    <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                      <resources>
+                        <resource>NOTICE.txt</resource>
+                        <resource>NOTICE</resource>
+                        <resource>LICENSE</resource>
+                      </resources>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                      <resource>META-INF/LICENSE.txt</resource>
+                      <file>${basedir}/../../LICENSE.txt</file>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                      <resource>META-INF/NOTICE.txt</resource>
+                      <file>${basedir}/../../NOTICE.txt</file>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
+                      <resource>META-INF/jboss-beans.xml</resource>
+                      <!-- Add this to enable loading of DTDs
+                      <ignoreDtd>false</ignoreDtd>
+                      -->
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                      <resource>META-INF/mailcap.default</resource>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                      <resource>META-INF/mimetypes.default</resource>
+                    </transformer>
+                  </transformers>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>noshade</id>
+      <activation>
+        <property><name>skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- We contain no source -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+              <configuration>
+                <skipSource>true</skipSource>
+              </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>
+
