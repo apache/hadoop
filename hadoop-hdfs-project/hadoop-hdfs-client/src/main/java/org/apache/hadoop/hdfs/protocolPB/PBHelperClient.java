@@ -271,16 +271,11 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    TokenProto.Builder builder = TokenProto.newBuilder().
+    return TokenProto.newBuilder().
         setIdentifier(getByteString(tok.getIdentifier())).
         setPassword(getByteString(tok.getPassword())).
         setKindBytes(getFixedByteString(tok.getKind())).
-        setServiceBytes(getFixedByteString(tok.getService()));
-    if (tok.getDnHandshakeSecret() != null) {
-      builder.setHandshakeSecret(
-          ByteString.copyFrom(tok.getDnHandshakeSecret()));
-    }
-    return builder.build();
+        setServiceBytes(getFixedByteString(tok.getService())).build();
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -652,14 +647,9 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    Token<BlockTokenIdentifier> token =
-        new Token<>(blockToken.getIdentifier()
+    return new Token<>(blockToken.getIdentifier()
         .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
         blockToken.getKind()), new Text(blockToken.getService()));
-    if (blockToken.hasHandshakeSecret()) {
-      token.setDNHandshakeSecret(blockToken.getHandshakeSecret().toByteArray());
-    }
-    return token;
   }
 
   // DatanodeId

@@ -1700,7 +1700,7 @@ public class DataNode extends ReconfigurableBase
   public SaslDataTransferServer getSaslServer() {
     return saslServer;
   }
-  
+
   /**
    * @return name useful for logging
    */
