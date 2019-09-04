@@ -157,7 +157,7 @@ public class RMProxy<T> {
   private <T> RMFailoverProxyProvider<T> createNonHaRMFailoverProxyProvider(
       Configuration conf, Class<T> protocol) {
     String defaultProviderClassName =
-        YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER;
+        YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER;
     Class<? extends RMFailoverProxyProvider<T>> defaultProviderClass;
     try {
       defaultProviderClass = (Class<? extends RMFailoverProxyProvider<T>>)

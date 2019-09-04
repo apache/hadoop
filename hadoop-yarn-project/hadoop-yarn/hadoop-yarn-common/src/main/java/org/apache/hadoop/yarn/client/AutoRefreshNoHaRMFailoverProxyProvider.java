@@ -37,9 +37,8 @@ public class AutoRefreshNoHaRMFailoverProxyProvider<T>
 
   private static final Log LOG =
       LogFactory.getLog(AutoRefreshNoHaRMFailoverProxyProvider.class);
-  private T proxy;
-  private RMProxy<T> rmProxy;
-  private YarnConfiguration conf;
+  protected RMProxy<T> rmProxy;
+  protected YarnConfiguration conf;
 
   @Override
   public void init(Configuration configuration, RMProxy<T> rmProxy,

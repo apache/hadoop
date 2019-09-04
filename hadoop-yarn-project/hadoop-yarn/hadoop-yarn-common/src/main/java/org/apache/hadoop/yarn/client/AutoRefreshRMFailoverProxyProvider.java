@@ -24,9 +24,10 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import java.util.Set;
-import java.util.Hashset;
+import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,7 +49,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public class AutoRefreshRMFailoverProxyProvider<T>
     extends ConfiguredRMFailoverProxyProvider<T> {
   private static final Log LOG =
-      LogFactory.getLog(AutoRefreshHaRMFailoverProxyProvider.class);
+      LogFactory.getLog(AutoRefreshRMFailoverProxyProvider.class);
 
   @Override
   public synchronized void performFailover(T currentProxy) {
@@ -56,7 +57,7 @@ public class AutoRefreshRMFailoverProxyProvider<T>
 
     //clears out all keys that map to currentProxy
     Set<String> rmIds = new HashSet<>();
-    for (Entry<K, V> entry : proxies.entrySet()) {
+    for (Entry<String, T> entry : proxies.entrySet()) {
         if (entry.getValue().equals(currentProxy)) {
             rmIds.add(entry.getKey());
         }

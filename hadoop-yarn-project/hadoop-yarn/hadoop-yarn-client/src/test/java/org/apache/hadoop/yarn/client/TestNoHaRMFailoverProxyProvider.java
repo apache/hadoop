@@ -41,9 +41,8 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
-public class TestRMFailoverProxyProvider {
+public class TestNoHaRMFailoverProxyProvider {
     private Configuration conf;
-    private final int NODE_MANAGER_COUNT = 1;
 
     @Before
     public void setUp() throws IOException, YarnException {
@@ -54,7 +53,7 @@ public class TestRMFailoverProxyProvider {
     public void testRestartedRM() throws Exception {
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+                        "testRestartedRMNegative", 1, 1, 1);
         YarnClient rmClient = YarnClient.createYarnClient();
         try {
             cluster.init(conf);
@@ -66,7 +65,7 @@ public class TestRMFailoverProxyProvider {
             List<NodeReport> nodeReports = rmClient.getNodeReports();
             Assert.assertEquals(
                     "The proxy didn't get expected number of node reports",
-                    NODE_MANAGER_COUNT, nodeReports.size());
+                    1, nodeReports.size());
         } finally {
             if (rmClient != null) {
                 rmClient.stop();
@@ -86,7 +85,7 @@ public class TestRMFailoverProxyProvider {
 
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+                        "testRestartedRMNegative", 1, 1, 1);
         YarnClient rmClient = null;
         try {
             cluster.init(conf);
@@ -98,7 +97,7 @@ public class TestRMFailoverProxyProvider {
             List<NodeReport> nodeReports = rmClient.getNodeReports();
             Assert.assertEquals(
                     "The proxy didn't get expected number of node reports",
-                    NODE_MANAGER_COUNT, nodeReports.size());
+                    1, nodeReports.size());
         } finally {
             if (rmClient != null) {
                 rmClient.stop();

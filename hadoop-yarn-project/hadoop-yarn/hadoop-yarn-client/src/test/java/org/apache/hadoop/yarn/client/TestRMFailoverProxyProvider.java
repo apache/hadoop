@@ -46,7 +46,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestRMFailoverProxyProvider {
-    private final int NODE_MANAGER_COUNT = 1;
+    private final int RESOURCE_MANAGER_COUNT = 2;
+    private final int NODE_MANAGER_COUNT = 2;
     private Configuration conf;
 
     @Before
@@ -54,7 +55,6 @@ public class TestRMFailoverProxyProvider {
         conf = new YarnConfiguration();
         conf.set(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
                 ConfiguredRMFailoverProxyProvider.class.getName());
-        conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
     }
 
     /**
@@ -63,9 +63,10 @@ public class TestRMFailoverProxyProvider {
      */
     @Test
     public void testConnectingToRM() throws Exception {
+        conf.set(YarnConfiguration.RM_HA_ENABLED, "true");
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+                    "testRestartedRMNegative", RESOURCE_MANAGER_COUNT, NODE_MANAGER_COUNT, 2);
         YarnClient rmClient = null;
         try {
             cluster.init(conf);
@@ -91,12 +92,12 @@ public class TestRMFailoverProxyProvider {
      * will connect to RM.
      */
     @Test
-    public void testConnectingToRM() throws Exception {
+    public void testAutoRefreshConnectingToRM() throws Exception {
         conf.set(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
                 AutoRefreshRMFailoverProxyProvider.class.getName());
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+                    "testRestartedRMNegative", RESOURCE_MANAGER_COUNT, NODE_MANAGER_COUNT, 2);
         YarnClient rmClient = null;
         try {
             cluster.init(conf);
@@ -135,6 +136,9 @@ public class TestRMFailoverProxyProvider {
             }
         }
 
+        //Adjusting the YARN Conf
+        conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
+	
         // Create two proxies and mock a RMProxy
         Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
         Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
@@ -261,6 +265,10 @@ public class TestRMFailoverProxyProvider {
             }
         }
 
+        //Adjusting the YARN Conf
+        conf.set(YarnConfiguration.RM_HA_ENABLED, "true");
+        conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
+	
         // Create three proxies and mock a RMProxy
         Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
         Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
@@ -322,10 +330,10 @@ public class TestRMFailoverProxyProvider {
         // based on different IP address.
         when(mockRMProxy.getRMAddress(
                 any(YarnConfiguration.class),
-                any(Class.class))).thenReturn(mockAdd3);
+                any(Class.class))).thenReturn(mockAdd2);
         when(mockRMProxy.getProxy(
                 any(YarnConfiguration.class),
-                any(Class.class), eq(mockAdd3))).thenReturn(mockProxy1);
+                any(Class.class), eq(mockAdd2))).thenReturn(mockProxy2);
 
         // Perform Failover and get proxy again from failover proxy provider
         fpp.performFailover(actualProxy1.proxy);
