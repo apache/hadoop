@@ -23,11 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,16 +114,10 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
  * {@code DynamoDBMetadataStore} with batching delete requests
  * in the DDB APIs.
  */
-public class DeleteOperation extends AbstractStoreOperation {
+public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       DeleteOperation.class);
-
-  /**
-   * Used to stop any re-entrancy of the rename.
-   * This is an execute-once operation.
-   */
-  private final AtomicBoolean executed = new AtomicBoolean(false);
 
   /**
    * Pre-fetched source status.
@@ -242,10 +234,9 @@ public class DeleteOperation extends AbstractStoreOperation {
    * @throws IOException list failures or an inability to delete a file.
    */
   @Retries.RetryTranslated
-  public boolean execute() throws IOException {
-    Preconditions.checkState(
-        !executed.getAndSet(true),
-        "delete attempted twice");
+  public Boolean execute() throws IOException {
+    executeOnlyOnce();
+
     StoreContext context = getStoreContext();
     Path path = status.getPath();
     LOG.debug("Delete path {} - recursive {}", path, recursive);
@@ -414,7 +405,8 @@ public class DeleteOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Queue keys for deletion; once a page of keys are ready to delete this
+   * Queue keys for deletion.
+   * Once a page of keys are ready to delete this
    * call is submitted to the executor, after waiting for the previous run to
    * complete.
    *

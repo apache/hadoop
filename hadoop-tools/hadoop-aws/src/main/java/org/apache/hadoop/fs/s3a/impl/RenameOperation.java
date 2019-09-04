@@ -22,13 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,16 +74,10 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.RENAME_PARALLEL_LI
  * Callers are required to themselves verify that destination is not under
  * the source, above the source, the source itself, etc, etc.
  */
-public class RenameOperation extends AbstractStoreOperation {
+public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       RenameOperation.class);
-
-  /**
-   * Used to stop any re-entrancy of the rename.
-   * This is an execute-once operation.
-   */
-  private final AtomicBoolean executed = new AtomicBoolean(false);
 
   private final Path sourcePath;
 
@@ -210,10 +202,8 @@ public class RenameOperation extends AbstractStoreOperation {
   }
 
   @Retries.RetryMixed
-  public long executeRename() throws IOException {
-    Preconditions.checkState(
-        !executed.getAndSet(true),
-        "Rename attempted twice");
+  public Long execute() throws IOException {
+    executeOnlyOnce();
     final StoreContext storeContext = getStoreContext();
     final MetadataStore metadataStore = checkNotNull(
         storeContext.getMetadataStore(),

@@ -1317,7 +1317,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         src, srcKey, p.getLeft(),
         dst, dstKey, p.getRight(),
         operationCallbacks);
-    return renameOperation.executeRename();
+    return renameOperation.execute();
   }
 
   /**
