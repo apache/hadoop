@@ -52,6 +52,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private long position;
   private boolean closed;
   private boolean supportFlush;
+  private boolean supportAbfsFlush;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -80,12 +81,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final String path,
       final long position,
       final int bufferSize,
-      final boolean supportFlush) {
+      final boolean supportFlush,
+      final boolean supportAbfsFlush) {
     this.client = client;
     this.path = path;
     this.position = position;
     this.closed = false;
     this.supportFlush = supportFlush;
+    this.supportAbfsFlush = supportAbfsFlush;
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = bufferSize;
@@ -199,7 +202,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    */
   @Override
   public void flush() throws IOException {
-    if (supportFlush) {
+    if (supportAbfsFlush && supportFlush) {
       flushInternalAsync();
     }
   }
