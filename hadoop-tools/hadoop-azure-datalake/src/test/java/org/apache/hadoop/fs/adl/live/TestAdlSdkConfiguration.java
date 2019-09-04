@@ -100,10 +100,8 @@ public class TestAdlSdkConfiguration {
     fs = (AdlFileSystem) (AdlStorageConfiguration.createStorageConnector(conf));
 
     SSLChannelMode sslChannelMode = fs.getAdlClient().getSSLChannelMode();
-    Assert.assertTrue(
-        "Effective SSL Channel Mode : " + sslChannelMode.toString() + " is"
-            + " unexpected when config adl.ssl.channel.mode is set to : "
-            + sslChannelModeConfigValue, sslChannelMode == expectedMode);
-
+    Assert.assertEquals(
+        "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
+            + sslChannelModeConfigValue, expectedMode, sslChannelMode);
   }
 }
