@@ -36,7 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.net.ConnectException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
