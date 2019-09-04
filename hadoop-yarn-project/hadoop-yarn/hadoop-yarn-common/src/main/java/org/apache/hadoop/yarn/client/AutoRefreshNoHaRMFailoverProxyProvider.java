@@ -33,7 +33,7 @@ import java.net.InetSocketAddress;
  * This provider don't support HA or Federation.
  */
 public class AutoRefreshNoHaRMFailoverProxyProvider<T>
-    extends DefaultRMFailoverProxyProvider {
+    extends DefaultRMFailoverProxyProvider<T> {
 
   private static final Log LOG =
       LogFactory.getLog(AutoRefreshNoHaRMFailoverProxyProvider.class);

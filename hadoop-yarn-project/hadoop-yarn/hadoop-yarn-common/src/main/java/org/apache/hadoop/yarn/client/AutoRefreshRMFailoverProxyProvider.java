@@ -25,6 +25,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Set;
+import java.util.Hashset;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,8 +45,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  * resolve the proxy DNS in the event of failover.
  * This provider don't support Federation.
  */
-public class AutoRefreshHaRMFailoverProxyProvider<T>
-    extends ConfiguredRMFailoverProxyProvider {
+public class AutoRefreshRMFailoverProxyProvider<T>
+    extends ConfiguredRMFailoverProxyProvider<T> {
   private static final Log LOG =
       LogFactory.getLog(AutoRefreshHaRMFailoverProxyProvider.class);
 
@@ -62,6 +65,6 @@ public class AutoRefreshHaRMFailoverProxyProvider<T>
       proxies.remove(rmId);
     }
 
-    super.performFailover();
+    super.performFailover(currentProxy);
   }
 }
