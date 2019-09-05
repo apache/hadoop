@@ -336,5 +336,11 @@ public class CSQueueUtils {
      queue.getMetrics().setMaxCapacityResources(partition, rc.multiplyAndNormalizeDown(
          partitionResource, queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition),
          queue.getMinimumAllocation()));
+    queue.getMetrics().setGuaranteedCapacities(partition,
+        queue.getQueueCapacities().getCapacity(partition),
+        queue.getQueueCapacities().getAbsoluteCapacity(partition));
+    queue.getMetrics().setMaxCapacities(partition,
+        queue.getQueueCapacities().getMaximumCapacity(partition),
+        queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition));
    }
 }
