@@ -21,12 +21,18 @@ package org.apache.hadoop.tools.mapred;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -441,6 +447,57 @@ public class TestCopyMapper {
     catch (Exception exception) {
       Assert.assertTrue("Caught unexpected exception:" + exception.getMessage(),
               false);
+    }
+  }
+
+  @Test(timeout = 40000)
+  public void testCopyWhileAppend() throws Exception {
+    deleteState();
+    mkdirs(SOURCE_PATH + "/1");
+    touchFile(SOURCE_PATH + "/1/3");
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+            stubContext.getContext();
+    copyMapper.setup(context);
+    final Path path = new Path(SOURCE_PATH + "/1/3");
+    int manyBytes = 100000000;
+    appendFile(path, manyBytes);
+    ScheduledExecutorService scheduledExecutorService =
+            Executors.newSingleThreadScheduledExecutor();
+    Runnable task = new Runnable() {
+      public void run() {
+        try {
+          int maxAppendAttempts = 20;
+          int appendCount = 0;
+          while (appendCount < maxAppendAttempts) {
+            appendFile(path, 1000);
+            Thread.sleep(200);
+            appendCount++;
+          }
+        } catch (IOException | InterruptedException e) {
+            LOG.error("Exception encountered ", e);
+            Assert.fail("Test failed: " + e.getMessage());
+        }
+      }
+    };
+    scheduledExecutorService.schedule(task, 10, TimeUnit.MILLISECONDS);
+    try {
+      copyMapper.map(new Text(DistCpUtils.getRelativePath(
+              new Path(SOURCE_PATH), path)),
+              new CopyListingFileStatus(cluster.getFileSystem().getFileStatus(
+                      path)), context);
+    } catch (Exception ex) {
+      StringWriter sw = new StringWriter();
+      ex.printStackTrace(new PrintWriter(sw));
+      String exceptionAsString = sw.toString();
+      LOG.error("Exception encountered ", ex);
+      if (exceptionAsString.contains(DistCpConstants.LENGTH_MISMATCH_ERROR_MSG) ||
+              exceptionAsString.contains(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)) {
+        Assert.fail("Test failed: " + exceptionAsString);
+      }
+    } finally {
+      scheduledExecutorService.shutdown();
     }
   }
 
