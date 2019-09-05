@@ -123,8 +123,8 @@ public class TestNoHaRMFailoverProxyProvider {
         Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
         Class protocol = ApplicationClientProtocol.class;
         RMProxy mockRMProxy = mock(RMProxy.class);
-        DefaultRMFailoverProxyProvider<RMProxy> fpp =
-                new DefaultRMFailoverProxyProvider<RMProxy>();
+        DefaultNoHARMFailoverProxyProvider<RMProxy> fpp =
+                new DefaultNoHARMFailoverProxyProvider<RMProxy>();
 
         Random rand = new Random();
         int port1 = rand.nextInt(65535);

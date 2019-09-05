@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -32,11 +32,11 @@ import java.net.InetSocketAddress;
  * resolve the proxy DNS in the event of failover.
  * This provider don't support HA or Federation.
  */
-public class AutoRefreshNoHaRMFailoverProxyProvider<T>
-    extends DefaultRMFailoverProxyProvider<T> {
+public class AutoRefreshNoHARMFailoverProxyProvider<T>
+    extends DefaultNoHARMFailoverProxyProvider<T> {
 
-  private static final Log LOG =
-      LogFactory.getLog(AutoRefreshNoHaRMFailoverProxyProvider.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AutoRefreshNoHARMFailoverProxyProvider.class);
   protected RMProxy<T> rmProxy;
   protected YarnConfiguration conf;
 

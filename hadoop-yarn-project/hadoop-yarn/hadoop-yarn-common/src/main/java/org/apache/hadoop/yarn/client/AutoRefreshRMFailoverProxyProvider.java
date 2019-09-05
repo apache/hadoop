@@ -29,8 +29,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -48,8 +48,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  */
 public class AutoRefreshRMFailoverProxyProvider<T>
     extends ConfiguredRMFailoverProxyProvider<T> {
-  private static final Log LOG =
-      LogFactory.getLog(AutoRefreshRMFailoverProxyProvider.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AutoRefreshRMFailoverProxyProvider.class);
 
   @Override
   public synchronized void performFailover(T currentProxy) {

@@ -927,7 +927,7 @@ public class YarnConfiguration extends Configuration {
   public static final String CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER =
     CLIENT_FAILOVER_PREFIX + "no-ha-proxy-provider";
   public static final String DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER =
-      "org.apache.hadoop.yarn.client.DefaultRMFailoverProxyProvider";
+      "org.apache.hadoop.yarn.client.DefaultNoHARMFailoverProxyProvider";
 
   public static final String CLIENT_FAILOVER_MAX_ATTEMPTS =
       CLIENT_FAILOVER_PREFIX + "max-attempts";

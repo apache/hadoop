@@ -1,7 +1,7 @@
 package org.apache.hadoop.yarn.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.DefaultFailoverProxyProvider;
 import org.apache.hadoop.ipc.RPC;
@@ -16,10 +16,10 @@ import java.net.InetSocketAddress;
  * This is the default non-HA RM Failover proxy provider. It is used to replace
  * {@Link DefaultFailoveProxyProvider} which was used as Yarn default non-HA.
  */
-public class DefaultRMFailoverProxyProvider<T>
+public class DefaultNoHARMFailoverProxyProvider<T>
     implements RMFailoverProxyProvider<T> {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultRMFailoverProxyProvider.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(DefaultNoHARMFailoverProxyProvider.class);
   protected T proxy;
   protected Class<T> protocol;
 
