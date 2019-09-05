@@ -25,8 +25,7 @@ import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager.ReplicationManagerConfiguration;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms
-    .ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
@@ -70,7 +69,7 @@ public class TestSafeModeHandler {
         .thenReturn(new HashSet<>());
     replicationManager = new ReplicationManager(
         new ReplicationManagerConfiguration(),
-        containerManager, Mockito.mock(ContainerPlacementPolicy.class),
+        containerManager, Mockito.mock(PlacementPolicy.class),
         eventQueue, new LockManager(configuration));
     scmPipelineManager = Mockito.mock(SCMPipelineManager.class);
     blockManager = Mockito.mock(BlockManagerImpl.class);

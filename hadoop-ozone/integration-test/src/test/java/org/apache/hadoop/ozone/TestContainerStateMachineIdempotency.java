@@ -29,8 +29,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms.
-    ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.
     SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.protocolPB.
@@ -60,7 +59,7 @@ public class TestContainerStateMachineIdempotency {
   public static void init() throws Exception {
     ozoneConfig = new OzoneConfiguration();
     ozoneConfig.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
+        SCMContainerPlacementCapacity.class, PlacementPolicy.class);
     cluster =
         MiniOzoneCluster.newBuilder(ozoneConfig).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();

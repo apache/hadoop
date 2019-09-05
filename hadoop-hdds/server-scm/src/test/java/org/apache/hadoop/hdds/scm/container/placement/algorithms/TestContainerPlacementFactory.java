@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -99,7 +100,7 @@ public class TestContainerPlacementFactory {
     when(nodeManager.getNodeStat(datanodes.get(4)))
         .thenReturn(new SCMNodeMetric(storageCapacity, 70L, 30L));
 
-    ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
+    PlacementPolicy policy = ContainerPlacementPolicyFactory
         .getPolicy(conf, nodeManager, cluster, true);
 
     int nodeNum = 3;
@@ -116,7 +117,7 @@ public class TestContainerPlacementFactory {
 
   @Test
   public void testDefaultPolicy() throws IOException {
-    ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
+    PlacementPolicy policy = ContainerPlacementPolicyFactory
         .getPolicy(conf, null, null, true);
     Assert.assertSame(SCMContainerPlacementRandom.class, policy.getClass());
   }
@@ -124,7 +125,7 @@ public class TestContainerPlacementFactory {
   /**
    * A dummy container placement implementation for test.
    */
-  public static class DummyImpl implements ContainerPlacementPolicy {
+  public static class DummyImpl implements PlacementPolicy {
     @Override
     public List<DatanodeDetails> chooseDatanodes(
         List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,

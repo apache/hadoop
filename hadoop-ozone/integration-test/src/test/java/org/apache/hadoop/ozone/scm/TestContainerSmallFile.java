@@ -24,7 +24,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -59,7 +59,7 @@ public class TestContainerSmallFile {
   public static void init() throws Exception {
     ozoneConfig = new OzoneConfiguration();
     ozoneConfig.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
+        SCMContainerPlacementCapacity.class, PlacementPolicy.class);
     cluster = MiniOzoneCluster.newBuilder(ozoneConfig).setNumDatanodes(1)
         .build();
     cluster.waitForClusterToBeReady();

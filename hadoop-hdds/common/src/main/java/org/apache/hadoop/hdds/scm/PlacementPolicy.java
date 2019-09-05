@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.hdds.scm.container.placement.algorithms;
+package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 
@@ -23,14 +23,14 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * A ContainerPlacementPolicy support choosing datanodes to build replication
- * pipeline with specified constraints.
+ * A PlacementPolicy support choosing datanodes to build
+ * pipelines or containers with specified constraints.
  */
-public interface ContainerPlacementPolicy {
+public interface PlacementPolicy {
 
   /**
-   * Given the replication factor and size required, return set of datanodes
-   * that satisfy the nodes and size requirement.
+   * Given an initial set of datanodes and the size required,
+   * return set of datanodes that satisfy the nodes and size requirement.
    *
    * @param excludedNodes - list of nodes to be excluded.
    * @param favoredNodes - list of nodes preferred.

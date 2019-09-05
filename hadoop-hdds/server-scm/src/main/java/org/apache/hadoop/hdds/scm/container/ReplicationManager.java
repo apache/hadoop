@@ -29,8 +29,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms
-    .ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.lock.LockManager;
@@ -80,7 +79,7 @@ public class ReplicationManager {
    * PlacementPolicy which is used to identify where a container
    * should be replicated.
    */
-  private final ContainerPlacementPolicy containerPlacement;
+  private final PlacementPolicy containerPlacement;
 
   /**
    * EventPublisher to fire Replicate and Delete container events.
@@ -126,12 +125,12 @@ public class ReplicationManager {
    *
    * @param conf OzoneConfiguration
    * @param containerManager ContainerManager
-   * @param containerPlacement ContainerPlacementPolicy
+   * @param containerPlacement PlacementPolicy
    * @param eventPublisher EventPublisher
    */
   public ReplicationManager(final ReplicationManagerConfiguration conf,
                             final ContainerManager containerManager,
-                            final ContainerPlacementPolicy containerPlacement,
+                            final PlacementPolicy containerPlacement,
                             final EventPublisher eventPublisher,
                             final LockManager<ContainerID> lockManager) {
     this.containerManager = containerManager;
@@ -464,7 +463,7 @@ public class ReplicationManager {
 
   /**
    * If the given container is under replicated, identify a new set of
-   * datanode(s) to replicate the container using ContainerPlacementPolicy
+   * datanode(s) to replicate the container using PlacementPolicy
    * and send replicate container command to the identified datanode(s).
    *
    * @param container ContainerInfo
