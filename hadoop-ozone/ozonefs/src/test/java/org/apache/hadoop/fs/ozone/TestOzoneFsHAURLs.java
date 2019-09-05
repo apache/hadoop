@@ -74,9 +74,9 @@ public class TestOzoneFsHAURLs {
   private String bucketName;
   private String rootPath;
 
-  private final String FS_O3FS_IMPL_KEY =
+  private final String o3fsImplKey =
       "fs." + OzoneConsts.OZONE_URI_SCHEME + ".impl";
-  private final String FS_O3FS_IMPL_VALUE =
+  private final String o3fsImplValue =
       "org.apache.hadoop.fs.ozone.OzoneFileSystem";
 
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
@@ -187,14 +187,14 @@ public class TestOzoneFsHAURLs {
   }
 
   /**
-   * Test OM HA URLs with qualified fs.defaultFS
+   * Test OM HA URLs with qualified fs.defaultFS.
    * @throws Exception
    */
   @Test
   public void testWithQualifiedDefaultFS() throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
     clientConf.setQuietMode(false);
-    clientConf.set(FS_O3FS_IMPL_KEY, FS_O3FS_IMPL_VALUE);
+    clientConf.set(o3fsImplKey, o3fsImplValue);
     // fs.defaultFS = o3fs://bucketName.volumeName.omServiceId/
     clientConf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
 
@@ -209,13 +209,13 @@ public class TestOzoneFsHAURLs {
     try {
       // Test case 1: ozone fs -ls /
       // Expectation: Success.
-      res = ToolRunner.run(shell, new String[] { "-ls", "/" });
+      res = ToolRunner.run(shell, new String[] {"-ls", "/"});
       // Check return value, should be 0 (success)
       Assert.assertEquals(res, 0);
 
       // Test case 2: ozone fs -ls o3fs:///
       // Expectation: Success. fs.defaultFS is a fully qualified path.
-      res = ToolRunner.run(shell, new String[] { "-ls", "o3fs:///" });
+      res = ToolRunner.run(shell, new String[] {"-ls", "o3fs:///"});
       Assert.assertEquals(res, 0);
 
       // Test case 3: ozone fs -ls o3fs://bucket.volume/
@@ -224,7 +224,7 @@ public class TestOzoneFsHAURLs {
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
       try (GenericTestUtils.SystemErrCapturer capture =
           new GenericTestUtils.SystemErrCapturer()) {
-        res = ToolRunner.run(shell, new String[] { "-ls", unqualifiedPath1 });
+        res = ToolRunner.run(shell, new String[] {"-ls", unqualifiedPath1});
         // Check stderr, inspired by testDFSWithInvalidCommmand
         Assert.assertThat("Command did not print the error message " +
                 "correctly for test case: ozone fs -ls o3fs://bucket.volume/",
@@ -241,7 +241,7 @@ public class TestOzoneFsHAURLs {
       String qualifiedPath1 = String.format("%s://%s.%s.%s/",
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
           om.getOmRpcServerAddr().getHostName());
-      res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath1 });
+      res = ToolRunner.run(shell, new String[] {"-ls", qualifiedPath1});
       // Note: this test case will fail if the port is not from the leader node
       // Q: Why does a read-only operation require a leader node?
       Assert.assertEquals(res, 0);
@@ -251,7 +251,7 @@ public class TestOzoneFsHAURLs {
       String qualifiedPath2 = String.format("%s://%s.%s.%s/",
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
           leaderOMNodeAddr);
-      res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath2 });
+      res = ToolRunner.run(shell, new String[] {"-ls", qualifiedPath2});
       Assert.assertEquals(res, 0);
 
       // Test case 6: ozone fs -ls o3fs://bucket.volume.id1/
@@ -259,7 +259,7 @@ public class TestOzoneFsHAURLs {
       String qualifiedPath3 = String
           .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
               volumeName, omServiceId);
-      res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath3 });
+      res = ToolRunner.run(shell, new String[] {"-ls", qualifiedPath3});
       Assert.assertEquals(res, 0);
 
       // Test case 7: ozone fs -ls o3fs://bucket.volume.id1:port/
@@ -270,7 +270,7 @@ public class TestOzoneFsHAURLs {
           omServiceId, getPortFromAddress(leaderOMNodeAddr));
       try (GenericTestUtils.SystemErrCapturer capture =
           new GenericTestUtils.SystemErrCapturer()) {
-        res = ToolRunner.run(shell, new String[] { "-ls", unqualifiedPath2 });
+        res = ToolRunner.run(shell, new String[] {"-ls", unqualifiedPath2});
         // Check stderr
         Assert.assertThat("Command did not print the error message " +
                 "correctly for test case: "
@@ -295,7 +295,7 @@ public class TestOzoneFsHAURLs {
   private void testWithDefaultFS(String defaultFS) throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
     clientConf.setQuietMode(false);
-    clientConf.set(FS_O3FS_IMPL_KEY, FS_O3FS_IMPL_VALUE);
+    clientConf.set(o3fsImplKey, o3fsImplValue);
     // fs.defaultFS = file:///
     clientConf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         defaultFS);
@@ -304,7 +304,7 @@ public class TestOzoneFsHAURLs {
     try {
       // Test case: ozone fs -ls o3fs:///
       // Expectation: Fail. fs.defaultFS is not a qualified o3fs URI.
-      int res = ToolRunner.run(shell, new String[] { "-ls", "o3fs:///" });
+      int res = ToolRunner.run(shell, new String[] {"-ls", "o3fs:///"});
       Assert.assertEquals(res, -1);
     } finally {
       shell.close();
@@ -312,7 +312,7 @@ public class TestOzoneFsHAURLs {
   }
 
   /**
-   * Test OM HA URLs with some unqualified fs.defaultFS
+   * Test OM HA URLs with some unqualified fs.defaultFS.
    * @throws Exception
    */
   @Test
