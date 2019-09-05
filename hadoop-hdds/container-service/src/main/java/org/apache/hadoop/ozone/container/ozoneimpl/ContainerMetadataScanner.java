@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +37,19 @@ public class ContainerMetadataScanner extends Thread {
 
   private final ContainerController controller;
   private final long metadataScanInterval;
+  private final ContainerMetadataScrubberMetrics metrics;
   /**
    * True if the thread is stopping.<p/>
    * Protected by this object's lock.
    */
   private boolean stopping = false;
 
-  public ContainerMetadataScanner(ContainerController controller,
+  public ContainerMetadataScanner(Configuration conf,
+                                  ContainerController controller,
                                   long metadataScanInterval) {
     this.controller = controller;
     this.metadataScanInterval = metadataScanInterval;
+    this.metrics = ContainerMetadataScrubberMetrics.create(conf);
     setName("ContainerMetadataScanner");
     setDaemon(true);
   }
@@ -58,10 +62,43 @@ public class ContainerMetadataScanner extends Thread {
     LOG.info("Background ContainerMetadataScanner starting up");
     while (!stopping) {
       long start = System.nanoTime();
-      scrub();
-      long interval = TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start);
+      runIteration();
+      if(!stopping) {
+        metrics.resetNumUnhealthyContainers();
+        metrics.resetNumContainersScanned();
+      }
+    }
+  }
+
+  @VisibleForTesting
+  public void runIteration() {
+    long start = System.nanoTime();
+    Iterator<Container> containerIt = controller.getContainers();
+    while (!stopping && containerIt.hasNext()) {
+      Container container = containerIt.next();
+      try {
+        scrub(container);
+      } catch (IOException e) {
+        LOG.info("Unexpected error while scrubbing container {}",
+            container.getContainerData().getContainerID());
+      } finally {
+        metrics.incNumContainersScanned();
+      }
+    }
+    long interval = System.nanoTime()-start;
+    if (!stopping) {
+      metrics.incNumScanIterations();
+      LOG.info("Completed an iteration of container metadata scrubber in" +
+              " {} minutes." +
+              " Number of  iterations (since the data-node restart) : {}" +
+              ", Number of containers scanned in this iteration : {}" +
+              ", Number of unhealthy containers found in this iteration : {}",
+          TimeUnit.NANOSECONDS.toMinutes(interval),
+          metrics.getNumScanIterations(),
+          metrics.getNumContainersScanned(),
+          metrics.getNumUnHealthyContainers());
       // ensure to delay next metadata scan with respect to user config.
-      if (!stopping && interval < metadataScanInterval) {
+      if (interval < metadataScanInterval) {
         try {
           Thread.sleep(metadataScanInterval - interval);
         } catch (InterruptedException e) {
@@ -72,30 +109,18 @@ public class ContainerMetadataScanner extends Thread {
     }
   }
 
-  private void scrub() {
-    Iterator<Container> containerIt = controller.getContainers();
-    long count = 0;
-
-    while (!stopping && containerIt.hasNext()) {
-      Container container = containerIt.next();
-      try {
-        scrub(container);
-      } catch (IOException e) {
-        LOG.info("Unexpected error while scrubbing container {}",
-            container.getContainerData().getContainerID());
-      }
-      count++;
-    }
-
-    LOG.debug("iterator ran integrity checks on {} containers", count);
-  }
-
   @VisibleForTesting
   public void scrub(Container container) throws IOException {
     if (!container.scanMetaData()) {
+      metrics.incNumUnHealthyContainers();
       controller.markContainerUnhealthy(
           container.getContainerData().getContainerID());
     }
+  }
+
+  @VisibleForTesting
+  public ContainerMetadataScrubberMetrics getMetrics() {
+    return metrics;
   }
 
   public synchronized void shutdown() {

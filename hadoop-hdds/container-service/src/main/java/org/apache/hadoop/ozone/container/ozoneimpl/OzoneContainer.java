@@ -178,14 +178,14 @@ public class OzoneContainer {
       LOG.info("Background container scanner has been disabled.");
     } else {
       if (this.metadataScanner == null) {
-        this.metadataScanner = new ContainerMetadataScanner(controller,
+        this.metadataScanner = new ContainerMetadataScanner(config, controller,
             metadataScanInterval);
       }
       this.metadataScanner.start();
 
       dataScanners = new ArrayList<>();
       for (HddsVolume v : volumeSet.getVolumesList()) {
-        ContainerDataScanner s = new ContainerDataScanner(controller,
+        ContainerDataScanner s = new ContainerDataScanner(config, controller,
             v, bytesPerSec);
         s.start();
         dataScanners.add(s);

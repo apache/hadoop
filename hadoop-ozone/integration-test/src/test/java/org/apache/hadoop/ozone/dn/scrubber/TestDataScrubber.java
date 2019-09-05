@@ -159,7 +159,7 @@ public class TestDataScrubber {
     deleteDirectory(chunksDir);
     Assert.assertFalse(chunksDir.exists());
 
-    ContainerMetadataScanner sb = new ContainerMetadataScanner(
+    ContainerMetadataScanner sb = new ContainerMetadataScanner(ozoneConfig,
         oc.getController(), 0);
     sb.scrub(c);
 
