@@ -76,12 +76,7 @@ class FSDirRenameOp {
     while(src.getINode(i) == dst.getINode(i)) { i++; }
     // src[i - 1] is the last common ancestor.
     BlockStoragePolicySuite bsps = fsd.getBlockStoragePolicySuite();
-    // Assume dstParent existence check done by callers.
-    INode dstParent = dst.getINode(-2);
-    // Use the destination parent's storage policy for quota delta verify.
-    final QuotaCounts delta = src.getLastINode()
-        .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
-            Snapshot.CURRENT_STATE_ID);
+    final QuotaCounts delta = src.getLastINode().computeQuotaUsage(bsps);
 
     // Reduce the required quota by dst that is being removed
     final INode dstINode = dst.getLastINode();
