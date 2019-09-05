@@ -21,10 +21,12 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -44,16 +46,22 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.hdds.HddsUtils.getHostPort;
 
 /**
  * Test client-side URL handling with and without Ozone Manager HA.
  */
 public class TestOzoneFsHAURLs {
+  public static final Logger LOG = LoggerFactory.getLogger(
+      TestOzoneFsHAURLs.class);
 
   private OzoneConfiguration conf;
   private MiniOzoneCluster cluster;
@@ -63,6 +71,17 @@ public class TestOzoneFsHAURLs {
   private String scmId;
   private OzoneManager om;
   private OzoneManagerRatisServer omRatisServer;
+  private int numOMs;
+
+  private String volumeName;
+  private String bucketName;
+  private OzoneBucket ozoneBucket;
+  private String rootPath;
+
+  private final String FS_O3FS_IMPL_KEY =
+      "fs." + OzoneConsts.OZONE_URI_SCHEME + ".impl";
+  private final String FS_O3FS_IMPL_VALUE =
+      "org.apache.hadoop.fs.ozone.OzoneFileSystem";
 
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
 
@@ -74,7 +93,7 @@ public class TestOzoneFsHAURLs {
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     final String path = GenericTestUtils.getTempPath(omId);
-    Path metaDirPath = Paths.get(path, "om-meta");
+    java.nio.file.Path metaDirPath = java.nio.file.Paths.get(path, "om-meta");
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
     conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
@@ -82,6 +101,7 @@ public class TestOzoneFsHAURLs {
     conf.setTimeDuration(
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
+    numOMs = 3;
 
     OMStorage omStore = new OMStorage(conf);
     omStore.setClusterId("testClusterId");
@@ -90,7 +110,8 @@ public class TestOzoneFsHAURLs {
     omStore.initialize();
 
     cluster = MiniOzoneCluster.newHABuilder(conf).setClusterId(clusterId)
-        .setScmId(scmId).setOMServiceId(omServiceId).setNumOfOzoneManagers(3)
+        .setScmId(scmId).setOMServiceId(omServiceId)
+        .setNumOfOzoneManagers(numOMs)
         .build();
     cluster.waitForClusterToBeReady();
 
@@ -98,32 +119,17 @@ public class TestOzoneFsHAURLs {
     omRatisServer = om.getOmRatisServer();
 
     Assert.assertEquals(LifeCycle.State.RUNNING, om.getOmRatisServerState());
-  }
 
-  @After
-  public void shutdown() {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
-  }
-
-  /**
-   * Test configurating an OM service with three OM nodes.
-   * Inspired by TestOzoneManagerConfiguration
-   * @throws Exception
-   */
-  @Test
-  public void testHAURLs1() throws Exception {
     // Inspired by TestOzoneManagerHA#setupBucket
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     ObjectStore objectStore =
         OzoneClientFactory.getRpcClient(omServiceId, conf).getObjectStore();
     objectStore.createVolume(volumeName);
 
     OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     retVolumeinfo.createBucket(bucketName);
-    OzoneBucket ozoneBucket = retVolumeinfo.getBucket(bucketName);
+    ozoneBucket = retVolumeinfo.getBucket(bucketName);
 
     /*
     // create a volume and a bucket to be used by OzoneFileSystem,
@@ -134,63 +140,86 @@ public class TestOzoneFsHAURLs {
     String rootPath = String.format("%s://%s.%s." + omServiceId,
         OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
      */
-    String rootPath = String
+
+    rootPath = String
         .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
             volumeName, omServiceId);
     // Set the fs.defaultFS and start the filesystem
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
     FileSystem fs = FileSystem.get(conf);
 
-    // Create random stuff
-    org.apache.hadoop.fs.Path root = new org.apache.hadoop.fs.Path("/");
-    org.apache.hadoop.fs.Path dir1 = new org.apache.hadoop.fs.Path(root, "dir1");
-    org.apache.hadoop.fs.Path dir12 =
-        new org.apache.hadoop.fs.Path(dir1, "dir12");
-    org.apache.hadoop.fs.Path dir2 = new org.apache.hadoop.fs.Path(root, "dir2");
+    // Create some dirs
+    Path root = new Path("/");
+    Path dir1 = new Path(root, "dir1");
+    Path dir12 = new Path(dir1, "dir12");
+    Path dir2 = new Path(root, "dir2");
     fs.mkdirs(dir12);
     fs.mkdirs(dir2);
-/*
-    FileStatus[] fileStatuses = fs.listStatus(root);
-    for (FileStatus fileStatus : fileStatuses) {
-      System.out.println(fileStatus);
-    }
-    System.out.println("!!! done creating stuff");
- */
+  }
 
+  @After
+  public void shutdown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * @return the leader OM's RPC address in the MiniOzoneHACluster
+   */
+  private String getLeaderOMNodeAddr() {
+    String leaderOMNodeAddr = null;
+    Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, omServiceId);
+    assert(omNodeIds.size() == numOMs);
+    MiniOzoneHAClusterImpl haCluster = (MiniOzoneHAClusterImpl) cluster;
+    for (String omNodeId : omNodeIds) {
+      // Find the leader OM
+      if (!haCluster.getOzoneManager(omNodeId).isLeader()) {
+        continue;
+      }
+      LOG.info("Leader OM node ID is " + omNodeId);
+      // ozone.om.address.omServiceId.omNode
+      String leaderOMNodeAddrKey = OmUtils.addKeySuffixes(
+          OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodeId);
+      leaderOMNodeAddr = conf.get(leaderOMNodeAddrKey);
+    }
+    assert(leaderOMNodeAddr != null);
+    return leaderOMNodeAddr;
+  }
+
+  private int getPortFromAddress(String addr) {
+    Optional<Integer> portOptional = getHostPort(addr);
+    assert(portOptional.isPresent());
+    return portOptional.get();
+  }
+
+  /**
+   * Test OM HA URLs
+   * @throws Exception
+   */
+  @Test
+  public void testWithQualifiedDefaultFS() throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
     // Inspired by TestFsShell#testTracing
     clientConf.setQuietMode(false);
-    // TODO: Do not hard code key
-//    System.out.println("!!! Previous fs.o3fs.impl=" + clientConf.get("fs.o3fs.impl"));
-    clientConf.set("fs.o3fs.impl", "org.apache.hadoop.fs.ozone.OzoneFileSystem");
-//    System.out.println("!!! Previous fs.defaultFS=" + clientConf.get("fs.defaultFS"));
-    clientConf.set("fs.defaultFS", rootPath);
-//    System.out.println("!!! New fs.defaultFS=" + clientConf.get("fs.defaultFS"));
-//    System.out.println("!!! Previous ozone.om.address=" + clientConf.get("ozone.om.address"));
+    clientConf.set(FS_O3FS_IMPL_KEY, FS_O3FS_IMPL_VALUE);
+    // fs.defaultFS = o3fs://bucketName.volumeName.omServiceId/
+    clientConf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
 
-    // Pick the first OM's RPC address and assign it to ozone.om.address
-    // for test case: ozone fs -ls o3fs://bucket.volume.om1/
-    // TODO: Modularize this snippet
-    String omNodesKey = "ozone.om.nodes." + omServiceId;
-    String[] omNodes = clientConf.get(omNodesKey).split(",");
-    assert(omNodes.length == 3);
-    String omNode1 = omNodes[0];
-    String omNodeAddressKey1 = "ozone.om.address." + omServiceId + "." + omNode1;
-    String omNodeAddress1 = clientConf.get(omNodeAddressKey1);
+    // Pick leader OM's RPC address and assign it to ozone.om.address for
+    // the test case: ozone fs -ls o3fs://bucket.volume.om1/
+    String leaderOMNodeAddr = getLeaderOMNodeAddr();
+    // ozone.om.address was set to service id in MiniOzoneHAClusterImpl
+//    System.out.println("Previous ozone.om.address=" + clientConf.get("ozone.om.address"));
+    clientConf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, leaderOMNodeAddr);
 
-    int omNodeAddressPort1 = OmUtils.getOmRpcPort(clientConf, omNodeAddressKey1);
-    System.out.println(omNodeAddressPort1);
-
-    clientConf.set("ozone.om.address", omNodeAddress1);
-
-    // Compose fs command
     FsShell shell = new FsShell(clientConf);
     int res;
     try {
       // Test case 1: ozone fs -ls /
       // Expectation: Success.
       res = ToolRunner.run(shell, new String[] { "-ls", "/" });
-      // Check return value
+      // Check return value, should be 0 (success)
       Assert.assertEquals(res, 0);
 
       // Test case 2: ozone fs -ls o3fs:///
@@ -231,24 +260,25 @@ public class TestOzoneFsHAURLs {
       // Test case 5: ozone fs -ls o3fs://bucket.volume.om1:port/
       // Expectation: Success.
       String qualifiedPath2 = String.format("%s://%s.%s.%s/",
-          OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName, omNodeAddress1);
+          OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
+          leaderOMNodeAddr);
       res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath2 });
       Assert.assertEquals(res, 0);
 
       // Test case 6: ozone fs -ls o3fs://bucket.volume.id1/
+      // Expectation: Success.
       String qualifiedPath3 = String
           .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
               volumeName, omServiceId);
       res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath3 });
-      // Should succeed
       Assert.assertEquals(res, 0);
 
       // Test case 7: ozone fs -ls o3fs://bucket.volume.id1:port/
       // Expectation: Fail. Service ID does not use port information.
-      // Fill in the port number with an OM's port (doesn't really matter)
+      // Use the port number from leader OM (doesn't really matter)
       String unqualifiedPath2 = String.format("%s://%s.%s.%s:%d/",
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
-          omServiceId, omNodeAddressPort1);
+          omServiceId, getPortFromAddress(leaderOMNodeAddr));
       try (GenericTestUtils.SystemErrCapturer capture =
           new GenericTestUtils.SystemErrCapturer()) {
         res = ToolRunner.run(shell, new String[] { "-ls", unqualifiedPath2 });
@@ -266,16 +296,14 @@ public class TestOzoneFsHAURLs {
     }
   }
 
-  @Test
-  public void testHAURLs2() throws Exception {
-    // Change fs.defaultFS to test other scenarios
+  private void testWithDefaultFS(String defaultFS) throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
-    // Inspired by TestFsShell#testTracing
     clientConf.setQuietMode(false);
-    // TODO: Do not hard code key
-    clientConf.set("fs.o3fs.impl", "org.apache.hadoop.fs.ozone.OzoneFileSystem");
-    clientConf.set("fs.defaultFS", "file:///");
-    // Compose fs command
+    clientConf.set(FS_O3FS_IMPL_KEY, FS_O3FS_IMPL_VALUE);
+    // fs.defaultFS = file:///
+    clientConf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        defaultFS);
+
     FsShell shell = new FsShell(clientConf);
     try {
       // Test case: ozone fs -ls o3fs:///
@@ -285,5 +313,26 @@ public class TestOzoneFsHAURLs {
     } finally {
       shell.close();
     }
+  }
+
+  @Test
+  public void testOtherDefaultFS() throws Exception {
+    // Test scenarios where fs.defaultFS isn't a fully qualified o3fs
+
+    // fs.defaultFS = file:///
+    testWithDefaultFS(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT);
+
+    // fs.defaultFS = hdfs://ns1/
+    testWithDefaultFS("hdfs://ns1/");
+
+    // fs.defaultFS = o3fs:///
+    String unqualifiedFs1 = String.format(
+        "%s:///", OzoneConsts.OZONE_URI_SCHEME);
+    testWithDefaultFS(unqualifiedFs1);
+
+    // fs.defaultFS = o3fs://bucketName.volumeName/
+    String unqualifiedFs2 = String.format("%s://%s.%s/",
+        OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
+    testWithDefaultFS(unqualifiedFs2);
   }
 }
