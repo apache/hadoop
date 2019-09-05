@@ -4144,6 +4144,16 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.datanode.data.transfer.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that each datanode can utilize for the data transfering purpose in term
+      of the number of bytes per second.
+      when the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
 <property>
   <name>dfs.datanode.fsdataset.factory</name>
   <value></value>
