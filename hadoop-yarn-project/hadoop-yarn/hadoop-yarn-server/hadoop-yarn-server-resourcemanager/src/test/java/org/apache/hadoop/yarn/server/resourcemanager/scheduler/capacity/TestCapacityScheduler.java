@@ -195,6 +195,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   private ResourceManager resourceManager = null;
   private RMContext mockContext;
 
+  private static final double DELTA = 0.000001;
+
   @Before
   public void setUp() throws Exception {
     resourceManager = new ResourceManager() {
@@ -5502,6 +5504,22 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     assertEquals(35840, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getGuaranteedMB());
     assertEquals(51200, ((CSQueueMetrics)cs.getQueue("a").getMetrics()).getMaxCapacityMB());
     assertEquals(51200, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getMaxCapacityMB());
+    assertEquals(A_CAPACITY / 100, ((CSQueueMetrics)cs.getQueue("a")
+        .getMetrics()).getGuaranteedCapacity(), DELTA);
+    assertEquals(A_CAPACITY / 100, ((CSQueueMetrics)cs.getQueue("a")
+        .getMetrics()).getGuaranteedAbsoluteCapacity(), DELTA);
+    assertEquals(B1_CAPACITY / 100, ((CSQueueMetrics)cs.getQueue("b1")
+        .getMetrics()).getGuaranteedCapacity(), DELTA);
+    assertEquals((B_CAPACITY / 100) * (B1_CAPACITY / 100), ((CSQueueMetrics)cs
+        .getQueue("b1").getMetrics()).getGuaranteedAbsoluteCapacity(), DELTA);
+    assertEquals(1, ((CSQueueMetrics)cs.getQueue("a").getMetrics())
+        .getMaxCapacity(), DELTA);
+    assertEquals(1, ((CSQueueMetrics)cs.getQueue("a").getMetrics())
+        .getMaxAbsoluteCapacity(), DELTA);
+    assertEquals(1, ((CSQueueMetrics)cs.getQueue("b1").getMetrics())
+        .getMaxCapacity(), DELTA);
+    assertEquals(1, ((CSQueueMetrics)cs.getQueue("b1").getMetrics())
+        .getMaxAbsoluteCapacity(), DELTA);
 
     // Add child queue to a, and reinitialize. Metrics should be updated
     conf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a", new String[] {"a1", "a2", "a3"} );
