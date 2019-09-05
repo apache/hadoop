@@ -104,8 +104,9 @@ public final class XceiverServerRatis extends XceiverServer {
   private final Configuration conf;
   // TODO: Remove the gids set when Ratis supports an api to query active
   // pipelines
-  private final Set<RaftGroupId> gids = new HashSet<>();
+  private final Set<RaftGroupId> raftGids = new HashSet<>();
 
+  @SuppressWarnings("parameternumber")
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, ContainerController containerController,
       StateContext context, GrpcTlsConfig tlsConfig, CertificateClient caClient,
@@ -571,7 +572,7 @@ public final class XceiverServerRatis extends XceiverServer {
 
   @Override
   public boolean isExist(HddsProtos.PipelineID pipelineId) {
-    return gids.contains(
+    return raftGids.contains(
         RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineId).getId()));
   }
 
@@ -665,10 +666,10 @@ public final class XceiverServerRatis extends XceiverServer {
   }
 
   void notifyGroupRemove(RaftGroupId gid) {
-    gids.remove(gid);
+    raftGids.remove(gid);
   }
 
   void notifyGroupAdd(RaftGroupId gid) {
-    gids.add(gid);
+    raftGids.add(gid);
   }
 }

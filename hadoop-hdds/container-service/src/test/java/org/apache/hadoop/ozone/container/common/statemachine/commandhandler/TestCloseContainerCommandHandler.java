@@ -159,7 +159,7 @@ public class TestCloseContainerCommandHandler {
 
     verify(containerHandler)
         .markContainerForClose(container);
-    verify(writeChannel, never())
+    verify(writeChannel)
         .submitRequest(any(), any());
     verify(containerHandler, never())
         .quasiCloseContainer(container);

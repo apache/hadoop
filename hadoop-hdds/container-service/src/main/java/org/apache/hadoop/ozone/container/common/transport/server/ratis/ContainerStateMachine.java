@@ -814,9 +814,6 @@ public class ContainerStateMachine extends BaseStateMachine {
     for (Long cid : createContainerSet) {
       try {
         containerController.markContainerForClose(cid);
-      } catch (IOException e) {
-      }
-      try {
         containerController.quasiCloseContainer(cid);
       } catch (IOException e) {
       }

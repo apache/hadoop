@@ -86,40 +86,35 @@ public class CloseContainerCommandHandler implements CommandHandler {
         return;
       }
 
-      if (container.getContainerState() ==
-          ContainerProtos.ContainerDataProto.State.CLOSED) {
-        // Closing a container is an idempotent operation.
-        return;
-      }
-
-      // Move the container to CLOSING state
-      controller.markContainerForClose(containerId);
-
-      // If the container is part of open pipeline, close it via write channel
-      if (ozoneContainer.getWriteChannel()
-          .isExist(closeCommand.getPipelineID())) {
-        if (closeCommand.getForce()) {
-          LOG.warn("Cannot force close a container when the container is" +
-              " part of an active pipeline.");
-          return;
+      switch (container.getContainerState()) {
+      case OPEN:
+        // move the container to CLOSING state
+        controller.markContainerForClose(containerId);
+      case CLOSING:
+        // If the container is part of open pipeline, close it via write channel
+        if (ozoneContainer.getWriteChannel()
+            .isExist(closeCommand.getPipelineID())) {
+          ContainerCommandRequestProto request =
+              getContainerCommandRequestProto(datanodeDetails,
+                  closeCommand.getContainerID());
+          ozoneContainer.getWriteChannel()
+              .submitRequest(request, closeCommand.getPipelineID());
+        } else {
+          // Container should not exist in CLOSING state without a pipeline
+          controller.markContainerUnhealthy(containerId);
         }
-        ContainerCommandRequestProto request =
-            getContainerCommandRequestProto(datanodeDetails,
-                closeCommand.getContainerID());
-        ozoneContainer.getWriteChannel().submitRequest(
-            request, closeCommand.getPipelineID());
-        return;
-      }
-      // If we reach here, there is no active pipeline for this container.
-      if (container.getContainerState() == ContainerProtos.ContainerDataProto
-          .State.OPEN || container.getContainerState() ==
-          ContainerProtos.ContainerDataProto.State.CLOSING) {
-        // Container should not exist in OPEN or CLOSING state without a
-        // pipeline.
-        controller.markContainerUnhealthy(containerId);
-      } else if (closeCommand.getForce()) {
-        // SCM told us to force close the container.
-        controller.closeContainer(containerId);
+        break;
+      case QUASI_CLOSED:
+        if (closeCommand.getForce()) {
+          controller.closeContainer(containerId);
+          break;
+        }
+      case CLOSED:
+        break;
+      case UNHEALTHY:
+      case INVALID:
+        LOG.debug("Cannot close the container #{}, the container is"
+            + " in {} state.", containerId, container.getContainerState());
       }
     } catch (NotLeaderException e) {
       LOG.debug("Follower cannot close container #{}.", containerId);
