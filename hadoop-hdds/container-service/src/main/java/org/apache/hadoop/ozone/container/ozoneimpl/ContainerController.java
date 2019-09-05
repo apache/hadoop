@@ -29,8 +29,9 @@ import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -120,11 +121,18 @@ public class ContainerController {
 
   public Container importContainer(final ContainerType type,
       final long containerId, final long maxSize, final String originPipelineId,
-      final String originNodeId, final FileInputStream rawContainerStream,
+      final String originNodeId, final InputStream rawContainerStream,
       final TarContainerPacker packer)
       throws IOException {
     return handlers.get(type).importContainer(containerId, maxSize,
         originPipelineId, originNodeId, rawContainerStream, packer);
+  }
+
+  public void exportContainer(final ContainerType type,
+      final long containerId, final OutputStream outputStream,
+      final TarContainerPacker packer) throws IOException {
+    handlers.get(type).exportContainer(
+        containerSet.getContainer(containerId), outputStream, packer);
   }
 
   /**

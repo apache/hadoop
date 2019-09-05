@@ -330,6 +330,9 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } finally {
       writeUnlock();
     }
+    LOG.info("Container {} is closed with bcsId {}.",
+        containerData.getContainerID(),
+        containerData.getBlockCommitSequenceId());
   }
 
   /**
@@ -361,13 +364,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     }
   }
 
-  void compactDB() throws StorageContainerException {
+  private void compactDB() throws StorageContainerException {
     try {
       try(ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
         db.getStore().compactDB();
-        LOG.info("Container {} is closed with bcsId {}.",
-            containerData.getContainerID(),
-            containerData.getBlockCommitSequenceId());
       }
     } catch (StorageContainerException ex) {
       throw ex;
@@ -524,6 +524,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
           "Only closed containers could be exported: ContainerId="
               + getContainerData().getContainerID());
     }
+    compactDB();
     packer.pack(this, destination);
   }
 
