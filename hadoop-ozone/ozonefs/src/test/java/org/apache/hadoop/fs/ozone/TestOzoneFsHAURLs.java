@@ -31,13 +31,11 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
-import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.ratis.util.LifeCycle;
@@ -70,12 +68,10 @@ public class TestOzoneFsHAURLs {
   private String clusterId;
   private String scmId;
   private OzoneManager om;
-  private OzoneManagerRatisServer omRatisServer;
-  private int numOMs;
+  private int numOfOMs;
 
   private String volumeName;
   private String bucketName;
-  private OzoneBucket ozoneBucket;
   private String rootPath;
 
   private final String FS_O3FS_IMPL_KEY =
@@ -90,6 +86,7 @@ public class TestOzoneFsHAURLs {
     conf = new OzoneConfiguration();
     omId = UUID.randomUUID().toString();
     omServiceId = "om-service-test1";
+    numOfOMs = 3;
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     final String path = GenericTestUtils.getTempPath(omId);
@@ -101,7 +98,6 @@ public class TestOzoneFsHAURLs {
     conf.setTimeDuration(
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
-    numOMs = 3;
 
     OMStorage omStore = new OMStorage(conf);
     omStore.setClusterId(clusterId);
@@ -114,13 +110,11 @@ public class TestOzoneFsHAURLs {
         .setClusterId(clusterId)
         .setScmId(scmId)
         .setOMServiceId(omServiceId)
-        .setNumOfOzoneManagers(numOMs)
+        .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();
 
     om = cluster.getOzoneManager();
-    omRatisServer = om.getOmRatisServer();
-
     Assert.assertEquals(LifeCycle.State.RUNNING, om.getOmRatisServerState());
 
     volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -131,11 +125,9 @@ public class TestOzoneFsHAURLs {
     OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
     bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     retVolumeinfo.createBucket(bucketName);
-    ozoneBucket = retVolumeinfo.getBucket(bucketName);
 
-    rootPath = String
-        .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
-            volumeName, omServiceId);
+    rootPath = String.format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME,
+        bucketName, volumeName, omServiceId);
     // Set fs.defaultFS
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
     FileSystem fs = FileSystem.get(conf);
@@ -161,7 +153,7 @@ public class TestOzoneFsHAURLs {
   private String getLeaderOMNodeAddr() {
     String leaderOMNodeAddr = null;
     Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, omServiceId);
-    assert(omNodeIds.size() == numOMs);
+    assert(omNodeIds.size() == numOfOMs);
     MiniOzoneHAClusterImpl haCluster = (MiniOzoneHAClusterImpl) cluster;
     // Note: this loop may be implemented inside MiniOzoneHAClusterImpl
     for (String omNodeId : omNodeIds) {
