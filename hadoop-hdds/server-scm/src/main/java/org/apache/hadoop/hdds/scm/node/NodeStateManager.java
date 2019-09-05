@@ -112,7 +112,7 @@ public class NodeStateManager implements Runnable, Closeable {
   /**
    * Maps the event to be triggered when a node state us updated.
    */
-  private final Map<NodeState, Event<DatanodeDetails>> state2EventMap;
+  private final Map<NodeStatus, Event<DatanodeDetails>> state2EventMap;
   /**
    * ExecutorService used for scheduling heartbeat processing thread.
    */
@@ -190,10 +190,12 @@ public class NodeStateManager implements Runnable, Closeable {
    * Populates state2event map.
    */
   private void initialiseState2EventMap() {
-    state2EventMap.put(NodeState.STALE, SCMEvents.STALE_NODE);
-    state2EventMap.put(NodeState.DEAD, SCMEvents.DEAD_NODE);
-    state2EventMap
-        .put(NodeState.HEALTHY, SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE);
+    state2EventMap.put(NodeStatus.inServiceStale(), SCMEvents.STALE_NODE);
+    state2EventMap.put(NodeStatus.inServiceDead(), SCMEvents.DEAD_NODE);
+    state2EventMap.put(NodeStatus.inServiceHealthy(),
+        SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE);
+    // TODO - add whatever events are needed for decomm / maint to stale, dead,
+    //        healthy
   }
 
   /*
@@ -588,29 +590,28 @@ public class NodeStateManager implements Runnable, Closeable {
         (lastHbTime) -> lastHbTime < staleNodeDeadline;
     try {
       for(DatanodeInfo node : nodeStateMap.getAllDatanodeInfos()) {
-        NodeState state =
-            nodeStateMap.getNodeStatus(node.getUuid()).getHealth();
-        switch (state) {
+        NodeStatus status = nodeStateMap.getNodeStatus(node.getUuid());
+        switch (status.getHealth()) {
         case HEALTHY:
           // Move the node to STALE if the last heartbeat time is less than
           // configured stale-node interval.
-          updateNodeState(node, staleNodeCondition, state,
+          updateNodeState(node, staleNodeCondition, status,
               NodeLifeCycleEvent.TIMEOUT);
           break;
         case STALE:
           // Move the node to DEAD if the last heartbeat time is less than
           // configured dead-node interval.
-          updateNodeState(node, deadNodeCondition, state,
+          updateNodeState(node, deadNodeCondition, status,
               NodeLifeCycleEvent.TIMEOUT);
           // Restore the node if we have received heartbeat before configured
           // stale-node interval.
-          updateNodeState(node, healthyNodeCondition, state,
+          updateNodeState(node, healthyNodeCondition, status,
               NodeLifeCycleEvent.RESTORE);
           break;
         case DEAD:
           // Resurrect the node if we have received heartbeat before
           // configured stale-node interval.
-          updateNodeState(node, healthyNodeCondition, state,
+          updateNodeState(node, healthyNodeCondition, status,
               NodeLifeCycleEvent.RESURRECT);
           break;
         default:
@@ -672,29 +673,29 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @param node DatanodeInfo
    * @param condition condition to check
-   * @param state current state of node
+   * @param status current status of node
    * @param lifeCycleEvent NodeLifeCycleEvent to be applied if condition
    *                       matches
    *
    * @throws NodeNotFoundException if the node is not present
    */
   private void updateNodeState(DatanodeInfo node, Predicate<Long> condition,
-      NodeState state, NodeLifeCycleEvent lifeCycleEvent)
+      NodeStatus status, NodeLifeCycleEvent lifeCycleEvent)
       throws NodeNotFoundException {
     try {
       if (condition.test(node.getLastHeartbeatTime())) {
-        NodeState newState = nodeHealthSM.getNextState(state, lifeCycleEvent);
-        // TODO - hardcoded IN_SERVICE
-        nodeStateMap.updateNodeState(node.getUuid(),
-            new NodeStatus(NodeOperationalState.IN_SERVICE, newState));
-        if (state2EventMap.containsKey(newState)) {
-          eventPublisher.fireEvent(state2EventMap.get(newState), node);
+        NodeState newHealthState = nodeHealthSM.
+            getNextState(status.getHealth(), lifeCycleEvent);
+        NodeStatus newStatus =
+            nodeStateMap.updateNodeHealthState(node.getUuid(), newHealthState);
+        if (state2EventMap.containsKey(newStatus)) {
+          eventPublisher.fireEvent(state2EventMap.get(newStatus), node);
         }
       }
     } catch (InvalidStateTransitionException e) {
       LOG.warn("Invalid state transition of node {}." +
               " Current state: {}, life cycle event: {}",
-          node, state, lifeCycleEvent);
+          node, status.getHealth(), lifeCycleEvent);
     }
   }
 

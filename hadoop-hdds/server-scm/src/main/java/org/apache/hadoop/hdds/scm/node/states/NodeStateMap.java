@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdds.scm.node.states;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
@@ -86,19 +88,44 @@ public class NodeStateMap {
   }
 
   /**
-   * Updates the node state.
+   * Updates the node health state.
    *
    * @param nodeId Node Id
-   * @param newState new state
+   * @param newHealth new health state
    *
    * @throws NodeNotFoundException if the node is not present
    */
-  public void updateNodeState(UUID nodeId, NodeStatus newState)
+  public NodeStatus updateNodeHealthState(UUID nodeId, NodeState newHealth)
       throws NodeNotFoundException {
-    lock.writeLock().lock();
     try {
-      checkIfNodeExist(nodeId);
-      stateMap.put(nodeId, newState);
+      lock.writeLock().lock();
+      NodeStatus oldStatus = getNodeStatus(nodeId);
+      NodeStatus newStatus = new NodeStatus(
+          oldStatus.getOperationalState(), newHealth);
+      stateMap.put(nodeId, newStatus);
+      return newStatus;
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Updates the node operational state.
+   *
+   * @param nodeId Node Id
+   * @param newOpState new operational state
+   *
+   * @throws NodeNotFoundException if the node is not present
+   */
+  public NodeStatus updateNodeOperationalState(UUID nodeId,
+      NodeOperationalState newOpState) throws NodeNotFoundException {
+    try {
+      lock.writeLock().lock();
+      NodeStatus oldStatus = getNodeStatus(nodeId);
+      NodeStatus newStatus = new NodeStatus(
+          newOpState, oldStatus.getHealth());
+      stateMap.put(nodeId, newStatus);
+      return newStatus;
     } finally {
       lock.writeLock().unlock();
     }

@@ -60,17 +60,33 @@ public class TestNodeStateMap {
   }
 
   @Test
-  public void testNodeStateCanBeUpdated()
+  public void testNodeHealthStateCanBeUpdated()
       throws NodeAlreadyExistsException, NodeNotFoundException {
     DatanodeDetails dn = generateDatanode();
     NodeStatus status = NodeStatus.inServiceHealthy();
     map.addNode(dn, status);
 
-    NodeStatus newStatus = new NodeStatus(
+    NodeStatus expectedStatus = NodeStatus.inServiceStale();
+    NodeStatus returnedStatus =
+        map.updateNodeHealthState(dn.getUuid(), expectedStatus.getHealth());
+    assertEquals(expectedStatus, returnedStatus);
+    assertEquals(returnedStatus, map.getNodeStatus(dn.getUuid()));
+  }
+
+  @Test
+  public void testNodeOperationalStateCanBeUpdated()
+      throws NodeAlreadyExistsException, NodeNotFoundException {
+    DatanodeDetails dn = generateDatanode();
+    NodeStatus status = NodeStatus.inServiceHealthy();
+    map.addNode(dn, status);
+
+    NodeStatus expectedStatus = new NodeStatus(
         NodeOperationalState.DECOMMISSIONING,
-        NodeState.STALE);
-    map.updateNodeState(dn.getUuid(), newStatus);
-    assertEquals(newStatus, map.getNodeStatus(dn.getUuid()));
+        NodeState.HEALTHY);
+    NodeStatus returnedStatus = map.updateNodeOperationalState(
+        dn.getUuid(), expectedStatus.getOperationalState());
+    assertEquals(expectedStatus, returnedStatus);
+    assertEquals(returnedStatus, map.getNodeStatus(dn.getUuid()));
   }
 
   @Test
