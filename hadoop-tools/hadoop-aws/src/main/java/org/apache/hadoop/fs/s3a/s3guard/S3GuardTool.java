@@ -1139,7 +1139,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return SUCCESS;
     }
 
-
   }
 
   /**
