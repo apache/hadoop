@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.hdds.HddsUtils.getHostPort;
 
 /**
- * Test client-side URL handling with and without Ozone Manager HA.
+ * Test client-side URI handling with Ozone Manager HA.
  */
 public class TestOzoneFsHAURLs {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -104,13 +104,16 @@ public class TestOzoneFsHAURLs {
     numOMs = 3;
 
     OMStorage omStore = new OMStorage(conf);
-    omStore.setClusterId("testClusterId");
-    omStore.setScmId("testScmId");
+    omStore.setClusterId(clusterId);
+    omStore.setScmId(scmId);
     // writes the version file properties
     omStore.initialize();
 
-    cluster = MiniOzoneCluster.newHABuilder(conf).setClusterId(clusterId)
-        .setScmId(scmId).setOMServiceId(omServiceId)
+    // Start the cluster
+    cluster = MiniOzoneCluster.newHABuilder(conf)
+        .setClusterId(clusterId)
+        .setScmId(scmId)
+        .setOMServiceId(omServiceId)
         .setNumOfOzoneManagers(numOMs)
         .build();
     cluster.waitForClusterToBeReady();
@@ -120,7 +123,6 @@ public class TestOzoneFsHAURLs {
 
     Assert.assertEquals(LifeCycle.State.RUNNING, om.getOmRatisServerState());
 
-    // Inspired by TestOzoneManagerHA#setupBucket
     volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     ObjectStore objectStore =
         OzoneClientFactory.getRpcClient(omServiceId, conf).getObjectStore();
@@ -131,23 +133,12 @@ public class TestOzoneFsHAURLs {
     retVolumeinfo.createBucket(bucketName);
     ozoneBucket = retVolumeinfo.getBucket(bucketName);
 
-    /*
-    // create a volume and a bucket to be used by OzoneFileSystem,
-    // borrowed from TestOzoneFileSystem#init
-    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
-    String volumeName = bucket.getVolumeName();
-    String bucketName = bucket.getName();
-    String rootPath = String.format("%s://%s.%s." + omServiceId,
-        OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
-     */
-
     rootPath = String
         .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
             volumeName, omServiceId);
-    // Set the fs.defaultFS and start the filesystem
+    // Set fs.defaultFS
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
     FileSystem fs = FileSystem.get(conf);
-
     // Create some dirs
     Path root = new Path("/");
     Path dir1 = new Path(root, "dir1");
@@ -172,21 +163,31 @@ public class TestOzoneFsHAURLs {
     Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, omServiceId);
     assert(omNodeIds.size() == numOMs);
     MiniOzoneHAClusterImpl haCluster = (MiniOzoneHAClusterImpl) cluster;
+    // Note: this loop may be implemented inside MiniOzoneHAClusterImpl
     for (String omNodeId : omNodeIds) {
       // Find the leader OM
       if (!haCluster.getOzoneManager(omNodeId).isLeader()) {
         continue;
       }
-      LOG.info("Leader OM node ID is " + omNodeId);
       // ozone.om.address.omServiceId.omNode
       String leaderOMNodeAddrKey = OmUtils.addKeySuffixes(
           OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodeId);
       leaderOMNodeAddr = conf.get(leaderOMNodeAddrKey);
+      LOG.info("Found leader OM: nodeId=" + omNodeId + ", " +
+          leaderOMNodeAddrKey + "=" + leaderOMNodeAddr);
+      // Leader found, no need to continue loop
+      break;
     }
+    // There has to be a leader
     assert(leaderOMNodeAddr != null);
     return leaderOMNodeAddr;
   }
 
+  /**
+   * Get port number from an address. This uses getHostPort() internally.
+   * @param addr Address with port
+   * @return The port number
+   */
   private int getPortFromAddress(String addr) {
     Optional<Integer> portOptional = getHostPort(addr);
     assert(portOptional.isPresent());
@@ -194,13 +195,12 @@ public class TestOzoneFsHAURLs {
   }
 
   /**
-   * Test OM HA URLs
+   * Test OM HA URLs with qualified fs.defaultFS
    * @throws Exception
    */
   @Test
   public void testWithQualifiedDefaultFS() throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
-    // Inspired by TestFsShell#testTracing
     clientConf.setQuietMode(false);
     clientConf.set(FS_O3FS_IMPL_KEY, FS_O3FS_IMPL_VALUE);
     // fs.defaultFS = o3fs://bucketName.volumeName.omServiceId/
@@ -210,7 +210,6 @@ public class TestOzoneFsHAURLs {
     // the test case: ozone fs -ls o3fs://bucket.volume.om1/
     String leaderOMNodeAddr = getLeaderOMNodeAddr();
     // ozone.om.address was set to service id in MiniOzoneHAClusterImpl
-//    System.out.println("Previous ozone.om.address=" + clientConf.get("ozone.om.address"));
     clientConf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, leaderOMNodeAddr);
 
     FsShell shell = new FsShell(clientConf);
@@ -245,16 +244,14 @@ public class TestOzoneFsHAURLs {
       Assert.assertEquals(res, -1);
 
       // Test case 4: ozone fs -ls o3fs://bucket.volume.om1/
-      // Expectation: Success. The client would use the port number
-      // we set in ozone.om.address.
+      // Expectation: Success. The client should use the port number
+      // set in ozone.om.address.
       String qualifiedPath1 = String.format("%s://%s.%s.%s/",
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
           om.getOmRpcServerAddr().getHostName());
-//      System.out.println("!!! omNodeAddress1 = " + omNodeAddress1);
-//      System.out.println("!!! qualifiedPath1 = " + qualifiedPath1);
       res = ToolRunner.run(shell, new String[] { "-ls", qualifiedPath1 });
-      // TODO: this test case will fail if the port is not a leader node
-      // Why does a read-only operation require a leader node?
+      // Note: this test case will fail if the port is not from the leader node
+      // Q: Why does a read-only operation require a leader node?
       Assert.assertEquals(res, 0);
 
       // Test case 5: ozone fs -ls o3fs://bucket.volume.om1:port/
@@ -315,6 +312,10 @@ public class TestOzoneFsHAURLs {
     }
   }
 
+  /**
+   * Test OM HA URLs with some unqualified fs.defaultFS
+   * @throws Exception
+   */
   @Test
   public void testOtherDefaultFS() throws Exception {
     // Test scenarios where fs.defaultFS isn't a fully qualified o3fs
