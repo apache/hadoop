@@ -2643,7 +2643,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // dest is also a directory, there's no difference.
       // TODO After HADOOP-16085 the modification detection can be done with
       //  etags or object version instead of modTime
-      boolean allowAuthoritative = allowAuthoritative(path;
+      boolean allowAuthoritative = allowAuthoritative(path);
       if (!pm.getFileStatus().isDirectory() &&
           !allowAuthoritative &&
           !onlyProbeForDirectory) {
