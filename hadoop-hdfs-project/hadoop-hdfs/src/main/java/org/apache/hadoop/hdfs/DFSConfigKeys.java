@@ -115,6 +115,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.datanode.balance.max.concurrent.moves";
   public static final int
       DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT = 100;
+  public static final String DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.data.transfer.bandwidthPerSec";
+  public static final long DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
