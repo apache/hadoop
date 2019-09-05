@@ -1049,6 +1049,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       jvmOpts += DEFAULT_AM_JVM_XMX;
     }
 
+    // validate possible command injection.
+    ServiceApiUtil.validateJvmOpts(jvmOpts);
+
     CLI.setJVMOpts(jvmOpts);
     if (hasSliderAMLog4j) {
       CLI.sysprop(SYSPROP_LOG4J_CONFIGURATION, YARN_SERVICE_LOG4J_FILENAME);
