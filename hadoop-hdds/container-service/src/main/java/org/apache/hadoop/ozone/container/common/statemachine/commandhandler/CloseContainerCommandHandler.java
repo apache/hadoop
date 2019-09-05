@@ -86,10 +86,11 @@ public class CloseContainerCommandHandler implements CommandHandler {
         return;
       }
 
+      // move the container to CLOSING if in OPEN state
+      controller.markContainerForClose(containerId);
+
       switch (container.getContainerState()) {
       case OPEN:
-        // move the container to CLOSING state
-        controller.markContainerForClose(containerId);
       case CLOSING:
         // If the container is part of open pipeline, close it via write channel
         if (ozoneContainer.getWriteChannel()
@@ -115,6 +116,8 @@ public class CloseContainerCommandHandler implements CommandHandler {
       case INVALID:
         LOG.debug("Cannot close the container #{}, the container is"
             + " in {} state.", containerId, container.getContainerState());
+      default:
+        break;
       }
     } catch (NotLeaderException e) {
       LOG.debug("Follower cannot close container #{}.", containerId);
