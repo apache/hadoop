@@ -102,6 +102,11 @@ public class BasicOzoneFileSystem extends FileSystem {
         "Invalid scheme provided in " + name);
 
     String authority = name.getAuthority();
+    if (authority == null) {
+      // authority is null when fs.defaultFS is not a qualified o3fs URI and
+      // o3fs:/// is passed to the client. matcher will NPE if authority is null
+      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+    }
 
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
@@ -121,7 +126,12 @@ public class BasicOzoneFileSystem extends FileSystem {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      // omHost is not in the service ids list
+      if (OmUtils.isOmHAServiceId(conf, omHost) && parts.length > 1) {
+        // If omHost is a service id, it shouldn't use a port
+        throw new IllegalArgumentException("Port " + parts[1] +
+            " specified in URI " + name + " but host '" + omHost + "' is "
+            + "a logical (HA) OzoneManager and does not use port information.");
+      }
       if (parts.length == 2) {
         try {
           omPort = Integer.parseInt(parts[1]);
@@ -132,6 +142,13 @@ public class BasicOzoneFileSystem extends FileSystem {
         // If port number is not specified, read it from config
         omPort = OmUtils.getOmRpcPort(conf);
       }
+    } else if (OmUtils.isServiceIdsDefined(conf)) {
+      // When host name or service id is given, and ozone.om.service.ids is
+      // defined, fail here as of current design.
+      // This can be seen as a safety precaution so that we don't accidentally
+      // fallback to a wrong cluster. Can be extended in the future.
+      throw new IllegalArgumentException("Service ID or host name must not"
+          + " be omitted when ozone.om.service.ids is defined.");
     }
 
     try {
