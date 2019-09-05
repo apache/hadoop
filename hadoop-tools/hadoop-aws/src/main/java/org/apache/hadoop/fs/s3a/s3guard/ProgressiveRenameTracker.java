@@ -231,12 +231,13 @@ public class ProgressiveRenameTracker extends RenameTracker {
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "delete %s metastore entries", paths.size())) {
       getMetadataStore().move(paths, null, getOperationState());
+      getMetadataStore().deletePaths(paths, getOperationState());
     }
   }
 
   @Override
   public synchronized void completeRename() throws IOException {
-    // and finish off; by deleting source directories.
+    // and finish off by deleting source directories.
     sourceObjectsDeleted(pathsToDelete);
     super.completeRename();
   }

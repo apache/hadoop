@@ -760,6 +760,7 @@ public final class S3Guard {
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */
+  @Retries.RetryTranslated
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
       Path path, @Nullable ITtlTimeProvider timeProvider)
       throws IOException {
@@ -792,6 +793,14 @@ public final class S3Guard {
     return authoritativePaths;
   }
 
+  /**
+   * Is the path for the given FS instance authoritative?
+   * @param p path
+   * @param fs filesystem
+   * @param authMetadataStore is the MS authoritative.
+   * @param authPaths possibly empty list of authoritative paths
+   * @return true iff the path is authoritative
+   */
   public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
       boolean authMetadataStore, Collection<String> authPaths) {
     String haystack = fs.maybeAddTrailingSlash(fs.qualify(p).toString());

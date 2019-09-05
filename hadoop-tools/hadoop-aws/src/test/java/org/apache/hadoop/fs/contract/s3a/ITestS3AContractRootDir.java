@@ -85,7 +85,8 @@ public class ITestS3AContractRootDir extends
         if (attempt < maxAttempts) {
           LOG.info("Attempt {} of {} for empty root directory test failed.  "
               + "This is likely caused by eventual consistency of S3 "
-              + "listings.  Attempting retry.", attempt, maxAttempts);
+              + "listings.  Attempting retry.", attempt, maxAttempts,
+              e);
           try {
             Thread.sleep(1000);
           } catch (InterruptedException e2) {

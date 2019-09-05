@@ -316,7 +316,10 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void deleteObjectAtPath(Path f, String key, boolean isFile)
+  void deleteObjectAtPath(Path f,
+      String key,
+      boolean isFile,
+      final BulkOperationState operationState)
       throws AmazonClientException, IOException {
     deleteObject(key);
   }
