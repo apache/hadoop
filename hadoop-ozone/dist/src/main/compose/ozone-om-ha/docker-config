@@ -14,10 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.om.nodes=om1,om2,om3
-OZONE-SITE.XML_ozone.om.address.om1=om1
-OZONE-SITE.XML_ozone.om.address.om2=om2
-OZONE-SITE.XML_ozone.om.address.om3=om3
+CORE-SITE.XML_fs.o3fs.impl=org.apache.hadoop.fs.ozone.OzoneFileSystem
+CORE-SITE.XML_fs.defaultFS=o3fs://bucket.volume.id1
+OZONE-SITE.XML_ozone.om.service.ids=id1
+OZONE-SITE.XML_ozone.om.nodes.id1=om1,om2,om3
+OZONE-SITE.XML_ozone.om.address.id1.om1=om1
+OZONE-SITE.XML_ozone.om.address.id1.om2=om2
+OZONE-SITE.XML_ozone.om.address.id1.om3=om3
 OZONE-SITE.XML_ozone.om.ratis.enable=true
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
