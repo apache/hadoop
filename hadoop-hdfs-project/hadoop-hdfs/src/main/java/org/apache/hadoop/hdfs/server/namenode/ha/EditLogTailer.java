@@ -435,9 +435,11 @@ public class EditLogTailer {
           // There's no point in triggering a log roll if the Standby hasn't
           // read any more transactions since the last time a roll was
           // triggered.
+          boolean triggeredLogRoll = false;
           if (tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
+            triggeredLogRoll = true;
           }
           /**
            * Check again in case someone calls {@link EditLogTailer#stop} while
@@ -458,7 +460,9 @@ public class EditLogTailer {
             namesystem.cpUnlock();
           }
           //Update NameDirSize Metric
-          namesystem.getFSImage().getStorage().updateNameDirSize();
+          if (triggeredLogRoll) {
+            namesystem.getFSImage().getStorage().updateNameDirSize();
+          }
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
