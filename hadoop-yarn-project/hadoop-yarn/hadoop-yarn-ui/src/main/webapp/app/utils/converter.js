@@ -83,7 +83,7 @@ export default {
     return total * 1000;
   },
   timeStampToDate: function(timeStamp) {
-    return convertTimestampWithTz(timeStamp, "YYYY/MM/DD HH:mm:ss");
+    return timeStamp === 0 ? "NA" : convertTimestampWithTz(timeStamp, "YYYY/MM/DD HH:mm:ss");
   },
   timeStampToDateOnly: function(timeStamp) {
     return convertTimestampWithTz(timeStamp, "YYYY/MM/DD");
