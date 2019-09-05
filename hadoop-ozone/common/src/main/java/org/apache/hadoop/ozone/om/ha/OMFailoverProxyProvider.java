@@ -92,25 +92,22 @@ public class OMFailoverProxyProvider implements
     this(configuration, ugi, null);
   }
 
-  private void loadOMClientConfigs(Configuration config, String omServiceId)
+  private void loadOMClientConfigs(Configuration config, String omSvcId)
       throws IOException {
     this.omProxies = new HashMap<>();
     this.omProxyInfos = new HashMap<>();
     this.omNodeIDList = new ArrayList<>();
 
     Collection<String> omServiceIds;
-    if (omServiceId == null) {
-      // If no omServiceId is passed in
-      // TODO: this branch will only be executed when omServiceId is not passed,
-      // which means the user-specified hostname/service id doesn't match any of
-      // ozone.om.service.ids on the client side, in this case, just treat it as
-      // non-HA, correct?  Just put an empty array?
+    if (omSvcId == null) {
+      // When no OM service id is passed in
+      // Note: this branch will only be followed when omSvcId is null,
+      // meaning the host name/service id provided by user doesn't match any
+      // ozone.om.service.ids on the client side. Therefore, in this case
+      // just treat it as non-HA by assigning an empty list to omServiceIds
       omServiceIds = new ArrayList<>();
-      // The following is the original fall back to reading from config
-//      omServiceIds = config.getTrimmedStringCollection(
-//          OZONE_OM_SERVICE_IDS_KEY);
     } else {
-      omServiceIds = Collections.singletonList(omServiceId);
+      omServiceIds = Collections.singletonList(omSvcId);
     }
 
     // TODO: Remove this warning? Or change the message?
