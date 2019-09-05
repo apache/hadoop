@@ -103,6 +103,7 @@ import javax.crypto.CipherOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.InvalidKeyException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -611,6 +612,12 @@ public class RpcClient implements ClientProtocol {
         GDPRSymmetricKey gKey = new GDPRSymmetricKey();
         metadata.putAll(gKey.getKeyDetails());
       }catch (Exception e) {
+        if(e instanceof InvalidKeyException &&
+            e.getMessage().contains("Illegal key size or default parameters")) {
+          LOG.error("Missing Unlimited Strength Policy jars. Please install " +
+              "Java Cryptography Extension (JCE) Unlimited Strength " +
+              "Jurisdiction Policy Files");
+        }
         throw new IOException(e);
       }
     }

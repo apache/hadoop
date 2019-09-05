@@ -315,7 +315,7 @@ public final class OzoneConsts {
   //GDPR
   public static final String GDPR_FLAG = "gdprEnabled";
   public static final String GDPR_ALGORITHM_NAME = "AES";
-  public static final int GDPR_RANDOM_SECRET_LENGTH = 32;
+  public static final int GDPR_DEFAULT_RANDOM_SECRET_LENGTH = 16;
   public static final String GDPR_CHARSET = "UTF-8";
   public static final String GDPR_LENGTH = "length";
   public static final String GDPR_SECRET = "secret";
