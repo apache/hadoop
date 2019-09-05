@@ -42,6 +42,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
 public class TestNoHaRMFailoverProxyProvider {
+    private final int NODE_MANAGER_COUNT = 1;
     private Configuration conf;
 
     @Before
@@ -53,7 +54,7 @@ public class TestNoHaRMFailoverProxyProvider {
     public void testRestartedRM() throws Exception {
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", 1, 1, 1);
+                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
         YarnClient rmClient = YarnClient.createYarnClient();
         try {
             cluster.init(conf);
@@ -65,7 +66,7 @@ public class TestNoHaRMFailoverProxyProvider {
             List<NodeReport> nodeReports = rmClient.getNodeReports();
             Assert.assertEquals(
                     "The proxy didn't get expected number of node reports",
-                    1, nodeReports.size());
+                    NODE_MANAGER_COUNT, nodeReports.size());
         } finally {
             if (rmClient != null) {
                 rmClient.stop();
@@ -85,7 +86,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
         MiniYARNCluster cluster =
                 new MiniYARNCluster(
-                        "testRestartedRMNegative", 1, 1, 1);
+                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
         YarnClient rmClient = null;
         try {
             cluster.init(conf);
@@ -97,7 +98,7 @@ public class TestNoHaRMFailoverProxyProvider {
             List<NodeReport> nodeReports = rmClient.getNodeReports();
             Assert.assertEquals(
                     "The proxy didn't get expected number of node reports",
-                    1, nodeReports.size());
+                    NODE_MANAGER_COUNT, nodeReports.size());
         } finally {
             if (rmClient != null) {
                 rmClient.stop();
