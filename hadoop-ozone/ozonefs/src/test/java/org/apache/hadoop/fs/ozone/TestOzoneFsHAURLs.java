@@ -285,6 +285,13 @@ public class TestOzoneFsHAURLs {
     }
   }
 
+  /**
+   * Helper function for testOtherDefaultFS(),
+   * run fs -ls o3fs:/// against different fs.defaultFS input.
+   *
+   * @param defaultFS Desired fs.defaultFS to be used in the test
+   * @throws Exception
+   */
   private void testWithDefaultFS(String defaultFS) throws Exception {
     OzoneConfiguration clientConf = new OzoneConfiguration(conf);
     clientConf.setQuietMode(false);
@@ -296,7 +303,7 @@ public class TestOzoneFsHAURLs {
     FsShell shell = new FsShell(clientConf);
     try {
       // Test case: ozone fs -ls o3fs:///
-      // Expectation: Fail. fs.defaultFS does not begin with o3fs://
+      // Expectation: Fail. fs.defaultFS is not a qualified o3fs URI.
       int res = ToolRunner.run(shell, new String[] { "-ls", "o3fs:///" });
       Assert.assertEquals(res, -1);
     } finally {
