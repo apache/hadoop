@@ -472,7 +472,6 @@ public class SCMNodeManager implements NodeManager {
     return nodeInfo;
   }
 
-
   /**
    * Get set of pipelines a datanode is part of.
    * @param datanodeDetails - datanodeID
@@ -483,6 +482,15 @@ public class SCMNodeManager implements NodeManager {
     return nodeStateManager.getPipelineByDnID(datanodeDetails.getUuid());
   }
 
+  /**
+   * Get the count of pipelines a datanodes is associated with.
+   * @param datanodeDetails DatanodeDetails
+   * @return The number of pipelines
+   */
+  @Override
+  public int getPipelinesCount(DatanodeDetails datanodeDetails) {
+    return nodeStateManager.getPipelinesCount(datanodeDetails);
+  }
 
   /**
    * Add pipeline information in the NodeManager.
@@ -607,6 +615,15 @@ public class SCMNodeManager implements NodeManager {
     }
     LOG.warn("Cannot find node for address {}", address);
     return null;
+  }
+
+  /**
+   * Get cluster map as in network topology for this node manager.
+   * @return cluster map
+   */
+  @Override
+  public NetworkTopology getClusterNetworkTopologyMap() {
+    return clusterMap;
   }
 
   private String nodeResolve(String hostname) {

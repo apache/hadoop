@@ -16,11 +16,13 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.net.Node;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -85,7 +87,7 @@ public class MockNodeManager implements NodeManager {
   private final SCMNodeStat aggregateStat;
   private boolean safemode;
   private final Map<UUID, List<SCMCommand>> commandMap;
-  private final Node2PipelineMap node2PipelineMap;
+  private Node2PipelineMap node2PipelineMap;
   private final Node2ContainerMap node2ContainerMap;
   private NetworkTopology clusterMap;
   private ConcurrentHashMap<String, String> dnsToUuidMap;
@@ -99,6 +101,7 @@ public class MockNodeManager implements NodeManager {
     this.node2ContainerMap = new Node2ContainerMap();
     this.dnsToUuidMap = new ConcurrentHashMap();
     aggregateStat = new SCMNodeStat();
+    clusterMap = new NetworkTopologyImpl(new Configuration());
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
         DatanodeDetails dd = TestUtils.randomDatanodeDetails();
@@ -250,12 +253,38 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
+   * Get the count of pipelines a datanodes is associated with.
+   * @param datanodeDetails DatanodeDetails
+   * @return The number of pipelines
+   */
+  @Override
+  public int getPipelinesCount(DatanodeDetails datanodeDetails) {
+    return node2PipelineMap.getPipelinesCount(datanodeDetails.getUuid());
+  }
+
+  /**
    * Add pipeline information in the NodeManager.
    * @param pipeline - Pipeline to be added
    */
   @Override
   public void addPipeline(Pipeline pipeline) {
     node2PipelineMap.addPipeline(pipeline);
+  }
+
+  /**
+   * Get the entire Node2PipelineMap.
+   * @return Node2PipelineMap
+   */
+  public Node2PipelineMap getNode2PipelineMap() {
+    return node2PipelineMap;
+  }
+
+  /**
+   * Set the Node2PipelineMap.
+   * @param node2PipelineMap Node2PipelineMap
+   */
+  public void setNode2PipelineMap(Node2PipelineMap node2PipelineMap) {
+    this.node2PipelineMap = node2PipelineMap;
   }
 
   /**
@@ -486,6 +515,11 @@ public class MockNodeManager implements NodeManager {
   @Override
   public DatanodeDetails getNodeByAddress(String address) {
     return getNodeByUuid(dnsToUuidMap.get(address));
+  }
+
+  @Override
+  public NetworkTopology getClusterNetworkTopologyMap() {
+    return clusterMap;
   }
 
   public void setNetworkTopology(NetworkTopology topology) {
