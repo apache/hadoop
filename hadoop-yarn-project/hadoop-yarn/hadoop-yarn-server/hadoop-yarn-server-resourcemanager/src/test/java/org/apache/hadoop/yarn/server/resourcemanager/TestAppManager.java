@@ -110,6 +110,7 @@ import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Testing applications being retired from RM.
@@ -998,6 +999,7 @@ public class TestAppManager{
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
     when(app.getLaunchTime()).thenReturn(2000L);
+    when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -1025,7 +1027,8 @@ public class TestAppManager{
     assertTrue(msg.contains("preemptedNonAMContainers=10"));
     assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
     assertTrue(msg.contains("applicationType=MAPREDUCE"));
- }
+    assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
+  }
 
   @Test
   public void testRMAppSubmitWithQueueChanged() throws Exception {
