@@ -611,6 +611,11 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     containerData.updateBlockCommitSequenceId(blockCommitSequenceId);
   }
 
+  @Override
+  public long getBlockCommitSequenceId() {
+    return containerData.getBlockCommitSequenceId();
+  }
+
 
   /**
    * Returns KeyValueContainerReport for the KeyValueContainer.
