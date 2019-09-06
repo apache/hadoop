@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -211,7 +212,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               .getResourceSecondsString(metrics.getResourceSecondsMap()))
           .add("preemptedResourceSeconds", StringHelper
               .getResourceSecondsString(
-                  metrics.getPreemptedResourceSecondsMap()));
+                  metrics.getPreemptedResourceSecondsMap()))
+          .add("applicationTags", StringHelper.CSV_JOINER.join(
+              app.getApplicationTags() != null ? new TreeSet<>(
+                  app.getApplicationTags()) : Collections.<String>emptySet()));
       return summary;
     }
 
