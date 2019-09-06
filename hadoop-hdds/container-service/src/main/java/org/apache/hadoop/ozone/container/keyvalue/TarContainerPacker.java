@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
 
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
@@ -57,6 +58,8 @@ public class TarContainerPacker
   private static final String DB_DIR_NAME = "db";
 
   private static final String CONTAINER_FILE_NAME = "container.yaml";
+
+  private static final String CONTAINER_BCSID = "BCSID";
 
 
 
@@ -233,6 +236,16 @@ public class TarContainerPacker
       includeFile(path.toFile(), subdir + "/" + path.getFileName(),
           archiveOutputStream);
     }
+  }
+
+  private void includeBCSID(ArchiveOutputStream archiveOutputStream, long bcsID)
+      throws IOException {
+    File bcsIDFile = new File(CONTAINER_BCSID);
+    ArchiveEntry archiveEntry =
+        archiveOutputStream.createArchiveEntry(bcsIDFile, CONTAINER_BCSID);
+    archiveOutputStream.putArchiveEntry(archiveEntry);
+    IOUtils.write(Longs.toByteArray(bcsID), archiveOutputStream);
+    archiveOutputStream.closeArchiveEntry();
   }
 
   private void includeFile(File file, String entryName,

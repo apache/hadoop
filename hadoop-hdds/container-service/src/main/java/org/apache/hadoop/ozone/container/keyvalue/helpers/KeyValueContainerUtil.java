@@ -24,12 +24,15 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
@@ -193,6 +196,10 @@ public final class KeyValueContainerUtil {
       }).sum();
       kvContainerData.setBytesUsed(bytesUsed);
       kvContainerData.setKeyCount(liveKeys.size());
+      byte[] bcsId = metadata.getStore().get(DFSUtil.string2Bytes(
+          OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
+      Preconditions.checkNotNull(bcsId);
+      kvContainerData.updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
     }
   }
 
