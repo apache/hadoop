@@ -348,7 +348,7 @@ public class TestWebHdfsTokens {
             @Override
             Token<DelegationTokenIdentifier> decodeResponse(Map<?, ?> json)
                 throws IOException {
-              return JsonUtilClient.toDelegationToken(json);
+              return WebHdfsTestUtil.convertJsonToDelegationToken(json);
             }
           }.run();
 
