@@ -532,6 +532,24 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.include-path";
   public static final String DEFAULT_RM_NODES_INCLUDE_FILE_PATH = "";
+
+  /** Enable submission pre-processor.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      RM_PREFIX + "submission-preprocessor.enabled";
+  public static final boolean DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      false;
+
+  /** Path to file with hosts for the submission processor to handle.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      RM_PREFIX + "submission-preprocessor.file-path";
+  public static final String DEFAULT_RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      "";
+
+  /** Submission processor refresh interval.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS =
+      RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
+  public static final int
+      DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
   
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
