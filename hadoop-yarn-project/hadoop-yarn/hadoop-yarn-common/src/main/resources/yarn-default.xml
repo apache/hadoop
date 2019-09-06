@@ -4263,4 +4263,25 @@
     <name>yarn.nodemanager.containers-launcher.class</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher</value>
   </property>
+
+  <property>
+    <description>
+      Enable the Pre processing of Application Submission context with server side configuration
+    </description>
+    <name>yarn.resourcemanager.submission-preprocessor.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Path to file with hosts for the submission processor to handle.</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Submission processor refresh interval</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-refresh-interval-ms</name>
+    <value>60000</value>
+  </property>
+
 </configuration>
