@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_SCRUB_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT;
 
 /**
  * Select an appropriate ChunkManager implementation as per config setting.
@@ -64,12 +66,12 @@ public final class ChunkManagerFactory {
 
     if (!persist) {
       boolean scrubber = config.getBoolean(
-          "hdds.containerscrub.enabled",
-          false);
+          HDDS_CONTAINER_SCRUB_ENABLED,
+          HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT);
       if (scrubber) {
         // Data Scrubber needs to be disabled for non-persistent chunks.
         LOG.warn("Failed to set " + HDDS_CONTAINER_PERSISTDATA + " to false."
-            + " Please set hdds.containerscrub.enabled"
+            + " Please set " + HDDS_CONTAINER_SCRUB_ENABLED
             + " also to false to enable non-persistent containers.");
         persist = true;
       }
