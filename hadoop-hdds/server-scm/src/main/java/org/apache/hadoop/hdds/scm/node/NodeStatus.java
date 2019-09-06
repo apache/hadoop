@@ -85,4 +85,9 @@ public class NodeStatus {
     return Objects.hash(health, operationalState);
   }
 
+  @Override
+  public String toString() {
+    return "OperationalState: "+operationalState+" Health: "+health;
+  }
+
 }

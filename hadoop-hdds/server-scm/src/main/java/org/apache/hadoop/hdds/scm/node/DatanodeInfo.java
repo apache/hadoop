@@ -42,16 +42,19 @@ public class DatanodeInfo extends DatanodeDetails {
 
   private List<StorageReportProto> storageReports;
 
+  private NodeStatus nodeStatus;
+
   /**
    * Constructs DatanodeInfo from DatanodeDetails.
    *
    * @param datanodeDetails Details about the datanode
    */
-  public DatanodeInfo(DatanodeDetails datanodeDetails) {
+  public DatanodeInfo(DatanodeDetails datanodeDetails, NodeStatus nodeStatus) {
     super(datanodeDetails);
     this.lock = new ReentrantReadWriteLock();
     this.lastHeartbeatTime = Time.monotonicNow();
     this.storageReports = Collections.emptyList();
+    this.nodeStatus = nodeStatus;
   }
 
   /**
@@ -117,6 +120,37 @@ public class DatanodeInfo extends DatanodeDetails {
       return storageReports;
     } finally {
       lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Return the current NodeStatus for the datanode
+   *
+   * @return NodeStatus - the current nodeStatus
+   */
+  public NodeStatus getNodeStatus() {
+    try {
+      lock.readLock().lock();
+      return nodeStatus;
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Update the NodeStatus for this datanode. When using this method
+   * be ware of the potential for lost updates if two threads read the
+   * current status, update one field and then write it back without
+   * locking enforced outside of this class.
+   *
+   * @param newNodeStatus - the new NodeStatus object
+   */
+  public void setNodeStatus(NodeStatus newNodeStatus) {
+    try {
+      lock.writeLock().lock();
+      this.nodeStatus = newNodeStatus;
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 

@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -37,15 +36,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * this class.
  */
 public class NodeStateMap {
-
   /**
    * Node id to node info map.
    */
   private final ConcurrentHashMap<UUID, DatanodeInfo> nodeMap;
-  /**
-   * Represents the current state of node.
-   */
-  private final ConcurrentHashMap<UUID, NodeStatus> stateMap;
   /**
    * Node to set of containers on the node.
    */
@@ -59,7 +53,6 @@ public class NodeStateMap {
   public NodeStateMap() {
     lock = new ReentrantReadWriteLock();
     nodeMap = new ConcurrentHashMap<>();
-    stateMap = new ConcurrentHashMap<>();
     nodeToContainer = new ConcurrentHashMap<>();
   }
 
@@ -79,9 +72,8 @@ public class NodeStateMap {
       if (nodeMap.containsKey(id)) {
         throw new NodeAlreadyExistsException("Node UUID: " + id);
       }
-      nodeMap.put(id, new DatanodeInfo(datanodeDetails));
+      nodeMap.put(id, new DatanodeInfo(datanodeDetails, nodeStatus));
       nodeToContainer.put(id, Collections.emptySet());
-      stateMap.put(id, nodeStatus);
     } finally {
       lock.writeLock().unlock();
     }
@@ -99,10 +91,11 @@ public class NodeStateMap {
       throws NodeNotFoundException {
     try {
       lock.writeLock().lock();
-      NodeStatus oldStatus = getNodeStatus(nodeId);
+      DatanodeInfo dn = getNodeInfo(nodeId);
+      NodeStatus oldStatus = dn.getNodeStatus();
       NodeStatus newStatus = new NodeStatus(
           oldStatus.getOperationalState(), newHealth);
-      stateMap.put(nodeId, newStatus);
+      dn.setNodeStatus(newStatus);
       return newStatus;
     } finally {
       lock.writeLock().unlock();
@@ -121,10 +114,11 @@ public class NodeStateMap {
       NodeOperationalState newOpState) throws NodeNotFoundException {
     try {
       lock.writeLock().lock();
-      NodeStatus oldStatus = getNodeStatus(nodeId);
+      DatanodeInfo dn = getNodeInfo(nodeId);
+      NodeStatus oldStatus = dn.getNodeStatus();
       NodeStatus newStatus = new NodeStatus(
           newOpState, oldStatus.getHealth());
-      stateMap.put(nodeId, newStatus);
+      dn.setNodeStatus(newStatus);
       return newStatus;
     } finally {
       lock.writeLock().unlock();
@@ -154,17 +148,16 @@ public class NodeStateMap {
   /**
    * Returns the list of node ids which are in the specified state.
    *
-   * @param state NodeStatus
+   * @param status NodeStatus
    *
    * @return list of node ids
    */
-  public List<UUID> getNodes(NodeStatus state) {
-    // TODO - do we need stateMap to be state -> Set as it used to be?
+  public List<UUID> getNodes(NodeStatus status) {
     lock.readLock().lock();
     ArrayList<UUID> nodes = new ArrayList<>();
     try {
-      for(Map.Entry<UUID, NodeStatus> entry : stateMap.entrySet()) {
-        if (entry.getValue().equals(state)) {
+      for(Map.Entry<UUID, DatanodeInfo> entry : nodeMap.entrySet()) {
+        if (entry.getValue().getNodeStatus().equals(status)) {
           nodes.add(entry.getKey());
         }
       }
@@ -244,13 +237,12 @@ public class NodeStateMap {
   public NodeStatus getNodeStatus(UUID uuid) throws NodeNotFoundException {
     lock.readLock().lock();
     try {
-      checkIfNodeExist(uuid);
-      NodeStatus nodeStatus = stateMap.get(uuid);
-      if (nodeStatus == null) {
-        throw new NodeNotFoundException("Node not found in node state map." +
+      DatanodeInfo dn = nodeMap.get(uuid);
+      if (dn == null) {
+        throw new NodeNotFoundException("Node not found in node map." +
             " UUID: " + uuid);
       }
-      return nodeStatus;
+      return dn.getNodeStatus();
     } finally {
       lock.readLock().unlock();
     }
