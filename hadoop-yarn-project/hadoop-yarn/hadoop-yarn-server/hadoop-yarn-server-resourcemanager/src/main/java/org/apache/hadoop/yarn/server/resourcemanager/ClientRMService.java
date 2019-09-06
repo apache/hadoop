@@ -153,6 +153,7 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.preprocessor.SubmissionContextPreProcessor;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
@@ -216,6 +217,8 @@ public class ClientRMService extends AbstractService implements
   private Clock clock;
   private ReservationSystem reservationSystem;
   private ReservationInputValidator rValidator;
+
+  private SubmissionContextPreProcessor contextPreProcessor;
 
   private boolean filterAppsByUser = false;
 
@@ -297,6 +300,14 @@ public class ClientRMService extends AbstractService implements
                                                server.getListenerAddress());
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(conf);
+
+    if (conf.getBoolean(
+        YarnConfiguration.RM_SUBMISSION_PREPROCESSOR_ENABLED,
+        YarnConfiguration.DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED)) {
+      this.contextPreProcessor = new SubmissionContextPreProcessor();
+      this.contextPreProcessor.start(conf);
+    }
+
     super.serviceStart();
   }
 
@@ -304,6 +315,9 @@ public class ClientRMService extends AbstractService implements
   protected void serviceStop() throws Exception {
     if (this.server != null) {
         this.server.stop();
+    }
+    if (this.contextPreProcessor != null) {
+      this.contextPreProcessor.stop();
     }
     super.serviceStop();
   }
@@ -314,6 +328,11 @@ public class ClientRMService extends AbstractService implements
             YarnConfiguration.RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_PORT);
+  }
+
+  @VisibleForTesting
+  SubmissionContextPreProcessor getContextPreProcessor() {
+    return this.contextPreProcessor;
   }
 
   @Private
@@ -646,6 +665,11 @@ public class ClientRMService extends AbstractService implements
 
     checkReservationACLs(submissionContext.getQueue(), AuditConstants
             .SUBMIT_RESERVATION_REQUEST, reservationId);
+
+    if (this.contextPreProcessor != null) {
+      this.contextPreProcessor.preProcess(Server.getRemoteIp().getHostName(),
+          applicationId, submissionContext);
+    }
 
     try {
       // call RMAppManager to submit application directly
