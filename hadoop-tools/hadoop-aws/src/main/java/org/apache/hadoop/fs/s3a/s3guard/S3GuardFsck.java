@@ -275,12 +275,14 @@ public class S3GuardFsck {
       comparePair.violations.add(Violation.VERSIONID_MISMATCH);
     }
 
-
-    if (msPathMetadata.getFileStatus().getETag() == null) {
-      comparePair.violations.add(Violation.NO_ETAG);
-    } else if (s3FileStatus.getETag() != null &&
-        !s3FileStatus.getETag().equals(msFileStatus.getETag())) {
-      comparePair.violations.add(Violation.ETAG_MISMATCH);
+    // check etag only for files, and not directories
+    if (!s3FileStatus.isDirectory()) {
+      if (msPathMetadata.getFileStatus().getETag() == null) {
+        comparePair.violations.add(Violation.NO_ETAG);
+      } else if (s3FileStatus.getETag() != null &&
+          !s3FileStatus.getETag().equals(msFileStatus.getETag())) {
+        comparePair.violations.add(Violation.ETAG_MISMATCH);
+      }
     }
 
     return comparePair;
