@@ -71,7 +71,7 @@ function ozonecmd_case
 
   ozone_default_log4j="${HADOOP_CONF_DIR}/log4j.properties"
   ozone_shell_log4j="${HADOOP_CONF_DIR}/ozone-shell-log4j.properties"
-  if [ ! -f ${ozone_shell_log4j} ]; then
+  if [ ! -f "${ozone_shell_log4j}" ]; then
     ozone_shell_log4j=${ozone_default_log4j}
   fi
 
