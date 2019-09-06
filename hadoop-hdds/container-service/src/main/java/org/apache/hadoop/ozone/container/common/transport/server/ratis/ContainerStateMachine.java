@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenExcep
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -138,6 +139,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       new SimpleStateMachineStorage();
   private final RaftGroupId gid;
   private final ContainerDispatcher dispatcher;
+  private final ContainerController containerController;
   private ThreadPoolExecutor chunkExecutor;
   private final XceiverServerRatis ratisServer;
   private final ConcurrentHashMap<Long,
@@ -160,11 +162,13 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   @SuppressWarnings("parameternumber")
   public ContainerStateMachine(RaftGroupId gid, ContainerDispatcher dispatcher,
-      ThreadPoolExecutor chunkExecutor, XceiverServerRatis ratisServer,
-      long expiryInterval, boolean isBlockTokenEnabled,
-      TokenVerifier tokenVerifier, Configuration conf) {
+      ContainerController containerController, ThreadPoolExecutor chunkExecutor,
+      XceiverServerRatis ratisServer, long expiryInterval,
+      boolean isBlockTokenEnabled, TokenVerifier tokenVerifier,
+      Configuration conf) {
     this.gid = gid;
     this.dispatcher = dispatcher;
+    this.containerController = containerController;
     this.chunkExecutor = chunkExecutor;
     this.ratisServer = ratisServer;
     metrics = CSMMetrics.create(gid);
@@ -215,6 +219,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     super.initialize(server, id, raftStorage);
     storage.init(raftStorage);
+    ratisServer.notifyGroupAdd(gid);
 
     loadSnapshot(storage.getLatestSnapshot());
   }
@@ -798,6 +803,21 @@ public class ContainerStateMachine extends BaseStateMachine {
     final CompletableFuture<TermIndex> future = new CompletableFuture<>();
     future.complete(firstTermIndexInLog);
     return future;
+  }
+
+  @Override
+  public void notifyGroupRemove() {
+    ratisServer.notifyGroupRemove(gid);
+    // Make best effort to quasi-close all the containers on group removal.
+    // Containers already in terminal state like CLOSED or UNHEALTHY will not
+    // be affected.
+    for (Long cid : createContainerSet) {
+      try {
+        containerController.markContainerForClose(cid);
+        containerController.quasiCloseContainer(cid);
+      } catch (IOException e) {
+      }
+    }
   }
 
   @Override

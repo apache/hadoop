@@ -113,7 +113,8 @@ public class OzoneContainer {
      */
     this.controller = new ContainerController(containerSet, handlers);
     this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
-        datanodeDetails, config, hddsDispatcher, context, certClient);
+        datanodeDetails, config, hddsDispatcher, controller, certClient,
+        context);
     this.readChannel = new XceiverServerGrpc(
         datanodeDetails, config, hddsDispatcher, certClient,
         createReplicationService());
