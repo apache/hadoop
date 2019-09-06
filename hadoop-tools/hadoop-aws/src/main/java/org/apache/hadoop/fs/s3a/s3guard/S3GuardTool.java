@@ -616,6 +616,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       // Validate parameters.
       try {
         parseDynamoDBRegion(paths);
+        maybeInitFilesystem(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
@@ -668,6 +669,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         checkBucketNameOrDDBTableNameProvided(paths);
         checkIfS3BucketIsGuarded(paths);
         parseDynamoDBRegion(paths);
+        maybeInitFilesystem(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
