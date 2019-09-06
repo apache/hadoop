@@ -119,8 +119,10 @@ public class TestCloseContainerCommandHandler {
         .markContainerForClose(container);
     verify(writeChannel, never())
         .submitRequest(any(), any());
+    // Container in CLOSING state is moved to UNHEALTHY if pipeline does not
+    // exist. Container should not exist in CLOSING state without a pipeline.
     verify(containerHandler)
-        .quasiCloseContainer(container);
+        .markContainerUnhealthy(container);
   }
 
   @Test
@@ -144,8 +146,10 @@ public class TestCloseContainerCommandHandler {
 
     verify(writeChannel, never())
         .submitRequest(any(), any());
+    // Container in CLOSING state is moved to UNHEALTHY if pipeline does not
+    // exist. Container should not exist in CLOSING state without a pipeline.
     verify(containerHandler)
-        .closeContainer(container);
+        .markContainerUnhealthy(container);
   }
 
   @Test
@@ -155,7 +159,7 @@ public class TestCloseContainerCommandHandler {
 
     verify(containerHandler)
         .markContainerForClose(container);
-    verify(writeChannel, never())
+    verify(writeChannel)
         .submitRequest(any(), any());
     verify(containerHandler, never())
         .quasiCloseContainer(container);
