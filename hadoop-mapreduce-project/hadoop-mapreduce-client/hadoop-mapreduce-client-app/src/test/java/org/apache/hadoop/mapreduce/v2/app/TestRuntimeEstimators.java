@@ -128,6 +128,9 @@ public class TestRuntimeEstimators {
     estimator = testedEstimator;
 	clock = new ControlledClock();
 	dispatcher = new AsyncDispatcher();
+    Configuration conf = new Configuration();
+    dispatcher.init(conf);
+
     myJob = null;
     slotsInUse.set(0);
     completedMaps.set(0);
@@ -136,8 +139,6 @@ public class TestRuntimeEstimators {
     taskTimeSavedBySpeculation.set(0);
 
     clock.tickMsec(1000);
-
-    Configuration conf = new Configuration();
 
     myAppContext = new MyAppContext(MAP_TASKS, REDUCE_TASKS);
     myJob = myAppContext.getAllJobs().values().iterator().next();
@@ -165,7 +166,6 @@ public class TestRuntimeEstimators {
 
     dispatcher.register(TaskEventType.class, new SpeculationRequestEventHandler());
 
-    dispatcher.init(conf);
     dispatcher.start();
 
 
