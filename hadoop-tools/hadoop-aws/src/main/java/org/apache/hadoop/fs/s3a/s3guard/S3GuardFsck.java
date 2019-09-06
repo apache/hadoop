@@ -267,10 +267,11 @@ public class S3GuardFsck {
       comparePair.violations.add(Violation.MOD_TIME_MISMATCH);
     }
 
-    if(msPathMetadata.getFileStatus().getVersionId() == null) {
-      LOG.debug("Missing versionIDs are skipped right now. A HEAD request is "
+    if(msPathMetadata.getFileStatus().getVersionId() == null
+        || s3FileStatus.getVersionId() == null ) {
+      LOG.debug("Missing versionIDs skipped. A HEAD request is "
           + "required for each object to get the versionID.");
-    } else if(s3FileStatus.getVersionId() != msFileStatus.getVersionId()) {
+    } else if(!s3FileStatus.getVersionId().equals(msFileStatus.getVersionId())) {
       comparePair.violations.add(Violation.VERSIONID_MISMATCH);
     }
 
