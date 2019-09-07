@@ -23,7 +23,7 @@ import java.lang.reflect.Modifier;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.slf4j.Logger;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -143,7 +143,7 @@ public class TestAsyncDispatcher {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.
             YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD, 5000);
-    Logger log = mock(Logger.class);
+    Log log = mock(Log.class);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
 
