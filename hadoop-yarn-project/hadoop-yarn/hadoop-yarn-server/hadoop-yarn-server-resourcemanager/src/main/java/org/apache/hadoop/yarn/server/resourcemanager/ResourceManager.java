@@ -1232,8 +1232,7 @@ public class ResourceManager extends CompositeService
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
-        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-        URL url = cl.findResource(war);
+        URL url = getClass().getClassLoader().getResource(war);
 
         if (null == url) {
           onDiskPath = getWebAppsPath("ui2");
