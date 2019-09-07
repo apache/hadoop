@@ -35,6 +35,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.PrefixManager;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -307,7 +308,6 @@ public abstract class OMKeyRequest extends OMClientRequest {
 
 
         if (omAction == OMAction.CREATE_FILE) {
-          ozoneManager.getMetrics().incNumCreateFile();
           omResponse.setCreateFileResponse(CreateFileResponse.newBuilder()
                   .setKeyInfo(omKeyInfo.getProtobuf())
                   .setID(clientID)
@@ -316,7 +316,6 @@ public abstract class OMKeyRequest extends OMClientRequest {
           omClientResponse = new OMFileCreateResponse(omKeyInfo, clientID,
               omResponse.build());
         } else {
-          ozoneManager.getMetrics().incNumKeyAllocates();
           omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
               .setKeyInfo(omKeyInfo.getProtobuf())
               .setID(clientID).setOpenVersion(openVersion)
@@ -363,7 +362,9 @@ public abstract class OMKeyRequest extends OMClientRequest {
         .setReplicationType(type)
         .setReplicationFactor(factor)
         .setFileEncryptionInfo(encInfo)
-        .setAcls(getAclsForKey(keyArgs, omBucketInfo, prefixManager)).build();
+        .setAcls(getAclsForKey(keyArgs, omBucketInfo, prefixManager))
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyArgs.getMetadataList()))
+        .build();
   }
 
   private List< OzoneAcl > getAclsForKey(KeyArgs keyArgs,
@@ -508,7 +509,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
   protected void checkBucketAcls(OzoneManager ozoneManager, String volume,
       String bucket, String key) throws IOException {
     if (ozoneManager.getAclsEnabled()) {
-      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
+      checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
           OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
           volume, bucket, key);
     }

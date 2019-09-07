@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 
 import io.opentracing.Scope;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.conf.RaftProperties;
@@ -63,9 +64,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -90,6 +93,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private final RaftServer server;
   private ThreadPoolExecutor chunkExecutor;
   private final ContainerDispatcher dispatcher;
+  private final ContainerController containerController;
   private ClientId clientId = ClientId.randomId();
   private final StateContext context;
   private final ReplicationLevel replicationLevel;
@@ -98,10 +102,15 @@ public final class XceiverServerRatis extends XceiverServer {
   private boolean isStarted = false;
   private DatanodeDetails datanodeDetails;
   private final Configuration conf;
+  // TODO: Remove the gids set when Ratis supports an api to query active
+  // pipelines
+  private final Set<RaftGroupId> raftGids = new HashSet<>();
 
+  @SuppressWarnings("parameternumber")
   private XceiverServerRatis(DatanodeDetails dd, int port,
-      ContainerDispatcher dispatcher, Configuration conf, StateContext
-      context, GrpcTlsConfig tlsConfig, CertificateClient caClient)
+      ContainerDispatcher dispatcher, ContainerController containerController,
+      StateContext context, GrpcTlsConfig tlsConfig, CertificateClient caClient,
+      Configuration conf)
       throws IOException {
     super(conf, caClient);
     this.conf = conf;
@@ -127,6 +136,7 @@ public final class XceiverServerRatis extends XceiverServer {
             DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
     this.dispatcher = dispatcher;
+    this.containerController = containerController;
 
     RaftServer.Builder builder =
         RaftServer.newBuilder().setServerId(RatisHelper.toRaftPeerId(dd))
@@ -139,9 +149,10 @@ public final class XceiverServerRatis extends XceiverServer {
   }
 
   private ContainerStateMachine getStateMachine(RaftGroupId gid) {
-    return new ContainerStateMachine(gid, dispatcher, chunkExecutor, this,
-        cacheEntryExpiryInteval, getSecurityConfig().isBlockTokenEnabled(),
-        getBlockTokenVerifier(), conf);
+    return new ContainerStateMachine(gid, dispatcher, containerController,
+        chunkExecutor, this, cacheEntryExpiryInteval,
+        getSecurityConfig().isBlockTokenEnabled(), getBlockTokenVerifier(),
+        conf);
   }
 
   private RaftProperties newRaftProperties() {
@@ -258,7 +269,7 @@ public final class XceiverServerRatis extends XceiverServer {
             .getDuration(), timeUnit);
     final TimeDuration nodeFailureTimeout =
         TimeDuration.valueOf(duration, timeUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);
@@ -367,8 +378,8 @@ public final class XceiverServerRatis extends XceiverServer {
 
   public static XceiverServerRatis newXceiverServerRatis(
       DatanodeDetails datanodeDetails, Configuration ozoneConf,
-      ContainerDispatcher dispatcher, StateContext context,
-      CertificateClient caClient) throws IOException {
+      ContainerDispatcher dispatcher, ContainerController containerController,
+      CertificateClient caClient, StateContext context) throws IOException {
     int localPort = ozoneConf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT);
@@ -383,8 +394,8 @@ public final class XceiverServerRatis extends XceiverServer {
     GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfig(
           new SecurityConfig(ozoneConf));
 
-    return new XceiverServerRatis(datanodeDetails, localPort,
-        dispatcher, ozoneConf, context, tlsConfig, caClient);
+    return new XceiverServerRatis(datanodeDetails, localPort, dispatcher,
+        containerController, context, tlsConfig, caClient, ozoneConf);
   }
 
   @Override
@@ -561,13 +572,8 @@ public final class XceiverServerRatis extends XceiverServer {
 
   @Override
   public boolean isExist(HddsProtos.PipelineID pipelineId) {
-    for (RaftGroupId groupId : server.getGroupIds()) {
-      if (PipelineID.valueOf(groupId.getUuid()).getProtobuf()
-          .equals(pipelineId)) {
-        return true;
-      }
-    }
-    return false;
+    return raftGids.contains(
+        RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineId).getId()));
   }
 
   @Override
@@ -657,5 +663,13 @@ public final class XceiverServerRatis extends XceiverServer {
         .getGroupInfo(createGroupInfoRequest(pipelineID.getProtobuf()));
     minIndex = RatisHelper.getMinReplicatedIndex(reply.getCommitInfos());
     return minIndex == null ? -1 : minIndex.longValue();
+  }
+
+  void notifyGroupRemove(RaftGroupId gid) {
+    raftGids.remove(gid);
+  }
+
+  void notifyGroupAdd(RaftGroupId gid) {
+    raftGids.add(gid);
   }
 }

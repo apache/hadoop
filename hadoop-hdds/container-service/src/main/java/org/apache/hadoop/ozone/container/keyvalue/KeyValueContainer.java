@@ -39,6 +39,8 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -328,6 +330,9 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     } finally {
       writeUnlock();
     }
+    LOG.info("Container {} is closed with bcsId {}.",
+        containerData.getContainerID(),
+        containerData.getBlockCommitSequenceId());
   }
 
   /**
@@ -359,13 +364,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     }
   }
 
-  void compactDB() throws StorageContainerException {
+  private void compactDB() throws StorageContainerException {
     try {
       try(ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
         db.getStore().compactDB();
-        LOG.info("Container {} is closed with bcsId {}.",
-            containerData.getContainerID(),
-            containerData.getBlockCommitSequenceId());
       }
     } catch (StorageContainerException ex) {
       throw ex;
@@ -522,6 +524,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
           "Only closed containers could be exported: ContainerId="
               + getContainerData().getContainerID());
     }
+    compactDB();
     packer.pack(this, destination);
   }
 
@@ -671,52 +674,33 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .getContainerID() + OzoneConsts.DN_CONTAINER_DB);
   }
 
-  /**
-   * run integrity checks on the Container metadata.
-   */
-  public boolean check() {
-    ContainerCheckLevel level = ContainerCheckLevel.NO_CHECK;
+  public boolean scanMetaData() {
     long containerId = containerData.getContainerID();
+    KeyValueContainerCheck checker =
+        new KeyValueContainerCheck(containerData.getMetadataPath(), config,
+            containerId);
+    return checker.fastCheck();
+  }
 
-    switch (containerData.getState()) {
-    case OPEN:
-      level = ContainerCheckLevel.FAST_CHECK;
-      LOG.info("Doing Fast integrity checks for Container ID : {},"
-          + " because it is OPEN", containerId);
-      break;
-    case CLOSING:
-      level = ContainerCheckLevel.FAST_CHECK;
-      LOG.info("Doing Fast integrity checks for Container ID : {},"
-          + " because it is CLOSING", containerId);
-      break;
-    case CLOSED:
-    case QUASI_CLOSED:
-      level = ContainerCheckLevel.FULL_CHECK;
-      LOG.debug("Doing Full integrity checks for Container ID : {},"
-              + " because it is in {} state", containerId,
-          containerData.getState());
-      break;
-    default:
-      break;
+  @Override
+  public boolean shouldScanData() {
+    return containerData.getState() == ContainerDataProto.State.CLOSED
+        || containerData.getState() == ContainerDataProto.State.QUASI_CLOSED;
+  }
+
+  public boolean scanData(DataTransferThrottler throttler, Canceler canceler) {
+    if (!shouldScanData()) {
+      throw new IllegalStateException("The checksum verification can not be" +
+          " done for container in state "
+          + containerData.getState());
     }
 
-    if (level == ContainerCheckLevel.NO_CHECK) {
-      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      return true;
-    }
-
+    long containerId = containerData.getContainerID();
     KeyValueContainerCheck checker =
         new KeyValueContainerCheck(containerData.getMetadataPath(), config,
             containerId);
 
-    switch (level) {
-    case FAST_CHECK:
-      return checker.fastCheck();
-    case FULL_CHECK:
-      return checker.fullCheck();
-    default:
-      return true;
-    }
+    return checker.fullCheck(throttler, canceler);
   }
 
   private enum ContainerCheckLevel {

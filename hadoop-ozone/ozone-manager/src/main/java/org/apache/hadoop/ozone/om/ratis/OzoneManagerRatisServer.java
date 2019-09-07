@@ -489,7 +489,7 @@ public final class OzoneManagerRatisServer {
             .getDuration(), nodeFailureTimeoutUnit);
     final TimeDuration nodeFailureTimeout = TimeDuration.valueOf(
         nodeFailureTimeoutDuration, nodeFailureTimeoutUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);

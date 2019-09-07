@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,38 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+package org.apache.hadoop.yarn.server.resourcemanager.preprocessor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+
+
 
 /**
- * Constants for internal use in the org.apache.hadoop.fs.s3a module itself.
- * Please don't refer to these outside of this module &amp; its tests.
- * If you find you need to then either the code is doing something it
- * should not, or these constants need to be uprated to being
- * public and stable entries.
+ * This is the interface providing functionality to process
+ * application submission context.
  */
 @InterfaceAudience.Private
-public final class InternalConstants {
-
-  private InternalConstants() {
-  }
-
+@InterfaceStability.Unstable
+public interface ContextProcessor {
   /**
-   * The known keys used in a standard openFile call.
-   * if there's a select marker in there then the keyset
-   * used becomes that of the select operation.
+   * It will enrich the application submission context with value provided.
+   * @param host  Address of the host from where application launched.
+   * @param value  Value to be filled in ApplicationSubmissionContext.
+   * @param applicationId  Application Id of the application.
+   * @param submissionContext  Context of the application.
    */
-  @InterfaceStability.Unstable
-  public static final Set<String> STANDARD_OPENFILE_KEYS =
-      Collections.unmodifiableSet(
-          new HashSet<>(
-              Arrays.asList(Constants.INPUT_FADVISE,
-                  Constants.READAHEAD_RANGE)));
+  void process(String host, String value, ApplicationId applicationId,
+      ApplicationSubmissionContext submissionContext);
 }
