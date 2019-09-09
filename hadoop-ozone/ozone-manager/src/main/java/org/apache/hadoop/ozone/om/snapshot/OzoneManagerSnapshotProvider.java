@@ -149,7 +149,7 @@ public class OzoneManagerSnapshotProvider {
    * @param leaderOMNodeID leader OM Node ID.
    * @return the DB checkpoint (including the ratis snapshot index)
    */
-  protected DBCheckpoint getOzoneManagerDBSnapshot(String leaderOMNodeID)
+  public DBCheckpoint getOzoneManagerDBSnapshot(String leaderOMNodeID)
       throws IOException {
     String snapshotFileName = OM_SNAPSHOT_DB + "_" + System.currentTimeMillis();
     File targetFile = new File(omSnapshotDir, snapshotFileName + ".tar.gz");

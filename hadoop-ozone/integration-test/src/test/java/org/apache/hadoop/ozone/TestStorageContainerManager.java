@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.ozone;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
+    .NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,7 +43,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
@@ -60,12 +62,15 @@ import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.server.events.TypedEvent;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -75,6 +80,7 @@ import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.HddsVersionInfo;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -486,6 +492,51 @@ public class TestStorageContainerManager {
     Assert.assertEquals(expectedVersion, actualVersion);
   }
 
+  /**
+   * Test datanode heartbeat well processed with a 4-layer network topology.
+   */
+  @Test(timeout = 60000)
+  public void testScmProcessDatanodeHeartbeat() throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    String scmId = UUID.randomUUID().toString();
+    conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        StaticMapping.class, DNSToSwitchMapping.class);
+    StaticMapping.addNodeToRack(NetUtils.normalizeHostNames(
+        Collections.singleton(HddsUtils.getHostName(conf))).get(0),
+        "/rack1");
+
+    final int datanodeNum = 3;
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(datanodeNum)
+        .setScmId(scmId)
+        .build();
+    cluster.waitForClusterToBeReady();
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+
+    try {
+      // first sleep 10s
+      Thread.sleep(10000);
+      // verify datanode heartbeats are well processed
+      long heartbeatCheckerIntervalMs =
+          MiniOzoneCluster.Builder.DEFAULT_HB_INTERVAL_MS;
+      long start = Time.monotonicNow();
+      Thread.sleep(heartbeatCheckerIntervalMs * 2);
+
+      List<DatanodeDetails> allNodes = scm.getScmNodeManager().getAllNodes();
+      Assert.assertEquals(datanodeNum, allNodes.size());
+      for (DatanodeDetails node : allNodes) {
+        DatanodeInfo datanodeInfo = (DatanodeInfo) scm.getScmNodeManager()
+            .getNodeByUuid(node.getUuidString());
+        Assert.assertTrue(datanodeInfo.getLastHeartbeatTime() > start);
+        Assert.assertEquals(datanodeInfo.getUuidString(),
+            datanodeInfo.getNetworkName());
+        Assert.assertEquals("/rack1", datanodeInfo.getNetworkLocation());
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testCloseContainerCommandOnRestart() throws Exception {
@@ -520,6 +571,11 @@ public class TestStorageContainerManager {
 
     // Stop processing HB
     scm.getDatanodeProtocolServer().stop();
+
+    scm.getContainerManager().updateContainerState(selectedContainer
+        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
+    cluster.restartStorageContainerManager(true);
+    scm = cluster.getStorageContainerManager();
     EventPublisher publisher = mock(EventPublisher.class);
     ReplicationManager replicationManager = scm.getReplicationManager();
     Field f = replicationManager.getClass().getDeclaredField("eventPublisher");
@@ -528,13 +584,6 @@ public class TestStorageContainerManager {
     modifiersField.setAccessible(true);
     modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
     f.set(replicationManager, publisher);
-
-    doNothing().when(publisher).fireEvent(any(TypedEvent.class),
-        any(CommandForDatanode.class));
-
-    scm.getContainerManager().updateContainerState(selectedContainer
-        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
-    cluster.restartStorageContainerManager(true);
     scm.getReplicationManager().start();
     Thread.sleep(2000);
 
@@ -572,7 +621,7 @@ public class TestStorageContainerManager {
           (CloseContainerCommand) cmdRight.getCommand();
       return cmdRight.getDatanodeId().equals(uuid)
           && left.getContainerID() == right.getContainerID()
-          && left.getPipelineID() == right.getPipelineID()
+          && left.getPipelineID().equals(right.getPipelineID())
           && left.getType() == right.getType()
           && left.getProto().equals(right.getProto());
     }

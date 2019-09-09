@@ -116,9 +116,13 @@ public final class DynoInfraUtils {
    * (checked in that order) is set, use that as the mirror; else use
    * {@value APACHE_DOWNLOAD_MIRROR_DEFAULT}.
    *
+   * @param destinationDir destination directory to save a tarball
    * @param version The version of Hadoop to download, like "2.7.4"
    *                or "3.0.0-beta1"
+   * @param conf configuration
+   * @param log logger instance
    * @return The path to the tarball.
+   * @throws IOException on failure
    */
   public static File fetchHadoopTarball(File destinationDir, String version,
       Configuration conf, Logger log) throws IOException {
@@ -135,7 +139,11 @@ public final class DynoInfraUtils {
           APACHE_DOWNLOAD_MIRROR_DEFAULT);
     }
 
-    destinationDir.mkdirs();
+    if (!destinationDir.exists()) {
+      if (!destinationDir.mkdirs()) {
+        throw new IOException("Unable to create local dir: " + destinationDir);
+      }
+    }
     URL downloadURL = new URL(apacheMirror + String
         .format(APACHE_DOWNLOAD_MIRROR_SUFFIX_FORMAT, version, version));
     log.info("Downloading tarball from: <{}> to <{}>", downloadURL,
@@ -437,6 +445,7 @@ public final class DynoInfraUtils {
    * @param shouldExit Should return true iff this should stop waiting.
    * @param log Where to log information.
    */
+  @SuppressWarnings("checkstyle:parameternumber")
   private static void waitForNameNodeJMXValue(String valueName,
       String jmxBeanQuery, String jmxProperty, double threshold,
       double printThreshold, boolean decreasing, Properties nameNodeProperties,

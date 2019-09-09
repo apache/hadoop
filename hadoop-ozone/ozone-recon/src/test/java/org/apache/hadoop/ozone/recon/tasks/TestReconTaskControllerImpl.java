@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -28,14 +27,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.util.Collections;
+import java.util.HashSet;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.recon.persistence.AbstractSqlDatabaseTest;
-import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
-import org.apache.hadoop.ozone.recon.recovery.ReconOmMetadataManagerImpl;
 import org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition;
 import org.hadoop.ozone.recon.schema.tables.daos.ReconTaskStatusDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.ReconTaskStatus;
@@ -50,16 +48,12 @@ import org.junit.Test;
 public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
 
   private ReconTaskController reconTaskController;
-
   private Configuration sqlConfiguration;
+
   @Before
   public void setUp() throws Exception {
 
-    File omDbDir = temporaryFolder.newFolder();
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OZONE_OM_DB_DIRS, omDbDir.getAbsolutePath());
-    ReconOMMetadataManager omMetadataManager = new ReconOmMetadataManagerImpl(
-        ozoneConfiguration);
 
     sqlConfiguration = getInjector()
         .getInstance(Configuration.class);
@@ -69,7 +63,7 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     schemaDefinition.initializeSchema();
 
     reconTaskController = new ReconTaskControllerImpl(ozoneConfiguration,
-        omMetadataManager, sqlConfiguration);
+        sqlConfiguration, new HashSet<>());
   }
 
   @Test
@@ -86,15 +80,17 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
   @Test
   public void testConsumeOMEvents() throws Exception {
 
-    ReconDBUpdateTask reconDBUpdateTaskMock = mock(ReconDBUpdateTask.class);
-    when(reconDBUpdateTaskMock.getTaskTables()).thenReturn(Collections
-        .EMPTY_LIST);
-    when(reconDBUpdateTaskMock.getTaskName()).thenReturn("MockTask");
+    ReconDBUpdateTask reconDBUpdateTaskMock = getMockTask("MockTask");
     when(reconDBUpdateTaskMock.process(any(OMUpdateEventBatch.class)))
         .thenReturn(new ImmutablePair<>("MockTask", true));
     reconTaskController.registerTask(reconDBUpdateTaskMock);
+    OMUpdateEventBatch omUpdateEventBatchMock = mock(OMUpdateEventBatch.class);
+    when(omUpdateEventBatchMock.isEmpty()).thenReturn(false);
+    when(omUpdateEventBatchMock.filter(Collections.singleton("MockTable")))
+        .thenReturn(omUpdateEventBatchMock);
     reconTaskController.consumeOMEvents(
-        new OMUpdateEventBatch(Collections.emptyList()));
+        omUpdateEventBatchMock,
+        mock(OMMetadataManager.class));
 
     verify(reconDBUpdateTaskMock, times(1))
         .process(any());
@@ -107,17 +103,13 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
         new DummyReconDBTask(taskName, DummyReconDBTask.TaskType.FAIL_ONCE);
     reconTaskController.registerTask(dummyReconDBTask);
 
-
-    long currentTime = System.nanoTime();
-    OMDBUpdateEvent.EventInfo eventInfoMock = mock(
-        OMDBUpdateEvent.EventInfo.class);
-    when(eventInfoMock.getSequenceNumber()).thenReturn(100L);
-    when(eventInfoMock.getEventTimestampMillis()).thenReturn(currentTime);
-
+    long currentTime = System.currentTimeMillis();
     OMUpdateEventBatch omUpdateEventBatchMock = mock(OMUpdateEventBatch.class);
-    when(omUpdateEventBatchMock.getLastEventInfo()).thenReturn(eventInfoMock);
+    when(omUpdateEventBatchMock.isEmpty()).thenReturn(false);
+    when(omUpdateEventBatchMock.getLastSequenceNumber()).thenReturn(100L);
 
-    reconTaskController.consumeOMEvents(omUpdateEventBatchMock);
+    reconTaskController.consumeOMEvents(omUpdateEventBatchMock,
+        mock(OMMetadataManager.class));
     assertFalse(reconTaskController.getRegisteredTasks().isEmpty());
     assertEquals(dummyReconDBTask, reconTaskController.getRegisteredTasks()
         .get(dummyReconDBTask.getTaskName()));
@@ -126,8 +118,8 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     ReconTaskStatus dbRecord = dao.findById(taskName);
 
     Assert.assertEquals(taskName, dbRecord.getTaskName());
-    Assert.assertEquals(Long.valueOf(currentTime),
-        dbRecord.getLastUpdatedTimestamp());
+    Assert.assertTrue(
+        dbRecord.getLastUpdatedTimestamp() > currentTime);
     Assert.assertEquals(Long.valueOf(100L), dbRecord.getLastUpdatedSeqNumber());
   }
 
@@ -138,18 +130,14 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
         new DummyReconDBTask(taskName, DummyReconDBTask.TaskType.ALWAYS_FAIL);
     reconTaskController.registerTask(dummyReconDBTask);
 
-
-    long currentTime = System.nanoTime();
-    OMDBUpdateEvent.EventInfo eventInfoMock =
-        mock(OMDBUpdateEvent.EventInfo.class);
-    when(eventInfoMock.getSequenceNumber()).thenReturn(100L);
-    when(eventInfoMock.getEventTimestampMillis()).thenReturn(currentTime);
-
     OMUpdateEventBatch omUpdateEventBatchMock = mock(OMUpdateEventBatch.class);
-    when(omUpdateEventBatchMock.getLastEventInfo()).thenReturn(eventInfoMock);
+    when(omUpdateEventBatchMock.isEmpty()).thenReturn(false);
+    when(omUpdateEventBatchMock.getLastSequenceNumber()).thenReturn(100L);
 
+    OMMetadataManager omMetadataManagerMock = mock(OMMetadataManager.class);
     for (int i = 0; i < 2; i++) {
-      reconTaskController.consumeOMEvents(omUpdateEventBatchMock);
+      reconTaskController.consumeOMEvents(omUpdateEventBatchMock,
+          omMetadataManagerMock);
 
       assertFalse(reconTaskController.getRegisteredTasks().isEmpty());
       assertEquals(dummyReconDBTask, reconTaskController.getRegisteredTasks()
@@ -157,8 +145,8 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     }
 
     //Should be blacklisted now.
-    reconTaskController.consumeOMEvents(
-        new OMUpdateEventBatch(Collections.emptyList()));
+    reconTaskController.consumeOMEvents(omUpdateEventBatchMock,
+        omMetadataManagerMock);
     assertTrue(reconTaskController.getRegisteredTasks().isEmpty());
 
     ReconTaskStatusDao dao = new ReconTaskStatusDao(sqlConfiguration);
@@ -167,5 +155,37 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     Assert.assertEquals(taskName, dbRecord.getTaskName());
     Assert.assertEquals(Long.valueOf(0L), dbRecord.getLastUpdatedTimestamp());
     Assert.assertEquals(Long.valueOf(0L), dbRecord.getLastUpdatedSeqNumber());
+  }
+
+
+  @Test
+  public void testReInitializeTasks() throws Exception {
+
+    OMMetadataManager omMetadataManagerMock = mock(OMMetadataManager.class);
+    ReconDBUpdateTask reconDBUpdateTaskMock =
+        getMockTask("MockTask2");
+    when(reconDBUpdateTaskMock.reprocess(omMetadataManagerMock))
+        .thenReturn(new ImmutablePair<>("MockTask2", true));
+
+    reconTaskController.registerTask(reconDBUpdateTaskMock);
+    reconTaskController.reInitializeTasks(omMetadataManagerMock);
+
+    verify(reconDBUpdateTaskMock, times(1))
+        .reprocess(omMetadataManagerMock);
+  }
+
+  /**
+   * Helper method for getting a mocked Task.
+   * @param taskName name of the task.
+   * @return instance of ReconDBUpdateTask.
+   */
+  private ReconDBUpdateTask getMockTask(String taskName) {
+    ReconDBUpdateTask reconDBUpdateTaskMock = mock(ReconDBUpdateTask.class);
+    when(reconDBUpdateTaskMock.getTaskTables()).thenReturn(Collections
+        .EMPTY_LIST);
+    when(reconDBUpdateTaskMock.getTaskName()).thenReturn(taskName);
+    when(reconDBUpdateTaskMock.getTaskTables())
+        .thenReturn(Collections.singleton("MockTable"));
+    return reconDBUpdateTaskMock;
   }
 }

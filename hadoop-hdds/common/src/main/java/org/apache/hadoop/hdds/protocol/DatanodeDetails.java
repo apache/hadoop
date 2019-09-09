@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.protocol;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -76,6 +77,7 @@ public class DatanodeDetails extends NodeImpl implements
     this.ipAddress = datanodeDetails.ipAddress;
     this.hostName = datanodeDetails.hostName;
     this.ports = datanodeDetails.ports;
+    this.setNetworkName(datanodeDetails.getNetworkName());
   }
 
   /**
@@ -192,6 +194,12 @@ public class DatanodeDetails extends NodeImpl implements
       builder.addPort(newPort(
           Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
     }
+    if (datanodeDetailsProto.hasNetworkName()) {
+      builder.setNetworkName(datanodeDetailsProto.getNetworkName());
+    }
+    if (datanodeDetailsProto.hasNetworkLocation()) {
+      builder.setNetworkLocation(datanodeDetailsProto.getNetworkLocation());
+    }
     return builder.build();
   }
 
@@ -212,7 +220,12 @@ public class DatanodeDetails extends NodeImpl implements
     if (certSerialId != null) {
       builder.setCertSerialId(certSerialId);
     }
-    builder.setNetworkLocation(getNetworkLocation());
+    if (!Strings.isNullOrEmpty(getNetworkName())) {
+      builder.setNetworkName(getNetworkName());
+    }
+    if (!Strings.isNullOrEmpty(getNetworkLocation())) {
+      builder.setNetworkLocation(getNetworkLocation());
+    }
 
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()
@@ -268,6 +281,7 @@ public class DatanodeDetails extends NodeImpl implements
     private String id;
     private String ipAddress;
     private String hostName;
+    private String networkName;
     private String networkLocation;
     private List<Port> ports;
     private String certSerialId;
@@ -310,6 +324,17 @@ public class DatanodeDetails extends NodeImpl implements
      */
     public Builder setHostName(String host) {
       this.hostName = host;
+      return this;
+    }
+
+    /**
+     * Sets the network name of DataNode.
+     *
+     * @param name network name
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setNetworkName(String name) {
+      this.networkName = name;
       return this;
     }
 
@@ -358,8 +383,12 @@ public class DatanodeDetails extends NodeImpl implements
       if (networkLocation == null) {
         networkLocation = NetConstants.DEFAULT_RACK;
       }
-      return new DatanodeDetails(id, ipAddress, hostName, networkLocation,
-          ports, certSerialId);
+      DatanodeDetails dn = new DatanodeDetails(id, ipAddress, hostName,
+          networkLocation, ports, certSerialId);
+      if (networkName != null) {
+        dn.setNetworkName(networkName);
+      }
+      return dn;
     }
   }
 

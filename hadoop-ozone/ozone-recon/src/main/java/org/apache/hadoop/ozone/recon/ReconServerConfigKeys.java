@@ -114,7 +114,7 @@ public final class ReconServerConfigKeys {
 
   public static final String OZONE_RECON_TASK_THREAD_COUNT_KEY =
       "ozone.recon.task.thread.count";
-  public static final int OZONE_RECON_TASK_THREAD_COUNT_DEFAULT = 1;
+  public static final int OZONE_RECON_TASK_THREAD_COUNT_DEFAULT = 5;
 
   /**
    * Private constructor for utility class.

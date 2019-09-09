@@ -24,11 +24,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -42,7 +43,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -53,6 +55,7 @@ import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,9 +87,10 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
-  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
-      "should be either one of the two forms: " +
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
+      "should be one of the following formats: " +
       "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com/key  OR " +
       "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
@@ -109,16 +113,23 @@ public class BasicOzoneFileSystem extends FileSystem {
     String remaining = matcher.groupCount() == 3 ? matcher.group(3) : null;
 
     String omHost = null;
-    String omPort = String.valueOf(-1);
+    int omPort = -1;
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      if (parts.length != 2) {
+      // Array length should be either 1(host) or 2(host:port)
+      if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      omPort = parts[1];
-      if (!isNumber(omPort)) {
-        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      if (parts.length == 2) {
+        try {
+          omPort = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+        }
+      } else {
+        // If port number is not specified, read it from config
+        omPort = OmUtils.getOmRpcPort(conf);
       }
     }
 
@@ -160,7 +171,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
   protected OzoneClientAdapter createAdapter(Configuration conf,
       String bucketStr,
-      String volumeStr, String omHost, String omPort,
+      String volumeStr, String omHost, int omPort,
       boolean isolatedClassloader) throws IOException {
 
     if (isolatedClassloader) {
@@ -170,8 +181,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
     } else {
 
-      return new BasicOzoneClientAdapterImpl(omHost,
-          Integer.parseInt(omPort), conf,
+      return new BasicOzoneClientAdapterImpl(omHost, omPort, conf,
           volumeStr, bucketStr);
     }
   }
@@ -497,13 +507,18 @@ public class BasicOzoneFileSystem extends FileSystem {
     statistics.incrementReadOps(1);
     LOG.trace("listStatus() path:{}", f);
     int numEntries = LISTING_PAGE_SIZE;
-    LinkedList<OzoneFileStatus> statuses = new LinkedList<>();
-    List<OzoneFileStatus> tmpStatusList;
+    LinkedList<FileStatus> statuses = new LinkedList<>();
+    List<FileStatus> tmpStatusList;
     String startKey = "";
 
     do {
       tmpStatusList =
-          adapter.listStatus(pathToKey(f), false, startKey, numEntries);
+          adapter.listStatus(pathToKey(f), false, startKey, numEntries, uri,
+              workingDir, getUsername())
+              .stream()
+              .map(this::convertFileStatus)
+              .collect(Collectors.toList());
+
       if (!tmpStatusList.isEmpty()) {
         if (startKey.isEmpty()) {
           statuses.addAll(tmpStatusList);
@@ -517,10 +532,7 @@ public class BasicOzoneFileSystem extends FileSystem {
       // exhausted.
     } while (tmpStatusList.size() == numEntries);
 
-    for (OzoneFileStatus status : statuses) {
-      status.makeQualified(uri, status.getPath().makeQualified(uri, workingDir),
-          getUsername(), getUsername());
-    }
+
     return statuses.toArray(new FileStatus[0]);
   }
 
@@ -560,51 +572,14 @@ public class BasicOzoneFileSystem extends FileSystem {
   }
 
   /**
-   * Check whether the path is valid and then create directories.
-   * Directory is represented using a key with no value.
-   * All the non-existent parent directories are also created.
+   * Creates a directory. Directory is represented using a key with no value.
    *
    * @param path directory path to be created
    * @return true if directory exists or created successfully.
    * @throws IOException
    */
   private boolean mkdir(Path path) throws IOException {
-    Path fPart = path;
-    Path prevfPart = null;
-    do {
-      LOG.trace("validating path:{}", fPart);
-      try {
-        FileStatus fileStatus = getFileStatus(fPart);
-        if (fileStatus.isDirectory()) {
-          // If path exists and a directory, exit
-          break;
-        } else {
-          // Found a file here, rollback and delete newly created directories
-          LOG.trace("Found a file with same name as directory, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          throw new FileAlreadyExistsException(String.format(
-              "Can't make directory for path '%s', it is a file.", fPart));
-        }
-      } catch (FileNotFoundException fnfe) {
-        LOG.trace("creating directory for fpart:{}", fPart);
-        String key = pathToKey(fPart);
-        String dirKey = addTrailingSlashIfNeeded(key);
-        if (!adapter.createDirectory(dirKey)) {
-          // Directory creation failed here,
-          // rollback and delete newly created directories
-          LOG.trace("Directory creation failed, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          return false;
-        }
-      }
-      prevfPart = fPart;
-      fPart = fPart.getParent();
-    } while (fPart != null);
-    return true;
+    return adapter.createDirectory(pathToKey(path));
   }
 
   @Override
@@ -624,9 +599,16 @@ public class BasicOzoneFileSystem extends FileSystem {
     LOG.trace("getFileStatus() path:{}", f);
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
-
-    return adapter.getFileStatus(key)
-        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
+    FileStatus fileStatus = null;
+    try {
+      fileStatus = convertFileStatus(
+          adapter.getFileStatus(key, uri, qualifiedPath, getUsername()));
+    } catch (OMException ex) {
+      if (ex.getResult().equals(OMException.ResultCodes.KEY_NOT_FOUND)) {
+        throw new FileNotFoundException("File not found. path:" + f);
+      }
+    }
+    return fileStatus;
   }
 
   /**
@@ -758,5 +740,31 @@ public class BasicOzoneFileSystem extends FileSystem {
       return false;
     }
     return true;
+  }
+
+  private FileStatus convertFileStatus(
+      FileStatusAdapter fileStatusAdapter) {
+
+    Path symLink = null;
+    try {
+      fileStatusAdapter.getSymlink();
+    } catch (Exception ex) {
+      //NOOP: If not symlink symlink remains null.
+    }
+
+    return new FileStatus(
+        fileStatusAdapter.getLength(),
+        fileStatusAdapter.isDir(),
+        fileStatusAdapter.getBlockReplication(),
+        fileStatusAdapter.getBlocksize(),
+        fileStatusAdapter.getModificationTime(),
+        fileStatusAdapter.getAccessTime(),
+        new FsPermission(fileStatusAdapter.getPermission()),
+        fileStatusAdapter.getOwner(),
+        fileStatusAdapter.getGroup(),
+        symLink,
+        fileStatusAdapter.getPath()
+    );
+
   }
 }

@@ -46,13 +46,13 @@ You also need the following:
 First of all create a docker image with the Spark image creator.
 Execute the following from the Spark distribution
 
-```
+```bash
 ./bin/docker-image-tool.sh -r myrepo -t 2.4.0 build
 ```
 
 _Note_: if you use Minikube add the `-m` flag to use the docker daemon of the Minikube image:
 
-```
+```bash
 ./bin/docker-image-tool.sh -m -r myrepo -t 2.4.0 build
 ```
 
@@ -64,18 +64,22 @@ Create a new directory for customizing the created docker image.
 
 Copy the `ozone-site.xml` from the cluster:
 
-```
+```bash
 kubectl cp om-0:/opt/hadoop/etc/hadoop/ozone-site.xml .
 ```
 
-And create a custom `core-site.xml`:
+And create a custom `core-site.xml`.
 
-```
+```xml
 <configuration>
     <property>
         <name>fs.o3fs.impl</name>
         <value>org.apache.hadoop.fs.ozone.BasicOzoneFileSystem</value>
     </property>
+    <property>
+        <name>fs.AbstractFileSystem.o3fs.impl</name>
+        <value>org.apache.hadoop.fs.ozone.OzFs</value>
+     </property>
 </configuration>
 ```
 
@@ -98,13 +102,13 @@ ENV SPARK_EXTRA_CLASSPATH=/opt/hadoop/conf
 ADD hadoop-ozone-filesystem-lib-legacy-0.4.0-SNAPSHOT.jar /opt/hadoop-ozone-filesystem-lib-legacy.jar
 ```
 
-```
+```bash
 docker build -t myrepo/spark-ozone
 ```
 
 For remote kubernetes cluster you may need to push it:
 
-```
+```bash
 docker push myrepo/spark-ozone
 ```
 
@@ -112,7 +116,7 @@ docker push myrepo/spark-ozone
 
 Download any text file and put it to the `/tmp/alice.txt` first.
 
-```
+```bash
 kubectl port-forward s3g-0 9878:9878
 aws s3api --endpoint http://localhost:9878 create-bucket --bucket=test
 aws s3api --endpoint http://localhost:9878 put-object --bucket test --key alice.txt --body /tmp/alice.txt
@@ -130,7 +134,7 @@ Write down the ozone filesystem uri as it should be used with the spark-submit c
 
 ## Create service account to use
 
-```
+```bash
 kubectl create serviceaccount spark -n yournamespace
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=yournamespace:spark --namespace=yournamespace
 ```
@@ -138,13 +142,14 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
 
 Execute the following spark-submit command, but change at least the following values:
 
- * the kubernetes master url (you can check your ~/.kube/config to find the actual value)
- * the kubernetes namespace (yournamespace in this example)
- * serviceAccountName (you can use the _spark_ value if you folllowed the previous steps)
- * container.image (in this example this is myrepo/spark-ozone. This is pushed to the registry in the previous steps)
- * location of the input file (o3fs://...), use the string which is identified earlier with the `ozone s3 path <bucketname>` command
+ * the kubernetes master url (you can check your _~/.kube/config_ to find the actual value)
+ * the kubernetes namespace (_yournamespace_ in this example)
+ * serviceAccountName (you can use the _spark_ value if you followed the previous steps)
+ * container.image (in this example this is _myrepo/spark-ozone_. This is pushed to the registry in the previous steps)
+ * location of the input file (o3fs://...), use the string which is identified earlier with the \
+ `ozone s3 path <bucketname>` command
 
-```
+```bash
 bin/spark-submit \
     --master k8s://https://kubernetes:6443 \
     --deploy-mode cluster \
@@ -162,7 +167,8 @@ bin/spark-submit \
 
 Check the available `spark-word-count-...` pods with `kubectl get pod`
 
-Check the output of the calculation with `kubectl logs spark-word-count-1549973913699-driver`
+Check the output of the calculation with \
+`kubectl logs spark-word-count-1549973913699-driver`
 
 You should see the output of the wordcount job. For example:
 

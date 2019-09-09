@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .IncrementalContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -47,6 +48,7 @@ import static org.apache.hadoop.hdds.scm.TestUtils.getReplicas;
  */
 public class TestIncrementalContainerReportHandler {
 
+  private NodeManager nodeManager;
   private ContainerManager containerManager;
   private ContainerStateManager containerStateManager;
   private EventPublisher publisher;
@@ -55,6 +57,7 @@ public class TestIncrementalContainerReportHandler {
   public void setup() throws IOException {
     final Configuration conf = new OzoneConfiguration();
     this.containerManager = Mockito.mock(ContainerManager.class);
+    this.nodeManager = Mockito.mock(NodeManager.class);
     this.containerStateManager = new ContainerStateManager(conf);
     this.publisher = Mockito.mock(EventPublisher.class);
 
@@ -88,7 +91,7 @@ public class TestIncrementalContainerReportHandler {
   @Test
   public void testClosingToClosed() throws IOException {
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(containerManager);
+        new IncrementalContainerReportHandler(nodeManager, containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.CLOSING);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();
@@ -122,7 +125,7 @@ public class TestIncrementalContainerReportHandler {
   @Test
   public void testClosingToQuasiClosed() throws IOException {
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(containerManager);
+        new IncrementalContainerReportHandler(nodeManager, containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.CLOSING);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();
@@ -157,7 +160,7 @@ public class TestIncrementalContainerReportHandler {
   @Test
   public void testQuasiClosedToClosed() throws IOException {
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(containerManager);
+        new IncrementalContainerReportHandler(nodeManager, containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.QUASI_CLOSED);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();

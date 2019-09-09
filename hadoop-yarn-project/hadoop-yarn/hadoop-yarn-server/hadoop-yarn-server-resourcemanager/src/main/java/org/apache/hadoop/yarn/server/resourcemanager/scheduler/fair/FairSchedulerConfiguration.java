@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.apache.hadoop.yarn.util.resource.ResourceUtils.RESOURCE_REQUEST_VALUE_PATTERN;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -216,6 +218,15 @@ public class FairSchedulerConfiguration extends Configuration {
 
   private static final String INVALID_RESOURCE_DEFINITION_PREFIX =
           "Error reading resource config--invalid resource definition: ";
+  private static final String RESOURCE_PERCENTAGE_PATTERN =
+      "^(-?(\\d+)(\\.\\d*)?)\\s*%\\s*";
+  private static final String RESOURCE_VALUE_PATTERN =
+      "^(-?\\d+)(\\.\\d*)?\\s*";
+  /**
+   * For resources separated by spaces instead of a comma.
+   */
+  private static final String RESOURCES_WITH_SPACES_PATTERN =
+      "-?\\d+(?:\\.\\d*)?\\s*[a-z]+\\s*";
 
   public FairSchedulerConfiguration() {
     super();
@@ -507,7 +518,7 @@ public class FairSchedulerConfiguration extends Configuration {
       try {
         if (asPercent) {
           double percentage = parseNewStyleResourceAsPercentage(value,
-              resourceValue);
+              resourceName, resourceValue);
           configurableResource.setPercentage(resourceName, percentage);
         } else {
           long parsedValue = parseNewStyleResourceAsAbsoluteValue(value,
@@ -526,10 +537,10 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   private static double parseNewStyleResourceAsPercentage(
-      String value, String resourceValue)
+      String value, String resource, String resourceValue)
       throws AllocationConfigurationException {
     try {
-      return findPercentage(resourceValue, "");
+      return findPercentage(resourceValue, resource);
     } catch (AllocationConfigurationException ex) {
       throw createConfigException(value,
           "The resource values must all be percentages. \""
@@ -563,18 +574,39 @@ public class FairSchedulerConfiguration extends Configuration {
             getResourcePercentage(StringUtils.toLowerCase(value)));
   }
 
-  private static ConfigurableResource parseOldStyleResource(String value)
+  private static ConfigurableResource parseOldStyleResource(String input)
           throws AllocationConfigurationException {
-    final String lCaseValue = StringUtils.toLowerCase(value);
-    final int memory = parseOldStyleResourceMemory(lCaseValue);
-    final int vcores = parseOldStyleResourceVcores(lCaseValue);
+    final String lowerCaseInput = StringUtils.toLowerCase(input);
+    String[] resources = lowerCaseInput.split(",");
+
+    if (resources.length != 2) {
+      resources = findOldStyleResourcesInSpaceSeparatedInput(lowerCaseInput);
+      if (resources.length != 2) {
+        throw new AllocationConfigurationException(
+            "Cannot parse resource values from input: " + input);
+      }
+    }
+    final int memory = parseOldStyleResourceMemory(resources);
+    final int vcores = parseOldStyleResourceVcores(resources);
     return new ConfigurableResource(
             BuilderUtils.newResource(memory, vcores));
   }
 
-  private static int parseOldStyleResourceMemory(String lCaseValue)
+  private static String[] findOldStyleResourcesInSpaceSeparatedInput(
+      String input) {
+    final Pattern pattern = Pattern.compile(RESOURCES_WITH_SPACES_PATTERN);
+    final Matcher matcher = pattern.matcher(input);
+
+    List<String> resources = Lists.newArrayList();
+    while (matcher.find()) {
+      resources.add(matcher.group(0));
+    }
+    return resources.toArray(new String[0]);
+  }
+
+  private static int parseOldStyleResourceMemory(String[] resources)
       throws AllocationConfigurationException {
-    final int memory = findResource(lCaseValue, "mb");
+    final int memory = findResource(resources, "mb");
 
     if (memory < 0) {
       throw new AllocationConfigurationException(
@@ -584,9 +616,9 @@ public class FairSchedulerConfiguration extends Configuration {
     return memory;
   }
 
-  private static int parseOldStyleResourceVcores(String lCaseValue)
+  private static int parseOldStyleResourceVcores(String[] resources)
       throws AllocationConfigurationException {
-    final int vcores = findResource(lCaseValue, "vcores");
+    final int vcores = findResource(resources, "vcores");
 
     if (vcores < 0) {
       throw new AllocationConfigurationException(
@@ -596,45 +628,62 @@ public class FairSchedulerConfiguration extends Configuration {
     return vcores;
   }
 
-  private static double[] getResourcePercentage(
-      String val) throws AllocationConfigurationException {
+  private static double[] getResourcePercentage(String val)
+      throws AllocationConfigurationException {
     int numberOfKnownResourceTypes = ResourceUtils
         .getNumberOfCountableResourceTypes();
     double[] resourcePercentage = new double[numberOfKnownResourceTypes];
-    String[] strings = val.split(",");
+    String[] values = val.split(",");
 
-    if (strings.length == 1) {
-      double percentage = findPercentage(strings[0], "");
+    if (values.length == 1) {
+      double percentage = findPercentage(values, "");
       for (int i = 0; i < numberOfKnownResourceTypes; i++) {
         resourcePercentage[i] = percentage;
       }
     } else {
-      resourcePercentage[0] = findPercentage(val, "memory");
-      resourcePercentage[1] = findPercentage(val, "cpu");
+      resourcePercentage[0] = findPercentage(values, "memory");
+      resourcePercentage[1] = findPercentage(values, "cpu");
     }
 
     return resourcePercentage;
   }
 
-  private static double findPercentage(String val, String units)
+  private static double findPercentage(String resourceValue, String resource)
       throws AllocationConfigurationException {
-    final Pattern pattern =
-        Pattern.compile("(-?(\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
-    Matcher matcher = pattern.matcher(val);
-    if (!matcher.find()) {
-      if (units.equals("")) {
+    return findPercentageInternal(resource, resourceValue, false);
+  }
+
+  private static double findPercentage(String[] resourceValues, String resource)
+      throws AllocationConfigurationException {
+    String resourceValue = findResourceFromValues(resourceValues, resource);
+    return findPercentageInternal(resource, resourceValue, true);
+  }
+
+  private static double findPercentageInternal(String resource,
+      String resourceValue, boolean includeResourceInPattern)
+      throws AllocationConfigurationException {
+    final Pattern pattern;
+    if (includeResourceInPattern) {
+      pattern = Pattern.compile(RESOURCE_PERCENTAGE_PATTERN + resource);
+    } else {
+      pattern = Pattern.compile(RESOURCE_PERCENTAGE_PATTERN);
+    }
+
+    Matcher matcher = pattern.matcher(resourceValue);
+    if (!matcher.matches()) {
+      if (resource.equals("")) {
         throw new AllocationConfigurationException("Invalid percentage: " +
-            val);
+            resourceValue);
       } else {
-        throw new AllocationConfigurationException("Missing resource: " +
-            units);
+        throw new AllocationConfigurationException("Invalid percentage of " +
+            resource + ": " + resourceValue);
       }
     }
     double percentage = Double.parseDouble(matcher.group(1)) / 100.0;
 
     if (percentage < 0) {
       throw new AllocationConfigurationException("Invalid percentage: " +
-          val + ", percentage should not be negative!");
+          resourceValue + ", percentage should not be negative!");
     }
 
     return percentage;
@@ -659,13 +708,26 @@ public class FairSchedulerConfiguration extends Configuration {
     return getLong(UPDATE_INTERVAL_MS, DEFAULT_UPDATE_INTERVAL_MS);
   }
   
-  private static int findResource(String val, String units)
+  private static int findResource(String[] resourceValues, String resource)
       throws AllocationConfigurationException {
-    final Pattern pattern = Pattern.compile("(-?\\d+)(\\.\\d*)?\\s*" + units);
-    Matcher matcher = pattern.matcher(val);
+    String resourceValue = findResourceFromValues(resourceValues, resource);
+    final Pattern pattern = Pattern.compile(RESOURCE_VALUE_PATTERN +
+        resource);
+    Matcher matcher = pattern.matcher(resourceValue);
     if (!matcher.find()) {
-      throw new AllocationConfigurationException("Missing resource: " + units);
+      throw new AllocationConfigurationException("Invalid value of " +
+          (resource.equals("mb") ? "memory" : resource) + ": " + resourceValue);
     }
     return Integer.parseInt(matcher.group(1));
+  }
+
+  private static String findResourceFromValues(String[] resourceValues,
+      String resource) throws AllocationConfigurationException {
+    for (String resourceValue : resourceValues) {
+      if (resourceValue.contains(resource)) {
+        return resourceValue.trim();
+      }
+    }
+    throw new AllocationConfigurationException("Missing resource: " + resource);
   }
 }

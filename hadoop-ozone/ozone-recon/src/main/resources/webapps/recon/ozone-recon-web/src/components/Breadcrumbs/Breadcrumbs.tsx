@@ -55,4 +55,4 @@ class Breadcrumbs extends React.Component<RouteComponentProps> {
   }
 }
 
-export default withRouter<RouteComponentProps>(Breadcrumbs);
+export default withRouter(Breadcrumbs);

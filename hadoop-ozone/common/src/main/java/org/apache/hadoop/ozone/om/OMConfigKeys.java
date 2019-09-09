@@ -123,6 +123,9 @@ public final class OMConfigKeys {
       "ozone.om.ratis.log.appender.queue.byte-limit";
   public static final String
       OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+  public static final String OZONE_OM_RATIS_LOG_PURGE_GAP =
+      "ozone.om.ratis.log.purge.gap";
+  public static final int OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT = 1000000;
 
   // OM Snapshot configurations
   public static final String OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY
@@ -210,7 +213,7 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"
       + ".kerberos.principal";
   public static final String OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE =
-      "ozone.om.http.kerberos.keytab.file";
+      "ozone.om.http.kerberos.keytab";
   public static final String OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY
       = "ozone.om.http.kerberos.principal";
   // Delegation token related keys

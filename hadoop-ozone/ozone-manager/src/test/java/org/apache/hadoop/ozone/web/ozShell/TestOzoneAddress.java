@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,9 +42,6 @@ public class TestOzoneAddress {
         {"o3fs://localhost:9878/"},
         {"o3fs://localhost/"},
         {"o3fs:///"},
-        {"http://localhost:9878/"},
-        {"http://localhost/"},
-        {"http:///"},
         {"/"},
         {""}
     });
@@ -57,7 +54,7 @@ public class TestOzoneAddress {
   }
 
   @Test
-  public void checkUrlTypes() throws OzoneException, IOException {
+  public void checkUrlTypes() throws OzoneClientException, IOException {
     OzoneAddress address;
 
     address = new OzoneAddress("");

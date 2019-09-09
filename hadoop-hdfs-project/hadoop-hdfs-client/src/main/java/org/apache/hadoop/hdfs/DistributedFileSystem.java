@@ -132,8 +132,6 @@ public class DistributedFileSystem extends FileSystem
     implements KeyProviderTokenIssuer {
   private Path workingDir;
   private URI uri;
-  private String homeDirPrefix =
-      HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT;
 
   DFSClient dfs;
   private boolean verifyChecksum = true;
@@ -169,9 +167,6 @@ public class DistributedFileSystem extends FileSystem
     if (host == null) {
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
-    homeDirPrefix = conf.get(
-        HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
-        HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
 
     this.dfs = new DFSClient(uri, conf, statistics);
     this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
@@ -214,8 +209,7 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path(homeDirPrefix + "/"
-        + dfs.ugi.getShortUserName()));
+    return makeQualified(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi));
   }
 
   /**
@@ -1006,6 +1000,7 @@ public class DistributedFileSystem extends FileSystem
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String,
    * long, long, StorageType)
    */
+  @Override
   public void setQuota(Path src, final long namespaceQuota,
       final long storagespaceQuota) throws IOException {
     statistics.incrementWriteOps(1);
@@ -1035,6 +1030,7 @@ public class DistributedFileSystem extends FileSystem
    * @param quota value of the specific storage type quota to be modified.
    * Maybe {@link HdfsConstants#QUOTA_RESET} to clear quota by storage type.
    */
+  @Override
   public void setQuotaByStorageType(Path src, final StorageType type,
       final long quota)
       throws IOException {
@@ -3384,6 +3380,12 @@ public class DistributedFileSystem extends FileSystem
   @Deprecated
   public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
     return dfs.listOpenFiles();
+  }
+
+  @Deprecated
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+    return dfs.listOpenFiles(openFilesTypes);
   }
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(

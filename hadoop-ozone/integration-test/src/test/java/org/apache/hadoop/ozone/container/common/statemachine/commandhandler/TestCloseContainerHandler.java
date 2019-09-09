@@ -17,8 +17,15 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.TimeoutException;
+
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -26,23 +33,16 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Test to behaviour of the datanode when recieve close container command.
@@ -50,8 +50,8 @@ import java.util.concurrent.TimeoutException;
 public class TestCloseContainerHandler {
 
   @Test
-  public void test() throws IOException, TimeoutException, InterruptedException,
-      OzoneException {
+  public void test()
+      throws IOException, TimeoutException, InterruptedException {
 
     //setup a cluster (1G free space is enough for a unit test)
     OzoneConfiguration conf = new OzoneConfiguration();

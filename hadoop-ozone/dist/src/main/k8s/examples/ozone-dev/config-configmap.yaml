@@ -35,3 +35,6 @@ data:
   OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
   OZONE-SITE.XML_hdds.profiler.endpoint.enabled: "true"
   ASYNC_PROFILER_HOME: /opt/profiler
+  OZONE-SITE.XML_ozone.csi.s3g.address: http://s3g-0.s3g:9878
+  OZONE-SITE.XML_ozone.csi.socket: /var/lib/csi/csi.sock
+  OZONE-SITE.XML_ozone.csi.owner: hadoop

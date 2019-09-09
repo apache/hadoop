@@ -1129,7 +1129,7 @@ shows that it is generally more efficient to abort the TCP connection and initia
 a new one than read to the end of a large file.
 
 Note: the threshold when data is read rather than the stream aborted can be tuned
-by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.fadvise`.
+by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
 ### <a name="no_such_bucket"></a> `FileNotFoundException` Bucket does not exist.
 
@@ -1233,17 +1233,20 @@ The number of retries and interval between each retry can be configured:
 
 ```xml
 <property>
-  <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors,
-  excluding throttling errors.</description>
+  <name>fs.s3a.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between retry attempts.
+    Initial retry interval when retrying operations for any reason other
+    than S3 throttle errors.
   </description>
 </property>
 ```

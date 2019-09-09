@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +80,7 @@ public class SimulatedDataNodes extends Configured implements Tool {
   static void printUsageExit(String err) {
     System.out.println(err);
     System.out.println(USAGE);
-    System.exit(1);
+    throw new RuntimeException(err);
   }
 
   public static void main(String[] args) throws Exception {
@@ -108,8 +109,10 @@ public class SimulatedDataNodes extends Configured implements Tool {
     }
     System.out.println("DataNodes will connect to NameNode at " + nameNodeAdr);
 
-    System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA,
-        DataNode.getStorageLocations(getConf()).get(0).getUri().getPath());
+    String loc = DataNode.getStorageLocations(getConf()).get(0).toString();
+    loc = loc.substring(loc.indexOf("]") + 1); // delete storage type
+    String path = new URI(loc).getPath();
+    System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA, path);
     SimulatedFSDataset.setFactory(getConf());
     getConf().setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
         STORAGE_CAPACITY);
@@ -120,7 +123,7 @@ public class SimulatedDataNodes extends Configured implements Tool {
       mc.formatDataNodeDirs();
     } catch (IOException e) {
       System.out.println("Error formatting DataNode dirs: " + e);
-      System.exit(1);
+      throw new RuntimeException("Error formatting DataNode dirs", e);
     }
 
     try {
@@ -144,10 +147,10 @@ public class SimulatedDataNodes extends Configured implements Tool {
 
       for (int dnIndex = 0; dnIndex < blockListFiles.size(); dnIndex++) {
         Path blockListFile = blockListFiles.get(dnIndex);
-        try (FSDataInputStream fsdis = blockListFile.getFileSystem(getConf())
-            .open(blockListFile)) {
-          BufferedReader reader = new BufferedReader(
-              new InputStreamReader(fsdis));
+        try (FSDataInputStream fsdis =
+            blockListFile.getFileSystem(getConf()).open(blockListFile);
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(fsdis, StandardCharsets.UTF_8))) {
           List<Block> blockList = new ArrayList<>();
           int cnt = 0;
           for (String line = reader.readLine(); line != null; line = reader

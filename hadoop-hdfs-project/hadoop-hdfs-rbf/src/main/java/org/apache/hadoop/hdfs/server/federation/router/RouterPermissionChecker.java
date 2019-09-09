@@ -121,7 +121,7 @@ public class RouterPermissionChecker extends FSPermissionChecker {
     }
 
     // Is this by the Router user itself?
-    if (ugi.getUserName().equals(superUser)) {
+    if (ugi.getShortUserName().equals(superUser)) {
       return;
     }
 

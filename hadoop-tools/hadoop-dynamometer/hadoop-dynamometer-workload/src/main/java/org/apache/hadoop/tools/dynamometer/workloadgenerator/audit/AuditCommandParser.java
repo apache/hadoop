@@ -35,6 +35,7 @@ public interface AuditCommandParser {
    * called prior to any calls to {@link #parse(Text, Function)}.
    *
    * @param conf The Configuration to be used to set up this parser.
+   * @throws IOException if error on initializing a parser.
    */
   void initialize(Configuration conf) throws IOException;
 
@@ -50,6 +51,7 @@ public interface AuditCommandParser {
    *                           (in milliseconds) to absolute timestamps
    *                           (in milliseconds).
    * @return A command representing the input line.
+   * @throws IOException if error on parsing.
    */
   AuditReplayCommand parse(Text inputLine,
       Function<Long, Long> relativeToAbsolute) throws IOException;

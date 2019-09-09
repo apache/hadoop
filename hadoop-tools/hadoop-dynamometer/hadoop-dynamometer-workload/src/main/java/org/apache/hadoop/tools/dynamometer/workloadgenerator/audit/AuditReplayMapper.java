@@ -57,16 +57,16 @@ import static org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditR
  * format of these files is determined by the value of the
  * {@value COMMAND_PARSER_KEY} configuration, which defaults to
  * {@link AuditLogDirectParser}.
- *
- * <p/>This generates a number of {@link org.apache.hadoop.mapreduce.Counter}
+ * <p>
+ * This generates a number of {@link org.apache.hadoop.mapreduce.Counter}
  * values which can be used to get information into the replay, including the
  * number of commands replayed, how many of them were "invalid" (threw an
  * exception), how many were "late" (replayed later than they should have been),
  * and the latency (from client perspective) of each command. If there are a
  * large number of "late" commands, you likely need to increase the number of
  * threads used and/or the number of mappers.
- *
- * <p/>By default, commands will be replayed at the same rate as they were
+ * <p>
+ * By default, commands will be replayed at the same rate as they were
  * originally performed. However a rate factor can be specified via the
  * {@value RATE_FACTOR_KEY} configuration; all of the (relative) timestamps will
  * be divided by this rate factor, effectively changing the rate at which they

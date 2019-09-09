@@ -202,12 +202,12 @@ public final class Constants {
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
-  public static final long DEFAULT_MULTIPART_SIZE = 104857600; // 100 MB
+  public static final long DEFAULT_MULTIPART_SIZE = 67108864; // 64M
 
   // minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_THRESHOLD =
       "fs.s3a.multipart.threshold";
-  public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
+  public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = 134217728; // 128M
 
   //enable multiobject-delete calls?
   public static final String ENABLE_MULTI_DELETE =
@@ -362,6 +362,10 @@ public final class Constants {
   public static final int S3A_DEFAULT_PORT = 443;
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
+
+  /** Whether or not to allow MetadataStore to be source of truth for a path prefix */
+  public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
+  public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
 
   /** Whether or not to allow MetadataStore to be source of truth. */
   public static final String METADATASTORE_AUTHORITATIVE =
@@ -631,7 +635,7 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
-  public static final int RETRY_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Interval between retry attempts.: {@value}.

@@ -56,7 +56,7 @@ public abstract class QJMTestUtil {
     for (long txid = startTxn; txid < startTxn + numTxns; txid++) {
       FSEditLogOp op = NameNodeAdapter.createMkdirOp("tx " + txid);
       op.setTransactionId(txid);
-      writer.writeOp(op);
+      writer.writeOp(op, FAKE_NSINFO.getLayoutVersion());
     }
     
     return Arrays.copyOf(buf.getData(), buf.getLength());
@@ -73,7 +73,7 @@ public abstract class QJMTestUtil {
     for (long txid = startTxId; txid < startTxId + numTxns; txid++) {
       FSEditLogOp op = new TestEditLog.GarbageMkdirOp();
       op.setTransactionId(txid);
-      writer.writeOp(op);
+      writer.writeOp(op, FAKE_NSINFO.getLayoutVersion());
     }
     return Arrays.copyOf(buf.getData(), buf.getLength());
   }

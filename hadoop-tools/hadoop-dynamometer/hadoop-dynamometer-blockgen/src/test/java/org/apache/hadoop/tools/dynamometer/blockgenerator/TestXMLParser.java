@@ -47,13 +47,15 @@ public class TestXMLParser {
         "<replication>12</replication>",
         "<blocks><block><id>13</id><genstamp>14</genstamp>"
             + "<numBytes>15</numBytes></block>",
-        "</inode>"
+        "</inode>",
+        "</INodeSection>"
     };
 
+    short replCount = 0; // This is ignored
     Map<BlockInfo, Short> expectedBlockCount = new HashMap<>();
-    expectedBlockCount.put(new BlockInfo(6, 7, 8), (short) 3);
-    expectedBlockCount.put(new BlockInfo(9, 10, 11), (short) 3);
-    expectedBlockCount.put(new BlockInfo(13, 14, 15), (short) 12);
+    expectedBlockCount.put(new BlockInfo(6, 7, 8, replCount), (short) 3);
+    expectedBlockCount.put(new BlockInfo(9, 10, 11, replCount), (short) 3);
+    expectedBlockCount.put(new BlockInfo(13, 14, 15, replCount), (short) 12);
 
     final Map<BlockInfo, Short> actualBlockCount = new HashMap<>();
     XMLParser parser = new XMLParser();
@@ -65,6 +67,27 @@ public class TestXMLParser {
 
     for (Map.Entry<BlockInfo, Short> expect : expectedBlockCount.entrySet()) {
       assertEquals(expect.getValue(), actualBlockCount.get(expect.getKey()));
+    }
+  }
+
+  @Test
+  public void testNonInodeSectionIgnored() throws Exception {
+    String[] lines = {
+        "<INodeSection>",
+        "</INodeSection>",
+        "<OtherSection>",
+        "<inode><id>1</id><type>FILE</type><name>fake-file</name>"
+            + "<replication>1</replication>",
+        "<blocks><block><id>2</id><genstamp>1</genstamp>"
+            + "<numBytes>1</numBytes></block>",
+        "</inode>",
+        "<replication>3</replication>",
+        "</OtherSection>"
+    };
+
+    XMLParser parser = new XMLParser();
+    for (String line : lines) {
+      assertTrue((parser.parseLine(line).isEmpty()));
     }
   }
 }

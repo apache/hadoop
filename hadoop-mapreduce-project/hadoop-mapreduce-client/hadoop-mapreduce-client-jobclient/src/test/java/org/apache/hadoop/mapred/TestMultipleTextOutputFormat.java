@@ -27,7 +27,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 public class TestMultipleTextOutputFormat {
@@ -112,7 +112,7 @@ public class TestMultipleTextOutputFormat {
     }
     String output = UtilsForTests.slurp(expectedFile_11);
     //System.out.printf("File_2 output: %s\n", output);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
     
     String file_12 = "2-part-00000";
     
@@ -124,7 +124,7 @@ public class TestMultipleTextOutputFormat {
     }
     output = UtilsForTests.slurp(expectedFile_12);
     //System.out.printf("File_2 output: %s\n", output);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
     
     String file_13 = "3-part-00000";
     
@@ -136,7 +136,7 @@ public class TestMultipleTextOutputFormat {
     }
     output = UtilsForTests.slurp(expectedFile_13);
     //System.out.printf("File_2 output: %s\n", output);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
     
     String file_2 = "2/3";
     
@@ -148,6 +148,6 @@ public class TestMultipleTextOutputFormat {
     }
     output = UtilsForTests.slurp(expectedFile_2);
     //System.out.printf("File_2 output: %s\n", output);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
   }
 }

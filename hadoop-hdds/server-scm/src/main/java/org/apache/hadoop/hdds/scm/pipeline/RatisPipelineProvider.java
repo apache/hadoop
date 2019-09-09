@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.protocol.RaftClientReply;
@@ -134,6 +134,7 @@ public class RatisPipelineProvider implements PipelineProvider {
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
     stateManager.getPipelines(ReplicationType.RATIS, factor).stream().filter(
         p -> p.getPipelineState().equals(PipelineState.OPEN) ||
+            p.getPipelineState().equals(PipelineState.DORMANT) ||
             p.getPipelineState().equals(PipelineState.ALLOCATED))
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 

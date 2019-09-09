@@ -285,6 +285,14 @@ public abstract class ContainerData {
   }
 
   /**
+   * checks if the container is unhealthy.
+   * @return - boolean
+   */
+  public synchronized boolean isUnhealthy() {
+    return ContainerDataProto.State.UNHEALTHY == state;
+  }
+
+  /**
    * Marks this container as quasi closed.
    */
   public synchronized void quasiCloseContainer() {
@@ -544,4 +552,9 @@ public abstract class ContainerData {
    * @return Protocol Buffer Message
    */
   public abstract ContainerProtos.ContainerDataProto getProtoBufMessage();
+
+  /**
+   * Returns the blockCommitSequenceId.
+   */
+  public abstract long getBlockCommitSequenceId();
 }

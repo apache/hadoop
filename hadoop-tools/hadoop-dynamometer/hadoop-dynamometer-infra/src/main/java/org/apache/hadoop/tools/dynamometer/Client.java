@@ -97,7 +97,6 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,24 +107,24 @@ import org.slf4j.LoggerFactory;
  * for them to be accessed by the YARN app, then launches an
  * {@link ApplicationMaster}, which is responsible for managing the lifetime of
  * the application.
- *
- * <p/>The Dynamometer YARN application starts up the DataNodes of an HDFS
+ * <p>
+ * The Dynamometer YARN application starts up the DataNodes of an HDFS
  * cluster. If the namenode_servicerpc_addr option is specified, it should point
  * to the service RPC address of an existing namenode, which the datanodes will
  * talk to. Else, a namenode will be launched internal to this YARN application.
  * The ApplicationMaster's logs contain links to the NN / DN containers to be
  * able to access their logs. Some of this information is also printed by the
  * client.
- *
- * <p/>The application will store files in the submitting user's home directory
+ * <p>
+ * The application will store files in the submitting user's home directory
  * under a `.dynamometer/applicationID/` folder. This is mostly for uses
  * internal to the application, but if the NameNode is launched through YARN,
  * the NameNode's metrics will also be uploaded to a file `namenode_metrics`
  * within this folder. This file is also accessible as part of the NameNode's
  * logs, but this centralized location is easier to access for subsequent
  * parsing.
- *
- * <p/>If the NameNode is launched internally, this Client will monitor the
+ * <p>
+ * If the NameNode is launched internally, this Client will monitor the
  * status of the NameNode, printing information about its availability as the
  * DataNodes register (e.g., outstanding under replicated blocks as block
  * reports arrive). If this is configured to launch the workload job, once the
@@ -134,8 +133,8 @@ import org.slf4j.LoggerFactory;
  * NameNode. Once the workload job completes, the infrastructure application
  * will be shut down. At this time only the audit log replay
  * ({@link AuditReplayMapper}) workload is supported.
- *
- * <p/>If there is no workload job configured, this application will, by
+ * <p>
+ * If there is no workload job configured, this application will, by
  * default, persist indefinitely until killed by YARN. You can specify the
  * timeout option to have it exit automatically after some time. This timeout
  * will enforced if there is a workload job configured as well.
@@ -248,15 +247,12 @@ public class Client extends Configured implements Tool {
   private Options opts;
 
   /**
-   * @param args
-   *          Command line arguments
+   * @param args Command line arguments
+   * @throws Exception on error
    */
   public static void main(String[] args) throws Exception {
     Client client = new Client(
-        ClassUtil.findContainingJar(ApplicationMaster.class),
-        // JUnit is required by MiniDFSCluster at runtime, but is not included
-        // in standard Hadoop dependencies, so it must explicitly included here
-        ClassUtil.findContainingJar(Assert.class));
+        ClassUtil.findContainingJar(ApplicationMaster.class));
     System.exit(ToolRunner.run(new YarnConfiguration(), client, args));
   }
 
@@ -386,18 +382,19 @@ public class Client extends Configured implements Tool {
    *
    * @param args Parsed command line options
    * @return Whether the init was successful to run the client
+   * @throws ParseException on error while parsing
+   * @throws IOException for other errors
    */
   public boolean init(String[] args) throws ParseException, IOException {
 
-    CommandLineParser parser = new GnuParser();
-    if (parser.parse(
-        new Options().addOption("h", "help", false, "Shows this message."),
-        args, true).hasOption("h")) {
+    List<String> list = Arrays.asList(args);
+    if (list.contains("-h") || list.contains("--help")) {
       printUsage();
       return false;
     }
 
-    CommandLine cliParser = parser.parse(opts, args);
+    CommandLineParser parser = new GnuParser();
+    CommandLine commandLine = parser.parse(opts, args);
 
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(getConf());
@@ -405,12 +402,13 @@ public class Client extends Configured implements Tool {
     LOG.info("Starting with arguments: [\"{}\"]",
         Joiner.on("\" \"").join(args));
 
-    Path fsImageDir = new Path(cliParser.getOptionValue(FS_IMAGE_DIR_ARG, ""));
+    Path fsImageDir = new Path(commandLine.getOptionValue(FS_IMAGE_DIR_ARG,
+        ""));
     versionFilePath = new Path(fsImageDir, "VERSION").toString();
-    if (cliParser.hasOption(NAMENODE_SERVICERPC_ADDR_ARG)) {
+    if (commandLine.hasOption(NAMENODE_SERVICERPC_ADDR_ARG)) {
       launchNameNode = false;
       remoteNameNodeRpcAddress =
-          cliParser.getOptionValue(NAMENODE_SERVICERPC_ADDR_ARG);
+          commandLine.getOptionValue(NAMENODE_SERVICERPC_ADDR_ARG);
     } else {
       launchNameNode = true;
       FileSystem localFS = FileSystem.getLocal(getConf());
@@ -436,26 +434,27 @@ public class Client extends Configured implements Tool {
           + "application master, exiting. Specified virtual cores=" + amVCores);
     }
 
-    this.appName = cliParser.getOptionValue(APPNAME_ARG, APPNAME_DEFAULT);
-    this.amQueue = cliParser.getOptionValue(QUEUE_ARG, QUEUE_DEFAULT);
-    this.amMemory = Integer.parseInt(cliParser
+    this.appName = commandLine.getOptionValue(APPNAME_ARG, APPNAME_DEFAULT);
+    this.amQueue = commandLine.getOptionValue(QUEUE_ARG, QUEUE_DEFAULT);
+    this.amMemory = Integer.parseInt(commandLine
         .getOptionValue(MASTER_MEMORY_MB_ARG, MASTER_MEMORY_MB_DEFAULT));
     this.amVCores = Integer.parseInt(
-        cliParser.getOptionValue(MASTER_VCORES_ARG, MASTER_VCORES_DEFAULT));
-    this.confPath = cliParser.getOptionValue(CONF_PATH_ARG);
-    this.blockListPath = cliParser.getOptionValue(BLOCK_LIST_PATH_ARG);
-    if (cliParser.hasOption(HADOOP_BINARY_PATH_ARG)) {
-      this.hadoopBinary = cliParser.getOptionValue(HADOOP_BINARY_PATH_ARG);
+        commandLine.getOptionValue(MASTER_VCORES_ARG, MASTER_VCORES_DEFAULT));
+    this.confPath = commandLine.getOptionValue(CONF_PATH_ARG);
+    this.blockListPath = commandLine.getOptionValue(BLOCK_LIST_PATH_ARG);
+    if (commandLine.hasOption(HADOOP_BINARY_PATH_ARG)) {
+      this.hadoopBinary = commandLine.getOptionValue(HADOOP_BINARY_PATH_ARG);
     } else {
       this.hadoopBinary = DynoInfraUtils.fetchHadoopTarball(
           new File(".").getAbsoluteFile(),
-          cliParser.getOptionValue(HADOOP_VERSION_ARG), getConf(), LOG)
+          commandLine.getOptionValue(HADOOP_VERSION_ARG), getConf(), LOG)
           .toString();
     }
-    this.amOptions = AMOptions.initFromParser(cliParser);
+    this.amOptions = AMOptions.initFromParser(commandLine);
     this.clientTimeout = Integer
-        .parseInt(cliParser.getOptionValue(TIMEOUT_ARG, TIMEOUT_DEFAULT));
-    this.tokenFileLocation = cliParser.getOptionValue(TOKEN_FILE_LOCATION_ARG);
+        .parseInt(commandLine.getOptionValue(TIMEOUT_ARG, TIMEOUT_DEFAULT));
+    this.tokenFileLocation = commandLine.
+        getOptionValue(TOKEN_FILE_LOCATION_ARG);
 
     amOptions.verify();
 
@@ -469,28 +468,28 @@ public class Client extends Configured implements Tool {
     numTotalDataNodes = blockListFS.listStatus(blockPath,
         DynoConstants.BLOCK_LIST_FILE_FILTER).length;
 
-    if (cliParser.hasOption(WORKLOAD_REPLAY_ENABLE_ARG)) {
-      if (!cliParser.hasOption(WORKLOAD_INPUT_PATH_ARG)
-          || !cliParser.hasOption(WORKLOAD_START_DELAY_ARG)) {
+    if (commandLine.hasOption(WORKLOAD_REPLAY_ENABLE_ARG)) {
+      if (!commandLine.hasOption(WORKLOAD_INPUT_PATH_ARG)
+          || !commandLine.hasOption(WORKLOAD_START_DELAY_ARG)) {
         throw new IllegalArgumentException("workload_replay_enable was "
             + "specified; must include all required workload_ parameters.");
       }
       launchWorkloadJob = true;
-      workloadInputPath = cliParser.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
+      workloadInputPath = commandLine.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
       workloadThreadsPerMapper = Integer
-          .parseInt(cliParser.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
+          .parseInt(commandLine.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
               String.valueOf(AuditReplayMapper.NUM_THREADS_DEFAULT)));
-      workloadRateFactor = Double.parseDouble(cliParser.getOptionValue(
+      workloadRateFactor = Double.parseDouble(commandLine.getOptionValue(
           WORKLOAD_RATE_FACTOR_ARG, WORKLOAD_RATE_FACTOR_DEFAULT));
       workloadExtraConfigs = new HashMap<>();
-      if (cliParser.getOptionValues(WORKLOAD_CONFIG_ARG) != null) {
-        for (String opt : cliParser.getOptionValues(WORKLOAD_CONFIG_ARG)) {
+      if (commandLine.getOptionValues(WORKLOAD_CONFIG_ARG) != null) {
+        for (String opt : commandLine.getOptionValues(WORKLOAD_CONFIG_ARG)) {
           Iterator<String> kvPair =
               Splitter.on("=").trimResults().split(opt).iterator();
           workloadExtraConfigs.put(kvPair.next(), kvPair.next());
         }
       }
-      String delayString = cliParser.getOptionValue(WORKLOAD_START_DELAY_ARG,
+      String delayString = commandLine.getOptionValue(WORKLOAD_START_DELAY_ARG,
           WorkloadDriver.START_TIME_OFFSET_DEFAULT);
       // Store a temporary config to leverage Configuration's time duration
       // parsing.
@@ -506,6 +505,8 @@ public class Client extends Configured implements Tool {
    * Main run function for the client.
    *
    * @return true if application completed successfully
+   * @throws IOException for general issues
+   * @throws YarnException for issues while contacting YARN daemons
    */
   public boolean run() throws IOException, YarnException {
 
@@ -856,11 +857,11 @@ public class Client extends Configured implements Tool {
       String relativePath = file.getAbsolutePath()
           .substring(root.getAbsolutePath().length() + 1);
       try {
-        FileInputStream in = new FileInputStream(file.getAbsolutePath());
-        out.putNextEntry(new ZipEntry(relativePath));
-        IOUtils.copyBytes(in, out, getConf(), false);
-        out.closeEntry();
-        in.close();
+        try (FileInputStream in = new FileInputStream(file.getAbsolutePath())) {
+          out.putNextEntry(new ZipEntry(relativePath));
+          IOUtils.copyBytes(in, out, getConf(), false);
+          out.closeEntry();
+        }
       } catch (FileNotFoundException fnfe) {
         LOG.warn("Skipping file; it is a symlink with a nonexistent target: {}",
             file);

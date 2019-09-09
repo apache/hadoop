@@ -243,6 +243,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           .setPipeline(pipeline);
       LOG.trace("New block allocated : {} Container ID: {}", localID,
           containerID);
+      pipelineManager.incNumBlocksAllocatedMetric(pipeline.getId());
       return abb.build();
     } catch (PipelineNotFoundException ex) {
       LOG.error("Pipeline Machine count is zero.", ex);

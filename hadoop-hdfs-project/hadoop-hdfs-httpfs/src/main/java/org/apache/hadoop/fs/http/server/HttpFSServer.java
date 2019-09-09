@@ -304,6 +304,14 @@ public class HttpFSServer {
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETQUOTAUSAGE: {
+      FSOperations.FSQuotaUsage command =
+          new FSOperations.FSQuotaUsage(path);
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GETFILECHECKSUM: {
       FSOperations.FSFileChecksum command =
           new FSOperations.FSFileChecksum(path);

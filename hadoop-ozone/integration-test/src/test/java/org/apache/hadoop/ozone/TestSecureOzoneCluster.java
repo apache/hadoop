@@ -35,11 +35,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -103,6 +105,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.slf4j.event.Level.INFO;
 
 /**
@@ -112,6 +115,7 @@ import static org.slf4j.event.Level.INFO;
 public final class TestSecureOzoneCluster {
 
   private static final String TEST_USER = "testUgiUser@EXAMPLE.COM";
+  private static final String COMPONENT = "test";
   private static final int CLIENT_TIMEOUT = 2 * 1000;
   private Logger logger = LoggerFactory
       .getLogger(TestSecureOzoneCluster.class);
@@ -271,7 +275,7 @@ public final class TestSecureOzoneCluster {
   public void testSCMSecurityProtocol() throws Exception {
 
     initSCM();
-    scm = StorageContainerManager.createSCM(conf);
+    scm = HddsTestUtils.getScm(conf);
     //Reads the SCM Info from SCM instance
     try {
       scm.start();
@@ -557,7 +561,7 @@ public final class TestSecureOzoneCluster {
   private void generateKeyPair(OzoneConfiguration config) throws Exception {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(conf);
     keyPair = keyGenerator.generateKey();
-    KeyCodec pemWriter = new KeyCodec(config);
+    KeyCodec pemWriter = new KeyCodec(new SecurityConfig(config), COMPONENT);
     pemWriter.writeKey(keyPair, true);
   }
 
@@ -688,11 +692,11 @@ public final class TestSecureOzoneCluster {
 
       //Creates a secret since it does not exist
       S3SecretValue firstAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //Fetches the secret from db since it was created in previous step
       S3SecretValue secondAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //secret fetched on both attempts must be same
       assertTrue(firstAttempt.getAwsSecret()
@@ -702,6 +706,13 @@ public final class TestSecureOzoneCluster {
       assertTrue(firstAttempt.getAwsAccessKey()
           .equals(secondAttempt.getAwsAccessKey()));
 
+
+      try {
+        omClient.getS3Secret("HADOOP/JOHNDOE");
+        fail("testGetS3Secret failed");
+      } catch (IOException ex) {
+        GenericTestUtils.assertExceptionContains("USER_MISMATCH", ex);
+      }
     } finally {
       if(om != null){
         om.stop();
@@ -739,7 +750,7 @@ public final class TestSecureOzoneCluster {
 
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(conf);
+      scm = HddsTestUtils.getScm(conf);
       scm.start();
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, false);
       OMStorage omStore = new OMStorage(conf);
@@ -785,7 +796,7 @@ public final class TestSecureOzoneCluster {
     omLogs.clearOutput();
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(conf);
+      scm = HddsTestUtils.getScm(conf);
       scm.start();
 
       OMStorage omStore = new OMStorage(conf);

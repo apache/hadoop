@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -457,8 +457,10 @@ public class ContractTestUtils extends Assert {
   public static FileStatus[] deleteChildren(FileSystem fileSystem,
       Path path,
       boolean recursive) throws IOException {
+    LOG.debug("Deleting children of {} (recursive={})", path, recursive);
     FileStatus[] children = listChildren(fileSystem, path);
     for (FileStatus entry : children) {
+      LOG.debug("Deleting {}", entry);
       fileSystem.delete(entry.getPath(), recursive);
     }
     return children;
@@ -672,7 +674,8 @@ public class ContractTestUtils extends Assert {
   /**
    * Delete a file/dir and assert that delete() returned true
    * <i>and</i> that the path no longer exists. This variant rejects
-   * all operations on root directories.
+   * all operations on root directories and requires the target path
+   * to exist before the deletion operation.
    * @param fs filesystem
    * @param file path to delete
    * @param recursive flag to enable recursive delete
@@ -686,8 +689,9 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Delete a file/dir and assert that delete() returned true
-   * <i>and</i> that the path no longer exists. This variant rejects
-   * all operations on root directories
+   * <i>and</i> that the path no longer exists.
+   * This variant requires the target path
+   * to exist before the deletion operation.
    * @param fs filesystem
    * @param file path to delete
    * @param recursive flag to enable recursive delete
@@ -698,8 +702,28 @@ public class ContractTestUtils extends Assert {
       Path file,
       boolean recursive,
       boolean allowRootOperations) throws IOException {
+    assertDeleted(fs, file, true, recursive, allowRootOperations);
+  }
+
+  /**
+   * Delete a file/dir and assert that delete() returned true
+   * <i>and</i> that the path no longer exists.
+   * @param fs filesystem
+   * @param file path to delete
+   * @param requirePathToExist check for the path existing first?
+   * @param recursive flag to enable recursive delete
+   * @param allowRootOperations can the root dir be deleted?
+   * @throws IOException IO problems
+   */
+  public static void assertDeleted(FileSystem fs,
+      Path file,
+      boolean requirePathToExist,
+      boolean recursive,
+      boolean allowRootOperations) throws IOException {
     rejectRootOperation(file, allowRootOperations);
-    assertPathExists(fs, "about to be deleted file", file);
+    if (requirePathToExist) {
+      assertPathExists(fs, "about to be deleted file", file);
+    }
     boolean deleted = fs.delete(file, recursive);
     String dir = ls(fs, file.getParent());
     assertTrue("Delete failed on " + file + ": " + dir, deleted);
@@ -1604,6 +1628,22 @@ public class ContractTestUtils extends Assert {
     }
 
     /**
+     * Dump the files and directories to a multi-line string for error
+     * messages and assertions.
+     * @return a dump of the internal state
+     */
+    private String dump() {
+      StringBuilder sb = new StringBuilder(toString());
+      sb.append("\nFiles:");
+      directories.forEach(p ->
+          sb.append("\n  \"").append(p.toString()));
+      sb.append("\nDirectories:");
+      files.forEach(p ->
+          sb.append("\n  \"").append(p.toString()));
+      return sb.toString();
+    }
+
+    /**
      * Equality check compares files and directory counts.
      * As these are non-final fields, this class cannot be used in
      * hash tables.
@@ -1643,7 +1683,7 @@ public class ContractTestUtils extends Assert {
      * @param o expected other entries.
      */
     public void assertSizeEquals(String text, long f, long d, long o) {
-      String self = toString();
+      String self = dump();
       Assert.assertEquals(text + ": file count in " + self,
           f, getFileCount());
       Assert.assertEquals(text + ": directory count in " + self,

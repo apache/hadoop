@@ -109,7 +109,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   /** The MetadataStore contract used to test against. */
   private AbstractMSContract contract;
 
-  private MetadataStore ms;
+  protected MetadataStore ms;
 
   /**
    * @return reference to the test contract.
@@ -120,18 +120,21 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   @Before
   public void setUp() throws Exception {
+    Thread.currentThread().setName("setup");
     LOG.debug("== Setup. ==");
     contract = createContract();
     ms = contract.getMetadataStore();
     assertNotNull("null MetadataStore", ms);
     assertNotNull("null FileSystem", contract.getFileSystem());
-    ms.initialize(contract.getFileSystem());
+    ms.initialize(contract.getFileSystem(),
+        new S3Guard.TtlTimeProvider(contract.getFileSystem().getConf()));
     ttlTimeProvider =
         new S3Guard.TtlTimeProvider(contract.getFileSystem().getConf());
   }
 
   @After
   public void tearDown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.debug("== Tear down. ==");
     if (ms != null) {
       try {
@@ -331,7 +334,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testDelete() throws Exception {
     setUpDeleteTest();
 
-    ms.delete(strToPath("/ADirectory1/db1/file2"), ttlTimeProvider);
+    ms.delete(strToPath("/ADirectory1/db1/file2"), null);
 
     /* Ensure delete happened. */
     assertDirectorySize("/ADirectory1/db1", 1);
@@ -360,7 +363,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing()) {
       assertCached(p + "/ADirectory1/db1");
     }
-    ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"), null);
 
     assertEmptyDirectory(p + "/ADirectory1");
     assertDeleted(p + "/ADirectory1/db1");
@@ -380,7 +383,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testDeleteRecursiveRoot() throws Exception {
     setUpDeleteTest();
 
-    ms.deleteSubtree(strToPath("/"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath("/"), null);
     assertDeleted("/ADirectory1");
     assertDeleted("/ADirectory2");
     assertDeleted("/ADirectory2/db1");
@@ -391,10 +394,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   @Test
   public void testDeleteNonExisting() throws Exception {
     // Path doesn't exist, but should silently succeed
-    ms.delete(strToPath("/bobs/your/uncle"), ttlTimeProvider);
+    ms.delete(strToPath("/bobs/your/uncle"), null);
 
     // Ditto.
-    ms.deleteSubtree(strToPath("/internets"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath("/internets"), null);
   }
 
 
@@ -432,7 +435,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
 
     if (!(ms instanceof NullMetadataStore)) {
-      ms.delete(strToPath(filePath), ttlTimeProvider);
+      ms.delete(strToPath(filePath), null);
       meta = ms.get(strToPath(filePath));
       assertTrue("Tombstone not left for deleted file", meta.isDeleted());
     }
@@ -551,7 +554,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
     dirMeta.setAuthoritative(true);
-    dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
+    dirMeta.put(new PathMetadata(
+        makeFileStatus("/a1/b1/file_new", 100)));
     ms.put(dirMeta, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
@@ -610,7 +614,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     destMetas.add(new PathMetadata(makeDirStatus("/b1")));
     destMetas.add(new PathMetadata(makeFileStatus("/b1/file1", 100)));
     destMetas.add(new PathMetadata(makeFileStatus("/b1/file2", 100)));
-    ms.move(srcPaths, destMetas, ttlTimeProvider, null);
+    ms.move(srcPaths, destMetas, null);
 
     // Assert src is no longer there
     dirMeta = ms.listChildren(strToPath("/a1"));
@@ -660,11 +664,11 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     // Make sure delete is correct as well
     if (!allowMissing()) {
-      ms.delete(new Path(p2), ttlTimeProvider);
+      ms.delete(new Path(p2), null);
       meta = ms.get(new Path(p1));
       assertNotNull("Path should not have been deleted", meta);
     }
-    ms.delete(new Path(p1), ttlTimeProvider);
+    ms.delete(new Path(p1), null);
   }
 
   @Test
@@ -1050,6 +1054,11 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return checkNotNull(get(pathStr), "No metastore entry for %s", pathStr);
   }
 
+  /**
+   * Assert that either a path has no entry or that it is marked as deleted.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
   protected void assertDeleted(String pathStr) throws IOException {
     PathMetadata meta = get(pathStr);
     boolean cached = meta != null && !meta.isDeleted();
@@ -1071,6 +1080,39 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertFalse(pathStr + " was found but marked deleted: "+ meta,
         meta.isDeleted());
     return meta;
+  }
+
+  /**
+   * Assert that an entry exists and is a file.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata verifyIsFile(String pathStr) throws IOException {
+    PathMetadata md = verifyCached(pathStr);
+    assertTrue("Not a file: " + md,
+        md.getFileStatus().isFile());
+    return md;
+  }
+
+  /**
+   * Assert that an entry exists and is a tombstone.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertIsTombstone(String pathStr) throws IOException {
+    PathMetadata meta = getNonNull(pathStr);
+    assertTrue(pathStr + " must be a tombstone: " + meta, meta.isDeleted());
+  }
+
+  /**
+   * Assert that an entry does not exist.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertNotFound(String pathStr) throws IOException {
+    PathMetadata meta = get(pathStr);
+    assertNull("Unexpectedly found entry at path " + pathStr,
+        meta);
   }
 
   /**
@@ -1096,6 +1138,40 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     PathMetadata meta = verifyCached(pathStr);
     assertTrue(pathStr + " is not a directory: " + meta,
         meta.getFileStatus().isDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must not be marked as an empty directory:
+   * its empty directory field must be FALSE or UNKNOWN.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getNonEmptyDirectory(final String pathStr)
+      throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertNotEquals("Path " + pathStr
+            + " is considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must be an empty directory.
+   * its empty directory field must be TRUE.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getEmptyDirectory(final String pathStr)
+      throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertEquals("Path " + pathStr
+            + " is not considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
     return meta;
   }
 

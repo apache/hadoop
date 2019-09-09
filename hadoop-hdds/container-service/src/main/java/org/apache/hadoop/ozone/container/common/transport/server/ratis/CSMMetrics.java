@@ -19,11 +19,14 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.ratis.protocol.RaftGroupId;
 
 /**
@@ -43,14 +46,32 @@ public class CSMMetrics {
   private @Metric MutableCounterLong numBytesWrittenCount;
   private @Metric MutableCounterLong numBytesCommittedCount;
 
+  private @Metric MutableRate transactionLatency;
+  private MutableRate[] opsLatency;
+  private MetricsRegistry registry = null;
+
   // Failure Metrics
   private @Metric MutableCounterLong numWriteStateMachineFails;
+  private @Metric MutableCounterLong numWriteDataFails;
   private @Metric MutableCounterLong numQueryStateMachineFails;
   private @Metric MutableCounterLong numApplyTransactionFails;
   private @Metric MutableCounterLong numReadStateMachineFails;
   private @Metric MutableCounterLong numReadStateMachineMissCount;
+  private @Metric MutableCounterLong numStartTransactionVerifyFailures;
+  private @Metric MutableCounterLong numContainerNotOpenVerifyFailures;
+
+  private @Metric MutableRate applyTransaction;
+  private @Metric MutableRate writeStateMachineData;
 
   public CSMMetrics() {
+    int numCmdTypes = ContainerProtos.Type.values().length;
+    this.opsLatency = new MutableRate[numCmdTypes];
+    this.registry = new MetricsRegistry(CSMMetrics.class.getSimpleName());
+    for (int i = 0; i < numCmdTypes; i++) {
+      opsLatency[i] = registry.newRate(
+          ContainerProtos.Type.forNumber(i + 1).toString(),
+          ContainerProtos.Type.forNumber(i + 1) + " op");
+    }
   }
 
   public static CSMMetrics create(RaftGroupId gid) {
@@ -78,6 +99,10 @@ public class CSMMetrics {
 
   public void incNumWriteStateMachineFails() {
     numWriteStateMachineFails.incr();
+  }
+
+  public void incNumWriteDataFails() {
+    numWriteDataFails.incr();
   }
 
   public void incNumQueryStateMachineFails() {
@@ -125,6 +150,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumWriteDataFails() {
+    return numWriteDataFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumQueryStateMachineFails() {
     return numQueryStateMachineFails.value();
   }
@@ -145,6 +175,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumReadStateMachineOps() {
+    return numReadStateMachineOps.value();
+  }
+
+  @VisibleForTesting
   public long getNumBytesWrittenCount() {
     return numBytesWrittenCount.value();
   }
@@ -154,6 +189,30 @@ public class CSMMetrics {
     return numBytesCommittedCount.value();
   }
 
+  public MutableRate getApplyTransactionLatency() {
+    return applyTransaction;
+  }
+
+  public void incPipelineLatency(ContainerProtos.Type type, long latencyNanos) {
+    opsLatency[type.ordinal()].add(latencyNanos);
+    transactionLatency.add(latencyNanos);
+  }
+
+  public void incNumStartTransactionVerifyFailures() {
+    numStartTransactionVerifyFailures.incr();
+  }
+
+  public void incNumContainerNotOpenVerifyFailures() {
+    numContainerNotOpenVerifyFailures.incr();
+  }
+
+  public void recordApplyTransactionCompletion(long latencyNanos) {
+    applyTransaction.add(latencyNanos);
+  }
+
+  public void recordWriteStateMachineCompletion(long latencyNanos) {
+    writeStateMachineData.add(latencyNanos);
+  }
 
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();

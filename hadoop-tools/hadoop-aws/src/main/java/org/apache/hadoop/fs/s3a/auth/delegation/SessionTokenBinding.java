@@ -297,7 +297,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
     hasSessionCreds = parentCredentials instanceof AWSSessionCredentials;
 
     if (!hasSessionCreds) {
-      LOG.info("Creating STS client for {}", getDescription());
+      LOG.debug("Creating STS client for {}", getDescription());
 
       invoker = new Invoker(new S3ARetryPolicy(conf), LOG_EVENT);
       ClientConfiguration awsConf =

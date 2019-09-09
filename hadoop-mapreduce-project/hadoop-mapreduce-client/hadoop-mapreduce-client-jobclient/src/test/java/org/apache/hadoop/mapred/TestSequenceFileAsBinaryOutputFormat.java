@@ -34,8 +34,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestSequenceFileAsBinaryOutputFormat {
@@ -126,10 +126,10 @@ public class TestSequenceFileAsBinaryOutputFormat {
               "Keys don't match: " + "*" + iwritable.get() + ":" + 
                                            sourceInt + "*",
               sourceInt, iwritable.get());
-          assertTrue(
+          assertThat(dwritable.get()).withFailMessage(
               "Vals don't match: " + "*" + dwritable.get() + ":" +
-                                           sourceDouble + "*",
-              Double.compare(dwritable.get(), sourceDouble) == 0 );
+                  sourceDouble + "*")
+              .isEqualTo(sourceDouble);
           ++count;
         }
       } finally {

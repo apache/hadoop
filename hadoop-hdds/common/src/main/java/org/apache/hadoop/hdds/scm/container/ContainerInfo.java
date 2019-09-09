@@ -467,4 +467,5 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return state == HddsProtos.LifeCycleState.OPEN
         || state == HddsProtos.LifeCycleState.CLOSING;
   }
+
 }

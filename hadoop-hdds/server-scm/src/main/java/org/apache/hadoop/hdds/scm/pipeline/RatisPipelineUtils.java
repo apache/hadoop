@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.protocol.RaftGroup;
@@ -90,10 +90,11 @@ public final class RatisPipelineUtils {
         new SecurityConfig(ozoneConf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
-    RaftClient client = RatisHelper
+    try(RaftClient client = RatisHelper
         .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout);
-    client
-        .groupRemove(RaftGroupId.valueOf(pipelineID.getId()), true, p.getId());
+            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout)) {
+      client.groupRemove(RaftGroupId.valueOf(pipelineID.getId()),
+          true, p.getId());
+    }
   }
 }

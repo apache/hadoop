@@ -456,6 +456,21 @@ public class NodeStateManager implements Runnable, Closeable {
   public void removePipeline(Pipeline pipeline) {
     node2PipelineMap.removePipeline(pipeline);
   }
+
+  /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param uuid - datanode uuid
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  public void addContainer(final UUID uuid,
+                           final ContainerID containerId)
+      throws NodeNotFoundException {
+    nodeStateMap.addContainer(uuid, containerId);
+  }
+
   /**
    * Update set of containers available on a datanode.
    * @param uuid - DatanodeID

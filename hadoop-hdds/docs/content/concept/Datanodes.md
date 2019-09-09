@@ -36,7 +36,7 @@ actual data streams. This is the default Storage container format. From
 Ozone's perspective, container is a protocol spec, actual storage layouts
 does not matter. In other words, it is trivial to extend or bring new
 container layouts. Hence this should be treated as a reference implementation
- of containers under Ozone.
+of containers under Ozone.
 
 ## Understanding Ozone Blocks and Containers
 
@@ -51,13 +51,13 @@ shows the logical layout out of Ozone block.
 
 The container ID lets the clients discover the location of the container. The
 authoritative information about where a container is located is with the
-Storage Container Manager or SCM. In most cases, the container location will
+Storage Container Manager (SCM). In most cases, the container location will be
 cached by Ozone Manager and will be returned along with the Ozone blocks.
 
 
 Once the client is able to locate the contianer, that is, understand which
 data nodes contain this container, the client will connect to the datanode
-read the data the data stream specified by container ID:Local ID. In other
+and read the data stream specified by _Container ID:Local ID_. In other
 words, the local ID serves as index into the container which describes what
 data stream we want to read from.
 

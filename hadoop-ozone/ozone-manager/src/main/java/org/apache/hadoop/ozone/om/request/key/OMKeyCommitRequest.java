@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +37,8 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.key.OMKeyCommitResponse;
-import org.apache.hadoop.ozone.om.response.key.OMKeyCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CommitKeyRequest;
@@ -49,8 +48,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
@@ -61,8 +58,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_L
 /**
  * Handles CommitKey request.
  */
-public class OMKeyCommitRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMKeyCommitRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMKeyCommitRequest.class);
@@ -89,7 +85,8 @@ public class OMKeyCommitRequest extends OMClientRequest
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     CommitKeyRequest commitKeyRequest = getOmRequest().getCommitKeyRequest();
 
@@ -111,39 +108,28 @@ public class OMKeyCommitRequest extends OMClientRequest
             OzoneManagerProtocolProtos.Type.CommitKey).setStatus(
             OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
 
-    try {
-      // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, keyName);
-      }
-    } catch (IOException ex) {
-      LOG.error("CommitKey failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, ex);
-      omMetrics.incNumKeyCommitFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.COMMIT_KEY, auditMap,
-          ex, getOmRequest().getUserInfo()));
-      return new OMKeyCreateResponse(null, -1L,
-          createErrorOMResponse(omResponse, ex));
-    }
-
-    List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
-        .getKeyLocationsList().stream().map(OmKeyLocationInfo::getFromProtobuf)
-        .collect(Collectors.toList());
-
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    String dbOzoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
-    String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
-        keyName, commitKeyRequest.getClientID());
-
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-        bucketName);
-
     IOException exception = null;
     OmKeyInfo omKeyInfo = null;
+    OMClientResponse omClientResponse = null;
+
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     try {
+      // check Acl
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
+
+      List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
+          .getKeyLocationsList().stream()
+          .map(OmKeyLocationInfo::getFromProtobuf)
+          .collect(Collectors.toList());
+
+      String dbOzoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
+          keyName);
+      String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
+          keyName, commitKeyRequest.getClientID());
+
+      omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          bucketName);
+
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(dbOpenKey);
       if (omKeyInfo == null) {
@@ -166,9 +152,20 @@ public class OMKeyCommitRequest extends OMClientRequest
           new CacheKey<>(dbOzoneKey),
           new CacheValue<>(Optional.of(omKeyInfo), transactionLogIndex));
 
+      omResponse.setCommitKeyResponse(CommitKeyResponse.newBuilder().build());
+      omClientResponse =
+          new OMKeyCommitResponse(omKeyInfo, commitKeyRequest.getClientID(),
+              omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMKeyCommitResponse(null, -1L,
+          createErrorOMResponse(omResponse, exception));
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
           bucketName);
     }
@@ -180,12 +177,22 @@ public class OMKeyCommitRequest extends OMClientRequest
     // return response after releasing lock.
     if (exception == null) {
       omResponse.setCommitKeyResponse(CommitKeyResponse.newBuilder().build());
-      return new OMKeyCommitResponse(omKeyInfo, commitKeyRequest.getClientID(),
-          omResponse.build());
+
+      // As when we commit the key, then it is visible in ozone, so we should
+      // increment here.
+      // As key also can have multiple versions, we need to increment keys
+      // only if version is 0. Currently we have not complete support of
+      // versioning of keys. So, this can be revisited later.
+
+      if (omKeyInfo.getKeyLocationVersions().size() == 1) {
+        omMetrics.incNumKeys();
+      }
+      return omClientResponse;
     } else {
+      LOG.error("CommitKey failed for Key: {} in volume/bucket:{}/{}",
+          keyName, bucketName, volumeName, exception);
       omMetrics.incNumKeyCommitFails();
-      return new OMKeyCommitResponse(null, -1L,
-          createErrorOMResponse(omResponse, exception));
+      return omClientResponse;
     }
 
   }

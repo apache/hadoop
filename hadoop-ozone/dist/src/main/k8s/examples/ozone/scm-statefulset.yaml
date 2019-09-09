@@ -58,6 +58,10 @@ spec:
         args:
         - ozone
         - scm
+        livenessProbe:
+          tcpSocket:
+            port: 9861
+          initialDelaySeconds: 30
         envFrom:
         - configMapRef:
             name: config

@@ -29,13 +29,14 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
  * Dummy Recon task that has 3 modes of operations.
  * ALWAYS_FAIL / FAIL_ONCE / ALWAYS_PASS
  */
-public class DummyReconDBTask extends ReconDBUpdateTask {
+public class DummyReconDBTask implements ReconDBUpdateTask {
 
   private int numFailuresAllowed = Integer.MIN_VALUE;
   private int callCtr = 0;
+  private String taskName;
 
-  public DummyReconDBTask(String taskName, TaskType taskType) {
-    super(taskName);
+  DummyReconDBTask(String taskName, TaskType taskType) {
+    this.taskName = taskName;
     if (taskType.equals(TaskType.FAIL_ONCE)) {
       numFailuresAllowed = 1;
     } else if (taskType.equals(TaskType.ALWAYS_FAIL)) {
@@ -44,12 +45,17 @@ public class DummyReconDBTask extends ReconDBUpdateTask {
   }
 
   @Override
-  protected Collection<String> getTaskTables() {
+  public String getTaskName() {
+    return taskName;
+  }
+
+  @Override
+  public Collection<String> getTaskTables() {
     return Collections.singletonList("volumeTable");
   }
 
   @Override
-  Pair<String, Boolean> process(OMUpdateEventBatch events) {
+  public Pair<String, Boolean> process(OMUpdateEventBatch events) {
     if (++callCtr <= numFailuresAllowed) {
       return new ImmutablePair<>(getTaskName(), false);
     } else {
@@ -58,7 +64,7 @@ public class DummyReconDBTask extends ReconDBUpdateTask {
   }
 
   @Override
-  Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
+  public Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
     if (++callCtr <= numFailuresAllowed) {
       return new ImmutablePair<>(getTaskName(), false);
     } else {

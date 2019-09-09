@@ -1092,8 +1092,8 @@
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
+    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
+       IAM credentials of any EC2 VM or AWS container in which the process is running.
   </description>
 </property>
 
@@ -1353,7 +1353,7 @@
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -1361,7 +1361,7 @@
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -1660,7 +1660,7 @@
 
 <property>
   <name>fs.s3a.retry.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
     excluding throttling requests.
@@ -1671,7 +1671,7 @@
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between attempts to retry operations for any reason other
+    Initial retry interval when retrying operations for any reason other
     than S3 throttle errors.
   </description>
 </property>
@@ -1747,7 +1747,7 @@
 
 <property>
   <name>fs.s3a.committer.staging.conflict-mode</name>
-  <value>fail</value>
+  <value>append</value>
   <description>
     Staging committer conflict resolution policy.
     Supported: "fail", "append", "replace".
@@ -2196,7 +2196,7 @@
 
 <property>
   <name>ipc.server.listen.queue.size</name>
-  <value>128</value>
+  <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting
                client connections.
   </description>
@@ -2213,7 +2213,7 @@
 
 <property>
   <name>ipc.maximum.data.length</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
     accepted by the server. Messages larger than this value are rejected by the
     immediately to avoid possible OOMs. This setting should rarely need to be
@@ -2495,6 +2495,19 @@
   </description>
 </property>
 
+  <property>
+    <name>hadoop.http.authentication.kerberos.endpoint.whitelist</name>
+    <value></value>
+    <description>
+      The comma-separated list of the endpoints that skips Kerberos
+      authentication. The endpoint must start with '/' and must not
+      contain special characters afterwards. This parameter is for
+      the monitoring tools that do not support Kerberos authentication.
+      Administrator must configure this parameter very carefully
+      because it allows unauthenticated access to the daemons.
+    </description>
+  </property>
+
 <!-- HTTP CORS support -->
 <property>
   <name>hadoop.http.cross-origin.enabled</name>
@@ -2739,6 +2752,15 @@
   <value>1000</value>
   <description>
     How long to sleep after an unexpected RPC error.
+  </description>
+</property>
+
+<property>
+  <name>ha.health-monitor.rpc.connect.max.retries</name>
+  <value>1</value>
+  <description>
+    The number of retries on connect error when establishing RPC proxy
+    connection to NameNode, used for monitorHealth() calls.
   </description>
 </property>
 
@@ -3492,6 +3514,36 @@
       If client choose to ignore KMS uri provided by NameNode then client
       should set KMS URI using 'hadoop.security.key.provider.path' to access
       the right KMS for encrypted files.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <description>
+      If set to true, prometheus compatible metric page on the HTTP servers
+      is enabled via '/prom' endpoint.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.classname</name>
+    <value></value>
+    <description>
+      The class that can tell estimate much space is used in a directory.
+      There are four impl classes that being supported:
+      org.apache.hadoop.fs.DU(default), org.apache.hadoop.fs.WindowsGetSpaceUsed
+      org.apache.hadoop.fs.DFCachingGetSpaceUsed and
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaCachingGetSpaceUsed.
+      And the ReplicaCachingGetSpaceUsed impl class only used in HDFS module.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.jitterMillis</name>
+    <value>60000</value>
+    <description>
+      fs space usage statistics refresh jitter in msec.
     </description>
   </property>
 </configuration>

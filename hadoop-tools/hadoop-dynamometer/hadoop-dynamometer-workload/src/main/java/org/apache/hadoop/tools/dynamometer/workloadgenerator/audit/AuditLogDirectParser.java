@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.function.Function;
@@ -36,8 +37,8 @@ import org.apache.hadoop.io.Text;
  * It requires setting the {@value AUDIT_START_TIMESTAMP_KEY} configuration to
  * specify what the start time of the audit log was to determine when events
  * occurred relative to this start time.
- *
- * <p/>By default, this assumes that the audit log is in the default log format
+ * <p>
+ * By default, this assumes that the audit log is in the default log format
  * set up by Hadoop, like:
  * <pre>{@code
  *   1970-01-01 00:00:00,000 INFO FSNamesystem.audit: allowed=true ...
@@ -81,8 +82,6 @@ public class AuditLogDirectParser implements AuditCommandParser {
   public static final String AUDIT_LOG_PARSE_REGEX_DEFAULT =
       "^(?<timestamp>.+?) INFO [^:]+: (?<message>.+)$";
 
-  private static final Splitter.MapSplitter AUDIT_SPLITTER = Splitter.on("\t")
-      .trimResults().omitEmptyStrings().withKeyValueSeparator("=");
   private static final Splitter SPACE_SPLITTER = Splitter.on(" ").trimResults()
       .omitEmptyStrings();
 
@@ -132,8 +131,20 @@ public class AuditLogDirectParser implements AuditCommandParser {
     // Sanitize the = in the rename options field into a : so we can split on =
     String auditMessageSanitized =
         m.group("message").replace("(options=", "(options:");
-    Map<String, String> parameterMap = AUDIT_SPLITTER
-        .split(auditMessageSanitized);
+
+    Map<String, String> parameterMap = new HashMap<String, String>();
+    String[] auditMessageSanitizedList = auditMessageSanitized.split("\t");
+
+    for (String auditMessage : auditMessageSanitizedList) {
+      String[] splitMessage = auditMessage.split("=", 2);
+      try {
+        parameterMap.put(splitMessage[0], splitMessage[1]);
+      } catch (ArrayIndexOutOfBoundsException e) {
+        throw new IOException(
+            "Exception while parsing a message from audit log", e);
+      }
+    }
+
     return new AuditReplayCommand(relativeToAbsolute.apply(relativeTimestamp),
         // Split the UGI on space to remove the auth and proxy portions of it
         SPACE_SPLITTER.split(parameterMap.get("ugi")).iterator().next(),

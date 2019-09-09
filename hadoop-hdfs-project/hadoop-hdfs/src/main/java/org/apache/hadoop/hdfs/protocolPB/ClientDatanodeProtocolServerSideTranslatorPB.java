@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DiskBa
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * Implementation for protobuf service that forwards requests
@@ -225,8 +226,12 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       RpcController unused, TriggerBlockReportRequestProto request)
           throws ServiceException {
     try {
-      impl.triggerBlockReport(new BlockReportOptions.Factory().
-          setIncremental(request.getIncremental()).build());
+      BlockReportOptions.Factory factory = new BlockReportOptions.Factory().
+          setIncremental(request.getIncremental());
+      if (request.hasNnAddress()) {
+        factory.setNamenodeAddr(NetUtils.createSocketAddr(request.getNnAddress()));
+      }
+      impl.triggerBlockReport(factory.build());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

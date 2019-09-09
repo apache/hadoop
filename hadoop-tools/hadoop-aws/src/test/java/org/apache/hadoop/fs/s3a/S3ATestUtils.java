@@ -27,7 +27,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -504,6 +506,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Require a filesystem to have a metadata store; skip test
+   * if not.
+   * @param fs filesystem to check
+   */
+  public static void assumeFilesystemHasMetadatastore(S3AFileSystem fs) {
+    assume("Filesystem does not have a metastore",
+        fs.hasMetadataStore());
+  }
+
+  /**
    * Reset all metrics in a list.
    * @param metrics metrics to reset
    */
@@ -758,6 +770,20 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Remove any values from the test bucket and the base values too.
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBaseAndBucketOverrides(
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf, options);
+  }
+
+  /**
    * Call a function; any exception raised is logged at info.
    * This is for test teardowns.
    * @param log log to use.
@@ -814,6 +840,22 @@ public final class S3ATestUtils {
   public static <T extends Service> T terminateService(final T service) {
     ServiceOperations.stopQuietly(LOG, service);
     return null;
+  }
+
+  /**
+   * Get a file status from S3A with the {@code needEmptyDirectoryFlag}
+   * state probed.
+   * This accesses a package-private method in the
+   * S3A filesystem.
+   * @param fs filesystem
+   * @param dir directory
+   * @return a status
+   * @throws IOException
+   */
+  public static S3AFileStatus getStatusWithEmptyDirFlag(
+      final S3AFileSystem fs,
+      final Path dir) throws IOException {
+    return fs.innerGetFileStatus(dir, true);
   }
 
   /**
@@ -1216,4 +1258,53 @@ public final class S3ATestUtils {
     }
     return Boolean.valueOf(persists);
   }
+
+  public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, lfs.getPath());
+    }
+    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, fileStatus.getPath());
+    }
+    LOG.info("{}; file omitted from listStatus as expected.", filePath);
+  }
+
+  public static void checkListingContainsPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+
+    boolean listFilesHasIt = false;
+    boolean listStatusHasIt = false;
+
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+
+
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      if (filePath.equals(lfs.getPath())) {
+        listFilesHasIt = true;
+      }
+    }
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      if (filePath.equals(fileStatus.getPath())) {
+        listStatusHasIt = true;
+      }
+    }
+    assertTrue("fs.listFiles didn't include " + filePath,
+          listFilesHasIt);
+    assertTrue("fs.listStatus didn't include " + filePath,
+          listStatusHasIt);
+  }
+
 }

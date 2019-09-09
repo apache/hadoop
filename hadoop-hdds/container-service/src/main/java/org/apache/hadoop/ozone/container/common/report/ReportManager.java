@@ -23,10 +23,13 @@ import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ReportManager is responsible for managing all the {@link ReportPublisher}
@@ -34,6 +37,8 @@ import java.util.concurrent.ScheduledExecutorService;
  * which should be used for scheduling the reports.
  */
 public final class ReportManager {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReportManager.class);
 
   private final StateContext context;
   private final List<ReportPublisher> publishers;
@@ -71,6 +76,11 @@ public final class ReportManager {
    */
   public void shutdown() {
     executorService.shutdown();
+    try {
+      executorService.awaitTermination(5, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      LOG.error("Failed to shutdown Report Manager", e);
+    }
   }
 
   /**

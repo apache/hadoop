@@ -60,8 +60,8 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf =  super.createConfiguration();
     //patch the read/write capacity
-    conf.set(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, "0");
-    conf.set(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, "0");
+    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 0);
+    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 0);
     return conf;
   }
 
@@ -107,7 +107,7 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
     //now init the store; this should increment the ref count.
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(fs);
+    ms.initialize(fs, new S3Guard.TtlTimeProvider(conf));
 
     // the ref count should have gone up
     assertEquals("Credential Ref count unchanged after initializing metastore "
@@ -155,7 +155,7 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
               Exception result = null;
               try (DynamoDBMetadataStore store = new DynamoDBMetadataStore()) {
-                store.initialize(conf);
+                store.initialize(conf, new S3Guard.TtlTimeProvider(conf));
               } catch (Exception e) {
                 LOG.error(e.getClass() + ": " + e.getMessage());
                 result = e;

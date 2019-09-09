@@ -36,6 +36,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestUberAM extends TestMRJobs {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUberAM.class);
@@ -127,7 +129,7 @@ public class TestUberAM extends TestMRJobs {
     } catch (Exception e) {
       secondTaskAttemptExists = false;
     }
-    Assert.assertEquals(false, secondTaskAttemptExists);
+    assertThat(secondTaskAttemptExists).isFalse();
 
     TaskCompletionEvent[] events = job.getTaskCompletionEvents(0, 2);
     Assert.assertEquals(1, events.length);

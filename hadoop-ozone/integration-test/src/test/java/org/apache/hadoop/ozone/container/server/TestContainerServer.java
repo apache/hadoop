@@ -141,8 +141,9 @@ public class TestContainerServer {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis
-        .newXceiverServerRatis(dn, conf, dispatcher, null, caClient);
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        caClient, null);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)

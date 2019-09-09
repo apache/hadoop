@@ -177,6 +177,7 @@ public class TestLeafQueue {
     setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();
     cs.setConf(conf);
+    when(spyRMContext.getYarnConfiguration()).thenReturn(conf);
 
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
@@ -213,12 +214,12 @@ public class TestLeafQueue {
     cs.setRMContext(spyRMContext);
     cs.init(csConf);
     cs.setResourceCalculator(rC);
-    cs.start();
 
     when(spyRMContext.getScheduler()).thenReturn(cs);
     when(spyRMContext.getYarnConfiguration())
         .thenReturn(new YarnConfiguration());
     when(cs.getNumClusterNodes()).thenReturn(3);
+    cs.start();
   }
 
 

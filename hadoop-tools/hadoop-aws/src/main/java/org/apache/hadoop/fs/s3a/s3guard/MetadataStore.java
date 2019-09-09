@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -50,17 +51,21 @@ public interface MetadataStore extends Closeable {
    * Performs one-time initialization of the metadata store.
    *
    * @param fs {@code FileSystem} associated with the MetadataStore
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(FileSystem fs) throws IOException;
+  void initialize(FileSystem fs, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Performs one-time initialization of the metadata store via configuration.
-   * @see #initialize(FileSystem)
+   * @see #initialize(FileSystem, ITtlTimeProvider)
    * @param conf Configuration.
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(Configuration conf) throws IOException;
+  void initialize(Configuration conf,
+      ITtlTimeProvider ttlTimeProvider) throws IOException;
 
   /**
    * Deletes exactly one path, leaving a tombstone to prevent lingering,
@@ -71,16 +76,16 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of the record has to be updated to <pre>now</pre>.
    *
    * @param path the path to delete
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+  void delete(Path path,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path, ITtlTimeProvider)}. It is currently
+   * {@link MetadataStore#delete(Path, BulkOperationState)}. It is currently
    * intended for testing only, and a need to use it as part of normal
    * FileSystem usage is not anticipated.
    *
@@ -103,11 +108,26 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of all records have to be updated to <pre>now</pre>.
    *
    * @param path the root of the sub-tree to delete
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+  @Retries.RetryTranslated
+  void deleteSubtree(Path path,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
+
+  /**
+   * Delete the paths.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param paths paths to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+
+  @RetryTranslated
+  void deletePaths(Collection<Path> paths,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
@@ -143,6 +163,7 @@ public interface MetadataStore extends Closeable {
    *     in the MetadataStore.
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   DirListingMetadata listChildren(Path path) throws IOException;
 
   /**
@@ -152,14 +173,11 @@ public interface MetadataStore extends Closeable {
    * must have their last updated timestamps set through
    * {@link S3Guard#patchLastUpdated(Collection, ITtlTimeProvider)}.
    * @param qualifiedPath path to update
-   * @param timeProvider time provider for timestamps
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException failure
    */
   @RetryTranslated
-  void addAncestors(
-      Path qualifiedPath,
-      @Nullable ITtlTimeProvider timeProvider,
+  void addAncestors(Path qualifiedPath,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -184,16 +202,12 @@ public interface MetadataStore extends Closeable {
    *                      source directory tree of the move.
    * @param pathsToCreate Collection of all PathMetadata for the new paths
    *                      that were created at the destination of the rename().
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
    * @param operationState     Any ongoing state supplied to the rename tracker
    *                      which is to be passed in with each move operation.
    * @throws IOException if there is an error
    */
-  void move(
-      @Nullable Collection<Path> pathsToDelete,
+  void move(@Nullable Collection<Path> pathsToDelete,
       @Nullable Collection<PathMetadata> pathsToCreate,
-      ITtlTimeProvider ttlTimeProvider,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -301,7 +315,7 @@ public interface MetadataStore extends Closeable {
    *   </li>
    * </ul>
    *
-   * @param pruneMode
+   * @param pruneMode Prune Mode
    * @param cutoff Oldest time to allow (UTC)
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
@@ -313,7 +327,7 @@ public interface MetadataStore extends Closeable {
    * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an
    * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
-   * @param pruneMode
+   * @param pruneMode Prune Mode
    * @param cutoff Oldest time to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
@@ -377,5 +391,14 @@ public interface MetadataStore extends Closeable {
       Path dest) throws IOException {
     return null;
   }
+
+  /**
+   * The TtlTimeProvider has to be set during the initialization for the
+   * metadatastore, but this method can be used for testing, and change the
+   * instance during runtime.
+   *
+   * @param ttlTimeProvider
+   */
+  void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
 }

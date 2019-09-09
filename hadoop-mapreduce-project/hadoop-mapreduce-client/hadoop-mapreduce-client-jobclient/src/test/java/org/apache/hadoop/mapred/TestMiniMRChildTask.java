@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -171,9 +172,10 @@ public class TestMiniMRChildTask {
         String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
         assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
                       javaOpts);
-        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
-                     javaOpts, 
-                     javaOpts, TASK_OPTS_VAL);
+        assertThat(javaOpts)
+            .withFailMessage(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: "
+                + javaOpts)
+            .isEqualTo(TASK_OPTS_VAL);
       } else {
         String mapJavaOpts = job.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
         assertNotNull(JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!", 
@@ -214,16 +216,18 @@ public class TestMiniMRChildTask {
         String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
         assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
                       javaOpts);
-        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
-                     javaOpts, 
-                     javaOpts, TASK_OPTS_VAL);
+        assertThat(javaOpts)
+            .withFailMessage(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: "
+                + javaOpts)
+            .isEqualTo(TASK_OPTS_VAL);
       } else {
         String reduceJavaOpts = job.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS);
         assertNotNull(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!", 
                       reduceJavaOpts);
-        assertEquals(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " has value of: " + 
-                     reduceJavaOpts, 
-                     reduceJavaOpts, REDUCE_OPTS_VAL);
+        assertThat(reduceJavaOpts)
+            .withFailMessage(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS +
+                " has value of: " + reduceJavaOpts)
+            .isEqualTo(REDUCE_OPTS_VAL);
       }
 
       // check if X=y works for an already existing parameter

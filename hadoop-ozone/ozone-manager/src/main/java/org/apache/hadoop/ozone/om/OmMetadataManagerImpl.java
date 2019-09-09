@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
@@ -68,6 +69,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import org.apache.hadoop.utils.db.TypedTable;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,12 +140,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table s3SecretTable;
   private Table dTokenTable;
   private Table prefixTable;
+  private boolean isRatisEnabled;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
     this.openKeyExpireThresholdMS = 1000L * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
+    // TODO: This is a temporary check. Once fully implemented, all OM state
+    //  change should go through Ratis - be it standalone (for non-HA) or
+    //  replicated (for HA).
+    isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     start(conf);
   }
 
@@ -267,12 +276,18 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     userTable =
         this.store.getTable(USER_TABLE, String.class, VolumeList.class);
     checkTableStatus(userTable, USER_TABLE);
+
+    TableCacheImpl.CacheCleanupPolicy cleanupPolicy =
+        TableCacheImpl.CacheCleanupPolicy.NEVER;
+
     volumeTable =
-        this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class);
+        this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class,
+            cleanupPolicy);
     checkTableStatus(volumeTable, VOLUME_TABLE);
 
     bucketTable =
-        this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class);
+        this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class,
+            cleanupPolicy);
 
     checkTableStatus(bucketTable, BUCKET_TABLE);
 
@@ -379,6 +394,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       }
     }
     return builder.toString();
+  }
+
+  @Override
+  public String getOzoneDirKey(String volume, String bucket, String key) {
+    key = OzoneFSUtils.addTrailingSlashIfNeeded(key);
+    return getOzoneKey(volume, bucket, key);
   }
 
   @Override
@@ -788,6 +809,16 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           count++;
         }
       }
+    }
+    return count;
+  }
+
+  @Override
+  public <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
+      throws IOException {
+    long count = 0;
+    if (table != null) {
+      count = table.getEstimatedKeyCount();
     }
     return count;
   }

@@ -36,7 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.net.ConnectException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
@@ -60,6 +59,7 @@ import static org.apache.hadoop.test.GenericTestUtils.*;
  */
 public class TestSecureOzoneManager {
 
+  private static final String COMPONENT = "om";
   private MiniOzoneCluster cluster = null;
   private OzoneConfiguration conf;
   private String clusterId;
@@ -121,66 +121,50 @@ public class TestSecureOzoneManager {
     omLogs.clearOutput();
 
     // Case 1: When keypair as well as certificate is missing. Initial keypair
-    // boot-up. Get certificate will fail no SCM is not running.
-    LambdaTestUtils.intercept(ConnectException.class, "Connection " +
-            "refused; For more detail",
-        () -> OzoneManager.initializeSecurity(conf, omStorage));
+    // boot-up. Get certificate will fail when SCM is not running.
     SecurityConfig securityConfig = new SecurityConfig(conf);
-    CertificateClient client =
-        new OMCertificateClient(securityConfig);
+    CertificateClient client = new OMCertificateClient(securityConfig,
+        omStorage.getOmCertSerialId());
+    Assert.assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
     privateKey = client.getPrivateKey();
     publicKey = client.getPublicKey();
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
     Assert.assertNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: GETCERT"));
-    omLogs.clearOutput();
 
     // Case 2: If key pair already exist than response should be RECOVER.
-    client = new OMCertificateClient(securityConfig);
-    LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
-            " initialization failed",
-        () -> OzoneManager.initializeSecurity(conf, omStorage));
+    client = new OMCertificateClient(securityConfig,
+        omStorage.getOmCertSerialId());
+    Assert.assertEquals(CertificateClient.InitResponse.RECOVER, client.init());
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
     Assert.assertNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: RECOVER"));
-    Assert.assertTrue(omLogs.getOutput().contains(" OM certificate is " +
-        "missing"));
-    omLogs.clearOutput();
 
     // Case 3: When public key as well as certificate is missing.
     client = new OMCertificateClient(securityConfig);
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
-            " initialization failed",
-        () -> OzoneManager.initializeSecurity(conf, omStorage));
+    Assert.assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNull(client.getPublicKey());
     Assert.assertNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: FAILURE"));
-    omLogs.clearOutput();
 
     // Case 4: When private key and certificate is missing.
     client = new OMCertificateClient(securityConfig);
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    KeyCodec keyCodec = new KeyCodec(securityConfig);
+    KeyCodec keyCodec = new KeyCodec(securityConfig, COMPONENT);
     keyCodec.writePublicKey(publicKey);
-    LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
-            " initialization failed",
-        () -> OzoneManager.initializeSecurity(conf, omStorage));
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
+        .toString(), securityConfig.getPrivateKeyFileName()).toFile());
+    Assert.assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
     Assert.assertNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
     Assert.assertNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: FAILURE"));
-    omLogs.clearOutput();
 
     // Case 5: When only certificate is present.
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    CertificateCodec certCodec = new CertificateCodec(securityConfig);
+    CertificateCodec certCodec =
+        new CertificateCodec(securityConfig, COMPONENT);
     X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
         "CN=Test", new KeyPair(publicKey, privateKey), 10,
         securityConfig.getSignatureAlgo());
@@ -189,37 +173,29 @@ public class TestSecureOzoneManager {
     client = new OMCertificateClient(securityConfig,
         x509Certificate.getSerialNumber().toString());
     omStorage.setOmCertSerialId(x509Certificate.getSerialNumber().toString());
-    LambdaTestUtils.intercept(RuntimeException.class, " OM security" +
-            " initialization failed",
-        () -> OzoneManager.initializeSecurity(conf, omStorage));
+    Assert.assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
     Assert.assertNull(client.getPrivateKey());
     Assert.assertNull(client.getPublicKey());
     Assert.assertNotNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: FAILURE"));
-    omLogs.clearOutput();
 
     // Case 6: When private key and certificate is present.
     client = new OMCertificateClient(securityConfig,
         x509Certificate.getSerialNumber().toString());
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyCodec.writePrivateKey(privateKey);
-    OzoneManager.initializeSecurity(conf, omStorage);
+    Assert.assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
     Assert.assertNotNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: SUCCESS"));
-    omLogs.clearOutput();
 
     // Case 7 When keypair and certificate is present.
     client = new OMCertificateClient(securityConfig,
         x509Certificate.getSerialNumber().toString());
-    OzoneManager.initializeSecurity(conf, omStorage);
+    Assert.assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
     Assert.assertNotNull(client.getCertificate());
-    Assert.assertTrue(omLogs.getOutput().contains("Init response: SUCCESS"));
-    omLogs.clearOutput();
   }
 
   /**

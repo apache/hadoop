@@ -81,10 +81,10 @@ public class TestContainerPlacement {
 
     SCMContainerPlacementCapacity capacityPlacer = new
         SCMContainerPlacementCapacity(nodeManagerCapacity, new Configuration(),
-        null, true);
+        null, true, null);
     SCMContainerPlacementRandom randomPlacer = new
         SCMContainerPlacementRandom(nodeManagerRandom, new Configuration(),
-        null, true);
+        null, true, null);
 
     for (int x = 0; x < opsCount; x++) {
       long containerSize = random.nextInt(100) * OzoneConsts.GB;

@@ -1582,11 +1582,10 @@ public class TestIPC {
     try {
       call(client, 0, addr, conf);
     } catch (IOException ioe) {
-      Throwable t = ioe.getCause();
-      Assert.assertNotNull(t);
-      Assert.assertEquals(RpcException.class, t.getClass());
+      Assert.assertNotNull(ioe);
+      Assert.assertEquals(RpcException.class, ioe.getClass());
       Assert.assertEquals("RPC response exceeds maximum data length",
-          t.getMessage());
+          ioe.getMessage());
       return;
     }
     Assert.fail("didn't get limit exceeded");

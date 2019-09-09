@@ -31,7 +31,10 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
       }),
-      app: this.fetchAppInfoFromRMorATS(app_id, this.store)
+      app: this.fetchAppInfoFromRMorATS(app_id, this.store),
+      timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
+        return null;
+      })
     });
   },
 

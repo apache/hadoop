@@ -117,10 +117,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   /**
    * Test array for parameterized test runs: how many threads and
-   * how many files to use.
+   * whether or not filenames are unique.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="threads-{0}-unique-{1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {0, false},
@@ -142,6 +142,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         uniqueFilenames);
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID,
         UUID.randomUUID().toString());
+    jobConf.set(RETRY_INTERVAL, "100ms");
+    jobConf.setInt(RETRY_LIMIT, 1);
 
     this.results = new StagingTestBase.ClientResults();
     this.errors = new StagingTestBase.ClientErrors();

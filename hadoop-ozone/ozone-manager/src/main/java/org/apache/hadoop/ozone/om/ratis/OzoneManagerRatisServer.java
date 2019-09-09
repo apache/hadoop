@@ -308,10 +308,15 @@ public final class OzoneManagerRatisServer {
   }
 
   /**
-   * Returns OzoneManager StateMachine.
+   * Initializes and returns OzoneManager StateMachine.
    */
   private OzoneManagerStateMachine getStateMachine() {
-    return  new OzoneManagerStateMachine(this);
+    return new OzoneManagerStateMachine(this);
+  }
+
+  @VisibleForTesting
+  public OzoneManagerStateMachine getOmStateMachine() {
+    return omStateMachine;
   }
 
   public OzoneManager getOzoneManager() {
@@ -387,6 +392,12 @@ public final class OzoneManagerRatisServer {
         SizeInBytes.valueOf(logAppenderQueueByteLimit));
     RaftServerConfigKeys.Log.setPreallocatedSize(properties,
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
+    RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
+        false);
+    final int logPurgeGap = conf.getInt(
+        OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP,
+        OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT);
+    RaftServerConfigKeys.Log.setPurgeGap(properties, logPurgeGap);
 
     // For grpc set the maximum message size
     // TODO: calculate the optimal max message size
@@ -478,7 +489,7 @@ public final class OzoneManagerRatisServer {
             .getDuration(), nodeFailureTimeoutUnit);
     final TimeDuration nodeFailureTimeout = TimeDuration.valueOf(
         nodeFailureTimeoutDuration, nodeFailureTimeoutUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);

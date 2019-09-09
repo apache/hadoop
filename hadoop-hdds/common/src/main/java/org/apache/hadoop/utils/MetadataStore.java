@@ -132,6 +132,12 @@ public interface MetadataStore extends Closeable{
   void compactDB() throws IOException;
 
   /**
+   * Flush the outstanding I/O operations of the DB.
+   * @param sync if true will sync the outstanding I/Os to the disk.
+   */
+  void flushDB(boolean sync) throws IOException;
+
+  /**
    * Destroy the content of the specified database,
    * a destroyed database will not be able to load again.
    * Be very careful with this method.

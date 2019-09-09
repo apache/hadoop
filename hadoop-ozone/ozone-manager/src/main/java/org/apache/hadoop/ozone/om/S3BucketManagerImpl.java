@@ -21,10 +21,13 @@ package org.apache.hadoop.ozone.om;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_ALREADY_EXISTS;
 
@@ -33,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_VOLUME_PREFIX;
@@ -51,7 +55,6 @@ public class S3BucketManagerImpl implements S3BucketManager {
   private final OMMetadataManager omMetadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
-  private final boolean isRatisEnabled;
 
   /**
    * Construct an S3 Bucket Manager Object.
@@ -68,17 +71,13 @@ public class S3BucketManagerImpl implements S3BucketManager {
     this.omMetadataManager = omMetadataManager;
     this.volumeManager = volumeManager;
     this.bucketManager = bucketManager;
-    isRatisEnabled = configuration.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
   }
 
   @Override
   public void createS3Bucket(String userName, String bucketName)
       throws IOException {
-    Preconditions.checkArgument(
-        Strings.isNotBlank(bucketName), "Bucket name cannot be null or empty.");
-
+    Preconditions.checkArgument(Strings.isNotBlank(bucketName), "Bucket" +
+        " name cannot be null or empty.");
     Preconditions.checkArgument(Strings.isNotBlank(userName), "User name " +
         "cannot be null or empty.");
 
@@ -162,19 +161,20 @@ public class S3BucketManagerImpl implements S3BucketManager {
     boolean newVolumeCreate = true;
     String ozoneVolumeName = formatOzoneVolumeName(userName);
     try {
-      OmVolumeArgs args =
+      OmVolumeArgs.Builder builder =
           OmVolumeArgs.newBuilder()
               .setAdminName(S3_ADMIN_NAME)
               .setOwnerName(userName)
               .setVolume(ozoneVolumeName)
-              .setQuotaInBytes(OzoneConsts.MAX_QUOTA_IN_BYTES)
-              .build();
-      if (isRatisEnabled) {
-        // When ratis is enabled we need to call apply also.
-        volumeManager.applyCreateVolume(args, volumeManager.createVolume(args));
-      } else {
-        volumeManager.createVolume(args);
+              .setQuotaInBytes(OzoneConsts.MAX_QUOTA_IN_BYTES);
+      for (OzoneAcl acl : getDefaultAcls(userName)) {
+        builder.addOzoneAcls(OzoneAcl.toProtobuf(acl));
       }
+
+      OmVolumeArgs args = builder.build();
+
+      volumeManager.createVolume(args);
+
     } catch (OMException exp) {
       newVolumeCreate = false;
       if (exp.getResult().compareTo(VOLUME_ALREADY_EXISTS) == 0) {
@@ -189,6 +189,15 @@ public class S3BucketManagerImpl implements S3BucketManager {
     return newVolumeCreate;
   }
 
+  /**
+   * Get default acls. 
+   * */
+  private List<OzoneAcl> getDefaultAcls(String userName) {
+    UserGroupInformation ugi = ProtobufRpcEngine.Server.getRemoteUser();
+    return OzoneAcl.parseAcls("user:" + (ugi == null ? userName :
+        ugi.getUserName()) + ":a,user:" + S3_ADMIN_NAME + ":a");
+  }
+
   private void createOzoneBucket(String volumeName, String bucketName)
       throws IOException {
     OmBucketInfo.Builder builder = OmBucketInfo.newBuilder();
@@ -198,6 +207,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
             .setBucketName(bucketName)
             .setIsVersionEnabled(Boolean.FALSE)
             .setStorageType(StorageType.DEFAULT)
+            .setAcls(getDefaultAcls(null))
             .build();
     bucketManager.createBucket(bucketInfo);
   }

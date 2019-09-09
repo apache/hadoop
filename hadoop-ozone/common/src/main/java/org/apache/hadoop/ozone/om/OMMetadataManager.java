@@ -100,6 +100,17 @@ public interface OMMetadataManager {
 
   String getOzoneKey(String volume, String bucket, String key);
 
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB directory
+   * key.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key    - key name
+   * @return DB directory key as String.
+   */
+  String getOzoneDirKey(String volume, String bucket, String key);
+
 
   /**
    * Returns the DB key name of a open key in OM metadata store. Should be
@@ -304,5 +315,16 @@ public interface OMMetadataManager {
    * @throws IOException
    */
   <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
+      throws IOException;
+
+  /**
+   * Returns an estimated number of rows in a table.  This is much quicker
+   * than {@link OMMetadataManager#countRowsInTable} but the result can be
+   * inaccurate.
+   * @param table Table
+   * @return long Estimated number of rows in the table.
+   * @throws IOException
+   */
+  <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
       throws IOException;
 }

@@ -89,9 +89,11 @@ public class TestOMVolumeCreateResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
+
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
     Assert.assertEquals(omVolumeArgs,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+        omMetadataManager.getVolumeTable().iterator().next().getValue());
 
     Assert.assertEquals(volumeList,
         omMetadataManager.getUserTable().get(

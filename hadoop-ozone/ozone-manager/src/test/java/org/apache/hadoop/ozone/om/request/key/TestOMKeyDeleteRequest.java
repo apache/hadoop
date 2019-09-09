@@ -71,7 +71,7 @@ public class TestOMKeyDeleteRequest extends TestOMKeyRequest {
 
     OMClientResponse omClientResponse =
         omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
-        100L);
+        100L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omClientResponse.getOMResponse().getStatus());
@@ -101,7 +101,7 @@ public class TestOMKeyDeleteRequest extends TestOMKeyRequest {
 
     OMClientResponse omClientResponse =
         omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
-            100L);
+            100L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
@@ -121,7 +121,7 @@ public class TestOMKeyDeleteRequest extends TestOMKeyRequest {
 
     OMClientResponse omClientResponse =
         omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
-            100L);
+            100L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());

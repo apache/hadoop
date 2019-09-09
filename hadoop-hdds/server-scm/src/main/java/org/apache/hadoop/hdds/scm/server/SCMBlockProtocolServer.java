@@ -21,10 +21,16 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
-import com.google.common.collect.Maps;
-import com.google.protobuf.BlockingService;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
@@ -33,6 +39,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.net.Node;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.io.IOUtils;
@@ -47,28 +55,19 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
-import org.apache.hadoop.ozone.protocolPB
-    .ScmBlockLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
+import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
+
+import com.google.common.collect.Maps;
+import com.google.protobuf.BlockingService;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdds.scm.server.StorageContainerManager.startRpcServer;
+import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
-import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
-    .startRpcServer;
 
 /**
  * SCM block protocol is the protocol used by Namenode and OzoneManager to get
@@ -86,6 +85,8 @@ public class SCMBlockProtocolServer implements
   private final OzoneConfiguration conf;
   private final RPC.Server blockRpcServer;
   private final InetSocketAddress blockRpcAddress;
+  private final ProtocolMessageMetrics
+      protocolMessageMetrics;
 
   /**
    * The RPC server that listens to requests from block service clients.
@@ -100,11 +101,18 @@ public class SCMBlockProtocolServer implements
 
     RPC.setProtocolEngine(conf, ScmBlockLocationProtocolPB.class,
         ProtobufRpcEngine.class);
+
+    protocolMessageMetrics =
+        ProtocolMessageMetrics.create("ScmBlockLocationProtocol",
+            "SCM Block location protocol counters",
+            ScmBlockLocationProtocolProtos.Type.values());
+
     // SCM Block Service RPC.
     BlockingService blockProtoPbService =
         ScmBlockLocationProtocolProtos.ScmBlockLocationProtocolService
             .newReflectiveBlockingService(
-                new ScmBlockLocationProtocolServerSideTranslatorPB(this));
+                new ScmBlockLocationProtocolServerSideTranslatorPB(this,
+                    protocolMessageMetrics));
 
     final InetSocketAddress scmBlockAddress = HddsServerUtil
         .getScmBlockClientBindAddress(conf);
@@ -134,6 +142,7 @@ public class SCMBlockProtocolServer implements
   }
 
   public void start() {
+    protocolMessageMetrics.register();
     LOG.info(
         StorageContainerManager.buildRpcServerStartMessage(
             "RPC server for Block Protocol", getBlockRpcAddress()));
@@ -142,6 +151,7 @@ public class SCMBlockProtocolServer implements
 
   public void stop() {
     try {
+      protocolMessageMetrics.unregister();
       LOG.info("Stopping the RPC server for Block Protocol");
       getBlockRpcServer().stop();
     } catch (Exception ex) {
@@ -274,6 +284,40 @@ public class SCMBlockProtocolServer implements
       if(auditSuccess) {
         AUDIT.logReadSuccess(
             buildAuditMessageForSuccess(SCMAction.GET_SCM_INFO, null)
+        );
+      }
+    }
+  }
+
+  @Override
+  public List<DatanodeDetails> sortDatanodes(List<String> nodes,
+      String clientMachine) throws IOException {
+    boolean auditSuccess = true;
+    try{
+      NodeManager nodeManager = scm.getScmNodeManager();
+      Node client = nodeManager.getNodeByAddress(clientMachine);
+      List<Node> nodeList = new ArrayList();
+      nodes.stream().forEach(uuid -> {
+        DatanodeDetails node = nodeManager.getNodeByUuid(uuid);
+        if (node != null) {
+          nodeList.add(node);
+        }
+      });
+      List<? extends Node> sortedNodeList = scm.getClusterMap()
+          .sortByDistanceCost(client, nodeList, nodes.size());
+      List<DatanodeDetails> ret = new ArrayList<>();
+      sortedNodeList.stream().forEach(node -> ret.add((DatanodeDetails)node));
+      return ret;
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.SORT_DATANODE, null, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.SORT_DATANODE, null)
         );
       }
     }

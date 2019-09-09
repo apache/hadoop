@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -625,6 +626,9 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT);
 
+    boolean shouldWrapQOP = conf.getBoolean(
+        DFS_NAMENODE_SEND_QOP_ENABLED, DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT);
+
     if (isHaEnabled) {
       // figure out which index we are of the nns
       Collection<String> nnIds = DFSUtilClient.getNameNodeIds(conf, nsId);
@@ -638,11 +642,11 @@ public class BlockManager implements BlockStatsMXBean {
       }
       return new BlockTokenSecretManager(updateMin * 60 * 1000L,
           lifetimeMin * 60 * 1000L, nnIndex, nnIds.size(), null,
-          encryptionAlgorithm, shouldWriteProtobufToken);
+          encryptionAlgorithm, shouldWriteProtobufToken, shouldWrapQOP);
     } else {
       return new BlockTokenSecretManager(updateMin*60*1000L,
           lifetimeMin*60*1000L, 0, 1, null, encryptionAlgorithm,
-          shouldWriteProtobufToken);
+          shouldWriteProtobufToken, shouldWrapQOP);
     }
   }
 
@@ -3338,7 +3342,8 @@ public class BlockManager implements BlockStatsMXBean {
 
     int curReplicaDelta;
     if (result == AddBlockResult.ADDED) {
-      curReplicaDelta = (node.isDecommissioned()) ? 0 : 1;
+      curReplicaDelta =
+          (node.isDecommissioned() || node.isDecommissionInProgress()) ? 0 : 1;
       if (logEveryBlock) {
         blockLog.debug("BLOCK* addStoredBlock: {} is added to {} (size={})",
             node, storedBlock, storedBlock.getNumBytes());
@@ -3364,9 +3369,11 @@ public class BlockManager implements BlockStatsMXBean {
     int numLiveReplicas = num.liveReplicas();
     int pendingNum = pendingReconstruction.getNumReplicas(storedBlock);
     int numCurrentReplica = numLiveReplicas + pendingNum;
+    int numUsableReplicas = num.liveReplicas() +
+        num.decommissioning() + num.liveEnteringMaintenanceReplicas();
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
-        hasMinStorage(storedBlock, numLiveReplicas)) {
+        hasMinStorage(storedBlock, numUsableReplicas)) {
       addExpectedReplicasToPending(storedBlock);
       completeBlock(storedBlock, null, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
@@ -3638,6 +3645,7 @@ public class BlockManager implements BlockStatsMXBean {
           while (iter.hasNext() && processed < limit) {
             BlockInfo blk = iter.next();
             MisReplicationResult r = processMisReplicatedBlock(blk);
+            processed++;
             LOG.debug("BLOCK* processMisReplicatedBlocks: " +
                     "Re-scanned block {}, result is {}", blk, r);
           }

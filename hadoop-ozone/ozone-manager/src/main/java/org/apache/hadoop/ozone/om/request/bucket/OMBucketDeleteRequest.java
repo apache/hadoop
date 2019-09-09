@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,8 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumBucketDeletes();
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
@@ -83,8 +85,10 @@ public class OMBucketDeleteRequest extends OMClientRequest {
     auditMap.put(OzoneConsts.BUCKET, bucketName);
 
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
+    IOException exception = null;
 
-
+    boolean acquiredLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -92,21 +96,12 @@ public class OMBucketDeleteRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
             volumeName, bucketName, null);
       }
-    } catch (IOException ex) {
-      omMetrics.incNumBucketDeleteFails();
-      LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
-          volumeName, ex);
-      auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_BUCKET,
-          auditMap, ex, userInfo));
-      return new OMBucketDeleteResponse(volumeName, bucketName,
-          createErrorOMResponse(omResponse, ex));
-    }
 
-    IOException exception = null;
-    // acquire lock
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-        bucketName);
-    try {
+
+      // acquire lock
+      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
+
       // No need to check volume exists here, as bucket cannot be created
       // with out volume creation.
       //Check if bucket exists
@@ -131,11 +126,26 @@ public class OMBucketDeleteRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
+      omResponse.setDeleteBucketResponse(
+          DeleteBucketResponse.newBuilder().build());
+
+      // Add to double buffer.
+      omClientResponse = new OMBucketDeleteResponse(volumeName, bucketName,
+          omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMBucketDeleteResponse(volumeName, bucketName,
+          createErrorOMResponse(omResponse, exception));
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
+      if (acquiredLock) {
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
     }
 
     // Performing audit logging outside of the lock.
@@ -145,16 +155,12 @@ public class OMBucketDeleteRequest extends OMClientRequest {
     // return response.
     if (exception == null) {
       LOG.debug("Deleted bucket:{} in volume:{}", bucketName, volumeName);
-      omResponse.setDeleteBucketResponse(
-          DeleteBucketResponse.newBuilder().build());
-      return new OMBucketDeleteResponse(volumeName, bucketName,
-          omResponse.build());
+      return omClientResponse;
     } else {
       omMetrics.incNumBucketDeleteFails();
       LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
           volumeName, exception);
-      return new OMBucketDeleteResponse(volumeName, bucketName,
-          createErrorOMResponse(omResponse, exception));
+      return omClientResponse;
     }
   }
 }

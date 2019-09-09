@@ -124,8 +124,8 @@ public final class TestUtils {
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256);
-    return createDatanodeDetails(uuid.toString(), "localhost", ipAddress,
-        null);
+    return createDatanodeDetails(uuid.toString(), "localhost" + "-" + ipAddress,
+        ipAddress, null);
   }
 
   /**
@@ -137,8 +137,10 @@ public final class TestUtils {
    */
   public static DatanodeDetails getDatanodeDetails(
       RegisteredCommand registeredCommand) {
-    return createDatanodeDetails(registeredCommand.getDatanodeUUID(),
-        registeredCommand.getHostName(), registeredCommand.getIpAddress(),
+    return createDatanodeDetails(
+        registeredCommand.getDatanode().getUuidString(),
+        registeredCommand.getDatanode().getHostName(),
+        registeredCommand.getDatanode().getIpAddress(),
         null);
   }
 

@@ -61,8 +61,11 @@ import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -191,6 +194,11 @@ public final class HttpServer2 implements FilterContainer {
   private static final String X_FRAME_OPTIONS = "X-FRAME-OPTIONS";
   private static final Pattern PATTERN_HTTP_HEADER_REGEX =
           Pattern.compile(HTTP_HEADER_REGEX);
+
+  private boolean prometheusSupport;
+  protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
+  private PrometheusMetricsSink prometheusMetricsSink;
+
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -612,6 +620,19 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     addDefaultServlets();
+    addPrometheusServlet(conf);
+  }
+
+  private void addPrometheusServlet(Configuration conf) {
+    prometheusSupport = conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED_DEFAULT);
+    if (prometheusSupport) {
+      prometheusMetricsSink = new PrometheusMetricsSink();
+      getWebAppContext().getServletContext()
+          .setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
+      addServlet("prometheus", "/prom", PrometheusServlet.class);
+    }
   }
 
   private void addListener(ServerConnector connector) {
@@ -797,12 +818,27 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
+    addJerseyResourcePackage(packageName, pathSpec,
+        Collections.<String, String>emptyMap());
+  }
+
+  /**
+   * Add a Jersey resource package.
+   * @param packageName The Java package name containing the Jersey resource.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourcePackage(final String packageName,
+      final String pathSpec, Map<String, String> params) {
     LOG.info("addJerseyResourcePackage: packageName=" + packageName
         + ", pathSpec=" + pathSpec);
     final ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
         "com.sun.jersey.api.core.PackagesResourceConfig");
     sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
     webAppContext.addServlet(sh, pathSpec);
   }
 
@@ -1133,6 +1169,11 @@ public final class HttpServer2 implements FilterContainer {
       try {
         openListeners();
         webServer.start();
+        if (prometheusSupport) {
+          DefaultMetricsSystem.instance()
+              .register("prometheus", "Hadoop metrics prometheus exporter",
+                  prometheusMetricsSink);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;

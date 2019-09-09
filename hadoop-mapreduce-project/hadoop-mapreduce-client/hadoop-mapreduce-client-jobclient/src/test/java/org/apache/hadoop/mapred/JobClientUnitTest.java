@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
@@ -234,12 +235,12 @@ public class JobClientUnitTest {
 
     //no retry
     assertNotNull(client.getJob(id));
-    assertEquals(client.getLastGetJobRetriesCounter(), 0);
+    assertThat(client.getLastGetJobRetriesCounter()).isEqualTo(0);
 
     //2 retries
     client.setGetJobRetries(2);
     assertNotNull(client.getJob(id));
-    assertEquals(client.getLastGetJobRetriesCounter(), 2);
+    assertThat(client.getLastGetJobRetriesCounter()).isEqualTo(2);
 
     //beyond yarn.app.mapreduce.client.job.max-retries, will get null
     client.setGetJobRetries(3);
@@ -260,8 +261,8 @@ public class JobClientUnitTest {
     //3 retries (default)
     client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
     assertNotNull(client.getJob(id));
-    assertEquals(client.getLastGetJobRetriesCounter(),
-        MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+    assertThat(client.getLastGetJobRetriesCounter())
+        .isEqualTo(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
 
     //beyond yarn.app.mapreduce.client.job.max-retries, will get null
     client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES + 1);

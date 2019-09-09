@@ -114,7 +114,7 @@ supplied this way.
 
 This means you have a relative similar workflow across secure and insecure clusters.
 
-1. Suring AM startup, log in to Kerberos.
+1. During AM startup, log in to Kerberos.
 A call to `UserGroupInformation.isSecurityEnabled()` will trigger this operation.
 
 1. Enumerate the current user's credentials, through a call of
@@ -144,7 +144,7 @@ than the AMRM and timeline tokens.
 
 Here are the different strategies
 
-1. Don't. Rely on the lifespan of the application being so short that token
+1. Don't rely on the lifespan of the application being so short that token
 renewal is not needed. For applications whose life can always be measured
 in minutes or tens of minutes, this is a viable strategy.
 
@@ -156,7 +156,7 @@ This what most YARN applications do.
 
 ### AM/RM Token Refresh
 
-The AM/RM token is renewed automatically; the AM pushes out a new token
+The AM/RM token is renewed automatically; the RM sends out a new token
 to the AM within an `allocate` message. Consult the `AMRMClientImpl` class
 to see the process. *Your AM code does not need to worry about this process*
 
@@ -191,7 +191,7 @@ token. Consult `UnmanagedAMLauncher` for the specifics.
 ### Identity on an insecure cluster: `HADOOP_USER_NAME`
 
 In an insecure cluster, the application will run as the identity of
-the account of the node manager, typically something such as `yarn`
+the account of the node manager, such as `yarn`
 or `mapred`. By default, the application will access HDFS
 as that user, with a different home directory, and with
 a different user identified in audit logs and on file system owner attributes.

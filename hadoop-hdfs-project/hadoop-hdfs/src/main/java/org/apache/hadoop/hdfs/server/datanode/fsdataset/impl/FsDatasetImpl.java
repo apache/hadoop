@@ -31,6 +31,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -200,6 +201,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  /**
+   * The deepCopyReplica call doesn't use the datasetock since it will lead the
+   * potential deadlock with the {@link FsVolumeList#addBlockPool} call.
+   */
+  @Override
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+      throws IOException {
+    Set<? extends Replica> replicas =
+        new HashSet<>(volumeMap.replicas(bpid) == null ? Collections.EMPTY_SET
+            : volumeMap.replicas(bpid));
+    return Collections.unmodifiableSet(replicas);
+  }
 
   /**
    * This should be primarily used for testing.
@@ -781,7 +794,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       long seekOffset) throws IOException {
 
     ReplicaInfo info;
-    synchronized(this) {
+    try (AutoCloseableLock lock = datasetLock.acquire()) {
       info = volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
     }
 
@@ -2811,16 +2824,28 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return replica.getVisibleLength();
     }
   }
-  
+
   @Override
   public void addBlockPool(String bpid, Configuration conf)
       throws IOException {
     LOG.info("Adding block pool " + bpid);
+    AddBlockPoolException volumeExceptions = new AddBlockPoolException();
     try (AutoCloseableLock lock = datasetLock.acquire()) {
-      volumes.addBlockPool(bpid, conf);
+      try {
+        volumes.addBlockPool(bpid, conf);
+      } catch (AddBlockPoolException e) {
+        volumeExceptions.mergeException(e);
+      }
       volumeMap.initBlockPool(bpid);
     }
-    volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
+    try {
+      volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
+    } catch (AddBlockPoolException e) {
+      volumeExceptions.mergeException(e);
+    }
+    if (volumeExceptions.hasExceptions()) {
+      throw volumeExceptions;
+    }
   }
 
   @Override
@@ -3164,10 +3189,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     public void evictBlocks(long bytesNeeded) throws IOException {
       int iterations = 0;
 
-      final long cacheCapacity = cacheManager.getCacheCapacity();
+      final long cacheCapacity = cacheManager.getMemCacheCapacity();
 
       while (iterations++ < MAX_BLOCK_EVICTIONS_PER_ITERATION &&
-             (cacheCapacity - cacheManager.getCacheUsed()) < bytesNeeded) {
+             (cacheCapacity - cacheManager.getMemCacheUsed()) < bytesNeeded) {
         RamDiskReplica replicaState = ramDiskReplicaTracker.getNextCandidateForEviction();
 
         if (replicaState == null) {

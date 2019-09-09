@@ -272,8 +272,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   }
 
   protected ResourceRequest createResourceRequest(Resource resource,
-      ExecutionType executionType, String host, int priority, int
-      numContainers) {
+      ExecutionType executionType, String host, int priority, long
+      allocationId, int numContainers) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setCapability(resource);
@@ -284,6 +284,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
     request.setPriority(prio);
+    request.setAllocationRequestId(allocationId);
     return request;
   }
 
@@ -406,11 +407,22 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected List<ResourceRequest> packageRequests(
           List<ContainerSimulator> csList, int priority) {
     // create requests
-    Map<String, ResourceRequest> rackLocalRequestMap = new HashMap<String, ResourceRequest>();
-    Map<String, ResourceRequest> nodeLocalRequestMap = new HashMap<String, ResourceRequest>();
-    ResourceRequest anyRequest = null;
+    Map<Long, Map<String, ResourceRequest>> rackLocalRequests =
+        new HashMap<>();
+    Map<Long, Map<String, ResourceRequest>> nodeLocalRequests =
+        new HashMap<>();
+    Map<Long, ResourceRequest> anyRequests = new HashMap<>();
     for (ContainerSimulator cs : csList) {
+      long allocationId = cs.getAllocationId();
+      ResourceRequest anyRequest = anyRequests.get(allocationId);
       if (cs.getHostname() != null) {
+        Map<String, ResourceRequest> rackLocalRequestMap;
+        if (rackLocalRequests.containsKey(allocationId)) {
+          rackLocalRequestMap = rackLocalRequests.get(allocationId);
+        } else {
+          rackLocalRequestMap = new HashMap<>();
+          rackLocalRequests.put(allocationId, rackLocalRequestMap);
+        }
         String[] rackHostNames = SLSUtils.getRackHostName(cs.getHostname());
         // check rack local
         String rackname = "/" + rackHostNames[0];
@@ -419,34 +431,49 @@ public abstract class AMSimulator extends TaskRunner.Task {
               rackLocalRequestMap.get(rackname).getNumContainers() + 1);
         } else {
           ResourceRequest request = createResourceRequest(cs.getResource(),
-              cs.getExecutionType(), rackname, priority, 1);
+              cs.getExecutionType(), rackname, priority,
+              cs.getAllocationId(), 1);
           rackLocalRequestMap.put(rackname, request);
         }
         // check node local
+        Map<String, ResourceRequest> nodeLocalRequestMap;
+        if (nodeLocalRequests.containsKey(allocationId)) {
+          nodeLocalRequestMap = nodeLocalRequests.get(allocationId);
+        } else {
+          nodeLocalRequestMap = new HashMap<>();
+          nodeLocalRequests.put(allocationId, nodeLocalRequestMap);
+        }
         String hostname = rackHostNames[1];
         if (nodeLocalRequestMap.containsKey(hostname)) {
           nodeLocalRequestMap.get(hostname).setNumContainers(
               nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
         } else {
           ResourceRequest request = createResourceRequest(cs.getResource(),
-              cs.getExecutionType(), hostname, priority, 1);
+              cs.getExecutionType(), hostname, priority,
+              cs.getAllocationId(), 1);
           nodeLocalRequestMap.put(hostname, request);
         }
       }
       // any
       if (anyRequest == null) {
         anyRequest = createResourceRequest(cs.getResource(),
-            cs.getExecutionType(), ResourceRequest.ANY, priority, 1);
+            cs.getExecutionType(), ResourceRequest.ANY, priority,
+            cs.getAllocationId(), 1);
+        anyRequests.put(allocationId, anyRequest);
       } else {
         anyRequest.setNumContainers(anyRequest.getNumContainers() + 1);
       }
     }
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ask.addAll(nodeLocalRequestMap.values());
-    ask.addAll(rackLocalRequestMap.values());
-    if (anyRequest != null) {
-      ask.add(anyRequest);
+    for (Map<String, ResourceRequest> nodeLocalRequestMap :
+        nodeLocalRequests.values()) {
+      ask.addAll(nodeLocalRequestMap.values());
     }
+    for (Map<String, ResourceRequest> rackLocalRequestMap :
+        rackLocalRequests.values()) {
+      ask.addAll(rackLocalRequestMap.values());
+    }
+    ask.addAll(anyRequests.values());
     return ask;
   }
 

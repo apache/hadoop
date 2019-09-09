@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.Table;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -106,9 +107,15 @@ public class TestOMVolumeSetOwnerResponse {
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
 
-    Assert.assertEquals(newOwnerVolumeArgs,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
+
+    Table.KeyValue<String, OmVolumeArgs> keyValue =
+        omMetadataManager.getVolumeTable().iterator().next();
+
+    Assert.assertEquals(omMetadataManager.getVolumeKey(volumeName),
+        keyValue.getKey());
+    Assert.assertEquals(newOwnerVolumeArgs, keyValue.getValue());
 
     Assert.assertEquals(volumeList,
         omMetadataManager.getUserTable().get(
