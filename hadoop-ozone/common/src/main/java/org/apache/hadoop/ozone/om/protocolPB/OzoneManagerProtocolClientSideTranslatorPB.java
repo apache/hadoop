@@ -216,11 +216,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     this.clientID = clientId;
   }
 
-  public OzoneManagerProtocolClientSideTranslatorPB(OzoneConfiguration conf,
-      String clientId, UserGroupInformation ugi) throws IOException {
-    this(conf, clientId, null, ugi);
-  }
-
   /**
    * Creates a {@link RetryProxy} encapsulating the
    * {@link OMFailoverProxyProvider}. The retry proxy fails over on network
