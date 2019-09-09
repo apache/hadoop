@@ -241,6 +241,10 @@ public final class HddsConfigKeys {
       "hdds.container.chunk.persistdata";
   public static final boolean HDDS_CONTAINER_PERSISTDATA_DEFAULT = true;
 
+  public static final String HDDS_CONTAINER_SCRUB_ENABLED =
+      "hdds.container.scrub.enabled";
+  public static final boolean HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT = false;
+
   public static final String HDDS_DATANODE_HTTP_ENABLED_KEY =
       "hdds.datanode.http.enabled";
   public static final String HDDS_DATANODE_HTTP_BIND_HOST_KEY =
