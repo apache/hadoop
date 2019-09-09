@@ -58,7 +58,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.util.function.CheckedBiConsumer;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import org.junit.Test;
@@ -230,7 +230,8 @@ public class TestCSMMetrics {
     }
 
     @Override
-    public void buildMissingContainerSet(Set<Long> createdContainerSet) {
+    public void buildMissingContainerSetAndValidate(
+        Map<Long, Long> container2BCSIDMap) {
     }
   }
 }

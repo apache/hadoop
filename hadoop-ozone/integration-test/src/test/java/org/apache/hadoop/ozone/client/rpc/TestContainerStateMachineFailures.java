@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.client.rpc;
 
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -39,7 +41,9 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.ContainerStateMachine;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -347,5 +351,89 @@ public class TestContainerStateMachineFailures {
     // Make sure the latest snapshot is same as the previous one
     FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
     Assert.assertTrue(snapshot.getPath().equals(latestSnapshot.getPath()));
+  }
+
+  @Test
+  public void testValidateBCSIDOnDnRestart() throws Exception {
+    OzoneOutputStream key =
+        objectStore.getVolume(volumeName).getBucket(bucketName)
+            .createKey("ratis", 1024, ReplicationType.RATIS,
+                ReplicationFactor.ONE, new HashMap<>());
+    // First write and flush creates a container in the datanode
+    key.write("ratis".getBytes());
+    key.flush();
+    key.write("ratis".getBytes());
+    KeyOutputStream groupOutputStream = (KeyOutputStream) key.getOutputStream();
+    List<OmKeyLocationInfo> locationInfoList =
+        groupOutputStream.getLocationInfoList();
+    Assert.assertEquals(1, locationInfoList.size());
+    OmKeyLocationInfo omKeyLocationInfo = locationInfoList.get(0);
+    ContainerData containerData =
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
+            .getContainer().getContainerSet()
+            .getContainer(omKeyLocationInfo.getContainerID())
+            .getContainerData();
+    Assert.assertTrue(containerData instanceof KeyValueContainerData);
+    KeyValueContainerData keyValueContainerData =
+        (KeyValueContainerData) containerData;
+    key.close();
+
+    long containerID = omKeyLocationInfo.getContainerID();
+    cluster.shutdownHddsDatanode(
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails());
+    // delete the container db file
+    FileUtil.fullyDelete(new File(keyValueContainerData.getContainerPath()));
+    cluster.restartHddsDatanode(
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), true);
+    OzoneContainer ozoneContainer =
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
+            .getContainer();
+    // make sure the missing containerSet is not empty
+    HddsDispatcher dispatcher = (HddsDispatcher) ozoneContainer.getDispatcher();
+    Assert.assertTrue(!dispatcher.getMissingContainerSet().isEmpty());
+    Assert
+        .assertTrue(dispatcher.getMissingContainerSet().contains(containerID));
+    // write a new key
+    key = objectStore.getVolume(volumeName).getBucket(bucketName)
+        .createKey("ratis", 1024, ReplicationType.RATIS, ReplicationFactor.ONE,
+            new HashMap<>());
+    // First write and flush creates a container in the datanode
+    key.write("ratis1".getBytes());
+    key.flush();
+    groupOutputStream = (KeyOutputStream) key.getOutputStream();
+    locationInfoList = groupOutputStream.getLocationInfoList();
+    Assert.assertEquals(1, locationInfoList.size());
+    omKeyLocationInfo = locationInfoList.get(0);
+    key.close();
+    containerID = omKeyLocationInfo.getContainerID();
+    containerData = cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
+        .getContainer().getContainerSet()
+        .getContainer(omKeyLocationInfo.getContainerID()).getContainerData();
+    Assert.assertTrue(containerData instanceof KeyValueContainerData);
+    keyValueContainerData = (KeyValueContainerData) containerData;
+    ReferenceCountedDB db = BlockUtils.
+        getDB(keyValueContainerData, conf);
+    byte[] blockCommitSequenceIdKey =
+        DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX);
+
+    // modify the bcsid for the container in the ROCKS DB tereby inducing
+    // corruption
+    db.getStore().put(blockCommitSequenceIdKey, Longs.toByteArray(0));
+    db.decrementReference();
+    // shutdown of dn will take a snapsot which will persist the valid BCSID
+    // recorded in the container2BCSIDMap in ContainerStateMachine
+    cluster.shutdownHddsDatanode(
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails());
+    // after the restart, there will be a mismatch in BCSID of what is recorded
+    // in the and what is there in RockSDB and hence the container would be
+    // marked unhealthy
+    cluster.restartHddsDatanode(
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), true);
+    // Make sure the container is marked unhealthy
+    Assert.assertTrue(
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
+            .getContainer().getContainerSet().getContainer(containerID)
+            .getContainerState()
+            == ContainerProtos.ContainerDataProto.State.UNHEALTHY);
   }
 }
