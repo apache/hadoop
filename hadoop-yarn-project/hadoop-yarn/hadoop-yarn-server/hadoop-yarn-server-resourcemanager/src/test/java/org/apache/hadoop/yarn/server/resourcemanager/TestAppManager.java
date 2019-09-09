@@ -1063,6 +1063,9 @@ public class TestAppManager extends AppManagerTestBase{
   @Test (timeout = 30000)
   public void testEscapeApplicationSummary() {
     RMApp app = mock(RMAppImpl.class);
+    ApplicationSubmissionContext asc = mock(ApplicationSubmissionContext.class);
+    when(asc.getNodeLabelExpression()).thenReturn("test");
+    when(app.getApplicationSubmissionContext()).thenReturn(asc);
     when(app.getApplicationId()).thenReturn(
         ApplicationId.newInstance(100L, 1));
     when(app.getName()).thenReturn("Multiline\n\n\r\rAppName");
@@ -1101,6 +1104,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
     assertTrue(msg.contains("applicationType=MAPREDUCE"));
     assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
+    assertTrue(msg.contains("applicationNodeLabel=test"));
   }
 
   @Test
