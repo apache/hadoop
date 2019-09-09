@@ -98,24 +98,7 @@ public class OMFailoverProxyProvider implements
     this.omProxyInfos = new HashMap<>();
     this.omNodeIDList = new ArrayList<>();
 
-    Collection<String> omServiceIds;
-    if (omSvcId == null) {
-      // When no OM service id is passed in
-      // Note: this branch will only be followed when omSvcId is null,
-      // meaning the host name/service id provided by user doesn't match any
-      // ozone.om.service.ids on the client side. Therefore, in this case
-      // just treat it as non-HA by assigning an empty list to omServiceIds
-      omServiceIds = new ArrayList<>();
-    } else {
-      omServiceIds = Collections.singletonList(omSvcId);
-    }
-
-    // TODO: Remove this warning? Or change the message?
-    if (omServiceIds.size() > 1) {
-      throw new IllegalArgumentException("Multi-OM Services is not supported." +
-          " Please configure only one OM Service ID in " +
-          OZONE_OM_SERVICE_IDS_KEY);
-    }
+    Collection<String> omServiceIds = Collections.singletonList(omSvcId);
 
     for (String serviceId : OmUtils.emptyAsSingletonNull(omServiceIds)) {
       Collection<String> omNodeIds = OmUtils.getOMNodeIds(config, serviceId);
