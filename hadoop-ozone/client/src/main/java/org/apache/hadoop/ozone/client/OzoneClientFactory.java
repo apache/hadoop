@@ -154,10 +154,8 @@ public final class OzoneClientFactory {
       throws IOException {
     Preconditions.checkNotNull(omServiceId);
     Preconditions.checkNotNull(config);
-    // Override ozone.om.address just in case it is used later.
-    // Because if this is not overridden, the (incorrect) value from xml
-    // will be used?
-    config.set(OZONE_OM_ADDRESS_KEY, omServiceId);
+    // Won't set OZONE_OM_ADDRESS_KEY here since service id is passed directly,
+    // leaving OZONE_OM_ADDRESS_KEY value as is.
     return getClient(getClientProtocol(config, omServiceId), config);
   }
 
