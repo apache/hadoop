@@ -1367,7 +1367,7 @@
   </property>
 
   <property>
-    <name>hdds.containerscrub.enabled</name>
+    <name>hdds.container.scrub.enabled</name>
     <value>false</value>
     <tag>DATANODE</tag>
     <description>

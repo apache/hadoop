@@ -35,6 +35,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.PrefixManager;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -361,7 +362,9 @@ public abstract class OMKeyRequest extends OMClientRequest {
         .setReplicationType(type)
         .setReplicationFactor(factor)
         .setFileEncryptionInfo(encInfo)
-        .setAcls(getAclsForKey(keyArgs, omBucketInfo, prefixManager)).build();
+        .setAcls(getAclsForKey(keyArgs, omBucketInfo, prefixManager))
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyArgs.getMetadataList()))
+        .build();
   }
 
   private List< OzoneAcl > getAclsForKey(KeyArgs keyArgs,

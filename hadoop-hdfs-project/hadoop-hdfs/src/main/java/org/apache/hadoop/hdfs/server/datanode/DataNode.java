@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -2499,6 +2500,9 @@ public class DataNode extends ReconfigurableBase
     final String clientname;
     final CachingStrategy cachingStrategy;
 
+    /** Throttle to block replication when data transfers. */
+    private DataTransferThrottler transferThrottler;
+
     /**
      * Connect to the first item in the target list.  Pass along the 
      * entire target list, the block, and the data.
@@ -2525,6 +2529,15 @@ public class DataNode extends ReconfigurableBase
       this.clientname = clientname;
       this.cachingStrategy =
           new CachingStrategy(true, getDnConf().readaheadLength);
+      // 1. the stage is PIPELINE_SETUP_CREATE，that is moving blocks, set
+      // throttler.
+      // 2. the stage is PIPELINE_SETUP_APPEND_RECOVERY or
+      // PIPELINE_SETUP_STREAMING_RECOVERY,
+      // that is writing and recovering pipeline, don't set throttle.
+      if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE
+          && clientname.isEmpty()) {
+        this.transferThrottler = xserver.getTransferThrottler();
+      }
     }
 
     /**
@@ -2583,7 +2596,7 @@ public class DataNode extends ReconfigurableBase
             targetStorageIds);
 
         // send data & checksum
-        blockSender.sendBlock(out, unbufOut, null);
+        blockSender.sendBlock(out, unbufOut, transferThrottler);
 
         // no response necessary
         LOG.info("{}, at {}: Transmitted {} (numBytes={}) to {}",

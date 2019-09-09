@@ -64,6 +64,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_DOES_NOT_NEED_UPGRADE;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE;
@@ -243,6 +245,16 @@ public class ServiceApiUtil {
     // Service lifetime if not specified, is set to unlimited lifetime
     if (service.getLifetime() == null) {
       service.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
+    }
+  }
+
+  public static void validateJvmOpts(String jvmOpts)
+      throws IllegalArgumentException {
+    Pattern pattern = Pattern.compile("[!~#?@*&%${}()<>\\[\\]|\"\\/,`;]");
+    Matcher matcher = pattern.matcher(jvmOpts);
+    if (matcher.find()) {
+      throw new IllegalArgumentException(
+          RestApiErrorMessages.ERROR_JVM_OPTS);
     }
   }
 

@@ -191,7 +191,7 @@ public class ReplicationManager implements MetricsSource {
   @VisibleForTesting
   @SuppressFBWarnings(value="NN_NAKED_NOTIFY",
       justification="Used only for testing")
-  synchronized void processContainersNow() {
+  public synchronized void processContainersNow() {
     notify();
   }
 

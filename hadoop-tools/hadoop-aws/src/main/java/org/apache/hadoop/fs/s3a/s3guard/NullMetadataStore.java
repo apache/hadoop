@@ -54,7 +54,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path path)
+  public void delete(Path path,
+      final BulkOperationState operationState)
       throws IOException {
   }
 
@@ -63,8 +64,15 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path)
+  public void deleteSubtree(Path path,
+      final BulkOperationState operationState)
       throws IOException {
+  }
+
+  @Override
+  public void deletePaths(final Collection<Path> paths,
+      @Nullable final BulkOperationState operationState) throws IOException {
+
   }
 
   @Override

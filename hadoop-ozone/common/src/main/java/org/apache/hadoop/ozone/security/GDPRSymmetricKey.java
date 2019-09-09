@@ -51,7 +51,7 @@ public class GDPRSymmetricKey {
   public GDPRSymmetricKey() throws Exception {
     algorithm = OzoneConsts.GDPR_ALGORITHM_NAME;
     secret = RandomStringUtils
-        .randomAlphabetic(OzoneConsts.GDPR_RANDOM_SECRET_LENGTH);
+        .randomAlphabetic(OzoneConsts.GDPR_DEFAULT_RANDOM_SECRET_LENGTH);
     this.secretKey = new SecretKeySpec(
         secret.getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);
@@ -62,8 +62,12 @@ public class GDPRSymmetricKey {
    * @throws Exception
    */
   public GDPRSymmetricKey(String secret, String algorithm) throws Exception {
-    Preconditions.checkArgument(secret.length() == 32,
-        "Secret must be exactly 32 characters");
+    Preconditions.checkNotNull(secret, "Secret cannot be null");
+    //TODO: When we add feature to allow users to customize the secret length,
+    // we need to update this length check Precondition
+    Preconditions.checkArgument(secret.length() == 16,
+        "Secret must be exactly 16 characters");
+    Preconditions.checkNotNull(algorithm, "Algorithm cannot be null");
     this.secret = secret;
     this.algorithm = algorithm;
     this.secretKey = new SecretKeySpec(

@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -841,13 +842,14 @@ public class KeyValueHandler extends Handler {
     throw new StorageContainerException(msg, result);
   }
 
-  public Container importContainer(long containerID, long maxSize,
-      String originPipelineId,
-      String originNodeId,
-      FileInputStream rawContainerStream,
-      TarContainerPacker packer)
+  @Override
+  public Container importContainer(final long containerID,
+      final long maxSize, final String originPipelineId,
+      final String originNodeId, final InputStream rawContainerStream,
+      final TarContainerPacker packer)
       throws IOException {
 
+    // TODO: Add layout version!
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerID,
             maxSize, originPipelineId, originNodeId);
@@ -860,6 +862,20 @@ public class KeyValueHandler extends Handler {
     sendICR(container);
     return container;
 
+  }
+
+  @Override
+  public void exportContainer(final Container container,
+      final OutputStream outputStream,
+      final TarContainerPacker packer)
+      throws IOException{
+    container.readLock();
+    try {
+      final KeyValueContainer kvc = (KeyValueContainer) container;
+      kvc.exportContainerData(outputStream, packer);
+    } finally {
+      container.readUnlock();
+    }
   }
 
   @Override

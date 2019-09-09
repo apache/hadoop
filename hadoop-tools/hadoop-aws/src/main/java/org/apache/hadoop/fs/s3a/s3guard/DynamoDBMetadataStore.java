@@ -88,6 +88,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
@@ -200,7 +201,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * sub-tree.
  *
  * Some mutating operations, notably
- * {@link MetadataStore#deleteSubtree(Path)} and
+ * {@link MetadataStore#deleteSubtree(Path, BulkOperationState)} and
  * {@link MetadataStore#move(Collection, Collection, BulkOperationState)}
  * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
@@ -544,9 +545,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void delete(Path path)
+  public void delete(Path path,
+      final BulkOperationState operationState)
       throws IOException {
-    innerDelete(path, true, null);
+    innerDelete(path, true,
+        extractOrCreate(operationState,
+            BulkOperationState.OperationType.Delete));
   }
 
   @Override
@@ -562,7 +566,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * There is no check as to whether the entry exists in the table first.
    * @param path path to delete
    * @param tombstone flag to create a tombstone marker
-   * @param ancestorState ancestor state for logging
+   * @param ancestorState ancestor state for context.
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated
@@ -615,7 +619,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void deleteSubtree(Path path)
+  public void deleteSubtree(Path path,
+      final BulkOperationState operationState)
       throws IOException {
     checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
@@ -630,27 +635,51 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
       return;
     }
+    deleteEntries(new InternalIterators.PathFromRemoteStatusIterator(
+        new DescendantsIterator(this, meta)),
+        operationState);
+  }
 
-    try(AncestorState state = new AncestorState(this,
-        BulkOperationState.OperationType.Delete, path)) {
-      // Execute via the bounded threadpool.
-      final List<CompletableFuture<Void>> futures = new ArrayList<>();
-      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-          desc.hasNext();) {
-        final Path pathToDelete = desc.next().getPath();
-        futures.add(submit(executor, () -> {
-          innerDelete(pathToDelete, true, state);
-          return null;
-        }));
-        if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
-          // first batch done; block for completion.
-          waitForCompletion(futures);
-          futures.clear();
-        }
+  @Override
+  @Retries.RetryTranslated
+  public void deletePaths(Collection<Path> paths,
+      final BulkOperationState operationState)
+      throws IOException {
+    deleteEntries(
+        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+        operationState);
+  }
+
+  /**
+   * Delete the entries under an iterator.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param entries entries to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  private void deleteEntries(RemoteIterator<Path> entries,
+      final BulkOperationState operationState)
+      throws IOException {
+    final List<CompletableFuture<Void>> futures = new ArrayList<>();
+    AncestorState state = extractOrCreate(operationState,
+        BulkOperationState.OperationType.Delete);
+
+    while (entries.hasNext()) {
+      final Path pathToDelete = entries.next();
+      futures.add(submit(executor, () -> {
+        innerDelete(pathToDelete, true, state);
+        return null;
+      }));
+      if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+        // first batch done; block for completion.
+        waitForCompletion(futures);
+        futures.clear();
       }
-      // now wait for the final set.
-      waitForCompletion(futures);
     }
+    // now wait for the final set.
+    waitForCompletion(futures);
   }
 
   /**
@@ -2399,7 +2428,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       // log the operations
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
-        boolean tombstone = itemExists(item);
+        boolean tombstone = !itemExists(item);
         OPERATIONS_LOG.debug("{} {} {}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",

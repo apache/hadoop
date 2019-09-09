@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.security;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +40,7 @@ public class TestGDPRSymmetricKey {
   @Test
   public void testKeyGenerationWithValidInput() throws Exception {
     GDPRSymmetricKey gkey = new GDPRSymmetricKey(
-        "ApacheHadoopOzoneIsAnObjectStore",
+        RandomStringUtils.randomAlphabetic(16),
         OzoneConsts.GDPR_ALGORITHM_NAME);
 
     Assert.assertTrue(gkey.getCipher().getAlgorithm()
@@ -53,11 +54,11 @@ public class TestGDPRSymmetricKey {
   public void testKeyGenerationWithInvalidInput() throws Exception {
     GDPRSymmetricKey gkey = null;
     try{
-      gkey = new GDPRSymmetricKey("ozone",
+      gkey = new GDPRSymmetricKey(RandomStringUtils.randomAlphabetic(5),
           OzoneConsts.GDPR_ALGORITHM_NAME);
     } catch (IllegalArgumentException ex) {
       Assert.assertTrue(ex.getMessage()
-          .equalsIgnoreCase("Secret must be exactly 32 characters"));
+          .equalsIgnoreCase("Secret must be exactly 16 characters"));
       Assert.assertTrue(gkey == null);
     }
   }

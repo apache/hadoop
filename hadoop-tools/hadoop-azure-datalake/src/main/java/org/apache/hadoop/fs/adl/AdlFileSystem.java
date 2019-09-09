@@ -203,6 +203,10 @@ public class AdlFileSystem extends FileSystem {
       LOG.info("No valid ADL SDK timeout configured: using SDK default.");
     }
 
+    String sslChannelMode = conf.get(ADL_SSL_CHANNEL_MODE,
+        "Default");
+    options.setSSLChannelMode(sslChannelMode);
+
     adlClient.setOptions(options);
 
     boolean trackLatency = conf

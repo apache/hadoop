@@ -282,5 +282,4 @@ public class BlockManagerImpl implements BlockManager {
   public void shutdown() {
     BlockUtils.shutdownCache(ContainerCache.getInstance(config));
   }
-
 }

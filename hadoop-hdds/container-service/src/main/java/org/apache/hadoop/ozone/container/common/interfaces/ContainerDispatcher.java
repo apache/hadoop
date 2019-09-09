@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
  * Dispatcher acts as the bridge between the transport layer and
@@ -62,9 +62,9 @@ public interface ContainerDispatcher {
 
   /**
    * finds and builds the missing containers in case of a lost disk etc
-   * in the ContainerSet.
+   * in the ContainerSet. It also validates the BCSID of the containers found.
    */
-  void buildMissingContainerSet(Set<Long> createdContainers);
+  void buildMissingContainerSetAndValidate(Map<Long, Long> container2BCSIDMap);
 
   /**
    * Shutdown Dispatcher services.

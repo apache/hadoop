@@ -43,7 +43,8 @@ public final class ContainerPlacementPolicyFactory {
 
   public static ContainerPlacementPolicy getPolicy(Configuration conf,
       final NodeManager nodeManager, NetworkTopology clusterMap,
-      final boolean fallback) throws SCMException{
+      final boolean fallback, SCMContainerPlacementMetrics metrics)
+      throws SCMException{
     final Class<? extends ContainerPlacementPolicy> placementClass = conf
         .getClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
             OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT,
@@ -51,7 +52,8 @@ public final class ContainerPlacementPolicyFactory {
     Constructor<? extends ContainerPlacementPolicy> constructor;
     try {
       constructor = placementClass.getDeclaredConstructor(NodeManager.class,
-          Configuration.class, NetworkTopology.class, boolean.class);
+          Configuration.class, NetworkTopology.class, boolean.class,
+          SCMContainerPlacementMetrics.class);
       LOG.info("Create container placement policy of type " +
           placementClass.getCanonicalName());
     } catch (NoSuchMethodException e) {
@@ -64,7 +66,8 @@ public final class ContainerPlacementPolicyFactory {
     }
 
     try {
-      return constructor.newInstance(nodeManager, conf, clusterMap, fallback);
+      return constructor.newInstance(nodeManager, conf, clusterMap, fallback,
+          metrics);
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate class " +
           placementClass.getCanonicalName() + " for " + e.getMessage());
