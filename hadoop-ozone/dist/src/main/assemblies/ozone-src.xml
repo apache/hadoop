@@ -81,8 +81,8 @@
       <directory>hadoop-ozone</directory>
       <useDefaultExcludes>true</useDefaultExcludes>
       <excludes>
-        <exclude>**/ozone-recon-web/build/**</exclude>
-        <exclude>**/ozone-recon-web/node_modules/**</exclude>
+        <exclude>**/recon-web/build/**</exclude>
+        <exclude>**/recon-web/node_modules/**</exclude>
         <exclude>**/.classpath</exclude>
         <exclude>**/.project</exclude>
         <exclude>**/.settings</exclude>

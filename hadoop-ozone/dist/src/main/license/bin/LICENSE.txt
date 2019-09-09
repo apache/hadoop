@@ -436,7 +436,7 @@ jquery-3.4.1.min.js
 
 --------------------------------------------------------------------------------
 recon server uses a huge number of javascript and css dependencies. See the
-licenses/LICENSE-ozone-recon.txt for the detailed list of the dependencies and licenses.
+licenses/LICENSE-recon.txt for the detailed list of the dependencies and licenses.
 
 --------------------------------------------------------------------------------
 ratis-thirdparty-misc is a shaded dependency which includes additional 3rd party dependencies in shaded form.
