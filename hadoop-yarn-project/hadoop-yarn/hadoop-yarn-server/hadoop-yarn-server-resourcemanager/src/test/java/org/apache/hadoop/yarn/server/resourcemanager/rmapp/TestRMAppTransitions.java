@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
@@ -472,8 +473,12 @@ public class TestRMAppTransitions {
   private void assertAppStateLaunchTimeSaved(long expectedLaunchTime) {
     ArgumentCaptor<ApplicationStateData> state =
         ArgumentCaptor.forClass(ApplicationStateData.class);
-    verify(store, times(1)).updateApplicationState(state.capture());
+    ArgumentCaptor<Boolean> notifyApp =
+        ArgumentCaptor.forClass(Boolean.class);
+    verify(store, times(1)).updateApplicationState(state.capture(),
+        notifyApp.capture());
     assertEquals(expectedLaunchTime, state.getValue().getLaunchTime());
+    assertFalse(notifyApp.getValue());
   }
 
   private void assertKilled(RMApp application) {
