@@ -46,7 +46,6 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
-import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -121,11 +120,11 @@ public class TestContainerReplication {
             cluster.getHddsDatanodes());
 
     // Close the container
-    cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(
-            sourceDatanodes.get(0).getUuid(),
-            new CloseContainerCommand(containerId,
-                sourcePipelines.getId(), true));
+    ContainerCommandRequestProto closeContainerRequest = ContainerTestHelper
+        .getCloseContainer(sourcePipelines, containerId);
+    response = client.sendCommand(closeContainerRequest);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
 
     //WHEN: send the order to replicate the container
     cluster.getStorageContainerManager().getScmNodeManager()
