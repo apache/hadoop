@@ -148,7 +148,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       metadataStore.move(new ArrayList<>(0), destMetas, getOperationState());
       for (Path deletedPath : deletedPaths) {
         // this is not ideal in that it may leave parent stuff around.
-        metadataStore.delete(deletedPath);
+        metadataStore.delete(deletedPath, getOperationState());
       }
       deleteParentPaths();
     } catch (IOException | SdkBaseException e) {
@@ -181,7 +181,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       PathMetadata md = metadataStore.get(parent, true);
       if (md != null && md.isEmptyDirectory() == Tristate.TRUE) {
         // if were confident that this is empty: delete it.
-        metadataStore.delete(parent);
+        metadataStore.delete(parent, getOperationState());
       }
     }
   }

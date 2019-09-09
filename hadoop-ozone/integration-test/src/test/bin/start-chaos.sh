@@ -22,7 +22,7 @@ current="/tmp/"
 filename="${current}${date}${fileformat}"
 heapdumpfile="${current}${date}${heapformat}"
 
-export MAVEN_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${heapdumpfile}"
+export MAVEN_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${heapdumpfile} -Dorg.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false"
 
 echo "logging to ${filename}"
 echo "heapdump to ${heapdumpfile}"

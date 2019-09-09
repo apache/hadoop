@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -116,6 +117,7 @@ public class SCMPipelineManager implements PipelineManager {
     return stateManager;
   }
 
+  @VisibleForTesting
   public void setPipelineProvider(ReplicationType replicationType,
                                   PipelineProvider provider) {
     pipelineFactory.setProvider(replicationType, provider);
@@ -347,6 +349,30 @@ public class SCMPipelineManager implements PipelineManager {
   @Override
   public void triggerPipelineCreation() {
     backgroundPipelineCreator.triggerPipelineCreation();
+  }
+
+  /**
+   * Activates a dormant pipeline.
+   *
+   * @param pipelineID ID of the pipeline to activate.
+   * @throws IOException in case of any Exception
+   */
+  @Override
+  public void activatePipeline(PipelineID pipelineID)
+      throws IOException {
+    stateManager.activatePipeline(pipelineID);
+  }
+
+  /**
+   * Deactivates an active pipeline.
+   *
+   * @param pipelineID ID of the pipeline to deactivate.
+   * @throws IOException in case of any Exception
+   */
+  @Override
+  public void deactivatePipeline(PipelineID pipelineID)
+      throws IOException {
+    stateManager.deactivatePipeline(pipelineID);
   }
 
   /**

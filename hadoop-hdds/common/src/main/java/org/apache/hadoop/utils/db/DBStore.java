@@ -184,4 +184,13 @@ public interface DBStore extends AutoCloseable {
    * @return codec registry.
    */
   CodecRegistry getCodecRegistry();
+
+  /**
+   * Get data written to DB since a specific sequence number.
+   * @param sequenceNumber
+   * @return
+   * @throws SequenceNumberNotFoundException
+   */
+  DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
+      throws SequenceNumberNotFoundException;
 }

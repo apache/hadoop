@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.request.s3.multipart;
 import java.io.IOException;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
@@ -77,7 +76,8 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     OzoneManagerProtocolProtos.KeyArgs keyArgs =
         getOmRequest().getAbortMultiPartUploadRequest().getKeyArgs();
 
@@ -90,14 +90,13 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
     IOException exception = null;
     OmMultipartKeyInfo multipartKeyInfo = null;
     String multipartKey = null;
+    OMResponse.Builder omResponse = OMResponse.newBuilder()
+        .setCmdType(OzoneManagerProtocolProtos.Type.AbortMultiPartUpload)
+        .setStatus(OzoneManagerProtocolProtos.Status.OK)
+        .setSuccess(true);
+    OMClientResponse omClientResponse = null;
     try {
-      // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, keyName);
-      }
-
+      // TODO to support S3 ACL later.
       acquiredLock =
           omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
               bucketName);
@@ -132,9 +131,21 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
             new CacheValue<>(Optional.absent(), transactionLogIndex));
       }
 
+      omClientResponse = new S3MultipartUploadAbortResponse(multipartKey,
+          keyArgs.getModificationTime(), multipartKeyInfo,
+          omResponse.setAbortMultiPartUploadResponse(
+              MultipartUploadAbortResponse.newBuilder()).build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new S3MultipartUploadAbortResponse(multipartKey,
+          keyArgs.getModificationTime(), multipartKeyInfo,
+          createErrorOMResponse(omResponse, exception));
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquiredLock) {
         omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
             bucketName);
@@ -146,28 +157,18 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
         OMAction.ABORT_MULTIPART_UPLOAD, buildKeyArgsAuditMap(keyArgs),
         exception, getOmRequest().getUserInfo()));
 
-    OMResponse.Builder omResponse = OMResponse.newBuilder()
-        .setCmdType(OzoneManagerProtocolProtos.Type.AbortMultiPartUpload)
-        .setStatus(OzoneManagerProtocolProtos.Status.OK)
-        .setSuccess(true);
-
 
     if (exception == null) {
       LOG.debug("Abort Multipart request is successfully completed for " +
           "KeyName {} in VolumeName/Bucket {}/{}", keyName, volumeName,
           bucketName);
-      return new S3MultipartUploadAbortResponse(multipartKey,
-          keyArgs.getModificationTime(), multipartKeyInfo,
-          omResponse.setAbortMultiPartUploadResponse(
-              MultipartUploadAbortResponse.newBuilder()).build());
     } else {
+      ozoneManager.getMetrics().incNumAbortMultipartUploadFails();
       LOG.error("Abort Multipart request is failed for " +
           "KeyName {} in VolumeName/Bucket {}/{}", keyName, volumeName,
           bucketName, exception);
-      return new S3MultipartUploadAbortResponse(multipartKey,
-          keyArgs.getModificationTime(), multipartKeyInfo,
-          createErrorOMResponse(omResponse, exception));
     }
+    return omClientResponse;
 
   }
 }

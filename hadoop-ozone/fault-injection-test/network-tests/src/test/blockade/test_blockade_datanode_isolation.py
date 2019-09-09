@@ -16,9 +16,9 @@
 # limitations under the License.
 
 import logging
-import pytest
 
 from ozone.cluster import OzoneCluster
+from ozone.exceptions import ContainerNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,6 @@ def teardown_function():
     cluster.stop()
 
 
-@pytest.mark.skip(reason="HDDS-1850")
 def test_isolate_single_datanode():
     """
     In this test case we will create a network partition in such a way that
@@ -68,15 +67,25 @@ def test_isolate_single_datanode():
 
     oz_client.run_freon(1, 1, 1, 10240)
 
-    logger.info("Waiting for container to be QUASI_CLOSED")
-    containers = cluster.get_containers_on_datanode(dns[2])
+    containers = cluster.get_containers_on_datanode(dns[0])
+
+    # The same set of containers should also be in datanode[2]
+
     for container in containers:
-        container.wait_until_replica_is_quasi_closed(dns[2])
+        assert container.is_on(dns[2])
+
+    logger.info("Waiting for container to be CLOSED")
+    for container in containers:
+        container.wait_until_one_replica_is_closed()
 
     for container in containers:
         assert container.get_state(dns[0]) == 'CLOSED'
         assert container.get_state(dns[1]) == 'CLOSED'
-        assert container.get_state(dns[2]) == 'QUASI_CLOSED'
+        try:
+            assert container.get_state(dns[2]) == 'CLOSING' or \
+                   container.get_state(dns[2]) == 'QUASI_CLOSED'
+        except ContainerNotFoundError:
+            assert True
 
     # Since the replica in datanode[2] doesn't have the latest BCSID,
     # ReplicationManager will delete it and copy a closed replica.
@@ -98,7 +107,6 @@ def test_isolate_single_datanode():
     assert exit_code == 0, "freon run failed with output=[%s]" % output
 
 
-@pytest.mark.skip(reason="RATIS-615")
 def test_datanode_isolation_all():
     """
     In this test case we will create a network partition in such a way that

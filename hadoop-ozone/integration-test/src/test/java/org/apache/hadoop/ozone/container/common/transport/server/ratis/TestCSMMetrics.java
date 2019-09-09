@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getDoubleGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 import java.io.File;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -40,19 +42,23 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.transport.server
       .XceiverServerSpi;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.util.function.CheckedBiConsumer;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import org.junit.Test;
@@ -118,6 +124,12 @@ public class TestCSMMetrics {
       assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
       assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
       assertCounter("WriteChunkNumOps", 0L, metric);
+      double applyTransactionLatency = getDoubleGauge(
+          "ApplyTransactionAvgTime", metric);
+      assertTrue(applyTransactionLatency == 0.0);
+      double writeStateMachineLatency = getDoubleGauge(
+          "WriteStateMachineDataAvgTime", metric);
+      assertTrue(writeStateMachineLatency == 0.0);
 
       // Write Chunk
       BlockID blockID = ContainerTestHelper.getTestBlockID(ContainerTestHelper.
@@ -152,6 +164,13 @@ public class TestCSMMetrics {
           RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumQueryStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
+      applyTransactionLatency = getDoubleGauge(
+          "ApplyTransactionAvgTime", metric);
+      assertTrue(applyTransactionLatency > 0.0);
+      writeStateMachineLatency = getDoubleGauge(
+          "WriteStateMachineDataAvgTime", metric);
+      assertTrue(writeStateMachineLatency > 0.0);
+
     } finally {
       if (client != null) {
         client.close();
@@ -169,6 +188,7 @@ public class TestCSMMetrics {
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
         null, null);
   }
 
@@ -210,7 +230,8 @@ public class TestCSMMetrics {
     }
 
     @Override
-    public void buildMissingContainerSet(Set<Long> createdContainerSet) {
+    public void buildMissingContainerSetAndValidate(
+        Map<Long, Long> container2BCSIDMap) {
     }
   }
 }

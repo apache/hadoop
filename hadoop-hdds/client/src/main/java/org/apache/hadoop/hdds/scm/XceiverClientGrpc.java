@@ -70,6 +70,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class XceiverClientGrpc extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientGrpc.class);
+  private static final String COMPONENT = "dn";
   private final Pipeline pipeline;
   private final Configuration config;
   private Map<UUID, XceiverClientProtocolServiceStub> asyncStubs;
@@ -99,9 +100,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
     this.channels = new HashMap<>();
     this.asyncStubs = new HashMap<>();
-    this.topologyAwareRead = Boolean.parseBoolean(config.get(
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED,
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT));
+    this.topologyAwareRead = config.getBoolean(
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
   }
 
   /**
@@ -150,9 +151,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             .intercept(new ClientCredentialInterceptor(userName, encodedToken),
                 new GrpcClientInterceptor());
     if (secConfig.isGrpcTlsEnabled()) {
-      File trustCertCollectionFile = secConfig.getTrustStoreFile();
-      File privateKeyFile = secConfig.getClientPrivateKeyFile();
-      File clientCertChainFile = secConfig.getClientCertChainFile();
+      File trustCertCollectionFile = secConfig.getTrustStoreFile(COMPONENT);
+      File privateKeyFile = secConfig.getClientPrivateKeyFile(COMPONENT);
+      File clientCertChainFile = secConfig.getClientCertChainFile(COMPONENT);
 
       SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
       if (trustCertCollectionFile != null) {

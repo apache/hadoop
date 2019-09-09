@@ -26,6 +26,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,12 @@ public abstract class BaseHttpServer {
       this.httpAddress = getHttpBindAddress();
       this.httpsAddress = getHttpsBindAddress();
       HttpServer2.Builder builder = null;
+
+      // Avoid registering o.a.h.http.PrometheusServlet in HttpServer2.
+      // TODO: Replace "hadoop.prometheus.endpoint.enabled" with
+      // CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED when possible.
+      conf.setBoolean("hadoop.prometheus.endpoint.enabled", false);
+
       builder = DFSUtil.httpServerTemplateForNNAndJN(conf, this.httpAddress,
           this.httpsAddress, name, getSpnegoPrincipal(), getKeytabFile());
 
@@ -86,8 +93,9 @@ public abstract class BaseHttpServer {
       httpServer = builder.build();
       httpServer.addServlet("conf", "/conf", HddsConfServlet.class);
 
+      httpServer.addServlet("logstream", "/logstream", LogStreamServlet.class);
       prometheusSupport =
-          conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, false);
+          conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, true);
 
       profilerSupport =
           conf.getBoolean(HddsConfigKeys.HDDS_PROFILER_ENABLED, false);

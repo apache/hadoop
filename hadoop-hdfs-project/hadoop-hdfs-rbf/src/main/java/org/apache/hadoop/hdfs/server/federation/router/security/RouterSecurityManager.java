@@ -22,7 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.io.Text;
@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.lang.reflect.Constructor;
 
 /**
  * Manager to hold underlying delegation token secret manager implementations.
@@ -58,7 +57,7 @@ public class RouterSecurityManager {
     AuthenticationMethod authMethodToInit =
         AuthenticationMethod.KERBEROS;
     if (authMethodConfigured.equals(authMethodToInit)) {
-      this.dtSecretManager = newSecretManager(conf);
+      this.dtSecretManager = FederationUtil.newSecretManager(conf);
     }
   }
 
@@ -66,37 +65,6 @@ public class RouterSecurityManager {
   public RouterSecurityManager(AbstractDelegationTokenSecretManager
       <DelegationTokenIdentifier> dtSecretManager) {
     this.dtSecretManager = dtSecretManager;
-  }
-
-  /**
-   * Creates an instance of a SecretManager from the configuration.
-   *
-   * @param conf Configuration that defines the secret manager class.
-   * @return New secret manager.
-   */
-  public static AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
-      newSecretManager(Configuration conf) {
-    Class<? extends AbstractDelegationTokenSecretManager> clazz =
-        conf.getClass(
-        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
-        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT,
-        AbstractDelegationTokenSecretManager.class);
-    AbstractDelegationTokenSecretManager secretManager;
-    try {
-      Constructor constructor = clazz.getConstructor(Configuration.class);
-      secretManager = (AbstractDelegationTokenSecretManager)
-          constructor.newInstance(conf);
-      LOG.info("Delegation token secret manager object instantiated");
-    } catch (ReflectiveOperationException e) {
-      LOG.error("Could not instantiate: {}", clazz.getSimpleName(),
-          e.getCause());
-      return null;
-    } catch (RuntimeException e) {
-      LOG.error("RuntimeException to instantiate: {}",
-          clazz.getSimpleName(), e);
-      return null;
-    }
-    return secretManager;
   }
 
   public AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>

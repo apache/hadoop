@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -164,6 +164,7 @@
               <!-- these two get covered in our non-test invariant check -->
               <excludeArtifactIds>hadoop-client-api,hadoop-client-runtime</excludeArtifactIds>
               <excludeTransitive>true</excludeTransitive>
+              <pathSeparator>;</pathSeparator>
               <outputProperty>hadoop-client-artifacts</outputProperty>
             </configuration>
           </execution>

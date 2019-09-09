@@ -22,7 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
@@ -76,7 +75,7 @@ public class KeyCodec {
   private Supplier<Boolean> isPosixFileSystem;
 
   /**
-   * Creates an KeyCodec.
+   * Creates a KeyCodec with component name.
    *
    * @param config - Security Config.
    * @param component - Component String.
@@ -85,29 +84,6 @@ public class KeyCodec {
     this.securityConfig = config;
     isPosixFileSystem = KeyCodec::isPosix;
     this.location = securityConfig.getKeyLocation(component);
-  }
-
-  /**
-   * Creates an KeyCodec.
-   *
-   * @param config - Security Config.
-   */
-  public KeyCodec(SecurityConfig config) {
-    this.securityConfig = config;
-    isPosixFileSystem = KeyCodec::isPosix;
-    this.location = securityConfig.getKeyLocation();
-  }
-
-  /**
-   * Creates an HDDS Key Writer.
-   *
-   * @param configuration - Configuration
-   */
-  public KeyCodec(Configuration configuration) {
-    Preconditions.checkNotNull(configuration, "Config cannot be null");
-    this.securityConfig = new SecurityConfig(configuration);
-    isPosixFileSystem = KeyCodec::isPosix;
-    this.location = securityConfig.getKeyLocation();
   }
 
   /**

@@ -16,9 +16,16 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.param;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import static org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli.YAML_PARSE_FAILED;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -39,15 +46,9 @@ import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli.YAML_PARSE_FAILED;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * This class acts as a wrapper of {@code CommandLine} values along with
@@ -104,6 +105,8 @@ public final class ParametersHolder {
       }
     } else if (command == Command.SHOW_JOB) {
       return new ShowJobParameters();
+    } else if (command == Command.KILL_JOB) {
+      return new KillJobParameters();
     } else {
       throw new UnsupportedOperationException(SUPPORTED_COMMANDS_MESSAGE);
     }

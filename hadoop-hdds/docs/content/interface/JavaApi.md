@@ -74,21 +74,21 @@ It is possible to pass an array of arguments to the createVolume by creating vol
 
 Once you have a volume, you can create buckets inside the volume.
 
-{{< highlight bash >}}
+{{< highlight java >}}
 // Let us create a bucket called videos.
 assets.createBucket("videos");
 OzoneBucket video = assets.getBucket("videos");
 {{< /highlight >}}
 
-At this point we have a usable volume and a bucket. Our volume is called assets and bucket is called videos.
+At this point we have a usable volume and a bucket. Our volume is called _assets_ and bucket is called _videos_.
 
 Now we can create a Key.
 
 ### Reading and Writing a Key
 
-With a bucket object the users can now read and write keys. The following code reads a video called intro.mp4 from the local disk and stores in the video bucket that we just created.
+With a bucket object the users can now read and write keys. The following code reads a video called intro.mp4 from the local disk and stores in the _video_ bucket that we just created.
 
-{{< highlight bash >}}
+{{< highlight java >}}
 // read data from the file, this is a user provided function.
 byte [] videoData = readFile("intro.mp4");
 

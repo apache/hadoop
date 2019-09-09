@@ -766,6 +766,12 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     Assert.assertTrue(thread.isAlive());
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testJvmOpts() {
+    String jvmOpts = "`ping -c 3 example.com`";
+    ServiceApiUtil.validateJvmOpts(jvmOpts);
+  }
+
   public static Service createExampleApplication() {
 
     Service exampleApp = new Service();

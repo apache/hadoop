@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -208,7 +209,6 @@ import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.util.InvalidChecksumSizeException;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
@@ -1448,7 +1448,7 @@ public class DataNode extends ReconfigurableBase
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
     peerMetrics = dnConf.peerStatsEnabled ?
-        DataNodePeerMetrics.create(getDisplayName()) : null;
+        DataNodePeerMetrics.create(getDisplayName(), getConf()) : null;
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     ecWorker = new ErasureCodingWorker(getConf(), this);
@@ -2500,6 +2500,9 @@ public class DataNode extends ReconfigurableBase
     final String clientname;
     final CachingStrategy cachingStrategy;
 
+    /** Throttle to block replication when data transfers. */
+    private DataTransferThrottler transferThrottler;
+
     /**
      * Connect to the first item in the target list.  Pass along the 
      * entire target list, the block, and the data.
@@ -2526,6 +2529,15 @@ public class DataNode extends ReconfigurableBase
       this.clientname = clientname;
       this.cachingStrategy =
           new CachingStrategy(true, getDnConf().readaheadLength);
+      // 1. the stage is PIPELINE_SETUP_CREATE，that is moving blocks, set
+      // throttler.
+      // 2. the stage is PIPELINE_SETUP_APPEND_RECOVERY or
+      // PIPELINE_SETUP_STREAMING_RECOVERY,
+      // that is writing and recovering pipeline, don't set throttle.
+      if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE
+          && clientname.isEmpty()) {
+        this.transferThrottler = xserver.getTransferThrottler();
+      }
     }
 
     /**
@@ -2584,7 +2596,7 @@ public class DataNode extends ReconfigurableBase
             targetStorageIds);
 
         // send data & checksum
-        blockSender.sendBlock(out, unbufOut, null);
+        blockSender.sendBlock(out, unbufOut, transferThrottler);
 
         // no response necessary
         LOG.info("{}, at {}: Transmitted {} (numBytes={}) to {}",
@@ -2610,13 +2622,7 @@ public class DataNode extends ReconfigurableBase
           metrics.incrBlocksReplicated();
         }
       } catch (IOException ie) {
-        if (ie instanceof InvalidChecksumSizeException) {
-          // Add the block to the front of the scanning queue if metadata file
-          // is corrupt. We already add the block to front of scanner if the
-          // peer disconnects.
-          LOG.info("Adding block: {} for scanning", b);
-          blockScanner.markSuspectBlock(data.getVolume(b).getStorageID(), b);
-        }
+        handleBadBlock(b, ie, false);
         LOG.warn("{}:Failed to transfer {} to {} got",
             bpReg, b, targets[0], ie);
       } finally {
@@ -2626,6 +2632,11 @@ public class DataNode extends ReconfigurableBase
         IOUtils.closeStream(in);
         IOUtils.closeSocket(sock);
       }
+    }
+
+    @Override
+    public String toString() {
+      return "DataTransfer " + b + " to " + Arrays.asList(targets);
     }
   }
 
@@ -3311,10 +3322,14 @@ public class DataNode extends ReconfigurableBase
   public void triggerBlockReport(BlockReportOptions options)
       throws IOException {
     checkSuperuserPrivilege();
+    InetSocketAddress namenodeAddr = options.getNamenodeAddr();
+    boolean shouldTriggerToAllNn = (namenodeAddr == null);
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       if (bpos != null) {
         for (BPServiceActor actor : bpos.getBPServiceActors()) {
-          actor.triggerBlockReport(options);
+          if (shouldTriggerToAllNn || namenodeAddr.equals(actor.nnAddr)) {
+            actor.triggerBlockReport(options);
+          }
         }
       }
     }
@@ -3451,6 +3466,41 @@ public class DataNode extends ReconfigurableBase
     LOG.debug("{}", sb);
       // send blockreport regarding volume failure
     handleDiskError(sb.toString());
+  }
+
+  /**
+   * A bad block need to be handled, either to add to blockScanner suspect queue
+   * or report to NameNode directly.
+   *
+   * If the method is called by scanner, then the block must be a bad block, we
+   * report it to NameNode directly. Otherwise if we judge it as a bad block
+   * according to exception type, then we try to add the bad block to
+   * blockScanner suspect queue if blockScanner is enabled, or report to
+   * NameNode directly otherwise.
+   *
+   * @param block The suspicious block
+   * @param e The exception encountered when accessing the block
+   * @param fromScanner Is it from blockScanner. The blockScanner will call this
+   *          method only when it's sure that the block is corrupt.
+   */
+  void handleBadBlock(ExtendedBlock block, IOException e, boolean fromScanner) {
+
+    boolean isBadBlock = fromScanner || (e instanceof DiskFileCorruptException
+        || e instanceof CorruptMetaHeaderException);
+
+    if (!isBadBlock) {
+      return;
+    }
+    if (!fromScanner && blockScanner.isEnabled()) {
+      blockScanner.markSuspectBlock(data.getVolume(block).getStorageID(),
+          block);
+    } else {
+      try {
+        reportBadBlocks(block);
+      } catch (IOException ie) {
+        LOG.warn("report bad block {} failed", block, ie);
+      }
+    }
   }
 
   @VisibleForTesting

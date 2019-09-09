@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -210,7 +212,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               .getResourceSecondsString(metrics.getResourceSecondsMap()))
           .add("preemptedResourceSeconds", StringHelper
               .getResourceSecondsString(
-                  metrics.getPreemptedResourceSecondsMap()));
+                  metrics.getPreemptedResourceSecondsMap()))
+          .add("applicationTags", StringHelper.CSV_JOINER.join(
+              app.getApplicationTags() != null ? new TreeSet<>(
+                  app.getApplicationTags()) : Collections.<String>emptySet()))
+          .add("applicationNodeLabel",
+              app.getApplicationSubmissionContext().getNodeLabelExpression()
+                  == null
+                  ? ""
+                  : app.getApplicationSubmissionContext()
+                      .getNodeLabelExpression());
+
       return summary;
     }
 
@@ -371,7 +383,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Passing start time as -1. It will be eventually set in RMAppImpl
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
-        submissionContext, submitTime, user, false, -1);
+        submissionContext, submitTime, user, false, -1, null);
     try {
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
@@ -408,18 +420,22 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true, appState.getStartTime());
+            appState.getUser(), true, appState.getStartTime(),
+            appState.getState());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery, long startTime) throws YarnException {
+      String user, boolean isRecovery, long startTime,
+      RMAppState recoveredFinalState) throws YarnException {
 
-    ApplicationPlacementContext placementContext =
-        placeApplication(rmContext.getQueuePlacementManager(),
-            submissionContext, user, isRecovery);
+    ApplicationPlacementContext placementContext = null;
+    if (recoveredFinalState == null) {
+      placementContext = placeApplication(rmContext.getQueuePlacementManager(),
+          submissionContext, user, isRecovery);
+    }
 
     // We only replace the queue when it's a new application
     if (!isRecovery) {
@@ -717,6 +733,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               app.getStartTime(), app.getApplicationSubmissionContext(),
               app.getUser(), app.getCallerContext());
       appState.setApplicationTimeouts(currentExpireTimeouts);
+      appState.setLaunchTime(app.getLaunchTime());
 
       // update to state store. Though it synchronous call, update via future to
       // know any exception has been set. It is required because in non-HA mode,
@@ -842,6 +859,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         app.getApplicationSubmissionContext(), app.getUser(),
         app.getCallerContext());
     appState.setApplicationTimeouts(app.getApplicationTimeouts());
+    appState.setLaunchTime(app.getLaunchTime());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
         false, future);
 

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
+import java.util.List;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -32,8 +34,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
-
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +44,10 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
   private final GpuNodeResourceUpdateHandler resourceDiscoverHandler;
   private final GpuDiscoverer gpuDiscoverer;
+  public static final int MAX_REPEATED_ERROR_ALLOWED = 10;
+
+  private int numOfErrorExecutionSinceLastSucceed = 0;
+
   private GpuResourceHandlerImpl gpuResourceHandler = null;
   private DockerCommandPlugin dockerCommandPlugin = null;
 
@@ -54,15 +58,16 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public synchronized void initialize(Context context) throws YarnException {
-    this.gpuDiscoverer.initialize(context.getConf());
+  public void initialize(Context context) throws YarnException {
+    this.gpuDiscoverer.initialize(context.getConf(),
+        new NvidiaBinaryHelper());
     this.dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
             context.getConf());
   }
 
   @Override
-  public synchronized ResourceHandler createResourceHandler(
+  public ResourceHandler createResourceHandler(
       Context context, CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (gpuResourceHandler == null) {
@@ -74,7 +79,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public synchronized NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
+  public NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
     return resourceDiscoverHandler;
   }
 
@@ -89,17 +94,26 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
   @Override
   public synchronized NMResourceInfo getNMResourceInfo() throws YarnException {
-    GpuDeviceInformation gpuDeviceInformation =
-        gpuDiscoverer.getGpuDeviceInformation();
+    GpuDeviceInformation gpuDeviceInformation;
 
     //At this point the gpu plugin is already enabled
     checkGpuResourceHandler();
 
+    checkErrorCount();
+    try{
+      gpuDeviceInformation = gpuDiscoverer.getGpuDeviceInformation();
+      numOfErrorExecutionSinceLastSucceed = 0;
+    } catch (YarnException e) {
+      LOG.error(e.getMessage(), e);
+      numOfErrorExecutionSinceLastSucceed++;
+      throw e;
+    }
+
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
-    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
+    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpus();
     List<AssignedGpuDevice> assignedGpuDevices =
-        gpuResourceAllocator.getAssignedGpusCopy();
+        gpuResourceAllocator.getAssignedGpus();
 
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
@@ -113,6 +127,17 @@ public class GpuResourcePlugin implements ResourcePlugin {
               + YarnConfiguration.NM_CONTAINER_EXECUTOR + " properly.";
       LOG.warn(errorMsg);
       throw new YarnException(errorMsg);
+    }
+  }
+
+  private void checkErrorCount() throws YarnException {
+    if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
+      String msg =
+          "Failed to execute GPU device information detection script for "
+              + MAX_REPEATED_ERROR_ALLOWED
+              + " times, skip following executions.";
+      LOG.error(msg);
+      throw new YarnException(msg);
     }
   }
 

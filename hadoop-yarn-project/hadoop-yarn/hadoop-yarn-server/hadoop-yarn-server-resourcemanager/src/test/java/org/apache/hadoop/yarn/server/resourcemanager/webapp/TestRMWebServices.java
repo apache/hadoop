@@ -426,9 +426,11 @@ public class TestRMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "reservedMB"),
           WebServicesTestUtils.getXmlInt(element, "availableMB"),
           WebServicesTestUtils.getXmlInt(element, "allocatedMB"),
+          WebServicesTestUtils.getXmlInt(element, "pendingMB"),
           WebServicesTestUtils.getXmlInt(element, "reservedVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "availableVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "allocatedVirtualCores"),
+          WebServicesTestUtils.getXmlInt(element, "pendingVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "totalVirtualCores"),
           WebServicesTestUtils.getXmlInt(element, "containersAllocated"),
           WebServicesTestUtils.getXmlInt(element, "totalMB"),
@@ -446,13 +448,16 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 25, clusterinfo.length());
+    assertEquals("incorrect number of elements", 27, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
-        clusterinfo.getInt("allocatedMB"),
-        clusterinfo.getInt("reservedVirtualCores"), clusterinfo.getInt("availableVirtualCores"),
-        clusterinfo.getInt("allocatedVirtualCores"), clusterinfo.getInt("totalVirtualCores"),
+        clusterinfo.getInt("allocatedMB"), clusterinfo.getInt("pendingMB"),
+        clusterinfo.getInt("reservedVirtualCores"),
+        clusterinfo.getInt("availableVirtualCores"),
+        clusterinfo.getInt("allocatedVirtualCores"),
+        clusterinfo.getInt("pendingVirtualCores"),
+        clusterinfo.getInt("totalVirtualCores"),
         clusterinfo.getInt("containersAllocated"),
         clusterinfo.getInt("totalMB"), clusterinfo.getInt("totalNodes"),
         clusterinfo.getInt("lostNodes"), clusterinfo.getInt("unhealthyNodes"),
@@ -462,8 +467,9 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   public void verifyClusterMetrics(int submittedApps, int completedApps,
-      int reservedMB, int availableMB, int allocMB, int reservedVirtualCores,
-      int availableVirtualCores, int allocVirtualCores, int totalVirtualCores,
+      int reservedMB, int availableMB, int allocMB, int pendingMB,
+      int reservedVirtualCores, int availableVirtualCores,
+      int allocVirtualCores, int pendingVirtualCores, int totalVirtualCores,
       int containersAlloc, int totalMB, int totalNodes, int lostNodes,
       int unhealthyNodes, int decommissionedNodes, int rebootedNodes,
       int activeNodes, int shutdownNodes) throws JSONException, Exception {
@@ -486,12 +492,19 @@ public class TestRMWebServices extends JerseyTestBase {
         metrics.getAvailableMB(), availableMB);
     assertEquals("allocatedMB doesn't match",
         metrics.getAllocatedMB(), allocMB);
+    assertEquals("pendingMB doesn't match",
+            metrics.getPendingMB(), pendingMB);
     assertEquals("reservedVirtualCores doesn't match",
         metrics.getReservedVirtualCores(), reservedVirtualCores);
     assertEquals("availableVirtualCores doesn't match",
         metrics.getAvailableVirtualCores(), availableVirtualCores);
+    assertEquals("pendingVirtualCores doesn't match",
+        metrics.getPendingVirtualCores(), pendingVirtualCores);
     assertEquals("allocatedVirtualCores doesn't match",
-        totalVirtualCoresExpect, allocVirtualCores);
+        metrics.getAllocatedVirtualCores(), allocVirtualCores);
+    assertEquals("totalVirtualCores doesn't match",
+        totalVirtualCoresExpect, totalVirtualCores);
+
     assertEquals("containersAllocated doesn't match", 0, containersAlloc);
     assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
     assertEquals(

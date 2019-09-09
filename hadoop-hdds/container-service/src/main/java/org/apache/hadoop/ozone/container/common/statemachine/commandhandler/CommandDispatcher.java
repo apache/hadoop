@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
@@ -79,6 +80,11 @@ public final class CommandDispatcher {
 
   public CommandHandler getCloseContainerHandler() {
     return handlerMap.get(Type.closeContainerCommand);
+  }
+
+  @VisibleForTesting
+  public CommandHandler getDeleteBlocksCommandHandler() {
+    return handlerMap.get(Type.deleteBlocksCommand);
   }
 
   /**

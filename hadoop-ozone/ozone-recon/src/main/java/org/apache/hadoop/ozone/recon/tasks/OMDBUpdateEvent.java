@@ -30,18 +30,18 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
   private final String table;
   private final KEY updatedKey;
   private final VALUE updatedValue;
-  private final EventInfo eventInfo;
+  private final long sequenceNumber;
 
   private OMDBUpdateEvent(OMDBUpdateAction action,
                           String table,
                           KEY updatedKey,
                           VALUE updatedValue,
-                          EventInfo eventInfo) {
+                          long sequenceNumber) {
     this.action = action;
     this.table = table;
     this.updatedKey = updatedKey;
     this.updatedValue = updatedValue;
-    this.eventInfo = eventInfo;
+    this.sequenceNumber = sequenceNumber;
   }
 
   public OMDBUpdateAction getAction() {
@@ -60,8 +60,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     return updatedValue;
   }
 
-  public EventInfo getEventInfo() {
-    return eventInfo;
+  public long getSequenceNumber() {
+    return sequenceNumber;
   }
 
   /**
@@ -75,7 +75,7 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     private String table;
     private KEY updatedKey;
     private VALUE updatedValue;
-    private EventInfo eventInfo;
+    private long lastSequenceNumber;
 
     OMUpdateEventBuilder setAction(OMDBUpdateAction omdbUpdateAction) {
       this.action = omdbUpdateAction;
@@ -97,10 +97,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
       return this;
     }
 
-    OMUpdateEventBuilder setEventInfo(long sequenceNumber,
-                                      long eventTimestampMillis) {
-      this.eventInfo = new EventInfo(sequenceNumber,
-          eventTimestampMillis);
+    OMUpdateEventBuilder setSequenceNumber(long sequenceNumber) {
+      this.lastSequenceNumber = sequenceNumber;
       return this;
     }
 
@@ -114,30 +112,7 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
           table,
           updatedKey,
           updatedValue,
-          eventInfo);
-    }
-  }
-
-  /**
-   * Class used to hold timing information for an event. (Seq number and
-   * timestamp)
-   */
-  public static class EventInfo {
-    private long sequenceNumber;
-    private long eventTimestampMillis;
-
-    public EventInfo(long sequenceNumber,
-                     long eventTimestampMillis) {
-      this.sequenceNumber = sequenceNumber;
-      this.eventTimestampMillis = eventTimestampMillis;
-    }
-
-    public long getSequenceNumber() {
-      return sequenceNumber;
-    }
-
-    public long getEventTimestampMillis() {
-      return eventTimestampMillis;
+          lastSequenceNumber);
     }
   }
 

@@ -82,6 +82,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
+
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRuntimeEstimators {
 
@@ -125,6 +128,9 @@ public class TestRuntimeEstimators {
     estimator = testedEstimator;
 	clock = new ControlledClock();
 	dispatcher = new AsyncDispatcher();
+    Configuration conf = new Configuration();
+    dispatcher.init(conf);
+
     myJob = null;
     slotsInUse.set(0);
     completedMaps.set(0);
@@ -133,8 +139,6 @@ public class TestRuntimeEstimators {
     taskTimeSavedBySpeculation.set(0);
 
     clock.tickMsec(1000);
-
-    Configuration conf = new Configuration();
 
     myAppContext = new MyAppContext(MAP_TASKS, REDUCE_TASKS);
     myJob = myAppContext.getAllJobs().values().iterator().next();
@@ -151,10 +155,10 @@ public class TestRuntimeEstimators {
         500L, speculator.getSoonestRetryAfterNoSpeculate());
     Assert.assertEquals("wrong SPECULATIVE_RETRY_AFTER_SPECULATE value",
         5000L, speculator.getSoonestRetryAfterSpeculate());
-    Assert.assertEquals(speculator.getProportionRunningTasksSpeculatable(),
-        0.1, 0.00001);
-    Assert.assertEquals(speculator.getProportionTotalTasksSpeculatable(),
-        0.001, 0.00001);
+    assertThat(speculator.getProportionRunningTasksSpeculatable())
+        .isCloseTo(0.1, offset(0.00001));
+    assertThat(speculator.getProportionTotalTasksSpeculatable())
+        .isCloseTo(0.001, offset(0.00001));
     Assert.assertEquals("wrong SPECULATIVE_MINIMUM_ALLOWED_TASKS value",
         5, speculator.getMinimumAllowedSpeculativeTasks());
 
@@ -162,7 +166,6 @@ public class TestRuntimeEstimators {
 
     dispatcher.register(TaskEventType.class, new SpeculationRequestEventHandler());
 
-    dispatcher.init(conf);
     dispatcher.start();
 
 

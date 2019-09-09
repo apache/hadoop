@@ -56,7 +56,7 @@ public class TestAbortMultipartUpload {
     rest.setHeaders(headers);
     rest.setClient(client);
 
-    Response response = rest.multipartUpload(bucket, key, "", "", null);
+    Response response = rest.initializeMultipartUpload(bucket, key);
 
     assertEquals(response.getStatus(), 200);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =

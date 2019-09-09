@@ -123,14 +123,23 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testProxyConnection() throws Exception {
-    conf = new Configuration();
-    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    useFailFastConfiguration();
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
     String proxy =
         conf.get(Constants.PROXY_HOST) + ":" + conf.get(Constants.PROXY_PORT);
     expectFSCreateFailure(AWSClientIOException.class,
         conf, "when using proxy " + proxy);
+  }
+
+  /**
+   * Create a configuration designed to fail fast on network problems.
+   */
+  protected void useFailFastConfiguration() {
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.setInt(Constants.RETRY_LIMIT, 2);
+    conf.set(RETRY_INTERVAL, "100ms");
   }
 
   /**
@@ -153,9 +162,8 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testProxyPortWithoutHost() throws Exception {
-    conf = new Configuration();
+    useFailFastConfiguration();
     conf.unset(Constants.PROXY_HOST);
-    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.setInt(Constants.PROXY_PORT, 1);
     IllegalArgumentException e = expectFSCreateFailure(
         IllegalArgumentException.class,
@@ -169,9 +177,8 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testAutomaticProxyPortSelection() throws Exception {
-    conf = new Configuration();
+    useFailFastConfiguration();
     conf.unset(Constants.PROXY_PORT);
-    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.set(Constants.SECURE_CONNECTIONS, "true");
     expectFSCreateFailure(AWSClientIOException.class,
@@ -183,8 +190,7 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testUsernameInconsistentWithPassword() throws Exception {
-    conf = new Configuration();
-    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    useFailFastConfiguration();
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
     conf.set(Constants.PROXY_USERNAME, "user");
@@ -204,8 +210,7 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testUsernameInconsistentWithPassword2() throws Exception {
-    conf = new Configuration();
-    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    useFailFastConfiguration();
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
     conf.set(Constants.PROXY_PASSWORD, "password");

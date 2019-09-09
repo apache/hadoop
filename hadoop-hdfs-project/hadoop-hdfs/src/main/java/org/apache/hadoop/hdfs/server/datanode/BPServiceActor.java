@@ -436,7 +436,7 @@ class BPServiceActor implements Runnable {
           " The reports had " + totalBlockCount +
           " total blocks and used " + numRPCs +
           " RPC(s). This took " + brCreateCost +
-          " msec to generate and " + brSendCost +
+          " msecs to generate and " + brSendCost +
           " msecs for RPC and NN processing." +
           " Got back " +
           ((nCmds == 0) ? "no commands" :
@@ -486,7 +486,7 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addCacheReport(sendCost);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CacheReport of " + blockIds.size()
-            + " block(s) took " + createCost + " msec to generate and "
+            + " block(s) took " + createCost + " msecs to generate and "
             + sendCost + " msecs for RPC and NN processing");
       }
     }
@@ -634,9 +634,9 @@ class BPServiceActor implements Runnable {
    */
   private void offerService() throws Exception {
     LOG.info("For namenode " + nnAddr + " using"
-        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
-        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
-        + " Initial delay: " + dnConf.initialBlockReportDelayMs + "msec"
+        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msecs"
+        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msecs"
+        + " Initial delay: " + dnConf.initialBlockReportDelayMs + "msecs"
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));

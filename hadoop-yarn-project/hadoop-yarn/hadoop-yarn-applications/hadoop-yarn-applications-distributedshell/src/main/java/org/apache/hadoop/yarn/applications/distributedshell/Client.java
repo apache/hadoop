@@ -925,7 +925,7 @@ public class Client {
 
     // add the runtime classpath needed for tests to work
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-      classPathEnv.append(':')
+      classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR)
           .append(System.getProperty("java.class.path"));
     }
 

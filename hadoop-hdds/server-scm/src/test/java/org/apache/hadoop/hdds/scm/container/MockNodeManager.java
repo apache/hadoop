@@ -268,6 +268,19 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
+  public void addContainer(DatanodeDetails dd,
+                           ContainerID containerId)
+      throws NodeNotFoundException {
+    try {
+      Set<ContainerID> set = node2ContainerMap.getContainers(dd.getUuid());
+      set.add(containerId);
+      node2ContainerMap.setContainersForDatanode(dd.getUuid(), set);
+    } catch (SCMException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
   public void addDatanodeCommand(UUID dnId, SCMCommand command) {
     if(commandMap.containsKey(dnId)) {
       List<SCMCommand> commandList = commandMap.get(dnId);

@@ -39,7 +39,7 @@ class Test extends FsCommand {
   }
 
   public static final String NAME = "test";
-  public static final String USAGE = "-[defsz] <path>";
+  public static final String USAGE = "-[defswrz] <path>";
   public static final String DESCRIPTION =
       "Answer various questions about <path>, with result via exit status.\n"
           + "  -d  return 0 if <path> is a directory.\n"

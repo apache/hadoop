@@ -48,8 +48,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Random;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestMRSequenceFileAsBinaryOutputFormat {
@@ -142,10 +142,9 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
               "Keys don't match: " + "*" + iwritable.get() + ":" + 
                                            sourceInt + "*",
               sourceInt, iwritable.get());
-          assertTrue(
+          assertThat(dwritable.get()).withFailMessage(
               "Vals don't match: " + "*" + dwritable.get() + ":" +
-                                           sourceDouble + "*",
-              Double.compare(dwritable.get(), sourceDouble) == 0 );
+                  sourceDouble + "*").isEqualTo(sourceDouble);
           ++count;
         }
       } finally {

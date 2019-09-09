@@ -69,6 +69,22 @@ public class TestRMDelegationTokens {
     UserGroupInformation.setConfiguration(testConf);
   }
 
+  private static void assertMasterKeysAreSaved(
+      Set<DelegationKey> rmDTMasterKeyState,
+      RMDelegationTokenSecretManager dtSecretManager) {
+    dtSecretManager.getAllMasterKeys().forEach(managerKey -> {
+      int keyId = managerKey.getKeyId();
+      boolean found = false;
+      for (DelegationKey stateKey: rmDTMasterKeyState) {
+        if (stateKey.getKeyId() == keyId) {
+          found = true;
+          break;
+        }
+      }
+      Assert.assertTrue("Master key not found: " + keyId, found);
+    });
+  }
+
   // Test the DT mast key in the state-store when the mast key is being rolled.
   @Test(timeout = 15000)
   public void testRMDTMasterKeyStateOnRollingMasterKey() throws Exception {
@@ -96,18 +112,8 @@ public class TestRMDelegationTokens {
 
     RMDelegationTokenSecretManager dtSecretManager =
         rm1.getRMContext().getRMDelegationTokenSecretManager();
-    // assert all master keys are saved
-    dtSecretManager.getAllMasterKeys().forEach(managerKey -> {
-      int keyId = managerKey.getKeyId();
-      boolean found = false;
-      for (DelegationKey stateKey: rmDTMasterKeyState) {
-        if (stateKey.getKeyId() == keyId) {
-          found = true;
-          break;
-        }
-      }
-      Assert.assertTrue("Master key not found: " + keyId, found);
-    });
+
+    assertMasterKeysAreSaved(rmDTMasterKeyState, dtSecretManager);
 
     // request to generate a RMDelegationToken
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
@@ -154,8 +160,7 @@ public class TestRMDelegationTokens {
     RMDelegationTokenSecretManager dtSecretManager =
         rm1.getRMContext().getRMDelegationTokenSecretManager();
 
-    // assert all master keys are saved
-    Assert.assertEquals(dtSecretManager.getAllMasterKeys(), rmDTMasterKeyState);
+    assertMasterKeysAreSaved(rmDTMasterKeyState, dtSecretManager);
     Set<DelegationKey> expiringKeys = new HashSet<DelegationKey>();
     expiringKeys.addAll(dtSecretManager.getAllMasterKeys());
 

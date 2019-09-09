@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -550,8 +551,8 @@ public class TestMRAppMaster {
         .handleEvent(captor.capture());
     HistoryEvent event = captor.getValue().getHistoryEvent();
     assertTrue(event instanceof JobUnsuccessfulCompletionEvent);
-    assertEquals(((JobUnsuccessfulCompletionEvent) event).getStatus()
-        , expectedJobState);
+    assertThat(((JobUnsuccessfulCompletionEvent) event).getStatus())
+        .isEqualTo(expectedJobState);
   }
 }
 class MRAppMasterTest extends MRAppMaster {

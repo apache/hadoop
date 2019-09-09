@@ -144,6 +144,7 @@ enum Result {
   CONTAINER_NOT_OPEN = 39;
   CONTAINER_MISSING = 40;
   BLOCK_TOKEN_VERIFICATION_FAILED = 41;
+  ERROR_IN_DB_SYNC = 42;
 }
 
 /**
@@ -247,8 +248,9 @@ message ContainerDataProto {
   optional ContainerType containerType = 10 [default = KeyValueContainer];
 }
 
-message ContainerIdSetProto {
-    repeated int64 containerId = 1;
+message Container2BCSIDMapProto {
+   // repeated Container2BCSIDMapEntryProto container2BCSID = 1;
+    map <int64, int64> container2BCSID = 1;
 }
 
 enum ContainerType {

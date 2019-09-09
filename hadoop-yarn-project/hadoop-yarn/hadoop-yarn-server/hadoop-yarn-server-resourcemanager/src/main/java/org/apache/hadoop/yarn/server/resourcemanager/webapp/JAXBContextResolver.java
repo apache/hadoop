@@ -55,7 +55,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
             UsersInfo.class, UserInfo.class, ApplicationStatisticsInfo.class,
             StatisticsItemInfo.class, CapacitySchedulerHealthInfo.class,
             FairSchedulerQueueInfoList.class, AppTimeoutsInfo.class,
-            AppTimeoutInfo.class, ResourceInformationsInfo.class };
+            AppTimeoutInfo.class, ResourceInformationsInfo.class,
+            ActivitiesInfo.class, AppActivitiesInfo.class};
     // these dao classes need root unwrapping
     final Class[] rootUnwrappedTypes =
         { NewApplication.class, ApplicationSubmissionContextInfo.class,

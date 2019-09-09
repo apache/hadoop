@@ -133,7 +133,6 @@ public class TestOMRatisSnapshots {
 
     long leaderOMappliedLogIndex =
         leaderRatisServer.getStateMachineLastAppliedIndex();
-    leaderOM.getOmRatisServer().getStateMachineLastAppliedIndex();
 
     List<String> keys = new ArrayList<>();
     while (leaderOMappliedLogIndex < 2000) {
@@ -143,7 +142,7 @@ public class TestOMRatisSnapshots {
     }
 
     // Get the latest db checkpoint from the leader OM.
-    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot(true);
+    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot();
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 

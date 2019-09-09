@@ -108,8 +108,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   // These variables are only for testing
   private final AtomicBoolean waiting = new AtomicBoolean(false);
   private int logAggregationTimes = 0;
-  private int cleanupOldLogTimes = 0;
-
+  private long logFileSizeThreshold;
   private boolean renameTemporaryLogFileFailed = false;
 
   private final Map<ContainerId, ContainerLogAggregator> containerLogAggregators =
@@ -176,6 +175,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.nodeId = nodeId;
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
+    this.logFileSizeThreshold =
+        conf.getLong(YarnConfiguration.LOG_AGGREGATION_DEBUG_FILESIZE,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE);
     if (logAggregationFileController == null) {
       // by default, use T-File Controller
       this.logAggregationFileController = new LogAggregationTFileController();
@@ -193,10 +195,16 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.remoteNodeTmpLogFileForApp = getRemoteNodeTmpLogFileForApp();
     }
     boolean logAggregationInRolling =
-        rollingMonitorInterval <= 0 || this.logAggregationContext == null
-            || this.logAggregationContext.getRolledLogsIncludePattern() == null
-            || this.logAggregationContext.getRolledLogsIncludePattern()
-                .isEmpty() ? false : true;
+        rollingMonitorInterval > 0 && this.logAggregationContext != null
+            && this.logAggregationContext.getRolledLogsIncludePattern() != null
+            && !this.logAggregationContext.getRolledLogsIncludePattern()
+                .isEmpty();
+    if (logAggregationInRolling) {
+      LOG.info("Rolling mode is turned on with include pattern {}",
+          this.logAggregationContext.getRolledLogsIncludePattern());
+    } else {
+      LOG.debug("Rolling mode is turned off");
+    }
     logControllerContext = new LogAggregationFileControllerContext(
             this.remoteNodeLogFileForApp,
             this.remoteNodeTmpLogFileForApp,
@@ -296,11 +304,13 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     if (pendingContainerInThisCycle.isEmpty()) {
+      LOG.debug("No pending container in this cycle");
       sendLogAggregationReport(true, "", appFinished);
       return;
     }
 
     logAggregationTimes++;
+    LOG.debug("Cycle #{} of log aggregator", logAggregationTimes);
     String diagnosticMessage = "";
     boolean logAggregationSucceedInThisCycle = true;
     DeletionTask deletionTask = null;
@@ -328,8 +338,23 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             appFinished, finishedContainers.contains(container));
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
+          LOG.trace("Uploaded the following files for {}: {}",
+              container, uploadedFilePathsInThisCycle.toString());
           List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
           uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
+          if (LOG.isDebugEnabled()) {
+            for (Path uploadedFilePath : uploadedFilePathsInThisCycleList) {
+              try {
+                long fileSize = lfs.getFileStatus(uploadedFilePath).getLen();
+                if (fileSize >= logFileSizeThreshold) {
+                  LOG.debug("Log File " + uploadedFilePath
+                      + " size is " + fileSize + " bytes");
+                }
+              } catch (Exception e1) {
+                LOG.error("Failed to get log file size " + e1);
+              }
+            }
+          }
           deletionTask = new FileDeletionTask(delService,
               this.userUgi.getShortUserName(), null,
               uploadedFilePathsInThisCycleList);
@@ -369,6 +394,13 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
       if (logAggregationSucceedInThisCycle && deletionTask != null) {
         delService.delete(deletionTask);
+      }
+      if (diagnosticMessage != null && !diagnosticMessage.isEmpty()) {
+        LOG.debug("Sending log aggregation report along with the " +
+            "following diagnostic message:\"{}\"", diagnosticMessage);
+      }
+      if (!logAggregationSucceedInThisCycle) {
+        LOG.warn("Log aggregation did not succeed in this cycle");
       }
       sendLogAggregationReport(logAggregationSucceedInThisCycle,
           diagnosticMessage, appFinished);
@@ -506,14 +538,17 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         lfs.getFileStatus(logPath);
         localAppLogDirs.add(logPath);
       } catch (UnsupportedFileSystemException ue) {
-        LOG.warn("Log dir " + rootLogDir + "is an unsupported file system", ue);
+        LOG.warn("Log dir {} is in an unsupported file system", rootLogDir,
+            ue);
         continue;
       } catch (IOException fe) {
+        LOG.warn("An exception occurred while getting file information", fe);
         continue;
       }
     }
 
     if (localAppLogDirs.size() > 0) {
+      LOG.debug("Cleaning up {} files", localAppLogDirs.size());
       List<Path> localAppLogDirsList = new ArrayList<>();
       localAppLogDirsList.addAll(localAppLogDirs);
       DeletionTask deletionTask = new FileDeletionTask(delService,
@@ -654,17 +689,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public UserGroupInformation updateCredentials(Credentials cred) {
     this.userUgi.addCredentials(cred);
     return userUgi;
-  }
-
-  @Private
-  @VisibleForTesting
-  public int getLogAggregationTimes() {
-    return this.logAggregationTimes;
-  }
-
-  @VisibleForTesting
-  int getCleanupOldLogTimes() {
-    return this.cleanupOldLogTimes;
   }
 
   @VisibleForTesting
