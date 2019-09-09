@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -78,7 +77,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -286,7 +284,6 @@ public class ContainerStateMachine extends BaseStateMachine {
       LOG.error(msg);
       throw sme;
     }
-    SingleFileSnapshotInfo lastSnapshot = storage.findLatestSnapshot();
     if (ti != null && ti.getIndex() != RaftLog.INVALID_LOG_INDEX) {
       final File snapshotFile =
           storage.getSnapshotFile(ti.getTerm(), ti.getIndex());
@@ -296,14 +293,6 @@ public class ContainerStateMachine extends BaseStateMachine {
         fos.flush();
         // make sure the snapshot file is synced
         fos.getFD().sync();
-
-        //delete old snapshot only if the above creation step was successful.
-        if (lastSnapshot != null && lastSnapshot.getFile() != null) {
-          Path lastSnapshotFile = lastSnapshot.getFile().getPath();
-          LOG.info("Deleting last snapshot at {} ",
-              lastSnapshotFile.toString());
-          FileUtils.deleteQuietly(lastSnapshotFile.toFile());
-        }
       } catch (IOException ioe) {
         LOG.error("{}: Failed to write snapshot at:{} file {}", gid, ti,
             snapshotFile);

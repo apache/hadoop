@@ -19,8 +19,8 @@
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -101,7 +101,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private final long cacheEntryExpiryInteval;
   private boolean isStarted = false;
   private DatanodeDetails datanodeDetails;
-  private final Configuration conf;
+  private final OzoneConfiguration conf;
   // TODO: Remove the gids set when Ratis supports an api to query active
   // pipelines
   private final Set<RaftGroupId> raftGids = new HashSet<>();
@@ -110,7 +110,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, ContainerController containerController,
       StateContext context, GrpcTlsConfig tlsConfig, CertificateClient caClient,
-      Configuration conf)
+      OzoneConfiguration conf)
       throws IOException {
     super(conf, caClient);
     this.conf = conf;
@@ -255,6 +255,13 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT);
     RaftServerConfigKeys.Log.setPurgeGap(properties, purgeGap);
 
+    //Set the number of Snapshots Retained.
+    RatisServerConfiguration ratisServerConfiguration =
+        conf.getObject(RatisServerConfiguration.class);
+    int numSnapshotsRetained =
+        ratisServerConfiguration.getNumSnapshotsRetained();
+    RaftServerConfigKeys.Snapshot.setSnapshotRetentionPolicy(properties,
+        numSnapshotsRetained);
     return properties;
   }
 
@@ -377,7 +384,7 @@ public final class XceiverServerRatis extends XceiverServer {
   }
 
   public static XceiverServerRatis newXceiverServerRatis(
-      DatanodeDetails datanodeDetails, Configuration ozoneConf,
+      DatanodeDetails datanodeDetails, OzoneConfiguration ozoneConf,
       ContainerDispatcher dispatcher, ContainerController containerController,
       CertificateClient caClient, StateContext context) throws IOException {
     int localPort = ozoneConf.getInt(
