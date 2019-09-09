@@ -1036,7 +1036,7 @@ public class RMAppImpl implements RMApp, Recoverable {
             app.callerContext);
         appState.setApplicationTimeouts(app.getApplicationTimeouts());
         appState.setLaunchTime(event.getTimestamp());
-        app.rmContext.getStateStore().updateApplicationState(appState);
+        app.rmContext.getStateStore().updateApplicationState(appState, false);
         app.launchTime = event.getTimestamp();
       }
     }
