@@ -3373,6 +3373,20 @@
     </description>
   </property>
 
+  <property>
+    <name>adl.ssl.channel.mode</name>
+    <value></value>
+    <description>
+      Valid inputs are OpenSSL, Default_JSE and Default (case insensitive).
+      If config is missing or is invalid, SSL Channel mode will be set to Default.
+
+      When OpenSSL, SSL socket connections are created in OpenSSL mode.
+      When Default_JSE, SSL socket connections are created in the default JSE mode.
+      When Default, SSL socket connections are attempted with OpenSSL
+      and will fallback to Default_JSE mode if OpenSSL is not available at runtime.
+    </description>
+  </property>
+
   <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>
