@@ -85,13 +85,16 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  *   there was not one already.</li>
  * </ol>
  * The tests are all bundled into one big test case.
- * This is, from a purist unit test perspective,
- * utterly wrong as it goes against the "Each test case tests exactly one
- * thing" philosophy of JUnit.
+ * From a purist unit test perspective, this is utterly wrong as it goes
+ * against the
+ * <i>"Each test case tests exactly one thing"</i>
+ * philosophy of JUnit.
+ * <p>
  * However is significantly reduces setup costs on the parameterized test runs,
  * as it means that the filesystems and directories only need to be
  * created and destroyed once per parameterized suite, rather than
  * once per individual test.
+ * <p>
  * All the test probes have informative messages so when a test failure
  * does occur, its cause should be discoverable. It main weaknesses are
  * therefore:
@@ -141,6 +144,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    * Text used in files.
    */
   public static final byte[] HELLO = "hello".getBytes(Charset.forName("UTF-8"));
+
+  /**
+   * Wildcard scan to find *.txt in the no-read directory.
+   * When a scan/glob is done with S3Guard in auth mode, the scan will
+   * succeed but the file open will fail for any non-empty file.
+   * In non-auth mode, the read restrictions will fail the actual scan.
+   */
+  private Path noReadWildcard;
 
   /**
    * Parameterization.
@@ -268,10 +279,13 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // to globStatus itself, and then to LocatedFileStatusFetcher,
     // which invokes globStatus
 
-    testBasicFileOperations();
-    testGlobOperations();
-    testLocatedFileStatusFetcher();
-    testDeleteOperations();
+    checkBasicFileOperations();
+    checkGlobOperations();
+    checkSingleThreadedLocatedFileStatus();
+    checkLocatedFileStatusFourThreads();
+    checkLocatedFileStatusScanFile();
+    checkLocatedFileStatusNonexistentPath();
+    checkDeleteOperations();
   }
 
   /**
@@ -292,6 +306,8 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // this is the directory to which the restricted role has no read
     // access.
     noReadDir = new Path(basePath, "noReadDir");
+    // wildcard scan to find *.txt
+    noReadWildcard = new Path(noReadDir, "*/*.txt");
 
     // an empty directory directory under the noReadDir
     emptyDir = new Path(noReadDir, "emptyDir");
@@ -330,7 +346,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   /**
    * Validate basic IO operations.
    */
-  public void testBasicFileOperations() throws Throwable {
+  public void checkBasicFileOperations() throws Throwable {
 
     // this is a LIST call; there's no marker.
     // so the sequence is
@@ -392,7 +408,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   /**
    * Explore Glob's recursive scan.
    */
-  public void testGlobOperations() throws Throwable {
+  public void checkGlobOperations() throws Throwable {
 
     describe("Glob Status operations");
     // baseline: the real filesystem on a subdir
@@ -403,10 +419,8 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     assertStatusPathEquals(emptyDir,
         globFS(readonlyFS, emptyDir, null, false, 1));
 
-    // wildcard scan to find *.txt
-    Path textFilePathPattern = new Path(noReadDir, "*/*.txt");
     FileStatus[] st = globFS(readonlyFS,
-        textFilePathPattern,
+        noReadWildcard,
         null, false, 2);
     Assertions.assertThat(st)
         .extracting(FileStatus::getPath)
@@ -430,17 +444,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     Assertions.assertThat(st2)
         .extracting(FileStatus::getPath)
         .containsExactly(noReadDir);
-
   }
 
   /**
    * Run a located file status fetcher against the directory tree.
    */
-  public void testLocatedFileStatusFetcher() throws Throwable {
+  public void checkSingleThreadedLocatedFileStatus() throws Throwable {
 
     describe("LocatedFileStatusFetcher operations");
-    // wildcard scan to find *.txt
-    Path textFilePathPattern = new Path(noReadDir, "*/*.txt");
     // use the same filter as FileInputFormat; single thread.
     roleConfig.setInt(LIST_STATUS_NUM_THREADS, 1);
     LocatedFileStatusFetcher fetcher =
@@ -459,13 +470,21 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             subdir2File1,
             subdir2File2);
 
+  }
+
+  /**
+   * Run a located file status fetcher against the directory tree.
+   */
+  public void checkLocatedFileStatusFourThreads() throws Throwable {
+
     // four threads and the text filter.
-    describe("LocatedFileStatusFetcher with %s", textFilePathPattern);
-    roleConfig.setInt(LIST_STATUS_NUM_THREADS, 4);
+    int threads = 4;
+    describe("LocatedFileStatusFetcher with %d", threads);
+    roleConfig.setInt(LIST_STATUS_NUM_THREADS, threads);
     LocatedFileStatusFetcher fetcher2 =
         new LocatedFileStatusFetcher(
             roleConfig,
-            new Path[]{textFilePathPattern},
+            new Path[]{noReadWildcard},
             true,
             EVERYTHING,
             true);
@@ -474,7 +493,12 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         .isNotNull()
         .flatExtracting(FileStatus::getPath)
         .containsExactlyInAnyOrder(subdirFile, subdir2File1);
+  }
 
+  /**
+   * Run a located file status fetcher against the directory tree.
+   */
+  public void checkLocatedFileStatusScanFile() throws Throwable {
     // pass in a file as the base of the scan.
     describe("LocatedFileStatusFetcher with file %s", subdirFile);
     roleConfig.setInt(LIST_STATUS_NUM_THREADS, 16);
@@ -499,7 +523,12 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
       // mode, but not in auth mode.
       failif(authMode, "LocatedFileStatusFetcher(" + subdirFile + ")", e);
     }
+  }
 
+  /**
+   * Explore what happens with a path that does not exist.
+   */
+  public void checkLocatedFileStatusNonexistentPath() throws Throwable {
     // scan a path that doesn't exist
     Path nonexistent = new Path(noReadDir, "nonexistent");
     InvalidInputException ex = intercept(InvalidInputException.class,
@@ -547,7 +576,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    * just makes use of the delete calls to see how delete failures
    * change with permissions and S3Guard stettings.
    */
-  public void testDeleteOperations() throws Throwable {
+  public void checkDeleteOperations() throws Throwable {
     describe("Testing delete operations");
 
     if (!authMode) {

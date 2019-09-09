@@ -58,8 +58,8 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   @Override
   @Ignore("local FS path setup broken")
-  public void testCopyToLocalWithUseRawLocalFileSystemOption() throws
-      Exception {
+  public void testCopyToLocalWithUseRawLocalFileSystemOption()
+      throws Exception {
   }
 
 }

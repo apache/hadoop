@@ -50,7 +50,7 @@ public class Globber {
   private final PathFilter filter;
   private final Tracer tracer;
   private final boolean resolveSymlinks;
-  
+
   Globber(FileSystem fs, Path pathPattern, PathFilter filter) {
     this.fs = fs;
     this.fc = null;
@@ -70,7 +70,7 @@ public class Globber {
   }
 
   /**
-   * Constructor for use by {@link GlobBuilder}.
+   * Filesystem constructor for use by {@link GlobBuilder}.
    * @param fs filesystem
    * @param pathPattern path pattern
    * @param filter optional filter
@@ -89,7 +89,7 @@ public class Globber {
   }
 
   /**
-   * Constructor for use by {@link GlobBuilder}.
+   * File Context constructor for use by {@link GlobBuilder}.
    * @param fc file context
    * @param pathPattern path pattern
    * @param filter optional filter
@@ -195,7 +195,7 @@ public class Globber {
   public FileStatus[] glob() throws IOException {
     TraceScope scope = tracer.newScope("Globber#glob");
     scope.addKVAnnotation("pattern", pathPattern.toUri().getPath());
-    try(DurationInfo ignored = new DurationInfo(LOG, false,
+    try (DurationInfo ignored = new DurationInfo(LOG, false,
         "glob %s", pathPattern)) {
       return doGlob();
     } finally {
@@ -324,7 +324,6 @@ public class Globber {
                   // the listing status is of a file
                   continue;
                 }
-
               }
             }
             for (FileStatus child : children) {
@@ -394,17 +393,29 @@ public class Globber {
     return ret;
   }
 
-  public static GlobBuilder createGlobber(FileSystem fs) {
-    return new GlobBuilder(fs);
-  }
-
-  public static GlobBuilder createGlobber(FileContext fc) {
-    return new GlobBuilder(fc);
+  /**
+   * Create a builder for a Globber, bonded to the specific filesystem.
+   * @param filesystem filesystem
+   * @return the builder to finish configuring.
+   */
+  public static GlobBuilder createGlobber(FileSystem filesystem) {
+    return new GlobBuilder(filesystem);
   }
 
   /**
-   * Builder for glob instances.
+   * Create a builder for a Globber, bonded to the specific file
+   * context.
+   * @param fileContext file context.
+   * @return the builder to finish configuring.
    */
+  public static GlobBuilder createGlobber(FileContext fileContext) {
+    return new GlobBuilder(fileContext);
+  }
+
+  /**
+   * Builder for Globber instances.
+   */
+  @InterfaceAudience.Private
   public static class GlobBuilder {
 
     private final FileSystem fs;
@@ -474,6 +485,5 @@ public class Globber {
           ? new Globber(fs, pathPattern, filter, resolveSymlinks)
           : new Globber(fc, pathPattern, filter, resolveSymlinks);
     }
-
   }
 }

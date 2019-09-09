@@ -3674,8 +3674,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to add statistic collection
-   * and disable symlink resolution.
+   * Override superclass so as to disable symlink resolution and so avoid
+   * some calls to the FS which may have problems when the store is being
+   * inconsistent.
    * {@inheritDoc}
    */
   @Override
