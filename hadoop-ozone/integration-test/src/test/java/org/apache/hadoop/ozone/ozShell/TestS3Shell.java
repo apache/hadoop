@@ -111,7 +111,7 @@ public class TestS3Shell {
         .build();
     conf.setInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue());
     conf.setQuietMode(false);
-    client = new RpcClient(conf);
+    client = new RpcClient(conf, null);
     cluster.waitForClusterToBeReady();
   }
 

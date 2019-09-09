@@ -137,19 +137,10 @@ public class RpcClient implements ClientProtocol {
   private Text dtService;
   private final boolean topologyAwareReadEnabled;
 
-  /**
-   * Creates RpcClient instance with the given configuration.
-   * @param conf Configuration
-   * @throws IOException
-   */
-  public RpcClient(Configuration conf) throws IOException {
-    this(conf, null);
-  }
-
    /**
     * Creates RpcClient instance with the given configuration.
     * @param conf Configuration
-    * @param omServiceId OM HA Service ID, null if not HA
+    * @param omServiceId OM HA Service ID, set this to null if not HA
     * @throws IOException
     */
   public RpcClient(Configuration conf, String omServiceId) throws IOException {
