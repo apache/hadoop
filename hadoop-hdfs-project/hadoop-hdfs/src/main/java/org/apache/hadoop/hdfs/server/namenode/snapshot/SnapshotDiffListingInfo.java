@@ -107,8 +107,8 @@ class SnapshotDiffListingInfo {
         if (getTotalEntries() < maxEntries) {
           INode created = iterator.next();
           byte[][] path = newPath(parent, created.getLocalNameBytes());
-          createdList.add(new DiffReportListingEntry(getInodeType(created), dirId,
-              created.getId(), path, created.isReference(), null));
+          createdList.add(new DiffReportListingEntry(getInodeType(created),
+              dirId, created.getId(), path, created.isReference(), null));
         } else {
           setLastPath(parent);
           setLastIndex(iterator.nextIndex());

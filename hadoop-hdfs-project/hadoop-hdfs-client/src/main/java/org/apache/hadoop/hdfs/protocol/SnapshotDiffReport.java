@@ -121,8 +121,8 @@ public class SnapshotDiffReport {
       this.targetPath = targetPath;
     }
 
-    public DiffReportEntry(INodeType inodeType, DiffType type, byte[][] sourcePathComponents,
-                           byte[][] targetPathComponents) {
+    public DiffReportEntry(INodeType inodeType, DiffType type,
+        byte[][] sourcePathComponents, byte[][] targetPathComponents) {
       this.inodeType = inodeType;
       this.type = type;
       this.sourcePath = DFSUtilClient.byteArray2bytes(sourcePathComponents);

@@ -1677,6 +1677,9 @@ public class PBHelperClient {
     case IS_SYMLINK:
       inodeType = DiffReportListingEntry.INodeType.SYMLINK;
       break;
+    default:
+      throw new IllegalArgumentException("Unknown entry file type: "
+          + entry.getFileType());
     }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
