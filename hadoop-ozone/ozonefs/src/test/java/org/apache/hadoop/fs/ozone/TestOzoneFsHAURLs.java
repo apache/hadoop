@@ -52,6 +52,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdds.HddsUtils.getHostName;
 import static org.apache.hadoop.hdds.HddsUtils.getHostPort;
 
 /**
@@ -176,9 +177,20 @@ public class TestOzoneFsHAURLs {
   }
 
   /**
+   * Get host name from an address. This uses getHostName() internally.
+   * @param addr Address with port number
+   * @return Host name
+   */
+  private String getHostFromAddress(String addr) {
+    Optional<String> hostOptional = getHostName(addr);
+    assert(hostOptional.isPresent());
+    return hostOptional.get();
+  }
+
+  /**
    * Get port number from an address. This uses getHostPort() internally.
    * @param addr Address with port
-   * @return The port number
+   * @return Port number
    */
   private int getPortFromAddress(String addr) {
     Optional<Integer> portOptional = getHostPort(addr);
@@ -240,10 +252,9 @@ public class TestOzoneFsHAURLs {
       // set in ozone.om.address.
       String qualifiedPath1 = String.format("%s://%s.%s.%s/",
           OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName,
-          om.getOmRpcServerAddr().getHostName());
+          getHostFromAddress(leaderOMNodeAddr));
       res = ToolRunner.run(shell, new String[] {"-ls", qualifiedPath1});
       // Note: this test case will fail if the port is not from the leader node
-      // Q: Why does a read-only operation require a leader node?
       Assert.assertEquals(res, 0);
 
       // Test case 5: ozone fs -ls o3fs://bucket.volume.om1:port/
@@ -256,9 +267,8 @@ public class TestOzoneFsHAURLs {
 
       // Test case 6: ozone fs -ls o3fs://bucket.volume.id1/
       // Expectation: Success.
-      String qualifiedPath3 = String
-          .format("%s://%s.%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
-              volumeName, omServiceId);
+      String qualifiedPath3 = String.format("%s://%s.%s.%s/",
+          OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName, omServiceId);
       res = ToolRunner.run(shell, new String[] {"-ls", qualifiedPath3});
       Assert.assertEquals(res, 0);
 
