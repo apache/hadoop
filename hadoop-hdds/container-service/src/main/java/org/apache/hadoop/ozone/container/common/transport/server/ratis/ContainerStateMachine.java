@@ -46,7 +46,7 @@ import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
-    ContainerIdSetProto;
+    Container2BCSIDMapProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -88,8 +88,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
@@ -146,7 +144,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       CompletableFuture<ContainerCommandResponseProto>> writeChunkFutureMap;
 
   // keeps track of the containers created per pipeline
-  private final Set<Long> createContainerSet;
+  private final Map<Long, Long> container2BCSIDMap;
   private ExecutorService[] executors;
   private final Map<Long, Long> applyTransactionCompletionMap;
   private final Cache<Long, ByteString> stateMachineDataCache;
@@ -181,7 +179,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         .maximumSize(chunkExecutor.getCorePoolSize()).build();
     this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.tokenVerifier = tokenVerifier;
-    this.createContainerSet = new ConcurrentSkipListSet<>();
+    this.container2BCSIDMap = new ConcurrentHashMap<>();
 
     final int numContainerOpExecutors = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY,
@@ -244,14 +242,15 @@ public class ContainerStateMachine extends BaseStateMachine {
     // initialize the dispatcher with snapshot so that it build the missing
     // container list
     try (FileInputStream fin = new FileInputStream(snapshotFile)) {
-      byte[] containerIds = IOUtils.toByteArray(fin);
-      ContainerProtos.ContainerIdSetProto proto =
-          ContainerProtos.ContainerIdSetProto.parseFrom(containerIds);
+      byte[] container2BCSIDData = IOUtils.toByteArray(fin);
+      ContainerProtos.Container2BCSIDMapProto proto =
+          ContainerProtos.Container2BCSIDMapProto
+              .parseFrom(container2BCSIDData);
       // read the created containers list from the snapshot file and add it to
-      // the createContainerSet here.
-      // createContainerSet will further grow as and when containers get created
-      createContainerSet.addAll(proto.getContainerIdList());
-      dispatcher.buildMissingContainerSet(createContainerSet);
+      // the container2BCSIDMap here.
+      // container2BCSIDMap will further grow as and when containers get created
+      container2BCSIDMap.putAll(proto.getContainer2BCSIDMap());
+      dispatcher.buildMissingContainerSetAndValidate(container2BCSIDMap);
     }
     return last.getIndex();
   }
@@ -263,8 +262,9 @@ public class ContainerStateMachine extends BaseStateMachine {
    * @throws IOException
    */
   public void persistContainerSet(OutputStream out) throws IOException {
-    ContainerIdSetProto.Builder builder = ContainerIdSetProto.newBuilder();
-    builder.addAllContainerId(createContainerSet);
+    Container2BCSIDMapProto.Builder builder =
+        Container2BCSIDMapProto.newBuilder();
+    builder.putAllContainer2BCSID(container2BCSIDMap);
     // TODO : while snapshot is being taken, deleteContainer call should not
     // should not happen. Lock protection will be required if delete
     // container happens outside of Ratis.
@@ -433,7 +433,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setTerm(term)
             .setLogIndex(entryIndex)
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
-            .setCreateContainerSet(createContainerSet)
+            .setContainer2BCSIDMap(container2BCSIDMap)
             .build();
     // ensure the write chunk happens asynchronously in writeChunkExecutor pool
     // thread.
@@ -697,8 +697,9 @@ public class ContainerStateMachine extends BaseStateMachine {
         builder
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA);
       }
-      if (cmdType == Type.WriteChunk || cmdType ==Type.PutSmallFile) {
-        builder.setCreateContainerSet(createContainerSet);
+      if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile
+          || cmdType == Type.PutBlock) {
+        builder.setContainer2BCSIDMap(container2BCSIDMap);
       }
       CompletableFuture<Message> applyTransactionFuture =
           new CompletableFuture<>();
@@ -811,7 +812,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     // Make best effort to quasi-close all the containers on group removal.
     // Containers already in terminal state like CLOSED or UNHEALTHY will not
     // be affected.
-    for (Long cid : createContainerSet) {
+    for (Long cid : container2BCSIDMap.keySet()) {
       try {
         containerController.markContainerForClose(cid);
         containerController.quasiCloseContainer(cid);
