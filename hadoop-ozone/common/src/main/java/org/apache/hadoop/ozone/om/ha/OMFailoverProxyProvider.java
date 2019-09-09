@@ -71,8 +71,7 @@ public class OMFailoverProxyProvider implements
   private final UserGroupInformation ugi;
   private final Text delegationTokenService;
 
-  // TODO: Do we want this to be final?
-  private String omServiceId;
+  private final String omServiceId;
 
   public OMFailoverProxyProvider(OzoneConfiguration configuration,
       UserGroupInformation ugi, String omServiceId) throws IOException {
