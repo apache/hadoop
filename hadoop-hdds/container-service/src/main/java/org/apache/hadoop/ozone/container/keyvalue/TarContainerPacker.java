@@ -237,17 +237,7 @@ public class TarContainerPacker
           archiveOutputStream);
     }
   }
-
-  private void includeBCSID(ArchiveOutputStream archiveOutputStream, long bcsID)
-      throws IOException {
-    File bcsIDFile = new File(CONTAINER_BCSID);
-    ArchiveEntry archiveEntry =
-        archiveOutputStream.createArchiveEntry(bcsIDFile, CONTAINER_BCSID);
-    archiveOutputStream.putArchiveEntry(archiveEntry);
-    IOUtils.write(Longs.toByteArray(bcsID), archiveOutputStream);
-    archiveOutputStream.closeArchiveEntry();
-  }
-
+  
   private void includeFile(File file, String entryName,
       ArchiveOutputStream archiveOutputStream) throws IOException {
     ArchiveEntry archiveEntry =
