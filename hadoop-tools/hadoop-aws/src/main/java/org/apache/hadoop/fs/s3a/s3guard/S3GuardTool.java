@@ -1523,6 +1523,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         out.println(USAGE);
         throw invalidArgs("no arguments");
       }
+      int exitValue = EXIT_SUCCESS;
 
       String s3Path = paths.get(0);
       try {
@@ -1557,7 +1558,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
         try {
-          s3GuardFsck.compareS3ToMs(fs.qualify(root));
+          final List<S3GuardFsck.ComparePair> comparePairs
+              = s3GuardFsck.compareS3ToMs(fs.qualify(root));
+          if (comparePairs.size() > 0) {
+            exitValue = EXIT_FAIL;
+          }
         } catch (IOException e) {
           throw e;
         }
@@ -1568,7 +1573,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       out.flush();
-      return SUCCESS;
+      return exitValue;
     }
   }
 

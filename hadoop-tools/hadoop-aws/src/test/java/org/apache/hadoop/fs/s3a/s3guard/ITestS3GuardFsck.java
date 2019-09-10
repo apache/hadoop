@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
@@ -51,7 +53,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
   private S3AFileSystem guardedFs;
-  private S3AFileSystem rawFS;
+  private S3AFileSystem rawFs;
 
   private MetadataStore metadataStore;
 
@@ -69,9 +71,9 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     metadataStore = fs.getMetadataStore();
 
     // create raw fs without s3guard
-    rawFS = createUnguardedFS();
-    assertFalse("Raw FS still has S3Guard " + rawFS,
-        rawFS.hasMetadataStore());
+    rawFs = createUnguardedFS();
+    assertFalse("Raw FS still has S3Guard " + rawFs,
+        rawFs.hasMetadataStore());
   }
 
   @Override
@@ -79,7 +81,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     if (guardedFs != null) {
       IOUtils.cleanupWithLogger(LOG, guardedFs);
     }
-    IOUtils.cleanupWithLogger(LOG, rawFS);
+    IOUtils.cleanupWithLogger(LOG, rawFs);
     super.teardown();
   }
 
@@ -106,31 +108,19 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      touch(rawFS, file);
-      awaitFileStatus(rawFS, file);
+      touchRawAndWaitRaw(file);
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 2);
-
       final S3GuardFsck.ComparePair pair = comparePairs.get(0);
-      assertTrue("The pair must contain a violation.", pair.containsViolation());
-      assertEquals("The pair must contain only one violation", 1,
-          pair.getViolations().size());
-
-      final S3GuardFsck.Violation violation =
-          pair.getViolations().iterator().next();
-      assertEquals("The violation should be that there is no violation entry.",
-          violation, S3GuardFsck.Violation.NO_METADATA_ENTRY);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.NO_METADATA_ENTRY);
     } finally {
       // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -139,45 +129,23 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // delete the parent from the MS
       metadataStore.forgetMetadata(cwd);
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 2);
-
       // check the parent that it does not exist
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      assertTrue("The cwdPair must contain a violation.", cwdPair.containsViolation());
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .contains(S3GuardFsck.Violation.NO_METADATA_ENTRY);
-
+      checkForViolationInPairs(cwd, comparePairs,
+          S3GuardFsck.Violation.NO_METADATA_ENTRY);
       // check the child that there's no parent entry.
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.", childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.NO_PARENT_ENTRY);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.NO_PARENT_ENTRY);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -186,47 +154,25 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // modify the cwd metadata and set that it's not a directory
       final S3AFileStatus newParentFile = MetadataStoreTestBase
           .basicFileStatus(cwd, 1, false, 1);
       metadataStore.put(new PathMetadata(newParentFile));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 2);
-
       // check the parent that it does not exist
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      assertTrue("The cwdPair must contain a violation.", cwdPair.containsViolation());
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .contains(S3GuardFsck.Violation.DIR_IN_S3_FILE_IN_MS);
-
+      checkForViolationInPairs(cwd, comparePairs,
+          S3GuardFsck.Violation.DIR_IN_S3_FILE_IN_MS);
       // check the child that the parent is a file.
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.", childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.PARENT_IS_A_FILE);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_IS_A_FILE);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -235,37 +181,22 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // modify the parent metadata and set that it's not a directory
       final PathMetadata cwdPmd = metadataStore.get(cwd);
       cwdPmd.setIsDeleted(true);
       metadataStore.put(cwdPmd);
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 1);
-
       // check the child that the parent is tombstoned
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.", childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.PARENT_TOMBSTONED);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_TOMBSTONED);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -276,33 +207,21 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       // create a file with guarded fs
       mkdirs(cwd);
       awaitFileStatus(guardedFs, cwd);
-
       // modify the cwd metadata and set that it's not a directory
       final S3AFileStatus newParentFile = MetadataStoreTestBase
           .basicFileStatus(cwd, 1, false, 1);
       metadataStore.put(new PathMetadata(newParentFile));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
-
       assertComparePairsSize(comparePairs, 1);
 
       // check the child that the dir in s3 is a file in the ms
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      assertTrue("The cwdPair must contain a violation.", cwdPair.containsViolation());
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .contains(S3GuardFsck.Violation.DIR_IN_S3_FILE_IN_MS);
+      checkForViolationInPairs(cwd, comparePairs,
+          S3GuardFsck.Violation.DIR_IN_S3_FILE_IN_MS);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(cwd);
     }
   }
 
@@ -311,38 +230,22 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // modify the cwd metadata and set that it's not a directory
       final S3AFileStatus newFile = MetadataStoreTestBase
           .basicFileStatus(file, 1, true, 1);
       metadataStore.put(new PathMetadata(newFile));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 1);
-
       // check the child that the dir in s3 is a file in the ms
-      final S3GuardFsck.ComparePair filePair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", filePair);
-      assertTrue("The filePair must contain a violation.",
-          filePair.containsViolation());
-      Assertions.assertThat(filePair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .contains(S3GuardFsck.Violation.FILE_IN_S3_DIR_IN_MS);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.FILE_IN_S3_DIR_IN_MS);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -360,34 +263,22 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path fileIc1 = new Path(cwdIncorrect, "fileC1");
     final Path fileIc2 = new Path(cwdIncorrect, "fileC2");
     try {
-      touch(guardedFs, fileC1);
-      touch(guardedFs, fileC2);
-      touch(guardedFs, fileIc1);
-
-      awaitFileStatus(rawFS, fileC1);
-      awaitFileStatus(rawFS, fileC2);
-      awaitFileStatus(rawFS, fileIc1);
-
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
+      touchGuardedAndWaitRaw(fileC1);
+      touchGuardedAndWaitRaw(fileC2);
+      touchGuardedAndWaitRaw(fileIc1);
 
       // get listing from ms and set it authoritative
-      final DirListingMetadata dlmC =
-          metadataStore.listChildren(cwdCorrect);
-      final DirListingMetadata dlmIc =
-          metadataStore.listChildren(cwdIncorrect);
+      final DirListingMetadata dlmC = metadataStore.listChildren(cwdCorrect);
+      final DirListingMetadata dlmIc = metadataStore.listChildren(cwdIncorrect);
       dlmC.setAuthoritative(true);
       dlmIc.setAuthoritative(true);
       metadataStore.put(dlmC, null);
       metadataStore.put(dlmIc, null);
 
-      final DirListingMetadata dlmCa =
-          metadataStore.listChildren(cwdCorrect);
-
       // add a file raw so the listing will be different.
-      touch(rawFS, fileIc2);
-      awaitFileStatus(rawFS, fileIc2);
+      touchRawAndWaitRaw(fileIc2);
 
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> pairsCorrect =
           s3GuardFsck.compareS3ToMs(cwdCorrect);
       final List<S3GuardFsck.ComparePair> pairsIncorrect =
@@ -398,25 +289,10 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
           .noneMatch(p -> p.getPath().equals(cwdCorrect)));
 
       // Assert that the incorrect listing contains the violation.
-      final S3GuardFsck.ComparePair childPair = pairsIncorrect.stream()
-          .filter(p -> p.getPath().equals(cwdIncorrect))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.", childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
-
+      checkForViolationInPairs(cwdIncorrect, pairsIncorrect,
+          S3GuardFsck.Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
     } finally {
-      // cleanup
-      rawFS.delete(cwdCorrect, true);
-      rawFS.delete(cwdIncorrect, true);
-      metadataStore.forgetMetadata(fileIc1);
-      metadataStore.forgetMetadata(fileIc2);
-      metadataStore.forgetMetadata(fileC1);
-      metadataStore.forgetMetadata(fileC2);
-      metadataStore.forgetMetadata(cwdCorrect);
-      metadataStore.forgetMetadata(cwdIncorrect);
+      cleanup(fileC1, fileC2, fileIc1, fileIc2, cwdCorrect, cwdIncorrect);
     }
   }
 
@@ -426,40 +302,26 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path file = new Path(cwd, "file");
     try {
       // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
+      touchGuardedAndWaitRaw(file);
 
       // modify the file metadata so the length will not match
       final S3AFileStatus newFile = MetadataStoreTestBase
           .basicFileStatus(file, 9999, false, 1);
       metadataStore.put(new PathMetadata(newFile));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 1);
-
       // Assert that the correct dir does not contain the violation.
       assertTrue(comparePairs.stream()
           .noneMatch(p -> p.getPath().equals(cwd)));
-
       // Assert that the incorrect file meta contains the violation.
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.", childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.LENGTH_MISMATCH);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.LENGTH_MISMATCH);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -469,48 +331,31 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path file = new Path(cwd, "file");
     try {
       // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // modify the file metadata so the length will not match
       final S3AFileStatus newFileStatus = MetadataStoreTestBase
           .basicFileStatus(file, 0, false, 1);
       metadataStore.put(new PathMetadata(newFileStatus));
-
       // modify the parent meta entry so the MOD_TIME will surely be up to date
-      final FileStatus oldCwdFileStatus = rawFS.getFileStatus(cwd);
+      final FileStatus oldCwdFileStatus = rawFs.getFileStatus(cwd);
       final S3AFileStatus newCwdFileStatus = MetadataStoreTestBase
           .basicFileStatus(file, 0, true,
               oldCwdFileStatus.getModificationTime());
       metadataStore.put(new PathMetadata(newCwdFileStatus));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 1);
-
       // Assert that the correct dir does not contain the violation.
       assertTrue(comparePairs.stream()
           .noneMatch(p -> p.getPath().equals(cwd)));
-
       // check the file meta that there's a violation.
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.",
-          childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.MOD_TIME_MISMATCH);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.MOD_TIME_MISMATCH);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -519,38 +364,22 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
     final Path file = new Path(cwd, "file");
     try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
+      touchGuardedAndWaitRaw(file);
       // modify the file metadata so the etag will not match
       final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, "",
           "etag", "versionId");
       metadataStore.put(new PathMetadata(newFileStatus));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 1);
-
       // check the child that there's a BLOCKSIZE_MISMATCH
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.",
-          childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.ETAG_MISMATCH);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.ETAG_MISMATCH);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file, cwd);
     }
   }
 
@@ -561,53 +390,30 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     final Path file2 = new Path(cwd, "file2");
     try {
       // create a file1 with guarded fs
-      touch(guardedFs, file1);
-      touch(guardedFs, file2);
-      awaitFileStatus(guardedFs, file1);
-      awaitFileStatus(guardedFs, file2);
-
+      touchGuardedAndWaitRaw(file1);
+      touchGuardedAndWaitRaw(file2);
       // modify the file1 metadata so there's no etag
       final S3AFileStatus newFile1Status =
           new S3AFileStatus(1, 1, file1, 1, "", null, "versionId");
       final S3AFileStatus newFile2Status =
           new S3AFileStatus(1, 1, file2, 1, "", "etag", "versionId");
-
       metadataStore.put(new PathMetadata(newFile1Status));
       metadataStore.put(new PathMetadata(newFile2Status));
 
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
       assertComparePairsSize(comparePairs, 2);
 
       // check file 1 that there's NO_ETAG
-      final S3GuardFsck.ComparePair file1Pair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file1))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", file1Pair);
-      assertTrue("The file1Pair must contain a violation.",
-          file1Pair.containsViolation());
-      Assertions.assertThat(file1Pair.getViolations())
-          .describedAs("Violations in the file1Pair")
-          .contains(S3GuardFsck.Violation.NO_ETAG);
-
+      checkForViolationInPairs(file1, comparePairs,
+          S3GuardFsck.Violation.NO_ETAG);
       // check the child that there's no NO_ETAG violation
-      final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file2))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", file2Pair);
-      Assertions.assertThat(file2Pair.getViolations())
-          .describedAs("Violations in the file2Pair")
-          .doesNotContain(S3GuardFsck.Violation.NO_ETAG);
+      checkNoViolationInPairs(file2, comparePairs,
+          S3GuardFsck.Violation.NO_ETAG);
     } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file1);
-      metadataStore.forgetMetadata(file2);
-      metadataStore.forgetMetadata(cwd);
+      cleanup(file1, file2, cwd);
     }
   }
 
@@ -616,5 +422,56 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     Assertions.assertThat(comparePairs.size())
         .describedAs("Number of compare pairs")
         .isEqualTo(num);
+  }
+
+  private void touchGuardedAndWaitRaw(Path file) throws Exception {
+    touchAndWait(guardedFs, rawFs, file);
+  }
+
+  private void touchRawAndWaitRaw(Path file) throws Exception {
+    touchAndWait(rawFs, rawFs, file);
+  }
+
+  private void touchAndWait(FileSystem forTouch, FileSystem forWait, Path file)
+      throws IOException {
+    touch(forTouch, file);
+    touch(forWait, file);
+  }
+
+  private void checkForViolationInPairs(Path file,
+      List<S3GuardFsck.ComparePair> comparePairs,
+      S3GuardFsck.Violation violation) {
+    final S3GuardFsck.ComparePair childPair = comparePairs.stream()
+        .filter(p -> p.getPath().equals(file))
+        .findFirst().get();
+    assertNotNull("The pair should not be null.", childPair);
+    assertTrue("The pair must contain a violation.",
+        childPair.containsViolation());
+    Assertions.assertThat(childPair.getViolations())
+        .describedAs("Violations in the pair")
+        .contains(violation);
+  }
+
+  private void checkNoViolationInPairs(Path file2,
+      List<S3GuardFsck.ComparePair> comparePairs,
+      S3GuardFsck.Violation violation) {
+    final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
+        .filter(p -> p.getPath().equals(file2))
+        .findFirst().get();
+    assertNotNull("The pair should not be null.", file2Pair);
+    Assertions.assertThat(file2Pair.getViolations())
+        .describedAs("Violations in the pair")
+        .doesNotContain(violation);
+  }
+
+  private void cleanup(Path... paths) {
+    for (Path path : paths) {
+      try {
+        metadataStore.forgetMetadata(path);
+        rawFs.delete(path, true);
+      } catch (IOException e) {
+        LOG.error("Error during cleanup.", e);
+      }
+    }
   }
 }
