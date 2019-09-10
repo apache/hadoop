@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.cli.container.DeleteSubcommand;
 import org.apache.hadoop.hdds.scm.cli.container.InfoSubcommand;
 import org.apache.hadoop.hdds.scm.cli.container.ListSubcommand;
 import org.apache.hadoop.hdds.scm.cli.pipeline.ClosePipelineSubcommand;
+import org.apache.hadoop.hdds.scm.cli.pipeline.CreatePipelineSubcommand;
 import org.apache.hadoop.hdds.scm.cli.pipeline.ListPipelinesSubcommand;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
@@ -83,6 +84,7 @@ import picocli.CommandLine.Option;
         DeleteSubcommand.class,
         CreateSubcommand.class,
         CloseSubcommand.class,
+        CreatePipelineSubcommand.class,
         ListPipelinesSubcommand.class,
         ClosePipelineSubcommand.class,
         TopologySubcommand.class,

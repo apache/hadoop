@@ -234,8 +234,14 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public PipelineResponseProto allocatePipeline(
       RpcController controller, PipelineRequestProto request)
       throws ServiceException {
-    // TODO : Wiring this up requires one more patch.
-    return null;
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("createPipeline", request.getTraceID())) {
+      impl.createReplicationPipeline(request.getReplicationType(),
+          request.getReplicationFactor(), request.getNodePool());
+      return PipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override

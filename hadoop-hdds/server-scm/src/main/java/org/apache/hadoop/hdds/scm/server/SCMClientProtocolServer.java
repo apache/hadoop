@@ -390,10 +390,10 @@ public class SCMClientProtocolServer implements
   public Pipeline createReplicationPipeline(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, HddsProtos.NodePool nodePool)
       throws IOException {
-    // TODO: will be addressed in future patch.
-    // This is needed only for debugging purposes to make sure cluster is
-    // working correctly.
-    return null;
+    Pipeline result = scm.getPipelineManager().createPipeline(type, factor);
+    AUDIT.logWriteSuccess(
+        buildAuditMessageForSuccess(SCMAction.CREATE_PIPELINE, null));
+    return result;
   }
 
   @Override
