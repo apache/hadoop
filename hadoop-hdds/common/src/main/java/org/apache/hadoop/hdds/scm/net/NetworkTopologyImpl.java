@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.net;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -363,27 +364,6 @@ public class NetworkTopologyImpl implements NetworkTopology{
     } else {
       return chooseRandom(scope, null, excludedNodes, null, ancestorGen);
     }
-  }
-
-  /**
-   * Randomly choose a leaf node.
-   *
-   * @param scope range from which a node will be chosen, cannot start with ~
-   * @param excludedNodes nodes to be excluded
-   * @param excludedScopes excluded node ranges. Cannot start with ~
-   * @param ancestorGen matters when excludeNodes is not null. It means the
-   * ancestor generation that's not allowed to share between chosen node and the
-   * excludedNodes. For example, if ancestorGen is 1, means chosen node
-   * cannot share the same parent with excludeNodes. If value is 2, cannot
-   * share the same grand parent, and so on. If ancestorGen is 0, then no
-   * effect.
-   *
-   * @return the chosen node
-   */
-  public Node chooseRandom(String scope, List<String> excludedScopes,
-      Collection<Node> excludedNodes, int ancestorGen) {
-    return chooseRandom(scope, excludedScopes, excludedNodes, null,
-        ancestorGen);
   }
 
   /**
@@ -784,7 +764,7 @@ public class NetworkTopologyImpl implements NetworkTopology{
   }
 
   private void checkExcludedScopes(List<String> excludedScopes) {
-    if (excludedScopes != null && excludedScopes.size() > 0) {
+    if (!CollectionUtils.isEmpty(excludedScopes)) {
       excludedScopes.stream().forEach(scope -> {
         if (scope.startsWith(SCOPE_REVERSE_STR)) {
           throw new IllegalArgumentException("excludedScope " + scope +

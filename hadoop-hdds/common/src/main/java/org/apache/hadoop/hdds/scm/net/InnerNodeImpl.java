@@ -301,7 +301,7 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
    *
    *   Input:
    *   leafIndex = 2
-   *   excludedScope = /dc2
+   *   excludedScope = /dc2/rack2
    *   excludedNodes = {/dc1/rack1/n1}
    *   ancestorGen = 1
    *

@@ -39,14 +39,12 @@ public interface NetworkTopology {
    */
   void add(Node node);
 
-
   /**
    * Remove a node from the network topology. This will be called when a
    * existing datanode is removed from the system.
    * @param node node to be removed; cannot be null
    */
   void remove(Node node);
-
 
   /**
    * Check if the tree already contains node <i>node</i>.
@@ -67,7 +65,6 @@ public interface NetworkTopology {
    * @return true if their specified generation ancestor are equal
    */
   boolean isSameAncestor(Node node1, Node node2, int ancestorGen);
-
 
   /**
    * Get the ancestor for node on generation <i>ancestorGen</i>.
@@ -159,26 +156,6 @@ public interface NetworkTopology {
    */
   Node chooseRandom(String scope, Collection<Node> excludedNodes,
       int ancestorGen);
-
-
-  /**
-   * Randomly choose a leaf node.
-   *
-   * @param scope range from which a node will be chosen, cannot start with ~
-   * @param excludedNodes nodes to be excluded
-   * @param excludedScopes excluded node ranges. Cannot start with ~
-   * @param ancestorGen matters when excludeNodes is not null. It means the
-   * ancestor generation that's not allowed to share between chosen node and the
-   * excludedNodes. For example, if ancestorGen is 1, means chosen node
-   * cannot share the same parent with excludeNodes. If value is 2, cannot
-   * share the same grand parent, and so on. If ancestorGen is 0, then no
-   * effect.
-   *
-   * @return the chosen node
-   */
-  Node chooseRandom(String scope, List<String>  excludedScopes,
-      Collection<Node> excludedNodes, int ancestorGen);
-
 
   /**
    * Randomly choose one node from <i>scope</i>, share the same generation

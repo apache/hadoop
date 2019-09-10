@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.net;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,9 +77,8 @@ public final class NetUtils {
   public static void removeDuplicate(NetworkTopology topology,
       Collection<Node> mutableExcludedNodes, List<String> mutableExcludedScopes,
       int ancestorGen) {
-    if (mutableExcludedNodes == null || mutableExcludedNodes.size() == 0 ||
-        mutableExcludedScopes == null || mutableExcludedScopes.size() == 0 ||
-        topology == null) {
+    if (CollectionUtils.isEmpty(mutableExcludedNodes) ||
+        CollectionUtils.isEmpty(mutableExcludedScopes) || topology == null) {
       return;
     }
 
@@ -114,7 +114,7 @@ public final class NetUtils {
    */
   public static void removeOutscope(Collection<Node> mutableExcludedNodes,
       String scope) {
-    if (mutableExcludedNodes == null || scope == null) {
+    if (CollectionUtils.isEmpty(mutableExcludedNodes) || scope == null) {
       return;
     }
     synchronized (mutableExcludedNodes) {
@@ -139,7 +139,7 @@ public final class NetUtils {
   public static List<Node> getAncestorList(NetworkTopology topology,
       Collection<Node> nodes, int generation) {
     List<Node> ancestorList = new ArrayList<>();
-    if (topology == null ||nodes == null || nodes.size() == 0 ||
+    if (topology == null || CollectionUtils.isEmpty(nodes) ||
         generation == 0) {
       return ancestorList;
     }

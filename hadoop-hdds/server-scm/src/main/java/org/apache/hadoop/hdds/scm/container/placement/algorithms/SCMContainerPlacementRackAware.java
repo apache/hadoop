@@ -242,22 +242,15 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       long sizeRequired) throws SCMException {
     int ancestorGen = RACK_LEVEL;
     int maxRetry = MAX_RETRY;
-<<<<<<< HEAD
-    List<Node> excludedNodesForCapacity = null;
+    List<String> excludedNodesForCapacity = null;
     boolean isFallbacked = false;
     while(true) {
-      Node node = networkTopology.chooseRandom(NetConstants.ROOT, null,
-          excludedNodes, affinityNode, ancestorGen);
       metrics.incrDatanodeChooseAttemptCount();
-=======
-    List<String> excludedNodesForCapacity = null;
-    while(true) {
       Node node = networkTopology.chooseRandom(NetConstants.ROOT,
           excludedNodesForCapacity, excludedNodes, affinityNode, ancestorGen);
->>>>>>> HDDS-1879. Support multiple excluded scopes when choosing datanodes in NetworkTopology.
       if (node == null) {
         // cannot find the node which meets all constrains
-        LOG.warn("Failed to find the datanode. excludedNodes:" +
+        LOG.warn("Failed to find the datanode for container. excludedNodes:" +
             (excludedNodes == null ? "" : excludedNodes.toString()) +
             ", affinityNode:" +
             (affinityNode == null ? "" : affinityNode.getNetworkFullPath()));
@@ -279,18 +272,12 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.warn("Datanode {} is chosen. Required size is {}",
+        LOG.debug("Datanode {} is chosen for container. Required size is {}",
             node.toString(), sizeRequired);
-<<<<<<< HEAD
-        if (excludedNodes != null && excludedNodesForCapacity != null) {
-          excludedNodes.removeAll(excludedNodesForCapacity);
-        }
         metrics.incrDatanodeChooseSuccessCount();
         if (isFallbacked) {
           metrics.incrDatanodeChooseFallbackCount();
         }
-=======
->>>>>>> HDDS-1879. Support multiple excluded scopes when choosing datanodes in NetworkTopology.
         return node;
       } else {
         maxRetry--;
