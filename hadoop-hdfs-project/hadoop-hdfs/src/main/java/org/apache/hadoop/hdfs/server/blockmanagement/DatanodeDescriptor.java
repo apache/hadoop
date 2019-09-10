@@ -24,11 +24,11 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -79,43 +79,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
-    }
-  }
-
-  /** A BlockTargetPair queue. */
-  private static class BlockQueue<E> {
-    private final Queue<E> blockq = new LinkedList<>();
-
-    /** Size of the queue */
-    synchronized int size() {return blockq.size();}
-
-    /** Enqueue */
-    synchronized boolean offer(E e) { 
-      return blockq.offer(e);
-    }
-
-    /** Dequeue */
-    synchronized List<E> poll(int numBlocks) {
-      if (numBlocks <= 0 || blockq.isEmpty()) {
-        return null;
-      }
-
-      List<E> results = new ArrayList<>();
-      for(; !blockq.isEmpty() && numBlocks > 0; numBlocks--) {
-        results.add(blockq.poll());
-      }
-      return results;
-    }
-
-    /**
-     * Returns <tt>true</tt> if the queue contains the specified element.
-     */
-    synchronized boolean contains(E e) {
-      return blockq.contains(e);
-    }
-
-    synchronized void clear() {
-      blockq.clear();
     }
   }
 
@@ -195,13 +158,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long bandwidth;
 
   /** A queue of blocks to be replicated by this datanode */
-  private final BlockQueue<BlockTargetPair> replicateBlocks =
-      new BlockQueue<>();
+  private final BlockingQueue<BlockTargetPair> replicateBlocks =
+      new LinkedBlockingQueue<>();
   /** A queue of blocks to be erasure coded by this datanode */
-  private final BlockQueue<BlockECReconstructionInfo> erasurecodeBlocks =
-      new BlockQueue<>();
+  private final BlockingQueue<BlockECReconstructionInfo> erasurecodeBlocks =
+      new LinkedBlockingQueue<>();
   /** A queue of blocks to be recovered by this datanode */
-  private final BlockQueue<BlockInfo> recoverBlocks = new BlockQueue<>();
+  private final BlockingQueue<BlockInfo> recoverBlocks =
+      new LinkedBlockingQueue<>();
   /** A set of blocks to be invalidated by this datanode */
   private final LightWeightHashSet<Block> invalidateBlocks =
       new LightWeightHashSet<>();
@@ -706,19 +670,22 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
-    return replicateBlocks.poll(maxTransfers);
+    List<BlockTargetPair> list = new ArrayList<>();
+    replicateBlocks.drainTo(list, maxTransfers);
+    return list;
   }
 
   public List<BlockECReconstructionInfo> getErasureCodeCommand(
       int maxTransfers) {
-    return erasurecodeBlocks.poll(maxTransfers);
+    List<BlockECReconstructionInfo> list = new ArrayList<>();
+    erasurecodeBlocks.drainTo(list, maxTransfers);
+    return list;
   }
 
   public BlockInfo[] getLeaseRecoveryCommand(int maxTransfers) {
-    List<BlockInfo> blocks = recoverBlocks.poll(maxTransfers);
-    if(blocks == null)
-      return null;
-    return blocks.toArray(new BlockInfo[blocks.size()]);
+    List<BlockInfo> list = new ArrayList<>();
+    recoverBlocks.drainTo(list, maxTransfers);
+    return (list.isEmpty()) ? null : list.toArray(new BlockInfo[0]);
   }
 
   /**
