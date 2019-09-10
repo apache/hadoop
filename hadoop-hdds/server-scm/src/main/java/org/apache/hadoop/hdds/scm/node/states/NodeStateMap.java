@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -144,7 +145,6 @@ public class NodeStateMap {
     }
   }
 
-
   /**
    * Returns the list of node ids which are in the specified state.
    *
@@ -153,18 +153,30 @@ public class NodeStateMap {
    * @return list of node ids
    */
   public List<UUID> getNodes(NodeStatus status) {
-    lock.readLock().lock();
     ArrayList<UUID> nodes = new ArrayList<>();
-    try {
-      for(Map.Entry<UUID, DatanodeInfo> entry : nodeMap.entrySet()) {
-        if (entry.getValue().getNodeStatus().equals(status)) {
-          nodes.add(entry.getKey());
-        }
-      }
-      return nodes;
-    } finally {
-      lock.readLock().unlock();
+    for (DatanodeInfo dn : filterNodes(status)) {
+      nodes.add(dn.getUuid());
     }
+    return nodes;
+  }
+
+  /**
+   * Returns the list of node ids which match the desired operational state
+   * and health. Passing a null for either value is equivalent to a wild card.
+   *
+   * Therefore, passing opState = null, health=stale will return all stale nodes
+   * regardless of their operational state.
+   *
+   * @param opState
+   * @param health
+   * @return The list of nodes matching the given states
+   */
+  public List<UUID> getNodes(NodeOperationalState opState, NodeState health) {
+    ArrayList<UUID> nodes = new ArrayList<>();
+    for (DatanodeInfo dn : filterNodes(opState, health)) {
+      nodes.add(dn.getUuid());
+    }
+    return nodes;
   }
 
   /**
@@ -173,8 +185,8 @@ public class NodeStateMap {
    * @return list of all the node ids
    */
   public List<UUID> getAllNodes() {
-    lock.readLock().lock();
     try {
+      lock.readLock().lock();
       return new ArrayList<>(nodeMap.keySet());
     } finally {
       lock.readLock().unlock();
@@ -196,6 +208,31 @@ public class NodeStateMap {
   }
 
   /**
+   * Returns a list of the nodes as DatanodeInfo objects matching the passed
+   * status.
+   *
+   * @param status - The status of the nodes to return
+   * @return List of DatanodeInfo for the matching nodes
+   */
+  public List<DatanodeInfo> getDatanodeInfos(NodeStatus status) {
+    return filterNodes(status);
+  }
+
+  /**
+   * Returns a list of the nodes as DatanodeInfo objects matching the passed
+   * states. Passing null for either of the state values acts as a wildcard
+   * for that state.
+   *
+   * @param opState - The node operational state
+   * @param health - The node health
+   * @return List of DatanodeInfo for the matching nodes
+   */
+  public List<DatanodeInfo> getDatanodeInfos(
+      NodeOperationalState opState, NodeState health) {
+    return filterNodes(opState, health);
+  }
+
+  /**
    * Returns the count of nodes in the specified state.
    *
    * @param state NodeStatus
@@ -203,12 +240,23 @@ public class NodeStateMap {
    * @return Number of nodes in the specified state
    */
   public int getNodeCount(NodeStatus state) {
-    lock.readLock().lock();
-    try {
-      return getNodes(state).size();
-    } finally {
-      lock.readLock().unlock();
-    }
+    return getNodes(state).size();
+  }
+
+  /**
+   * Returns the count of node ids which match the desired operational state
+   * and health. Passing a null for either value is equivalent to a wild card.
+   *
+   * Therefore, passing opState=null, health=stale will count all stale nodes
+   * regardless of their operational state.
+   *
+   * @param opState
+   * @param health
+   *
+   * @return Number of nodes in the specified state
+   */
+  public int getNodeCount(NodeOperationalState opState, NodeState health) {
+    return getNodes(opState, health).size();
   }
 
   /**
@@ -331,6 +379,63 @@ public class NodeStateMap {
   private void checkIfNodeExist(UUID uuid) throws NodeNotFoundException {
     if (!nodeToContainer.containsKey(uuid)) {
       throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
+  }
+
+  /**
+   * Create a list of datanodeInfo for all nodes matching the passed states.
+   * Passing null for one of the states acts like a wildcard for that state.
+   *
+   * @param opState
+   * @param health
+   * @return List of DatanodeInfo objects matching the passed state
+   */
+  private List<DatanodeInfo> filterNodes(
+      NodeOperationalState opState, NodeState health) {
+    if (opState != null && health != null) {
+      return filterNodes(new NodeStatus(opState, health));
+    }
+    if (opState == null && health == null) {
+      return getAllDatanodeInfos();
+    }
+    ArrayList<DatanodeInfo> nodes = new ArrayList<>();
+    try {
+      lock.readLock().lock();
+      // If we get here, then at least one of the params must be null
+      for(DatanodeInfo dn : nodeMap.values()) {
+        if (opState != null
+            && dn.getNodeStatus().getOperationalState() != opState) {
+          continue;
+        }
+        if (health != null && dn.getNodeStatus().getHealth() != health) {
+          continue;
+        }
+        nodes.add(dn);
+      }
+    } finally {
+      lock.readLock().unlock();
+    }
+    return nodes;
+  }
+
+  /**
+   * Create a list of datanodeInfo for all nodes matching the passsed status.
+   *
+   * @param status
+   * @return List of DatanodeInfo objects matching the passed state
+   */
+  private List<DatanodeInfo> filterNodes(NodeStatus status) {
+    ArrayList<DatanodeInfo> nodes = new ArrayList<>();
+    try {
+      lock.readLock().lock();
+      for(DatanodeInfo dn : nodeMap.values()) {
+        if (dn.getNodeStatus().equals(status)) {
+          nodes.add(dn);
+        }
+      }
+      return nodes;
+    } finally {
+      lock.readLock().unlock();
     }
   }
 }

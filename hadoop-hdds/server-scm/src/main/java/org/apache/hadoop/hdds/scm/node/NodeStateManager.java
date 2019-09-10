@@ -332,36 +332,33 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Returns all the node which are in healthy state.
+   * Returns all the node which are in healthy state, ignoring the operational
+   * state.
    *
    * @return list of healthy nodes
    */
   public List<DatanodeInfo> getHealthyNodes() {
-    // TODO - fix hard coded IN_SERVICE
-    return getNodes(new NodeStatus(
-        NodeOperationalState.IN_SERVICE, NodeState.HEALTHY));
+    return getNodes(null, NodeState.HEALTHY);
   }
 
   /**
-   * Returns all the node which are in stale state.
+   * Returns all the node which are in stale state, ignoring the operational
+   * state.
    *
    * @return list of stale nodes
    */
   public List<DatanodeInfo> getStaleNodes() {
-    // TODO - fix hard coded IN_SERVICE
-    return getNodes(new NodeStatus(
-        NodeOperationalState.IN_SERVICE, NodeState.STALE));
+    return getNodes(null, NodeState.STALE);
   }
 
   /**
-   * Returns all the node which are in dead state.
+   * Returns all the node which are in dead state, ignoring the operational
+   * state.
    *
    * @return list of dead nodes
    */
   public List<DatanodeInfo> getDeadNodes() {
-    // TODO - fix hard coded IN_SERVICE
-    return getNodes(new NodeStatus(
-        NodeOperationalState.IN_SERVICE, NodeState.DEAD));
+    return getNodes(null, NodeState.DEAD);
   }
 
   /**
@@ -372,19 +369,20 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of nodes
    */
   public List<DatanodeInfo> getNodes(NodeStatus status) {
-    List<DatanodeInfo> nodes = new ArrayList<>();
-    nodeStateMap.getNodes(status).forEach(
-        uuid -> {
-          try {
-            nodes.add(nodeStateMap.getNodeInfo(uuid));
-          } catch (NodeNotFoundException e) {
-            // This should not happen unless someone else other than
-            // NodeStateManager is directly modifying NodeStateMap and
-            // removed the node entry after we got the list of UUIDs.
-            LOG.error("Inconsistent NodeStateMap! " + nodeStateMap);
-          }
-        });
-    return nodes;
+    return nodeStateMap.getDatanodeInfos(status);
+  }
+
+  /**
+   * Returns all the nodes with the specified operationalState and health.
+   *
+   * @param opState The operationalState of the node
+   * @param health  The node health
+   *
+   * @return list of nodes matching the passed states
+   */
+  public List<DatanodeInfo> getNodes(
+      NodeOperationalState opState, NodeState health) {
+    return nodeStateMap.getDatanodeInfos(opState, health);
   }
 
   /**
@@ -393,7 +391,6 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return all the managed nodes
    */
   public List<DatanodeInfo> getAllNodes() {
-    List<DatanodeInfo> nodes = new ArrayList<>();
     return nodeStateMap.getAllDatanodeInfos();
   }
 
@@ -407,36 +404,30 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Returns the count of healthy nodes.
+   * Returns the count of healthy nodes, ignoring operational state.
    *
    * @return healthy node count
    */
   public int getHealthyNodeCount() {
-    // TODO - hard coded IN_SERVICE
-    return getNodeCount(
-        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.HEALTHY));
+    return getHealthyNodes().size();
   }
 
   /**
-   * Returns the count of stale nodes.
+   * Returns the count of stale nodes, ignoring operational state.
    *
    * @return stale node count
    */
   public int getStaleNodeCount() {
-    // TODO - hard coded IN_SERVICE
-    return getNodeCount(
-        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.STALE));
+    return getStaleNodes().size();
   }
 
   /**
-   * Returns the count of dead nodes.
+   * Returns the count of dead nodes, ignoring operational state.
    *
    * @return dead node count
    */
   public int getDeadNodeCount() {
-    // TODO - hard coded IN_SERVICE
-    return getNodeCount(
-        new NodeStatus(NodeOperationalState.IN_SERVICE, NodeState.DEAD));
+    return getDeadNodes().size();
   }
 
   /**

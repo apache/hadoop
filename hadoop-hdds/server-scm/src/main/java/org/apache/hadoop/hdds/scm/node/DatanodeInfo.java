@@ -124,7 +124,7 @@ public class DatanodeInfo extends DatanodeDetails {
   }
 
   /**
-   * Return the current NodeStatus for the datanode
+   * Return the current NodeStatus for the datanode.
    *
    * @return NodeStatus - the current nodeStatus
    */

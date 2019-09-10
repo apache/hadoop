@@ -107,6 +107,15 @@ public class TestNodeStateMap {
     assertEquals(nodeCount, map.getTotalNodeCount());
     assertEquals(nodeCount, map.getAllNodes().size());
     assertEquals(nodeCount, map.getAllDatanodeInfos().size());
+
+    // Checks for the getNodeCount(opstate, health) method
+    assertEquals(nodeCount, map.getNodeCount(null, null));
+    assertEquals(1,
+        map.getNodeCount(NodeOperationalState.DECOMMISSIONING,
+            NodeState.STALE));
+    assertEquals(5, map.getNodeCount(null, NodeState.HEALTHY));
+    assertEquals(3,
+        map.getNodeCount(NodeOperationalState.DECOMMISSIONING, null));
   }
 
   private void addNodeWithState(DatanodeDetails dn,
