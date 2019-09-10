@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -142,7 +143,7 @@ public class BasicOzoneFileSystem extends FileSystem {
         // If port number is not specified, read it from config
         omPort = OmUtils.getOmRpcPort(conf);
       }
-    } else if (OmUtils.isServiceIdsDefined(conf)) {
+    } else if (OmUtils.isServiceIdsDefined(new OzoneConfiguration(conf))) {
       // When host name or service id is given, and ozone.om.service.ids is
       // defined, fail here as of current design.
       // This can be seen as a safety precaution so that we don't accidentally
