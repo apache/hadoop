@@ -3794,6 +3794,15 @@
   </property>
 
   <property>
+    <name>yarn.webapp.filter-invalid-xml-chars</name>
+    <value>false</value>
+    <description>
+      Flag to enable filter of invalid xml 1.0 characters present in the
+      value of diagnostics field of apps output from RM WebService.
+    </description>
+  </property>
+
+  <property>
     <description>
       The type of configuration store to use for scheduler configurations.
       Default is "file", which uses file based capacity-scheduler.xml to
