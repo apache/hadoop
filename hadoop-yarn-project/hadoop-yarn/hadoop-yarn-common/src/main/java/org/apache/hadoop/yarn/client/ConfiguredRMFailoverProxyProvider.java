@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public class ConfiguredRMFailoverProxyProvider<T>
     implements RMFailoverProxyProvider<T> {
   private static final Logger LOG =
-    LoggerFactory.getLogger(ConfiguredRMFailoverProxyProvider.class);
+      LoggerFactory.getLogger(ConfiguredRMFailoverProxyProvider.class);
 
   private int currentProxyIndex = 0;
   Map<String, T> proxies = new HashMap<String, T>();
@@ -71,9 +71,15 @@ public class ConfiguredRMFailoverProxyProvider<T>
             YarnConfiguration.DEFAULT_CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS));
   }
 
-  @Override
-  public Class<T> getInterface() {
-    return protocol;
+  protected T getProxyInternal() {
+    try {
+      final InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
+      return rmProxy.getProxy(conf, protocol, rmAddress);
+    } catch (IOException ioe) {
+      LOG.error("Unable to create proxy to the ResourceManager " +
+          rmServiceIds[currentProxyIndex], ioe);
+      return null;
+    }
   }
 
   @Override
@@ -87,22 +93,16 @@ public class ConfiguredRMFailoverProxyProvider<T>
     return new ProxyInfo<T>(current, rmId);
   }
 
-  protected T getProxyInternal() {
-    try {
-      final InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
-      return rmProxy.getProxy(conf, protocol, rmAddress);
-    } catch (IOException ioe) {
-      LOG.error("Unable to create proxy to the ResourceManager " +
-          rmServiceIds[currentProxyIndex], ioe);
-      return null;
-    }
-  }
-
   @Override
   public synchronized void performFailover(T currentProxy) {
     currentProxyIndex = (currentProxyIndex + 1) % rmServiceIds.length;
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
     LOG.info("Failing over to " + rmServiceIds[currentProxyIndex]);
+  }
+
+  @Override
+  public Class<T> getInterface() {
+    return protocol;
   }
 
   /**

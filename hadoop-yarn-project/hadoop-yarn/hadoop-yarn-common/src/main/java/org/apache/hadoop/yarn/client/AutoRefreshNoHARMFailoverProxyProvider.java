@@ -56,7 +56,7 @@ public class AutoRefreshNoHARMFailoverProxyProvider<T>
     return new ProxyInfo<T>(proxy, null);
   }
 
-  private T getProxyInternal() {
+  protected T getProxyInternal() {
     try {
       final InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
       return rmProxy.getProxy(conf, protocol, rmAddress);
