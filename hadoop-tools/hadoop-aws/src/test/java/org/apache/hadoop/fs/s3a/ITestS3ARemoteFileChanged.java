@@ -129,6 +129,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
   private Optional<AmazonS3> originalS3Client = Optional.empty();
 
+  private static final String INCONSISTENT = "inconsistent";
+
+  private static final String CONSISTENT = "consistent";
+
   private enum InteractionType {
     READ,
     READ_AFTER_DELETE,
@@ -703,10 +707,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     Path sourcedir = new Path(basedir, "sourcedir");
     fs.mkdirs(sourcedir);
     Path destdir = new Path(basedir, "destdir");
-    String inconsistent = "inconsistent";
-    String consistent = "consistent";
-    Path inconsistentFile = new Path(sourcedir, inconsistent);
-    Path consistentFile = new Path(sourcedir, consistent);
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
 
     // write the consistent data
     writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
@@ -740,10 +742,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     Path sourcedir = new Path(basedir, "sourcedir");
     fs.mkdirs(sourcedir);
     Path destdir = new Path(basedir, "destdir");
-    String inconsistent = "inconsistent";
-    String consistent = "consistent";
-    Path inconsistentFile = new Path(sourcedir, inconsistent);
-    Path consistentFile = new Path(sourcedir, consistent);
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
 
     // write the consistent data
     writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
@@ -777,10 +777,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     Path sourcedir = new Path(basedir, "sourcedir");
     fs.mkdirs(sourcedir);
     Path destdir = new Path(basedir, "destdir");
-    String inconsistent = "inconsistent";
-    String consistent = "consistent";
-    Path inconsistentFile = new Path(sourcedir, inconsistent);
-    Path consistentFile = new Path(sourcedir, consistent);
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
 
     // write the consistent data
     writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,

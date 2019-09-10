@@ -782,6 +782,9 @@ public final class Constants {
 
   /**
    * Default initial retry interval: {@value}.
+   * The consistency retry probe uses exponential backoff, because
+   * each probe can cause the S3 load balancers to retain any 404 in
+   * its cache for longer. See HADOOP-16490.
    */
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
       "2s";
