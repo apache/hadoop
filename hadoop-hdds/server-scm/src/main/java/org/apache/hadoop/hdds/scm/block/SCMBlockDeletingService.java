@@ -23,9 +23,9 @@ import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
@@ -137,7 +137,10 @@ public class SCMBlockDeletingService extends BackgroundService {
       // to delete blocks.
       LOG.debug("Running DeletedBlockTransactionScanner");
       DatanodeDeletedBlockTransactions transactions = null;
-      List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+      // TODO - DECOMM - should we be deleting blocks from decom nodes
+      //        and what about entering maintenance.
+      List<DatanodeDetails> datanodes =
+          nodeManager.getNodes(NodeStatus.inServiceHealthy());
       Map<Long, Long> transactionMap = null;
       if (datanodes != null) {
         transactions = new DatanodeDeletedBlockTransactions(containerManager,

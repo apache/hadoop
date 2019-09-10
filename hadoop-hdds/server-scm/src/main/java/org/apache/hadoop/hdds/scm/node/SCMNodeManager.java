@@ -32,8 +32,8 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
@@ -151,9 +151,27 @@ public class SCMNodeManager implements NodeManager {
    * @return List of Datanodes that are known to SCM in the requested state.
    */
   @Override
-  public List<DatanodeDetails> getNodes(NodeState nodestate) {
-    return nodeStateManager.getNodes(
-        new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE, nodestate))
+  public List<DatanodeDetails> getNodes(NodeStatus nodeStatus) {
+    return nodeStateManager.getNodes(nodeStatus)
+        .stream()
+        .map(node -> (DatanodeDetails)node).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns all datanode that are in the given states. Passing null for one of
+   * of the states acts like a wildcard for that state. This function works by
+   * taking a snapshot of the current collection and then returning the list
+   * from that collection. This means that real map might have changed by the
+   * time we return this list.
+   *
+   * @param opState The operational state of the node
+   * @param health The health of the node
+   * @return List of Datanodes that are known to SCM in the requested states.
+   */
+  @Override
+  public List<DatanodeDetails> getNodes(
+      NodeOperationalState opState, NodeState health) {
+    return nodeStateManager.getNodes(opState, health)
         .stream()
         .map(node -> (DatanodeDetails)node).collect(Collectors.toList());
   }
@@ -175,10 +193,21 @@ public class SCMNodeManager implements NodeManager {
    * @return count
    */
   @Override
-  public int getNodeCount(NodeState nodestate) {
-    // TODO: hardcoded IN_SERVICE
-    return nodeStateManager.getNodeCount(
-        new NodeStatus(HddsProtos.NodeOperationalState.IN_SERVICE, nodestate));
+  public int getNodeCount(NodeStatus nodeStatus) {
+    return nodeStateManager.getNodeCount(nodeStatus);
+  }
+
+  /**
+   * Returns the Number of Datanodes by State they are in. Passing null for
+   * either of the states acts like a wildcard for that state.
+   *
+   * @parem nodeOpState - The Operational State of the node
+   * @param health - The health of the node
+   * @return count
+   */
+  @Override
+  public int getNodeCount(NodeOperationalState nodeOpState, NodeState health) {
+    return nodeStateManager.getNodeCount(nodeOpState, health);
   }
 
   /**
@@ -422,9 +451,12 @@ public class SCMNodeManager implements NodeManager {
 
   @Override
   public Map<String, Integer> getNodeCount() {
+    // TODO - This does not consider decom, maint etc.
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
     for(NodeState state : NodeState.values()) {
-      nodeCountMap.put(state.toString(), getNodeCount(state));
+      // TODO - this iterate the node list once per state and needs
+      //        fixed to only perform one pass.
+      nodeCountMap.put(state.toString(), getNodeCount(null, state));
     }
     return nodeCountMap;
   }

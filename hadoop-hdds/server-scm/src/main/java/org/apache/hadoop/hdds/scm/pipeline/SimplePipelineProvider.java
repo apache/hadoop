@@ -21,8 +21,8 @@ package org.apache.hadoop.hdds.scm.pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ public class SimplePipelineProvider implements PipelineProvider {
   @Override
   public Pipeline create(ReplicationFactor factor) throws IOException {
     List<DatanodeDetails> dns =
-        nodeManager.getNodes(NodeState.HEALTHY);
+        nodeManager.getNodes(NodeStatus.inServiceHealthy());
     if (dns.size() < factor.getNumber()) {
       String e = String
           .format("Cannot create pipeline of factor %d using %d nodes.",

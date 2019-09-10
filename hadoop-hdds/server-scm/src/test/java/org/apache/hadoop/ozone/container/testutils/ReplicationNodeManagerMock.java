@@ -17,9 +17,11 @@
 package org.apache.hadoop.ozone.container.testutils;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -81,22 +83,48 @@ public class ReplicationNodeManagerMock implements NodeManager {
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
    *
-   * @param nodestate - State of the node
+   * @param nodestatus - State of the node
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeDetails> getNodes(NodeState nodestate) {
+  public List<DatanodeDetails> getNodes(NodeStatus nodestatus) {
+    return null;
+  }
+
+  /**
+   * Gets all Live Datanodes that is currently communicating with SCM.
+   *
+   * @param opState - Operational state of the node
+   * @param health - Health of the node
+   * @return List of Datanodes that are Heartbeating SCM.
+   */
+  @Override
+  public List<DatanodeDetails> getNodes(
+      HddsProtos.NodeOperationalState opState, NodeState health) {
     return null;
   }
 
   /**
    * Returns the Number of Datanodes that are communicating with SCM.
    *
-   * @param nodestate - State of the node
+   * @param nodestatus - State of the node
    * @return int -- count
    */
   @Override
-  public int getNodeCount(NodeState nodestate) {
+  public int getNodeCount(NodeStatus nodestatus) {
+    return 0;
+  }
+
+  /**
+   * Returns the Number of Datanodes that are communicating with SCM.
+   *
+   * @param opState - Operational state of the node
+   * @param health - Health of the node
+   * @return int -- count
+   */
+  @Override
+  public int getNodeCount(
+      HddsProtos.NodeOperationalState opState, NodeState health) {
     return 0;
   }
 

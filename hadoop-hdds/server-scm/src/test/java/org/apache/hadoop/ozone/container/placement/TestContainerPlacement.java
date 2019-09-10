@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,8 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
-    .HEALTHY;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -45,7 +44,8 @@ public class TestContainerPlacement {
 
   private DescriptiveStatistics computeStatistics(NodeManager nodeManager) {
     DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
-    for (DatanodeDetails dd : nodeManager.getNodes(HEALTHY)) {
+    for (DatanodeDetails dd :
+        nodeManager.getNodes(NodeStatus.inServiceHealthy())) {
       float weightedValue =
           nodeManager.getNodeStat(dd).get().getScmUsed().get() / (float)
               nodeManager.getNodeStat(dd).get().getCapacity().get();

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager.SafeModeStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -264,7 +265,7 @@ public class TestBlockManager {
 
     // create pipelines
     for (int i = 0;
-         i < nodeManager.getNodes(HddsProtos.NodeState.HEALTHY).size(); i++) {
+         i < nodeManager.getNodes(NodeStatus.inServiceHealthy()).size(); i++) {
       pipelineManager.createPipeline(type, factor);
     }
 

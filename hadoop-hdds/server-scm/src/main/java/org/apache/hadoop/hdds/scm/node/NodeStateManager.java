@@ -442,6 +442,18 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Returns the count of nodes in the specified states.
+   *
+   * @param opState The operational state of the node
+   * @param health The health of the node
+   *
+   * @return node count
+   */
+  public int getNodeCount(NodeOperationalState opState, NodeState health) {
+    return nodeStateMap.getNodeCount(opState, health);
+  }
+
+  /**
    * Returns the count of all nodes managed by NodeStateManager.
    *
    * @return node count
