@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.SCMCommonPlacementPolicy;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
@@ -45,7 +46,8 @@ import java.util.List;
  * recommend to use this if the network topology has more layers.
  * <p>
  */
-public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
+public final class SCMContainerPlacementRackAware
+    extends SCMCommonPlacementPolicy {
   @VisibleForTesting
   static final Logger LOG =
       LoggerFactory.getLogger(SCMContainerPlacementRackAware.class);
@@ -271,8 +273,8 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
         throw new SCMException("No satisfied datanode to meet the" +
             " excludedNodes and affinityNode constrains.", null);
       }
-      if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.debug("Datanode {} is chosen for container. Required size is {}",
+      if (super.hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
+        LOG.debug("Datanode {} is chosen. Required size is {}",
             node.toString(), sizeRequired);
         metrics.incrDatanodeChooseSuccessCount();
         if (isFallbacked) {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
@@ -34,22 +35,23 @@ public final class ContainerPlacementPolicyFactory {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerPlacementPolicyFactory.class);
 
-  private static final Class<? extends ContainerPlacementPolicy>
+  private static final Class<? extends PlacementPolicy>
       OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
       SCMContainerPlacementRandom.class;
 
   private ContainerPlacementPolicyFactory() {
   }
 
-  public static ContainerPlacementPolicy getPolicy(Configuration conf,
-      final NodeManager nodeManager, NetworkTopology clusterMap,
-      final boolean fallback, SCMContainerPlacementMetrics metrics)
-      throws SCMException{
-    final Class<? extends ContainerPlacementPolicy> placementClass = conf
+
+  public static PlacementPolicy getPolicy(Configuration conf,
+    final NodeManager nodeManager, NetworkTopology clusterMap,
+    final boolean fallback, SCMContainerPlacementMetrics metrics)
+    throws SCMException{
+    final Class<? extends PlacementPolicy> placementClass = conf
         .getClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
             OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT,
-            ContainerPlacementPolicy.class);
-    Constructor<? extends ContainerPlacementPolicy> constructor;
+            PlacementPolicy.class);
+    Constructor<? extends PlacementPolicy> constructor;
     try {
       constructor = placementClass.getDeclaredConstructor(NodeManager.class,
           Configuration.class, NetworkTopology.class, boolean.class,

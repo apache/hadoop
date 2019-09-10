@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.hdds.scm.container.placement.algorithms;
+package org.apache.hadoop.hdds.scm;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -33,25 +33,25 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
- * SCM CommonPolicy implements a set of invariants which are common
- * for all container placement policies, acts as the repository of helper
+ * This policy implements a set of invariants which are common
+ * for all basic placement policies, acts as the repository of helper
  * functions which are common to placement policies.
  */
-public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
+public abstract class SCMCommonPlacementPolicy implements PlacementPolicy {
   @VisibleForTesting
   static final Logger LOG =
-      LoggerFactory.getLogger(SCMCommonPolicy.class);
+      LoggerFactory.getLogger(SCMCommonPlacementPolicy.class);
   private final NodeManager nodeManager;
   private final Random rand;
   private final Configuration conf;
 
   /**
-   * Constructs SCM Common Policy Class.
+   * Constructor.
    *
    * @param nodeManager NodeManager
    * @param conf Configuration class.
    */
-  public SCMCommonPolicy(NodeManager nodeManager, Configuration conf) {
+  public SCMCommonPlacementPolicy(NodeManager nodeManager, Configuration conf) {
     this.nodeManager = nodeManager;
     this.rand = new Random();
     this.conf = conf;
@@ -85,7 +85,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
   }
 
   /**
-   * Given the replication factor and size required, return set of datanodes
+   * Given size required, return set of datanodes
    * that satisfy the nodes and size requirement.
    * <p>
    * Here are some invariants of container placement.
@@ -149,7 +149,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * @param datanodeDetails DatanodeDetails
    * @return true if we have enough space.
    */
-  boolean hasEnoughSpace(DatanodeDetails datanodeDetails,
+  public boolean hasEnoughSpace(DatanodeDetails datanodeDetails,
       long sizeRequired) {
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(datanodeDetails);
     return (nodeMetric != null) && (nodeMetric.get() != null)
@@ -164,7 +164,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * @param nodesRequired - Nodes Required
    * @param healthyNodes - List of Nodes in the result set.
    * @return List of Datanodes that can be used for placement.
-   * @throws SCMException
+   * @throws SCMException SCMException
    */
   public List<DatanodeDetails> getResultSet(
       int nodesRequired, List<DatanodeDetails> healthyNodes)
@@ -190,8 +190,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
 
   /**
    * Choose a datanode according to the policy, this function is implemented
-   * by the actual policy class. For example, PlacementCapacity or
-   * PlacementRandom.
+   * by the actual policy class.
    *
    * @param healthyNodes - Set of healthy nodes we can choose from.
    * @return DatanodeDetails

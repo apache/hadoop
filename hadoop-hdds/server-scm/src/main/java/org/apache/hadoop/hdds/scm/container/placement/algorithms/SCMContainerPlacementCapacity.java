@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.SCMCommonPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
@@ -65,7 +66,8 @@ import org.slf4j.LoggerFactory;
  * little or no work and the cluster will achieve a balanced distribution
  * over time.
  */
-public final class SCMContainerPlacementCapacity extends SCMCommonPolicy {
+public final class SCMContainerPlacementCapacity
+    extends SCMCommonPlacementPolicy {
   @VisibleForTesting
   static final Logger LOG =
       LoggerFactory.getLogger(SCMContainerPlacementCapacity.class);

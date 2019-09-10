@@ -27,8 +27,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms
-    .ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -135,7 +134,7 @@ public class TestContainerPlacement {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
+        SCMContainerPlacementCapacity.class, PlacementPolicy.class);
 
     SCMNodeManager nodeManager = createNodeManager(conf);
     SCMContainerManager containerManager =
