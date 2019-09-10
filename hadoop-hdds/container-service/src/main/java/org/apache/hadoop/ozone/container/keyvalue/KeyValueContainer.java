@@ -82,7 +82,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to perform KeyValue Container operations.
+ * Class to perform KeyValue Container operations. Any modifications to
+ * KeyValueContainer object should ideally be done via api exposed in
+ * KeyValueHandler class.
  */
 public class KeyValueContainer implements Container<KeyValueContainerData> {
 
@@ -554,6 +556,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
    * Acquire write lock.
    */
   public void writeLock() {
+    // TODO: The lock for KeyValueContainer object should not be exposed
+    // publicly.
     this.lock.writeLock().lock();
   }
 

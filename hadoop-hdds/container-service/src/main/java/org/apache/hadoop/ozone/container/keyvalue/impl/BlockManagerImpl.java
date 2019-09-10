@@ -258,21 +258,25 @@ public class BlockManagerImpl implements BlockManager {
     Preconditions.checkArgument(count > 0,
         "Count must be a positive number.");
     container.readLock();
-    List<BlockData> result = null;
-    KeyValueContainerData cData = (KeyValueContainerData) container
-        .getContainerData();
-    try(ReferenceCountedDB db = BlockUtils.getDB(cData, config)) {
-      result = new ArrayList<>();
-      byte[] startKeyInBytes = Longs.toByteArray(startLocalID);
-      List<Map.Entry<byte[], byte[]>> range =
-          db.getStore().getSequentialRangeKVs(startKeyInBytes, count,
-              MetadataKeyFilters.getNormalKeyFilter());
-      for (Map.Entry<byte[], byte[]> entry : range) {
-        BlockData value = BlockUtils.getBlockData(entry.getValue());
-        BlockData data = new BlockData(value.getBlockID());
-        result.add(data);
+    try {
+      List<BlockData> result = null;
+      KeyValueContainerData cData =
+          (KeyValueContainerData) container.getContainerData();
+      try (ReferenceCountedDB db = BlockUtils.getDB(cData, config)) {
+        result = new ArrayList<>();
+        byte[] startKeyInBytes = Longs.toByteArray(startLocalID);
+        List<Map.Entry<byte[], byte[]>> range = db.getStore()
+            .getSequentialRangeKVs(startKeyInBytes, count,
+                MetadataKeyFilters.getNormalKeyFilter());
+        for (Map.Entry<byte[], byte[]> entry : range) {
+          BlockData value = BlockUtils.getBlockData(entry.getValue());
+          BlockData data = new BlockData(value.getBlockID());
+          result.add(data);
+        }
+        return result;
       }
-      return result;
+    } finally {
+      container.readUnlock();
     }
   }
 
