@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 /**
  * Violation handler for the S3Guard's fsck.
@@ -37,8 +38,8 @@ public class S3GuardFsckViolationHandler {
 
   // The rawFS and metadataStore are here to prepare when the ViolationHandlers
   // will not just log, but fix the violations, so they will have access.
-  private S3AFileSystem rawFs;
-  private DynamoDBMetadataStore metadataStore;
+  private final S3AFileSystem rawFs;
+  private final DynamoDBMetadataStore metadataStore;
 
   private static String newLine = System.getProperty("line.separator");
 
@@ -51,7 +52,7 @@ public class S3GuardFsckViolationHandler {
 
   public void handle(S3GuardFsck.ComparePair comparePair) {
     if (!comparePair.containsViolation()) {
-      LOG.debug("There is no violation in the compare pair: " + toString());
+      LOG.debug("There is no violation in the compare pair: {}", comparePair);
       return;
     }
 
@@ -59,7 +60,21 @@ public class S3GuardFsckViolationHandler {
     sB.append(newLine)
         .append("On path: ").append(comparePair.getPath()).append(newLine);
 
-    // Create a new instance of the handler and use it.
+    handleComparePair(comparePair, sB);
+
+    LOG.error(sB.toString());
+  }
+
+  /**
+   * Create a new instance of the violation handler for all the violations
+   * found in the compare pair and use it.
+   *
+   * @param comparePair the compare pair with violations
+   * @param sB StringBuilder to append error strings from violations.
+   */
+  protected static void handleComparePair(S3GuardFsck.ComparePair comparePair,
+      StringBuilder sB) {
+
     for (S3GuardFsck.Violation violation : comparePair.getViolations()) {
       try {
         ViolationHandler handler = violation.getHandler()
@@ -76,7 +91,6 @@ public class S3GuardFsckViolationHandler {
       }
       sB.append(newLine);
     }
-    LOG.error(sB.toString());
   }
 
   /**
@@ -102,7 +116,7 @@ public class S3GuardFsckViolationHandler {
       msDirListing = comparePair.getMsDirListing();
     }
 
-    abstract String getError();
+    public abstract String getError();
 
     public PathMetadata getPathMetadata() {
       return pathMetadata;
@@ -166,7 +180,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return "An entry’s parent is a file";
+      return "The entry's parent in the metastore database is a file.";
     }
   }
 
@@ -181,7 +195,8 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return "The entry's parent tombstoned";
+      return "The entry in the metastore database has a parent entry " +
+          "which is a tombstone marker";
     }
   }
 
@@ -244,7 +259,7 @@ public class S3GuardFsckViolationHandler {
     }
 
     @Override public String getError() {
-      return String.format("getLen mismatch - s3: %s, ms: %s",
+      return String.format("File length mismatch - s3: %s, ms: %s",
           getS3FileStatus().getLen(), getMsFileStatus().getLen());
     }
   }
@@ -260,7 +275,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return String.format("getModificationTime mismatch - s3: %s, ms: %s",
+      return String.format("File timestamp mismatch - s3: %s, ms: %s",
           getS3FileStatus().getModificationTime(),
           getMsFileStatus().getModificationTime());
     }
@@ -293,7 +308,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return String.format("getETag mismatch - s3: %s, ms: %s",
+      return String.format("Etag mismatch - s3: %s, ms: %s",
         getS3FileStatus().getETag(), getMsFileStatus().getETag());
     }
   }

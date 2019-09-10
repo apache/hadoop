@@ -18,16 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AWSBadRequestException;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-
-import com.google.common.base.Stopwatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayDeque;
@@ -38,6 +29,16 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.google.common.base.Stopwatch;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -56,28 +57,27 @@ public class S3GuardFsck {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardFsck.class);
   public static final String ROOT_PATH_STRING = "/";
 
-  private S3AFileSystem rawFS;
-  private DynamoDBMetadataStore metadataStore;
+  private final S3AFileSystem rawFS;
+  private final DynamoDBMetadataStore metadataStore;
 
   /**
    * Creates an S3GuardFsck.
    * @param fs the filesystem to compare to
    * @param ms metadatastore the metadatastore to compare with (dynamo)
    */
-  S3GuardFsck(S3AFileSystem fs, MetadataStore ms)
+  public S3GuardFsck(S3AFileSystem fs, MetadataStore ms)
       throws InvalidParameterException {
     this.rawFS = fs;
 
     if (ms == null) {
-      throw new InvalidParameterException("S3AFileSystem should be guarded by"
-          + " a " + DynamoDBMetadataStore.class.getCanonicalName());
+      throw new InvalidParameterException("S3A Bucket " + fs.getBucket()
+          + " should be guarded by a "
+          + DynamoDBMetadataStore.class.getCanonicalName());
     }
     this.metadataStore = (DynamoDBMetadataStore) ms;
 
-    if (rawFS.hasMetadataStore()) {
-      throw new InvalidParameterException("Raw fs should not have a "
-          + "metadatastore.");
-    }
+    Preconditions.checkArgument(!rawFS.hasMetadataStore(),
+        "Raw fs should not have a metadatastore.");
   }
 
   /**
@@ -89,50 +89,53 @@ public class S3GuardFsck {
    * The violations are listed in Enums: {@link Violation}
    *
    * @param p the root path to start the traversal
-   * @throws IOException
    * @return a list of {@link ComparePair}
+   * @throws IOException
    */
   public List<ComparePair> compareS3ToMs(Path p) throws IOException {
     Stopwatch stopwatch = Stopwatch.createStarted();
     int scannedItems = 0;
 
     final Path rootPath = rawFS.qualify(p);
-    S3AFileStatus root = null;
-    try {
-      root = (S3AFileStatus) rawFS.getFileStatus(rootPath);
-    } catch (AWSBadRequestException e) {
-      throw new IOException(e.getMessage());
-    }
+    S3AFileStatus root = (S3AFileStatus) rawFS.getFileStatus(rootPath);
     final List<ComparePair> comparePairs = new ArrayList<>();
     final Queue<S3AFileStatus> queue = new ArrayDeque<>();
     queue.add(root);
 
     while (!queue.isEmpty()) {
       final S3AFileStatus currentDir = queue.poll();
-      scannedItems++;
+
 
       final Path currentDirPath = currentDir.getPath();
-      List<FileStatus> s3DirListing = Arrays.asList(rawFS.listStatus(currentDirPath));
+      try {
+        List<FileStatus> s3DirListing = Arrays.asList(
+            rawFS.listStatus(currentDirPath));
 
-      // DIRECTORIES
-      // Check directory authoritativeness consistency
-      compareAuthoritativeDirectoryFlag(comparePairs, currentDirPath, s3DirListing);
-      // Add all descendant directory to the queue
-      s3DirListing.stream().filter(pm -> pm.isDirectory())
-              .map(S3AFileStatus.class::cast)
-              .forEach(pm -> queue.add(pm));
+        // Check authoritative directory flag.
+        compareAuthoritativeDirectoryFlag(comparePairs, currentDirPath,
+            s3DirListing);
+        // Add all descendant directory to the queue
+        s3DirListing.stream().filter(pm -> pm.isDirectory())
+            .map(S3AFileStatus.class::cast)
+            .forEach(pm -> queue.add(pm));
 
-      // FILES
-      // check files for consistency
-      final List<S3AFileStatus> children = s3DirListing.stream()
-              .filter(status -> !status.isDirectory())
-              .map(S3AFileStatus.class::cast).collect(toList());
-      final List<ComparePair> compareResult =
-          compareS3DirToMs(currentDir, children).stream()
-              .filter(comparePair -> comparePair.containsViolation())
-              .collect(toList());
-      comparePairs.addAll(compareResult);
-      scannedItems += children.size();
+        // Check file and directory metadata for consistency.
+        final List<S3AFileStatus> children = s3DirListing.stream()
+            .filter(status -> !status.isDirectory())
+            .map(S3AFileStatus.class::cast).collect(toList());
+        final List<ComparePair> compareResult =
+            compareS3DirContentToMs(currentDir, children);
+        comparePairs.addAll(compareResult);
+
+        // Increase the scanned file size.
+        // One for the directory, one for the children.
+        scannedItems++;
+        scannedItems += children.size();
+      } catch (FileNotFoundException e) {
+        LOG.error("The path has been deleted since it was queued: "
+            + currentDirPath, e);
+      }
+
     }
     stopwatch.stop();
 
@@ -148,14 +151,16 @@ public class S3GuardFsck {
   }
 
   /**
-   * Compare the directory contents if the listing is authoritative
-   * @param comparePairs the list of compare pairs to add to if it contains a violation
+   * Compare the directory contents if the listing is authoritative.
+   *
+   * @param comparePairs the list of compare pairs to add to
+   *                     if it contains a violation
    * @param currentDirPath the current directory path
    * @param s3DirListing the s3 directory listing to compare with
    * @throws IOException
    */
-  private void compareAuthoritativeDirectoryFlag(List<ComparePair> comparePairs, Path currentDirPath,
-                                                 List<FileStatus> s3DirListing) throws IOException {
+  private void compareAuthoritativeDirectoryFlag(List<ComparePair> comparePairs,
+      Path currentDirPath, List<FileStatus> s3DirListing) throws IOException {
     final DirListingMetadata msDirListing =
         metadataStore.listChildren(currentDirPath);
     if (msDirListing != null && msDirListing.isAuthoritative()) {
@@ -179,7 +184,16 @@ public class S3GuardFsck {
     }
   }
 
-  protected List<ComparePair> compareS3DirToMs(S3AFileStatus s3CurrentDir,
+  /**
+   * Compares S3 directory content to the metadata store.
+   *
+   * @param s3CurrentDir file status of the current directory
+   * @param children the contents of the directory
+   * @return the compare pairs with violations of consistency
+   * @throws IOException
+   */
+  protected List<ComparePair> compareS3DirContentToMs(
+      S3AFileStatus s3CurrentDir,
       List<S3AFileStatus> children) throws IOException {
     final Path path = s3CurrentDir.getPath();
     final PathMetadata pathMetadata = metadataStore.get(path);
@@ -201,23 +215,36 @@ public class S3GuardFsck {
           violationComparePairs.add(comparePair);
         }
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error(e.getMessage(), e);
       }
     });
 
     return violationComparePairs;
   }
 
+  /**
+   * Compares a {@link S3AFileStatus} from S3 to a {@link PathMetadata}
+   * from the metadata store. Finds violated invariants and consistency
+   * issues.
+   *
+   * @param s3FileStatus the file status from S3
+   * @param msPathMetadata the path metadata from metadatastore
+   * @return {@link ComparePair} with the found issues
+   * @throws IOException
+   */
   protected ComparePair compareFileStatusToPathMetadata(
       S3AFileStatus s3FileStatus,
       PathMetadata msPathMetadata) throws IOException {
     final Path path = s3FileStatus.getPath();
 
-    if(msPathMetadata != null) {
-      LOG.info("Path: {} - Length S3: {}, MS: {} - Etag S3: {}, MS: {}",
-              path,
-              s3FileStatus.getLen(), msPathMetadata.getFileStatus().getLen(),
-              s3FileStatus.getETag(), msPathMetadata.getFileStatus().getETag());
+    if (msPathMetadata != null) {
+      LOG.info("Path: {} - Length S3: {}, MS: {} " +
+              "- Etag S3: {}, MS: {} " +
+              "- VersionId: S3: {}, MS: {}",
+          path,
+          s3FileStatus.getLen(), msPathMetadata.getFileStatus().getLen(),
+          s3FileStatus.getETag(), msPathMetadata.getFileStatus().getETag(),
+          s3FileStatus.getVersionId(), msPathMetadata.getFileStatus().getVersionId());
     } else {
       LOG.info("Path: {} - Length S3: {} - Etag S3: {}, no record in MS.",
               path, s3FileStatus.getLen(), s3FileStatus.getETag());
@@ -240,7 +267,7 @@ public class S3GuardFsck {
         }
       }
     } else {
-      LOG.debug("Entry is in the root, so there's no parent");
+      LOG.debug("Entry is in the root directory, so there's no parent");
     }
 
     if (msPathMetadata == null) {
@@ -304,7 +331,7 @@ public class S3GuardFsck {
 
     private final Path path;
 
-    private Set<Violation> violations = new HashSet<>();
+    private final Set<Violation> violations = new HashSet<>();
 
     ComparePair(S3AFileStatus status, PathMetadata pm) {
       this.s3FileStatus = status;
@@ -364,45 +391,65 @@ public class S3GuardFsck {
    * where 0 is the most severe and 2 is the least severe.
    */
   public enum Violation {
-    // No entry in metadatastore
+    /**
+     * No entry in metadatastore.
+     */
     NO_METADATA_ENTRY(1,
         S3GuardFsckViolationHandler.NoMetadataEntry.class),
-    // A file or directory entry does not have a parent entry - excluding
-    // files and directories in the root.
+    /**
+     * A file or directory entry does not have a parent entry - excluding
+     * files and directories in the root.
+     */
     NO_PARENT_ENTRY(0,
         S3GuardFsckViolationHandler.NoParentEntry.class),
-    // An entry’s parent is a file
+    /**
+     * An entry’s parent is a file.
+     */
     PARENT_IS_A_FILE(0,
         S3GuardFsckViolationHandler.ParentIsAFile.class),
-    // A file exists under a path for which there is
-    // a tombstone entry in the MS
+    /**
+     * A file exists under a path for which there is a
+     * tombstone entry in the MS.
+     */
     PARENT_TOMBSTONED(0,
         S3GuardFsckViolationHandler.ParentTombstoned.class),
-    // A directory in S3 is a file entry in the MS
+    /**
+     * A directory in S3 is a file entry in the MS.
+     */
     DIR_IN_S3_FILE_IN_MS(0,
         S3GuardFsckViolationHandler.DirInS3FileInMs.class),
-    // A file in S3 is a directory in the MS
+    /**
+     * A file in S3 is a directory in the MS.
+     */
     FILE_IN_S3_DIR_IN_MS(0,
         S3GuardFsckViolationHandler.FileInS3DirInMs.class),
     AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1,
         S3GuardFsckViolationHandler.AuthDirContentMismatch.class),
-    // Attribute mismatch
+    /**
+     * Attribute mismatch.
+     */
     LENGTH_MISMATCH(0,
         S3GuardFsckViolationHandler.LengthMismatch.class),
     MOD_TIME_MISMATCH(2,
         S3GuardFsckViolationHandler.ModTimeMismatch.class),
-    // If there's a versionID the mismatch is severe
+    /**
+     * If there's a versionID the mismatch is severe.
+     */
     VERSIONID_MISMATCH(0,
         S3GuardFsckViolationHandler.VersionIdMismatch.class),
-    // If there's an etag the mismatch is severe
+    /**
+     * If there's an etag the mismatch is severe.
+     */
     ETAG_MISMATCH(0,
         S3GuardFsckViolationHandler.EtagMismatch.class),
-    // Don't worry too much if we don't have an etag
+    /**
+     * Don't worry too much if we don't have an etag.
+     */
     NO_ETAG(2,
         S3GuardFsckViolationHandler.NoEtag.class);
 
-    private int severity;
-    private Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
+    private final int severity;
+    private final Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
 
     Violation(int s,
         Class<? extends S3GuardFsckViolationHandler.ViolationHandler> h) {

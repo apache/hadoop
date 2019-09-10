@@ -1487,7 +1487,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   }
 
   /**
-   * Prune metadata that has not been modified recently.
+   * Fsck - check for consistency between S3 and the metadatastore.
    */
   static class Fsck extends S3GuardTool {
     public static final String CHECK_FLAG = "check";
@@ -1495,11 +1495,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String NAME = "fsck";
     public static final String PURPOSE = "Compares S3 with MetadataStore, and "
         + "returns a failure status if any rules or invariants are violated. "
-        + "Only works with DynamoDbMetadataStore.";
+        + "Only works with DynamoDB metadata stores.";
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
-        "  " + CHECK_FLAG + " Check the metadata store for errors, but do "
+        "  -" + CHECK_FLAG + " Check the metadata store for errors, but do "
         + "not fix any issues.\n";
 
     Fsck(Configuration conf) {
@@ -1559,7 +1559,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
         try {
           s3GuardFsck.compareS3ToMs(fs.qualify(root));
         } catch (IOException e) {
-          errorln("Error while running the check: compareS3ToMs");
           throw e;
         }
       } else {

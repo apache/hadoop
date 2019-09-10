@@ -23,25 +23,26 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.io.IOUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.assertj.core.api.Assertions;
 
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
+import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitFileStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Integration tests for the S3Guard Fsck against a dyamodb backed metadata
@@ -59,9 +60,9 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     // These test will fail if no ms
-    assertTrue("FS needs to have a metadatastore.",
+    assumeTrue("FS needs to have a metadatastore.",
         fs.hasMetadataStore());
-    assertTrue("Metadatastore should persist authoritative bit",
+    assumeTrue("Metadatastore should persist authoritative bit",
         metadataStorePersistsAuthoritativeBit(fs.getMetadataStore()));
 
     guardedFs = fs;
@@ -93,9 +94,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        S3_METADATA_STORE_IMPL);
-    removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        S3_METADATA_STORE_IMPL, METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     S3AFileSystem fs2 = new S3AFileSystem();
     fs2.initialize(uri, config);
     return fs2;
@@ -115,8 +115,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two.", 2,
-          comparePairs.size());
+      assertComparePairsSize(comparePairs, 2);
+
       final S3GuardFsck.ComparePair pair = comparePairs.get(0);
       assertTrue("The pair must contain a violation.", pair.containsViolation());
       assertEquals("The pair must contain only one violation", 1,
@@ -152,8 +152,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-              + "child.", 2, comparePairs.size());
+      assertComparePairsSize(comparePairs, 2);
 
       // check the parent that it does not exist
       final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
@@ -202,8 +201,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-              + "child.", 2, comparePairs.size());
+      assertComparePairsSize(comparePairs, 2);
 
       // check the parent that it does not exist
       final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
@@ -252,8 +250,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-              + "child.", 2, comparePairs.size());
+      assertComparePairsSize(comparePairs, 1);
 
       // check the child that the parent is tombstoned
       final S3GuardFsck.ComparePair childPair = comparePairs.stream()
@@ -291,8 +288,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pair should be one. Only the cwd.", 1,
-          comparePairs.size());
+      assertComparePairsSize(comparePairs, 1);
 
       // check the child that the dir in s3 is a file in the ms
       final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
@@ -330,17 +326,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two", 2,
-          comparePairs.size());
-
-      // check the child that the dir in s3 is a file in the ms
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.FILE_IN_S3_DIR_IN_MS);
+      assertComparePairsSize(comparePairs, 1);
 
       // check the child that the dir in s3 is a file in the ms
       final S3GuardFsck.ComparePair filePair = comparePairs.stream()
@@ -407,16 +393,11 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> pairsIncorrect =
           s3GuardFsck.compareS3ToMs(cwdIncorrect);
 
-      // check the parent that it does not contain LENGTH_MISMATCH
-      final S3GuardFsck.ComparePair cwdPair = pairsCorrect.stream()
-          .filter(p -> p.getPath().equals(cwdCorrect))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
+      // Assert that the correct dir does not contain the violation.
+      assertTrue(pairsCorrect.stream()
+          .noneMatch(p -> p.getPath().equals(cwdCorrect)));
 
-      // check the child that there's a LENGTH_MISMATCH
+      // Assert that the incorrect listing contains the violation.
       final S3GuardFsck.ComparePair childPair = pairsIncorrect.stream()
           .filter(p -> p.getPath().equals(cwdIncorrect))
           .findFirst().get();
@@ -459,19 +440,13 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-              + "child.", 2, comparePairs.size());
+      assertComparePairsSize(comparePairs, 1);
 
-      // check the parent that it does not contain LENGTH_MISMATCH
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.LENGTH_MISMATCH);
+      // Assert that the correct dir does not contain the violation.
+      assertTrue(comparePairs.stream()
+          .noneMatch(p -> p.getPath().equals(cwd)));
 
-      // check the child that there's a LENGTH_MISMATCH
+      // Assert that the incorrect file meta contains the violation.
       final S3GuardFsck.ComparePair childPair = comparePairs.stream()
           .filter(p -> p.getPath().equals(file))
           .findFirst().get();
@@ -515,19 +490,13 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-              + "child.", 2, comparePairs.size());
+      assertComparePairsSize(comparePairs, 1);
 
-      // check the parent that it does not contain MOD_TIME_MISMATCH
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.MOD_TIME_MISMATCH);
+      // Assert that the correct dir does not contain the violation.
+      assertTrue(comparePairs.stream()
+          .noneMatch(p -> p.getPath().equals(cwd)));
 
-      // check the child that there's a MOD_TIME_MISMATCH
+      // check the file meta that there's a violation.
       final S3GuardFsck.ComparePair childPair = comparePairs.stream()
           .filter(p -> p.getPath().equals(file))
           .findFirst().get();
@@ -537,56 +506,6 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       Assertions.assertThat(childPair.getViolations())
           .describedAs("Violations in the childPair")
           .contains(S3GuardFsck.Violation.MOD_TIME_MISMATCH);
-    } finally {
-      // delete the working directory with all of its contents
-      rawFS.delete(cwd, true);
-      metadataStore.forgetMetadata(file);
-      metadataStore.forgetMetadata(cwd);
-    }
-  }
-
-  @Test
-  public void testIVersionIdMismatch() throws Exception {
-    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
-    final Path file = new Path(cwd, "file");
-    try {
-      // create a file with guarded fs
-      touch(guardedFs, file);
-      awaitFileStatus(guardedFs, file);
-
-      // modify the file metadata so the versionId will not match
-      final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, "",
-          "etag", "versionId");
-      metadataStore.put(new PathMetadata(newFileStatus));
-
-      final S3GuardFsck s3GuardFsck =
-          new S3GuardFsck(rawFS, metadataStore);
-
-      final List<S3GuardFsck.ComparePair> comparePairs =
-          s3GuardFsck.compareS3ToMs(cwd);
-
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-          + "child.", 2, comparePairs.size());
-
-      // check the parent that it does not contain BLOCKSIZE_MISMATCH
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.VERSIONID_MISMATCH);
-
-      // check the child that there's a BLOCKSIZE_MISMATCH
-      final S3GuardFsck.ComparePair childPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(file))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", childPair);
-      assertTrue("The childPair must contain a violation.",
-          childPair.containsViolation());
-      Assertions.assertThat(childPair.getViolations())
-          .describedAs("Violations in the childPair")
-          .contains(S3GuardFsck.Violation.VERSIONID_MISMATCH);
     } finally {
       // delete the working directory with all of its contents
       rawFS.delete(cwd, true);
@@ -615,17 +534,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be two. The cwd (parent) and the "
-          + "child.", 2, comparePairs.size());
-
-      // check the parent that it does not contain BLOCKSIZE_MISMATCH
-      final S3GuardFsck.ComparePair cwdPair = comparePairs.stream()
-          .filter(p -> p.getPath().equals(cwd))
-          .findFirst().get();
-      assertNotNull("The pair should not be null.", cwdPair);
-      Assertions.assertThat(cwdPair.getViolations())
-          .describedAs("Violations in the cwdPair")
-          .doesNotContain(S3GuardFsck.Violation.ETAG_MISMATCH);
+      assertComparePairsSize(comparePairs, 1);
 
       // check the child that there's a BLOCKSIZE_MISMATCH
       final S3GuardFsck.ComparePair childPair = comparePairs.stream()
@@ -672,8 +581,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertEquals("Number of pairs should be 3. The cwd (parent) and the "
-          + "2 children.", 3, comparePairs.size());
+      assertComparePairsSize(comparePairs, 2);
 
       // check file 1 that there's NO_ETAG
       final S3GuardFsck.ComparePair file1Pair = comparePairs.stream()
@@ -703,5 +611,10 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     }
   }
 
-
+  protected void assertComparePairsSize(
+      List<S3GuardFsck.ComparePair> comparePairs, int num) {
+    Assertions.assertThat(comparePairs.size())
+        .describedAs("Number of compare pairs")
+        .isEqualTo(num);
+  }
 }
