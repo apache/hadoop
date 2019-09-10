@@ -60,6 +60,8 @@ public class S3GuardFsck {
   private final S3AFileSystem rawFS;
   private final DynamoDBMetadataStore metadataStore;
 
+  private final long MOD_TIME_RANGE = 2000L;
+
   /**
    * Creates an S3GuardFsck.
    * @param fs the filesystem to compare to
@@ -239,12 +241,10 @@ public class S3GuardFsck {
 
     if (msPathMetadata != null) {
       LOG.info("Path: {} - Length S3: {}, MS: {} " +
-              "- Etag S3: {}, MS: {} " +
-              "- VersionId: S3: {}, MS: {}",
+              "- Etag S3: {}, MS: {} ",
           path,
           s3FileStatus.getLen(), msPathMetadata.getFileStatus().getLen(),
-          s3FileStatus.getETag(), msPathMetadata.getFileStatus().getETag(),
-          s3FileStatus.getVersionId(), msPathMetadata.getFileStatus().getVersionId());
+          s3FileStatus.getETag(), msPathMetadata.getFileStatus().getETag());
     } else {
       LOG.info("Path: {} - Length S3: {} - Etag S3: {}, no record in MS.",
               path, s3FileStatus.getLen(), s3FileStatus.getETag());
@@ -289,8 +289,11 @@ public class S3GuardFsck {
       comparePair.violations.add(Violation.LENGTH_MISMATCH);
     }
 
-    if (s3FileStatus.getModificationTime() !=
-        msFileStatus.getModificationTime()) {
+    // ModTime should be in the accuracy range defined.
+    long modTimeDiff = Math.abs(
+        s3FileStatus.getModificationTime() - msFileStatus.getModificationTime()
+    );
+    if (modTimeDiff > MOD_TIME_RANGE) {
       comparePair.violations.add(Violation.MOD_TIME_MISMATCH);
     }
 

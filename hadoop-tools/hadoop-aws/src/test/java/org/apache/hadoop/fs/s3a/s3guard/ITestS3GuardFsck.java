@@ -332,16 +332,17 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     try {
       // create a file with guarded fs
       touchGuardedAndWaitRaw(file);
+      // modify the parent meta entry so the MOD_TIME will surely be up to date
+      final FileStatus oldCwdFileStatus = rawFs.getFileStatus(cwd);
+      final S3AFileStatus newCwdFileStatus = MetadataStoreTestBase
+          .basicFileStatus(cwd, 0, true,
+              oldCwdFileStatus.getModificationTime());
+      metadataStore.put(new PathMetadata(newCwdFileStatus));
+
       // modify the file metadata so the length will not match
       final S3AFileStatus newFileStatus = MetadataStoreTestBase
           .basicFileStatus(file, 0, false, 1);
       metadataStore.put(new PathMetadata(newFileStatus));
-      // modify the parent meta entry so the MOD_TIME will surely be up to date
-      final FileStatus oldCwdFileStatus = rawFs.getFileStatus(cwd);
-      final S3AFileStatus newCwdFileStatus = MetadataStoreTestBase
-          .basicFileStatus(file, 0, true,
-              oldCwdFileStatus.getModificationTime());
-      metadataStore.put(new PathMetadata(newCwdFileStatus));
 
       final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
       final List<S3GuardFsck.ComparePair> comparePairs =
