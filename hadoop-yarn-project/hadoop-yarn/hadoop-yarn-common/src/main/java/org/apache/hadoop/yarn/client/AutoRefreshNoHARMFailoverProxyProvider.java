@@ -48,10 +48,6 @@ public class AutoRefreshNoHARMFailoverProxyProvider<T>
     this.conf = new YarnConfiguration(configuration);
   }
 
-  /**
-   * Create or get the proxy from RMProxy.
-   * @return
-   */
   @Override
   public synchronized ProxyInfo<T> getProxy() {
     if (proxy == null) {

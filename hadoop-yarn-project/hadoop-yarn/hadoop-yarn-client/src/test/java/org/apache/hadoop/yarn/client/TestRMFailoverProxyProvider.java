@@ -38,7 +38,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Random;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
@@ -76,11 +76,11 @@ public class TestRMFailoverProxyProvider {
 
         //Adjusting the YARN Conf
         conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
-	
+
         // Create two proxies and mock a RMProxy
         Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
         Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
- 
+
         Class protocol = ApplicationClientProtocol.class;
         RMProxy mockRMProxy = mock(RMProxy.class);
         ConfiguredRMFailoverProxyProvider<RMProxy> fpp =
@@ -180,7 +180,7 @@ public class TestRMFailoverProxyProvider {
                         eq(mockAdd1));
         verify(mockRMProxy, times(1))
                 .getProxy(any(YarnConfiguration.class), any(Class.class),
-                        eq(mockAdd2));    
+                        eq(mockAdd2));
     }
 
     /**
@@ -206,7 +206,7 @@ public class TestRMFailoverProxyProvider {
         //Adjusting the YARN Conf
         conf.set(YarnConfiguration.RM_HA_ENABLED, "true");
         conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
-	
+
         // Create three proxies and mock a RMProxy
         Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
         Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
@@ -216,7 +216,7 @@ public class TestRMFailoverProxyProvider {
         AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
                 new AutoRefreshRMFailoverProxyProvider<RMProxy>();
 
-        // generate two address with different random port.        
+        // generate two address with different random port.
         Random rand = new Random();
         int port1 = rand.nextInt(65535);
         int port2 = rand.nextInt(65535);
