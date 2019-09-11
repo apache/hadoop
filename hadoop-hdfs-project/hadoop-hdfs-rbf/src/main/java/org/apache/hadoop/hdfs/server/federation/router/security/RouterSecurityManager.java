@@ -51,13 +51,16 @@ public class RouterSecurityManager {
   private AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
       dtSecretManager = null;
 
-  public RouterSecurityManager(Configuration conf) {
+  public RouterSecurityManager(Configuration conf) throws IOException {
     AuthenticationMethod authMethodConfigured =
         SecurityUtil.getAuthenticationMethod(conf);
     AuthenticationMethod authMethodToInit =
         AuthenticationMethod.KERBEROS;
     if (authMethodConfigured.equals(authMethodToInit)) {
       this.dtSecretManager = FederationUtil.newSecretManager(conf);
+      if (this.dtSecretManager == null) {
+        throw new IOException("Failed to create SecretManager");
+      }
     }
   }
 
