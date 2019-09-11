@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,11 +41,9 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
-import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -73,9 +70,6 @@ public class TestContainerReplication {
     OzoneConfiguration conf = newOzoneConfiguration();
 
     long containerId = 1L;
-
-    conf.setSocketAddr("hdls.datanode.http-address",
-        new InetSocketAddress("0.0.0.0", 0));
 
     MiniOzoneCluster cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
@@ -107,9 +101,6 @@ public class TestContainerReplication {
     ContainerCommandRequestProto putBlockRequest = ContainerTestHelper
         .getPutBlockRequest(sourcePipelines, requestProto.getWriteChunk());
 
-    ContainerProtos.BlockData blockData =
-        putBlockRequest.getPutBlock().getBlockData();
-
     ContainerCommandResponseProto response =
         client.sendCommand(putBlockRequest);
 
@@ -121,11 +112,11 @@ public class TestContainerReplication {
             cluster.getHddsDatanodes());
 
     // Close the container
-    cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(
-            sourceDatanodes.get(0).getUuid(),
-            new CloseContainerCommand(containerId,
-                sourcePipelines.getId(), true));
+    ContainerCommandRequestProto closeContainerRequest = ContainerTestHelper
+        .getCloseContainer(sourcePipelines, containerId);
+    response = client.sendCommand(closeContainerRequest);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
 
     //WHEN: send the order to replicate the container
     cluster.getStorageContainerManager().getScmNodeManager()
@@ -144,8 +135,6 @@ public class TestContainerReplication {
     OzoneContainer ozoneContainer =
         destinationDatanodeDatanodeStateMachine.getContainer();
 
-
-
     Container container =
         ozoneContainer
             .getContainerSet().getContainer(containerId);
@@ -158,9 +147,6 @@ public class TestContainerReplication {
         "ContainerData of the replicated container is null",
         container.getContainerData());
 
-    long keyCount = ((KeyValueContainerData) container.getContainerData())
-        .getKeyCount();
-
     KeyValueHandler handler = (KeyValueHandler) ozoneContainer.getDispatcher()
         .getHandler(ContainerType.KeyValueContainer);
 
@@ -171,7 +157,6 @@ public class TestContainerReplication {
     Assert.assertEquals(1, key.getChunks().size());
     Assert.assertEquals(requestProto.getWriteChunk().getChunkData(),
         key.getChunks().get(0));
-
   }
 
   private HddsDatanodeService chooseDatanodeWithoutContainer(Pipeline pipeline,
@@ -185,9 +170,8 @@ public class TestContainerReplication {
         "No datanode outside of the pipeline");
   }
 
-  static OzoneConfiguration newOzoneConfiguration() {
-    final OzoneConfiguration conf = new OzoneConfiguration();
-    return conf;
+  private static OzoneConfiguration newOzoneConfiguration() {
+    return new OzoneConfiguration();
   }
 
 }
