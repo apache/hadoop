@@ -108,13 +108,7 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
-    OzoneConfiguration conf;
-    if (hadoopConf instanceof OzoneConfiguration) {
-      conf = (OzoneConfiguration) hadoopConf;
-    } else {
-      conf = new OzoneConfiguration(hadoopConf);
-    }
-
+    OzoneConfiguration conf = OzoneConfiguration.of(hadoopConf);
     SecurityConfig secConfig = new SecurityConfig(conf);
 
     if (secConfig.isSecurityEnabled()) {
