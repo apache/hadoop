@@ -61,7 +61,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
  * Tests delete key operation with a slow follower in the datanode
  * pipeline.
  */
-public class TestContainerReplication {
+public class TestContainerReplicationEndToEnd {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
