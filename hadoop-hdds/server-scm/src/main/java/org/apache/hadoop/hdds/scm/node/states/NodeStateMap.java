@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * Maintains the state of datanodes in SCM. This class should only be used by
@@ -398,24 +399,17 @@ public class NodeStateMap {
     if (opState == null && health == null) {
       return getAllDatanodeInfos();
     }
-    ArrayList<DatanodeInfo> nodes = new ArrayList<>();
     try {
       lock.readLock().lock();
-      // If we get here, then at least one of the params must be null
-      for(DatanodeInfo dn : nodeMap.values()) {
-        if (opState != null
-            && dn.getNodeStatus().getOperationalState() != opState) {
-          continue;
-        }
-        if (health != null && dn.getNodeStatus().getHealth() != health) {
-          continue;
-        }
-        nodes.add(dn);
-      }
+      return nodeMap.values().stream()
+          .filter(n -> opState == null
+              || n.getNodeStatus().getOperationalState() == opState)
+          .filter(n -> health == null
+              || n.getNodeStatus().getHealth() == health)
+          .collect(Collectors.toList());
     } finally {
       lock.readLock().unlock();
     }
-    return nodes;
   }
 
   /**
@@ -425,16 +419,12 @@ public class NodeStateMap {
    * @return List of DatanodeInfo objects matching the passed state
    */
   private List<DatanodeInfo> filterNodes(NodeStatus status) {
-    ArrayList<DatanodeInfo> nodes = new ArrayList<>();
     try {
       lock.readLock().lock();
-      for(DatanodeInfo dn : nodeMap.values()) {
-        if (dn.getNodeStatus().equals(status)) {
-          nodes.add(dn);
-        }
-      }
-      return nodes;
-    } finally {
+      return nodeMap.values().stream()
+          .filter(n -> n.getNodeStatus().equals(status))
+          .collect(Collectors.toList());
+    }  finally {
       lock.readLock().unlock();
     }
   }
