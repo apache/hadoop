@@ -32,7 +32,7 @@ import java.net.InetSocketAddress;
  * An implementation of {@link RMFailoverProxyProvider} which does nothing in the
  * event of failover, and always returns the same proxy object.
  * This is the default non-HA RM Failover proxy provider. It is used to replace
- * {@link DefaultFailoveProxyProvider} which was used as Yarn default non-HA.
+ * {@link DefaultFailoverProxyProvider} which was used as Yarn default non-HA.
  */
 public class DefaultNoHARMFailoverProxyProvider<T>
     implements RMFailoverProxyProvider<T> {
@@ -53,10 +53,10 @@ public class DefaultNoHARMFailoverProxyProvider<T>
       Class<T> protocol) {
     this.protocol = protocol;
     try {
-      InetSocketAddress rmAddress =
-          proxy.getRMAddress((YarnConfiguration) conf, protocol);
-      LOG.info("Connecting to ResourceManager at " + rmAddress);
       YarnConfiguration yarnConf = new YarnConfiguration(conf);
+      InetSocketAddress rmAddress =
+          proxy.getRMAddress(yarnConf, protocol);
+      LOG.info("Connecting to ResourceManager at " + rmAddress);
       this.proxy = proxy.getProxy(yarnConf, protocol, rmAddress);
     } catch (IOException ioe) {
       LOG.error("Unable to create proxy to the ResourceManager ", ioe);
