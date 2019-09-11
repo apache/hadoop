@@ -156,8 +156,11 @@ public class RpcClient implements ClientProtocol {
     this.userRights = aclConfig.getUserDefaultRights();
     this.groupRights = aclConfig.getGroupDefaultRights();
 
-    this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        this.conf, clientId.toString(), ugi);
+    this.ozoneManagerClient = TracingUtil.createProxy(
+        new OzoneManagerProtocolClientSideTranslatorPB(
+            this.conf, clientId.toString(), ugi),
+        OzoneManagerProtocol.class, conf
+    );
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();

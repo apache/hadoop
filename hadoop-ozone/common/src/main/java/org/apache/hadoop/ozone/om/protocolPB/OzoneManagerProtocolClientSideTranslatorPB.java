@@ -207,10 +207,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY,
         OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT);
 
-    this.rpcProxy = TracingUtil.createProxy(
+    this.rpcProxy =
         createRetryProxy(omFailoverProxyProvider, maxRetries, maxFailovers,
-            sleepBase, sleepMax),
-        OzoneManagerProtocolPB.class, conf);
+            sleepBase, sleepMax);
     this.clientID = clientId;
   }
 
