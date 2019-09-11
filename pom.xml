@@ -400,6 +400,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>.gitattributes</exclude>
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
+            <exclude>.github/pull_request_template.md</exclude>
             <exclude>.idea/**</exclude>
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
