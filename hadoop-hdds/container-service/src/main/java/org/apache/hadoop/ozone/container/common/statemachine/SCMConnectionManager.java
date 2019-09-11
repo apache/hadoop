@@ -18,6 +18,8 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -38,6 +40,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -139,10 +142,14 @@ public class SCMConnectionManager
       long version =
           RPC.getProtocolVersion(StorageContainerDatanodeProtocolPB.class);
 
-      StorageContainerDatanodeProtocolPB rpcProxy = RPC.getProxy(
+      RetryPolicy retryPolicy =
+          RetryPolicies.retryForeverWithFixedSleep(
+              1000, TimeUnit.MILLISECONDS);
+      StorageContainerDatanodeProtocolPB rpcProxy = RPC.getProtocolProxy(
           StorageContainerDatanodeProtocolPB.class, version,
           address, UserGroupInformation.getCurrentUser(), conf,
-          NetUtils.getDefaultSocketFactory(conf), getRpcTimeout());
+          NetUtils.getDefaultSocketFactory(conf), getRpcTimeout(),
+          retryPolicy).getProxy();
 
       StorageContainerDatanodeProtocolClientSideTranslatorPB rpcClient =
           new StorageContainerDatanodeProtocolClientSideTranslatorPB(rpcProxy);
