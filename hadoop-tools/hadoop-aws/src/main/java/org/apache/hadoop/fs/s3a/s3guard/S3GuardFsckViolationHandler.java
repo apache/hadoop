@@ -332,7 +332,7 @@ public class S3GuardFsckViolationHandler {
    * The violation handler when there's a tombstoned entry in the ms is
    * present, but the object is not deleted in S3.
    */
-  public class TombstonedInMsNotDeletedInS3 extends ViolationHandler {
+  public static class TombstonedInMsNotDeletedInS3 extends ViolationHandler {
 
     public TombstonedInMsNotDeletedInS3(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);

@@ -191,7 +191,6 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final List<S3GuardFsck.ComparePair> comparePairs =
           s3GuardFsck.compareS3ToMs(cwd);
 
-      assertComparePairsSize(comparePairs, 1);
       // check the child that the parent is tombstoned
       checkForViolationInPairs(file, comparePairs,
           S3GuardFsck.Violation.PARENT_TOMBSTONED);
@@ -447,9 +446,9 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
   protected void assertComparePairsSize(
       List<S3GuardFsck.ComparePair> comparePairs, int num) {
-    Assertions.assertThat(comparePairs.size())
+    Assertions.assertThat(comparePairs)
         .describedAs("Number of compare pairs")
-        .isEqualTo(num);
+        .hasSize(num);
   }
 
   private void touchGuardedAndWaitRaw(Path file) throws Exception {
