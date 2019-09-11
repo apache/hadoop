@@ -30,6 +30,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,7 +61,11 @@ import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
  * a source and resolved target.  Sources are resolved as children of
  * a destination directory.
  */
-abstract class CommandWithDestination extends FsCommand {  
+abstract class CommandWithDestination extends FsCommand {
+
+  protected static final Logger LOG = LoggerFactory.getLogger(
+      CommandWithDestination.class);
+
   protected PathData dst;
   private boolean overwrite = false;
   private boolean verifyChecksum = true;
@@ -220,6 +227,7 @@ abstract class CommandWithDestination extends FsCommand {
       }
     } else if (dst.exists) {
       if (!dst.stat.isDirectory() && !overwrite) {
+        LOG.debug("Destination file exists: {}", dst.stat);
         throw new PathExistsException(dst.toString());
       }
     } else if (!dst.parentExists()) {
@@ -407,6 +415,7 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.setWriteChecksum(writeChecksum);
       targetFs.writeStreamToFile(in, tempTarget, lazyPersist, direct);
       if (!direct) {
+        targetFs.deleteOnExit(tempTarget.path);
         targetFs.rename(tempTarget, target);
       }
     } finally {
@@ -484,6 +493,15 @@ abstract class CommandWithDestination extends FsCommand {
       try {
         out = create(target, lazyPersist, direct);
         IOUtils.copyBytes(in, out, getConf(), true);
+      } catch (IOException e) {
+        // failure: clean up if we got as far as creating the file
+        if (!direct && out != null) {
+          try {
+            fs.delete(target.path, false);
+          } catch (IOException ignored) {
+          }
+        }
+        throw e;
       } finally {
         IOUtils.closeStream(out); // just in case copyBytes didn't
       }
@@ -493,37 +511,31 @@ abstract class CommandWithDestination extends FsCommand {
     FSDataOutputStream create(PathData item, boolean lazyPersist,
         boolean direct)
         throws IOException {
-      try {
-        if (lazyPersist) {
-          long defaultBlockSize;
-          try {
-            defaultBlockSize = getDefaultBlockSize();
-          } catch (NotInMountpointException ex) {
-            // ViewFileSystem#getDefaultBlockSize() throws an exception as it
-            // needs a target FS to retrive the default block size from.
-            // Hence, for ViewFs, we should call getDefaultBlockSize with the
-            // target path.
-            defaultBlockSize = getDefaultBlockSize(item.path);
-          }
+      if (lazyPersist) {
+        long defaultBlockSize;
+        try {
+          defaultBlockSize = getDefaultBlockSize();
+        } catch (NotInMountpointException ex) {
+          // ViewFileSystem#getDefaultBlockSize() throws an exception as it
+          // needs a target FS to retrive the default block size from.
+          // Hence, for ViewFs, we should call getDefaultBlockSize with the
+          // target path.
+          defaultBlockSize = getDefaultBlockSize(item.path);
+        }
 
-          EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE, LAZY_PERSIST);
-          return create(item.path,
-                        FsPermission.getFileDefault().applyUMask(
-                            FsPermission.getUMask(getConf())),
-                        createFlags,
-                        getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-                            IO_FILE_BUFFER_SIZE_DEFAULT),
-                        (short) 1,
-                        defaultBlockSize,
-                        null,
-                        null);
-        } else {
-          return create(item.path, true);
-        }
-      } finally { // might have been created but stream was interrupted
-        if (!direct) {
-          deleteOnExit(item.path);
-        }
+        EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE, LAZY_PERSIST);
+        return create(item.path,
+                      FsPermission.getFileDefault().applyUMask(
+                          FsPermission.getUMask(getConf())),
+                      createFlags,
+                      getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                          IO_FILE_BUFFER_SIZE_DEFAULT),
+                      (short) 1,
+                      defaultBlockSize,
+                      null,
+                      null);
+      } else {
+        return create(item.path, true);
       }
     }
 

@@ -761,4 +761,32 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
+      "fs.s3a.s3guard.consistency.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
+
+  /**
+   * Initial retry interval: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
+      "fs.s3a.s3guard.consistency.retry.interval";
+
+  /**
+   * Default initial retry interval: {@value}.
+   * The consistency retry probe uses exponential backoff, because
+   * each probe can cause the S3 load balancers to retain any 404 in
+   * its cache for longer. See HADOOP-16490.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
+      "2s";
+
 }
