@@ -83,4 +83,6 @@ public final class InternalConstants {
               Arrays.asList(Constants.INPUT_FADVISE,
                   Constants.READAHEAD_RANGE)));
 
+  /** 404 error code. */
+  public static final int SC_404 = 404;
 }

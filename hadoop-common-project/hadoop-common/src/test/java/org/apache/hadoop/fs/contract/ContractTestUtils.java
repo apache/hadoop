@@ -558,7 +558,8 @@ public class ContractTestUtils extends Assert {
    */
   public static void assertIsDirectory(FileSystem fs,
                                        Path path) throws IOException {
-    FileStatus fileStatus = fs.getFileStatus(path);
+    FileStatus fileStatus = verifyPathExists(fs,
+        "Expected to find a directory", path);
     assertIsDirectory(fileStatus);
   }
 
