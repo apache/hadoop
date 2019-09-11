@@ -23,11 +23,13 @@ import java.util.EnumSet;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.rules.Timeout;
 
 import static org.apache.hadoop.fs.CreateFlag.*;
 import static org.junit.Assert.*;
@@ -36,6 +38,46 @@ import static org.junit.Assert.*;
  * This class tests the functionality of ChecksumFs.
  */
 public class TestChecksumFs {
+  /**
+   * System property name to set the test timeout: {@value}.
+   */
+  public static final String PROPERTY_TEST_DEFAULT_TIMEOUT =
+      "test.default.timeout";
+
+  /**
+   * The default timeout (in milliseconds) if the system property
+   * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}
+   * is not set: {@value}.
+   */
+  public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100000;
+
+  /**
+   * The JUnit rule that sets the default timeout for tests.
+   */
+  @Rule
+  public Timeout defaultTimeout = retrieveTestTimeout();
+
+  /**
+   * Retrieve the test timeout from the system property
+   * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}, falling back to
+   * the value in {@link #TEST_DEFAULT_TIMEOUT_VALUE} if the
+   * property is not defined.
+   * @return the recommended timeout for tests
+   */
+  private static Timeout retrieveTestTimeout() {
+    String propval = System.getProperty(PROPERTY_TEST_DEFAULT_TIMEOUT,
+        Integer.toString(
+            TEST_DEFAULT_TIMEOUT_VALUE));
+    int millis;
+    try {
+      millis = Integer.parseInt(propval);
+    } catch (NumberFormatException e) {
+      //fall back to the default value, as the property cannot be parsed
+      millis = TEST_DEFAULT_TIMEOUT_VALUE;
+    }
+    return new Timeout(millis);
+  }
+
   private Configuration conf;
   private Path testRootDirPath;
   private FileContext fc;
