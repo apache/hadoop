@@ -197,7 +197,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
     <maven-pdf-plugin.version>1.2</maven-pdf-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
+    <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
+    <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
+    <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
     <build-helper-maven-plugin.version>1.9</build-helper-maven-plugin.version>
+    <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
@@ -1661,6 +1665,41 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <artifactId>hadoop-maven-plugins</artifactId>
           <version>${hadoop.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${maven-dependency-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>${maven-enforcer-plugin.version}</version>
+          <configuration>
+            <rules>
+              <requireMavenVersion>
+                <version>[3.0.2,)</version>
+              </requireMavenVersion>
+              <requireJavaVersion>
+                <version>[1.8,)</version>
+              </requireJavaVersion>
+            </rules>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${maven-deploy-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <version>${apache-rat-plugin.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -1804,52 +1843,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <outputDirectory>${project.reporting.outputDirectory}</outputDirectory>
           <includeReports>false</includeReports>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>depcheck</id>
-            <configuration>
-              <rules>
-                <DependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions>
-                </DependencyConvergence>
-                <bannedDependencies>
-                  <excludes>
-                    <exclude>cglib:cglib:</exclude>
-                    <exclude>com.sun.jersey:*</exclude>
-                    <exclude>com.sun.jersey.contribs:*</exclude>
-                    <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
-                    <exclude>com.google.inject:guice</exclude>
-                    <exclude>org.ow2.asm:asm</exclude>
-                  </excludes>
-                  <includes>
-                    <!-- for JDK 8 support -->
-                    <include>cglib:cglib:3.2.0</include>
-                    <include>com.google.inject:guice:4.0</include>
-                    <include>com.sun.jersey:jersey-core:1.19</include>
-                    <include>com.sun.jersey:jersey-servlet:1.19</include>
-                    <include>com.sun.jersey:jersey-json:1.19</include>
-                    <include>com.sun.jersey:jersey-server:1.19</include>
-                    <include>com.sun.jersey:jersey-client:1.19</include>
-                    <include>com.sun.jersey:jersey-grizzly2:1.19</include>
-                    <include>com.sun.jersey:jersey-grizzly2-servlet:1.19</include>
-                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-core:1.19</include>
-                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-grizzly2:1.19</include>
-                    <include>com.sun.jersey.contribs:jersey-guice:1.19</include>
-                    <include>org.ow2.asm:asm:5.0.0</include>
-                  </includes>
-                </bannedDependencies>
-              </rules>
-            </configuration>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>verify</phase>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
