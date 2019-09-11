@@ -259,7 +259,7 @@ public class S3GuardFsckViolationHandler {
     }
 
     @Override public String getError() {
-      return String.format("File length mismatch - s3: %s, ms: %s",
+      return String.format("File length mismatch - S3: %s, MS: %s",
           getS3FileStatus().getLen(), getMsFileStatus().getLen());
     }
   }
@@ -275,14 +275,14 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return String.format("File timestamp mismatch - s3: %s, ms: %s",
+      return String.format("File timestamp mismatch - S3: %s, MS: %s",
           getS3FileStatus().getModificationTime(),
           getMsFileStatus().getModificationTime());
     }
   }
 
   /**
-   * The violation handler when there's a version id mismatch
+   * The violation handler when there's a version id mismatch.
    */
   public static class VersionIdMismatch extends ViolationHandler {
 
@@ -292,7 +292,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return String.format("getVersionId mismatch - s3: %s, ms: %s",
+      return String.format("getVersionId mismatch - S3: %s, MS: %s",
           getS3FileStatus().getVersionId(), getMsFileStatus().getVersionId());
     }
   }
@@ -308,7 +308,7 @@ public class S3GuardFsckViolationHandler {
 
     @Override
     public String getError() {
-      return String.format("Etag mismatch - s3: %s, ms: %s",
+      return String.format("Etag mismatch - S3: %s, MS: %s",
         getS3FileStatus().getETag(), getMsFileStatus().getETag());
     }
   }
@@ -325,6 +325,22 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "No etag.";
+    }
+  }
+
+  /**
+   * The violation handler when there's a tombstoned entry in the ms is
+   * present, but the object is not deleted in S3.
+   */
+  public class TombstonedInMsNotDeletedInS3 extends ViolationHandler {
+
+    public TombstonedInMsNotDeletedInS3(S3GuardFsck.ComparePair comparePair) {
+      super(comparePair);
+    }
+
+    @Override
+    public String getError() {
+      return "The entry for the path is tombstoned in the MS.";
     }
   }
 }

@@ -418,6 +418,33 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testTombstonedInMsNotDeletedInS3() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path file = new Path(cwd, "file");
+    try {
+      // create a file with guarded fs
+      touchGuardedAndWaitRaw(file);
+      // set isDeleted flag in ms to true (tombstone item)
+      final PathMetadata fileMeta = metadataStore.get(file);
+      fileMeta.setIsDeleted(true);
+      metadataStore.put(fileMeta);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.compareS3ToMs(cwd);
+
+      assertComparePairsSize(comparePairs, 1);
+
+      // check fil1 that there's the violation
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.TOMBSTONED_IN_MS_NOT_DELETED_IN_S3);
+      // check the child that there's no NO_ETAG violation
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
   protected void assertComparePairsSize(
       List<S3GuardFsck.ComparePair> comparePairs, int num) {
     Assertions.assertThat(comparePairs.size())

@@ -60,7 +60,7 @@ public class S3GuardFsck {
   private final S3AFileSystem rawFS;
   private final DynamoDBMetadataStore metadataStore;
 
-  private final long MOD_TIME_RANGE = 2000L;
+  private static final long MOD_TIME_RANGE = 2000L;
 
   /**
    * Creates an S3GuardFsck.
@@ -270,16 +270,23 @@ public class S3GuardFsck {
       LOG.debug("Entry is in the root directory, so there's no parent");
     }
 
+    // If the msPathMetadata is null, we RETURN because
+    // there is no metadata compare with
     if (msPathMetadata == null) {
       comparePair.violations.add(Violation.NO_METADATA_ENTRY);
       return comparePair;
     }
+
     final S3AFileStatus msFileStatus = msPathMetadata.getFileStatus();
     if (s3FileStatus.isDirectory() && !msFileStatus.isDirectory()) {
       comparePair.violations.add(Violation.DIR_IN_S3_FILE_IN_MS);
     }
     if (!s3FileStatus.isDirectory() && msFileStatus.isDirectory()) {
       comparePair.violations.add(Violation.FILE_IN_S3_DIR_IN_MS);
+    }
+
+    if(msPathMetadata.isDeleted()) {
+      comparePair.violations.add(Violation.TOMBSTONED_IN_MS_NOT_DELETED_IN_S3);
     }
 
     /**
@@ -428,6 +435,11 @@ public class S3GuardFsck {
         S3GuardFsckViolationHandler.FileInS3DirInMs.class),
     AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1,
         S3GuardFsckViolationHandler.AuthDirContentMismatch.class),
+    /**
+     * An entry in the MS is tombstoned, but the object is not deleted on S3
+     */
+    TOMBSTONED_IN_MS_NOT_DELETED_IN_S3(0,
+        S3GuardFsckViolationHandler.TombstonedInMsNotDeletedInS3.class),
     /**
      * Attribute mismatch.
      */
