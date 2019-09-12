@@ -61,6 +61,11 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.PROBE_INTERVAL_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.STABILIZATION_TIME;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.TIMESTAMP_SLEEP;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitDeletedFileDisappearance;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitFileStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
@@ -114,12 +119,6 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(Parameterized.class)
 public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
-
-  public static final int TIMESTAMP_SLEEP = 2000;
-
-  public static final int STABILIZATION_TIME = 20_000;
-
-  public static final int PROBE_INTERVAL_MILLIS = 2500;
 
   private S3AFileSystem guardedFs;
   private S3AFileSystem rawFS;
