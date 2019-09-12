@@ -236,9 +236,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         if (container2BCSIDMap != null) {
           // adds this container to list of containers created in the pipeline
           // with initial BCSID recorded as 0.
-          Preconditions
-              .checkArgument(!container2BCSIDMap.containsKey(containerID));
-          container2BCSIDMap.put(containerID, Long.valueOf(0));
+          container2BCSIDMap.putIfAbsent(containerID, Long.valueOf(0));
         }
         container = getContainer(containerID);
       }

@@ -435,13 +435,18 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
             .setContainer2BCSIDMap(container2BCSIDMap)
             .build();
+    CompletableFuture<Message> raftFuture = new CompletableFuture<>();
     // ensure the write chunk happens asynchronously in writeChunkExecutor pool
     // thread.
     CompletableFuture<ContainerCommandResponseProto> writeChunkFuture =
-        CompletableFuture.supplyAsync(() ->
-            runCommand(requestProto, context), chunkExecutor);
-
-    CompletableFuture<Message> raftFuture = new CompletableFuture<>();
+        CompletableFuture.supplyAsync(() -> {
+          try {
+            return runCommand(requestProto, context);
+          } catch (Exception e) {
+            e.printStackTrace();
+            raftFuture.completeExceptionally(e);
+            throw e;
+          }}, chunkExecutor);
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +
@@ -706,9 +711,15 @@ public class ContainerStateMachine extends BaseStateMachine {
       // Ensure the command gets executed in a separate thread than
       // stateMachineUpdater thread which is calling applyTransaction here.
       CompletableFuture<ContainerCommandResponseProto> future =
-          CompletableFuture.supplyAsync(
-              () -> runCommand(requestProto, builder.build()),
-              getCommandExecutor(requestProto));
+          CompletableFuture.supplyAsync(() -> {
+            try {
+              return runCommand(requestProto, builder.build());
+            } catch (Exception e) {
+              e.printStackTrace();
+              applyTransactionFuture.completeExceptionally(e);
+              throw e;
+            }
+          }, getCommandExecutor(requestProto));
       future.thenApply(r -> {
         if (trx.getServerRole() == RaftPeerRole.LEADER) {
           long startTime = (long) trx.getStateMachineContext();
