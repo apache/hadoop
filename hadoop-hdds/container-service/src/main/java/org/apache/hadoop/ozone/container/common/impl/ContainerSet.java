@@ -240,14 +240,46 @@ public class ContainerSet {
   }
 
   /**
-   * Builds the missing container set by taking a diff total no containers
-   * actually found and number of containers which actually got created.
+   * Builds the missing container set by taking a diff between total no
+   * containers actually found and number of containers which actually
+   * got created. It also validates the BCSID stored in the snapshot file
+   * for each container as against what is reported in containerScan.
    * This will only be called during the initialization of Datanode Service
    * when  it still not a part of any write Pipeline.
-   * @param createdContainerSet ContainerId set persisted in the Ratis snapshot
+   * @param container2BCSIDMap Map of containerId to BCSID persisted in the
+   *                           Ratis snapshot
    */
-  public void buildMissingContainerSet(Set<Long> createdContainerSet) {
-    missingContainerSet.addAll(createdContainerSet);
-    missingContainerSet.removeAll(containerMap.keySet());
+  public void buildMissingContainerSetAndValidate(
+      Map<Long, Long> container2BCSIDMap) {
+    container2BCSIDMap.entrySet().parallelStream().forEach((mapEntry) -> {
+      long id = mapEntry.getKey();
+      if (!containerMap.containsKey(id)) {
+        LOG.warn("Adding container {} to missing container set.", id);
+        missingContainerSet.add(id);
+      } else {
+        Container container = containerMap.get(id);
+        long containerBCSID = container.getBlockCommitSequenceId();
+        long snapshotBCSID = mapEntry.getValue();
+        if (containerBCSID < snapshotBCSID) {
+          LOG.warn(
+              "Marking container {} unhealthy as reported BCSID {} is smaller"
+                  + " than ratis snapshot recorded value {}", id,
+              containerBCSID, snapshotBCSID);
+          // just mark the container unhealthy. Once the DatanodeStateMachine
+          // thread starts it will send container report to SCM where these
+          // unhealthy containers would be detected
+          try {
+            container.markContainerUnhealthy();
+          } catch (StorageContainerException sce) {
+            // The container will still be marked unhealthy in memory even if
+            // exception occurs. It won't accept any new transactions and will
+            // be handled by SCM. Eve if dn restarts, it will still be detected
+            // as unheathy as its BCSID won't change.
+            LOG.error("Unable to persist unhealthy state for container {}", id);
+          }
+        }
+      }
+    });
+
   }
 }

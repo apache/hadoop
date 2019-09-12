@@ -1663,7 +1663,7 @@
   <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests.
+    excluding throttling requests and S3Guard inconsistency resolution.
   </description>
 </property>
 
@@ -1672,7 +1672,7 @@
   <value>500ms</value>
   <description>
     Initial retry interval when retrying operations for any reason other
-    than S3 throttle errors.
+    than S3 throttle errors and S3Guard inconsistency resolution.
   </description>
 </property>
 
@@ -1689,6 +1689,27 @@
   <value>1000ms</value>
   <description>
     Interval between retry attempts on throttled requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry attempts to read/open/copy files when
+    S3Guard believes a specific version of the file to be available,
+    but the S3 request does not find any version of a file, or a different
+    version.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.interval</name>
+  <value>2s</value>
+  <description>
+    Initial interval between attempts to retry operations while waiting for S3
+    to become consistent with the S3Guard data.
+    An exponential back-off is used here: every failure doubles the delay.
   </description>
 </property>
 
@@ -2703,9 +2724,9 @@
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1.1,TLSv1.2</value>
+  <value>TLSv1.2</value>
   <description>
-    The supported SSL protocols. The parameter will only used from
+    The supported SSL protocols. The parameter will only be used from
     DatanodeHttpServer.
   </description>
 </property>
@@ -3370,6 +3391,20 @@
     <description>
       Base timeout (in milliseconds) for HTTP requests from the ADL SDK. Values
       of zero or less cause the SDK default to be used instead.
+    </description>
+  </property>
+
+  <property>
+    <name>adl.ssl.channel.mode</name>
+    <value></value>
+    <description>
+      Valid inputs are OpenSSL, Default_JSE and Default (case insensitive).
+      If config is missing or is invalid, SSL Channel mode will be set to Default.
+
+      When OpenSSL, SSL socket connections are created in OpenSSL mode.
+      When Default_JSE, SSL socket connections are created in the default JSE mode.
+      When Default, SSL socket connections are attempted with OpenSSL
+      and will fallback to Default_JSE mode if OpenSSL is not available at runtime.
     </description>
   </property>
 

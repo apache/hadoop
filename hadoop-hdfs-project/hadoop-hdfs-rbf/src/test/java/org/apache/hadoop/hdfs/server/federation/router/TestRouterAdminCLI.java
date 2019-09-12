@@ -93,6 +93,7 @@ public class TestRouterAdminCLI {
         .metrics()
         .admin()
         .rpc()
+        .quota()
         .safemode()
         .build();
     cluster.addRouterOverrides(conf);
@@ -1207,6 +1208,55 @@ public class TestRouterAdminCLI {
     assertEquals(testOwner, mountTable.getOwnerName());
     assertEquals(testGroup, mountTable.getGroupName());
     assertEquals((short)0455, mountTable.getMode().toShort());
+  }
+
+  @Test
+  public void testUpdateReadonlyWithQuota() throws Exception {
+    // Add a mount table
+    String nsId = "ns0";
+    String src = "/test-updateReadonlywithQuota";
+    String dest = "/UpdateReadonlywithQuota";
+    String[] argv = new String[] {"-add", src, nsId, dest };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    RemoteLocation localDest = mountTable.getDestinations().get(0);
+    assertEquals(nsId, localDest.getNameserviceId());
+    assertEquals(dest, localDest.getDest());
+    assertFalse(mountTable.isReadOnly());
+
+    argv = new String[] {"-update", src, nsId, dest, "-readonly", "true" };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    assertTrue(mountTable.isReadOnly());
+
+    // Update Quota
+    long nsQuota = 50;
+    long ssQuota = 100;
+    argv = new String[] {"-setQuota", src, "-nsQuota", String.valueOf(nsQuota),
+        "-ssQuota", String.valueOf(ssQuota) };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    mountTable = getResponse.getEntries().get(0);
+    RouterQuotaUsage quota = mountTable.getQuota();
+    assertEquals(nsQuota, quota.getQuota());
+    assertEquals(ssQuota, quota.getSpaceQuota());
+    assertTrue(mountTable.isReadOnly());
   }
 
   @Test

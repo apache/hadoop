@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.collect.Sets;
+import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -52,8 +53,10 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 
 /**
  * Test for an MR Job with all the different committers.
@@ -112,6 +115,7 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
     String committerPath = "file:" + mockResultsFile;
     jobConf.set("mock-results-file", committerPath);
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, "/staging");
 
     mrJob.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.addInputPath(mrJob, new Path(temp.getRoot().toURI()));
@@ -143,6 +147,10 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
     }
 
     waitForConsistency();
+    verifyPathExists(fs,
+        "MR job Output directory not found,"
+            + " even though the job did not report a failure",
+        outputPath);
     assertIsDirectory(outputPath);
     FileStatus[] results = fs.listStatus(outputPath,
         S3AUtils.HIDDEN_FILE_FILTER);
@@ -160,16 +168,17 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
         fs, "MR job");
     List<String> successFiles = successData.getFilenames();
     String commitData = successData.toString();
-    assertTrue("No filenames in " + commitData,
-        !successFiles.isEmpty());
+    assertFalse("No filenames in " + commitData,
+        successFiles.isEmpty());
 
-    assertEquals("Should commit the expected files",
-        expectedFiles, actualFiles);
+    Assertions.assertThat(actualFiles)
+        .describedAs("Committed files in the job output directory")
+        .containsExactlyInAnyOrderElementsOf(expectedFiles);
 
-    Set<String> summaryKeys = Sets.newHashSet();
-    summaryKeys.addAll(successFiles);
-    assertEquals("Summary keyset doesn't list the the expected paths "
-        + commitData, expectedKeys, summaryKeys);
+    Assertions.assertThat(successFiles)
+        .describedAs("List of committed files in %s", commitData)
+        .containsExactlyInAnyOrderElementsOf(expectedKeys);
+
     assertPathDoesNotExist("temporary dir",
         new Path(outputPath, CommitConstants.TEMPORARY));
     customPostExecutionValidation(outputPath, successData);

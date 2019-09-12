@@ -20,13 +20,14 @@ package org.apache.hadoop.ozone.container.keyvalue.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_SCRUB_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT;
 
 /**
  * Select an appropriate ChunkManager implementation as per config setting.
@@ -65,12 +66,12 @@ public final class ChunkManagerFactory {
 
     if (!persist) {
       boolean scrubber = config.getBoolean(
-          HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
-          HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+          HDDS_CONTAINER_SCRUB_ENABLED,
+          HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT);
       if (scrubber) {
         // Data Scrubber needs to be disabled for non-persistent chunks.
         LOG.warn("Failed to set " + HDDS_CONTAINER_PERSISTDATA + " to false."
-            + " Please set " + HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED
+            + " Please set " + HDDS_CONTAINER_SCRUB_ENABLED
             + " also to false to enable non-persistent containers.");
         persist = true;
       }

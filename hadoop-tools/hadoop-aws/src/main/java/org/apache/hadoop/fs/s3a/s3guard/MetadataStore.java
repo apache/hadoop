@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -75,14 +76,16 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of the record has to be updated to <pre>now</pre>.
    *
    * @param path the path to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void delete(Path path)
+  void delete(Path path,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path)}. It is currently
+   * {@link MetadataStore#delete(Path, BulkOperationState)}. It is currently
    * intended for testing only, and a need to use it as part of normal
    * FileSystem usage is not anticipated.
    *
@@ -105,9 +108,26 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of all records have to be updated to <pre>now</pre>.
    *
    * @param path the root of the sub-tree to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path)
+  @Retries.RetryTranslated
+  void deleteSubtree(Path path,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
+
+  /**
+   * Delete the paths.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param paths paths to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+
+  @RetryTranslated
+  void deletePaths(Collection<Path> paths,
+      @Nullable BulkOperationState operationState)
       throws IOException;
 
   /**
@@ -143,6 +163,7 @@ public interface MetadataStore extends Closeable {
    *     in the MetadataStore.
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   DirListingMetadata listChildren(Path path) throws IOException;
 
   /**

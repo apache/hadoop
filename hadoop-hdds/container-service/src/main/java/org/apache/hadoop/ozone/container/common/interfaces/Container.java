@@ -30,6 +30,8 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 
+import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -153,9 +155,34 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   void updateBlockCommitSequenceId(long blockCommitSequenceId);
 
   /**
+   * Returns the blockCommitSequenceId.
+   */
+  long getBlockCommitSequenceId();
+
+  /**
    * check and report the structural integrity of the container.
    * @return true if the integrity checks pass
+   * Scan the container metadata to detect corruption.
+   */
+  boolean scanMetaData();
+
+  /**
+   * Return if the container data should be checksum verified to detect
+   * corruption. The result depends upon the current state of the container
+   * (e.g. if a container is accepting writes, it may not be a good idea to
+   * perform checksum verification to avoid concurrency issues).
+   */
+  boolean shouldScanData();
+
+  /**
+   * Perform checksum verification for the container data.
+   *
+   * @param throttler A reference of {@link DataTransferThrottler} used to
+   *                  perform I/O bandwidth throttling
+   * @param canceler  A reference of {@link Canceler} used to cancel the
+   *                  I/O bandwidth throttling (e.g. for shutdown purpose).
+   * @return true if the checksum verification succeeds
    *         false otherwise
    */
-  boolean check();
+  boolean scanData(DataTransferThrottler throttler, Canceler canceler);
 }

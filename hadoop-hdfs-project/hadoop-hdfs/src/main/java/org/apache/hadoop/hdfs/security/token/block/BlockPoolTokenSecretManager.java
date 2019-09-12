@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier.AccessMode;
@@ -37,30 +37,29 @@ import org.apache.hadoop.fs.StorageType;
 public class BlockPoolTokenSecretManager extends
     SecretManager<BlockTokenIdentifier> {
   
-  private final Map<String, BlockTokenSecretManager> map = 
-    new HashMap<String, BlockTokenSecretManager>();
+  private final Map<String, BlockTokenSecretManager> map =
+      new ConcurrentHashMap<>();
 
   /**
    * Add a block pool Id and corresponding {@link BlockTokenSecretManager} to map
    * @param bpid block pool Id
    * @param secretMgr {@link BlockTokenSecretManager}
    */
-  public synchronized void addBlockPool(String bpid,
-      BlockTokenSecretManager secretMgr) {
+  public void addBlockPool(String bpid, BlockTokenSecretManager secretMgr) {
     map.put(bpid, secretMgr);
   }
 
   @VisibleForTesting
-  public synchronized BlockTokenSecretManager get(String bpid) {
+  public BlockTokenSecretManager get(String bpid) {
     BlockTokenSecretManager secretMgr = map.get(bpid);
     if (secretMgr == null) {
-      throw new IllegalArgumentException("Block pool " + bpid
-          + " is not found");
+      throw new IllegalArgumentException(
+          "Block pool " + bpid + " is not found");
     }
     return secretMgr;
   }
   
-  public synchronized boolean isBlockPoolRegistered(String bpid) {
+  public boolean isBlockPoolRegistered(String bpid) {
     return map.containsKey(bpid);
   }
 

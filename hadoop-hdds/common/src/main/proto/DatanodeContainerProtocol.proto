@@ -248,8 +248,9 @@ message ContainerDataProto {
   optional ContainerType containerType = 10 [default = KeyValueContainer];
 }
 
-message ContainerIdSetProto {
-    repeated int64 containerId = 1;
+message Container2BCSIDMapProto {
+   // repeated Container2BCSIDMapEntryProto container2BCSID = 1;
+    map <int64, int64> container2BCSID = 1;
 }
 
 enum ContainerType {

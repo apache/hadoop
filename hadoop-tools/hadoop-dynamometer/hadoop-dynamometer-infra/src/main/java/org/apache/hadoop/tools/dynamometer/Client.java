@@ -387,15 +387,14 @@ public class Client extends Configured implements Tool {
    */
   public boolean init(String[] args) throws ParseException, IOException {
 
-    CommandLineParser parser = new GnuParser();
-    if (parser.parse(
-        new Options().addOption("h", "help", false, "Shows this message."),
-        args, true).hasOption("h")) {
+    List<String> list = Arrays.asList(args);
+    if (list.contains("-h") || list.contains("--help")) {
       printUsage();
       return false;
     }
 
-    CommandLine cliParser = parser.parse(opts, args);
+    CommandLineParser parser = new GnuParser();
+    CommandLine commandLine = parser.parse(opts, args);
 
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(getConf());
@@ -403,12 +402,13 @@ public class Client extends Configured implements Tool {
     LOG.info("Starting with arguments: [\"{}\"]",
         Joiner.on("\" \"").join(args));
 
-    Path fsImageDir = new Path(cliParser.getOptionValue(FS_IMAGE_DIR_ARG, ""));
+    Path fsImageDir = new Path(commandLine.getOptionValue(FS_IMAGE_DIR_ARG,
+        ""));
     versionFilePath = new Path(fsImageDir, "VERSION").toString();
-    if (cliParser.hasOption(NAMENODE_SERVICERPC_ADDR_ARG)) {
+    if (commandLine.hasOption(NAMENODE_SERVICERPC_ADDR_ARG)) {
       launchNameNode = false;
       remoteNameNodeRpcAddress =
-          cliParser.getOptionValue(NAMENODE_SERVICERPC_ADDR_ARG);
+          commandLine.getOptionValue(NAMENODE_SERVICERPC_ADDR_ARG);
     } else {
       launchNameNode = true;
       FileSystem localFS = FileSystem.getLocal(getConf());
@@ -434,26 +434,27 @@ public class Client extends Configured implements Tool {
           + "application master, exiting. Specified virtual cores=" + amVCores);
     }
 
-    this.appName = cliParser.getOptionValue(APPNAME_ARG, APPNAME_DEFAULT);
-    this.amQueue = cliParser.getOptionValue(QUEUE_ARG, QUEUE_DEFAULT);
-    this.amMemory = Integer.parseInt(cliParser
+    this.appName = commandLine.getOptionValue(APPNAME_ARG, APPNAME_DEFAULT);
+    this.amQueue = commandLine.getOptionValue(QUEUE_ARG, QUEUE_DEFAULT);
+    this.amMemory = Integer.parseInt(commandLine
         .getOptionValue(MASTER_MEMORY_MB_ARG, MASTER_MEMORY_MB_DEFAULT));
     this.amVCores = Integer.parseInt(
-        cliParser.getOptionValue(MASTER_VCORES_ARG, MASTER_VCORES_DEFAULT));
-    this.confPath = cliParser.getOptionValue(CONF_PATH_ARG);
-    this.blockListPath = cliParser.getOptionValue(BLOCK_LIST_PATH_ARG);
-    if (cliParser.hasOption(HADOOP_BINARY_PATH_ARG)) {
-      this.hadoopBinary = cliParser.getOptionValue(HADOOP_BINARY_PATH_ARG);
+        commandLine.getOptionValue(MASTER_VCORES_ARG, MASTER_VCORES_DEFAULT));
+    this.confPath = commandLine.getOptionValue(CONF_PATH_ARG);
+    this.blockListPath = commandLine.getOptionValue(BLOCK_LIST_PATH_ARG);
+    if (commandLine.hasOption(HADOOP_BINARY_PATH_ARG)) {
+      this.hadoopBinary = commandLine.getOptionValue(HADOOP_BINARY_PATH_ARG);
     } else {
       this.hadoopBinary = DynoInfraUtils.fetchHadoopTarball(
           new File(".").getAbsoluteFile(),
-          cliParser.getOptionValue(HADOOP_VERSION_ARG), getConf(), LOG)
+          commandLine.getOptionValue(HADOOP_VERSION_ARG), getConf(), LOG)
           .toString();
     }
-    this.amOptions = AMOptions.initFromParser(cliParser);
+    this.amOptions = AMOptions.initFromParser(commandLine);
     this.clientTimeout = Integer
-        .parseInt(cliParser.getOptionValue(TIMEOUT_ARG, TIMEOUT_DEFAULT));
-    this.tokenFileLocation = cliParser.getOptionValue(TOKEN_FILE_LOCATION_ARG);
+        .parseInt(commandLine.getOptionValue(TIMEOUT_ARG, TIMEOUT_DEFAULT));
+    this.tokenFileLocation = commandLine.
+        getOptionValue(TOKEN_FILE_LOCATION_ARG);
 
     amOptions.verify();
 
@@ -467,28 +468,28 @@ public class Client extends Configured implements Tool {
     numTotalDataNodes = blockListFS.listStatus(blockPath,
         DynoConstants.BLOCK_LIST_FILE_FILTER).length;
 
-    if (cliParser.hasOption(WORKLOAD_REPLAY_ENABLE_ARG)) {
-      if (!cliParser.hasOption(WORKLOAD_INPUT_PATH_ARG)
-          || !cliParser.hasOption(WORKLOAD_START_DELAY_ARG)) {
+    if (commandLine.hasOption(WORKLOAD_REPLAY_ENABLE_ARG)) {
+      if (!commandLine.hasOption(WORKLOAD_INPUT_PATH_ARG)
+          || !commandLine.hasOption(WORKLOAD_START_DELAY_ARG)) {
         throw new IllegalArgumentException("workload_replay_enable was "
             + "specified; must include all required workload_ parameters.");
       }
       launchWorkloadJob = true;
-      workloadInputPath = cliParser.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
+      workloadInputPath = commandLine.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
       workloadThreadsPerMapper = Integer
-          .parseInt(cliParser.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
+          .parseInt(commandLine.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
               String.valueOf(AuditReplayMapper.NUM_THREADS_DEFAULT)));
-      workloadRateFactor = Double.parseDouble(cliParser.getOptionValue(
+      workloadRateFactor = Double.parseDouble(commandLine.getOptionValue(
           WORKLOAD_RATE_FACTOR_ARG, WORKLOAD_RATE_FACTOR_DEFAULT));
       workloadExtraConfigs = new HashMap<>();
-      if (cliParser.getOptionValues(WORKLOAD_CONFIG_ARG) != null) {
-        for (String opt : cliParser.getOptionValues(WORKLOAD_CONFIG_ARG)) {
+      if (commandLine.getOptionValues(WORKLOAD_CONFIG_ARG) != null) {
+        for (String opt : commandLine.getOptionValues(WORKLOAD_CONFIG_ARG)) {
           Iterator<String> kvPair =
               Splitter.on("=").trimResults().split(opt).iterator();
           workloadExtraConfigs.put(kvPair.next(), kvPair.next());
         }
       }
-      String delayString = cliParser.getOptionValue(WORKLOAD_START_DELAY_ARG,
+      String delayString = commandLine.getOptionValue(WORKLOAD_START_DELAY_ARG,
           WorkloadDriver.START_TIME_OFFSET_DEFAULT);
       // Store a temporary config to leverage Configuration's time duration
       // parsing.

@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -841,13 +842,14 @@ public class KeyValueHandler extends Handler {
     throw new StorageContainerException(msg, result);
   }
 
-  public Container importContainer(long containerID, long maxSize,
-      String originPipelineId,
-      String originNodeId,
-      FileInputStream rawContainerStream,
-      TarContainerPacker packer)
+  @Override
+  public Container importContainer(final long containerID,
+      final long maxSize, final String originPipelineId,
+      final String originNodeId, final InputStream rawContainerStream,
+      final TarContainerPacker packer)
       throws IOException {
 
+    // TODO: Add layout version!
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerID,
             maxSize, originPipelineId, originNodeId);
@@ -863,77 +865,113 @@ public class KeyValueHandler extends Handler {
   }
 
   @Override
+  public void exportContainer(final Container container,
+      final OutputStream outputStream,
+      final TarContainerPacker packer)
+      throws IOException{
+    container.readLock();
+    try {
+      final KeyValueContainer kvc = (KeyValueContainer) container;
+      kvc.exportContainerData(outputStream, packer);
+    } finally {
+      container.readUnlock();
+    }
+  }
+
+  @Override
   public void markContainerForClose(Container container)
       throws IOException {
-    // Move the container to CLOSING state only if it's OPEN
-    if (container.getContainerState() == State.OPEN) {
-      container.markContainerForClose();
-      sendICR(container);
+    container.writeLock();
+    try {
+      // Move the container to CLOSING state only if it's OPEN
+      if (container.getContainerState() == State.OPEN) {
+        container.markContainerForClose();
+        sendICR(container);
+      }
+    } finally {
+      container.writeUnlock();
     }
   }
 
   @Override
   public void markContainerUnhealthy(Container container)
       throws IOException {
-    if (container.getContainerState() != State.UNHEALTHY) {
-      try {
-        container.markContainerUnhealthy();
-      } catch (IOException ex) {
-        // explicitly catch IOException here since the this operation
-        // will fail if the Rocksdb metadata is corrupted.
-        long id = container.getContainerData().getContainerID();
-        LOG.warn("Unexpected error while marking container "
-                +id+ " as unhealthy", ex);
-      } finally {
-        sendICR(container);
+    container.writeLock();
+    try {
+      if (container.getContainerState() != State.UNHEALTHY) {
+        try {
+          container.markContainerUnhealthy();
+        } catch (IOException ex) {
+          // explicitly catch IOException here since the this operation
+          // will fail if the Rocksdb metadata is corrupted.
+          long id = container.getContainerData().getContainerID();
+          LOG.warn("Unexpected error while marking container " + id
+              + " as unhealthy", ex);
+        } finally {
+          sendICR(container);
+        }
       }
+    } finally {
+      container.writeUnlock();
     }
   }
 
   @Override
   public void quasiCloseContainer(Container container)
       throws IOException {
-    final State state = container.getContainerState();
-    // Quasi close call is idempotent.
-    if (state == State.QUASI_CLOSED) {
-      return;
+    container.writeLock();
+    try {
+      final State state = container.getContainerState();
+      // Quasi close call is idempotent.
+      if (state == State.QUASI_CLOSED) {
+        return;
+      }
+      // The container has to be in CLOSING state.
+      if (state != State.CLOSING) {
+        ContainerProtos.Result error =
+            state == State.INVALID ? INVALID_CONTAINER_STATE :
+                CONTAINER_INTERNAL_ERROR;
+        throw new StorageContainerException(
+            "Cannot quasi close container #" + container.getContainerData()
+                .getContainerID() + " while in " + state + " state.", error);
+      }
+      container.quasiClose();
+      sendICR(container);
+    } finally {
+      container.writeUnlock();
     }
-    // The container has to be in CLOSING state.
-    if (state != State.CLOSING) {
-      ContainerProtos.Result error = state == State.INVALID ?
-          INVALID_CONTAINER_STATE : CONTAINER_INTERNAL_ERROR;
-      throw new StorageContainerException("Cannot quasi close container #" +
-          container.getContainerData().getContainerID() + " while in " +
-          state + " state.", error);
-    }
-    container.quasiClose();
-    sendICR(container);
   }
 
   @Override
   public void closeContainer(Container container)
       throws IOException {
-    final State state = container.getContainerState();
-    // Close call is idempotent.
-    if (state == State.CLOSED) {
-      return;
+    container.writeLock();
+    try {
+      final State state = container.getContainerState();
+      // Close call is idempotent.
+      if (state == State.CLOSED) {
+        return;
+      }
+      if (state == State.UNHEALTHY) {
+        throw new StorageContainerException(
+            "Cannot close container #" + container.getContainerData()
+                .getContainerID() + " while in " + state + " state.",
+            ContainerProtos.Result.CONTAINER_UNHEALTHY);
+      }
+      // The container has to be either in CLOSING or in QUASI_CLOSED state.
+      if (state != State.CLOSING && state != State.QUASI_CLOSED) {
+        ContainerProtos.Result error =
+            state == State.INVALID ? INVALID_CONTAINER_STATE :
+                CONTAINER_INTERNAL_ERROR;
+        throw new StorageContainerException(
+            "Cannot close container #" + container.getContainerData()
+                .getContainerID() + " while in " + state + " state.", error);
+      }
+      container.close();
+      sendICR(container);
+    } finally {
+      container.writeUnlock();
     }
-    if (state == State.UNHEALTHY) {
-      throw new StorageContainerException(
-          "Cannot close container #" + container.getContainerData()
-              .getContainerID() + " while in " + state + " state.",
-          ContainerProtos.Result.CONTAINER_UNHEALTHY);
-    }
-    // The container has to be either in CLOSING or in QUASI_CLOSED state.
-    if (state != State.CLOSING && state != State.QUASI_CLOSED) {
-      ContainerProtos.Result error = state == State.INVALID ?
-          INVALID_CONTAINER_STATE : CONTAINER_INTERNAL_ERROR;
-      throw new StorageContainerException("Cannot close container #" +
-          container.getContainerData().getContainerID() + " while in " +
-          state + " state.", error);
-    }
-    container.close();
-    sendICR(container);
   }
 
   @Override

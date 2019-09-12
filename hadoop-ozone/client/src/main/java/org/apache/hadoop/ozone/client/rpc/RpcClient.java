@@ -82,6 +82,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
+import org.apache.hadoop.ozone.security.GDPRSymmetricKey;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -96,9 +97,13 @@ import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.InvalidKeyException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -152,8 +157,11 @@ public class RpcClient implements ClientProtocol {
     this.userRights = aclConfig.getUserDefaultRights();
     this.groupRights = aclConfig.getGroupDefaultRights();
 
-    this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        this.conf, clientId.toString(), omServiceId, ugi);
+    this.ozoneManagerClient = TracingUtil.createProxy(
+        new OzoneManagerProtocolClientSideTranslatorPB(
+            this.conf, clientId.toString(), omServiceId, ugi),
+        OzoneManagerProtocol.class, conf
+    );
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();
@@ -602,6 +610,22 @@ public class RpcClient implements ClientProtocol {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     HddsClientUtils.checkNotNull(keyName, type, factor);
     String requestId = UUID.randomUUID().toString();
+
+    if(Boolean.valueOf(metadata.get(OzoneConsts.GDPR_FLAG))){
+      try{
+        GDPRSymmetricKey gKey = new GDPRSymmetricKey();
+        metadata.putAll(gKey.getKeyDetails());
+      }catch (Exception e) {
+        if(e instanceof InvalidKeyException &&
+            e.getMessage().contains("Illegal key size or default parameters")) {
+          LOG.error("Missing Unlimited Strength Policy jars. Please install " +
+              "Java Cryptography Extension (JCE) Unlimited Strength " +
+              "Jurisdiction Policy Files");
+        }
+        throw new IOException(e);
+      }
+    }
+
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -1063,6 +1087,22 @@ public class RpcClient implements ClientProtocol {
               OzoneKMSUtil.getCryptoCodec(conf, feInfo),
               decrypted.getMaterial(), feInfo.getIV());
       return new OzoneInputStream(cryptoIn);
+    } else {
+      try{
+        GDPRSymmetricKey gk;
+        Map<String, String> keyInfoMetadata = keyInfo.getMetadata();
+        if(Boolean.valueOf(keyInfoMetadata.get(OzoneConsts.GDPR_FLAG))){
+          gk = new GDPRSymmetricKey(
+              keyInfoMetadata.get(OzoneConsts.GDPR_SECRET),
+              keyInfoMetadata.get(OzoneConsts.GDPR_ALGORITHM)
+          );
+          gk.getCipher().init(Cipher.DECRYPT_MODE, gk.getSecretKey());
+          return new OzoneInputStream(
+              new CipherInputStream(lengthInputStream, gk.getCipher()));
+        }
+      }catch (Exception ex){
+        throw new IOException(ex);
+      }
     }
     return new OzoneInputStream(lengthInputStream.getWrappedStream());
   }
@@ -1100,6 +1140,23 @@ public class RpcClient implements ClientProtocol {
               decrypted.getMaterial(), feInfo.getIV());
       return new OzoneOutputStream(cryptoOut);
     } else {
+      try{
+        GDPRSymmetricKey gk;
+        Map<String, String> openKeyMetadata =
+            openKey.getKeyInfo().getMetadata();
+        if(Boolean.valueOf(openKeyMetadata.get(OzoneConsts.GDPR_FLAG))){
+          gk = new GDPRSymmetricKey(
+              openKeyMetadata.get(OzoneConsts.GDPR_SECRET),
+              openKeyMetadata.get(OzoneConsts.GDPR_ALGORITHM)
+          );
+          gk.getCipher().init(Cipher.ENCRYPT_MODE, gk.getSecretKey());
+          return new OzoneOutputStream(
+              new CipherOutputStream(keyOutputStream, gk.getCipher()));
+        }
+      }catch (Exception ex){
+        throw new IOException(ex);
+      }
+
       return new OzoneOutputStream(keyOutputStream);
     }
   }

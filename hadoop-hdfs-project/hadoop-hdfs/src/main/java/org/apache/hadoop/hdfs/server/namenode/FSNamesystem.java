@@ -4244,8 +4244,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             }
           }
         } catch (Exception e) {
-          FSNamesystem.LOG.error(
-              "Ignoring exception in LazyPersistFileScrubber:", e);
+          FSNamesystem.LOG.warn(
+              "LazyPersistFileScrubber encountered an exception while "
+                      + "scanning for lazyPersist files with missing blocks. "
+                      + "Scanning will retry in " + scrubIntervalSec +
+                      " seconds. Exception: ", e);
         }
 
         try {

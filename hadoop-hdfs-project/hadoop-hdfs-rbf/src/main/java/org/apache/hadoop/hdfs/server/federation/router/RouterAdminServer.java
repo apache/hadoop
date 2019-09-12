@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslator
 import org.apache.hadoop.hdfs.protocolPB.RouterPolicyProvider;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -267,11 +269,13 @@ public class RouterAdminServer extends AbstractService
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-    UpdateMountTableEntryResponse response =
-        getMountTableStore().updateMountTableEntry(request);
+
+    UpdateMountTableEntryResponse response = getMountTableStore()
+        .updateMountTableEntry(request);
     try {
       MountTable mountTable = request.getEntry();
-      if (mountTable != null && router.isQuotaEnabled()) {
+      if (mountTable != null && router.isQuotaEnabled()
+          && isQuotaUpdated(request, mountTable)) {
         synchronizeQuota(mountTable.getSourcePath(),
             mountTable.getQuota().getQuota(),
             mountTable.getQuota().getSpaceQuota());
@@ -280,9 +284,34 @@ public class RouterAdminServer extends AbstractService
       // Ignore exception, if any while reseting quota. Specifically to handle
       // if the actual destination doesn't exist.
       LOG.warn("Unable to reset quota at the destinations for {}: {}",
-          request.getEntry().toString(), e.getMessage());
+          request.getEntry(), e.getMessage());
     }
     return response;
+  }
+
+  private boolean isQuotaUpdated(UpdateMountTableEntryRequest request,
+      MountTable mountTable) throws IOException {
+    long nsQuota = -1;
+    long ssQuota = -1;
+
+    String path = request.getEntry().getSourcePath();
+    if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
+      MountTableResolver mResolver = (MountTableResolver) this.router
+          .getSubclusterResolver();
+      MountTable entry = mResolver.getMountPoint(path);
+      if (entry != null) {
+        RouterQuotaUsage preQuota = entry.getQuota();
+        nsQuota = preQuota.getQuota();
+        ssQuota = preQuota.getSpaceQuota();
+      }
+    }
+    RouterQuotaUsage mountQuota = mountTable.getQuota();
+    if (nsQuota != mountQuota.getQuota()
+        || ssQuota != mountQuota.getSpaceQuota()) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
