@@ -68,7 +68,7 @@ public class TestSCMContainerPlacementRackAware {
   // node storage capacity
   private static final long STORAGE_CAPACITY = 100L;
   private SCMContainerPlacementMetrics metrics;
-  private static final int nodePerRack = 5;
+  private static final int NODE_PER_RACK = 5;
 
   public TestSCMContainerPlacementRackAware(Integer count) {
     this.datanodeCount = count;
@@ -95,7 +95,7 @@ public class TestSCMContainerPlacementRackAware {
     for (int i = 0; i < datanodeCount; i++) {
       // Totally 3 racks, each has 5 datanodes
       DatanodeDetails node = TestUtils.createDatanodeDetails(
-          hostname + i, rack + (i / nodePerRack));
+          hostname + i, rack + (i / NODE_PER_RACK));
       datanodes.add(node);
       cluster.add(node);
     }
@@ -146,14 +146,15 @@ public class TestSCMContainerPlacementRackAware {
     datanodeDetails = policy.chooseDatanodes(null, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
     Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
-        datanodeDetails.get(1)) || (datanodeCount % nodePerRack == 1));
+        datanodeDetails.get(1)) || (datanodeCount % NODE_PER_RACK == 1));
 
     //  3 replicas
     nodeNum = 3;
     datanodeDetails = policy.chooseDatanodes(null, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
     // requires at least 2 racks for following statement
-    assumeTrue(datanodeCount > nodePerRack && datanodeCount % nodePerRack > 1);
+    assumeTrue(datanodeCount > NODE_PER_RACK &&
+        datanodeCount % NODE_PER_RACK > 1);
     Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
         datanodeDetails.get(1)));
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
@@ -166,7 +167,7 @@ public class TestSCMContainerPlacementRackAware {
     datanodeDetails = policy.chooseDatanodes(null, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
     // requires at least 2 racks and enough datanodes for following statement
-    assumeTrue(datanodeCount > nodePerRack + 1);
+    assumeTrue(datanodeCount > NODE_PER_RACK + 1);
     Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
         datanodeDetails.get(1)));
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
@@ -179,7 +180,7 @@ public class TestSCMContainerPlacementRackAware {
   public void chooseNodeWithExcludedNodes() throws SCMException {
     // test choose new datanodes for under replicated pipeline
     // 3 replicas, two existing datanodes on same rack
-    assumeTrue(datanodeCount > nodePerRack);
+    assumeTrue(datanodeCount > NODE_PER_RACK);
     int nodeNum = 1;
     List<DatanodeDetails> excludedNodes = new ArrayList<>();
 
@@ -222,8 +223,8 @@ public class TestSCMContainerPlacementRackAware {
     // 5 replicas. there are only 3 racks. policy with fallback should
     // allocate the 5th datanode though it will break the rack rule(first
     // 2 replicas on same rack, others on different racks).
-    assumeTrue(datanodeCount > nodePerRack * 2 &&
-        (datanodeCount % nodePerRack > 1));
+    assumeTrue(datanodeCount > NODE_PER_RACK * 2 &&
+        (datanodeCount % NODE_PER_RACK > 1));
     int nodeNum = 5;
     List<DatanodeDetails>  datanodeDetails =
         policy.chooseDatanodes(null, null, nodeNum, 15);
@@ -254,8 +255,8 @@ public class TestSCMContainerPlacementRackAware {
 
   @Test
   public void testNoFallback() throws SCMException {
-    assumeTrue(datanodeCount > (nodePerRack * 2) &&
-        (datanodeCount <= nodePerRack * 3));
+    assumeTrue(datanodeCount > (NODE_PER_RACK * 2) &&
+        (datanodeCount <= NODE_PER_RACK * 3));
     // 5 replicas. there are only 3 racks. policy prohibit fallback should fail.
     int nodeNum = 5;
     try {
