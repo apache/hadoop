@@ -33,12 +33,12 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.google.common.base.Stopwatch;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.util.StopWatch;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -95,7 +95,8 @@ public class S3GuardFsck {
    * @throws IOException
    */
   public List<ComparePair> compareS3ToMs(Path p) throws IOException {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    StopWatch stopwatch = new StopWatch();
+    stopwatch.start();
     int scannedItems = 0;
 
     final Path rootPath = rawFS.qualify(p);
@@ -146,7 +147,7 @@ public class S3GuardFsck {
         new S3GuardFsckViolationHandler(rawFS, metadataStore);
     comparePairs.forEach(handler::handle);
 
-    LOG.info("Total scan time: {}s", stopwatch.elapsed(TimeUnit.SECONDS));
+    LOG.info("Total scan time: {}s", stopwatch.now(TimeUnit.SECONDS));
     LOG.info("Scanned entries: {}", scannedItems);
 
     return comparePairs;
