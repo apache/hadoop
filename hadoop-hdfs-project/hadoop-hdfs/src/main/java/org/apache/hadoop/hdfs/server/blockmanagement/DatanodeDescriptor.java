@@ -339,7 +339,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   public void resetBlocks() {
     updateStorageStats(this.getStorageReports(), 0L, 0L, 0, 0, null);
-    this.invalidateBlocks.clear();
+    synchronized (invalidateBlocks) {
+      this.invalidateBlocks.clear();
+    }
     this.volumeFailures = 0;
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
