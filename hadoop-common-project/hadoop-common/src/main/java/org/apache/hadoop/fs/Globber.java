@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
 import org.apache.hadoop.util.DurationInfo;
+
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementation of {@link FileSystem#globStatus(Path, PathFilter)}.
  * This has historically been package-private; it has been opened
- * up for object stores within the {@code hadoop-*} codebase.
+ * up for object stores within the {@code hadoop-*} codebase ONLY.
  * It could be expanded for external store implementations in future.
  */
 @InterfaceAudience.Private
