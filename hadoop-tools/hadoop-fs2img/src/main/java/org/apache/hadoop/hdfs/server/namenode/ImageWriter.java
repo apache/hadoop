@@ -266,7 +266,7 @@ public class ImageWriter implements Closeable {
     e.writeDelimitedTo(dirs);
   }
 
-  private static int getOndiskSize(com.google.protobuf.GeneratedMessage s) {
+  private static int getOndiskSize(com.google.protobuf.GeneratedMessageV3 s) {
     return CodedOutputStream.computeRawVarint32Size(s.getSerializedSize())
         + s.getSerializedSize();
   }
