@@ -97,6 +97,13 @@ public interface MiniOzoneCluster {
   void waitTobeOutOfSafeMode() throws TimeoutException, InterruptedException;
 
   /**
+   * Returns OzoneManager Service ID.
+   *
+   * @return Service ID String
+   */
+  String getServiceId();
+
+  /**
    * Returns {@link StorageContainerManager} associated with this
    * {@link MiniOzoneCluster} instance.
    *

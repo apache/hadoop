@@ -761,7 +761,7 @@ public class TestOzoneManagerHA {
 
       // Get the ObjectStore and FailoverProxyProvider for OM at index i
       final ObjectStore store = OzoneClientFactory.getRpcClient(
-          omHostName, rpcPort, conf).getObjectStore();
+          omHostName, rpcPort, omServiceId, conf).getObjectStore();
       final OMFailoverProxyProvider proxyProvider =
           store.getClientProxy().getOMProxyProvider();
 

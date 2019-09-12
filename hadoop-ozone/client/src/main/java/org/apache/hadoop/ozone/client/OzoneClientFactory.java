@@ -119,6 +119,35 @@ public final class OzoneClientFactory {
    * @param omRpcPort
    *        RPC port of OzoneManager.
    *
+   * @param omServiceId
+   *        Service ID of OzoneManager HA cluster.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(String omHost, Integer omRpcPort,
+      String omServiceId, Configuration config) throws IOException {
+    Preconditions.checkNotNull(omHost);
+    Preconditions.checkNotNull(omRpcPort);
+    Preconditions.checkNotNull(omServiceId);
+    Preconditions.checkNotNull(config);
+    config.set(OZONE_OM_ADDRESS_KEY, omHost + ":" + omRpcPort);
+    return getRpcClient(omServiceId, config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
+   * @param omHost
+   *        hostname of OzoneManager to connect.
+   *
+   * @param omRpcPort
+   *        RPC port of OzoneManager.
+   *
    * @param config
    *        Configuration to be used for OzoneClient creation
    *
@@ -150,8 +179,7 @@ public final class OzoneClientFactory {
    * @throws IOException
    */
   public static OzoneClient getRpcClient(String omServiceId,
-      Configuration config)
-      throws IOException {
+      Configuration config) throws IOException {
     Preconditions.checkNotNull(omServiceId);
     Preconditions.checkNotNull(config);
     // Won't set OZONE_OM_ADDRESS_KEY here since service id is passed directly,

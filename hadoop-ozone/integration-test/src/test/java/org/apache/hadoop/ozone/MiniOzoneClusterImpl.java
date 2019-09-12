@@ -128,6 +128,11 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     return conf;
   }
 
+  public String getServiceId() {
+    // Non-HA cluster doesn't have OM Service Id.
+    return null;
+  }
+
   /**
    * Waits for the Ozone cluster to be ready for processing requests.
    */
