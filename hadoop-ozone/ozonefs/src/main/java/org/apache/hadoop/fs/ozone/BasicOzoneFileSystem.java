@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -127,29 +126,13 @@ public class BasicOzoneFileSystem extends FileSystem {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      if (OmUtils.isOmHAServiceId(conf, omHost) && parts.length > 1) {
-        // If omHost is a service id, it shouldn't use a port
-        throw new IllegalArgumentException("Port " + parts[1] +
-            " specified in URI " + name + " but host '" + omHost + "' is "
-            + "a logical (HA) OzoneManager and does not use port information.");
-      }
       if (parts.length == 2) {
         try {
           omPort = Integer.parseInt(parts[1]);
         } catch (NumberFormatException e) {
           throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
         }
-      } else {
-        // If port number is not specified, read it from config
-        omPort = OmUtils.getOmRpcPort(conf);
       }
-    } else if (OmUtils.isServiceIdsDefined(new OzoneConfiguration(conf))) {
-      // When host name or service id is given, and ozone.om.service.ids is
-      // defined, fail here as of current design.
-      // This can be seen as a safety precaution so that we don't accidentally
-      // fallback to a wrong cluster. Can be extended in the future.
-      throw new IllegalArgumentException("Service ID or host name must not"
-          + " be omitted when ozone.om.service.ids is defined.");
     }
 
     try {
