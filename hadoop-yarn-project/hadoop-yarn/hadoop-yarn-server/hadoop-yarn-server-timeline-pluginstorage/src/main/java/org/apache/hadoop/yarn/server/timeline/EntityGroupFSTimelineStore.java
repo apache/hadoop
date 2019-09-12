@@ -376,7 +376,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
         AppLogs logs = getAndSetActiveLog(appId, stat.getPath());
         executor.execute(new ActiveLogParser(logs));
       } else {
-        logsToScanCount += scanActiveLogs(stat.getPath());
+        if (stat.isDirectory()) {
+          logsToScanCount += scanActiveLogs(stat.getPath());
+        } else {
+          LOG.warn("Ignoring unexpected file in active directory {}",
+              stat.getPath());
+        }
       }
     }
     return logsToScanCount;
