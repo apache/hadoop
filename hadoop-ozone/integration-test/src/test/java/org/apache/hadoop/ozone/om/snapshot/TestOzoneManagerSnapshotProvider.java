@@ -49,6 +49,7 @@ public class TestOzoneManagerSnapshotProvider {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omServiceId;
   private int numOfOMs = 3;
 
   @Rule
@@ -62,16 +63,18 @@ public class TestOzoneManagerSnapshotProvider {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    omServiceId = "om-service-test1";
     conf.setBoolean(OMConfigKeys.OZONE_OM_HTTP_ENABLED_KEY, true);
     conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
-        .setOMServiceId("om-service-test1")
+        .setOMServiceId(omServiceId)
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();
-    objectStore = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    objectStore = OzoneClientFactory.getRpcClient(omServiceId, conf)
+        .getObjectStore();
   }
 
   /**
