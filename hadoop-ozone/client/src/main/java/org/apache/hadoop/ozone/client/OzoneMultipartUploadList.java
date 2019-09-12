@@ -21,15 +21,18 @@ package org.apache.hadoop.ozone.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+
 /**
- * List of in-flight MU upoads.
+ * List of in-flight MPU upoads.
  */
 public class OzoneMultipartUploadList {
 
-  private List<OzoneMultipartUpload> uploads = new ArrayList<>();
+  private List<OzoneMultipartUpload> uploads;
 
   public OzoneMultipartUploadList(
       List<OzoneMultipartUpload> uploads) {
+    Preconditions.checkNotNull(uploads);
     this.uploads = uploads;
   }
 

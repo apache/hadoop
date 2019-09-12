@@ -222,7 +222,7 @@ public class BucketEndpoint extends EndpointBase {
     OzoneBucket bucket = getBucket(bucketName);
 
     OzoneMultipartUploadList ozoneMultipartUploadList =
-        bucket.listMultpartUploads(prefix);
+        bucket.listMultipartUploads(prefix);
 
     ListMultipartUploadsResult result = new ListMultipartUploadsResult();
     result.setBucket(bucketName);

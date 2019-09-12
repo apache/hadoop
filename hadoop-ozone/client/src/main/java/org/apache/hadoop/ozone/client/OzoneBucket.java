@@ -560,7 +560,7 @@ public class OzoneBucket extends WithMetadata {
    *
    * @param prefix Optional string to filter for the selected keys.
    */
-  public OzoneMultipartUploadList listMultpartUploads(String prefix)
+  public OzoneMultipartUploadList listMultipartUploads(String prefix)
       throws IOException {
     return proxy.listMultipartUploads(volumeName, getName(), prefix);
   }

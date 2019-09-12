@@ -58,7 +58,7 @@ public class OmMultipartUpload {
     String[] split = key.split(OM_KEY_PREFIX);
     if (split.length < 5) {
       throw new IllegalArgumentException("Key " + key
-          + " doesn't have enough segments to be a valid multpart upload key");
+          + " doesn't have enough segments to be a valid multipart upload key");
     }
     String uploadId = split[split.length - 1];
     String volume = split[1];
