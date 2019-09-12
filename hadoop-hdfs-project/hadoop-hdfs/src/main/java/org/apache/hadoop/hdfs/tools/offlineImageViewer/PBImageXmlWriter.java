@@ -433,7 +433,7 @@ public final class PBImageXmlWriter {
       int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
-          XAttrNamespaceProto.valueOf(ns).toString());
+          XAttrNamespaceProto.forNumber(ns).toString());
       o(SECTION_NAME, SerialNumberManager.XATTR.getString(
           XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
           stringTable));

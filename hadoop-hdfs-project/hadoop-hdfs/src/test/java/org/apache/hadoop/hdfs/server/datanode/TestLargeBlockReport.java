@@ -75,6 +75,7 @@ public class TestLargeBlockReport {
 
   @Test
   public void testBlockReportExceedsLengthLimit() throws Exception {
+    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT / 2);
     initCluster();
     // Create a large enough report that we expect it will go beyond the RPC
     // server's length validation, and also protobuf length validation.

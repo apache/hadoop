@@ -106,7 +106,7 @@ public abstract class RpcWritable implements Writable {
     @Override
     void writeTo(ResponseBuffer out) throws IOException {
       int length = message.getSerializedSize();
-      length += CodedOutputStream.computeRawVarint32Size(length);
+      length += CodedOutputStream.computeUInt32SizeNoTag(length);
       out.ensureCapacity(length);
       message.writeDelimitedTo(out);
     }
