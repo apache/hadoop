@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.google.common.annotations.VisibleForTesting;
@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -523,6 +524,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * This must clean up operations; it is called when a commit fails, as
    * well as in an {@link #abortJob(JobContext, JobStatus.State)} call.
    * The base implementation calls {@link #cleanup(JobContext, boolean)}
+   * so cleans up the filesystems and destroys the thread pool.
+   * Subclasses must always invoke this superclass method after their
+   * own operations.
    * @param context job context
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any IO problem raised when suppressExceptions is false.
@@ -536,6 +540,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   /**
    * Abort all pending uploads to the destination directory during
    * job cleanup operations.
+   * Note: this instantiates the thread pool if required -so
+   * {@link #destroyThreadPool()} must be called after this.
    * @param suppressExceptions should exceptions be suppressed
    * @throws IOException IO problem
    */
@@ -634,7 +640,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       throws IOException;
 
   /**
-   * Cleanup the job context, including aborting anything pending.
+   * Cleanup the job context, including aborting anything pending
+   * and destroying the thread pool.
    * @param context job context
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any failure if exceptions were not suppressed.
@@ -645,6 +652,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         "Cleanup job %s", jobIdString(context))) {
       abortPendingUploadsInCleanup(suppressExceptions);
     } finally {
+      destroyThreadPool();
       cleanupStagingDirs();
     }
   }
@@ -715,7 +723,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
   /**
    * Returns an {@link ExecutorService} for parallel tasks. The number of
-   * threads in the thread-pool is set by s3.multipart.committer.num-threads.
+   * threads in the thread-pool is set by fs.s3a.committer.threads.
    * If num-threads is 0, this will return null;
    *
    * @param context the JobContext for this commit
@@ -730,16 +738,39 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
           DEFAULT_COMMITTER_THREADS);
       LOG.debug("{}: creating thread pool of size {}", getRole(), numThreads);
       if (numThreads > 0) {
-        threadPool = Executors.newFixedThreadPool(numThreads,
+        threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat("s3-committer-pool-%d")
+                .setNameFormat("s3a-committer-pool-"
+                    + context.getJobID()
+                    + "-%d")
                 .build());
       } else {
         return null;
       }
     }
     return threadPool;
+  }
+
+  /**
+   * Destroy any thread pool; wait for it to finish,
+   * but don't overreact if it doesn't finish in time.
+   */
+  protected final synchronized void destroyThreadPool() {
+    if (threadPool != null) {
+      LOG.debug("Destroying thread pool");
+      HadoopExecutors.shutdown(threadPool, LOG,
+          THREAD_POOL_SHUTDOWN_DELAY, TimeUnit.SECONDS);
+      threadPool = null;
+    }
+  }
+
+  /**
+   * Does this committer have a thread pool?
+   * @return true if a thread pool exists.
+   */
+  public synchronized boolean hasThreadPool() {
+    return threadPool != null;
   }
 
   /**

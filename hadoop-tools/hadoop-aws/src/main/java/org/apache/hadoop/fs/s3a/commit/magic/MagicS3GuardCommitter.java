@@ -174,6 +174,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
       deleteTaskAttemptPathQuietly(context);
+      destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -250,6 +251,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       deleteQuietly(
           attemptPath.getFileSystem(context.getConfiguration()),
           attemptPath, true);
+      destroyThreadPool();
     }
   }
 

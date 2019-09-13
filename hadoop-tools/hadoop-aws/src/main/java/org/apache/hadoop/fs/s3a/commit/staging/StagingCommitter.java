@@ -646,6 +646,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
           getRole(), context.getTaskAttemptID(), e);
       getCommitOperations().taskCompleted(false);
       throw e;
+    } finally {
+      destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -779,6 +781,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
       LOG.error("{}: exception when aborting task {}",
           getRole(), context.getTaskAttemptID(), e);
       throw e;
+    } finally {
+      destroyThreadPool();
     }
   }
 
