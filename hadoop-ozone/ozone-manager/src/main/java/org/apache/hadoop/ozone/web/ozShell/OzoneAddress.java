@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
@@ -92,7 +93,9 @@ public class OzoneAddress {
     } else if (scheme.equals(OZONE_RPC_SCHEME)) {
       if (ozoneURI.getHost() != null && !ozoneURI.getAuthority()
           .equals(EMPTY_HOST)) {
-        if (ozoneURI.getPort() == -1) {
+        if (OmUtils.isOmHAServiceId(conf, ozoneURI.getHost())) {
+          client = OzoneClientFactory.getRpcClient(ozoneURI.getHost(), conf);
+        } else if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
         } else {
           client = OzoneClientFactory
