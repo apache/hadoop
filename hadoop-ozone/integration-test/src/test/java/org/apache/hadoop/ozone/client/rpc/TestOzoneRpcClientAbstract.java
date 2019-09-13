@@ -949,7 +949,7 @@ public abstract class TestOzoneRpcClientAbstract {
       Configuration configuration = cluster.getConf();
       configuration.setBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
           verifyChecksum);
-      RpcClient client = new RpcClient(configuration);
+      RpcClient client = new RpcClient(configuration, null);
       OzoneInputStream is = client.getKey(volumeName, bucketName, keyName);
       is.read(new byte[100]);
       is.close();

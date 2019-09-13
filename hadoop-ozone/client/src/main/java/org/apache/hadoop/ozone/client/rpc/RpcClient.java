@@ -144,10 +144,11 @@ public class RpcClient implements ClientProtocol {
 
    /**
     * Creates RpcClient instance with the given configuration.
-    * @param conf
+    * @param conf Configuration
+    * @param omServiceId OM HA Service ID, set this to null if not HA
     * @throws IOException
     */
-  public RpcClient(Configuration conf) throws IOException {
+  public RpcClient(Configuration conf, String omServiceId) throws IOException {
     Preconditions.checkNotNull(conf);
     this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
@@ -158,7 +159,7 @@ public class RpcClient implements ClientProtocol {
 
     this.ozoneManagerClient = TracingUtil.createProxy(
         new OzoneManagerProtocolClientSideTranslatorPB(
-            this.conf, clientId.toString(), ugi),
+            this.conf, clientId.toString(), omServiceId, ugi),
         OzoneManagerProtocol.class, conf
     );
     long scmVersion =

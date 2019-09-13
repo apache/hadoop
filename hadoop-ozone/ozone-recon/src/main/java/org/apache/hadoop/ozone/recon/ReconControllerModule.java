@@ -100,7 +100,7 @@ public class ReconControllerModule extends AbstractModule {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       ozoneManagerClient = new
           OzoneManagerProtocolClientSideTranslatorPB(
-          ozoneConfiguration, clientId.toString(), ugi);
+          ozoneConfiguration, clientId.toString(), null, ugi);
     } catch (IOException ioEx) {
       LOG.error("Error in provisioning OzoneManagerProtocol ", ioEx);
     }

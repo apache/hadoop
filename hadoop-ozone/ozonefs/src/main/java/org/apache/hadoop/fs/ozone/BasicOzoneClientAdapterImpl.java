@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -115,6 +116,29 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       conf = new OzoneConfiguration(hadoopConf);
     }
 
+    if (omHost == null && OmUtils.isServiceIdsDefined(conf)) {
+      // When the host name or service id isn't given
+      // but ozone.om.service.ids is defined, declare failure.
+
+      // This is a safety precaution that prevents the client from
+      // accidentally failing over to an unintended OM.
+      throw new IllegalArgumentException("Service ID or host name must not"
+          + " be omitted when ozone.om.service.ids is defined.");
+    }
+
+    if (omPort != -1) {
+      // When the port number is specified, perform the following check
+      if (OmUtils.isOmHAServiceId(conf, omHost)) {
+        // If omHost is a service id, it shouldn't use a port
+        throw new IllegalArgumentException("Port " + omPort +
+            " specified in URI but host '" + omHost + "' is "
+            + "a logical (HA) OzoneManager and does not use port information.");
+      }
+    } else {
+      // When port number is not specified, read it from config
+      omPort = OmUtils.getOmRpcPort(conf);
+    }
+
     SecurityConfig secConfig = new SecurityConfig(conf);
 
     if (secConfig.isSecurityEnabled()) {
@@ -129,7 +153,12 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       int replicationCountConf = conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
           OzoneConfigKeys.OZONE_REPLICATION_DEFAULT);
 
-      if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
+      if (OmUtils.isOmHAServiceId(conf, omHost)) {
+        // omHost is listed as one of the service ids in the config,
+        // thus we should treat omHost as omServiceId
+        this.ozoneClient =
+            OzoneClientFactory.getRpcClient(omHost, conf);
+      } else if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
         this.ozoneClient =
             OzoneClientFactory.getRpcClient(omHost, omPort, conf);
       } else {

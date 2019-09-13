@@ -112,6 +112,11 @@ public class BasicOzoneFileSystem extends FileSystem {
         "Invalid scheme provided in " + name);
 
     String authority = name.getAuthority();
+    if (authority == null) {
+      // authority is null when fs.defaultFS is not a qualified o3fs URI and
+      // o3fs:/// is passed to the client. matcher will NPE if authority is null
+      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+    }
 
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
@@ -126,7 +131,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     int omPort = -1;
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      // Array length should be either 1(host) or 2(host:port)
+      // Array length should be either 1(hostname or service id) or 2(host:port)
       if (parts.length > 2) {
         throw new IllegalArgumentException(getUriExceptionText(conf));
       }
@@ -137,9 +142,6 @@ public class BasicOzoneFileSystem extends FileSystem {
         } catch (NumberFormatException e) {
           throw new IllegalArgumentException(getUriExceptionText(conf));
         }
-      } else {
-        // If port number is not specified, read it from config
-        omPort = OmUtils.getOmRpcPort(conf);
       }
     }
 
