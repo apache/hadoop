@@ -1393,7 +1393,7 @@
 
 <property>
   <name>dfs.image.parallel.load</name>
-  <value>true</value>
+  <value>false</value>
   <description>
         If true, write sub-section entries to the fsimage index so it can
         be loaded in parallel. Also controls whether parallel loading
@@ -1403,6 +1403,11 @@
         Parallel loading is not compatible with image compression,
         so if dfs.image.compress is set to true this setting will be
         ignored and no parallel loading will occur.
+        Enabling this feature may impact rolling upgrades and downgrades if
+        the previous version does not support this feature. If the feature was
+        enabled and a downgrade is required, first set this parameter to
+        false and then save the namespace to create a fsimage with no
+        sub-sections and then perform the downgrade.
   </description>
 </property>
 
