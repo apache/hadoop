@@ -899,7 +899,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_IMAGE_PARALLEL_LOAD_KEY =
       "dfs.image.parallel.load";
-  public static final boolean DFS_IMAGE_PARALLEL_LOAD_DEFAULT = true;
+  public static final boolean DFS_IMAGE_PARALLEL_LOAD_DEFAULT = false;
 
   public static final String DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY =
       "dfs.image.parallel.target.sections";
