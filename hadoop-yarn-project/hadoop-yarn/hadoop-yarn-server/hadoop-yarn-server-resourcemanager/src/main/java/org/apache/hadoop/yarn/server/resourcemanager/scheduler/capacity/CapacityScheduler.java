@@ -569,38 +569,12 @@ public class CapacityScheduler extends
   }
 
   @VisibleForTesting
-  public UserGroupMappingPlacementRule
-      getUserGroupMappingPlacementRule() throws IOException {
+  public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
     try {
       readLock.lock();
-      boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
-      LOG.info(
-          "Initialized queue mappings, override: " + overrideWithQueueMappings);
-
-      // Get new user/group mappings
-      List<QueueMapping> newMappings = conf.getQueueMappings();
-      // check if mappings refer to valid queues
-      for (QueueMapping mapping : newMappings) {
-        String mappingQueue = mapping.getQueue();
-        if (!mappingQueue.equals(
-            UserGroupMappingPlacementRule.CURRENT_USER_MAPPING) && !mappingQueue
-            .equals(UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING)) {
-          CSQueue queue = getQueue(mappingQueue);
-          if (queue == null || !(queue instanceof LeafQueue)) {
-            throw new IOException(
-                "mapping contains invalid or non-leaf queue " + mappingQueue);
-          }
-        }
-      }
-
-      // initialize groups if mappings are present
-      if (newMappings.size() > 0) {
-        Groups groups = new Groups(conf);
-        return new UserGroupMappingPlacementRule(overrideWithQueueMappings,
-            newMappings, groups);
-      }
-
-      return null;
+      UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
+      ugRule.initialize(this);
+      return ugRule;
     } finally {
       readLock.unlock();
     }
@@ -626,11 +600,19 @@ public class CapacityScheduler extends
           }
           break;
         default:
+          boolean isMappingNotEmpty;
           try {
             PlacementRule rule = PlacementFactory.getPlacementRule(
                 placementRuleStr, conf);
             if (null != rule) {
-              placementRules.add(rule);
+              try {
+                isMappingNotEmpty = rule.initialize(this);
+              } catch (IOException ie) {
+                throw new IOException(ie);
+              }
+              if (isMappingNotEmpty) {
+                placementRules.add(rule);
+              }
             }
           } catch (ClassNotFoundException cnfe) {
             throw new IOException(cnfe);
