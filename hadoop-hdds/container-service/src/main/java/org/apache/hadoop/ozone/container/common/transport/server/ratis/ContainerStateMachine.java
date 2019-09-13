@@ -443,7 +443,9 @@ public class ContainerStateMachine extends BaseStateMachine {
           try {
             return runCommand(requestProto, context);
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error(gid + ": writeChunk writeStateMachineData failed: blockId"
+                + write.getBlockID() + " logIndex " + entryIndex + " chunkName "
+                + write.getChunkData().getChunkName() + e);
             raftFuture.completeExceptionally(e);
             throw e;
           }}, chunkExecutor);
@@ -703,7 +705,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA);
       }
       if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile
-          || cmdType == Type.PutBlock) {
+          || cmdType == Type.PutBlock || cmdType == Type.CreateContainer) {
         builder.setContainer2BCSIDMap(container2BCSIDMap);
       }
       CompletableFuture<Message> applyTransactionFuture =
@@ -715,7 +717,9 @@ public class ContainerStateMachine extends BaseStateMachine {
             try {
               return runCommand(requestProto, builder.build());
             } catch (Exception e) {
-              e.printStackTrace();
+              LOG.error("gid {} : ApplyTransaction failed. cmd {} logIndex "
+                      + "{} exception {}", gid, requestProto.getCmdType(),
+                  index, e);
               applyTransactionFuture.completeExceptionally(e);
               throw e;
             }
