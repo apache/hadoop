@@ -52,6 +52,7 @@ public class TestOMRatisSnapshots {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omServiceId;
   private int numOfOMs = 3;
   private static final long SNAPSHOT_THRESHOLD = 50;
   private static final int LOG_PURGE_GAP = 50;
@@ -74,6 +75,7 @@ public class TestOMRatisSnapshots {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    omServiceId = "om-service-test1";
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
         SNAPSHOT_THRESHOLD);
@@ -86,7 +88,8 @@ public class TestOMRatisSnapshots {
         .setNumOfActiveOMs(2)
         .build();
     cluster.waitForClusterToBeReady();
-    objectStore = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    objectStore = OzoneClientFactory.getRpcClient(omServiceId, conf)
+        .getObjectStore();
   }
 
   /**

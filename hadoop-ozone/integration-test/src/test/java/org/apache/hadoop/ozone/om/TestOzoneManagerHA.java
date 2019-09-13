@@ -101,6 +101,7 @@ public class TestOzoneManagerHA {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omServiceId;
   private int numOfOMs = 3;
   private static final long SNAPSHOT_THRESHOLD = 50;
   private static final int LOG_PURGE_GAP = 50;
@@ -123,6 +124,7 @@ public class TestOzoneManagerHA {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    omServiceId = "om-service-test1";
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.set(OzoneConfigKeys.OZONE_ADMINISTRATORS,
         OZONE_ADMINISTRATORS_WILDCARD);
@@ -136,11 +138,12 @@ public class TestOzoneManagerHA {
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
-        .setOMServiceId("om-service-test1")
+        .setOMServiceId(omServiceId)
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();
-    objectStore = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    objectStore = OzoneClientFactory.getRpcClient(omServiceId, conf)
+        .getObjectStore();
   }
 
   /**
@@ -758,7 +761,7 @@ public class TestOzoneManagerHA {
 
       // Get the ObjectStore and FailoverProxyProvider for OM at index i
       final ObjectStore store = OzoneClientFactory.getRpcClient(
-          omHostName, rpcPort, conf).getObjectStore();
+          omHostName, rpcPort, omServiceId, conf).getObjectStore();
       final OMFailoverProxyProvider proxyProvider =
           store.getClientProxy().getOMProxyProvider();
 

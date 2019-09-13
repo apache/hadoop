@@ -191,8 +191,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    * cluster.
    */
   public OzoneManagerProtocolClientSideTranslatorPB(OzoneConfiguration conf,
-      String clientId, UserGroupInformation ugi) throws IOException {
-    this.omFailoverProxyProvider = new OMFailoverProxyProvider(conf, ugi);
+      String clientId, String omServiceId, UserGroupInformation ugi)
+      throws IOException {
+    this.omFailoverProxyProvider = new OMFailoverProxyProvider(conf, ugi,
+        omServiceId);
 
     int maxRetries = conf.getInt(
         OzoneConfigKeys.OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY,
