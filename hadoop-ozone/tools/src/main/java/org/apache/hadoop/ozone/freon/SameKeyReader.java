@@ -56,8 +56,8 @@ public class SameKeyReader extends BaseFreonGenerator
   private String bucketName;
 
   @Option(names = {"-k", "--key"},
-      description = "Name of the key read from multiple threads",
-      defaultValue = "bucket1")
+      required = true,
+      description = "Name of the key read from multiple threads")
   private String keyName;
 
   private Timer timer;
