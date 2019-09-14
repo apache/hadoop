@@ -1304,8 +1304,12 @@ public class KeyManagerImpl implements KeyManager {
 
               OmKeyInfo omKeyInfo =
                   openKeyTable.get(upload.getDbKey());
+
               upload.setCreationTime(
                   Instant.ofEpochMilli(omKeyInfo.getCreationTime()));
+
+              upload.setReplicationType(omKeyInfo.getType());
+              upload.setReplicationFactor(omKeyInfo.getFactor());
             } catch (IOException e) {
               LOG.warn(
                   "Open key entry for multipart upload record can be read  {}",
@@ -1315,10 +1319,7 @@ public class KeyManagerImpl implements KeyManager {
           })
           .collect(Collectors.toList());
 
-      OmMultipartUploadList omMultipartUploadList =
-          new OmMultipartUploadList(collect);
-
-      return omMultipartUploadList;
+      return new OmMultipartUploadList(collect);
 
     } catch (IOException ex) {
       LOG.error("List Multipart Uploads Failed: volume: " + volumeName +
@@ -1418,8 +1419,10 @@ public class KeyManagerImpl implements KeyManager {
     } catch (OMException ex) {
       throw ex;
     } catch (IOException ex){
-      LOG.error("List Multipart Upload Parts Failed: volume: " + volumeName +
-              "bucket: " + bucketName + "key: " + keyName, ex);
+      LOG.error(
+          "List Multipart Upload Parts Failed: volume: {}, bucket: {}, ,key: "
+              + "{} ",
+          volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes
               .LIST_MULTIPART_UPLOAD_PARTS_FAILED);
     } finally {

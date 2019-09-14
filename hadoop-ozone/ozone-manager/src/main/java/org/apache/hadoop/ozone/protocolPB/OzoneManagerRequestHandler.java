@@ -962,6 +962,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
             .setBucketName(upload.getBucketName())
             .setKeyName(upload.getKeyName())
             .setUploadId(upload.getUploadId())
+            .setType(upload.getReplicationType())
+            .setFactor(upload.getReplicationFactor())
             .setCreationTime(upload.getCreationTime().toEpochMilli())
             .build())
         .collect(Collectors.toList());

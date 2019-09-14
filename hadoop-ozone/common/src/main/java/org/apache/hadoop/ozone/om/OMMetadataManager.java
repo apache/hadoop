@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.om;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -330,7 +331,7 @@ public interface OMMetadataManager {
 
   /**
    * Return the existing upload keys which includes volumeName, bucketName,
-   * keyName and uploadId.
+   * keyName.
    */
   List<String> getMultipartUploadKeys(String volumeName,
       String bucketName, String prefix) throws IOException;

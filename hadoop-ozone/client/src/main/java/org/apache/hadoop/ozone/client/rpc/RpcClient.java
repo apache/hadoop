@@ -968,8 +968,12 @@ public class RpcClient implements ClientProtocol {
     List<OzoneMultipartUpload> uploads = omMultipartUploadList.getUploads()
         .stream()
         .map(upload -> new OzoneMultipartUpload(upload.getVolumeName(),
-            upload.getBucketName(), upload.getKeyName(), upload.getUploadId(),
-            upload.getCreationTime()))
+            upload.getBucketName(),
+            upload.getKeyName(),
+            upload.getUploadId(),
+            upload.getCreationTime(),
+            ReplicationType.fromProto(upload.getReplicationType()),
+            ReplicationFactor.fromProto(upload.getReplicationFactor())))
         .collect(Collectors.toList());
     OzoneMultipartUploadList result = new OzoneMultipartUploadList(uploads);
     return result;

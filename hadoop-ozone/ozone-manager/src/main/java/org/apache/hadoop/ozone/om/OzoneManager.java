@@ -2845,10 +2845,28 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OmMultipartUploadList listMultipartUploads(String volumeName,
       String bucketName, String prefix) throws IOException {
-    //TODO add metrics and audit information
-    OmMultipartUploadList omMultipartUploadListParts =
-        keyManager.listMultipartUploads(volumeName, bucketName, prefix);
-    return omMultipartUploadListParts;
+
+    Map<String, String> auditMap = new HashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+
+    metrics.incNumListMultipartUploads();
+    try {
+      OmMultipartUploadList omMultipartUploadList =
+          keyManager.listMultipartUploads(volumeName, bucketName, prefix);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .LIST_MULTIPART_UPLOADS, auditMap));
+      return omMultipartUploadList;
+
+    } catch (IOException ex) {
+      metrics.incNumListMultipartUploadFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .LIST_MULTIPART_UPLOADS, auditMap, ex));
+      throw ex;
+    }
+
+
   }
 
   @Override

@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.sun.codemodel.internal.JExpression;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -131,6 +132,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numBucketS3Deletes;
   private @Metric MutableCounterLong numBucketS3DeleteFails;
 
+  private @Metric MutableCounterLong numListMultipartUploadFails;
+  private @Metric MutableCounterLong numListMultipartUploads;
 
   public OMMetrics() {
   }
@@ -324,10 +327,18 @@ public class OMMetrics {
     numAbortMultipartUploads.incr();
   }
 
+  public void incNumListMultipartUploadFails() {
+    numListMultipartUploadFails.incr();
+  }
+
+  public void incNumListMultipartUploads() {
+    numKeyOps.incr();
+    numListMultipartUploads.incr();
+  }
+
   public void incNumAbortMultipartUploadFails() {
     numAbortMultipartUploadFails.incr();
   }
-
   public void incNumListMultipartUploadParts() {
     numKeyOps.incr();
     numListMultipartUploadParts.incr();

@@ -228,8 +228,12 @@ public class BucketEndpoint extends EndpointBase {
     result.setBucket(bucketName);
 
     ozoneMultipartUploadList.getUploads().forEach(upload -> result.addUpload(
-        new ListMultipartUploadsResult.Upload(upload.getKeyName(),
-            upload.getUploadId(), upload.getCreationTime())));
+        new ListMultipartUploadsResult.Upload(
+            upload.getKeyName(),
+            upload.getUploadId(),
+            upload.getCreationTime(),
+            S3StorageType.fromReplicationType(upload.getReplicationType())
+        )));
     return Response.ok(result).build();
   }
   /**

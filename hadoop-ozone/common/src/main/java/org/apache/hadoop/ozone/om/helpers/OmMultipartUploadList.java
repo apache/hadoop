@@ -18,15 +18,21 @@
 
 package org.apache.hadoop.ozone.om.helpers;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+
 /**
- * List of in-flight MU upoads.
+ * List of in-flight MPU uploads.
  */
 public class OmMultipartUploadList {
 
-  private List<OmMultipartUpload> uploads = new ArrayList<>();
+  private ReplicationType replicationType;
+
+  private ReplicationFactor replicationFactor;
+
+  private List<OmMultipartUpload> uploads;
 
   public OmMultipartUploadList(
       List<OmMultipartUpload> uploads) {
@@ -40,5 +46,23 @@ public class OmMultipartUploadList {
   public void setUploads(
       List<OmMultipartUpload> uploads) {
     this.uploads = uploads;
+  }
+
+  public ReplicationType getReplicationType() {
+    return replicationType;
+  }
+
+  public void setReplicationType(
+      ReplicationType replicationType) {
+    this.replicationType = replicationType;
+  }
+
+  public ReplicationFactor getReplicationFactor() {
+    return replicationFactor;
+  }
+
+  public void setReplicationFactor(
+      ReplicationFactor replicationFactor) {
+    this.replicationFactor = replicationFactor;
   }
 }

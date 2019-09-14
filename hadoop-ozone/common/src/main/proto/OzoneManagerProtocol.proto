@@ -1042,6 +1042,9 @@ message MultipartUploadInfo {
     required string keyName = 3;
     required string uploadId = 4;
     required uint64 creationTime = 5;
+    required hadoop.hdds.ReplicationType type = 6;
+    required hadoop.hdds.ReplicationFactor factor = 7;
+
 }
 
 message PartInfo {

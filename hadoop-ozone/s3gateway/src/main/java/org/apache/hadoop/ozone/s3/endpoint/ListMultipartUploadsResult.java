@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.ozone.s3.commontypes.IsoDateAdapter;
+import org.apache.hadoop.ozone.s3.util.S3StorageType;
 
 /**
  * AWS compatible REST response for list multipart upload.
@@ -152,7 +153,6 @@ public class ListMultipartUploadsResult {
     @XmlElement(name = "Initiator")
     private Owner initiator = NOT_SUPPORTED_OWNER;
 
-    //TODO support storage class in the return.
     @XmlElement(name = "StorageClass")
     private String storageClass = "STANDARD";
 
@@ -167,6 +167,14 @@ public class ListMultipartUploadsResult {
       this.key = key;
       this.uploadId = uploadId;
       this.initiated = initiated;
+    }
+
+    public Upload(String key, String uploadId, Instant initiated,
+        S3StorageType storageClass) {
+      this.key = key;
+      this.uploadId = uploadId;
+      this.initiated = initiated;
+      this.storageClass = storageClass.toString();
     }
 
     public String getKey() {

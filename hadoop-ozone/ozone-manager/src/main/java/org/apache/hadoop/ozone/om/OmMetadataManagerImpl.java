@@ -61,6 +61,15 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.utils.db.DBStoreBuilder;
+import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.Table.KeyValue;
+import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.utils.db.TypedTable;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -827,6 +836,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public List<String> getMultipartUploadKeys(
       String volumeName, String bucketName, String prefix) throws IOException {
     List<String> response = new ArrayList<>();
+
     TableIterator<String, ? extends KeyValue<String, OmMultipartKeyInfo>>
         iterator = getMultipartInfoTable().iterator();
 

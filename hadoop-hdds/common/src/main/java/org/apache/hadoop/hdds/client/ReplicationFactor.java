@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdds.client;
 
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+
 /**
  * The replication factor to be used while writing key into ozone.
  */
@@ -51,6 +53,22 @@ public enum ReplicationFactor {
       return THREE;
     }
     throw new IllegalArgumentException("Unsupported value: " + value);
+  }
+
+  public static ReplicationFactor fromProto(
+      HddsProtos.ReplicationFactor replicationFactor) {
+    if (replicationFactor == null) {
+      return null;
+    }
+    switch (replicationFactor) {
+    case ONE:
+      return ReplicationFactor.ONE;
+    case THREE:
+      return ReplicationFactor.THREE;
+    default:
+      throw new IllegalArgumentException(
+          "Unsupported ProtoBuf replication factor: " + replicationFactor);
+    }
   }
 
   /**

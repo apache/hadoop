@@ -52,4 +52,12 @@ public enum S3StorageType {
     return STANDARD;
   }
 
+  public static S3StorageType fromReplicationType(
+      ReplicationType replicationType) {
+    if (replicationType == ReplicationType.STAND_ALONE) {
+      return S3StorageType.REDUCED_REDUNDANCY;
+    } else {
+      return S3StorageType.STANDARD;
+    }
+  }
 }

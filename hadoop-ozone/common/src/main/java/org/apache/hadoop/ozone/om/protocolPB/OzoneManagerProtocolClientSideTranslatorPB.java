@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -1179,9 +1181,15 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     List<OmMultipartUpload> uploadList =
         listMultipartUploadsResponse.getUploadsListList()
             .stream()
-            .map(proto -> new OmMultipartUpload(proto.getVolumeName(),
-                proto.getBucketName(), proto.getKeyName(), proto.getUploadId(),
-                Instant.ofEpochMilli(proto.getCreationTime())))
+            .map(proto -> new OmMultipartUpload(
+                proto.getVolumeName(),
+                proto.getBucketName(),
+                proto.getKeyName(),
+                proto.getUploadId(),
+                Instant.ofEpochMilli(proto.getCreationTime()),
+                proto.getType(),
+                proto.getFactor()
+            ))
             .collect(Collectors.toList());
 
     OmMultipartUploadList response = new OmMultipartUploadList(uploadList);
