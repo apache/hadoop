@@ -1849,19 +1849,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <version>${maven-checkstyle-plugin.version}</version>
           <dependencies>
             <dependency>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-hdds-build-tools</artifactId>
-              <version>${project.version}</version>
-            </dependency>
-            <dependency>
               <groupId>com.puppycrawl.tools</groupId>
               <artifactId>checkstyle</artifactId>
               <version>${checkstyle.version}</version>
             </dependency>
           </dependencies>
           <configuration>
-            <configLocation>checkstyle/checkstyle.xml</configLocation>
-            <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
+            <configLocation>hadoop-hdds/build-tools/src/main/resources/checkstyle/checkstyle.xml</configLocation>
+            <suppressionsLocation>hadoop-hdds/build-tools/src/main/resources/checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
             <format>xml</format>
