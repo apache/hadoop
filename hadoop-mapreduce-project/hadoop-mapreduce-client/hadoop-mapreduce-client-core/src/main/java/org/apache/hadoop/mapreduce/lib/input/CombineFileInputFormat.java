@@ -153,11 +153,20 @@ public abstract class CombineFileInputFormat<K, V>
     }
     pools.add(multi);
   }
-  
+
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   */
+  @Deprecated
   @Override
   protected boolean isSplitable(JobContext context, Path file) {
+    return isSplittable(context, file);
+  }
+
+  @Override
+  protected boolean isSplittable(JobContext context, Path file) {
     final CompressionCodec codec =
-      new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
+            new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
     if (null == codec) {
       return true;
     }
@@ -280,7 +289,7 @@ public abstract class CombineFileInputFormat<K, V>
     long totLength = 0;
     int i = 0;
     for (FileStatus stat : stats) {
-      files[i] = new OneFileInfo(stat, conf, isSplitable(job, stat.getPath()),
+      files[i] = new OneFileInfo(stat, conf, isSplittable(job, stat.getPath()),
                                  rackToBlocks, blockToNodes, nodeToBlocks,
                                  rackToNodes, maxSize);
       totLength += files[i].getLength();
@@ -572,7 +581,7 @@ public abstract class CombineFileInputFormat<K, V>
     private OneBlockInfo[] blocks;       // all blocks in this file
 
     OneFileInfo(FileStatus stat, Configuration conf,
-                boolean isSplitable,
+                boolean isSplittable,
                 HashMap<String, List<OneBlockInfo>> rackToBlocks,
                 HashMap<OneBlockInfo, String[]> blockToNodes,
                 HashMap<String, Set<OneBlockInfo>> nodeToBlocks,
@@ -598,7 +607,7 @@ public abstract class CombineFileInputFormat<K, V>
           locations = new BlockLocation[] { new BlockLocation() };
         }
 
-        if (!isSplitable) {
+        if (!isSplittable) {
           // if the file is not splitable, just create the one block with
           // full file length
           if (LOG.isDebugEnabled()) {

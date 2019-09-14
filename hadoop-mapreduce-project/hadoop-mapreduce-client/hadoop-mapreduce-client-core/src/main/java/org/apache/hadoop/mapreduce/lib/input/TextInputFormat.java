@@ -53,14 +53,22 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text> {
     return new LineRecordReader(recordDelimiterBytes);
   }
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   */
+  @Deprecated
   @Override
   protected boolean isSplitable(JobContext context, Path file) {
+    return isSplittable(context, file);
+  }
+
+  @Override
+  protected boolean isSplittable(JobContext context, Path file) {
     final CompressionCodec codec =
-      new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
+            new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
     if (null == codec) {
       return true;
     }
     return codec instanceof SplittableCompressionCodec;
   }
-
 }

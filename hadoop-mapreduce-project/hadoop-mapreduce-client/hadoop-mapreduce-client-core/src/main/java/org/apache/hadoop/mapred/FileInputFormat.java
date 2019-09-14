@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * {@link #getSplits(JobConf, int)}.
  *
  * Implementations of <code>FileInputFormat</code> can also override the
- * {@link #isSplitable(FileSystem, Path)} method to prevent input files
+ * {@link #isSplittable(FileSystem, Path)} method to prevent input files
  * from being split-up in certain situations. Implementations that may
  * deal with non-splittable files <i>must</i> override this method, since
  * the default implementation assumes splitting is always possible.
@@ -136,8 +136,30 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
    * @param fs the file system that the file is on
    * @param filename the file name to check
    * @return is this file splitable?
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
    */
+  @Deprecated
   protected boolean isSplitable(FileSystem fs, Path filename) {
+    return isSplittable(fs, filename);
+  }
+
+  /**
+   * Is the given filename splittable? Usually, true, but if the file is
+   * stream compressed, it will not be.
+   *
+   * The default implementation in <code>FileInputFormat</code> always returns
+   * true. Implementations that may deal with non-splittable files <i>must</i>
+   * override this method.
+   *
+   * <code>FileInputFormat</code> implementations can override this and return
+   * <code>false</code> to ensure that individual input files are never split-up
+   * so that {@link Mapper}s process entire files.
+   *
+   * @param fs the file system that the file is on
+   * @param filename the file name to check
+   * @return is this file splitable?
+   */
+  protected boolean isSplittable(FileSystem fs, Path filename) {
     return true;
   }
   
@@ -364,7 +386,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         } else {
           blkLocations = fs.getFileBlockLocations(file, 0, length);
         }
-        if (isSplitable(fs, path)) {
+        if (isSplittable(fs, path)) {
           long blockSize = file.getBlockSize();
           long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 

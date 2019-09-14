@@ -56,7 +56,7 @@ import com.google.common.collect.Lists;
  * {@link #getSplits(JobContext)}.
  *
  * Implementations of <code>FileInputFormat</code> can also override the
- * {@link #isSplitable(JobContext, Path)} method to prevent input files
+ * {@link #isSplittable(JobContext, Path)} method to prevent input files
  * from being split-up in certain situations. Implementations that may
  * deal with non-splittable files <i>must</i> override this method, since
  * the default implementation assumes splitting is always possible.
@@ -165,8 +165,30 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * @param context the job context
    * @param filename the file name to check
    * @return is this file splitable?
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
    */
+  @Deprecated
   protected boolean isSplitable(JobContext context, Path filename) {
+    return isSplittable(context, filename);
+  }
+
+  /**
+   * Is the given filename splittable? Usually, true, but if the file is
+   * stream compressed, it will not be.
+   *
+   * The default implementation in <code>FileInputFormat</code> always returns
+   * true. Implementations that may deal with non-splittable files <i>must</i>
+   * override this method.
+   *
+   * <code>FileInputFormat</code> implementations can override this and return
+   * <code>false</code> to ensure that individual input files are never split-up
+   * so that {@link Mapper}s process entire files.
+   *
+   * @param context the job context
+   * @param filename the file name to check
+   * @return is this file splitable?
+   */
+  protected boolean isSplittable(JobContext context, Path filename) {
     return true;
   }
 
@@ -415,7 +437,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
           FileSystem fs = path.getFileSystem(job.getConfiguration());
           blkLocations = fs.getFileBlockLocations(file, 0, length);
         }
-        if (isSplitable(job, path)) {
+        if (isSplittable(job, path)) {
           long blockSize = file.getBlockSize();
           long splitSize = computeSplitSize(blockSize, minSize, maxSize);
 

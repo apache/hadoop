@@ -143,21 +143,48 @@ public abstract class CombineFileInputFormat<K, V>
    * @param context the job context
    * @param file the file name to check
    * @return is this file splitable?
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
    */
+  @Deprecated
   @InterfaceAudience.Private
   @Override
   protected boolean isSplitable(JobContext context, Path file) {
+    return isSplittable(context, file);
+  }
+
+  /**
+   * Subclasses should avoid overriding this method and should instead only
+   * override {@link #isSplittable(FileSystem, Path)}.  The implementation of
+   * this method simply calls the other method to preserve compatibility.
+   * @see <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5530">
+   * MAPREDUCE-5530</a>
+   *
+   * @param context the job context
+   * @param file the file name to check
+   * @return is this file splittable?
+   */
+  @InterfaceAudience.Private
+  @Override
+  protected boolean isSplittable(JobContext context, Path file) {
     try {
-      return isSplitable(FileSystem.get(context.getConfiguration()), file);
+      return isSplittable(FileSystem.get(context.getConfiguration()), file);
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   */
+  @Deprecated
   protected boolean isSplitable(FileSystem fs, Path file) {
+    return isSplittable(fs, file);
+  }
+
+  protected boolean isSplittable(FileSystem fs, Path file) {
     final CompressionCodec codec =
-      new CompressionCodecFactory(fs.getConf()).getCodec(file);
+            new CompressionCodecFactory(fs.getConf()).getCodec(file);
     if (null == codec) {
       return true;
     }

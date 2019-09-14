@@ -45,8 +45,16 @@ public class KeyValueTextInputFormat extends FileInputFormat<Text, Text>
   public void configure(JobConf conf) {
     compressionCodecs = new CompressionCodecFactory(conf);
   }
-  
+
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   */
+  @Deprecated
   protected boolean isSplitable(FileSystem fs, Path file) {
+    return isSplittable(fs, file);
+  }
+
+  protected boolean isSplittable(FileSystem fs, Path file) {
     final CompressionCodec codec = compressionCodecs.getCodec(file);
     if (null == codec) {
       return true;

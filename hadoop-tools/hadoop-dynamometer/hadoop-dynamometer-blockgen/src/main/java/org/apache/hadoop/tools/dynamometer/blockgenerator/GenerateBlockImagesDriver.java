@@ -133,7 +133,7 @@ public class GenerateBlockImagesDriver extends Configured implements Tool {
   /** A simple text input format that doesn't allow splitting of files. */
   public static class NoSplitTextInputFormat extends TextInputFormat {
     @Override
-    public boolean isSplitable(JobContext context, Path file) {
+    public boolean isSplittable(JobContext context, Path file) {
       return false;
     }
   }

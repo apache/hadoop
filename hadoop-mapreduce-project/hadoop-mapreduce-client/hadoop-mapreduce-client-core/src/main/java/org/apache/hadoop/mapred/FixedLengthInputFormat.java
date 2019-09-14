@@ -88,10 +88,18 @@ public class FixedLengthInputFormat
                                        recordLength);
   }
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   */
+  @Deprecated
   @Override
   protected boolean isSplitable(FileSystem fs, Path file) {
-    final CompressionCodec codec = compressionCodecs.getCodec(file);
-    return(null == codec);
+    return isSplittable(fs, file);
   }
 
+  @Override
+  protected boolean isSplittable(FileSystem fs, Path file) {
+    final CompressionCodec codec = compressionCodecs.getCodec(file);
+    return (null == codec);
+  }
 }

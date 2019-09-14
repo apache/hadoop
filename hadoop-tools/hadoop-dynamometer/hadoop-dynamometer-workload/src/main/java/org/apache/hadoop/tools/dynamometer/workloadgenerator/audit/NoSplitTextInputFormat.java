@@ -39,9 +39,17 @@ public class NoSplitTextInputFormat extends TextInputFormat {
     return super.listStatus(context);
   }
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   */
+  @Deprecated
   @Override
   public boolean isSplitable(JobContext context, Path file) {
     return false;
   }
 
+  @Override
+  public boolean isSplittable(JobContext context, Path file) {
+    return false;
+  }
 }

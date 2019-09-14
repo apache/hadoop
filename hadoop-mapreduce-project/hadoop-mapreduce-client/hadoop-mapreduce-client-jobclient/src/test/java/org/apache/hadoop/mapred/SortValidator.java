@@ -311,7 +311,7 @@ public class SortValidator extends Configured implements Tool {
     
     public static class NonSplitableSequenceFileInputFormat 
       extends SequenceFileInputFormat {
-      protected boolean isSplitable(FileSystem fs, Path filename) {
+      protected boolean isSplittable(FileSystem fs, Path filename) {
         return false;
       }
     }

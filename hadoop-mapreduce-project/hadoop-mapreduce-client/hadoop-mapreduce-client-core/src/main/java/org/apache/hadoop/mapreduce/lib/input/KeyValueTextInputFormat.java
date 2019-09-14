@@ -46,10 +46,19 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @InterfaceStability.Stable
 public class KeyValueTextInputFormat extends FileInputFormat<Text, Text> {
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   */
+  @Deprecated
   @Override
   protected boolean isSplitable(JobContext context, Path file) {
+    return isSplittable(context, file);
+  }
+
+  @Override
+  protected boolean isSplittable(JobContext context, Path file) {
     final CompressionCodec codec =
-      new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
+            new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
     if (null == codec) {
       return true;
     }

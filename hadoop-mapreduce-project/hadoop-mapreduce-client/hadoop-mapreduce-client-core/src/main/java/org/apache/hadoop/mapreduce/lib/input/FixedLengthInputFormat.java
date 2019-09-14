@@ -80,11 +80,19 @@ public class FixedLengthInputFormat
     return new FixedLengthRecordReader(recordLength);
   }
 
+  /**
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   */
+  @Deprecated
   @Override
   protected boolean isSplitable(JobContext context, Path file) {
-    final CompressionCodec codec = 
-        new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
-    return (null == codec);
-  } 
+    return isSplittable(context, file);
+  }
 
+  @Override
+  protected boolean isSplittable(JobContext context, Path file) {
+    final CompressionCodec codec =
+            new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
+    return (null == codec);
+  }
 }

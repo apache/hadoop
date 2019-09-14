@@ -199,7 +199,7 @@ public class TestMRKeyValueTextInputFormat {
 
       // try splitting the file in a variety of sizes
       KeyValueTextInputFormat format = new KeyValueTextInputFormat();
-      assertTrue("KVTIF claims not splittable", format.isSplitable(job, file));
+      assertTrue("KVTIF claims not splittable", format.isSplittable(job, file));
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH / 2000) + 1;
         LOG.info("splitting: requesting = " + numSplits);
