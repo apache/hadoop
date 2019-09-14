@@ -174,6 +174,7 @@ public class ResourceLocalizationService extends CompositeService
   private NMStateStoreService stateStore;
   @VisibleForTesting
   final NodeManagerMetrics metrics;
+  private final boolean disablePrivateVis;
 
   @VisibleForTesting
   LocalResourcesTracker publicRsrc;
@@ -211,6 +212,15 @@ public class ResourceLocalizationService extends CompositeService
     this.dispatcher = dispatcher;
     this.delService = delService;
     this.dirsHandler = dirsHandler;
+
+    this.disablePrivateVis = UserGroupInformation.isSecurityEnabled() &&
+        context.getConf().getBoolean(
+            YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_LOCAL_USER);
+    if (this.disablePrivateVis) {
+      LOG.info("When " + YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER +
+          " is true, treat PRIVATE visibility as APPLICATION");
+    }
 
     this.cacheCleanup = new HadoopScheduledThreadPoolExecutor(1,
         new ThreadFactoryBuilder()
@@ -680,7 +690,9 @@ public class ResourceLocalizationService extends CompositeService
       case PUBLIC:
         return publicRsrc;
       case PRIVATE:
-        return privateRsrc.get(user);
+        if (!disablePrivateVis) {
+          return privateRsrc.get(user);
+        }
       case APPLICATION:
         return appRsrc.get(appId.toString());
     }
@@ -1233,9 +1245,11 @@ public class ResourceLocalizationService extends CompositeService
           context.getContainerId().getApplicationAttemptId().getApplicationId();
       LocalResourceVisibility vis = rsrc.getVisibility();
       String cacheDirectory = null;
-      if (vis == LocalResourceVisibility.PRIVATE) {// PRIVATE Only
+      if (!disablePrivateVis && vis == LocalResourceVisibility.PRIVATE) {
+        // PRIVATE ONLY
         cacheDirectory = getUserFileCachePath(user);
-      } else {// APPLICATION ONLY
+      } else {
+        // APPLICATION ONLY
         cacheDirectory = getAppFileCachePath(user, appId.toString());
       }
       Path dirPath =
@@ -1611,7 +1625,7 @@ public class ResourceLocalizationService extends CompositeService
         String owner = status.getOwner();
         List<Path> pathList = new ArrayList<>();
         pathList.add(status.getPath());
-        FileDeletionTask deletionTask = new FileDeletionTask(del, owner, null,
+        FileDeletionTask deletionTask = new FileDeletionTask(del, null, null,
             pathList);
         deletionTask.addDeletionTaskDependency(dependentDeletionTask);
         deletionTasks.add(deletionTask);
