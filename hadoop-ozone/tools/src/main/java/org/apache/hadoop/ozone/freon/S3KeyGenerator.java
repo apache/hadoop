@@ -75,8 +75,6 @@ public class S3KeyGenerator extends BaseFreonGenerator
 
     init();
 
-    OzoneConfiguration configuration = createOzoneConfiguration();
-
     AmazonS3ClientBuilder amazonS3ClientBuilder =
         AmazonS3ClientBuilder.standard()
             .withCredentials(new EnvironmentVariableCredentialsProvider());

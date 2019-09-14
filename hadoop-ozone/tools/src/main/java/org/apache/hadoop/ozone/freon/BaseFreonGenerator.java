@@ -246,6 +246,7 @@ public class BaseFreonGenerator {
    */
   public void ensureVolumeAndBucketExist(OzoneConfiguration ozoneConfiguration,
       String volumeName, String bucketName) throws IOException {
+
     try (OzoneClient rpcClient = OzoneClientFactory
         .getRpcClient(ozoneConfiguration)) {
 
@@ -256,6 +257,8 @@ public class BaseFreonGenerator {
         if (ex.getResult() == ResultCodes.VOLUME_NOT_FOUND) {
           rpcClient.getObjectStore().createVolume(volumeName);
           volume = rpcClient.getObjectStore().getVolume(volumeName);
+        } else {
+          throw ex;
         }
       }
 

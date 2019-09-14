@@ -56,10 +56,6 @@ public class OzoneClientKeyValidator extends BaseFreonGenerator
 
   private Timer timer;
 
-  private OzoneBucket bucket;
-
-  private ContentGenerator contentGenerator;
-
   private byte[] referenceDigest;
 
   private OzoneClient rpcClient;
