@@ -1131,8 +1131,9 @@ public class TestDirectoryScanner {
 
   @Test
   public void testDirectoryScannerInFederatedCluster() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration(CONF);
     //Create Federated cluster with two nameservices and one DN
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
         .numDataNodes(1).build()) {
       cluster.waitActive();
@@ -1149,7 +1150,7 @@ public class TestDirectoryScanner {
       int bp2Files = 2;
       writeFile(fs2, bp2Files);
       //Call the Directory scanner
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, conf);
       scanner.setRetainDiffs(true);
       scanner.reconcile();
       //Check blocks in corresponding BP
