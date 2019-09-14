@@ -321,8 +321,8 @@ public class ProfileServlet extends HttpServlet {
       throws IOException {
 
     File requestedFile =
-        ProfileServlet.OUTPUT_DIR.resolve(fileName).toAbsolutePath()
-            .toFile();
+        ProfileServlet.OUTPUT_DIR.resolve(Paths.get(fileName).getFileName())
+            .toAbsolutePath().toFile();
     // async-profiler version 1.4 writes 'Started [cpu] profiling' to output
     // file when profiler is running which
     // gets replaced by final output. If final output is not ready yet, the
