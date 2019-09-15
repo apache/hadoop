@@ -196,6 +196,10 @@ public class TimelineCollectorWebService {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
+    } catch (Exception e) {
+      LOG.error("Unexpected error while putting entities", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
     } finally {
       long latency = Time.monotonicNow() - startTime;
       if (isAsync) {
