@@ -143,7 +143,8 @@ public abstract class CombineFileInputFormat<K, V>
    * @param context the job context
    * @param file the file name to check
    * @return is this file splitable?
-   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)}
+   *             instead.
    */
   @Deprecated
   @InterfaceAudience.Private
@@ -175,7 +176,8 @@ public abstract class CombineFileInputFormat<K, V>
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)}
+   *             instead.
    */
   @Deprecated
   protected boolean isSplitable(FileSystem fs, Path file) {

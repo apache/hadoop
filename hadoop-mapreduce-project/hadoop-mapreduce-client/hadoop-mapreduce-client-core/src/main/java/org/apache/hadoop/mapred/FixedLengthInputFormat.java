@@ -89,7 +89,8 @@ public class FixedLengthInputFormat
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)}
+   *             instead.
    */
   @Deprecated
   @Override

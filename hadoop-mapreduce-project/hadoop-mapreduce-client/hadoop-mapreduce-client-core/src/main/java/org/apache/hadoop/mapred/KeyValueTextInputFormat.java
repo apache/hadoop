@@ -47,7 +47,8 @@ public class KeyValueTextInputFormat extends FileInputFormat<Text, Text>
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)}
+   *             instead.
    */
   @Deprecated
   protected boolean isSplitable(FileSystem fs, Path file) {

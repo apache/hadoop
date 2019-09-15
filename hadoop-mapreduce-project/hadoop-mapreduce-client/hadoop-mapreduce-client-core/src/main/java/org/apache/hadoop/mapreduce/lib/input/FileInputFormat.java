@@ -165,7 +165,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * @param context the job context
    * @param filename the file name to check
    * @return is this file splitable?
-   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)}
+   *             instead.
    */
   @Deprecated
   protected boolean isSplitable(JobContext context, Path filename) {

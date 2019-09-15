@@ -40,7 +40,8 @@ public class NoSplitTextInputFormat extends TextInputFormat {
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)}
+   *             instead.
    */
   @Deprecated
   @Override

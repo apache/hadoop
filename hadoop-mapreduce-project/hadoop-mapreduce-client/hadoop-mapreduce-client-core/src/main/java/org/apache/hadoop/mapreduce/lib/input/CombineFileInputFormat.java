@@ -155,7 +155,8 @@ public abstract class CombineFileInputFormat<K, V>
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(JobContext, Path)}
+   *             instead.
    */
   @Deprecated
   @Override
@@ -165,11 +166,13 @@ public abstract class CombineFileInputFormat<K, V>
 
   @Override
   protected boolean isSplittable(JobContext context, Path file) {
-    final CompressionCodec codec =
-            new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
+    final CompressionCodec codec = new CompressionCodecFactory(
+            context.getConfiguration()).getCodec(file);
+
     if (null == codec) {
       return true;
     }
+
     return codec instanceof SplittableCompressionCodec;
   }
 

@@ -46,7 +46,8 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text>
   }
 
   /**
-   * @deprecated since 3.3.0. Use {@link #isSplittable(org.apache.hadoop.fs.FileSystem, Path)}
+   * @deprecated since 3.3.0. Use
+   *             {@link #isSplittable(org.apache.hadoop.fs.FileSystem, Path)}
    *             instead.
    */
   @Deprecated

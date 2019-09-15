@@ -136,7 +136,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
    * @param fs the file system that the file is on
    * @param filename the file name to check
    * @return is this file splitable?
-   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)} instead.
+   * @deprecated since 3.3.0. Use {@link #isSplittable(FileSystem, Path)}
+   *             instead.
    */
   @Deprecated
   protected boolean isSplitable(FileSystem fs, Path filename) {
