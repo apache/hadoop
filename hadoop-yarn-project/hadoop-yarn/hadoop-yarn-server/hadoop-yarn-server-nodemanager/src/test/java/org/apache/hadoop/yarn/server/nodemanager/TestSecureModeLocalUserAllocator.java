@@ -7,7 +7,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestSecureModeLocalUserAllocator {
-  static Configuration conf;
+  private static Configuration conf;
 
   @BeforeClass
   public static void beforeAllTestMethods() {
@@ -28,7 +28,8 @@ public class TestSecureModeLocalUserAllocator {
     allocator.incrementFileOpCount("user0");
     allocator.decrementLogHandlingCount("user0");
     allocator.incrementLogHandlingCount("user0");
-    Assert.assertNull(allocator.getRunAsLocalUser("user0"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user0"));
 
     // as long as not all ref counts are 0, the mapping stays in memory
     allocator.allocate("user0", "app0");
@@ -40,7 +41,8 @@ public class TestSecureModeLocalUserAllocator {
     allocator.decrementFileOpCount("user0");
     Assert.assertEquals("smlu0", allocator.getRunAsLocalUser("user0"));
     allocator.decrementLogHandlingCount("user0");
-    Assert.assertNull(allocator.getRunAsLocalUser("user0"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user0"));
   }
 
   @Test
@@ -64,11 +66,14 @@ public class TestSecureModeLocalUserAllocator {
 
     Assert.assertEquals("smlu0", allocator.getRunAsLocalUser("user0"));
     Assert.assertEquals("smlu1", allocator.getRunAsLocalUser("user1"));
-    Assert.assertNull(allocator.getRunAsLocalUser("user2"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user2"));
 
     allocator.decrementFileOpCount("user0");
     allocator.decrementLogHandlingCount("user1");
-    Assert.assertNull(allocator.getRunAsLocalUser("user0"));
-    Assert.assertNull(allocator.getRunAsLocalUser("user1"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user0"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user1"));
   }
 }

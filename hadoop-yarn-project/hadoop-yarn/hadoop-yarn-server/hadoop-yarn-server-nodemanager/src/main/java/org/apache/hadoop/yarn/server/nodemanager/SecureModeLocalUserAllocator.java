@@ -47,11 +47,12 @@ class LocalUserInfo {
  * Maintains the appUser to local user mapping, until:
  * a) all applications of the appUser is finished;
  * b) all FileDeletionTask for that appUser is executed;
- * c) all log aggregation/handling requests for appUser's applications are done 
+ * c) all log aggregation/handling requests for appUser's applications are done
  * For now allocation is only maintained in memory so it does not support
  * node manager recovery mode.
  */
 public class SecureModeLocalUserAllocator {
+  public static final String NONEXISTUSER = "nonexistuser";
   private static final Logger LOG =
       LoggerFactory.getLogger(SecureModeLocalUserAllocator.class);
   private static SecureModeLocalUserAllocator instance;
@@ -96,8 +97,9 @@ public class SecureModeLocalUserAllocator {
    */
   public String getRunAsLocalUser(String appUser) {
     if (!appUserToLocalUser.containsKey(appUser)) {
-      LOG.error("Cannot find runas local user for appUser " + appUser);
-      return null;
+      LOG.error("Cannot find runas local user for appUser " + appUser +
+          ", return " + NONEXISTUSER);
+      return NONEXISTUSER;
     }
     return appUserToLocalUser.get(appUser).localUser;
   }
@@ -126,7 +128,7 @@ public class SecureModeLocalUserAllocator {
       LOG.error(errMsg);
       return;
     }
-    
+
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
     localUserInfo.appCount--;
     LOG.info("Decremented appCount for appUser " + appUser +
@@ -167,7 +169,7 @@ public class SecureModeLocalUserAllocator {
     localUserInfo.fileOpCount--;
     LOG.info("Decremented fileOpCount for appUser " + appUser +
         " to " + localUserInfo.fileOpCount);
-    
+
     checkAndDeallocateAppUser(appUser, localUserInfo);
   }
 
@@ -227,7 +229,7 @@ public class SecureModeLocalUserAllocator {
       String errMsg = "Cannot allocate local users from a pool of " +
           localUserCount; 
       LOG.error(errMsg);
-      throw new RuntimeException(errMsg);
+      return;
     }
     appUserToLocalUser.put(appUser,
         new LocalUserInfo(localUserPrefix + index, index));
