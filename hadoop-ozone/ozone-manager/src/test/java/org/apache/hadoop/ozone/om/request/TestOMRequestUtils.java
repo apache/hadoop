@@ -20,23 +20,51 @@
 package org.apache.hadoop.ozone.om.request;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadAbortRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartCommitUploadPartRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .AddAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .RemoveAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetAclRequest;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
+import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
+
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 
 /**
  * Helper class to test OMClientRequest classes.
@@ -63,8 +91,10 @@ public final class TestOMRequestUtils {
         OmBucketInfo.newBuilder().setVolumeName(volumeName)
             .setBucketName(bucketName).setCreationTime(Time.now()).build();
 
-    omMetadataManager.getBucketTable().put(
-        omMetadataManager.getBucketKey(volumeName, bucketName), omBucketInfo);
+    // Add to cache.
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getBucketKey(volumeName, bucketName)),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
   }
 
   /**
@@ -144,6 +174,12 @@ public final class TestOMRequestUtils {
     addVolumeToDB(volumeName, UUID.randomUUID().toString(), omMetadataManager);
   }
 
+  public static void addS3BucketToDB(String volumeName, String s3BucketName,
+      OMMetadataManager omMetadataManager) throws Exception {
+    omMetadataManager.getS3Table().put(s3BucketName,
+        S3BucketCreateRequest.formatS3MappingName(volumeName, s3BucketName));
+  }
+
   /**
    * Add volume creation entry to OM DB.
    * @param volumeName
@@ -159,6 +195,11 @@ public final class TestOMRequestUtils {
             .setOwnerName(ownerName).build();
     omMetadataManager.getVolumeTable().put(
         omMetadataManager.getVolumeKey(volumeName), omVolumeArgs);
+
+    // Add to cache.
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getVolumeKey(volumeName)),
+            new CacheValue<>(Optional.of(omVolumeArgs), 1L));
   }
 
 
@@ -178,6 +219,30 @@ public final class TestOMRequestUtils {
     return OzoneManagerProtocolProtos.OMRequest.newBuilder()
         .setCreateBucketRequest(req)
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  public static OzoneManagerProtocolProtos.OMRequest createS3BucketRequest(
+      String userName, String s3BucketName) {
+    OzoneManagerProtocolProtos.S3CreateBucketRequest request =
+        OzoneManagerProtocolProtos.S3CreateBucketRequest.newBuilder()
+            .setUserName(userName)
+            .setS3Bucketname(s3BucketName).build();
+
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+        .setCreateS3BucketRequest(request)
+        .setCmdType(OzoneManagerProtocolProtos.Type.CreateS3Bucket)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  public static OzoneManagerProtocolProtos.OMRequest deleteS3BucketRequest(
+      String s3BucketName) {
+    OzoneManagerProtocolProtos.S3DeleteBucketRequest request =
+        OzoneManagerProtocolProtos.S3DeleteBucketRequest.newBuilder()
+            .setS3BucketName(s3BucketName).build();
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+        .setDeleteS3BucketRequest(request)
+        .setCmdType(OzoneManagerProtocolProtos.Type.DeleteS3Bucket)
         .setClientId(UUID.randomUUID().toString()).build();
   }
 
@@ -242,4 +307,226 @@ public final class TestOMRequestUtils {
         .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
   }
 
+  public static OMRequest createVolumeAddAclRequest(String volumeName,
+      OzoneAcl acl) {
+    AddAclRequest.Builder addAclRequestBuilder = AddAclRequest.newBuilder();
+    addAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(ResourceType.VOLUME)
+        .setStoreType(StoreType.OZONE)
+        .build()));
+    if (acl != null) {
+      addAclRequestBuilder.setAcl(OzoneAcl.toProtobuf(acl));
+    }
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.AddAcl)
+        .setAddAclRequest(addAclRequestBuilder.build()).build();
+  }
+
+  public static OMRequest createVolumeRemoveAclRequest(String volumeName,
+      OzoneAcl acl) {
+    RemoveAclRequest.Builder removeAclRequestBuilder =
+        RemoveAclRequest.newBuilder();
+    removeAclRequestBuilder.setObj(OzoneObj.toProtobuf(
+        new OzoneObjInfo.Builder()
+            .setVolumeName(volumeName)
+            .setResType(ResourceType.VOLUME)
+            .setStoreType(StoreType.OZONE)
+            .build()));
+    if (acl != null) {
+      removeAclRequestBuilder.setAcl(OzoneAcl.toProtobuf(acl));
+    }
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.RemoveAcl)
+        .setRemoveAclRequest(removeAclRequestBuilder.build()).build();
+  }
+
+  public static OMRequest createVolumeSetAclRequest(String volumeName,
+      List<OzoneAcl> acls) {
+    SetAclRequest.Builder setAclRequestBuilder = SetAclRequest.newBuilder();
+    setAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(ResourceType.VOLUME)
+        .setStoreType(StoreType.OZONE)
+        .build()));
+    if (acls != null) {
+      acls.forEach(
+          acl -> setAclRequestBuilder.addAcl(OzoneAcl.toProtobuf(acl)));
+    }
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.SetAcl)
+        .setSetAclRequest(setAclRequestBuilder.build()).build();
+  }
+
+  /**
+   * Deletes key from Key table and adds it to DeletedKeys table.
+   * @return the deletedKey name
+   */
+  public static String deleteKey(String ozoneKey,
+      OMMetadataManager omMetadataManager) throws IOException {
+    // Retrieve the keyInfo
+    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+
+    // Delete key from KeyTable and put in DeletedKeyTable
+    omMetadataManager.getKeyTable().delete(ozoneKey);
+    String deletedKeyName = OmUtils.getDeletedKeyName(ozoneKey, Time.now());
+    omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
+
+    return deletedKeyName;
+  }
+
+  /**
+   * Create OMRequest which encapsulates InitiateMultipartUpload request.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   */
+  public static OMRequest createInitiateMPURequest(String volumeName,
+      String bucketName, String keyName) {
+    MultipartInfoInitiateRequest
+        multipartInfoInitiateRequest =
+        MultipartInfoInitiateRequest.newBuilder().setKeyArgs(
+            KeyArgs.newBuilder().setVolumeName(volumeName).setKeyName(keyName)
+                .setBucketName(bucketName)).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.InitiateMultiPartUpload)
+        .setInitiateMultiPartUploadRequest(multipartInfoInitiateRequest)
+        .build();
+  }
+
+  /**
+   * Create OMRequest which encapsulates InitiateMultipartUpload request.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   */
+  public static OMRequest createCommitPartMPURequest(String volumeName,
+      String bucketName, String keyName, long clientID, long size,
+      String multipartUploadID, int partNumber) {
+
+    // Just set dummy size.
+    KeyArgs.Builder keyArgs =
+        KeyArgs.newBuilder().setVolumeName(volumeName).setKeyName(keyName)
+            .setBucketName(bucketName)
+            .setDataSize(size)
+            .setMultipartNumber(partNumber)
+            .setMultipartUploadID(multipartUploadID)
+            .addAllKeyLocations(new ArrayList<>());
+    // Just adding dummy list. As this is for UT only.
+
+    MultipartCommitUploadPartRequest multipartCommitUploadPartRequest =
+        MultipartCommitUploadPartRequest.newBuilder()
+            .setKeyArgs(keyArgs).setClientID(clientID).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CommitMultiPartUpload)
+        .setCommitMultiPartUploadRequest(multipartCommitUploadPartRequest)
+        .build();
+  }
+
+  public static OMRequest createAbortMPURequest(String volumeName,
+      String bucketName, String keyName, String multipartUploadID) {
+    KeyArgs.Builder keyArgs =
+        KeyArgs.newBuilder().setVolumeName(volumeName)
+            .setKeyName(keyName)
+            .setBucketName(bucketName)
+            .setMultipartUploadID(multipartUploadID);
+
+    MultipartUploadAbortRequest multipartUploadAbortRequest =
+        MultipartUploadAbortRequest.newBuilder().setKeyArgs(keyArgs).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.AbortMultiPartUpload)
+        .setAbortMultiPartUploadRequest(multipartUploadAbortRequest).build();
+  }
+
+  public static OMRequest createCompleteMPURequest(String volumeName,
+      String bucketName, String keyName, String multipartUploadID,
+      List<OzoneManagerProtocolProtos.Part> partList) {
+    KeyArgs.Builder keyArgs =
+        KeyArgs.newBuilder().setVolumeName(volumeName)
+            .setKeyName(keyName)
+            .setBucketName(bucketName)
+            .setMultipartUploadID(multipartUploadID);
+
+    MultipartUploadCompleteRequest multipartUploadCompleteRequest =
+        MultipartUploadCompleteRequest.newBuilder().setKeyArgs(keyArgs)
+            .addAllPartsList(partList).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CompleteMultiPartUpload)
+        .setCompleteMultiPartUploadRequest(multipartUploadCompleteRequest)
+        .build();
+
+  }
+
+  /**
+   * Create OMRequest for create volume.
+   * @param volumeName
+   * @param adminName
+   * @param ownerName
+   * @return OMRequest
+   */
+  public static OMRequest createVolumeRequest(String volumeName,
+      String adminName, String ownerName) {
+    OzoneManagerProtocolProtos.VolumeInfo volumeInfo =
+        OzoneManagerProtocolProtos.VolumeInfo.newBuilder().setVolume(volumeName)
+        .setAdminName(adminName).setOwnerName(ownerName).build();
+    OzoneManagerProtocolProtos.CreateVolumeRequest createVolumeRequest =
+        OzoneManagerProtocolProtos.CreateVolumeRequest.newBuilder()
+            .setVolumeInfo(volumeInfo).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
+        .setCreateVolumeRequest(createVolumeRequest).build();
+  }
+
+  /**
+   * Create OMRequest for delete bucket.
+   * @param volumeName
+   * @param bucketName
+   */
+  public static OMRequest createDeleteBucketRequest(String volumeName,
+      String bucketName) {
+    return OMRequest.newBuilder().setDeleteBucketRequest(
+        OzoneManagerProtocolProtos.DeleteBucketRequest.newBuilder()
+            .setBucketName(bucketName).setVolumeName(volumeName))
+        .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  /**
+   * Add the Bucket information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omBucketInfo
+   * @throws IOException
+   */
+  public static void addBucketToOM(OMMetadataManager omMetadataManager,
+      OmBucketInfo omBucketInfo) throws IOException {
+    String dbBucketKey =
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().put(dbBucketKey, omBucketInfo);
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(dbBucketKey),
+        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+  }
+
+  /**
+   * Add the Volume information to OzoneManager DB and Cache.
+   * @param omMetadataManager
+   * @param omVolumeArgs
+   * @throws IOException
+   */
+  public static void addVolumeToOM(OMMetadataManager omMetadataManager,
+      OmVolumeArgs omVolumeArgs) throws IOException {
+    String dbVolumeKey =
+        omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+    omMetadataManager.getVolumeTable().put(dbVolumeKey, omVolumeArgs);
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(dbVolumeKey),
+        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+  }
 }

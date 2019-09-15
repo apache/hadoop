@@ -539,8 +539,8 @@ This means that the default S3A authentication chain can be defined as
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
+    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
+       IAM credentials of any EC2 VM or AWS container in which the process is running.
   </description>
 </property>
 ```
@@ -860,7 +860,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -868,7 +868,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128MB</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -1018,7 +1018,7 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
@@ -1033,7 +1033,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
@@ -1202,9 +1202,9 @@ The configurations items controlling this behavior are:
 In the default configuration, S3 object eTags are used to detect changes.  When
 the filesystem retrieves a file from S3 using
 [Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
-it captures the eTag and uses that eTag in an 'If-Match' condition on each
+it captures the eTag and uses that eTag in an `If-Match` condition on each
 subsequent request.  If a concurrent writer has overwritten the file, the
-'If-Match' condition will fail and a RemoteFileChangedException will be thrown.
+'If-Match' condition will fail and a `RemoteFileChangedException` will be thrown.
 
 Even in this default configuration, a new write may not trigger this exception
 on an open reader.  For example, if the reader only reads forward in the file
@@ -1229,7 +1229,7 @@ It is possible to switch to using the
 instead of eTag as the change detection mechanism.  Use of this option requires
 object versioning to be enabled on any S3 buckets used by the filesystem.  The
 benefit of using version id instead of eTag is potentially reduced frequency
-of RemoteFileChangedException. With object versioning enabled, old versions
+of `RemoteFileChangedException`. With object versioning enabled, old versions
 of objects remain available after they have been overwritten.
 This means an open input stream will still be able to seek backwards after a
 concurrent writer has overwritten the file.

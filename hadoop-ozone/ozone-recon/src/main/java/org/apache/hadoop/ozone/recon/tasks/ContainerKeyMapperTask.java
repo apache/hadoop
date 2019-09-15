@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
+import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,28 +43,23 @@ import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
+
 /**
  * Class to iterate over the OM DB and populate the Recon container DB with
  * the container -> Key reverse mapping.
  */
-public class ContainerKeyMapperTask extends ReconDBUpdateTask {
+public class ContainerKeyMapperTask implements ReconDBUpdateTask {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerKeyMapperTask.class);
 
   private ContainerDBServiceProvider containerDBServiceProvider;
-  private Collection<String> tables = new ArrayList<>();
 
+  @Inject
   public ContainerKeyMapperTask(ContainerDBServiceProvider
-                                    containerDBServiceProvider,
-                                OMMetadataManager omMetadataManager) {
-    super("ContainerKeyMapperTask");
+                                    containerDBServiceProvider) {
     this.containerDBServiceProvider = containerDBServiceProvider;
-    try {
-      tables.add(omMetadataManager.getKeyTable().getName());
-    } catch (IOException ioEx) {
-      LOG.error("Unable to listen on Key Table updates ", ioEx);
-    }
   }
 
   /**
@@ -103,13 +100,19 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
   }
 
   @Override
-  protected Collection<String> getTaskTables() {
-    return tables;
+  public String getTaskName() {
+    return "ContainerKeyMapperTask";
   }
 
   @Override
-  Pair<String, Boolean> process(OMUpdateEventBatch events) {
+  public Collection<String> getTaskTables() {
+    return Collections.singletonList(KEY_TABLE);
+  }
+
+  @Override
+  public Pair<String, Boolean> process(OMUpdateEventBatch events) {
     Iterator<OMDBUpdateEvent> eventIterator = events.getIterator();
+    int eventCount = 0;
     while (eventIterator.hasNext()) {
       OMDBUpdateEvent<String, OmKeyInfo> omdbUpdateEvent = eventIterator.next();
       String updatedKey = omdbUpdateEvent.getKey();
@@ -127,12 +130,15 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
         default: LOG.debug("Skipping DB update event : " + omdbUpdateEvent
             .getAction());
         }
+        eventCount++;
       } catch (IOException e) {
         LOG.error("Unexpected exception while updating key data : {} ",
             updatedKey, e);
         return new ImmutablePair<>(getTaskName(), false);
       }
     }
+    LOG.info("{} successfully processed {} OM DB update event(s).",
+        getTaskName(), eventCount);
     return new ImmutablePair<>(getTaskName(), true);
   }
 

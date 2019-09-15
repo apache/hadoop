@@ -37,6 +37,10 @@ public class RDBBatchOperation implements BatchOperation {
     writeBatch = new WriteBatch();
   }
 
+  public RDBBatchOperation(WriteBatch writeBatch) {
+    this.writeBatch = writeBatch;
+  }
+
   public void commit(RocksDB db, WriteOptions writeOptions) throws IOException {
     try {
       db.write(writeOptions, writeBatch);

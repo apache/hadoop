@@ -39,6 +39,8 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -69,6 +71,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.ERROR_IN_COMPACT_DB;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.ERROR_IN_DB_SYNC;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.INVALID_CONTAINER_STATE;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
@@ -78,7 +82,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to perform KeyValue Container operations.
+ * Class to perform KeyValue Container operations. Any modifications to
+ * KeyValueContainer object should ideally be done via api exposed in
+ * KeyValueHandler class.
  */
 public class KeyValueContainer implements Container<KeyValueContainerData> {
 
@@ -298,8 +304,14 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   @Override
   public void quasiClose() throws StorageContainerException {
+    // The DB must be synced during close operation
+    flushAndSyncDB();
+
     writeLock();
     try {
+      // Second sync should be a very light operation as sync has already
+      // been done outside the lock.
+      flushAndSyncDB();
       updateContainerData(containerData::quasiCloseContainer);
     } finally {
       writeUnlock();
@@ -308,16 +320,21 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   @Override
   public void close() throws StorageContainerException {
+    // The DB must be synced during close operation
+    flushAndSyncDB();
+
     writeLock();
     try {
+      // Second sync should be a very light operation as sync has already
+      // been done outside the lock.
+      flushAndSyncDB();
       updateContainerData(containerData::closeContainer);
     } finally {
       writeUnlock();
     }
-
-    // It is ok if this operation takes a bit of time.
-    // Close container is not expected to be instantaneous.
-    compactDB();
+    LOG.info("Container {} is closed with bcsId {}.",
+        containerData.getContainerID(),
+        containerData.getBlockCommitSequenceId());
   }
 
   /**
@@ -349,19 +366,32 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     }
   }
 
-  void compactDB() throws StorageContainerException {
+  private void compactDB() throws StorageContainerException {
     try {
       try(ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
         db.getStore().compactDB();
-        LOG.info("Container {} is closed with bcsId {}.",
-            containerData.getContainerID(),
-            containerData.getBlockCommitSequenceId());
       }
     } catch (StorageContainerException ex) {
       throw ex;
     } catch (IOException ex) {
       LOG.error("Error in DB compaction while closing container", ex);
       throw new StorageContainerException(ex, ERROR_IN_COMPACT_DB);
+    }
+  }
+
+  private void flushAndSyncDB() throws StorageContainerException {
+    try {
+      try (ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
+        db.getStore().flushDB(true);
+        LOG.info("Container {} is synced with bcsId {}.",
+            containerData.getContainerID(),
+            containerData.getBlockCommitSequenceId());
+      }
+    } catch (StorageContainerException ex) {
+      throw ex;
+    } catch (IOException ex) {
+      LOG.error("Error in DB sync while closing container", ex);
+      throw new StorageContainerException(ex, ERROR_IN_DB_SYNC);
     }
   }
 
@@ -496,6 +526,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
           "Only closed containers could be exported: ContainerId="
               + getContainerData().getContainerID());
     }
+    compactDB();
     packer.pack(this, destination);
   }
 
@@ -525,6 +556,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
    * Acquire write lock.
    */
   public void writeLock() {
+    // TODO: The lock for KeyValueContainer object should not be exposed
+    // publicly.
     this.lock.writeLock().lock();
   }
 
@@ -580,6 +613,11 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   @Override
   public void updateBlockCommitSequenceId(long blockCommitSequenceId) {
     containerData.updateBlockCommitSequenceId(blockCommitSequenceId);
+  }
+
+  @Override
+  public long getBlockCommitSequenceId() {
+    return containerData.getBlockCommitSequenceId();
   }
 
 
@@ -645,52 +683,33 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .getContainerID() + OzoneConsts.DN_CONTAINER_DB);
   }
 
-  /**
-   * run integrity checks on the Container metadata.
-   */
-  public boolean check() {
-    ContainerCheckLevel level = ContainerCheckLevel.NO_CHECK;
+  public boolean scanMetaData() {
     long containerId = containerData.getContainerID();
+    KeyValueContainerCheck checker =
+        new KeyValueContainerCheck(containerData.getMetadataPath(), config,
+            containerId);
+    return checker.fastCheck();
+  }
 
-    switch (containerData.getState()) {
-    case OPEN:
-      level = ContainerCheckLevel.FAST_CHECK;
-      LOG.info("Doing Fast integrity checks for Container ID : {},"
-          + " because it is OPEN", containerId);
-      break;
-    case CLOSING:
-      level = ContainerCheckLevel.FAST_CHECK;
-      LOG.info("Doing Fast integrity checks for Container ID : {},"
-          + " because it is CLOSING", containerId);
-      break;
-    case CLOSED:
-    case QUASI_CLOSED:
-      level = ContainerCheckLevel.FULL_CHECK;
-      LOG.debug("Doing Full integrity checks for Container ID : {},"
-              + " because it is in {} state", containerId,
-          containerData.getState());
-      break;
-    default:
-      break;
+  @Override
+  public boolean shouldScanData() {
+    return containerData.getState() == ContainerDataProto.State.CLOSED
+        || containerData.getState() == ContainerDataProto.State.QUASI_CLOSED;
+  }
+
+  public boolean scanData(DataTransferThrottler throttler, Canceler canceler) {
+    if (!shouldScanData()) {
+      throw new IllegalStateException("The checksum verification can not be" +
+          " done for container in state "
+          + containerData.getState());
     }
 
-    if (level == ContainerCheckLevel.NO_CHECK) {
-      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      return true;
-    }
-
+    long containerId = containerData.getContainerID();
     KeyValueContainerCheck checker =
         new KeyValueContainerCheck(containerData.getMetadataPath(), config,
             containerId);
 
-    switch (level) {
-    case FAST_CHECK:
-      return checker.fastCheck();
-    case FULL_CHECK:
-      return checker.fullCheck();
-    default:
-      return true;
-    }
+    return checker.fullCheck(throttler, canceler);
   }
 
   private enum ContainerCheckLevel {

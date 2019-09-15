@@ -19,24 +19,18 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.RenameFailedException;
@@ -80,16 +74,10 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.RENAME_PARALLEL_LI
  * Callers are required to themselves verify that destination is not under
  * the source, above the source, the source itself, etc, etc.
  */
-public class RenameOperation extends AbstractStoreOperation {
+public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       RenameOperation.class);
-
-  /**
-   * Used to stop any re-entrancy of the rename.
-   * This is an execute-once operation.
-   */
-  private final AtomicBoolean executed = new AtomicBoolean(false);
 
   private final Path sourcePath;
 
@@ -106,7 +94,7 @@ public class RenameOperation extends AbstractStoreOperation {
   /**
    * Callbacks into the filesystem.
    */
-  private final RenameOperationCallbacks callbacks;
+  private final OperationCallbacks callbacks;
 
   /**
    * Counter of bytes copied.
@@ -158,7 +146,7 @@ public class RenameOperation extends AbstractStoreOperation {
       final Path destPath,
       final String destKey,
       final S3AFileStatus destStatus,
-      final RenameOperationCallbacks callbacks) {
+      final OperationCallbacks callbacks) {
     super(storeContext);
     this.sourcePath = sourcePath;
     this.sourceKey = sourceKey;
@@ -174,7 +162,10 @@ public class RenameOperation extends AbstractStoreOperation {
   /**
    * Wait for the active copies to complete then reset the list.
    * @param reason for messages
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
    */
+  @Retries.OnceTranslated
   private void completeActiveCopies(String reason) throws IOException {
     LOG.debug("Waiting for {} active copies to complete: {}",
         activeCopies.size(), reason);
@@ -183,7 +174,7 @@ public class RenameOperation extends AbstractStoreOperation {
   }
 
   /**
-   * Queue and object for deletion.
+   * Queue an object for deletion.
    * @param path path to the object
    * @param key key of the object.
    */
@@ -198,6 +189,7 @@ public class RenameOperation extends AbstractStoreOperation {
    * @param reason reason for logs
    * @throws IOException failure.
    */
+  @Retries.RetryTranslated
   private void completeActiveCopiesAndDeleteSources(String reason)
       throws IOException {
     completeActiveCopies(reason);
@@ -210,10 +202,8 @@ public class RenameOperation extends AbstractStoreOperation {
   }
 
   @Retries.RetryMixed
-  public long executeRename() throws IOException {
-    Preconditions.checkState(
-        !executed.getAndSet(true),
-        "Rename attempted twice");
+  public Long execute() throws IOException {
+    executeOnlyOnce();
     final StoreContext storeContext = getStoreContext();
     final MetadataStore metadataStore = checkNotNull(
         storeContext.getMetadataStore(),
@@ -294,7 +284,7 @@ public class RenameOperation extends AbstractStoreOperation {
         false);
     bytesCopied.addAndGet(sourceStatus.getLen());
     // delete the source
-    callbacks.deleteObjectAtPath(sourcePath, sourceKey, true);
+    callbacks.deleteObjectAtPath(sourcePath, sourceKey, true, null);
     // and update the tracker
     renameTracker.sourceObjectsDeleted(Lists.newArrayList(sourcePath));
   }
@@ -327,12 +317,15 @@ public class RenameOperation extends AbstractStoreOperation {
       // marker.
       LOG.debug("Deleting fake directory marker at destination {}",
           destStatus.getPath());
-      callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false);
+      callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
 
     Path parentPath = storeContext.keyToPath(srcKey);
     final RemoteIterator<S3ALocatedFileStatus> iterator =
-        callbacks.listFilesAndEmptyDirectories(parentPath);
+        callbacks.listFilesAndEmptyDirectories(parentPath,
+            sourceStatus,
+            true,
+            true);
     while (iterator.hasNext()) {
       // get the next entry in the listing.
       S3ALocatedFileStatus child = iterator.next();
@@ -478,7 +471,7 @@ public class RenameOperation extends AbstractStoreOperation {
    * @param paths list of paths matching the keys to delete 1:1.
    * @throws IOException failure
    */
-  @Retries.RetryMixed
+  @Retries.RetryTranslated
   private void removeSourceObjects(
       final List<DeleteObjectsRequest.KeyVersion> keys,
       final List<Path> paths)
@@ -488,7 +481,12 @@ public class RenameOperation extends AbstractStoreOperation {
       // remove the keys
       // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
-      callbacks.removeKeys(keys, false, undeletedObjects);
+      callbacks.removeKeys(
+          keys,
+          false,
+          undeletedObjects,
+          renameTracker.getOperationState(),
+          true);
       // and clear the list.
     } catch (AmazonClientException | IOException e) {
       // Failed.
@@ -496,7 +494,8 @@ public class RenameOperation extends AbstractStoreOperation {
       // removeKeys will have already purged the metastore of
       // all keys it has known to delete; this is just a final
       // bit of housekeeping and a chance to tune exception
-      // reporting
+      // reporting.
+      // The returned IOE is rethrown.
       throw renameTracker.deleteFailed(e, paths, undeletedObjects);
     }
     renameTracker.sourceObjectsDeleted(paths);
@@ -518,117 +517,4 @@ public class RenameOperation extends AbstractStoreOperation {
     }
   }
 
-  /**
-   * These are all the callbacks which the rename operation needs,
-   * derived from the appropriate S3AFileSystem methods.
-   */
-  public interface RenameOperationCallbacks {
-
-    /**
-     * Create the attributes of an object for subsequent use.
-     * @param path path path of the request.
-     * @param eTag the eTag of the S3 object
-     * @param versionId S3 object version ID
-     * @param len length of the file
-     * @return attributes to use when building the query.
-     */
-    S3ObjectAttributes createObjectAttributes(
-        Path path,
-        String eTag,
-        String versionId,
-        long len);
-
-    /**
-     * Create the attributes of an object for subsequent use.
-     * @param fileStatus file status to build from.
-     * @return attributes to use when building the query.
-     */
-    S3ObjectAttributes createObjectAttributes(
-        S3AFileStatus fileStatus);
-
-    /**
-     * Create the read context for reading from the referenced file,
-     * using FS state as well as the status.
-     * @param fileStatus file status.
-     * @return a context for read and select operations.
-     */
-    S3AReadOpContext createReadContext(
-        FileStatus fileStatus);
-
-    /**
-     * The rename has finished; perform any store cleanup operations
-     * such as creating/deleting directory markers.
-     * @param sourceRenamed renamed source
-     * @param destCreated destination file created.
-     * @throws IOException failure
-     */
-    void finishRename(Path sourceRenamed, Path destCreated) throws IOException;
-
-    /**
-     * Delete an object, also updating the metastore.
-     * This call does <i>not</i> create any mock parent entries.
-     * Retry policy: retry untranslated; delete considered idempotent.
-     * @param path path to delete
-     * @param key key of entry
-     * @param isFile is the path a file (used for instrumentation only)
-     * @throws AmazonClientException problems working with S3
-     * @throws IOException IO failure in the metastore
-     */
-    @Retries.RetryMixed
-    void deleteObjectAtPath(Path path, String key, boolean isFile)
-        throws IOException;
-
-    /**
-     * Recursive list of files and empty directories.
-     * @param path path to list from
-     * @return an iterator.
-     * @throws IOException failure
-     */
-    RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
-        Path path) throws IOException;
-
-    /**
-     * Copy a single object in the bucket via a COPY operation.
-     * There's no update of metadata, directory markers, etc.
-     * Callers must implement.
-     * @param srcKey source object path
-     * @param srcAttributes S3 attributes of the source object
-     * @param readContext the read context
-     * @return the result of the copy
-     * @throws InterruptedIOException the operation was interrupted
-     * @throws IOException Other IO problems
-     */
-    @Retries.RetryTranslated
-    CopyResult copyFile(String srcKey,
-        String destKey,
-        S3ObjectAttributes srcAttributes,
-        S3AReadOpContext readContext)
-        throws IOException;
-
-    /**
-     * Remove keys from the store, updating the metastore on a
-     * partial delete represented as a MultiObjectDeleteException failure by
-     * deleting all those entries successfully deleted and then rethrowing
-     * the MultiObjectDeleteException.
-     * @param keysToDelete collection of keys to delete on the s3-backend.
-     *        if empty, no request is made of the object store.
-     * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-     * @param undeletedObjectsOnFailure List which will be built up of all
-     * files that were not deleted. This happens even as an exception
-     * is raised.
-     * @throws InvalidRequestException if the request was rejected due to
-     * a mistaken attempt to delete the root directory.
-     * @throws MultiObjectDeleteException one or more of the keys could not
-     * be deleted in a multiple object delete operation.
-     * @throws AmazonClientException amazon-layer failure.
-     * @throws IOException other IO Exception.
-     */
-    @Retries.RetryMixed
-    void removeKeys(
-        List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-        boolean deleteFakeDir,
-        List<Path> undeletedObjectsOnFailure)
-        throws MultiObjectDeleteException, AmazonClientException,
-        IOException;
-  }
 }

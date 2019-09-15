@@ -32,8 +32,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.ozone.om.BucketManager;
-import org.apache.hadoop.ozone.om.BucketManagerImpl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -56,7 +54,7 @@ public abstract class AbstractOMMetadataManagerTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   /**
-   * Create a new OM Metadata manager instance.
+   * Create a new OM Metadata manager instance with default volume and bucket.
    * @throws IOException ioEx
    */
   protected OMMetadataManager initializeNewOmMetadataManager()
@@ -77,14 +75,30 @@ public abstract class AbstractOMMetadataManagerTest {
             .build();
     omMetadataManager.getVolumeTable().put(volumeKey, args);
 
-    BucketManager bucketManager = new BucketManagerImpl(omMetadataManager);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .build();
-    bucketManager.createBucket(bucketInfo);
+
+    String bucketKey = omMetadataManager.getBucketKey(
+        bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+
+    omMetadataManager.getBucketTable().put(bucketKey, bucketInfo);
 
     return omMetadataManager;
+  }
+
+  /**
+   * Create an empty OM Metadata manager instance.
+   * @throws IOException ioEx
+   */
+  protected OMMetadataManager initializeEmptyOmMetadataManager()
+      throws IOException {
+    File omDbDir = temporaryFolder.newFolder();
+    OzoneConfiguration omConfiguration = new OzoneConfiguration();
+    omConfiguration.set(OZONE_OM_DB_DIRS,
+        omDbDir.getAbsolutePath());
+    return new OmMetadataManagerImpl(omConfiguration);
   }
 
   /**
@@ -154,6 +168,34 @@ public abstract class AbstractOMMetadataManagerTest {
             .setBucketName(bucket)
             .setVolumeName(volume)
             .setKeyName(key)
+            .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
+            .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
+            .setOmKeyLocationInfos(omKeyLocationInfoGroupList)
+            .build());
+  }
+
+  /**
+   * Write a key to OM instance.
+   * @throws IOException while writing.
+   */
+  protected void writeDataToOm(OMMetadataManager omMetadataManager,
+      String key,
+      String bucket,
+      String volume,
+      Long dataSize,
+      List<OmKeyLocationInfoGroup>
+          omKeyLocationInfoGroupList)
+      throws IOException {
+
+    String omKey = omMetadataManager.getOzoneKey(volume,
+        bucket, key);
+
+    omMetadataManager.getKeyTable().put(omKey,
+        new OmKeyInfo.Builder()
+            .setBucketName(bucket)
+            .setVolumeName(volume)
+            .setKeyName(key)
+            .setDataSize(dataSize)
             .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
             .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
             .setOmKeyLocationInfos(omKeyLocationInfoGroupList)

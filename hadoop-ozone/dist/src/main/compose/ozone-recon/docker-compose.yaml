@@ -17,7 +17,7 @@
 version: "3"
 services:
    datanode:
-      image: apache/ozone-runner:
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
         - ../..:/opt/hadoop

@@ -190,9 +190,9 @@ public class AppNameMappingPlacementRule extends PlacementRule {
               //queueName will be same as mapped queue name in case of recovery
               || queueName.equals(mappedQueue.getQueue())
               || overrideWithQueueMappings) {
-            LOG.info("Application " + applicationName
-                + " mapping [" + queueName + "] to [" + mappedQueue
-                + "] override " + overrideWithQueueMappings);
+            LOG.info("Application {} mapping [{}] to [{}] override {}",
+                applicationName, queueName, mappedQueue.getQueue(),
+                overrideWithQueueMappings);
             return mappedQueue;
           }
         }

@@ -106,7 +106,7 @@ public class TestPartialDeleteFailures {
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
     Pair<List<Path>, List<Path>> pair =
-        new MultiObjectDeleteSupport(context)
+        new MultiObjectDeleteSupport(context, null)
           .splitUndeletedKeys(ex, keys);
     List<Path> undeleted = pair.getLeft();
     List<Path> deleted = pair.getRight();
@@ -180,7 +180,7 @@ public class TestPartialDeleteFailures {
         = new OperationTrackingStore();
     StoreContext storeContext = createMockStoreContext(true, store);
     MultiObjectDeleteSupport deleteSupport
-        = new MultiObjectDeleteSupport(storeContext);
+        = new MultiObjectDeleteSupport(storeContext, null);
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
         triple = deleteSupport.processDeleteFailure(ex, keyList);
     Assertions.assertThat(triple.getRight())
@@ -261,11 +261,13 @@ public class TestPartialDeleteFailures {
     private final List<Path> created = new ArrayList<>();
 
     @Override
-    public void initialize(final FileSystem fs) {
+    public void initialize(final FileSystem fs,
+        ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
-    public void initialize(final Configuration conf) {
+    public void initialize(final Configuration conf,
+        ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
@@ -317,20 +319,25 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void delete(final Path path,
-        final ITtlTimeProvider ttlTimeProvider) {
+        final BulkOperationState operationState) {
       deleted.add(path);
     }
 
     @Override
+    public void deletePaths(final Collection<Path> paths,
+        @Nullable final BulkOperationState operationState) throws IOException {
+      deleted.addAll(paths);
+    }
+
+    @Override
     public void deleteSubtree(final Path path,
-        final ITtlTimeProvider ttlTimeProvider) {
+        final BulkOperationState operationState) {
 
     }
 
     @Override
     public void move(@Nullable final Collection<Path> pathsToDelete,
         @Nullable final Collection<PathMetadata> pathsToCreate,
-        final ITtlTimeProvider ttlTimeProvider,
         @Nullable final BulkOperationState operationState) {
     }
 
@@ -350,6 +357,10 @@ public class TestPartialDeleteFailures {
         final BulkOperationState.OperationType operation,
         final Path dest) {
       return null;
+    }
+
+    @Override
+    public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
@@ -384,7 +395,6 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void addAncestors(final Path qualifiedPath,
-        final ITtlTimeProvider timeProvider,
         @Nullable final BulkOperationState operationState) {
 
     }

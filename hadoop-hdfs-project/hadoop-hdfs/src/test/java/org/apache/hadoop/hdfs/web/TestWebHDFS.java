@@ -54,6 +54,8 @@ import java.util.Random;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
@@ -390,6 +393,57 @@ public class TestWebHDFS {
             return null;
           }
         });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test client receives correct DSQuotaExceededException.
+   */
+  @Test
+  public void testExceedingFileSpaceQuota() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    long spaceQuota = 50L << 20;
+    long fileLength = 80L << 20;
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .build();
+
+    try {
+      cluster.waitActive();
+
+      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsConstants.WEBHDFS_SCHEME);
+      final Path dir = new Path("/test/largeFile");
+      assertTrue(fs.mkdirs(dir));
+
+      final byte[] data = new byte[1 << 20];
+      RANDOM.nextBytes(data);
+
+      cluster.getFileSystem().setQuota(dir, HdfsConstants.QUOTA_DONT_SET,
+          spaceQuota);
+
+      final Path p = new Path(dir, "file");
+
+      FSDataOutputStream out = fs.create(p);
+      try {
+        for (long remaining = fileLength; remaining > 0;) {
+          final int n = (int) Math.min(remaining, data.length);
+          out.write(data, 0, n);
+          remaining -= n;
+        }
+        fail("should have thrown exception during the write");
+      } catch (DSQuotaExceededException e) {
+        //expected
+      } finally {
+        try {
+          out.close();
+        } catch (Exception e) {
+          // discard exception from close
+        }
+      }
     } finally {
       cluster.shutdown();
     }
@@ -1037,6 +1091,104 @@ public class TestWebHDFS {
       }
     }
   }
+
+  @Test
+  public void testQuotaUsage() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/TestDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final long nsQuota = 100;
+      final long spaceQuota = 600 * 1024 * 1024;
+      final long diskQuota = 100000;
+      final byte[] bytes = {0x0, 0x1, 0x2, 0x3};
+
+      dfs.mkdirs(path);
+      dfs.setQuota(path, nsQuota, spaceQuota);
+      for (int i = 0; i < 10; i++) {
+        dfs.createNewFile(new Path(path, "test_file_" + i));
+      }
+      FSDataOutputStream out = dfs.create(new Path(path, "test_file"));
+      out.write(bytes);
+      out.close();
+
+      dfs.setQuotaByStorageType(path, StorageType.DISK, diskQuota);
+
+      QuotaUsage quotaUsage = webHdfs.getQuotaUsage(path);
+      assertEquals(12, quotaUsage.getFileAndDirectoryCount());
+      assertEquals(nsQuota, quotaUsage.getQuota());
+      assertEquals(bytes.length * dfs.getDefaultReplication(), quotaUsage.getSpaceConsumed());
+      assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
+      assertEquals(diskQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testSetQuota() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/TestDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final long nsQuota = 100;
+      final long spaceQuota = 1024;
+
+      webHdfs.mkdirs(path);
+
+      webHdfs.setQuota(path, nsQuota, spaceQuota);
+      QuotaUsage quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(nsQuota, quotaUsage.getQuota());
+      assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuota(path,
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuotaByStorageType(path, StorageType.DISK, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.ARCHIVE, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.SSD, spaceQuota);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.ARCHIVE));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.SSD));
+
+      // Test invalid parameters
+
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, -100, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, 100, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, null, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100));
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   @Test
   public void testWebHdfsPread() throws Exception {

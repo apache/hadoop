@@ -23,37 +23,35 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.ozone.container.common.transport.server.ratis
-    .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.RaftStorage;
+import org.apache.ratis.statemachine.SnapshotInfo;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.LifeCycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,41 +63,73 @@ import org.slf4j.LoggerFactory;
 public class OzoneManagerStateMachine extends BaseStateMachine {
 
   static final Logger LOG =
-      LoggerFactory.getLogger(ContainerStateMachine.class);
+      LoggerFactory.getLogger(OzoneManagerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
   private final OzoneManager ozoneManager;
   private OzoneManagerHARequestHandler handler;
   private RaftGroupId raftGroupId;
-  private long lastAppliedIndex = 0;
-  private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
+  private long lastAppliedIndex;
+  private OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
+  private final OMRatisSnapshotInfo snapshotInfo;
   private final ExecutorService executorService;
+  private final ExecutorService installSnapshotExecutor;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
+
+    this.snapshotInfo = ozoneManager.getSnapshotInfo();
+    updateLastAppliedIndexWithSnaphsotIndex();
+
     this.ozoneManagerDoubleBuffer =
         new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
             this::updateLastAppliedIndex);
+
     this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
         ozoneManagerDoubleBuffer);
+
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("OM StateMachine ApplyTransaction Thread - %d").build();
     this.executorService = HadoopExecutors.newSingleThreadExecutor(build);
+    this.installSnapshotExecutor = HadoopExecutors.newSingleThreadExecutor();
   }
 
   /**
    * Initializes the State Machine with the given server, group and storage.
-   * TODO: Load the latest snapshot from the file system.
    */
   @Override
-  public void initialize(
-      RaftServer server, RaftGroupId id, RaftStorage raftStorage)
-      throws IOException {
-    super.initialize(server, id, raftStorage);
-    this.raftGroupId = id;
-    storage.init(raftStorage);
+  public void initialize(RaftServer server, RaftGroupId id,
+      RaftStorage raftStorage) throws IOException {
+    lifeCycle.startAndTransition(() -> {
+      super.initialize(server, id, raftStorage);
+      this.raftGroupId = id;
+      storage.init(raftStorage);
+    });
+  }
+
+  @Override
+  public SnapshotInfo getLatestSnapshot() {
+    return snapshotInfo;
+  }
+
+  /**
+   * Called to notify state machine about indexes which are processed
+   * internally by Raft Server, this currently happens when conf entries are
+   * processed in raft Server. This keep state machine to keep a track of index
+   * updates.
+   * @param term term of the current log entry
+   * @param index index which is being updated
+   */
+  @Override
+  public void notifyIndexUpdate(long term, long index) {
+    // SnapshotInfo should be updated when the term changes.
+    // The index here refers to the log entry index and the index in
+    // SnapshotInfo represents the snapshotIndex i.e. the index of the last
+    // transaction included in the snapshot. Hence, snaphsotInfo#index is not
+    // updated here.
+    snapshotInfo.updateTerm(term);
   }
 
   /**
@@ -190,6 +220,27 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     }
   }
 
+  @Override
+  public void pause() {
+    lifeCycle.transition(LifeCycle.State.PAUSING);
+    lifeCycle.transition(LifeCycle.State.PAUSED);
+    ozoneManagerDoubleBuffer.stop();
+  }
+
+  /**
+   * Unpause the StateMachine, re-initialize the DoubleBuffer and update the
+   * lastAppliedIndex. This should be done after uploading new state to the
+   * StateMachine.
+   */
+  public void unpause(long newLastAppliedSnaphsotIndex) {
+    lifeCycle.startAndTransition(() -> {
+      this.ozoneManagerDoubleBuffer =
+          new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
+              this::updateLastAppliedIndex);
+      this.updateLastAppliedIndex(newLastAppliedSnaphsotIndex);
+    });
+  }
+
   /**
    * Take OM Ratis snapshot. Write the snapshot index to file. Snapshot index
    * is the log index corresponding to the last applied transaction on the OM
@@ -205,6 +256,39 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       return ozoneManager.saveRatisSnapshot();
     }
     return 0;
+  }
+
+  /**
+   * Leader OM has purged entries from its log. To catch up, OM must download
+   * the latest checkpoint from the leader OM and install it.
+   * @param roleInfoProto the leader node information
+   * @param firstTermIndexInLog TermIndex of the first append entry available
+   *                           in the Leader's log.
+   * @return the last term index included in the installed snapshot.
+   */
+  @Override
+  public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
+      RaftProtos.RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+
+    String leaderNodeId = RaftPeerId.valueOf(roleInfoProto.getSelf().getId())
+        .toString();
+
+    LOG.info("Received install snapshot notificaiton form OM leader: {} with " +
+            "term index: {}", leaderNodeId, firstTermIndexInLog);
+
+    if (!roleInfoProto.getRole().equals(RaftProtos.RaftPeerRole.LEADER)) {
+      // A non-leader Ratis server should not send this notification.
+      LOG.error("Received Install Snapshot notification from non-leader OM " +
+          "node: {}. Ignoring the notification.", leaderNodeId);
+      return completeExceptionally(new OMException("Received notification to " +
+          "install snaphost from non-leader OM node",
+          OMException.ResultCodes.RATIS_ERROR));
+    }
+
+    CompletableFuture<TermIndex> future = CompletableFuture.supplyAsync(
+        () -> ozoneManager.installSnapshot(leaderNodeId),
+        installSnapshotExecutor);
+    return future;
   }
 
   /**
@@ -225,53 +309,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private TransactionContext handleStartTransactionRequests(
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
 
-    switch (omRequest.getCmdType()) {
-    case InitiateMultiPartUpload:
-      return handleInitiateMultipartUpload(raftClientRequest, omRequest);
-    default:
-      return TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .setLogData(raftClientRequest.getMessage().getContent())
-          .build();
-    }
-  }
-
-  private TransactionContext handleInitiateMultipartUpload(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-
-    // Generate a multipart uploadID, and create a new request.
-    // When applyTransaction happen's all OM's use the same multipartUploadID
-    // for the key.
-
-    long time = Time.monotonicNowNanos();
-    String multipartUploadID = UUID.randomUUID().toString() + "-" + time;
-
-    MultipartInfoApplyInitiateRequest multipartInfoApplyInitiateRequest =
-        MultipartInfoApplyInitiateRequest.newBuilder()
-            .setKeyArgs(omRequest.getInitiateMultiPartUploadRequest()
-                .getKeyArgs()).setMultipartUploadID(multipartUploadID).build();
-
-    OMRequest.Builder newOmRequest =
-        OMRequest.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.ApplyInitiateMultiPartUpload)
-            .setInitiateMultiPartUploadApplyRequest(
-                multipartInfoApplyInitiateRequest)
-            .setClientId(omRequest.getClientId());
-
-    if (omRequest.hasTraceID()) {
-      newOmRequest.setTraceID(omRequest.getTraceID());
-    }
-
-    ByteString messageContent =
-        ByteString.copyFrom(newOmRequest.build().toByteArray());
-
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
         .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
+        .setLogData(raftClientRequest.getMessage().getContent())
         .build();
   }
 
@@ -290,6 +332,10 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   @SuppressWarnings("HiddenField")
   public void updateLastAppliedIndex(long lastAppliedIndex) {
     this.lastAppliedIndex = lastAppliedIndex;
+  }
+
+  public void updateLastAppliedIndexWithSnaphsotIndex() {
+    this.lastAppliedIndex = snapshotInfo.getIndex();
   }
 
   /**
@@ -323,10 +369,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.raftGroupId = raftGroupId;
   }
 
-
   public void stop() {
     ozoneManagerDoubleBuffer.stop();
     HadoopExecutors.shutdown(executorService, LOG, 5, TimeUnit.SECONDS);
+    HadoopExecutors.shutdown(installSnapshotExecutor, LOG, 5, TimeUnit.SECONDS);
   }
-
 }

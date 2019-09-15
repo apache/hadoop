@@ -142,6 +142,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         uniqueFilenames);
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID,
         UUID.randomUUID().toString());
+    jobConf.set(RETRY_INTERVAL, "100ms");
+    jobConf.setInt(RETRY_LIMIT, 1);
 
     this.results = new StagingTestBase.ClientResults();
     this.errors = new StagingTestBase.ClientErrors();

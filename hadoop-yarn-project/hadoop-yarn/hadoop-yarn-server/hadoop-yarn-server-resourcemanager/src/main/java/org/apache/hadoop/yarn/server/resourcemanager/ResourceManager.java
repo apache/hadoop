@@ -267,6 +267,22 @@ public class ResourceManager extends CompositeService
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
+    // Set HA configuration should be done before login
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(this.conf);
+    }
+
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
+
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -285,22 +301,6 @@ public class ResourceManager extends CompositeService
     loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
-    
-    // Set HA configuration should be done before login
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
-    if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(this.conf);
-    }
-
-    // Set UGI and do login
-    // If security is enabled, use login user
-    // If security is not enabled, use current user
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -575,11 +575,13 @@ public class ResourceManager extends CompositeService
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
     List<SystemMetricsPublisher> publishers =
         new ArrayList<SystemMetricsPublisher>();
-    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV1Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
       publishers.add(publisherV1);
     }
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       // we're dealing with the v.2.x publisher
       LOG.info("system metrics publisher with the timeline service V2 is "
           + "configured");
@@ -1230,8 +1232,7 @@ public class ResourceManager extends CompositeService
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
-        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-        URL url = cl.findResource(war);
+        URL url = getClass().getClassLoader().getResource(war);
 
         if (null == url) {
           onDiskPath = getWebAppsPath("ui2");

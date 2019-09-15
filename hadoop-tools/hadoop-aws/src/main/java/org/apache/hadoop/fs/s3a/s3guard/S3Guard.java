@@ -83,17 +83,19 @@ public final class S3Guard {
   /**
    * Create a new instance of the configured MetadataStore.
    * The returned MetadataStore will have been initialized via
-   * {@link MetadataStore#initialize(FileSystem)} by this function before
-   * returning it.  Callers must clean up by calling
+   * {@link MetadataStore#initialize(FileSystem, ITtlTimeProvider)}
+   * by this function before returning it.  Callers must clean up by calling
    * {@link MetadataStore#close()} when done using the MetadataStore.
    *
    * @param fs  FileSystem whose Configuration specifies which
    *            implementation to use.
+   * @param ttlTimeProvider
    * @return Reference to new MetadataStore.
    * @throws IOException if the metadata store cannot be instantiated
    */
   @Retries.OnceTranslated
-  public static MetadataStore getMetadataStore(FileSystem fs)
+  public static MetadataStore getMetadataStore(FileSystem fs,
+      ITtlTimeProvider ttlTimeProvider)
       throws IOException {
     Preconditions.checkNotNull(fs);
     Configuration conf = fs.getConf();
@@ -104,7 +106,7 @@ public final class S3Guard {
       msInstance = ReflectionUtils.newInstance(msClass, conf);
       LOG.debug("Using {} metadata store for {} filesystem",
           msClass.getSimpleName(), fs.getScheme());
-      msInstance.initialize(fs);
+      msInstance.initialize(fs, ttlTimeProvider);
       return msInstance;
     } catch (FileNotFoundException e) {
       // Don't log this exception as it means the table doesn't exist yet;
@@ -294,12 +296,14 @@ public final class S3Guard {
         continue;
       }
 
+      final PathMetadata pathMetadata = new PathMetadata(s);
+
       if (!isAuthoritative){
         FileStatus status = dirMetaMap.get(s.getPath());
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, new PathMetadata(s), timeProvider, null);
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
         }
       }
 
@@ -310,7 +314,7 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(s);
+      boolean updated = dirMeta.put(pathMetadata);
       changed = changed || updated;
     }
 
@@ -521,7 +525,7 @@ public final class S3Guard {
   /**
    * This adds all new ancestors of a path as directories.
    * This forwards to
-   * {@link MetadataStore#addAncestors(Path, ITtlTimeProvider, BulkOperationState)}.
+   * {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
    * <p>
    * Originally it implemented the logic to probe for an add ancestors,
    * but with the addition of a store-specific bulk operation state
@@ -538,7 +542,7 @@ public final class S3Guard {
       final Path qualifiedPath,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
-    metadataStore.addAncestors(qualifiedPath, timeProvider, operationState);
+    metadataStore.addAncestors(qualifiedPath, operationState);
   }
 
   /**
@@ -710,12 +714,15 @@ public final class S3Guard {
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
+   * @param needEmptyDirectoryFlag if true, implementation will
+   * return known state of directory emptiness.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
-      @Nullable ITtlTimeProvider timeProvider) throws IOException {
-    final PathMetadata pathMetadata = ms.get(path);
+      @Nullable ITtlTimeProvider timeProvider,
+      final boolean needEmptyDirectoryFlag) throws IOException {
+    final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
     // if timeProvider is null let's return with what the ms has
     if (timeProvider == null) {
       LOG.debug("timeProvider is null, returning pathMetadata as is");
@@ -753,6 +760,7 @@ public final class S3Guard {
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */
+  @Retries.RetryTranslated
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
       Path path, @Nullable ITtlTimeProvider timeProvider)
       throws IOException {
@@ -785,6 +793,14 @@ public final class S3Guard {
     return authoritativePaths;
   }
 
+  /**
+   * Is the path for the given FS instance authoritative?
+   * @param p path
+   * @param fs filesystem
+   * @param authMetadataStore is the MS authoritative.
+   * @param authPaths possibly empty list of authoritative paths
+   * @return true iff the path is authoritative
+   */
   public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
       boolean authMetadataStore, Collection<String> authPaths) {
     String haystack = fs.maybeAddTrailingSlash(fs.qualify(p).toString());

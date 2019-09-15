@@ -20,7 +20,9 @@ package org.apache.hadoop.ozone.om.ratis;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -60,26 +62,54 @@ public class OzoneManagerDoubleBuffer {
   private Queue<DoubleBufferEntry<OMClientResponse>> currentBuffer;
   private Queue<DoubleBufferEntry<OMClientResponse>> readyBuffer;
 
+
+  // future objects which hold the future returned by add method.
+  private volatile Queue<CompletableFuture<Void>> currentFutureQueue;
+
+  // Once we have an entry in current buffer, we swap the currentFutureQueue
+  // with readyFutureQueue. After flush is completed in flushTransaction
+  // daemon thread, we complete the futures in readyFutureQueue and clear them.
+  private volatile Queue<CompletableFuture<Void>> readyFutureQueue;
+
   private Daemon daemon;
   private final OMMetadataManager omMetadataManager;
   private final AtomicLong flushedTransactionCount = new AtomicLong(0);
   private final AtomicLong flushIterations = new AtomicLong(0);
-  private volatile boolean isRunning;
+  private final AtomicBoolean isRunning = new AtomicBoolean(false);
   private OzoneManagerDoubleBufferMetrics ozoneManagerDoubleBufferMetrics;
   private long maxFlushedTransactionsInOneIteration;
 
   private final OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot;
 
+  private final boolean isRatisEnabled;
+
   public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
       OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot) {
+    this(omMetadataManager, ozoneManagerRatisSnapShot, true);
+  }
+
+  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
+      OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot,
+      boolean isRatisEnabled) {
     this.currentBuffer = new ConcurrentLinkedQueue<>();
     this.readyBuffer = new ConcurrentLinkedQueue<>();
+
+    this.isRatisEnabled = isRatisEnabled;
+
+    if (!isRatisEnabled) {
+      this.currentFutureQueue = new ConcurrentLinkedQueue<>();
+      this.readyFutureQueue = new ConcurrentLinkedQueue<>();
+    } else {
+      this.currentFutureQueue = null;
+      this.readyFutureQueue = null;
+    }
+
     this.omMetadataManager = omMetadataManager;
     this.ozoneManagerRatisSnapShot = ozoneManagerRatisSnapShot;
     this.ozoneManagerDoubleBufferMetrics =
         OzoneManagerDoubleBufferMetrics.create();
 
-    isRunning = true;
+    isRunning.set(true);
     // Daemon thread which runs in back ground and flushes transactions to DB.
     daemon = new Daemon(this::flushTransactions);
     daemon.setName("OMDoubleBufferFlushThread");
@@ -87,12 +117,15 @@ public class OzoneManagerDoubleBuffer {
 
   }
 
+
+
+
   /**
    * Runs in a background thread and batches the transaction in currentBuffer
    * and commit to DB.
    */
   private void flushTransactions() {
-    while(isRunning) {
+    while (isRunning.get()) {
       try {
         if (canFlush()) {
           setReadyBuffer();
@@ -137,10 +170,19 @@ public class OzoneManagerDoubleBuffer {
 
           // set metrics.
           updateMetrics(flushedTransactionsSize);
+
+          if (!isRatisEnabled) {
+            // Once all entries are flushed, we can complete their future.
+            readyFutureQueue.iterator().forEachRemaining((entry) -> {
+              entry.complete(null);
+            });
+
+            readyFutureQueue.clear();
+          }
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
-        if (isRunning) {
+        if (isRunning.get()) {
           final String message = "OMDoubleBuffer flush thread " +
               Thread.currentThread().getName() + " encountered Interrupted " +
               "exception while running";
@@ -175,6 +217,10 @@ public class OzoneManagerDoubleBuffer {
     omMetadataManager.getOpenKeyTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getKeyTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getDeletedTable().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getS3Table().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getMultipartInfoTable().cleanupCache(
+        lastRatisTransactionIndex);
+
   }
 
   /**
@@ -197,11 +243,16 @@ public class OzoneManagerDoubleBuffer {
   /**
    * Stop OM DoubleBuffer flush thread.
    */
-  public synchronized void stop() {
-    if (isRunning) {
+  public void stop() {
+    if (isRunning.compareAndSet(true, false)) {
       LOG.info("Stopping OMDoubleBuffer flush thread");
-      isRunning = false;
       daemon.interrupt();
+      try {
+        // Wait for daemon thread to exit
+        daemon.join();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted while waiting for daemon to exit.");
+      }
 
       // stop metrics.
       ozoneManagerDoubleBufferMetrics.unRegister();
@@ -238,10 +289,20 @@ public class OzoneManagerDoubleBuffer {
    * @param response
    * @param transactionIndex
    */
-  public synchronized void add(OMClientResponse response,
+  public synchronized CompletableFuture<Void> add(OMClientResponse response,
       long transactionIndex) {
     currentBuffer.add(new DoubleBufferEntry<>(transactionIndex, response));
     notify();
+
+    if (!isRatisEnabled) {
+      CompletableFuture<Void> future = new CompletableFuture<>();
+      currentFutureQueue.add(future);
+      return future;
+    } else {
+      // In Non-HA case we don't need future to be returned, and this return
+      // status is not used.
+      return null;
+    }
   }
 
   /**
@@ -269,6 +330,13 @@ public class OzoneManagerDoubleBuffer {
     Queue<DoubleBufferEntry<OMClientResponse>> temp = currentBuffer;
     currentBuffer = readyBuffer;
     readyBuffer = temp;
+
+    if (!isRatisEnabled) {
+      // Swap future queue.
+      Queue<CompletableFuture<Void>> tempFuture = currentFutureQueue;
+      currentFutureQueue = readyFutureQueue;
+      readyFutureQueue = tempFuture;
+    }
   }
 
   @VisibleForTesting

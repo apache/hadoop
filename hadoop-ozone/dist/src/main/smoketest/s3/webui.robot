@@ -27,8 +27,9 @@ ${BUCKET}             generated
 
 *** Test Cases ***
 
-File upload and directory list
-    ${result} =         Execute                             curl -v ${ENDPOINT_URL}
+S3 Gateway Web UI
+    Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit HTTP user
+    ${result} =         Execute                             curl --negotiate -u : -v ${ENDPOINT_URL}
                         Should contain      ${result}       HTTP/1.1 307 Temporary Redirect
-    ${result} =         Execute                             curl -v ${ENDPOINT_URL}/static/
+    ${result} =         Execute                             curl --negotiate -u : -v ${ENDPOINT_URL}/static/index.html
                         Should contain      ${result}       Apache Hadoop Ozone S3

@@ -128,7 +128,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
         flush = false;
         ratisSnapshotIndex = om.saveRatisSnapshot();
       } else {
-        ratisSnapshotIndex = om.loadRatisSnapshotIndex();
+        ratisSnapshotIndex = om.getRatisSnapshotIndex();
       }
 
       DBCheckpoint checkpoint = omDbStore.getCheckpoint(flush);

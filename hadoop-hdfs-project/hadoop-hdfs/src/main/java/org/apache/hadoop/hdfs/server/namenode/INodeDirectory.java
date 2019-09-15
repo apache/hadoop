@@ -573,6 +573,22 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   /**
+   * During image loading, the search is unnecessary since the insert position
+   * should always be at the end of the map given the sequence they are
+   * serialized on disk.
+   */
+  public boolean addChildAtLoading(INode node) {
+    int pos;
+    if (!node.isReference()) {
+      pos = (children == null) ? (-1) : (-children.size() - 1);
+      addChild(node, pos);
+      return true;
+    } else {
+      return addChild(node);
+    }
+  }
+
+  /**
    * Add the node to the children list at the given insertion point.
    * The basic add method which actually calls children.add(..).
    */
@@ -887,6 +903,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
       prefix.setLength(prefix.length() - 2);
       prefix.append("  ");
     }
+
+    final DirectoryWithSnapshotFeature snapshotFeature =
+        getDirectoryWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
+    out.println();
     dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
       final Iterator<INode> i = getChildrenList(snapshot).iterator();
       

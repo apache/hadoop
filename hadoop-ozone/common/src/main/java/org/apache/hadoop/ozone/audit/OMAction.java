@@ -37,6 +37,12 @@ public enum OMAction implements AuditAction {
   UPDATE_VOLUME,
   UPDATE_BUCKET,
   UPDATE_KEY,
+  PURGE_KEYS,
+
+  // S3 Bucket
+  CREATE_S3_BUCKET,
+  DELETE_S3_BUCKET,
+
   // READ Actions
   CHECK_VOLUME_ACCESS,
   LIST_BUCKETS,
@@ -50,13 +56,22 @@ public enum OMAction implements AuditAction {
   COMMIT_MULTIPART_UPLOAD_PARTKEY,
   COMPLETE_MULTIPART_UPLOAD,
   LIST_MULTIPART_UPLOAD_PARTS,
+  ABORT_MULTIPART_UPLOAD,
+
+  //ACL Actions
+  ADD_ACL,
+  GET_ACL,
+  SET_ACL,
+  REMOVE_ACL,
 
   //FS Actions
   GET_FILE_STATUS,
   CREATE_DIRECTORY,
   CREATE_FILE,
   LOOKUP_FILE,
-  LIST_STATUS;
+  LIST_STATUS,
+
+  GET_S3_SECRET;
 
   @Override
   public String getAction() {

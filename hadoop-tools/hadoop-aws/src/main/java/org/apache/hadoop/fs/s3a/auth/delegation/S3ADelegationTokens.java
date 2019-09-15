@@ -182,7 +182,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     tokenBinding.bindToFileSystem(getCanonicalUri(), getFileSystem());
     tokenBinding.init(conf);
     tokenBindingName = tokenBinding.getKind().toString();
-    LOG.info("Filesystem {} is using delegation tokens of kind {}",
+    LOG.debug("Filesystem {} is using delegation tokens of kind {}",
         getCanonicalUri(), tokenBindingName);
   }
 
@@ -197,7 +197,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     super.serviceStart();
     tokenBinding.start();
     bindToAnyDelegationToken();
-    LOG.info("S3A Delegation support token {} with {}",
+    LOG.debug("S3A Delegation support token {} with {}",
         identifierToString(),
         tokenBinding.getDescription());
   }
@@ -241,7 +241,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     requireServiceStarted();
     checkState(!isBoundToDT(),
         "Already Bound to a delegation token");
-    LOG.info("No delegation tokens present: using direct authentication");
+    LOG.debug("No delegation tokens present: using direct authentication");
     credentialProviders = Optional.of(tokenBinding.deployUnbonded());
   }
 

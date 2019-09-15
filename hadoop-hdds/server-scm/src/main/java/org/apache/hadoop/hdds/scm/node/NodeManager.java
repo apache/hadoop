@@ -130,6 +130,17 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   void removePipeline(Pipeline pipeline);
 
   /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param datanodeDetails - DatanodeDetails
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  void addContainer(DatanodeDetails datanodeDetails,
+                    ContainerID containerId) throws NodeNotFoundException;
+
+  /**
    * Remaps datanode to containers mapping to the new set of containers.
    * @param datanodeDetails - DatanodeDetails
    * @param containerIds - Set of containerIDs
@@ -173,11 +184,19 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   List<SCMCommand> getCommandQueue(UUID dnID);
 
   /**
-   * Given datanode host address, returns the DatanodeDetails for the
-   * node.
+   * Given datanode uuid, returns the DatanodeDetails for the node.
    *
-   * @param address node host address
+   * @param uuid datanode uuid
    * @return the given datanode, or null if not found
    */
-  DatanodeDetails getNode(String address);
+  DatanodeDetails getNodeByUuid(String uuid);
+
+  /**
+   * Given datanode address(Ipaddress or hostname), returns the DatanodeDetails
+   * for the node.
+   *
+   * @param address datanode address
+   * @return the given datanode, or null if not found
+   */
+  DatanodeDetails getNodeByAddress(String address);
 }

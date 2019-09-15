@@ -64,6 +64,7 @@ import java.util.concurrent.TimeUnit;
 public final class XceiverServerGrpc extends XceiverServer {
   private static final Logger
       LOG = LoggerFactory.getLogger(XceiverServerGrpc.class);
+  private static final String COMPONENT = "dn";
   private int port;
   private UUID id;
   private Server server;
@@ -111,11 +112,12 @@ public final class XceiverServerGrpc extends XceiverServer {
     }
 
     if (getSecConfig().isGrpcTlsEnabled()) {
-      File privateKeyFilePath = getSecurityConfig().getServerPrivateKeyFile();
+      File privateKeyFilePath =
+          getSecurityConfig().getServerPrivateKeyFile(COMPONENT);
       File serverCertChainFilePath =
-          getSecurityConfig().getServerCertChainFile();
+          getSecurityConfig().getServerCertChainFile(COMPONENT);
       File clientCertChainFilePath =
-          getSecurityConfig().getClientCertChainFile();
+          getSecurityConfig().getClientCertChainFile(COMPONENT);
       try {
         SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
             serverCertChainFilePath, privateKeyFilePath);

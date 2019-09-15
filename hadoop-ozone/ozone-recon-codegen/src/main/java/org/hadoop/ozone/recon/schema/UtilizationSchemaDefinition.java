@@ -38,6 +38,9 @@ public class UtilizationSchemaDefinition implements ReconSchemaDefinition {
   public static final String CLUSTER_GROWTH_DAILY_TABLE_NAME =
       "cluster_growth_daily";
 
+  public static final String FILE_COUNT_BY_SIZE_TABLE_NAME =
+      "file_count_by_size";
+
   @Inject
   UtilizationSchemaDefinition(DataSource dataSource) {
     this.dataSource = dataSource;
@@ -48,6 +51,7 @@ public class UtilizationSchemaDefinition implements ReconSchemaDefinition {
   public void initializeSchema() throws SQLException {
     Connection conn = dataSource.getConnection();
     createClusterGrowthTable(conn);
+    createFileSizeCount(conn);
   }
 
   void createClusterGrowthTable(Connection conn) {
@@ -65,5 +69,12 @@ public class UtilizationSchemaDefinition implements ReconSchemaDefinition {
         .execute();
   }
 
-
+  void createFileSizeCount(Connection conn) {
+    DSL.using(conn).createTableIfNotExists(FILE_COUNT_BY_SIZE_TABLE_NAME)
+        .column("file_size", SQLDataType.BIGINT)
+        .column("count", SQLDataType.BIGINT)
+        .constraint(DSL.constraint("pk_file_size")
+            .primaryKey("file_size"))
+        .execute();
+  }
 }

@@ -244,7 +244,7 @@ public class TestIndexCache {
       }
       getInfoThread.join();
       removeMapThread.join();
-      assertEquals(true, cache.checkTotalMemoryUsed());
+      assertTrue(cache.checkTotalMemoryUsed());
     }      
   }
 

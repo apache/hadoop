@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -86,17 +87,21 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -1380,6 +1385,46 @@ public class TestRouterRpc {
             "Parent directory doesn't exist: /a/a/b", "/a", "/ns1/a"));
   }
 
+  /**
+   * Create a file for each NameSpace, then find their 1st block and mark one of
+   * the replica as corrupt through BlockManager#findAndMarkBlockAsCorrupt.
+   *
+   * After all NameNode received the corrupt replica report, the
+   * replicatedBlockStats.getCorruptBlocks() should equal to the sum of
+   * corruptBlocks of all NameSpaces.
+   */
+  @Test
+  public void testGetReplicatedBlockStats() throws Exception {
+    String testFile = "/test-file";
+    for (String nsid : cluster.getNameservices()) {
+      NamenodeContext context = cluster.getNamenode(nsid, null);
+      NameNode nameNode = context.getNamenode();
+      FSNamesystem namesystem = nameNode.getNamesystem();
+      BlockManager bm = namesystem.getBlockManager();
+      FileSystem fileSystem = context.getFileSystem();
+
+      // create a test file
+      createFile(fileSystem, testFile, 1024);
+      // mark a replica as corrupt
+      LocatedBlock block = NameNodeAdapter
+          .getBlockLocations(nameNode, testFile, 0, 1024).get(0);
+      namesystem.writeLock();
+      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+          "STORAGE_ID", "TEST");
+      namesystem.writeUnlock();
+      BlockManagerTestUtil.updateState(bm);
+      DFSTestUtil.waitCorruptReplicas(fileSystem, namesystem,
+          new Path(testFile), block.getBlock(), 1);
+      // save the getReplicatedBlockStats result
+      ReplicatedBlockStats stats =
+          context.getClient().getNamenode().getReplicatedBlockStats();
+      assertEquals(1, stats.getCorruptBlocks());
+    }
+    ReplicatedBlockStats routerStat = routerProtocol.getReplicatedBlockStats();
+    assertEquals("There should be 1 corrupt blocks for each NN",
+        cluster.getNameservices().size(), routerStat.getCorruptBlocks());
+  }
+
   @Test
   public void testErasureCoding() throws Exception {
 
@@ -1530,6 +1575,13 @@ public class TestRouterRpc {
         .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
   }
 
+  /*
+   * This case is used to test NameNodeMetrics on 2 purposes:
+   * 1. NameNodeMetrics should be cached, since the cost of gathering the
+   * metrics is expensive
+   * 2. Metrics cache should updated regularly
+   * 3. Without any subcluster available, we should return an empty list
+   */
   @Test
   public void testNamenodeMetrics() throws Exception {
     final NamenodeBeanMetrics metrics =
@@ -1561,17 +1613,42 @@ public class TestRouterRpc {
     MockResolver resolver =
         (MockResolver) router.getRouter().getNamenodeResolver();
     resolver.cleanRegistrations();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return !jsonString2.equals(metrics.getLiveNodes());
-      }
-    }, 500, 5 * 1000);
-    assertEquals("{}", metrics.getLiveNodes());
+    resolver.setDisableRegistration(true);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return !jsonString2.equals(metrics.getLiveNodes());
+        }
+      }, 500, 5 * 1000);
+      assertEquals("{}", metrics.getLiveNodes());
+    } finally {
+      // Reset the registrations again
+      resolver.setDisableRegistration(false);
+      cluster.registerNamenodes();
+      cluster.waitNamenodeRegistration();
+    }
+  }
 
-    // Reset the registrations again
-    cluster.registerNamenodes();
-    cluster.waitNamenodeRegistration();
+  @Test
+  public void testRBFMetricsMethodsRelayOnStateStore() {
+    assertNull(router.getRouter().getStateStore());
+
+    RBFMetrics metrics = router.getRouter().getMetrics();
+    assertEquals("{}", metrics.getNamenodes());
+    assertEquals("[]", metrics.getMountTable());
+    assertEquals("{}", metrics.getRouters());
+    assertEquals(0, metrics.getNumNamenodes());
+    assertEquals(0, metrics.getNumExpiredNamenodes());
+
+    // These 2 methods relays on {@link RBFMetrics#getNamespaceInfo()}
+    assertEquals("[]", metrics.getClusterId());
+    assertEquals("[]", metrics.getBlockPoolId());
+
+    // These methods relays on
+    // {@link RBFMetrics#getActiveNamenodeRegistration()}
+    assertEquals("{}", metrics.getNameservices());
+    assertEquals(0, metrics.getNumLiveNodes());
   }
 
   @Test

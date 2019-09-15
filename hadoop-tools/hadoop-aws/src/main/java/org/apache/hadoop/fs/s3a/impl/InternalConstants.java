@@ -18,8 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.Constants;
+
 /**
  * Internal constants private only to the S3A codebase.
+ * Please don't refer to these outside of this module &amp; its tests.
+ * If you find you need to then either the code is doing something it
+ * should not, or these constants need to be uprated to being
+ * public and stable entries.
  */
 public final class InternalConstants {
 
@@ -57,4 +69,20 @@ public final class InternalConstants {
    * Default blocksize as used in blocksize and FS status queries: {@value}.
    */
   public static final int DEFAULT_BLOCKSIZE = 32 * 1024 * 1024;
+
+
+  /**
+   * The known keys used in a standard openFile call.
+   * if there's a select marker in there then the keyset
+   * used becomes that of the select operation.
+   */
+  @InterfaceStability.Unstable
+  public static final Set<String> STANDARD_OPENFILE_KEYS =
+      Collections.unmodifiableSet(
+          new HashSet<>(
+              Arrays.asList(Constants.INPUT_FADVISE,
+                  Constants.READAHEAD_RANGE)));
+
+  /** 404 error code. */
+  public static final int SC_404 = 404;
 }

@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class XceiverClientGrpc extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientGrpc.class);
+  private static final String COMPONENT = "dn";
   private final Pipeline pipeline;
   private final Configuration config;
   private Map<UUID, XceiverClientProtocolServiceStub> asyncStubs;
@@ -98,9 +100,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
     this.channels = new HashMap<>();
     this.asyncStubs = new HashMap<>();
-    this.topologyAwareRead = Boolean.parseBoolean(config.get(
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED,
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT));
+    this.topologyAwareRead = config.getBoolean(
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
   }
 
   /**
@@ -110,7 +112,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public void connect() throws Exception {
     // connect to the closest node, if closest node doesn't exist, delegate to
     // first node, which is usually the leader in the pipeline.
-    DatanodeDetails dn = this.pipeline.getClosestNode();
+    DatanodeDetails dn = topologyAwareRead ? this.pipeline.getClosestNode() :
+        this.pipeline.getFirstNode();
     // just make a connection to the picked datanode at the beginning
     connectToDatanode(dn, null);
   }
@@ -122,8 +125,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public void connect(String encodedToken) throws Exception {
     // connect to the closest node, if closest node doesn't exist, delegate to
     // first node, which is usually the leader in the pipeline.
-    DatanodeDetails dn;
-    dn = this.pipeline.getClosestNode();
+    DatanodeDetails dn = topologyAwareRead ? this.pipeline.getClosestNode() :
+        this.pipeline.getFirstNode();
     // just make a connection to the picked datanode at the beginning
     connectToDatanode(dn, encodedToken);
   }
@@ -148,9 +151,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             .intercept(new ClientCredentialInterceptor(userName, encodedToken),
                 new GrpcClientInterceptor());
     if (secConfig.isGrpcTlsEnabled()) {
-      File trustCertCollectionFile = secConfig.getTrustStoreFile();
-      File privateKeyFile = secConfig.getClientPrivateKeyFile();
-      File clientCertChainFile = secConfig.getClientCertChainFile();
+      File trustCertCollectionFile = secConfig.getTrustStoreFile(COMPONENT);
+      File privateKeyFile = secConfig.getClientPrivateKeyFile(COMPONENT);
+      File clientCertChainFile = secConfig.getClientCertChainFile(COMPONENT);
 
       SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
       if (trustCertCollectionFile != null) {
@@ -268,6 +271,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       datanodeList = pipeline.getNodesInOrder();
     } else {
       datanodeList = pipeline.getNodes();
+      // Shuffle datanode list so that clients do not read in the same order
+      // every time.
+      Collections.shuffle(datanodeList);
     }
     for (DatanodeDetails dn : datanodeList) {
       try {
@@ -284,7 +290,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         }
         break;
       } catch (ExecutionException | InterruptedException | IOException e) {
-        LOG.debug("Failed to execute command " + request + " on datanode " + dn
+        LOG.error("Failed to execute command " + request + " on datanode " + dn
             .getUuidString(), e);
         if (!(e instanceof IOException)) {
           if (Status.fromThrowable(e.getCause()).getCode()
@@ -305,8 +311,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       return reply;
     } else {
       Preconditions.checkNotNull(ioException);
-      LOG.error("Failed to execute command " + request + " on the pipeline "
-          + pipeline.getId());
+      LOG.error("Failed to execute command {} on the pipeline {}.", request,
+          pipeline);
       throw ioException;
     }
   }

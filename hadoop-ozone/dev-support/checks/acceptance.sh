@@ -16,7 +16,6 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-export HADOOP_VERSION=3
 OZONE_VERSION=$(grep "<ozone.version>" "$DIR/../../pom.xml" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
 cd "$DIR/../../dist/target/ozone-$OZONE_VERSION/compose" || exit 1
 ./test-all.sh

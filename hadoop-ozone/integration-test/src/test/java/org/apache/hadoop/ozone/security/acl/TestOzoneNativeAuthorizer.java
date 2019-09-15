@@ -38,9 +38,10 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS_NATIVE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
@@ -149,7 +151,7 @@ public class TestOzoneNativeAuthorizer {
     metadataManager = new OmMetadataManagerImpl(ozConfig);
     volumeManager = new VolumeManagerImpl(metadataManager, ozConfig);
     bucketManager = new BucketManagerImpl(metadataManager);
-    prefixManager = new PrefixManagerImpl(metadataManager);
+    prefixManager = new PrefixManagerImpl(metadataManager, false);
 
     NodeManager nodeManager = new MockNodeManager(true, 10);
     SCMConfigurator configurator = new SCMConfigurator();
@@ -177,7 +179,7 @@ public class TestOzoneNativeAuthorizer {
         .setFactor(HddsProtos.ReplicationFactor.ONE)
         .setDataSize(0)
         .setType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setAcls(OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
+        .setAcls(OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroups(),
             ALL, ALL))
         .build();
 
@@ -207,7 +209,7 @@ public class TestOzoneNativeAuthorizer {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .build();
-    bucketManager.createBucket(bucketInfo);
+    TestOMRequestUtils.addBucketToOM(metadataManager, bucketInfo);
     buckObj = new OzoneObjInfo.Builder()
         .setVolumeName(vol)
         .setBucketName(buck)
@@ -222,7 +224,7 @@ public class TestOzoneNativeAuthorizer {
         .setAdminName("bilbo")
         .setOwnerName("bilbo")
         .build();
-    volumeManager.createVolume(volumeArgs);
+    TestOMRequestUtils.addVolumeToOM(metadataManager, volumeArgs);
     volObj = new OzoneObjInfo.Builder()
         .setVolumeName(vol)
         .setResType(VOLUME)
@@ -242,9 +244,10 @@ public class TestOzoneNativeAuthorizer {
   @Test
   public void testCheckAccessForBucket() throws Exception {
 
-    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl);
+    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl,
+        ACCESS);
     OzoneAcl groupAcl = new OzoneAcl(GROUP, ugi.getGroups().size() > 0 ?
-        ugi.getGroups().get(0) : "", parentDirGroupAcl);
+        ugi.getGroups().get(0) : "", parentDirGroupAcl, ACCESS);
     // Set access for volume.
     volumeManager.setAcl(volObj, Arrays.asList(userAcl, groupAcl));
 
@@ -256,9 +259,10 @@ public class TestOzoneNativeAuthorizer {
 
   @Test
   public void testCheckAccessForKey() throws Exception {
-    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl);
+    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl,
+        ACCESS);
     OzoneAcl groupAcl = new OzoneAcl(GROUP, ugi.getGroups().size() > 0 ?
-        ugi.getGroups().get(0) : "", parentDirGroupAcl);
+        ugi.getGroups().get(0) : "", parentDirGroupAcl, ACCESS);
     // Set access for volume, bucket & prefix.
     volumeManager.setAcl(volObj, Arrays.asList(userAcl, groupAcl));
     bucketManager.setAcl(buckObj, Arrays.asList(userAcl, groupAcl));
@@ -280,9 +284,10 @@ public class TestOzoneNativeAuthorizer {
         .setStoreType(OZONE)
         .build();
 
-    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl);
+    OzoneAcl userAcl = new OzoneAcl(USER, ugi.getUserName(), parentDirUserAcl,
+        ACCESS);
     OzoneAcl groupAcl = new OzoneAcl(GROUP, ugi.getGroups().size() > 0 ?
-        ugi.getGroups().get(0) : "", parentDirGroupAcl);
+        ugi.getGroups().get(0) : "", parentDirGroupAcl, ACCESS);
     // Set access for volume & bucket.
     volumeManager.setAcl(volObj, Arrays.asList(userAcl, groupAcl));
     bucketManager.setAcl(buckObj, Arrays.asList(userAcl, groupAcl));
@@ -321,7 +326,8 @@ public class TestOzoneNativeAuthorizer {
      *    if user/group has access to them.
      * */
     for (ACLType a1 : allAcls) {
-      OzoneAcl newAcl = new OzoneAcl(accessType, getAclName(accessType), a1);
+      OzoneAcl newAcl = new OzoneAcl(accessType, getAclName(accessType), a1,
+          ACCESS);
 
       // Reset acls to only one right.
       aclImplementor.setAcl(obj, Arrays.asList(newAcl));
@@ -375,7 +381,7 @@ public class TestOzoneNativeAuthorizer {
           ACLIdentityType identityType = ACLIdentityType.values()[type];
           // Add remaining acls one by one and then check access.
           OzoneAcl addAcl = new OzoneAcl(identityType, 
-              getAclName(identityType), a2);
+              getAclName(identityType), a2, ACCESS);
           aclImplementor.addAcl(obj, addAcl);
 
           // Fetch acls again.

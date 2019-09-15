@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,6 +34,7 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -284,6 +289,83 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       fs.delete(dirPath, true);
       fs.setTtlTimeProvider(originalTimeProvider);
     }
+  }
+
+  /**
+   * Test that listing of metadatas is filtered from expired items.
+   */
+  @Test
+  public void testListingFilteredExpiredItems() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+    final S3AFileSystem fs = getFileSystem();
+
+    long oldTime = 100L;
+    long newTime = 110L;
+    long ttl = 9L;
+    final String basedir = "testListingFilteredExpiredItems";
+    final Path tombstonedPath = path(basedir + "/tombstonedPath");
+    final Path baseDirPath = path(basedir);
+    final List<Path> filesToCreate = new ArrayList<>();
+    final MetadataStore ms = fs.getMetadataStore();
+
+    for (int i = 0; i < 10; i++) {
+      filesToCreate.add(path(basedir + "/file" + i));
+    }
+
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
+
+    try {
+      fs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // add and delete entry with the oldtime
+      when(mockTimeProvider.getNow()).thenReturn(oldTime);
+      touch(fs, tombstonedPath);
+      fs.delete(tombstonedPath, false);
+
+      // create items with newTime
+      when(mockTimeProvider.getNow()).thenReturn(newTime);
+      for (Path path : filesToCreate) {
+        touch(fs, path);
+      }
+
+      // listing will contain the tombstone with oldtime
+      when(mockTimeProvider.getNow()).thenReturn(oldTime);
+      final DirListingMetadata fullDLM = getDirListingMetadata(ms, baseDirPath);
+      List<Path> containedPaths = fullDLM.getListing().stream()
+          .map(pm -> pm.getFileStatus().getPath())
+          .collect(Collectors.toList());
+      Assertions.assertThat(containedPaths)
+          .describedAs("Full listing of path %s", baseDirPath)
+          .hasSize(11)
+          .contains(tombstonedPath);
+
+      // listing will be filtered, and won't contain the tombstone with oldtime
+      when(mockTimeProvider.getNow()).thenReturn(newTime);
+      final DirListingMetadata filteredDLM = getDirListingMetadata(ms,
+          baseDirPath);
+      containedPaths = filteredDLM.getListing().stream()
+          .map(pm -> pm.getFileStatus().getPath())
+          .collect(Collectors.toList());
+      Assertions.assertThat(containedPaths)
+          .describedAs("Full listing of path %s", baseDirPath)
+          .hasSize(10)
+          .doesNotContain(tombstonedPath);
+    } finally {
+      fs.delete(baseDirPath, true);
+      fs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  protected DirListingMetadata getDirListingMetadata(final MetadataStore ms,
+      final Path baseDirPath) throws IOException {
+    final DirListingMetadata fullDLM = ms.listChildren(baseDirPath);
+    Assertions.assertThat(fullDLM)
+        .describedAs("Metastrore directory listing of %s",
+            baseDirPath)
+        .isNotNull();
+    return fullDLM;
   }
 
 }

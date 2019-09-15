@@ -29,6 +29,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -49,8 +50,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFile
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
@@ -124,6 +123,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenReque
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
+
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -270,13 +272,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         responseBuilder.setInitiateMultiPartUploadResponse(
             multipartInfoInitiateResponse);
         break;
-      case ApplyInitiateMultiPartUpload:
-        MultipartInfoInitiateResponse response =
-            applyInitiateMultiPartUpload(
-                request.getInitiateMultiPartUploadApplyRequest());
-        responseBuilder.setInitiateMultiPartUploadResponse(
-            response);
-        break;
       case CommitMultiPartUpload:
         MultipartCommitUploadPartResponse commitUploadPartResponse =
             commitMultipartUploadPart(
@@ -306,6 +301,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         ServiceListResponse serviceListResponse = getServiceList(
             request.getServiceListRequest());
         responseBuilder.setServiceListResponse(serviceListResponse);
+        break;
+      case DBUpdates:
+        DBUpdatesResponse dbUpdatesResponse = getOMDBUpdates(
+            request.getDbUpdatesRequest());
+        responseBuilder.setDbUpdatesResponse(dbUpdatesResponse);
         break;
       case GetDelegationToken:
         GetDelegationTokenResponseProto getDtResp = getDelegationToken(
@@ -386,12 +386,29 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return responseBuilder.build();
   }
 
+  private DBUpdatesResponse getOMDBUpdates(
+      DBUpdatesRequest dbUpdatesRequest)
+      throws SequenceNumberNotFoundException {
+
+    DBUpdatesResponse.Builder builder = DBUpdatesResponse
+        .newBuilder();
+    DBUpdatesWrapper dbUpdatesWrapper =
+        impl.getDBUpdates(dbUpdatesRequest);
+    for (int i = 0; i < dbUpdatesWrapper.getData().size(); i++) {
+      builder.addData(OMPBHelper.getByteString(
+          dbUpdatesWrapper.getData().get(i)));
+    }
+    builder.setSequenceNumber(dbUpdatesWrapper.getCurrentSequenceNumber());
+    return builder.build();
+  }
+
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
     List<OzoneAclInfo> acls = new ArrayList<>();
-
     List<OzoneAcl> aclList =
         impl.getAcl(OzoneObjInfo.fromProtobuf(req.getObj()));
-    aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    if (aclList != null) {
+      aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    }
     return GetAclResponse.newBuilder().addAllAcls(acls).build();
   }
 
@@ -569,6 +586,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
         .setAcls(keyArgs.getAclsList().stream().map(a ->
             OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyArgs.getMetadataList()))
         .build();
     if (keyArgs.hasDataSize()) {
       omKeyArgs.setDataSize(keyArgs.getDataSize());
@@ -592,6 +610,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .build();
     OmKeyInfo keyInfo = impl.lookupKey(omKeyArgs);
     resp.setKeyInfo(keyInfo.getProtobuf());
@@ -802,32 +821,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
-    resp.setVolumeName(multipartInfo.getVolumeName());
-    resp.setBucketName(multipartInfo.getBucketName());
-    resp.setKeyName(multipartInfo.getKeyName());
-    resp.setMultipartUploadID(multipartInfo.getUploadID());
-
-    return resp.build();
-  }
-
-  private MultipartInfoInitiateResponse applyInitiateMultiPartUpload(
-      MultipartInfoApplyInitiateRequest request) throws IOException {
-    MultipartInfoInitiateResponse.Builder resp = MultipartInfoInitiateResponse
-        .newBuilder();
-
-    KeyArgs keyArgs = request.getKeyArgs();
-    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(keyArgs.getVolumeName())
-        .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
-        .setType(keyArgs.getType())
-        .setAcls(keyArgs.getAclsList().stream().map(a ->
-            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
-        .setFactor(keyArgs.getFactor())
-        .build();
-    OmMultipartInfo multipartInfo =
-        impl.applyInitiateMultipartUpload(omKeyArgs,
-            request.getMultipartUploadID());
     resp.setVolumeName(multipartInfo.getVolumeName());
     resp.setBucketName(multipartInfo.getBucketName());
     resp.setKeyName(multipartInfo.getKeyName());
@@ -1065,6 +1058,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .build();
     return LookupFileResponse.newBuilder()
         .setKeyInfo(impl.lookupFile(omKeyArgs).getProtobuf())

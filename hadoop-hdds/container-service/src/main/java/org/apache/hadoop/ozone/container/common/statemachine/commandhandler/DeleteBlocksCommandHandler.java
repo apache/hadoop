@@ -127,7 +127,12 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
           case KeyValueContainer:
             KeyValueContainerData containerData = (KeyValueContainerData)
                 cont.getContainerData();
-            deleteKeyValueContainerBlocks(containerData, entry);
+            cont.writeLock();
+            try {
+              deleteKeyValueContainerBlocks(containerData, entry);
+            } finally {
+              cont.writeUnlock();
+            }
             txResultBuilder.setContainerID(containerId)
                 .setSuccess(true);
             break;

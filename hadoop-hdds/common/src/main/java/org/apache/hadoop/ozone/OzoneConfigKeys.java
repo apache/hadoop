@@ -1,4 +1,4 @@
- /**
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ import org.apache.ratis.util.TimeDuration;
 
 import java.util.concurrent.TimeUnit;
 
- /**
+/**
  * This class contains constants for configuration keys used in Ozone.
  */
 @InterfaceAudience.Public
@@ -124,9 +124,6 @@ public final class OzoneConfigKeys {
    * Used only for testing purpose. Results in making every user an admin.
    * */
   public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
-
-  public static final String OZONE_CLIENT_PROTOCOL =
-      "ozone.client.protocol";
 
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
       "ozone.client.stream.buffer.flush.size";
@@ -361,12 +358,12 @@ public final class OzoneConfigKeys {
       HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD =
       "hdds.datanode.storage.utilization.warning.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.95;
+      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.75;
   public static final String
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD =
       "hdds.datanode.storage.utilization.critical.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
+      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.95;
 
   public static final String OZONE_SECURITY_ENABLED_KEY =
       "ozone.security.enabled";
@@ -380,7 +377,7 @@ public final class OzoneConfigKeys {
    */
   public static final String OZONE_CLIENT_CHECKSUM_TYPE =
       "ozone.client.checksum.type";
-  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "SHA256";
+  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "CRC32";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM =
       "ozone.client.bytes.per.checksum";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT = "1MB";
@@ -446,6 +443,10 @@ public final class OzoneConfigKeys {
   public static final String
       OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "ozone.freon.http.kerberos.keytab";
+
+  public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
+      "ozone.network.topology.aware.read";
+  public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
 
   /**
    * There is no need to instantiate this class.

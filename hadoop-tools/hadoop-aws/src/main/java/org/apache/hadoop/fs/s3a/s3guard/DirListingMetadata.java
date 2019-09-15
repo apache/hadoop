@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,7 +63,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * Create a directory listing metadata container.
    *
    * @param path Path of the directory. If this path has a host component, then
-   *     all paths added later via {@link #put(S3AFileStatus)} must also have
+   *     all paths added later via {@link #put(PathMetadata)} must also have
    *     the same host.
    * @param listing Entries in the directory.
    * @param isAuthoritative true iff listing is the full contents of the
@@ -203,9 +204,9 @@ public class DirListingMetadata extends ExpirableMetadata {
    * Replace an entry with a tombstone.
    * @param childPath path of entry to replace.
    */
-  public void markDeleted(Path childPath) {
+  public void markDeleted(Path childPath, long lastUpdated) {
     checkChildPath(childPath);
-    listMap.put(childPath, PathMetadata.tombstone(childPath));
+    listMap.put(childPath, PathMetadata.tombstone(childPath, lastUpdated));
   }
 
   /**
@@ -222,16 +223,17 @@ public class DirListingMetadata extends ExpirableMetadata {
    * Add an entry to the directory listing.  If this listing already contains a
    * {@code FileStatus} with the same path, it will be replaced.
    *
-   * @param childFileStatus entry to add to this directory listing.
+   * @param childPathMetadata entry to add to this directory listing.
    * @return true if the status was added or replaced with a new value. False
    * if the same FileStatus value was already present.
    */
-  public boolean put(S3AFileStatus childFileStatus) {
-    Preconditions.checkNotNull(childFileStatus,
-        "childFileStatus must be non-null");
-    Path childPath = childStatusToPathKey(childFileStatus);
-    PathMetadata newValue = new PathMetadata(childFileStatus);
-    PathMetadata oldValue = listMap.put(childPath, newValue);
+  public boolean put(PathMetadata childPathMetadata) {
+    Preconditions.checkNotNull(childPathMetadata,
+        "childPathMetadata must be non-null");
+    final S3AFileStatus fileStatus = childPathMetadata.getFileStatus();
+    Path childPath = childStatusToPathKey(fileStatus);
+    PathMetadata newValue = childPathMetadata;
+    PathMetadata oldValue = listMap.put(childPath, childPathMetadata);
     return oldValue == null || !oldValue.equals(newValue);
   }
 
@@ -243,6 +245,25 @@ public class DirListingMetadata extends ExpirableMetadata {
         ", isAuthoritative=" + isAuthoritative +
         ", lastUpdated=" + this.getLastUpdated() +
         '}';
+  }
+
+  /**
+   * Remove expired entries from the listing based on TTL.
+   * @param ttl the ttl time
+   * @param now the current time
+   */
+  public synchronized void removeExpiredEntriesFromListing(long ttl,
+      long now) {
+    final Iterator<Map.Entry<Path, PathMetadata>> iterator =
+        listMap.entrySet().iterator();
+    while (iterator.hasNext()) {
+      final Map.Entry<Path, PathMetadata> entry = iterator.next();
+      // we filter iff the lastupdated is not 0 and the entry is expired
+      if (entry.getValue().getLastUpdated() != 0
+          && (entry.getValue().getLastUpdated() + ttl) <= now) {
+        iterator.remove();
+      }
+    }
   }
 
   /**
