@@ -46,6 +46,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -81,13 +83,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -405,9 +401,8 @@ public class DataNode extends ReconfigurableBase
 
   private final DatasetVolumeChecker volumeChecker;
   volatile FsDatasetSpi<? extends FsVolumeSpi> allData = null;
-  private Thread checkDiskThread = null;
-  private final int checkDiskInterval = 5*1000;
-  private Object checkDiskMutex = new Object();
+  private ScheduledExecutorService scheduledExecutor;
+  private int checkDiskInterval = 5*1000;
   private List<StorageLocation> errorDisk = null;
 
   private final SocketFactory socketFactory;
@@ -447,6 +442,8 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    this.checkDiskInterval = conf.getInt(DFS_DATANODE_DISK_CHECK_INTERVAL_KEY,
+        DFS_DATANODE_DISK_CHECK_INTERVAL_DEFAULT);
   }
 
   /**
@@ -480,6 +477,8 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
+    this.checkDiskInterval = conf.getInt(DFS_DATANODE_DISK_CHECK_INTERVAL_KEY,
+            DFS_DATANODE_DISK_CHECK_INTERVAL_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -1708,12 +1707,17 @@ public class DataNode extends ReconfigurableBase
     // In the case that this is the first block pool to connect, initialize
     // the dataset, block scanners, etc.
     initStorage(nsInfo);
-    // start check disk thread.
-    startCheckDiskThread();
 
     // Exclude failed disks before initializing the block pools to avoid startup
     // failures.
     checkDiskError();
+
+    // start check disk thread.
+    scheduledExecutor = Executors.newScheduledThreadPool(1);
+    Runnable checkDisk = new CheckDisk();
+    scheduledExecutor.scheduleAtFixedRate(checkDisk, checkDiskInterval,
+            checkDiskInterval, TimeUnit.SECONDS);
+
     try {
       data.addBlockPool(nsInfo.getBlockPoolID(), getConf());
     } catch (AddBlockPoolException e) {
@@ -2208,39 +2212,21 @@ public class DataNode extends ReconfigurableBase
     tracer.close();
   }
 
-  public void startCheckDiskThread() {
-    if (checkDiskThread == null) {
-      synchronized (checkDiskMutex) {
-        if (checkDiskThread == null) {
-          checkDiskThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-              while (shouldRun) {
-                LOG.info("CheckDiskThread running ");
-                if (errorDisk != null && !errorDisk.isEmpty()) {
-                  try {
-                    checkDiskError();
-                  } catch (Exception e) {
-                    LOG.warn("Unexpected exception occurred while" +
-                            " checking disk error "+ e);
-                    checkDiskThread = null;
-                    return;
-                  }
-                  lastDiskErrorCheck = Time.monotonicNow();
-                }
-                try {
-                  Thread.sleep(checkDiskInterval);
-                } catch (InterruptedException e) {
-                  LOG.debug("InterruptedException in check disk error thread",
-                          e);
-                  checkDiskThread = null;
-                  return;
-                }
-              }
-            }
-          });
-          checkDiskThread.start();
-          LOG.info("Starting CheckDiskError Thread");
+  private class CheckDisk implements Runnable {
+
+    @Override
+    public void run() {
+      while (shouldRun) {
+        LOG.info("CheckDiskThread running ");
+        if (errorDisk != null && !errorDisk.isEmpty()) {
+          try {
+            checkDiskError();
+          } catch (Exception e) {
+            LOG.warn("Unexpected exception occurred while" +
+                    " checking disk error "+ e);
+            return;
+          }
+          lastDiskErrorCheck = Time.monotonicNow();
         }
       }
     }
@@ -3478,6 +3464,8 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public void checkDiskError() throws IOException {
     Set<FsVolumeSpi> unhealthyVolumes;
+    Configuration conf = getConf();
+    String newDataDirs = null;
     try {
       // check all volume
       unhealthyVolumes = volumeChecker.checkAllVolumes(allData);
@@ -3492,10 +3480,10 @@ public class DataNode extends ReconfigurableBase
         errorDisk = new ArrayList<>();
       }
       List<StorageLocation> tmpDisk = Lists.newArrayList(errorDisk);
-      errorDisk = null;
+      errorDisk.clear();
       for (FsVolumeSpi vol : unhealthyVolumes) {
-        LOG.info("Add error disk " + vol.getStorageLocation()
-            + " to errorDisk - " + vol.getStorageLocation());
+        LOG.info("Add error disk {} to errorDisk - {}",
+            vol.getStorageLocation(), vol.getStorageLocation());
         errorDisk.add(vol.getStorageLocation());
         if (tmpDisk.contains(vol.getStorageLocation())) {
           tmpDisk.remove(vol.getStorageLocation());
@@ -3505,28 +3493,23 @@ public class DataNode extends ReconfigurableBase
           unhealthyVolumes.size(), unhealthyVolumes);
       handleVolumeFailures(unhealthyVolumes);
       if (!tmpDisk.isEmpty()) {
-        try {
-          Configuration conf = getConf();
-          String newDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY)
-                  + "," + Joiner.on(",").join(tmpDisk);
-          refreshVolumes(newDataDirs);
-        } catch (IOException e) {
-          LOG.error("Auto refreshVolumes error : ", e);
-        }
+        newDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY)
+            + "," + Joiner.on(",").join(tmpDisk);
       }
     } else {
       LOG.debug("checkDiskError encountered no failures," +
           "then check errorDisk");
       if (errorDisk != null && !errorDisk.isEmpty()) {
-        try {
-          Configuration conf = getConf();
-          String newDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY)
-              + "," + Joiner.on(",").join(errorDisk);
-          refreshVolumes(newDataDirs);
-          errorDisk = null;
-        } catch (IOException e) {
-          LOG.error("Auto refreshVolumes error : ", e);
-        }
+        newDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY)
+            + "," + Joiner.on(",").join(errorDisk);
+      }
+    }
+    if (newDataDirs != null) {
+      LOG.debug("Bad disks is repaired, should refreshVolumes disk.");
+      try {
+        refreshVolumes(newDataDirs);
+      } catch (IOException e) {
+        LOG.error("Bad disks is repaired, refreshVolumes error : ", e);
       }
     }
   }
