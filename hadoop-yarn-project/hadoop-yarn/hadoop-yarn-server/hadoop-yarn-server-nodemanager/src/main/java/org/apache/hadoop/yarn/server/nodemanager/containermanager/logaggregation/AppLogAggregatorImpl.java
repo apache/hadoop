@@ -215,8 +215,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             rollingMonitorInterval,
             this.appId, this.appAcls, this.nodeId, this.userUgi);
     secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
-        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER,
-            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_LOCAL_USER);
+        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
     if (secureModeUseLocalUser) {
       secureModeLocalUserAllocator =
           SecureModeLocalUserAllocator.getInstance(conf);

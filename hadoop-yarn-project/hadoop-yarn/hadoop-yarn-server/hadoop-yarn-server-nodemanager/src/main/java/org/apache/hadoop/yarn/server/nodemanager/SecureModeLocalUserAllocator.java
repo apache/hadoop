@@ -66,12 +66,12 @@ public class SecureModeLocalUserAllocator {
         YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED)) {
       String errMsg = "Invalidate configuration combination: " +
           YarnConfiguration.NM_RECOVERY_ENABLED + "=true, " +
-          YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER + "=true";
+          YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER + "=true";
       throw new RuntimeException(errMsg);
     }
     localUserPrefix = conf.get(
-        YarnConfiguration.NM_SECURE_MODE_LOCAL_USER_PREFIX,
-        YarnConfiguration.DEFAULT_NM_SECURE_MODE_LOCAL_USER_PREFIX);
+        YarnConfiguration.NM_SECURE_MODE_POOL_USER_PREFIX,
+        YarnConfiguration.DEFAULT_NM_SECURE_MODE_POOL_USER_PREFIX);
     localUserCount = conf.getInt(YarnConfiguration.NM_VCORES,
         YarnConfiguration.DEFAULT_NM_VCORES);
     allocated = new ArrayList<Boolean>(localUserCount);

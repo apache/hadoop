@@ -215,10 +215,10 @@ public class ResourceLocalizationService extends CompositeService
 
     this.disablePrivateVis = UserGroupInformation.isSecurityEnabled() &&
         context.getConf().getBoolean(
-            YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER,
-            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_LOCAL_USER);
+            YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
     if (this.disablePrivateVis) {
-      LOG.info("When " + YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER +
+      LOG.info("When " + YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER +
           " is true, treat PRIVATE visibility as APPLICATION");
     }
 

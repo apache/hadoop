@@ -2218,14 +2218,14 @@ public class YarnConfiguration extends Configuration {
   /**
    * Whether or not to use precreated pool of local users in secure mode.
    */
-  public static final String NM_SECURE_MODE_USE_LOCAL_USER = NM_PREFIX +
-      "linux-container-executor.secure-mode.use-local-user";
+  public static final String NM_SECURE_MODE_USE_POOL_USER = NM_PREFIX +
+      "linux-container-executor.secure-mode.use-pool-user";
 
-  public static final boolean DEFAULT_NM_SECURE_MODE_USE_LOCAL_USER = false;
+  public static final boolean DEFAULT_NM_SECURE_MODE_USE_POOL_USER = false;
 
   /**
-   * The prefix of all the local users can be used by Yarn Secure Container.
-   * The number of local users to use is specified by:
+   * The prefix of the local pool users can be used by Yarn Secure Container.
+   * The number of local pool users to use is specified by:
    * NM_PREFIX + "resource.cpu-vcores"
    * For example, if prefix is "user" and cpu-vcores configured to 20,
    * then local user names are:
@@ -2234,10 +2234,10 @@ public class YarnConfiguration extends Configuration {
    *   ...
    *   user19
    */
-  public static final String NM_SECURE_MODE_LOCAL_USER_PREFIX = NM_PREFIX +
-      "linux-container-executor.secure-mode.local-user-prefix";
+  public static final String NM_SECURE_MODE_POOL_USER_PREFIX = NM_PREFIX +
+      "linux-container-executor.secure-mode.pool-user-prefix";
 
-  public static final String DEFAULT_NM_SECURE_MODE_LOCAL_USER_PREFIX = "user";
+  public static final String DEFAULT_NM_SECURE_MODE_POOL_USER_PREFIX = "user";
 
   /** The type of resource enforcement to use with the
    *  linux container executor.

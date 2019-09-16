@@ -12,8 +12,8 @@ public class TestSecureModeLocalUserAllocator {
   @BeforeClass
   public static void beforeAllTestMethods() {
     conf = new Configuration();
-    conf.setBoolean(YarnConfiguration.NM_SECURE_MODE_USE_LOCAL_USER, true);
-    conf.set(YarnConfiguration.NM_SECURE_MODE_LOCAL_USER_PREFIX, "smlu");
+    conf.setBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER, true);
+    conf.set(YarnConfiguration.NM_SECURE_MODE_POOL_USER_PREFIX, "smlu");
     conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, false);
     conf.setInt(YarnConfiguration.NM_VCORES, 3);
   }
