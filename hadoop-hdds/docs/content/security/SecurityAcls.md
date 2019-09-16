@@ -78,5 +78,7 @@ supported are:
 of the ozone object and a list of ACLs.
 2. **GetAcl** – This API will take the name and type of the ozone object
 and will return a list of ACLs.
-3. **RemoveAcl** - This API will take the name, type of the
+3. **AddAcl** - This API will take the name, type of the ozone object, the
+ACL, and add it to existing ACL entries of the ozone object.
+4. **RemoveAcl** - This API will take the name, type of the
 ozone object and the ACL that has to be removed.
