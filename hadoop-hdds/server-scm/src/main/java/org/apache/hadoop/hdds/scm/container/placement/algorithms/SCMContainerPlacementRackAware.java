@@ -242,15 +242,15 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       long sizeRequired) throws SCMException {
     int ancestorGen = RACK_LEVEL;
     int maxRetry = MAX_RETRY;
-    List<Node> excludedNodesForCapacity = null;
+    List<String> excludedNodesForCapacity = null;
     boolean isFallbacked = false;
     while(true) {
-      Node node = networkTopology.chooseRandom(NetConstants.ROOT, null,
-          excludedNodes, affinityNode, ancestorGen);
       metrics.incrDatanodeChooseAttemptCount();
+      Node node = networkTopology.chooseRandom(NetConstants.ROOT,
+          excludedNodesForCapacity, excludedNodes, affinityNode, ancestorGen);
       if (node == null) {
         // cannot find the node which meets all constrains
-        LOG.warn("Failed to find the datanode. excludedNodes:" +
+        LOG.warn("Failed to find the datanode for container. excludedNodes:" +
             (excludedNodes == null ? "" : excludedNodes.toString()) +
             ", affinityNode:" +
             (affinityNode == null ? "" : affinityNode.getNetworkFullPath()));
@@ -268,15 +268,12 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
           }
         }
         // there is no constrains to reduce or fallback is true
-        throw new SCMException("No satisfied datanode to meet the " +
+        throw new SCMException("No satisfied datanode to meet the" +
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.warn("Datanode {} is chosen. Required size is {}",
+        LOG.debug("Datanode {} is chosen for container. Required size is {}",
             node.toString(), sizeRequired);
-        if (excludedNodes != null && excludedNodesForCapacity != null) {
-          excludedNodes.removeAll(excludedNodesForCapacity);
-        }
         metrics.incrDatanodeChooseSuccessCount();
         if (isFallbacked) {
           metrics.incrDatanodeChooseFallbackCount();
@@ -294,12 +291,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
         if (excludedNodesForCapacity == null) {
           excludedNodesForCapacity = new ArrayList<>();
         }
-        excludedNodesForCapacity.add(node);
-        if (excludedNodes == null) {
-          excludedNodes = excludedNodesForCapacity;
-        } else {
-          excludedNodes.add(node);
-        }
+        excludedNodesForCapacity.add(node.getNetworkFullPath());
       }
     }
   }

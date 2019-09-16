@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
@@ -276,7 +277,7 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
    *
    * @param leafIndex node's index, start from 0, skip the nodes in
    *                 excludedScope and excludedNodes with ancestorGen
-   * @param excludedScope the exclude scope
+   * @param excludedScopes the exclude scopes
    * @param excludedNodes nodes to be excluded from. If ancestorGen is not 0,
    *                      the chosen node will not share same ancestor with
    *                      those in excluded nodes at the specified generation
@@ -300,7 +301,7 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
    *
    *   Input:
    *   leafIndex = 2
-   *   excludedScope = /dc2
+   *   excludedScope = /dc2/rack2
    *   excludedNodes = {/dc1/rack1/n1}
    *   ancestorGen = 1
    *
@@ -313,12 +314,12 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
    *   means picking the 3th available node, which is n5.
    *
    */
-  public Node getLeaf(int leafIndex, String excludedScope,
+  public Node getLeaf(int leafIndex, List<String> excludedScopes,
       Collection<Node> excludedNodes, int ancestorGen) {
     Preconditions.checkArgument(leafIndex >= 0 && ancestorGen >= 0);
     // come to leaf parent layer
     if (isLeafParent()) {
-      return getLeafOnLeafParent(leafIndex, excludedScope, excludedNodes);
+      return getLeafOnLeafParent(leafIndex, excludedScopes, excludedNodes);
     }
 
     int maxLevel = NodeSchemaManager.getInstance().getMaxLevel();
@@ -328,14 +329,16 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
     Map<Node, Integer> countMap =
         getAncestorCountMap(excludedNodes, ancestorGen, currentGen);
     // nodes covered by excluded scope
-    int excludedNodeCount = getExcludedScopeNodeCount(excludedScope);
+    Map<String, Integer> excludedNodeCount =
+        getExcludedScopeNodeCount(excludedScopes);
 
-    for(Node child : childrenMap.values()) {
+    for (Node child : childrenMap.values()) {
       int leafCount = child.getNumOfLeaves();
-      // skip nodes covered by excluded scope
-      if (excludedScope != null &&
-          excludedScope.startsWith(child.getNetworkFullPath())) {
-        leafCount -= excludedNodeCount;
+      // skip nodes covered by excluded scopes
+      for (Map.Entry<String, Integer> entry: excludedNodeCount.entrySet()) {
+        if (entry.getKey().startsWith(child.getNetworkFullPath())) {
+          leafCount -= entry.getValue();
+        }
       }
       // skip nodes covered by excluded nodes and ancestorGen
       Integer count = countMap.get(child);
@@ -343,7 +346,7 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
         leafCount -= count;
       }
       if (leafIndex < leafCount) {
-        return ((InnerNode)child).getLeaf(leafIndex, excludedScope,
+        return ((InnerNode)child).getLeaf(leafIndex, excludedScopes,
             excludedNodes, ancestorGen);
       } else {
         leafIndex -= leafCount;
@@ -424,17 +427,21 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
    *  Get the node with leafIndex, considering skip nodes in excludedScope
    *  and in excludeNodes list.
    */
-  private Node getLeafOnLeafParent(int leafIndex, String excludedScope,
+  private Node getLeafOnLeafParent(int leafIndex, List<String> excludedScopes,
       Collection<Node> excludedNodes) {
     Preconditions.checkArgument(isLeafParent() && leafIndex >= 0);
     if (leafIndex >= getNumOfChildren()) {
       return null;
     }
     for(Node node : childrenMap.values()) {
-      if ((excludedNodes != null && (excludedNodes.contains(node))) ||
-          (excludedScope != null &&
-              (node.getNetworkFullPath().startsWith(excludedScope)))) {
+      if (excludedNodes != null && excludedNodes.contains(node)) {
         continue;
+      }
+      if (excludedScopes != null && excludedScopes.size() > 0) {
+        if (excludedScopes.stream().anyMatch(scope ->
+            node.getNetworkFullPath().startsWith(scope))) {
+          continue;
+        }
       }
       if (leafIndex == 0) {
         return node;
@@ -484,12 +491,19 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
     return node;
   }
 
-  /** Get how many leaf nodes are covered by the excludedScope. */
-  private int getExcludedScopeNodeCount(String excludedScope) {
-    if (excludedScope == null) {
-      return 0;
+  /** Get how many leaf nodes are covered by the excludedScopes(no overlap). */
+  private Map<String, Integer> getExcludedScopeNodeCount(
+      List<String> excludedScopes) {
+    HashMap<String, Integer> nodeCounts = new HashMap<>();
+    if (excludedScopes == null || excludedScopes.isEmpty()) {
+      return nodeCounts;
     }
-    Node excludedScopeNode = getNode(excludedScope);
-    return excludedScopeNode == null ? 0 : excludedScopeNode.getNumOfLeaves();
+
+    for (String scope: excludedScopes) {
+      Node excludedScopeNode = getNode(scope);
+      nodeCounts.put(scope, excludedScopeNode == null ? 0 :
+          excludedScopeNode.getNumOfLeaves());
+    }
+    return nodeCounts;
   }
 }

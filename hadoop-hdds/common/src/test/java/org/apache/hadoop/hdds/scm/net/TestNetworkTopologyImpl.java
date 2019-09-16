@@ -357,9 +357,11 @@ public class TestNetworkTopologyImpl {
 
     // test chooseRandom(String scope, String excludedScope)
     path = dataNodes[random.nextInt(dataNodes.length)].getNetworkFullPath();
-    assertNull(cluster.chooseRandom(path, path));
-    assertNotNull(cluster.chooseRandom(null, path));
-    assertNotNull(cluster.chooseRandom("", path));
+    List<String> pathList = new ArrayList<>();
+    pathList.add(path);
+    assertNull(cluster.chooseRandom(path, pathList));
+    assertNotNull(cluster.chooseRandom(null, pathList));
+    assertNotNull(cluster.chooseRandom("", pathList));
 
     // test chooseRandom(String scope, Collection<Node> excludedNodes)
     assertNull(cluster.chooseRandom("", Arrays.asList(dataNodes)));
@@ -399,7 +401,9 @@ public class TestNetworkTopologyImpl {
     }
 
     // "" excludedScope,  no node will ever be chosen
-    frequency = pickNodes(100, "", null, null, 0);
+    List<String> pathList = new ArrayList();
+    pathList.add("");
+    frequency = pickNodes(100, pathList, null, null, 0);
     for (Node key : dataNodes) {
       assertTrue(frequency.get(key) == 0);
     }
@@ -411,8 +415,10 @@ public class TestNetworkTopologyImpl {
       assertTrue(frequency.get(key) == 0);
     }
     // out network topology excluded scope, every node should be chosen
-    scope = "/city1";
-    frequency = pickNodes(cluster.getNumOfLeafNode(null), scope, null, null, 0);
+    pathList.clear();
+    pathList.add("/city1");
+    frequency = pickNodes(
+        cluster.getNumOfLeafNode(null), pathList, null, null, 0);
     for (Node key : dataNodes) {
       assertTrue(frequency.get(key) != 0);
     }
@@ -582,19 +588,32 @@ public class TestNetworkTopologyImpl {
         }};
     int[] affinityNodeIndexs = {0, dataNodes.length - 1,
         random.nextInt(dataNodes.length), random.nextInt(dataNodes.length)};
+    Node[][] excludedScopeIndexs = {{dataNodes[0]},
+        {dataNodes[dataNodes.length - 1]},
+        {dataNodes[random.nextInt(dataNodes.length)]},
+        {dataNodes[random.nextInt(dataNodes.length)],
+            dataNodes[random.nextInt(dataNodes.length)]
+        },
+        {dataNodes[random.nextInt(dataNodes.length)],
+            dataNodes[random.nextInt(dataNodes.length)],
+            dataNodes[random.nextInt(dataNodes.length)],
+        }};
     int leafNum = cluster.getNumOfLeafNode(null);
     Map<Node, Integer> frequency;
-    String scope;
+    List<String> pathList = new ArrayList<>();
     for (int k : affinityNodeIndexs) {
-      for (int i : excludedNodeIndexs) {
-        String path = dataNodes[i].getNetworkFullPath();
-        while (!path.equals(ROOT)) {
+      for (Node[] excludedScopes : excludedScopeIndexs) {
+        pathList.clear();
+        pathList.addAll(Arrays.stream(excludedScopes)
+            .map(node -> node.getNetworkFullPath())
+            .collect(Collectors.toList()));
+        while (!pathList.get(0).equals(ROOT)) {
           int ancestorGen = cluster.getMaxLevel() - 1;
           while (ancestorGen > 0) {
             for (Node[] list : excludedNodeLists) {
               List<Node> excludedList = Arrays.asList(list);
-              frequency = pickNodes(leafNum, path, excludedList, dataNodes[k],
-                  ancestorGen);
+              frequency = pickNodes(leafNum, pathList, excludedList,
+                  dataNodes[k], ancestorGen);
               Node affinityAncestor = dataNodes[k].getAncestor(ancestorGen);
               for (Node key : dataNodes) {
                 if (affinityAncestor != null) {
@@ -605,28 +624,33 @@ public class TestNetworkTopologyImpl {
                   } else if (excludedList != null &&
                       excludedList.contains(key)) {
                     continue;
-                  } else if (path != null &&
-                      key.getNetworkFullPath().startsWith(path)) {
+                  } else if (pathList != null &&
+                      pathList.stream().anyMatch(path ->
+                          key.getNetworkFullPath().startsWith(path))) {
                     continue;
                   } else {
                     fail("Node is not picked when sequentially going " +
                         "through ancestor node's leaf nodes. node:" +
                         key.getNetworkFullPath() + ", ancestor node:" +
                         affinityAncestor.getNetworkFullPath() +
-                        ", excludedScope: " + path + ", " + "excludedList:" +
-                        (excludedList == null ? "" : excludedList.toString()));
+                        ", excludedScope: " + pathList.toString() + ", " +
+                        "excludedList:" + (excludedList == null ? "" :
+                        excludedList.toString()));
                   }
                 }
               }
             }
             ancestorGen--;
           }
-          path = path.substring(0, path.lastIndexOf(PATH_SEPARATOR_STR));
+          pathList = pathList.stream().map(path ->
+              path.substring(0, path.lastIndexOf(PATH_SEPARATOR_STR)))
+              .collect(Collectors.toList());
         }
       }
     }
 
     // all nodes excluded, no node will be picked
+    String scope;
     List<Node> excludedList = Arrays.asList(dataNodes);
     for (int k : affinityNodeIndexs) {
       for (int i : excludedNodeIndexs) {
@@ -880,9 +904,12 @@ public class TestNetworkTopologyImpl {
       frequency.put(dnd, 0);
     }
 
+    List<String> pathList = new ArrayList<>();
+    pathList.add(excludedScope.substring(1));
     for (int j = 0; j < numNodes; j++) {
-      Node node = cluster.chooseRandom("", excludedScope.substring(1),
-          excludedNodes, affinityNode, ancestorGen);
+
+      Node node = cluster.chooseRandom("", pathList, excludedNodes,
+          affinityNode, ancestorGen);
       if (node != null) {
         frequency.put(node, frequency.get(node) + 1);
       }
@@ -895,7 +922,7 @@ public class TestNetworkTopologyImpl {
    * This picks a large amount of nodes sequentially.
    *
    * @param numNodes the number of nodes
-   * @param excludedScope the excluded scope, should not start with "~"
+   * @param excludedScopes the excluded scopes, should not start with "~"
    * @param excludedNodes the excluded node list
    * @param affinityNode the chosen node should share the same ancestor at
    *                     generation "ancestorGen" with this node
@@ -903,8 +930,9 @@ public class TestNetworkTopologyImpl {
    *                     this generation with excludedNodes
    * @return the frequency that nodes were chosen
    */
-  private Map<Node, Integer> pickNodes(int numNodes, String excludedScope,
-      Collection<Node> excludedNodes, Node affinityNode, int ancestorGen) {
+  private Map<Node, Integer> pickNodes(int numNodes,
+      List<String> excludedScopes, Collection<Node> excludedNodes,
+      Node affinityNode, int ancestorGen) {
     Map<Node, Integer> frequency = new HashMap<>();
     for (Node dnd : dataNodes) {
       frequency.put(dnd, 0);
@@ -912,7 +940,7 @@ public class TestNetworkTopologyImpl {
     excludedNodes = excludedNodes == null ? null :
         excludedNodes.stream().distinct().collect(Collectors.toList());
     for (int j = 0; j < numNodes; j++) {
-      Node node = cluster.getNode(j, null, excludedScope, excludedNodes,
+      Node node = cluster.getNode(j, null, excludedScopes, excludedNodes,
           affinityNode, ancestorGen);
       if (node != null) {
         frequency.put(node, frequency.get(node) + 1);
