@@ -19,21 +19,12 @@ package org.apache.hadoop.ozone.ozShell;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.OmUtils;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.web.ozShell.OzoneShell;
-import org.apache.hadoop.ozone.web.ozShell.s3.S3Shell;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -54,9 +45,9 @@ import picocli.CommandLine.RunLast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,12 +68,9 @@ public class TestOzoneShellHA {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static String url;
   private static File baseDir;
   private static OzoneConfiguration conf = null;
   private static MiniOzoneCluster cluster = null;
-  private static ClientProtocol client = null;
-  private static S3Shell s3Shell = null;
   private static OzoneShell ozoneShell = null;
 
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -109,8 +97,6 @@ public class TestOzoneShellHA {
         TestOzoneShellHA.class.getSimpleName());
     baseDir = new File(path);
     baseDir.mkdirs();
-
-    s3Shell = new S3Shell();
     ozoneShell = new OzoneShell();
 
     // Init HA cluster
@@ -125,7 +111,6 @@ public class TestOzoneShellHA {
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     conf.setQuietMode(false);
-//    client = new RpcClient(conf, omServiceId);
     cluster.waitForClusterToBeReady();
   }
 
@@ -147,8 +132,6 @@ public class TestOzoneShellHA {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-    // TODO: Replace this with an address with service id
-    url = "o3://" + getOmAddress();
   }
 
   @After
@@ -188,117 +171,12 @@ public class TestOzoneShellHA {
     cmd.parseWithHandlers(new RunLast(), exceptionHandler, argsWithHAConf);
   }
 
-  private String getSetConfStringFromConf(String key) {
-    return String.format("--set=%s=%s", key, conf.get(key));
-  }
-
-  private String generateSetConfString(String key, String value) {
-    return String.format("--set=%s=%s", key, value);
-  }
-
-  private String[] getHASetConfStrings(int numOfArgs) {
-    assert(numOfArgs >= 0);
-    String[] res = new String[1 + 1 + numOfOMs + numOfArgs];
-    final int indexOmServiceIds = 0;
-    final int indexOmNodes = 1;
-    final int indexOmAddressStart = 2;
-
-    res[indexOmServiceIds] = getSetConfStringFromConf(
-        OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY);
-
-    String omNodesKey = OmUtils.addKeySuffixes(
-        OMConfigKeys.OZONE_OM_NODES_KEY, omServiceId);
-    String omNodesVal = conf.get(omNodesKey);
-    res[indexOmNodes] = generateSetConfString(omNodesKey, omNodesVal);
-
-    // TODO: Use defined delimiter instead, if there is one
-    String[] omNodesArr = omNodesVal.split(",");
-    // Sanity check
-    assert(omNodesArr.length == numOfOMs);
-    for (int i = 0; i < numOfOMs; i++) {
-      res[indexOmAddressStart + i] =
-          getSetConfStringFromConf(OmUtils.addKeySuffixes(
-              OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodesArr[i]));
-    }
-
-    LOG.info(String.join("\n", res));
-    return res;
-  }
-
-  private String[] getHASetConfStrings(String[] existingArgs) {
-    // Get a String array populated with HA configs first
-    String[] res = getHASetConfStrings(existingArgs.length);
-
-    int indexCopyStart = res.length - existingArgs.length;
-    // Then copy the existing args to the returned String array
-    for (int i = 0; i < existingArgs.length; i++) {
-      res[indexCopyStart + i] = existingArgs[i];
-    }
-    return res;
-  }
-
-  @Test
-  public void testCreateVolume() throws IOException {
-    /*
-      ozone sh volume create /volume
-      ozone sh bucket create /volume/bucket
-      ozone sh volume create o3://om1/volume
-      ozone sh volume create o3://om1:port/volume
-      ozone sh bucket create o3://om1/volume/bucket
-      ozone sh volume create o3://id1/volume
-      ozone sh volume create o3://id1:port/volume
-     */
-
-    // ozone sh volume create o3://localhost:63620/volume
-    String[] args = new String[] {"volume", "create",
-        "o3://" + omServiceId + "/volume"};
-    execute(ozoneShell, args);
-  }
-
-  private void execute(S3Shell shell, String[] args) {
-    LOG.info("Executing s3Shell command with args {}", Arrays.asList(args));
-    CommandLine cmd = shell.getCmd();
-
-    IExceptionHandler2<List<Object>> exceptionHandler =
-        new IExceptionHandler2<List<Object>>() {
-          @Override
-          public List<Object> handleParseException(ParameterException ex,
-                                                   String[] args) {
-            throw ex;
-          }
-
-          @Override
-          public List<Object> handleExecutionException(ExecutionException ex,
-                                                       ParseResult parseRes) {
-            throw ex;
-          }
-        };
-    cmd.parseWithHandlers(new RunLast(),
-        exceptionHandler, args);
-  }
-
   /**
    * Execute command, assert exception message and returns true if error
    * was thrown.
    */
-  private void executeWithError(S3Shell shell, String[] args,
-                                OMException.ResultCodes code) {
-    try {
-      execute(shell, args);
-      fail("Exception is expected from command execution " + Arrays
-          .asList(args));
-    } catch (Exception ex) {
-      Assert.assertEquals(OMException.class, ex.getCause().getClass());
-      Assert.assertEquals(code, ((OMException) ex.getCause()).getResult());
-    }
-  }
-
-  /**
-   * Execute command, assert exception message and returns true if error
-   * was thrown.
-   */
-  private void executeWithError(S3Shell shell, String[] args,
-                                String expectedError) {
+  private void executeWithError(OzoneShell shell, String[] args,
+      String expectedError) {
     if (Strings.isNullOrEmpty(expectedError)) {
       execute(shell, args);
     } else {
@@ -314,7 +192,7 @@ public class TestOzoneShellHA {
           }
           Assert.assertTrue(
               String.format(
-                  "Error of s3Shell code doesn't contain the " +
+                  "Error of OzoneShell code doesn't contain the " +
                       "exception [%s] in [%s]",
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
@@ -323,19 +201,143 @@ public class TestOzoneShellHA {
     }
   }
 
-  private String getOmAddress() {
-    List<ServiceInfo> services;
-    try {
-      services = cluster.getOzoneManager().getServiceList();
-    } catch (IOException e) {
-      fail("Could not get service list from OM");
-      return null;
+  /**
+   * @return the leader OM's Node ID in the MiniOzoneHACluster.
+   *
+   * TODO: This should be put into MiniOzoneHAClusterImpl in the future.
+   * This helper function is similar to the one in TestOzoneFsHAURLs.
+   */
+  private String getLeaderOMNodeId() {
+    Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, omServiceId);
+    assert(omNodeIds.size() == numOfOMs);
+    MiniOzoneHAClusterImpl haCluster = (MiniOzoneHAClusterImpl) cluster;
+    // Note: this loop may be implemented inside MiniOzoneHAClusterImpl
+    for (String omNodeId : omNodeIds) {
+      // Find the leader OM
+      if (!haCluster.getOzoneManager(omNodeId).isLeader()) {
+        continue;
+      }
+      return omNodeId;
+    }
+    return null;
+  }
+
+  private String getSetConfStringFromConf(String key) {
+    return String.format("--set=%s=%s", key, conf.get(key));
+  }
+
+  private String generateSetConfString(String key, String value) {
+    return String.format("--set=%s=%s", key, value);
+  }
+
+  /**
+   * Helper function to get a String array to be fed into OzoneShell.
+   * @param numOfArgs Additional number of arguments after the HA conf string,
+   *                  this translates into the number of empty array elements
+   *                  after the HA conf string.
+   * @return String array.
+   */
+  private String[] getHASetConfStrings(int numOfArgs) {
+    assert(numOfArgs >= 0);
+    String[] res = new String[1 + 1 + numOfOMs + numOfArgs];
+    final int indexOmServiceIds = 0;
+    final int indexOmNodes = 1;
+    final int indexOmAddressStart = 2;
+
+    res[indexOmServiceIds] = getSetConfStringFromConf(
+        OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY);
+
+    String omNodesKey = OmUtils.addKeySuffixes(
+        OMConfigKeys.OZONE_OM_NODES_KEY, omServiceId);
+    String omNodesVal = conf.get(omNodesKey);
+    res[indexOmNodes] = generateSetConfString(omNodesKey, omNodesVal);
+
+    String[] omNodesArr = omNodesVal.split(",");
+    // Sanity check
+    assert(omNodesArr.length == numOfOMs);
+    for (int i = 0; i < numOfOMs; i++) {
+      res[indexOmAddressStart + i] =
+          getSetConfStringFromConf(OmUtils.addKeySuffixes(
+              OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodesArr[i]));
     }
 
-    return services.stream()
-        .filter(a -> HddsProtos.NodeType.OM.equals(a.getNodeType()))
-        .findFirst()
-        .map(s -> s.getServiceAddress(ServicePort.Type.RPC))
-        .orElseThrow(IllegalStateException::new);
+    return res;
+  }
+
+  /**
+   * Helper function to create a new set of arguments that contains HA configs.
+   * @param existingArgs Existing arguments to be fed into OzoneShell command.
+   * @return String array.
+   */
+  private String[] getHASetConfStrings(String[] existingArgs) {
+    // Get a String array populated with HA configs first
+    String[] res = getHASetConfStrings(existingArgs.length);
+
+    int indexCopyStart = res.length - existingArgs.length;
+    // Then copy the existing args to the returned String array
+    for (int i = 0; i < existingArgs.length; i++) {
+      res[indexCopyStart + i] = existingArgs[i];
+    }
+    return res;
+  }
+
+  /**
+   * Tests ozone sh command URI parsing with volume and bucket create commands.
+   */
+  @Test
+  public void testOzoneShCmdURIs() {
+    // Test case 1: ozone sh volume create /volume
+    // Expectation: Failure.
+    String[] args = new String[] {"volume", "create", "/volume"};
+    executeWithError(ozoneShell, args,
+        "Service ID or host name must not be omitted");
+
+    // Get leader OM node RPC address from ozone.om.address.omServiceId.omNode
+    String omLeaderNodeId = getLeaderOMNodeId();
+    String omLeaderNodeAddrKey = OmUtils.addKeySuffixes(
+        OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omLeaderNodeId);
+    String omLeaderNodeAddr = conf.get(omLeaderNodeAddrKey);
+    String omLeaderNodeAddrWithoutPort = omLeaderNodeAddr.split(":")[0];
+
+    // Test case 2: ozone sh volume create o3://om1/volume2
+    // Expectation: Success.
+    // Note: For now it seems OzoneShell is only trying the default port 9862
+    // instead of using the port defined in ozone.om.address (as ozone fs does).
+    // So the test will fail before this behavior is fixed.
+    // TODO: Fix this behavior, then uncomment the execute() below.
+    String setOmAddress = "--set=" + OMConfigKeys.OZONE_OM_ADDRESS_KEY + "="
+        + omLeaderNodeAddr;
+    args = new String[] {setOmAddress,
+        "volume", "create", "o3://" + omLeaderNodeAddrWithoutPort + "/volume2"};
+    //execute(ozoneShell, args);
+
+    // Test case 3: ozone sh volume create o3://om1:port/volume3
+    // Expectation: Success.
+    args = new String[] {
+        "volume", "create", "o3://" + omLeaderNodeAddr + "/volume3"};
+    execute(ozoneShell, args);
+
+    // Test case 4: ozone sh volume create o3://id1/volume
+    // Expectation: Success.
+    args = new String[] {"volume", "create", "o3://" + omServiceId + "/volume"};
+    execute(ozoneShell, args);
+
+    // Test case 5: ozone sh volume create o3://id1:port/volume
+    // Expectation: Failure.
+    args = new String[] {"volume", "create",
+        "o3://" + omServiceId + ":9862" + "/volume"};
+    executeWithError(ozoneShell, args, "does not use port information");
+
+    // Test case 6: ozone sh bucket create /volume/bucket
+    // Expectation: Failure.
+    args = new String[] {"bucket", "create", "/volume/bucket"};
+    executeWithError(ozoneShell, args,
+        "Service ID or host name must not be omitted");
+
+    // Test case 7: ozone sh bucket create o3://om1/volume/bucket
+    // Expectation: Success.
+    args = new String[] {
+        "bucket", "create", "o3://" + omServiceId + "/volume/bucket"};
+    execute(ozoneShell, args);
   }
 }
