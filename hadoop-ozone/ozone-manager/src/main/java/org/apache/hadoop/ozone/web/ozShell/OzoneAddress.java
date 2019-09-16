@@ -94,6 +94,13 @@ public class OzoneAddress {
       if (ozoneURI.getHost() != null && !ozoneURI.getAuthority()
           .equals(EMPTY_HOST)) {
         if (OmUtils.isOmHAServiceId(conf, ozoneURI.getHost())) {
+          // When host is an HA service ID
+          if (ozoneURI.getPort() != -1) {
+            throw new OzoneClientException(
+                "Port " + ozoneURI.getPort() + " specified in URI but host '"
+                    + ozoneURI.getHost() + "' is a logical (HA) OzoneManager "
+                    + "and does not use port information.");
+          }
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost(), conf);
         } else if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
@@ -102,6 +109,11 @@ public class OzoneAddress {
               .getRpcClient(ozoneURI.getHost(), ozoneURI.getPort(), conf);
         }
       } else {
+        // When host is not specified
+        if (OmUtils.isServiceIdsDefined(conf)) {
+          throw new OzoneClientException("Service ID or host name must not"
+              + " be omitted when ozone.om.service.ids is defined.");
+        }
         client = OzoneClientFactory.getRpcClient(conf);
       }
     } else {
