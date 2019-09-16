@@ -147,8 +147,8 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
     try {
-      OzoneTokenIdentifier ozoneTokenIdentifier =
-          ozoneTokenIdentifierToken.decodeIdentifier();
+      OzoneTokenIdentifier ozoneTokenIdentifier = OzoneTokenIdentifier.
+          readProtoBuf(ozoneTokenIdentifierToken.getIdentifier());
 
       // Update in memory map of token.
       long renewTime = ozoneManager.getDelegationTokenMgr()
