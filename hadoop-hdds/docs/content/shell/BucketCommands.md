@@ -1,7 +1,7 @@
 ---
 title: Bucket Commands
 summary: Bucket commands help you to manage the life cycle of a volume.
-weight: 2
+weight: 3
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

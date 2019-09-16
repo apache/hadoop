@@ -1,5 +1,6 @@
 ---
 title: Simple Single Ozone
+weight: 10
 
 ---
 <!---
