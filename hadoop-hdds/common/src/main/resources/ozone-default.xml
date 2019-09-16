@@ -1061,39 +1061,6 @@
     </description>
   </property>
 
-  <!--Client Settings-->
-  <property>
-    <name>scm.container.client.idle.threshold</name>
-    <value>10s</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      In the standalone pipelines, the SCM clients use netty to
-      communicate with the container. It also uses connection pooling to
-      reduce client side overheads. This allows a connection to stay idle for
-      a while before the connection is closed.
-    </description>
-  </property>
-  <property>
-    <name>scm.container.client.max.size</name>
-    <value>256</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of connections that we cached via
-      clientconnection pooling. If the number of connection
-      exceed this count then the oldest idle connection is evicted.
-    </description>
-  </property>
-
-  <property>
-    <name>scm.container.client.max.outstanding.requests</name>
-    <value>100</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of outstanding async requests that can be
-      handled by the Standalone as well as Ratis client.
-    </description>
-  </property>
-
   <property>
     <name>ozone.scm.container.creation.lease.timeout</name>
     <value>60s</value>
