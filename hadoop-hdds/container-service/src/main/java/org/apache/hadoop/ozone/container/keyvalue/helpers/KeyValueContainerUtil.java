@@ -198,8 +198,9 @@ public final class KeyValueContainerUtil {
       kvContainerData.setKeyCount(liveKeys.size());
       byte[] bcsId = metadata.getStore().get(DFSUtil.string2Bytes(
           OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
-      Preconditions.checkNotNull(bcsId);
-      kvContainerData.updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
+      if (bcsId != null) {
+        kvContainerData.updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
+      }
     }
   }
 
