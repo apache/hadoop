@@ -22,6 +22,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -138,8 +139,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                 if (file.getName().startsWith(CA_CERT_PREFIX)) {
                   String certFileName = FilenameUtils.getBaseName(
                       file.getName());
-                  long tmpCaCertSerailId = Long.valueOf(certFileName.substring(
-                      CA_CERT_PREFIX_LEN));
+                  long tmpCaCertSerailId = NumberUtils.toLong(
+                      certFileName.substring(CA_CERT_PREFIX_LEN));
                   if (tmpCaCertSerailId > latestCaCertSerailId) {
                     latestCaCertSerailId = tmpCaCertSerailId;
                   }
