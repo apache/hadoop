@@ -88,7 +88,7 @@
                     <resource>META-INF/BC2048KE.SF</resource>
                   </resources>
                 </transformer>
-
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
               </transformers>
               <relocations>
                 <relocation>
@@ -100,6 +100,19 @@
                     <include>org.sqlite.**.*</include>
                     <include>org.tukaani.**.*</include>
                     <include>org.bouncycastle.**.*</include>
+                    <include>org.fusesource.leveldbjni.**.*</include>
+                    <include>org.rocksdb.**.*</include>
+                    <include>org.apache.commons.cli.**.*</include>
+                    <include>org.apache.commons.compress.**.*</include>
+                    <include>org.apache.commons.codec.**.*</include>
+                    <include>org.apache.commons.beanutils.**.*</include>
+                    <include>org.apache.commons.collections.**.*</include>
+                    <include>org.apache.commons.digester.**.*</include>
+                    <include>org.apache.commons.logging.**.*</include>
+                    <include>org.apache.commons.pool2.**.*</include>
+                    <include>org.apache.commons.validator.**.*</include>
+                    <include>org.sqlite.**.*</include>
+                    <include>org.apache.thrift.**.*</include>
                   </includes>
                 </relocation>
                 <relocation>
@@ -108,8 +121,11 @@
                   </shadedPattern>
                   <includes>
                     <include>com.google.common.**.*</include>
+                    <include>com.google.json.**.*</include>
                     <include>com.codahale.**.*</include>
                     <include>com.lmax.**.*</include>
+                    <include>com.github.joshelser.**.*</include>
+                    <include>com.twitter.**.*</include>
                   </includes>
                 </relocation>
                 <relocation>
@@ -126,9 +142,17 @@
                   <pattern>io</pattern>
                   <shadedPattern>org.apache.hadoop.ozone.shaded.io
                   </shadedPattern>
-                  <includes>
-                    <include>io.netty.**.*</include>
-                  </includes>
+                </relocation>
+
+                <!-- handling some special packages with special namescd -->
+                <relocation>
+                  <pattern>okio</pattern>
+                  <shadedPattern>org.apache.hadoop.ozone.shaded.okio</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>okhttp3</pattern>
+                  <shadedPattern>org.apache.hadoop.ozone.shaded
+                    .okhttp3</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -167,6 +191,10 @@
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
           <artifactId>log4j-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
