@@ -4145,9 +4145,21 @@
     <name>dfs.datanode.data.transfer.bandwidthPerSec</name>
     <value>0</value>
     <description>
-      Specifies the maximum amount of bandwidth that each datanode can utilize for the data transfering purpose in term
-      of the number of bytes per second.
-      when the bandwidth value is zero, there is no limit.
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for transfering block when
+      BlockConstructionStage is
+      PIPELINE_SETUP_CREATE and clientName is empty.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.data.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for writing block or pipeline
+      recovery when
+      BlockConstructionStage is PIPELINE_SETUP_APPEND_RECOVERY or PIPELINE_SETUP_STREAMING_RECOVERY.
+      When the bandwidth value is zero, there is no limit.
     </description>
   </property>
 

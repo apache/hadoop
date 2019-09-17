@@ -171,6 +171,8 @@ class DataXceiverServer implements Runnable {
 
   private final DataTransferThrottler transferThrottler;
 
+  private final DataTransferThrottler writeThrottler;
+
   /**
    * Stores an estimate for block size to check if the disk partition has enough
    * space. Newer clients pass the expected block size to the DataNode. For
@@ -204,6 +206,15 @@ class DataXceiverServer implements Runnable {
       this.transferThrottler = new DataTransferThrottler(bandwidthPerSec);
     } else {
       this.transferThrottler = null;
+    }
+
+    bandwidthPerSec = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT);
+    if (bandwidthPerSec > 0) {
+      this.writeThrottler = new DataTransferThrottler(bandwidthPerSec);
+    } else {
+      this.writeThrottler = null;
     }
   }
 
@@ -456,6 +467,10 @@ class DataXceiverServer implements Runnable {
 
   public DataTransferThrottler getTransferThrottler() {
     return transferThrottler;
+  }
+
+  public DataTransferThrottler getWriteThrottler() {
+    return writeThrottler;
   }
 
   /**
