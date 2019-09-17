@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
- * An subclass of {@link RMFailoverProxyProvider} which try to
+ * A subclass of {@link RMFailoverProxyProvider} which tries to
  * resolve the proxy DNS in the event of failover.
  * This provider doesn't support HA or Federation.
  */

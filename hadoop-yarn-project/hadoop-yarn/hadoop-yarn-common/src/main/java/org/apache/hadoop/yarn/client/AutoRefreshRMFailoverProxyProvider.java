@@ -42,9 +42,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 /**
- * An subclass of {@link RMFailoverProxyProvider} which try to
+ * A subclass of {@link RMFailoverProxyProvider} which tries to
  * resolve the proxy DNS in the event of failover.
- * This provider don't support Federation.
+ * This provider doesn't support Federation.
  */
 public class AutoRefreshRMFailoverProxyProvider<T>
     extends ConfiguredRMFailoverProxyProvider<T> {
