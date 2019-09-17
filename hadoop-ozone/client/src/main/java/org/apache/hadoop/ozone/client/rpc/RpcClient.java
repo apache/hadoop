@@ -944,8 +944,10 @@ public class RpcClient implements ClientProtocol {
             uploadID, partNumberMarker, maxParts);
 
     OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
-        new OzoneMultipartUploadPartListParts(ReplicationType.valueOf(
-            omMultipartUploadListParts.getReplicationType().toString()),
+        new OzoneMultipartUploadPartListParts(ReplicationType
+            .fromProto(omMultipartUploadListParts.getReplicationType()),
+            ReplicationFactor
+                .fromProto(omMultipartUploadListParts.getReplicationFactor()),
             omMultipartUploadListParts.getNextPartNumberMarker(),
             omMultipartUploadListParts.isTruncated());
 

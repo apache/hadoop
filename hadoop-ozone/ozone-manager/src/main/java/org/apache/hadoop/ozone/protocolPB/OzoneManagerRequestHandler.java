@@ -822,6 +822,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setType(keyArgs.getType())
+        .setFactor(keyArgs.getFactor())
         .setAcls(keyArgs.getAclsList().stream().map(a ->
             OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .setFactor(keyArgs.getFactor())
@@ -937,6 +938,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     omPartInfoList.forEach(partInfo -> partInfoList.add(partInfo.getProto()));
 
     response.setType(omMultipartUploadListParts.getReplicationType());
+    response.setFactor(omMultipartUploadListParts.getReplicationFactor());
     response.setNextPartNumberMarker(
         omMultipartUploadListParts.getNextPartNumberMarker());
     response.setIsTruncated(omMultipartUploadListParts.isTruncated());

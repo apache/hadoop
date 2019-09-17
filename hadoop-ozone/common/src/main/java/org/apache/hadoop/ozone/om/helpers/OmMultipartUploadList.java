@@ -28,10 +28,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
  */
 public class OmMultipartUploadList {
 
-  private ReplicationType replicationType;
-
-  private ReplicationFactor replicationFactor;
-
   private List<OmMultipartUpload> uploads;
 
   public OmMultipartUploadList(
@@ -48,21 +44,4 @@ public class OmMultipartUploadList {
     this.uploads = uploads;
   }
 
-  public ReplicationType getReplicationType() {
-    return replicationType;
-  }
-
-  public void setReplicationType(
-      ReplicationType replicationType) {
-    this.replicationType = replicationType;
-  }
-
-  public ReplicationFactor getReplicationFactor() {
-    return replicationFactor;
-  }
-
-  public void setReplicationFactor(
-      ReplicationFactor replicationFactor) {
-    this.replicationFactor = replicationFactor;
-  }
 }

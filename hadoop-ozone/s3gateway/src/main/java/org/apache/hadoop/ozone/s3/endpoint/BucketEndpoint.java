@@ -232,7 +232,8 @@ public class BucketEndpoint extends EndpointBase {
             upload.getKeyName(),
             upload.getUploadId(),
             upload.getCreationTime(),
-            S3StorageType.fromReplicationType(upload.getReplicationType())
+            S3StorageType.fromReplicationType(upload.getReplicationType(),
+                upload.getReplicationFactor())
         )));
     return Response.ok(result).build();
   }

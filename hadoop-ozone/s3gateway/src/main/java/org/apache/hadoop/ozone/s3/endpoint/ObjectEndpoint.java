@@ -616,7 +616,8 @@ public class ObjectEndpoint extends EndpointBase {
       listPartsResponse.setTruncated(false);
 
       listPartsResponse.setStorageClass(S3StorageType.fromReplicationType(
-          ozoneMultipartUploadPartListParts.getReplicationType()).toString());
+          ozoneMultipartUploadPartListParts.getReplicationType(),
+          ozoneMultipartUploadPartListParts.getReplicationFactor()).toString());
 
       if (ozoneMultipartUploadPartListParts.isTruncated()) {
         listPartsResponse.setTruncated(

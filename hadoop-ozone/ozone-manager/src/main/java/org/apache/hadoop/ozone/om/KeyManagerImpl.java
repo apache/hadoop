@@ -1361,6 +1361,7 @@ public class KeyManagerImpl implements KeyManager {
             partKeyInfoMap.entrySet().iterator();
 
         HddsProtos.ReplicationType replicationType = null;
+        HddsProtos.ReplicationFactor replicationFactor = null;
 
         int count = 0;
         List<OmPartInfo> omPartInfoList = new ArrayList<>();
@@ -1381,6 +1382,7 @@ public class KeyManagerImpl implements KeyManager {
 
             //if there are parts, use replication type from one of the parts
             replicationType = partKeyInfo.getPartKeyInfo().getType();
+            replicationFactor = partKeyInfo.getPartKeyInfo().getFactor();
             count++;
           }
         }
@@ -1397,10 +1399,12 @@ public class KeyManagerImpl implements KeyManager {
           }
 
           replicationType = omKeyInfo.getType();
-
+          replicationFactor = omKeyInfo.getFactor();
         }
         Preconditions.checkNotNull(replicationType,
             "Replication type can't be identified");
+        Preconditions.checkNotNull(replicationFactor,
+            "Replication factor can't be identified");
 
         if (partKeyInfoMapIterator.hasNext()) {
           Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry =
@@ -1411,7 +1415,7 @@ public class KeyManagerImpl implements KeyManager {
           nextPartNumberMarker = 0;
         }
         OmMultipartUploadListParts omMultipartUploadListParts =
-            new OmMultipartUploadListParts(replicationType,
+            new OmMultipartUploadListParts(replicationType, replicationFactor,
                 nextPartNumberMarker, isTruncated);
         omMultipartUploadListParts.addPartList(omPartInfoList);
         return omMultipartUploadListParts;

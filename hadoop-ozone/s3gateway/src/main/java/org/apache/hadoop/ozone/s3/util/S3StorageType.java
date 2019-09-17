@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 
 public enum S3StorageType {
 
-  REDUCED_REDUNDANCY(ReplicationType.STAND_ALONE, ReplicationFactor.ONE),
+  REDUCED_REDUNDANCY(ReplicationType.RATIS, ReplicationFactor.ONE),
   STANDARD(ReplicationType.RATIS, ReplicationFactor.THREE);
 
   private final ReplicationType type;
@@ -53,8 +53,9 @@ public enum S3StorageType {
   }
 
   public static S3StorageType fromReplicationType(
-      ReplicationType replicationType) {
-    if (replicationType == ReplicationType.STAND_ALONE) {
+      ReplicationType replicationType, ReplicationFactor factor) {
+    if ((replicationType == ReplicationType.STAND_ALONE) ||
+        (factor == ReplicationFactor.ONE)) {
       return S3StorageType.REDUCED_REDUNDANCY;
     } else {
       return S3StorageType.STANDARD;

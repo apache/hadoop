@@ -1019,9 +1019,10 @@ message MultipartUploadListPartsRequest {
 message MultipartUploadListPartsResponse {
 
     optional hadoop.hdds.ReplicationType type = 2;
-    optional uint32 nextPartNumberMarker = 3;
-    optional bool isTruncated = 4;
-    repeated PartInfo partsList = 5;
+    optional hadoop.hdds.ReplicationFactor factor = 3;
+    optional uint32 nextPartNumberMarker = 4;
+    optional bool isTruncated = 5;
+    repeated PartInfo partsList = 6;
 
 }
 

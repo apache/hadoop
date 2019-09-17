@@ -26,8 +26,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -1152,7 +1150,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
 
     OmMultipartUploadListParts omMultipartUploadListParts =
-        new OmMultipartUploadListParts(response.getType(),
+        new OmMultipartUploadListParts(response.getType(), response.getFactor(),
             response.getNextPartNumberMarker(), response.getIsTruncated());
     omMultipartUploadListParts.addProtoPartList(response.getPartsListList());
 
