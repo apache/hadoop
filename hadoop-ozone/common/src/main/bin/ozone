@@ -178,7 +178,7 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-recon"
     ;;
     fs)
-      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.ozone.OzoneFsShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     scmcli)
