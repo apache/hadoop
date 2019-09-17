@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

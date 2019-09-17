@@ -140,7 +140,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequ
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.hdds.utils.db.DBUpdatesWrapper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;

@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.recon.tasks;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.utils.db.TypedTable;
+import org.apache.hadoop.hdds.utils.db.TypedTable;
 import org.junit.Test;
 
 import java.io.IOException;

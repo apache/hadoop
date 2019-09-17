@@ -45,7 +45,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.UniqueId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

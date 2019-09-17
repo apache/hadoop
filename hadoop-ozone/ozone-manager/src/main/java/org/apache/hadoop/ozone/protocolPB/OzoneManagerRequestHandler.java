@@ -124,8 +124,8 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
 
-import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
+import org.apache.hadoop.hdds.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

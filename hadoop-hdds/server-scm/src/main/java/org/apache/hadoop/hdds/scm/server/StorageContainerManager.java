@@ -99,7 +99,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.hdds.utils.HddsVersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

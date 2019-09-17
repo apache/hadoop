@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdds.server;
 
-import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
+import static org.apache.hadoop.hdds.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
 
 import java.io.IOException;
 import java.io.Writer;

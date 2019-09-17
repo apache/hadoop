@@ -25,7 +25,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
-import org.apache.hadoop.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.Codec;
 
 /**
  * Encodes and Decodes X509Certificate Class.

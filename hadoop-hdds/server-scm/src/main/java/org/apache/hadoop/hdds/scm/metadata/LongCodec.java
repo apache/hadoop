@@ -21,7 +21,7 @@ package org.apache.hadoop.hdds.scm.metadata;
 
 import com.google.common.primitives.Longs;
 import java.io.IOException;
-import org.apache.hadoop.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.Codec;
 
 /**
  * Codec for Persisting the DeletedBlocks.

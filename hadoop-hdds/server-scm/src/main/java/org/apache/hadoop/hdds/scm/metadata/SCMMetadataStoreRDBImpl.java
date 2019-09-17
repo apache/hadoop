@@ -27,12 +27,12 @@ import java.io.IOException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority
     .CertificateStore;
 import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.DBStoreBuilder;
-import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +126,7 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
   }
 
   @Override
-  public org.apache.hadoop.utils.db.DBStore getStore() {
+  public DBStore getStore() {
     return this.store;
   }
 
