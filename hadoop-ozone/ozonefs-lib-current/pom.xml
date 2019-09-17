@@ -31,6 +31,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <shaded.prefix>org.apache.hadoop.ozone.shaded</shaded.prefix>
   </properties>
 
   <build>
@@ -93,7 +94,8 @@
               <relocations>
                 <relocation>
                   <pattern>org</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.org
+                  <shadedPattern>
+                    ${shaded.prefix}.org
                   </shadedPattern>
                   <includes>
                     <include>org.yaml.**.*</include>
@@ -113,15 +115,21 @@
                     <include>org.apache.commons.validator.**.*</include>
                     <include>org.sqlite.**.*</include>
                     <include>org.apache.thrift.**.*</include>
+                    <!-- level db -->
+                    <include>org.iq80.**.*</include>
+                    <include>org.fusesource.**.*</include>
+                    <!-- http client and core -->
+                    <include>org.apache.http.**.*</include>
                   </includes>
                 </relocation>
                 <relocation>
                   <pattern>com</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.com
+                  <shadedPattern>
+                    ${shaded.prefix}.com
                   </shadedPattern>
                   <includes>
                     <include>com.google.common.**.*</include>
-                    <include>com.google.json.**.*</include>
+                    <include>com.google.gson.**.*</include>
                     <include>com.codahale.**.*</include>
                     <include>com.lmax.**.*</include>
                     <include>com.github.joshelser.**.*</include>
@@ -130,29 +138,36 @@
                 </relocation>
                 <relocation>
                   <pattern>picocli</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.picocli
+                  <shadedPattern>
+                    ${shaded.prefix}.picocli
                   </shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>info</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.info
+                  <shadedPattern>
+                    ${shaded.prefix}.info
                   </shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>io</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.io
+                  <shadedPattern>
+                    ${shaded.prefix}.io
                   </shadedPattern>
                 </relocation>
 
-                <!-- handling some special packages with special namescd -->
+                <!-- handling some special packages with special names -->
                 <relocation>
                   <pattern>okio</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded.okio</shadedPattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.okio
+                  </shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>okhttp3</pattern>
-                  <shadedPattern>org.apache.hadoop.ozone.shaded
-                    .okhttp3</shadedPattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.okhttp3
+                    ${shaded.prefix}.okhttp3
+                  </shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
