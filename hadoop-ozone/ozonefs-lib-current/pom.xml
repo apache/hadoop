@@ -166,7 +166,6 @@
                   <pattern>okhttp3</pattern>
                   <shadedPattern>
                     ${shaded.prefix}.okhttp3
-                    ${shaded.prefix}.okhttp3
                   </shadedPattern>
                 </relocation>
               </relocations>
