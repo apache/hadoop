@@ -236,9 +236,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         if (container2BCSIDMap != null) {
           // adds this container to list of containers created in the pipeline
           // with initial BCSID recorded as 0.
-          Preconditions
-              .checkArgument(!container2BCSIDMap.containsKey(containerID));
-          container2BCSIDMap.put(containerID, Long.valueOf(0));
+          container2BCSIDMap.putIfAbsent(containerID, Long.valueOf(0));
         }
         container = getContainer(containerID);
       }
@@ -290,6 +288,11 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       // state here.
 
       Result result = responseProto.getResult();
+      if (cmdType == ContainerProtos.Type.CreateContainer
+          && result == Result.SUCCESS && dispatcherContext != null) {
+        Preconditions.checkNotNull(dispatcherContext.getContainer2BCSIDMap());
+        container2BCSIDMap.putIfAbsent(containerID, Long.valueOf(0));
+      }
       if (!HddsUtils.isReadOnly(msg) && !canIgnoreException(result)) {
         // If the container is open/closing and the container operation
         // has failed, it should be first marked unhealthy and the initiate the

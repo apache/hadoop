@@ -435,13 +435,20 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
             .setContainer2BCSIDMap(container2BCSIDMap)
             .build();
+    CompletableFuture<Message> raftFuture = new CompletableFuture<>();
     // ensure the write chunk happens asynchronously in writeChunkExecutor pool
     // thread.
     CompletableFuture<ContainerCommandResponseProto> writeChunkFuture =
-        CompletableFuture.supplyAsync(() ->
-            runCommand(requestProto, context), chunkExecutor);
-
-    CompletableFuture<Message> raftFuture = new CompletableFuture<>();
+        CompletableFuture.supplyAsync(() -> {
+          try {
+            return runCommand(requestProto, context);
+          } catch (Exception e) {
+            LOG.error(gid + ": writeChunk writeStateMachineData failed: blockId"
+                + write.getBlockID() + " logIndex " + entryIndex + " chunkName "
+                + write.getChunkData().getChunkName() + e);
+            raftFuture.completeExceptionally(e);
+            throw e;
+          }}, chunkExecutor);
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +
@@ -698,7 +705,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA);
       }
       if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile
-          || cmdType == Type.PutBlock) {
+          || cmdType == Type.PutBlock || cmdType == Type.CreateContainer) {
         builder.setContainer2BCSIDMap(container2BCSIDMap);
       }
       CompletableFuture<Message> applyTransactionFuture =
@@ -706,9 +713,17 @@ public class ContainerStateMachine extends BaseStateMachine {
       // Ensure the command gets executed in a separate thread than
       // stateMachineUpdater thread which is calling applyTransaction here.
       CompletableFuture<ContainerCommandResponseProto> future =
-          CompletableFuture.supplyAsync(
-              () -> runCommand(requestProto, builder.build()),
-              getCommandExecutor(requestProto));
+          CompletableFuture.supplyAsync(() -> {
+            try {
+              return runCommand(requestProto, builder.build());
+            } catch (Exception e) {
+              LOG.error("gid {} : ApplyTransaction failed. cmd {} logIndex "
+                      + "{} exception {}", gid, requestProto.getCmdType(),
+                  index, e);
+              applyTransactionFuture.completeExceptionally(e);
+              throw e;
+            }
+          }, getCommandExecutor(requestProto));
       future.thenApply(r -> {
         if (trx.getServerRole() == RaftPeerRole.LEADER) {
           long startTime = (long) trx.getStateMachineContext();
