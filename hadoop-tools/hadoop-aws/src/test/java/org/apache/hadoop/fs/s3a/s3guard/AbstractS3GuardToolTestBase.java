@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -149,12 +148,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       throws Exception {
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class,
-            new Callable<Integer>() {
-              @Override
-              public Integer call() throws Exception {
-                return run(args);
-              }
-            });
+            () -> run(args));
     if (ex.status != status) {
       throw ex;
     }
@@ -334,6 +328,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
         "-seconds", "0",
         testPath.toString());
+    assertNotNull("Command did not create a filesystem",
+        cmd.getFilesystem());
   }
 
   @Test
