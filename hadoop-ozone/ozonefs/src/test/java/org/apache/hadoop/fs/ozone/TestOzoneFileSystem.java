@@ -40,6 +40,7 @@ import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
@@ -262,6 +263,30 @@ public class TestOzoneFileSystem {
         fileStatus1.equals(dir12.toString()));
     assertTrue(fileStatus2.equals(dir11.toString()) ||
         fileStatus2.equals(dir12.toString()));
+  }
+
+  @Test
+  public void testNonExplicitlyCreatedPathExistsAfterItsLeafsWereRemoved()
+      throws Exception {
+    Path source = new Path("/source");
+    Path interimPath = new Path(source, "interimPath");
+    Path leafInsideInterimPath = new Path(interimPath, "leaf");
+    Path target = new Path("/target");
+    Path leafInTarget = new Path(target, "leaf");
+
+    fs.mkdirs(source);
+    fs.mkdirs(target);
+    fs.mkdirs(leafInsideInterimPath);
+    assertTrue(fs.rename(leafInsideInterimPath, leafInTarget));
+
+    // after rename listStatus for interimPath should succeed and
+    // interimPath should have no children
+    FileStatus[] statuses = fs.listStatus(interimPath);
+    assertNotNull("liststatus returns a null array", statuses);
+    assertEquals("Statuses array is not empty", 0, statuses.length);
+    FileStatus fileStatus = fs.getFileStatus(interimPath);
+    assertEquals("FileStatus does not point to interimPath",
+        interimPath.getName(), fileStatus.getPath().getName());
   }
 
   private OzoneKeyDetails getKey(Path keyPath, boolean isDirectory)
