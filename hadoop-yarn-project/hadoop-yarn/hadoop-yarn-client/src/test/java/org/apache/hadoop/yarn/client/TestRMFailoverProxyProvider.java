@@ -36,7 +36,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Random;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
@@ -51,9 +50,9 @@ public class TestRMFailoverProxyProvider {
     @Before
     public void setUp() throws IOException, YarnException {
         conf = new YarnConfiguration();
-        conf.set(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
-                ConfiguredRMFailoverProxyProvider.class.getName());
-        conf.set(YarnConfiguration.RM_HA_ENABLED, "true");
+        conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
+                ConfiguredRMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
+        conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     }
 
     /**
@@ -86,13 +85,10 @@ public class TestRMFailoverProxyProvider {
         ConfiguredRMFailoverProxyProvider<RMProxy> fpp =
                 new ConfiguredRMFailoverProxyProvider<RMProxy>();
 
-        // generate two address with different random port.
-        Random rand = new Random();
-        int port1 = rand.nextInt(65535);
-        int port2 = rand.nextInt(65535);
-        while (port1 == port2) {
-            port2 = rand.nextInt(65535);
-        }
+        // generate two address with different ports.
+        // Default port of yarn RM
+        int port1 = 8032;
+        int port2 = 8031;
         InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
         InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
 
@@ -191,8 +187,8 @@ public class TestRMFailoverProxyProvider {
      */
     @Test
     public void testAutoRefreshFailoverChange() throws Exception {
-        conf.set(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
-                AutoRefreshRMFailoverProxyProvider.class.getName());
+        conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
+                AutoRefreshRMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
         class TestProxy extends Proxy implements Closeable {
             protected TestProxy(InvocationHandler h) {
                 super(h);
@@ -204,7 +200,7 @@ public class TestRMFailoverProxyProvider {
         }
 
         //Adjusting the YARN Conf
-        conf.set(YarnConfiguration.RM_HA_ENABLED, "true");
+        conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
         conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
 
         // Create three proxies and mock a RMProxy
@@ -216,17 +212,11 @@ public class TestRMFailoverProxyProvider {
         AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
                 new AutoRefreshRMFailoverProxyProvider<RMProxy>();
 
-        // generate two address with different random port.
-        Random rand = new Random();
-        int port1 = rand.nextInt(65535);
-        int port2 = rand.nextInt(65535);
-        while (port1 == port2) {
-            port2 = rand.nextInt(65535);
-        }
-        int port3 = rand.nextInt(65535);
-        while (port1 == port3 || port2 == port3) {
-            port3 = rand.nextInt(65535);
-        }
+        // generate two address with different ports.
+        // Default port of yarn RM
+        int port1 = 8032;
+        int port2 = 8031;
+        int port2 = 8033;
         InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
         InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
         InetSocketAddress mockAdd3 = new InetSocketAddress(port3);

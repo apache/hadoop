@@ -30,7 +30,7 @@ import java.net.InetSocketAddress;
 /**
  * An subclass of {@link RMFailoverProxyProvider} which try to
  * resolve the proxy DNS in the event of failover.
- * This provider don't support HA or Federation.
+ * This provider doesn't support HA or Federation.
  */
 public class AutoRefreshNoHARMFailoverProxyProvider<T>
     extends DefaultNoHARMFailoverProxyProvider<T> {

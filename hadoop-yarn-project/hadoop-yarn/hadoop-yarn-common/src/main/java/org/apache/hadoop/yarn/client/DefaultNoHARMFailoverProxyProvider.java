@@ -56,7 +56,7 @@ public class DefaultNoHARMFailoverProxyProvider<T>
       YarnConfiguration yarnConf = new YarnConfiguration(conf);
       InetSocketAddress rmAddress =
           proxy.getRMAddress(yarnConf, protocol);
-      LOG.info("Connecting to ResourceManager at " + rmAddress);
+      LOG.info("Connecting to ResourceManager at {}", rmAddress);
       this.proxy = proxy.getProxy(yarnConf, protocol, rmAddress);
     } catch (IOException ioe) {
       LOG.error("Unable to create proxy to the ResourceManager ", ioe);

@@ -59,7 +59,8 @@ public class AutoRefreshRMFailoverProxyProvider<T>
     Set<String> rmIds = new HashSet<>();
     for (Entry<String, T> entry : proxies.entrySet()) {
         if (entry.getValue().equals(currentProxy)) {
-            rmIds.add(entry.getKey());
+            String rmId = entry.getKey()
+            rmIds.add(rmId);
         }
     }
     for (String rmId : rmIds) {

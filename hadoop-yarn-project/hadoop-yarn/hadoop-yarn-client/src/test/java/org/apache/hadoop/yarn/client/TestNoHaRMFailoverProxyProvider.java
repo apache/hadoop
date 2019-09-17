@@ -34,7 +34,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Random;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
@@ -54,11 +53,11 @@ public class TestNoHaRMFailoverProxyProvider {
 
     @Test
     public void testRestartedRM() throws Exception {
-        MiniYARNCluster cluster =
-                new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
-        YarnClient rmClient = YarnClient.createYarnClient();
         try {
+            MiniYARNCluster cluster =
+                new MiniYARNCluster(
+                    "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+            YarnClient rmClient = YarnClient.createYarnClient();
             cluster.init(conf);
             cluster.start();
             final Configuration yarnConf = cluster.getConfig();
@@ -83,15 +82,14 @@ public class TestNoHaRMFailoverProxyProvider {
      */
     @Test
     public void testConnectingToRM() throws Exception {
-        conf.set(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
-                AutoRefreshNoHARMFailoverProxyProvider.class.getName());
+        conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
+                AutoRefreshNoHARMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
 
-        MiniYARNCluster cluster =
-                new MiniYARNCluster(
-                        "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
-        YarnClient rmClient = null;
         try {
-            cluster.init(conf);
+            MiniYARNCluster cluster =
+                new MiniYARNCluster(
+                    "testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+            YarnClient rmClient = null;            cluster.init(conf);
             cluster.start();
             final Configuration yarnConf = cluster.getConfig();
             rmClient = YarnClient.createYarnClient();
@@ -128,8 +126,8 @@ public class TestNoHaRMFailoverProxyProvider {
         DefaultNoHARMFailoverProxyProvider<RMProxy> fpp =
                 new DefaultNoHARMFailoverProxyProvider<RMProxy>();
 
-        Random rand = new Random();
-        int port1 = rand.nextInt(65535);
+        // Default port of yarn RM
+        int port1 = 8032;
 
         InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
 
@@ -143,7 +141,7 @@ public class TestNoHaRMFailoverProxyProvider {
         fpp.init(conf, mockRMProxy, protocol);
         FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
 
@@ -151,12 +149,12 @@ public class TestNoHaRMFailoverProxyProvider {
         // validate the returned proxy is always mockProxy1
         actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
         actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
 
@@ -168,7 +166,7 @@ public class TestNoHaRMFailoverProxyProvider {
         // Perform Failover and get proxy again from failover proxy provider
         fpp.performFailover(actualProxy1.proxy);
         FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy2 = fpp.getProxy();
-        Assert.assertEquals("AutoFefreshRMFailoverProxyProvider " +
+        Assert.assertEquals("AutoRefreshRMFailoverProxyProvider " +
                         "doesn't generate expected proxy after failover",
                 mockProxy1, actualProxy2.proxy);
 
@@ -187,8 +185,8 @@ public class TestNoHaRMFailoverProxyProvider {
      */
     @Test
     public void testAutoRefreshIPChange() throws Exception {
-        conf.set(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
-                AutoRefreshNoHARMFailoverProxyProvider.class.getName());
+        conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
+                AutoRefreshNoHARMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
 
         class TestProxy extends Proxy implements Closeable {
             protected TestProxy(InvocationHandler h) {
@@ -208,13 +206,10 @@ public class TestNoHaRMFailoverProxyProvider {
         AutoRefreshNoHARMFailoverProxyProvider<RMProxy> fpp =
                 new AutoRefreshNoHARMFailoverProxyProvider<RMProxy>();
 
-        // generate two address with different random port.
-        Random rand = new Random();
-        int port1 = rand.nextInt(65535);
-        int port2 = rand.nextInt(65535);
-        while (port1 == port2) {
-            port2 = rand.nextInt(65535);
-        }
+        // generate two address with different ports.
+        // Default port of yarn RM
+        int port1 = 8032;
+        int port2 = 8031;
         InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
         InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
 
@@ -228,7 +223,7 @@ public class TestNoHaRMFailoverProxyProvider {
         fpp.init(conf, mockRMProxy, protocol);
         FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
 
@@ -236,12 +231,12 @@ public class TestNoHaRMFailoverProxyProvider {
         // validate the returned proxy is always mockProxy1
         actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
         actualProxy1 = fpp.getProxy();
         Assert.assertEquals(
-                "AutoFefreshRMFailoverProxyProvider doesn't generate " +
+                "AutoRefreshRMFailoverProxyProvider doesn't generate " +
                         "expected proxy",
                 mockProxy1, actualProxy1.proxy);
 
