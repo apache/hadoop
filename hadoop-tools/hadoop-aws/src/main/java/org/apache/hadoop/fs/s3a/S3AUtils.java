@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
+import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -1218,14 +1219,15 @@ public final class S3AUtils {
    *
    * @param conf Hadoop configuration
    * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there was an error initializing the protocol
+   *                     settings
    */
   public static void initConnectionSettings(Configuration conf,
-      ClientConfiguration awsConf) {
+      ClientConfiguration awsConf) throws IOException {
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    initProtocolSettings(conf, awsConf);
     awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));
     awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
@@ -1241,6 +1243,27 @@ public final class S3AUtils {
     if (!signerOverride.isEmpty()) {
      LOG.debug("Signer override = {}", signerOverride);
       awsConf.setSignerOverride(signerOverride);
+    }
+  }
+
+  /**
+   * Initializes the connection protocol settings when connecting to S3 (e.g.
+   * either HTTP or HTTPS). If secure connections are enabled, this method
+   * will load the configured SSL providers.
+   *
+   * @param conf Hadoop configuration
+   * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there is an error initializing the configured
+   *                     {@link javax.net.ssl.SSLSocketFactory}
+   */
+  private static void initProtocolSettings(Configuration conf,
+      ClientConfiguration awsConf) throws IOException {
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
+        DEFAULT_SECURE_CONNECTIONS);
+    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    if (secureConnections) {
+      NetworkBinding.bindSSLChannelMode(conf, awsConf);
     }
   }
 

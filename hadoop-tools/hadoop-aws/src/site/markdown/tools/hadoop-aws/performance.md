@@ -516,3 +516,54 @@ With an object store this is slow, and may cause problems if the caller
 expects an immediate response. For example, a thread may block so long
 that other liveness checks start to fail.
 Consider spawning off an executor thread to do these background cleanup operations.
+
+## <a name="coding"></a> Tuning SSL Performance
+
+By default, S3A uses HTTPS to communicate with AWS Services. This means that all
+communication with S3 is encrypted using SSL. The overhead of this encryption
+can significantly slow down applications. The configuration option
+`fs.s3a.ssl.channel.mode` allows applications to trigger certain SSL
+optimizations.
+
+By default, `fs.s3a.ssl.channel.mode` is set to `default_jsse`, which uses
+the Java Secure Socket Extension implementation of SSL (this is the default
+implementation when running Java). However, there is one difference, the GCM
+cipher is removed from the list of enabled cipher suites when running on Java 8.
+The GCM cipher has known performance issues when running on Java 8, see
+HADOOP-15669 and HADOOP-16050 for details. It is important to note that the
+GCM cipher is only disabled on Java 8. GCM performance has been improved
+in Java 9, so if `default_jsse` is specified and applications run on Java
+9, they should see no difference compared to running with the vanilla JSSE.
+
+Other options for `fs.s3a.ssl.channel.mode` include `default_jsse_with_gcm`.
+This option includes GCM in the list of cipher suites on Java 8, so it is
+equivalent to running with the vanilla JSSE. The naming convention is setup
+in order to preserve backwards compatibility with HADOOP-15669.
+
+`fs.s3a.ssl.channel.mode` can be configured as follows:
+
+```xml
+<property>
+  <name>fs.s3a.ssl.channel.mode</name>
+  <value>default_jsse</value>
+  <description>
+    If secure connections to S3 are enabled, configures the SSL
+    implementation used to encrypt connections to S3. Supported values are:
+    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
+    Secure Socket Extension package (JSSE). However, when running on Java 8,
+    the GCM cipher is removed from the list of enabled ciphers. This is due
+    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
+    the JSSE with the default list of cipher suites.
+  </description>
+</property>
+```
+
+Supported values for `fs.s3a.ssl.channel.mode`:
+
+| fs.s3a.ssl.channel.mode Value | Description |
+|-------------------------------|-------------|
+| default_jsse | Uses Java JSSE without GCM on Java 8 |
+| default_jsse_with_gcm | Uses Java JSSE |
+
+Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
+further SSL optimizations are made.

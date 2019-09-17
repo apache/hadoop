@@ -1973,6 +1973,20 @@
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.ssl.channel.mode</name>
+  <value>default_jsse</value>
+  <description>
+    If secure connections to S3 are enabled, configures the SSL
+    implementation used to encrypt connections to S3. Supported values are:
+    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
+    Secure Socket Extension package (JSSE). However, when running on Java 8,
+    the GCM cipher is removed from the list of enabled ciphers. This is due
+    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
+    the JSSE with the default list of cipher suites.
+  </description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
