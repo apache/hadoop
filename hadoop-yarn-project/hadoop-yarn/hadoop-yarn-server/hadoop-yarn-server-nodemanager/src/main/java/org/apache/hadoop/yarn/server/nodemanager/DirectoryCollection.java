@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Manages a list of local storage directories.
@@ -230,7 +231,7 @@ public class DirectoryCollection {
   List<String> getGoodDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(localDirs);
+      return ImmutableList.copyOf(localDirs);
     } finally {
       this.readLock.unlock();
     }
@@ -242,7 +243,7 @@ public class DirectoryCollection {
   List<String> getFailedDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(
+      return ImmutableList.copyOf(
           DirectoryCollection.concat(errorDirs, fullDirs));
     } finally {
       this.readLock.unlock();
@@ -255,7 +256,7 @@ public class DirectoryCollection {
   List<String> getFullDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(fullDirs);
+      return ImmutableList.copyOf(fullDirs);
     } finally {
       this.readLock.unlock();
     }
