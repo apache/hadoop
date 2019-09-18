@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -329,6 +330,29 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         "-seconds", "0",
         testPath.toString());
     assertNotNull("Command did not create a filesystem",
+        cmd.getFilesystem());
+  }
+
+  /**
+   * HADOOP-16457. In certain cases prune doesn't create an FS.
+   */
+  @Test
+  public void testMaybeInitFilesystem() throws Exception {
+    Path testPath = path("maybeInitFilesystem");
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.maybeInitFilesystem(Collections.singletonList(testPath.toString()));
+    assertNotNull("Command did not create a filesystem",
+        cmd.getFilesystem());
+  }
+
+  /**
+   * HADOOP-16457. In certain cases prune doesn't create an FS.
+   */
+  @Test
+  public void testMaybeInitFilesystemNoPath() throws Exception {
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.maybeInitFilesystem(Collections.emptyList());
+    assertNull("Command should not have created a filesystem",
         cmd.getFilesystem());
   }
 

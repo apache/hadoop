@@ -373,7 +373,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @return true if at the end of the call, getFilesystem() is not null
    * @throws IOException failure to instantiate.
    */
-  protected boolean maybeInitFilesystem(final List<String> paths)
+  @VisibleForTesting
+  boolean maybeInitFilesystem(final List<String> paths)
       throws IOException {
     // is there an S3 FS to create?
     if (getFilesystem() == null) {
