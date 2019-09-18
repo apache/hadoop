@@ -32,7 +32,7 @@ import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.ReconContainerDBProvider;
-import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.junit.Assert;
 import org.junit.rules.TemporaryFolder;
 

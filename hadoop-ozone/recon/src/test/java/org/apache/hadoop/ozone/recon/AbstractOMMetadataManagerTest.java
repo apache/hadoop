@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.recovery.ReconOmMetadataManagerImpl;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 

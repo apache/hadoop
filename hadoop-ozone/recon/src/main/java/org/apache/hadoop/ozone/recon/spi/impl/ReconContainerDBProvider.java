@@ -28,10 +28,10 @@ import java.nio.file.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.DBStoreBuilder;
-import org.apache.hadoop.utils.db.IntegerCodec;
-import org.apache.hadoop.utils.db.LongCodec;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
+import org.apache.hadoop.hdds.utils.db.IntegerCodec;
+import org.apache.hadoop.hdds.utils.db.LongCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

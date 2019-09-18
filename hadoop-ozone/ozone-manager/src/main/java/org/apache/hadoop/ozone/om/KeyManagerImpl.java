@@ -84,14 +84,14 @@ import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.BackgroundService;
-import org.apache.hadoop.utils.UniqueId;
-import org.apache.hadoop.utils.db.BatchOperation;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.CodecRegistry;
-import org.apache.hadoop.utils.db.RDBStore;
-import org.apache.hadoop.utils.db.TableIterator;
-import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.hdds.utils.BackgroundService;
+import org.apache.hadoop.hdds.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.CodecRegistry;
+import org.apache.hadoop.hdds.utils.db.RDBStore;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.Table;
 
 import com.google.common.base.Preconditions;
 

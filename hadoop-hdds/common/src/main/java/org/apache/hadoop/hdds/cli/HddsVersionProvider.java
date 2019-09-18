@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdds.cli;
 
-import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.hdds.utils.HddsVersionInfo;
 
 import picocli.CommandLine.IVersionProvider;
 

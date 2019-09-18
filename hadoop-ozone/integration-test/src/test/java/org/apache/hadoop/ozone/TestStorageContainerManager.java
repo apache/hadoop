@@ -81,7 +81,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.hdds.utils.HddsVersionInfo;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

@@ -50,7 +50,7 @@ import org.apache.hadoop.ozone.recon.tasks.FileSizeCountTask;
 import org.apache.hadoop.ozone.recon.tasks.ReconTaskController;
 import org.apache.hadoop.ozone.recon.tasks.ReconTaskControllerImpl;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

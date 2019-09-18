@@ -27,7 +27,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

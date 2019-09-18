@@ -24,7 +24,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.Codec;
 
 /**
  * Codec for Persisting the DeletedBlocks.

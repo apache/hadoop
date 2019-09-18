@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hdds;
 
-import org.apache.hadoop.utils.db.DBProfile;
+import org.apache.hadoop.hdds.utils.db.DBProfile;
 
 /**
  * This class contains constants for configuration keys and default values

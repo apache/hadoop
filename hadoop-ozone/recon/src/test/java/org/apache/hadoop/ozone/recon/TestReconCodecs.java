@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.spi.impl.ContainerKeyPrefixCodec;
-import org.apache.hadoop.utils.db.Codec;
-import org.apache.hadoop.utils.db.IntegerCodec;
+import org.apache.hadoop.hdds.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.IntegerCodec;
 import org.junit.Assert;
 import org.junit.Test;
 
