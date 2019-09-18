@@ -43,9 +43,9 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.db.Table;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.MetadataKeyFilters;
+import org.apache.hadoop.hdds.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

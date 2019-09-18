@@ -26,8 +26,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.util.RadixNode;
 import org.apache.hadoop.ozone.util.RadixTree;
-import org.apache.hadoop.utils.db.Table.KeyValue;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

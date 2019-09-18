@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Interface for OM Responses, each OM response should implement this interface.

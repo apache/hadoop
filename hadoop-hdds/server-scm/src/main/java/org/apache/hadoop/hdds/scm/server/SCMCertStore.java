@@ -27,7 +27,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

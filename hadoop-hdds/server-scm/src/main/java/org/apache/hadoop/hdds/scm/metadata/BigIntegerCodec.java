@@ -21,7 +21,7 @@ package org.apache.hadoop.hdds.scm.metadata;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import org.apache.hadoop.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.Codec;
 
 /**
  * Encode and decode BigInteger.

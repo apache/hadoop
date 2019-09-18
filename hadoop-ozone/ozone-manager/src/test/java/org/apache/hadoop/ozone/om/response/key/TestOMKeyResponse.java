@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Base test class for key response.

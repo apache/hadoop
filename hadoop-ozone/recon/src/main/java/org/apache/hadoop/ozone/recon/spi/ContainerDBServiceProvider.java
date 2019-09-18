@@ -24,7 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 
 /**
  * The Recon Container DB Service interface.

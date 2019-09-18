@@ -34,7 +34,7 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import com.google.common.base.Preconditions;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME;

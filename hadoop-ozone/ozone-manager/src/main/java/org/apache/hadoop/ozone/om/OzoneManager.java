@@ -146,11 +146,11 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.utils.RetriableTask;
-import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
-import org.apache.hadoop.utils.db.DBCheckpoint;
-import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.RetriableTask;
+import org.apache.hadoop.hdds.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.FileUtils;

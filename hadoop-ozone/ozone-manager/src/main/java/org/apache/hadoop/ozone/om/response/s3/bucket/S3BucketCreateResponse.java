@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Response for S3Bucket create request.

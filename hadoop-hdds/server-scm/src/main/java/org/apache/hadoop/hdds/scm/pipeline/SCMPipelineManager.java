@@ -33,10 +33,10 @@ import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
-import org.apache.hadoop.utils.Scheduler;
+import org.apache.hadoop.hdds.utils.MetadataKeyFilters;
+import org.apache.hadoop.hdds.utils.MetadataStore;
+import org.apache.hadoop.hdds.utils.MetadataStoreBuilder;
+import org.apache.hadoop.hdds.utils.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

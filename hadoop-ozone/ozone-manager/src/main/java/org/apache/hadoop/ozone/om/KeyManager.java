@@ -29,7 +29,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
-import org.apache.hadoop.utils.BackgroundService;
+import org.apache.hadoop.hdds.utils.BackgroundService;
 
 import java.io.IOException;
 import java.util.List;
