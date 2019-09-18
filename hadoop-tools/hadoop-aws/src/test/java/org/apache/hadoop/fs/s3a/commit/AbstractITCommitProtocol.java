@@ -25,7 +25,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,6 +179,20 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     }
 
     super.teardown();
+  }
+
+  /**
+   * This only looks for leakage of committer thread pools,
+   * and not any other leaked threads, such as those from S3A FS instances.
+   */
+  @AfterClass
+  public static void checkForThreadLeakage() {
+    List<String> committerThreads = getCurrentThreadNames().stream()
+        .filter(n -> n.startsWith(AbstractS3ACommitter.THREAD_PREFIX))
+        .collect(Collectors.toList());
+    Assertions.assertThat(committerThreads)
+        .describedAs("Outstanding committer threads")
+        .isEmpty();
   }
 
   /**
@@ -518,7 +535,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       describe("\ncommitting job");
       committer.commitJob(jContext);
       describe("commit complete\n");
-      assertCommitterHasNoThreads(committer);
+      verifyCommitterHasNoThreads(committer);
     }
   }
 
@@ -575,9 +592,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     // Commit the task. This will promote data and metadata to where
     // job commits will pick it up on commit or abort.
-    committer.commitTask(tContext);
+    commitTask(committer, tContext);
     assertTaskAttemptPathDoesNotExist(committer, tContext);
-    assertCommitterHasNoThreads(committer);
 
     Configuration conf2 = jobData.job.getConfiguration();
     conf2.set(MRJobConfig.TASK_ATTEMPT_ID, attempt0);
@@ -602,7 +618,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     committer2.abortJob(jContext2, JobStatus.State.KILLED);
     // now, state of system may still have pending data
     assertNoMultipartUploadsPending(outDir);
-    assertCommitterHasNoThreads(committer2);
+    verifyCommitterHasNoThreads(committer2);
   }
 
   protected void assertTaskAttemptPathDoesNotExist(
@@ -745,8 +761,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     describe("2. Committing task");
     assertTrue("No files to commit were found by " + committer,
         committer.needsTaskCommit(tContext));
-    committer.commitTask(tContext);
-    assertCommitterHasNoThreads(committer);
+    commitTask(committer, tContext);
 
     // this is only task commit; there MUST be no part- files in the dest dir
     waitForConsistency();
@@ -762,8 +777,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     describe("3. Committing job");
     assertMultipartUploadsPending(outDir);
-    committer.commitJob(jContext);
-    assertCommitterHasNoThreads(committer);
+    commitJob(committer, jContext);
 
     // validate output
     describe("4. Validating content");
@@ -814,12 +828,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // now fail job
     expectSimulatedFailureOnJobCommit(jContext, committer);
 
-    committer.commitJob(jContext);
+    commitJob(committer, jContext);
 
     // but the data got there, due to the order of operations.
     validateContent(outDir, shouldExpectSuccessMarker());
-    assertCommitterHasNoThreads(committer);
-
     expectJobCommitToFail(jContext, committer);
   }
 
@@ -1018,7 +1030,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     committer.abortJob(jobData.jContext, JobStatus.State.FAILED);
     assertJobAbortCleanedUp(jobData);
-    assertCommitterHasNoThreads(committer);
+    verifyCommitterHasNoThreads(committer);
   }
 
   /**
@@ -1072,7 +1084,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // try again; expect abort to be idempotent.
     committer.abortJob(jContext, JobStatus.State.FAILED);
     assertNoMultipartUploadsPending(outDir);
-    assertCommitterHasNoThreads(committer);
+    verifyCommitterHasNoThreads(committer);
   }
 
   public void assertPart0000DoesNotExist(Path dir) throws Exception {
@@ -1232,10 +1244,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     validateTaskAttemptPathAfterWrite(dest);
     assertTrue("Committer does not have data to commit " + committer,
         committer.needsTaskCommit(tContext));
-    committer.commitTask(tContext);
-    assertCommitterHasNoThreads(committer);
-    committer.commitJob(jContext);
-    assertCommitterHasNoThreads(committer);
+    commitTask(committer, tContext);
+    commitJob(committer, jContext);
     // validate output
     verifySuccessMarker(outDir);
   }
@@ -1268,7 +1278,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     AbstractS3ACommitter committer2 = (AbstractS3ACommitter)
         outputFormat.getOutputCommitter(newAttempt);
     committer2.abortTask(tContext);
-    assertCommitterHasNoThreads(committer2);
+    verifyCommitterHasNoThreads(committer2);
     assertNoMultipartUploadsPending(getOutDir());
   }
 
@@ -1318,23 +1328,19 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       // at this point, job1 and job2 both have uncommitted tasks
 
       // commit tasks in order task 2, task 1.
-      committer2.commitTask(tContext2);
-      assertCommitterHasNoThreads(committer1);
-      committer1.commitTask(tContext1);
-      assertCommitterHasNoThreads(committer2);
+      commitTask(committer2, tContext2);
+      commitTask(committer1, tContext1);
 
       assertMultipartUploadsPending(job1Dest);
       assertMultipartUploadsPending(job2Dest);
 
       // commit jobs in order job 1, job 2
-      committer1.commitJob(jContext1);
-      assertCommitterHasNoThreads(committer1);
+      commitJob(committer1, jContext1);
       assertNoMultipartUploadsPending(job1Dest);
       getPart0000(job1Dest);
       assertMultipartUploadsPending(job2Dest);
 
-      committer2.commitJob(jContext2);
-      assertCommitterHasNoThreads(committer2);
+      commitJob(committer2, jContext2);
       getPart0000(job2Dest);
       assertNoMultipartUploadsPending(job2Dest);
     } finally {
@@ -1396,10 +1402,34 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
+   * Commit a task then validate the state of the committer afterwards.
+   * @param committer committer
+   * @param tContext task context
+   * @throws IOException IO failure
+   */
+  protected void commitTask(final AbstractS3ACommitter committer,
+      final TaskAttemptContext tContext) throws IOException {
+    committer.commitTask(tContext);
+    verifyCommitterHasNoThreads(committer);
+  }
+
+  /**
+   * Commit a job then validate the state of the committer afterwards.
+   * @param committer committer
+   * @param jContext job context
+   * @throws IOException IO failure
+   */
+  protected void commitJob(final AbstractS3ACommitter committer,
+      final JobContext jContext) throws IOException {
+    committer.commitJob(jContext);
+    verifyCommitterHasNoThreads(committer);
+  }
+
+  /**
    * Verify that the committer does not have a thread pool.
    * @param committer committer to validate.
    */
-  protected void assertCommitterHasNoThreads(AbstractS3ACommitter committer) {
+  protected void verifyCommitterHasNoThreads(AbstractS3ACommitter committer) {
     assertFalse("Committer has an active thread pool",
         committer.hasThreadPool());
   }

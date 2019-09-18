@@ -51,6 +51,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -69,8 +70,11 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
  * Requiring an output directory simplifies coding and testing.
  */
 public abstract class AbstractS3ACommitter extends PathOutputCommitter {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ACommitter.class);
+
+  public static final String THREAD_PREFIX = "s3a-committer-pool-";
 
   /**
    * Thread pool for task execution.
@@ -741,9 +745,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat("s3a-committer-pool-"
-                    + context.getJobID()
-                    + "-%d")
+                .setNameFormat(THREAD_PREFIX + context.getJobID() + "-%d")
                 .build());
       } else {
         return null;

@@ -255,9 +255,4 @@ public final class CommitConstants {
   public static final String FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS =
       "fs.s3a.committer.staging.abort.pending.uploads";
 
-  /**
-   * How long to wait for the thread pool to terminate when cleaning up
-   * or after any task termination.
-   */
-  public static final int THREAD_POOL_SHUTDOWN_DELAY = 30;
 }
