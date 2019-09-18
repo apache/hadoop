@@ -54,19 +54,6 @@ public final class OMNodeDetails {
     this.httpsAddress = httpsAddress;
   }
 
-  @Override
-  public String toString() {
-    return "OMNodeDetails["
-        + "omServiceId=" + omServiceId +
-        ", omNodeId=" + omNodeId +
-        ", rpcAddress=" + rpcAddress +
-        ", rpcPort=" + rpcPort +
-        ", ratisPort=" + ratisPort +
-        ", httpAddress=" + httpAddress +
-        ", httpsAddress=" + httpsAddress +
-        "]";
-  }
-
   /**
    * Builder class for OMNodeDetails.
    */
