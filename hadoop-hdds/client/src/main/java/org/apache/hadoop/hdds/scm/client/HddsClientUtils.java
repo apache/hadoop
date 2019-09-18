@@ -149,8 +149,8 @@ public final class HddsClientUtils {
           "Bucket or Volume name cannot start with a period or dash");
     }
 
-    if ((resName.charAt(resName.length() - 1) == '.') ||
-        (resName.charAt(resName.length() - 1) == '-')) {
+    if (resName.charAt(resName.length() - 1) == '.' ||
+        resName.charAt(resName.length() - 1) == '-') {
       throw new IllegalArgumentException("Bucket or Volume name cannot end with a period or dash");
     }
 
