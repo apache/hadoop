@@ -1374,6 +1374,14 @@
   </property>
 
   <property>
+    <description>If the NodeManager creates the remote-app-log-dir folder,
+    it will be created with this groupname.
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir.groupname</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Generate additional logs about container launches.
     Currently, this creates a copy of the launch script and lists the
     directory contents of the container work dir. When listing directory
