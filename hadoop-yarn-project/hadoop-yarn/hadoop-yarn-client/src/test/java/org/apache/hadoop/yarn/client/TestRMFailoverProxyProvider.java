@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,7 +37,7 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.junit.Assert;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -65,12 +64,22 @@ public class TestRMFailoverProxyProvider {
    */
   @Test
   public void testFailoverChange() throws Exception {
+    class MockProxy extends Proxy implements Closeable {
+      protected MockProxy(InvocationHandler h) {
+        super(h);
+      }
+
+      @Override
+      public void close() throws IOException {
+      }
+    }
+
     //Adjusting the YARN Conf
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
-
+    
     // Create two proxies and mock a RMProxy
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
 
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
@@ -182,14 +191,24 @@ public class TestRMFailoverProxyProvider {
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
       AutoRefreshRMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
 
+    class MockProxy extends Proxy implements Closeable {
+      protected MockProxy(InvocationHandler h) {
+        super(h);
+      }
+
+      @Override
+      public void close() throws IOException {
+      }
+    }
+    
     //Adjusting the YARN Conf
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
 
     // Create three proxies and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy3 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy3 = new MockProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     AutoRefreshRMFailoverProxyProvider <RMProxy> fpp =
@@ -199,7 +218,7 @@ public class TestRMFailoverProxyProvider {
     // Default port of yarn RM
     int port1 = 8032;
     int port2 = 8031;
-    int port2 = 8033;
+    int port3 = 8033;
     InetSocketAddress mockAdd1 = new InetSocketAddress(port1);
     InetSocketAddress mockAdd2 = new InetSocketAddress(port2);
     InetSocketAddress mockAdd3 = new InetSocketAddress(port3);

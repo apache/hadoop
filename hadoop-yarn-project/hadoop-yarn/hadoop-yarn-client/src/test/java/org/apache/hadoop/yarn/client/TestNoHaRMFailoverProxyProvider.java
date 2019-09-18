@@ -36,7 +36,7 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.junit.Assert;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -55,9 +55,9 @@ public class TestNoHaRMFailoverProxyProvider {
 
   @Test
   public void testRestartedRM() throws Exception {
+    MiniYARNCluster cluster = new MiniYARNCluster("testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+    YarnClient rmClient = YarnClient.createYarnClient();
     try {
-      MiniYARNCluster cluster = new MiniYARNCluster("testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
-      YarnClient rmClient = YarnClient.createYarnClient();
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
@@ -84,10 +84,9 @@ public class TestNoHaRMFailoverProxyProvider {
   public void testConnectingToRM() throws Exception {
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
       AutoRefreshNoHARMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
-
+    MiniYARNCluster cluster = new MiniYARNCluster("testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
+    YarnClient rmClient = null;
     try {
-      MiniYARNCluster cluster = new MiniYARNCluster("testRestartedRMNegative", NODE_MANAGER_COUNT, 1, 1);
-      YarnClient rmClient = null;
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
@@ -108,8 +107,18 @@ public class TestNoHaRMFailoverProxyProvider {
 
   @Test
   public void testDefaultFPPGetOneProxy() throws Exception {
-    // Create two proxies and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
+    class MockProxy extends Proxy implements Closeable {
+      protected MockProxy(InvocationHandler h) {
+        super(h);
+      }
+
+      @Override
+      public void close() throws IOException {
+      }
+    }
+
+    // Create a proxy and mock a RMProxy
+    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     DefaultNoHARMFailoverProxyProvider <RMProxy> fpp =
@@ -174,12 +183,22 @@ public class TestNoHaRMFailoverProxyProvider {
    */
   @Test
   public void testAutoRefreshIPChange() throws Exception {
+    class MockProxy extends Proxy implements Closeable {
+      protected MockProxy(InvocationHandler h) {
+        super(h);
+      }
+
+      @Override
+      public void close() throws IOException {
+      }
+    }
+
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
       AutoRefreshNoHARMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
 
     // Create two proxies and mock a RMProxy
-    Proxy mockProxy1 = new Proxy((proxy, method, args) -> null);
-    Proxy mockProxy2 = new Proxy((proxy, method, args) -> null);
+    Proxy mockProxy1 = new MockProxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new MockProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
     AutoRefreshNoHARMFailoverProxyProvider <RMProxy> fpp =
