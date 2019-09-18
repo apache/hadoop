@@ -126,8 +126,6 @@ public final class HddsClientUtils {
         .toInstant().toEpochMilli();
   }
 
-
-
   /**
    * verifies that bucket name / volume name is a valid DNS name.
    *
@@ -135,29 +133,25 @@ public final class HddsClientUtils {
    *
    * @throws IllegalArgumentException
    */
-  public static void verifyResourceName(String resName)
-      throws IllegalArgumentException {
-
+  public static void verifyResourceName(String resName) throws IllegalArgumentException {
     if (resName == null) {
       throw new IllegalArgumentException("Bucket or Volume name is null");
     }
 
-    if ((resName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH) ||
-        (resName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH)) {
+    if (resName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH ||
+        resName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH) {
       throw new IllegalArgumentException(
-          "Bucket or Volume length is illegal, " +
-              "valid length is 3-63 characters");
+          "Bucket or Volume length is illegal, valid length is 3-63 characters");
     }
 
-    if ((resName.charAt(0) == '.') || (resName.charAt(0) == '-')) {
+    if (resName.charAt(0) == '.' || resName.charAt(0) == '-') {
       throw new IllegalArgumentException(
           "Bucket or Volume name cannot start with a period or dash");
     }
 
-    if ((resName.charAt(resName.length() - 1) == '.') ||
-        (resName.charAt(resName.length() - 1) == '-')) {
-      throw new IllegalArgumentException(
-          "Bucket or Volume name cannot end with a period or dash");
+    if (resName.charAt(resName.length() - 1) == '.' ||
+        resName.charAt(resName.length() - 1) == '-') {
+      throw new IllegalArgumentException("Bucket or Volume name cannot end with a period or dash");
     }
 
     boolean isIPv4 = true;
@@ -165,36 +159,30 @@ public final class HddsClientUtils {
 
     for (int index = 0; index < resName.length(); index++) {
       char currChar = resName.charAt(index);
-
       if (currChar != '.') {
         isIPv4 = ((currChar >= '0') && (currChar <= '9')) && isIPv4;
       }
-
       if (currChar > 'A' && currChar < 'Z') {
         throw new IllegalArgumentException(
             "Bucket or Volume name does not support uppercase characters");
       }
-
-      if ((currChar != '.') && (currChar != '-')) {
-        if ((currChar < '0') || (currChar > '9' && currChar < 'a') ||
-            (currChar > 'z')) {
+      if (currChar != '.' && currChar != '-') {
+        if (currChar < '0' || (currChar > '9' && currChar < 'a') ||
+            currChar > 'z') {
           throw new IllegalArgumentException("Bucket or Volume name has an " +
               "unsupported character : " +
               currChar);
         }
       }
-
-      if ((prev == '.') && (currChar == '.')) {
+      if (prev == '.' && currChar == '.') {
         throw new IllegalArgumentException("Bucket or Volume name should not " +
             "have two contiguous periods");
       }
-
-      if ((prev == '-') && (currChar == '.')) {
+      if (prev == '-' && currChar == '.') {
         throw new IllegalArgumentException(
             "Bucket or Volume name should not have period after dash");
       }
-
-      if ((prev == '.') && (currChar == '-')) {
+      if (prev == '.' && currChar == '-') {
         throw new IllegalArgumentException(
             "Bucket or Volume name should not have dash after period");
       }
