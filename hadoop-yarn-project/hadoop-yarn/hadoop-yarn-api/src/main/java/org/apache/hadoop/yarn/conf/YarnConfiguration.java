@@ -1479,6 +1479,12 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
       true;
 
+  /**
+   * Specifies the group of the aggregated log directory.
+   */
+  public static final String NM_REMOTE_APP_LOG_DIR_GROUPNAME =
+      NM_PREFIX + "remote-app-log-dir.groupname";
+
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
 
