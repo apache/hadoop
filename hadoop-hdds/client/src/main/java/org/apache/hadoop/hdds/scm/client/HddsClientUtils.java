@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager.ScmClientConfig;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -86,7 +86,7 @@ public final class HddsClientUtils {
   private static final List<Class<? extends Exception>> EXCEPTION_LIST =
       new ArrayList<Class<? extends Exception>>() {{
         add(TimeoutException.class);
-        add(ContainerNotOpenException.class);
+        add(StorageContainerException.class);
         add(RaftRetryFailureException.class);
         add(AlreadyClosedException.class);
         add(GroupMismatchException.class);
@@ -301,7 +301,7 @@ public final class HddsClientUtils {
     return scmSecurityClient;
   }
 
-  public static Throwable checkForException(Exception e) throws IOException {
+  public static Throwable checkForException(Exception e) {
     Throwable t = e;
     while (t != null) {
       for (Class<? extends Exception> cls : getExceptionList()) {
@@ -311,8 +311,7 @@ public final class HddsClientUtils {
       }
       t = t.getCause();
     }
-
-    throw e instanceof IOException ? (IOException)e : new IOException(e);
+    return t;
   }
 
   public static RetryPolicy createRetryPolicy(int maxRetryCount,
