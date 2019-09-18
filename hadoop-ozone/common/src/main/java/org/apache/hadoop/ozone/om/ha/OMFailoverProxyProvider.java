@@ -194,7 +194,8 @@ public class OMFailoverProxyProvider implements
         omProxyInfos.entrySet()) {
       count++;
       rpcAddress =
-          rpcAddress.append(omProxyInfoSet.getValue().toString());
+          rpcAddress.append(
+              omProxyInfoSet.getValue().getDelegationTokenService());
 
       if (omProxyInfos.size() != count) {
         rpcAddress.append(",");
