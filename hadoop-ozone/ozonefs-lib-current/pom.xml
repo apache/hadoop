@@ -74,11 +74,6 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <artifactSet>
-                <excludes>
-                  <exclude>classworlds:classworlds</exclude>
-                </excludes>
-              </artifactSet>
               <transformers>
                 <transformer
                         implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
