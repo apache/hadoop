@@ -328,7 +328,7 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
-***Note: Running scale tests with `-Ds3guard` and `-Ddynamo` requires that
+***Note: Running scale tests with `-Dfs.s3a.s3guard.test.enabled=true` and `-Dfs.s3a.s3guard.test.implementation=dynamo` requires that
 you use a private, testing-only DynamoDB table.*** The tests do disruptive
 things such as deleting metadata and setting the provisioned throughput
 to very low values.
@@ -550,7 +550,7 @@ service.
 ```xml
 <property>
   <name>fs.s3a.delegation.token.endpoint</name>
-  <value>fs.s3a.assumed.role.sts.endpoint</value>
+  <value>${fs.s3a.assumed.role.sts.endpoint}</value>
 </property>
 <property>
   <name>fs.s3a.assumed.role.sts.endpoint.region</name>
@@ -848,7 +848,7 @@ it can be manually done:
       hadoop s3guard destroy s3a://test-bucket/
 
 The S3Guard tests will automatically create the Dynamo DB table in runs with
-`-Ds3guard -Ddynamo` set; default capacity of these buckets
+`-Dfs.s3a.s3guard.test.enabled=true -Dfs.s3a.s3guard.test.implementation=dynamo` set; default capacity of these buckets
 tests is very small; it keeps costs down at the expense of IO performance
 and, for test runs in or near the S3/DDB stores, throttling events.
 
@@ -1055,7 +1055,7 @@ run with S3Guard by using the `s3guard` profile. When set, this will run
 all the tests with local memory for the metadata set to "non-authoritative" mode.
 
 ```bash
-mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Dfs.s3a.s3guard.test.enabled=true
 ```
 
 When the `s3guard` profile is enabled, following profiles can be specified:
@@ -1065,14 +1065,14 @@ When the `s3guard` profile is enabled, following profiles can be specified:
 * `auth`: treat the S3Guard metadata as authoritative.
 
 ```bash
-mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Dfs.s3a.s3guard.test.enabled=true -Dfs.s3a.s3guard.test.implementation=dynamo -Dauth
 ```
 
 When experimenting with options, it is usually best to run a single test suite
 at a time until the operations appear to be working.
 
 ```bash
-mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
+mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Dfs.s3a.s3guard.test.enabled=true -Dfs.s3a.s3guard.test.implementation=dynamo
 ```
 
 ### Notes
@@ -1347,7 +1347,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
 1. Update AWS SDK versions in NOTICE.txt.
-1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
+1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Dfs.s3a.s3guard.test.enabled=true -Dfs.s3a.s3guard.test.implementation=dynamo` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
