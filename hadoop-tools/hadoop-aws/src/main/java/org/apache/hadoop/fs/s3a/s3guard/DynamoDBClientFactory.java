@@ -27,6 +27,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +82,7 @@ public interface DynamoDBClientFactory extends Configurable {
 
       final Configuration conf = getConf();
       final ClientConfiguration awsConf = S3AUtils
-          .createAwsConfForDdb(conf, bucket);
+          .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_DDB);
 
       final String region = getRegion(conf, defaultRegion);
       LOG.debug("Creating DynamoDB client in region {}", region);

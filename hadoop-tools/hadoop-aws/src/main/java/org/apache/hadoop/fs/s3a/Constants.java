@@ -369,10 +369,16 @@ public final class Constants {
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 
   public static final String SIGNING_ALGORITHM_S3 =
-      "fs.s3a.s3.signing-algorithm";
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
+          + ".signing-algorithm";
 
   public static final String SIGNING_ALGORITHM_DDB =
-      "fs.s3a.ddb.signing-algorithm";
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_DDB.toLowerCase()
+          + "signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_STS =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
+          + "signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -817,4 +823,7 @@ public final class Constants {
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
       "2s";
 
+  public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
+  public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
+  public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
 }

@@ -56,7 +56,7 @@ public class DefaultS3ClientFactory extends Configured
       final String userAgentSuffix) throws IOException {
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
-        .createAwsConfForS3(getConf(), bucket);
+        .createAwsConf(getConf(), bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
     if (!StringUtils.isEmpty(userAgentSuffix)) {
       awsConf.setUserAgentSuffix(userAgentSuffix);
     }

@@ -259,6 +259,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private MagicCommitIntegration committerIntegration;
 
   private AWSCredentialProviderList credentials;
+  private SignerManager signerManager;
 
   private ITtlTimeProvider ttlTimeProvider;
 
@@ -300,8 +301,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Initializing S3AFileSystem for {}", bucket);
     // clone the configuration into one with propagated bucket options
     Configuration conf = propagateBucketOptions(originalConf, bucket);
-    // Initialize any custom signers
-    initCustomSigners(conf);
     // patch the Hadoop security providers
     patchSecurityCredentialProviders(conf);
     // look for delegation token support early.
@@ -360,6 +359,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             "version 2", listVersion);
       }
       useListV1 = (listVersion == 1);
+
+      signerManager = new SignerManager();
+      signerManager.initCustomSigners(conf);;
 
       // creates the AWS client, including overriding auth chain if
       // the FS came with a DT
@@ -3055,6 +3057,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation = null;
       closeAutocloseables(LOG, credentials);
       cleanupWithLogger(LOG, delegationTokens.orElse(null));
+      cleanupWithLogger(LOG, signerManager);
+      signerManager = null;
       credentials = null;
     }
   }

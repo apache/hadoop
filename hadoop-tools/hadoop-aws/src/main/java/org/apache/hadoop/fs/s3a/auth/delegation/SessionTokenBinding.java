@@ -31,6 +31,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -301,7 +302,8 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
 
       invoker = new Invoker(new S3ARetryPolicy(conf), LOG_EVENT);
       ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, uri.getHost());
+          S3AUtils.createAwsConf(conf, uri.getHost(),
+              Constants.AWS_SERVICE_IDENTIFIER_STS);
       AWSSecurityTokenService tokenService =
           STSClientFactory.builder(parentAuthChain,
               awsConf,
