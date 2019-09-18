@@ -85,6 +85,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();
 
+    ozoneManager.getMetrics().incNumAbortMultipartUploads();
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     boolean acquiredLock = false;
     IOException exception = null;
@@ -156,7 +157,6 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
     auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(
         OMAction.ABORT_MULTIPART_UPLOAD, buildKeyArgsAuditMap(keyArgs),
         exception, getOmRequest().getUserInfo()));
-
 
     if (exception == null) {
       LOG.debug("Abort Multipart request is successfully completed for " +

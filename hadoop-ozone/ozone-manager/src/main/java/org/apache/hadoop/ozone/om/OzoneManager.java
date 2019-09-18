@@ -2834,7 +2834,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap));
       return omMultipartUploadListParts;
     } catch (IOException ex) {
-      metrics.incNumAbortMultipartUploadFails();
+      metrics.incNumListMultipartUploadPartFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap, ex));
       throw ex;
