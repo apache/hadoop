@@ -41,9 +41,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+
 /**
  * A subclass of {@link RMFailoverProxyProvider} which tries to
  * resolve the proxy DNS in the event of failover.
+ * This provider supports YARN Resourcemanager's HA mode.
  * This provider doesn't support Federation.
  */
 public class AutoRefreshRMFailoverProxyProvider<T>
@@ -58,10 +60,10 @@ public class AutoRefreshRMFailoverProxyProvider<T>
     //clears out all keys that map to currentProxy
     Set<String> rmIds = new HashSet<>();
     for (Entry<String, T> entry : proxies.entrySet()) {
-        if (entry.getValue().equals(currentProxy)) {
-            String rmId = entry.getKey()
-            rmIds.add(rmId);
-        }
+      if (entry.getValue().equals(currentProxy)) {
+        String rmId = entry.getKey();
+        rmIds.add(rmId);
+      }
     }
     for (String rmId : rmIds) {
       proxies.remove(rmId);

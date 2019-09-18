@@ -56,8 +56,7 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings("unchecked")
 public class RMProxy<T> {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(RMProxy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RMProxy.class);
   private UserGroupInformation user;
 
   protected RMProxy() {
