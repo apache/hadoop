@@ -152,8 +152,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Parse DynamoDB region from either -m option or a S3 path.
    *
-   * This function should only be called from {@link S3GuardTool.Init} or
-   * {@link S3GuardTool.Destroy}.
+   * Note that as a side effect, if the paths included an S3 path,
+   * and there is no region set on the CLI, then the S3A FS is
+   * initialized, after which {@link #filesystem} will no longer
+   * be null.
    *
    * @param paths remaining parameters from CLI.
    * @throws IOException on I/O errors.
@@ -338,6 +340,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @throws ExitUtil.ExitException if the FS is not an S3A FS
    */
   protected void initS3AFileSystem(String path) throws IOException {
+    LOG.debug("Initializing S3A FS to {}", path);
     URI uri = toUri(path);
     // Make sure that S3AFileSystem does not hold an actual MetadataStore
     // implementation.
@@ -361,6 +364,28 @@ public abstract class S3GuardTool extends Configured implements Tool {
           uri, fs.getClass().getName());
     }
     filesystem = (S3AFileSystem) fs;
+  }
+
+  /**
+   * Initialize the filesystem if there is none bonded to already and
+   * the command line path list is not empty.
+   * @param paths path list.
+   * @return true if at the end of the call, getFilesystem() is not null
+   * @throws IOException failure to instantiate.
+   */
+  @VisibleForTesting
+  boolean maybeInitFilesystem(final List<String> paths)
+      throws IOException {
+    // is there an S3 FS to create?
+    if (getFilesystem() == null) {
+      // none yet -create one
+      if (!paths.isEmpty()) {
+        initS3AFileSystem(paths.get(0));
+      } else {
+        LOG.debug("No path on command line, so not instantiating FS");
+      }
+    }
+    return getFilesystem() != null;
   }
 
   /**
@@ -592,6 +617,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       // Validate parameters.
       try {
         parseDynamoDBRegion(paths);
+        maybeInitFilesystem(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
@@ -644,6 +670,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         checkBucketNameOrDDBTableNameProvided(paths);
         checkIfS3BucketIsGuarded(paths);
         parseDynamoDBRegion(paths);
+        maybeInitFilesystem(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
@@ -1064,11 +1091,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
         InterruptedException, IOException {
       List<String> paths = parseArgs(args);
       try {
+        checkBucketNameOrDDBTableNameProvided(paths);
         parseDynamoDBRegion(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
       }
+      maybeInitFilesystem(paths);
       initMetadataStore(false);
 
       Configuration conf = getConf();
