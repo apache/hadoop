@@ -1234,22 +1234,23 @@ public final class S3AUtils {
     if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
       String configKey = null;
       switch (awsServiceIdentifier) {
-        case AWS_SERVICE_IDENTIFIER_S3:
-          configKey = SIGNING_ALGORITHM_S3;
-          break;
-        case AWS_SERVICE_IDENTIFIER_DDB:
-          configKey = SIGNING_ALGORITHM_DDB;
-          break;
-        case AWS_SERVICE_IDENTIFIER_STS:
-          configKey = SIGNING_ALGORITHM_STS;
-          break;
-        default:
-          // Nothing to do. The original signer override is already setup
+      case AWS_SERVICE_IDENTIFIER_S3:
+        configKey = SIGNING_ALGORITHM_S3;
+        break;
+      case AWS_SERVICE_IDENTIFIER_DDB:
+        configKey = SIGNING_ALGORITHM_DDB;
+        break;
+      case AWS_SERVICE_IDENTIFIER_STS:
+        configKey = SIGNING_ALGORITHM_STS;
+        break;
+      default:
+        // Nothing to do. The original signer override is already setup
       }
       if (configKey != null) {
         String signerOverride = conf.getTrimmed(configKey, "");
         if (!signerOverride.isEmpty()) {
-          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier, signerOverride);
+          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier,
+              signerOverride);
           awsConf.setSignerOverride(signerOverride);
         }
       }

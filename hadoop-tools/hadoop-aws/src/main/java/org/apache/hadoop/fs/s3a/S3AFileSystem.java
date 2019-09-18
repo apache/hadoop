@@ -361,7 +361,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       useListV1 = (listVersion == 1);
 
       signerManager = new SignerManager();
-      signerManager.initCustomSigners(conf);;
+      signerManager.initCustomSigners(conf);
 
       // creates the AWS client, including overriding auth chain if
       // the FS came with a DT

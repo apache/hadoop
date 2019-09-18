@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to handle custom signers
+ * Class to handle custom signers.
  */
 public class SignerManager implements Closeable {
 

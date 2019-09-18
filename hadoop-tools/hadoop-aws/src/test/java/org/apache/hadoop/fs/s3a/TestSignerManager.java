@@ -18,33 +18,38 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
-
 import com.amazonaws.SignableRequest;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.auth.SignerFactory;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
+
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
+
+/**
+ * Tests for the SignerManager.
+ */
 public class TestSignerManager {
 
   @Rule
   public Timeout testTimeout = new Timeout(
-10_000L, TimeUnit.MILLISECONDS
+      10_000L, TimeUnit.MILLISECONDS
   );
 
   @Test
   public void testCustomSignerFailureIfNotRegistered() throws Exception {
     LambdaTestUtils.intercept(Exception.class,
         () -> SignerFactory.createSigner("testsignerUnregistered", null));
-    // Expecting generic Exception.class to handle future implementation changes.
+    // Expecting generic Exception.class to handle future implementation
+    // changes.
     // For now, this is an NPE
   }
 
