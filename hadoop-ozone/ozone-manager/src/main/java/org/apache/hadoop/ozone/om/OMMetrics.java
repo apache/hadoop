@@ -62,7 +62,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numBlockAllocations;
   private @Metric MutableCounterLong numGetServiceLists;
-  private @Metric MutableCounterLong numListS3Buckets;
+  private @Metric MutableCounterLong numBucketS3Lists;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
@@ -92,7 +92,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocationFails;
   private @Metric MutableCounterLong numGetServiceListFails;
-  private @Metric MutableCounterLong numListS3BucketsFails;
+  private @Metric MutableCounterLong numBucketS3ListFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
   private @Metric MutableCounterLong numCommitMultipartUploadParts;
   private @Metric MutableCounterLong numCommitMultipartUploadPartFails;
@@ -126,10 +126,10 @@ public class OMMetrics {
   private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
 
-  private @Metric MutableCounterLong numS3BucketCreates;
-  private @Metric MutableCounterLong numS3BucketCreateFails;
-  private @Metric MutableCounterLong numS3BucketDeletes;
-  private @Metric MutableCounterLong numS3BucketDeleteFails;
+  private @Metric MutableCounterLong numBucketS3Creates;
+  private @Metric MutableCounterLong numBucketS3CreateFails;
+  private @Metric MutableCounterLong numBucketS3Deletes;
+  private @Metric MutableCounterLong numBucketS3DeleteFails;
 
 
   public OMMetrics() {
@@ -144,21 +144,21 @@ public class OMMetrics {
 
   public void incNumS3BucketCreates() {
     numBucketOps.incr();
-    numS3BucketCreates.incr();
+    numBucketS3Creates.incr();
   }
 
   public void incNumS3BucketCreateFails() {
-    numS3BucketCreateFails.incr();
+    numBucketS3CreateFails.incr();
   }
 
   public void incNumS3BucketDeletes() {
     numBucketOps.incr();
-    numS3BucketDeletes.incr();
+    numBucketS3Deletes.incr();
   }
 
   public void incNumS3BucketDeleteFails() {
     numBucketOps.incr();
-    numS3BucketDeleteFails.incr();
+    numBucketS3DeleteFails.incr();
   }
 
 
@@ -284,12 +284,12 @@ public class OMMetrics {
 
   public void incNumListS3Buckets() {
     numBucketOps.incr();
-    numListS3Buckets.incr();
+    numBucketS3Lists.incr();
   }
 
   public void incNumListS3BucketsFails() {
     numBucketOps.incr();
-    numListS3BucketsFails.incr();
+    numBucketS3ListFails.incr();
   }
 
   public void incNumInitiateMultipartUploads() {
@@ -717,12 +717,12 @@ public class OMMetrics {
 
   @VisibleForTesting
   public long getNumListS3Buckets() {
-    return numListS3Buckets.value();
+    return numBucketS3Lists.value();
   }
 
   @VisibleForTesting
   public long getNumListS3BucketsFails() {
-    return numListS3BucketsFails.value();
+    return numBucketS3ListFails.value();
   }
 
   public long getNumInitiateMultipartUploads() {
