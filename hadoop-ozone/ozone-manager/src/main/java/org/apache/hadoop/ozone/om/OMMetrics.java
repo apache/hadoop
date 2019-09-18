@@ -60,7 +60,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyLists;
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
-  private @Metric MutableCounterLong numAllocateBlockCalls;
+  private @Metric MutableCounterLong numBlockAllocations;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
@@ -90,7 +90,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyListFails;
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
-  private @Metric MutableCounterLong numBlockAllocateCallFails;
+  private @Metric MutableCounterLong numBlockAllocationFails;
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
@@ -474,11 +474,11 @@ public class OMMetrics {
   }
 
   public void incNumBlockAllocateCalls() {
-    numAllocateBlockCalls.incr();
+    numBlockAllocations.incr();
   }
 
   public void incNumBlockAllocateCallFails() {
-    numBlockAllocateCallFails.incr();
+    numBlockAllocationFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -702,12 +702,12 @@ public class OMMetrics {
 
   @VisibleForTesting
   public long getNumBlockAllocates() {
-    return numAllocateBlockCalls.value();
+    return numBlockAllocations.value();
   }
 
   @VisibleForTesting
   public long getNumBlockAllocateFails() {
-    return numBlockAllocateCallFails.value();
+    return numBlockAllocationFails.value();
   }
 
   @VisibleForTesting
