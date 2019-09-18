@@ -69,7 +69,7 @@
                     var groupedMetrics = {others: [], nums: {}};
                     var metrics = result.data.beans[0]
                     for (var key in metrics) {
-                        var numericalStatistic = key.match(/Num([A-Z][a-z]+)(.+?)(Fails)?$/);
+                        var numericalStatistic = key.match(/Num([A-Z][a-z]+)([A-Z].+?)(Fails)?$/);
                         if (numericalStatistic) {
                             var type = numericalStatistic[1];
                             var name = numericalStatistic[2];
