@@ -88,7 +88,7 @@
                                 if (name == "Ops") {
                                     groupedMetrics.nums[type].ops = metrics[key]
                                 } else {
-                                    groupedMetrics.nums[type].total += metrics[key]
+                                    groupedMetrics.nums[type].total += metrics[key];
                                     groupedMetrics.nums[type].all.push({
                                         key: name,
                                         value: metrics[key]
