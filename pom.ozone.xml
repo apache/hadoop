@@ -91,7 +91,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.3.24.v20180605</jetty.version>
+    <jetty.version>9.3.25.v20180904</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -127,6 +127,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.9.9</jackson2.version>
 
+    <!-- jaegertracing veresion -->
+    <jaeger.version>1.0.0</jaeger.version>
+
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.2</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
@@ -142,7 +145,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <protobuf.version>2.5.0</protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <zookeeper.version>3.4.13</zookeeper.version>
+    <zookeeper.version>3.5.5</zookeeper.version>
     <curator.version>2.12.0</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
