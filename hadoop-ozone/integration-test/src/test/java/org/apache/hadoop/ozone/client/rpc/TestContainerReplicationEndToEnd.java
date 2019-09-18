@@ -155,9 +155,13 @@ public class TestContainerReplicationEndToEnd {
             .getPipeline(pipelineID);
     key.close();
 
-    cluster.getStorageContainerManager().getContainerManager()
-        .updateContainerState(new ContainerID(containerID),
-            HddsProtos.LifeCycleEvent.FINALIZE);
+    if (cluster.getStorageContainerManager().getContainerManager()
+        .getContainer(new ContainerID(containerID)).getState() !=
+        HddsProtos.LifeCycleState.CLOSING) {
+      cluster.getStorageContainerManager().getContainerManager()
+          .updateContainerState(new ContainerID(containerID),
+              HddsProtos.LifeCycleEvent.FINALIZE);
+    }
     // wait for container to move to OPEN state in SCM
     Thread.sleep(2 * containerReportInterval);
     DatanodeDetails oldReplicaNode = pipeline.getFirstNode();
