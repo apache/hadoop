@@ -39,7 +39,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>tools</module>
     <module>docs</module>
     <module>config</module>
-
   </modules>
 
   <properties>
