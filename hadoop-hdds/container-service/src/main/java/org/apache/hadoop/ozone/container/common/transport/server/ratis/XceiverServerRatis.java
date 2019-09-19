@@ -225,6 +225,10 @@ public final class XceiverServerRatis extends XceiverServer {
       setAutoTriggerEnabled(properties, true);
     RaftServerConfigKeys.Snapshot.
       setAutoTriggerThreshold(properties, snapshotThreshold);
+    int maxPendingRequets = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT);
+    RaftServerConfigKeys.Write.setElementLimit(properties, maxPendingRequets);
     int logQueueNumElements =
         conf.getInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS_DEFAULT);
