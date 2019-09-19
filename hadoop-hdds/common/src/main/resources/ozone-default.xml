@@ -204,6 +204,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.leader.num.pending.requests</name>
+    <value>4096</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Maximum number of pending requests after which the leader
+      starts rejecting requests from client.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.replication.level</name>
     <value>MAJORITY</value>
     <tag>OZONE, RATIS</tag>
