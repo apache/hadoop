@@ -81,7 +81,9 @@ class Mkdir extends FsCommand {
       }
 
       if (!item.fs.exists(itemParentPath)) {
-        throw new PathNotFoundException(itemParentPath.toString());
+        throw new PathNotFoundException(String.format(
+            "mkdir failed for path: %s. Item parent path not found: %s.",
+        itemPath.toString(), itemParentPath.toString()));
       }
     }
     if (!item.fs.mkdirs(item.path)) {
