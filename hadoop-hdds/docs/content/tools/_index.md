@@ -2,8 +2,11 @@
 title: "Tools"
 date: "2017-10-10"
 summary: Ozone supports a set of tools that are handy for developers.Here is a quick list of command line tools.
-weight: 3
+menu:
+   main:
+      weight: 8
 ---
+
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -25,25 +28,38 @@ Ozone has a set of command line tools that can be used to manage ozone.
 
 All these commands are invoked via the ```ozone``` script.
 
-The commands supported by ozone are:
+Daemon commands:
+
+   * **scm** -  Storage Container Manager service, via daemon can be started
+   or stopped.
+   * **om** -   Ozone Manager, via daemon command can be started or stopped.
+   * **datanode** - Via daemon command, the HDDS data nodes can be started or
+   stopped.
+   * **s3g** -
+
+Client commands:
+
+   * **sh** -  Primary command line interface for ozone to manage volumes/buckets/keys.
+   * **fs** - Runs a command on ozone file system (similar to `hdfs dfs`)
+   * **version** - Prints the version of Ozone and HDDS.
+
+
+Admin commands:
 
    * **classpath** - Prints the class path needed to get the hadoop jar and the
     required libraries.
    * **dtutil**    - Operations related to delegation tokens
-   * **fs** - Runs a command on ozone file system.
-   * **datanode** - Via daemon command, the HDDS data nodes can be started or
-   stopped.
    * **envvars** - Display computed Hadoop environment variables.
-   * **freon** -  Runs the ozone load generator.
-   * **genesis**  - Developer Only, Ozone micro-benchmark application.
    * **getconf** -  Reads ozone config values from configuration.
    * **jmxget**  - Get JMX exported values from NameNode or DataNode.
-   * **om** -   Ozone Manager, via daemon command can be started or stopped.
-   * **sh** -  Primary command line interface for ozone.
-   * **scm** -  Storage Container Manager service, via daemon can be
-   stated or stopped.
    * **scmcli** -  Developer only, Command Line Interface for the Storage
    Container Manager.
-   * **version** - Prints the version of Ozone and HDDS.
    * **genconf** -  Generate minimally required ozone configs and output to
    ozone-site.xml.
+
+Test tools:
+
+   * **freon** -  Runs the ozone load generator.
+   * **genesis**  - Developer Only, Ozone micro-benchmark application.
+
+ For more information see the following subpages:

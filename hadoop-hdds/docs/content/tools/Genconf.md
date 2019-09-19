@@ -1,7 +1,7 @@
 ---
 title: "Generate Configurations"
 date: 2018-12-18
-
+summary: Tool to generate default configuration
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
