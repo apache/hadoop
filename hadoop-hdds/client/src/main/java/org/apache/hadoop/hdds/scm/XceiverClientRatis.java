@@ -218,10 +218,33 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               .build();
       boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
       ByteString byteString = finalPayload.toByteString();
-      LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest,
+            sanitizeForDebug(finalPayload));
+      }
       return isReadOnlyRequest ?
           getClient().sendReadOnlyAsync(() -> byteString) :
           getClient().sendAsync(() -> byteString);
+    }
+  }
+
+  private ContainerCommandRequestProto sanitizeForDebug(
+      ContainerCommandRequestProto request) {
+    switch (request.getCmdType()) {
+    case PutSmallFile:
+      return request.toBuilder()
+          .setPutSmallFile(request.getPutSmallFile().toBuilder()
+              .clearData()
+          )
+          .build();
+    case WriteChunk:
+      return request.toBuilder()
+          .setWriteChunk(request.getWriteChunk().toBuilder()
+              .clearData()
+          )
+          .build();
+    default:
+      return request;
     }
   }
 
