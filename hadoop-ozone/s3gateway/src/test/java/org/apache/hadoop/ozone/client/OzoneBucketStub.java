@@ -252,8 +252,8 @@ public class OzoneBucketStub extends OzoneBucket {
     List<PartInfo> partInfoList = new ArrayList<>();
 
     if (partList.get(key) == null) {
-      return new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
-          0, false);
+      return new OzoneMultipartUploadPartListParts(ReplicationType.RATIS,
+          ReplicationFactor.ONE, 0, false);
     } else {
       Map<Integer, Part> partMap = partList.get(key);
       Iterator<Map.Entry<Integer, Part>> partIterator =
@@ -282,7 +282,8 @@ public class OzoneBucketStub extends OzoneBucket {
       }
 
       OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
-          new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
+          new OzoneMultipartUploadPartListParts(ReplicationType.RATIS,
+              ReplicationFactor.ONE,
               nextPartNumberMarker, truncated);
       ozoneMultipartUploadPartListParts.addAllParts(partInfoList);
 

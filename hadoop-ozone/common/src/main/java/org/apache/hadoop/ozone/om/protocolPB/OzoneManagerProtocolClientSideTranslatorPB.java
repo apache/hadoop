@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om.protocolPB;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +48,9 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
@@ -59,6 +62,8 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListMultipartUploadsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListMultipartUploadsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneFileStatusProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileResponse;
@@ -1072,7 +1077,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
   @Override
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
-      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      OmKeyArgs omKeyArgs, OmMultipartUploadCompleteList multipartUploadList)
       throws IOException {
     MultipartUploadCompleteRequest.Builder multipartUploadCompleteRequest =
         MultipartUploadCompleteRequest.newBuilder();
@@ -1145,12 +1150,49 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
 
     OmMultipartUploadListParts omMultipartUploadListParts =
-        new OmMultipartUploadListParts(response.getType(),
+        new OmMultipartUploadListParts(response.getType(), response.getFactor(),
             response.getNextPartNumberMarker(), response.getIsTruncated());
     omMultipartUploadListParts.addProtoPartList(response.getPartsListList());
 
     return omMultipartUploadListParts;
 
+  }
+
+  @Override
+  public OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName,
+      String prefix) throws IOException {
+    ListMultipartUploadsRequest request = ListMultipartUploadsRequest
+        .newBuilder()
+        .setVolume(volumeName)
+        .setBucket(bucketName)
+        .setPrefix(prefix == null ? "" : prefix)
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.ListMultipartUploads)
+        .setListMultipartUploadsRequest(request)
+        .build();
+
+    ListMultipartUploadsResponse listMultipartUploadsResponse =
+        handleError(submitRequest(omRequest)).getListMultipartUploadsResponse();
+
+    List<OmMultipartUpload> uploadList =
+        listMultipartUploadsResponse.getUploadsListList()
+            .stream()
+            .map(proto -> new OmMultipartUpload(
+                proto.getVolumeName(),
+                proto.getBucketName(),
+                proto.getKeyName(),
+                proto.getUploadId(),
+                Instant.ofEpochMilli(proto.getCreationTime()),
+                proto.getType(),
+                proto.getFactor()
+            ))
+            .collect(Collectors.toList());
+
+    OmMultipartUploadList response = new OmMultipartUploadList(uploadList);
+
+    return response;
   }
 
   public List<ServiceInfo> getServiceList() throws IOException {

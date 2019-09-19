@@ -59,6 +59,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
@@ -901,12 +902,13 @@ public class RpcClient implements ClientProtocol {
         .setAcls(getAclList())
         .build();
 
-    OmMultipartUploadList omMultipartUploadList = new OmMultipartUploadList(
+    OmMultipartUploadCompleteList
+        omMultipartUploadCompleteList = new OmMultipartUploadCompleteList(
         partsMap);
 
     OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo =
         ozoneManagerClient.completeMultipartUpload(keyArgs,
-            omMultipartUploadList);
+            omMultipartUploadCompleteList);
 
     return omMultipartUploadCompleteInfo;
 
@@ -942,8 +944,10 @@ public class RpcClient implements ClientProtocol {
             uploadID, partNumberMarker, maxParts);
 
     OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
-        new OzoneMultipartUploadPartListParts(ReplicationType.valueOf(
-            omMultipartUploadListParts.getReplicationType().toString()),
+        new OzoneMultipartUploadPartListParts(ReplicationType
+            .fromProto(omMultipartUploadListParts.getReplicationType()),
+            ReplicationFactor
+                .fromProto(omMultipartUploadListParts.getReplicationFactor()),
             omMultipartUploadListParts.getNextPartNumberMarker(),
             omMultipartUploadListParts.isTruncated());
 
@@ -955,6 +959,26 @@ public class RpcClient implements ClientProtocol {
     }
     return ozoneMultipartUploadPartListParts;
 
+  }
+
+  @Override
+  public OzoneMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws IOException {
+
+    OmMultipartUploadList omMultipartUploadList =
+        ozoneManagerClient.listMultipartUploads(volumeName, bucketName, prefix);
+    List<OzoneMultipartUpload> uploads = omMultipartUploadList.getUploads()
+        .stream()
+        .map(upload -> new OzoneMultipartUpload(upload.getVolumeName(),
+            upload.getBucketName(),
+            upload.getKeyName(),
+            upload.getUploadId(),
+            upload.getCreationTime(),
+            ReplicationType.fromProto(upload.getReplicationType()),
+            ReplicationFactor.fromProto(upload.getReplicationFactor())))
+        .collect(Collectors.toList());
+    OzoneMultipartUploadList result = new OzoneMultipartUploadList(uploads);
+    return result;
   }
 
   @Override

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,32 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.helpers;
+package org.apache.hadoop.ozone.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import com.google.common.base.Preconditions;
 
 /**
- * List of in-flight MPU uploads.
+ * List of in-flight MPU upoads.
  */
-public class OmMultipartUploadList {
+public class OzoneMultipartUploadList {
 
-  private List<OmMultipartUpload> uploads;
+  private List<OzoneMultipartUpload> uploads;
 
-  public OmMultipartUploadList(
-      List<OmMultipartUpload> uploads) {
+  public OzoneMultipartUploadList(
+      List<OzoneMultipartUpload> uploads) {
+    Preconditions.checkNotNull(uploads);
     this.uploads = uploads;
   }
 
-  public List<OmMultipartUpload> getUploads() {
+  public List<OzoneMultipartUpload> getUploads() {
     return uploads;
   }
 
   public void setUploads(
-      List<OmMultipartUpload> uploads) {
+      List<OzoneMultipartUpload> uploads) {
     this.uploads = uploads;
   }
-
 }

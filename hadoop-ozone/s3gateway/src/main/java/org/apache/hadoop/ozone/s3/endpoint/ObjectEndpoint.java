@@ -615,13 +615,9 @@ public class ObjectEndpoint extends EndpointBase {
       listPartsResponse.setPartNumberMarker(partNumberMarker);
       listPartsResponse.setTruncated(false);
 
-      if (ozoneMultipartUploadPartListParts.getReplicationType().toString()
-          .equals(ReplicationType.STAND_ALONE.toString())) {
-        listPartsResponse.setStorageClass(S3StorageType.REDUCED_REDUNDANCY
-            .toString());
-      } else {
-        listPartsResponse.setStorageClass(S3StorageType.STANDARD.toString());
-      }
+      listPartsResponse.setStorageClass(S3StorageType.fromReplicationType(
+          ozoneMultipartUploadPartListParts.getReplicationType(),
+          ozoneMultipartUploadPartListParts.getReplicationFactor()).toString());
 
       if (ozoneMultipartUploadPartListParts.isTruncated()) {
         listPartsResponse.setTruncated(
