@@ -16,11 +16,14 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -36,8 +39,6 @@ public class OmMultipartKeyInfo {
   /**
    * Construct OmMultipartKeyInfo object which holds multipart upload
    * information for a key.
-   * @param id
-   * @param list upload parts of a key.
    */
   public OmMultipartKeyInfo(String id, Map<Integer, PartKeyInfo> list) {
     this.uploadID = id;

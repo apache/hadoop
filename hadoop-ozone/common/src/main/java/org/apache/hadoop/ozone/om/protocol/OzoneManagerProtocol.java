@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
@@ -367,7 +368,7 @@ public interface OzoneManagerProtocol
    * @throws IOException
    */
   OmMultipartUploadCompleteInfo completeMultipartUpload(
-      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      OmKeyArgs omKeyArgs, OmMultipartUploadCompleteList multipartUploadList)
       throws IOException;
 
   /**
@@ -391,6 +392,11 @@ public interface OzoneManagerProtocol
       String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException;
 
+  /**
+   * List in-flight uploads.
+   */
+  OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws IOException;
   /**
    * Gets s3Secret for given kerberos user.
    * @param kerberosID

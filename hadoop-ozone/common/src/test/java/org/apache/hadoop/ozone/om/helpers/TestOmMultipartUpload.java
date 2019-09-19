@@ -15,33 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.ozone.om.helpers;
 
-import java.util.List;
-
-import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- * List of in-flight MPU uploads.
+ * Test utilities inside OmMutipartUpload.
  */
-public class OmMultipartUploadList {
+public class TestOmMultipartUpload {
 
-  private List<OmMultipartUpload> uploads;
+  @Test
+  public void from() {
+    String key1 =
+        OmMultipartUpload.getDbKey("vol1", "bucket1", "dir1/key1", "uploadId");
+    OmMultipartUpload info = OmMultipartUpload.from(key1);
 
-  public OmMultipartUploadList(
-      List<OmMultipartUpload> uploads) {
-    this.uploads = uploads;
+    Assert.assertEquals("vol1", info.getVolumeName());
+    Assert.assertEquals("bucket1", info.getBucketName());
+    Assert.assertEquals("dir1/key1", info.getKeyName());
+    Assert.assertEquals("uploadId", info.getUploadId());
   }
-
-  public List<OmMultipartUpload> getUploads() {
-    return uploads;
-  }
-
-  public void setUploads(
-      List<OmMultipartUpload> uploads) {
-    this.uploads = uploads;
-  }
-
 }

@@ -454,6 +454,11 @@ public interface ClientProtocol {
       String bucketName, String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException;
 
+  /**
+   * Return with the inflight multipart uploads.
+   */
+  OzoneMultipartUploadList listMultipartUploads(String volumename,
+      String bucketName, String prefix) throws IOException;
 
   /**
    * Get a valid Delegation Token.
