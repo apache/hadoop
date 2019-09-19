@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
+
 import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -66,7 +67,8 @@ public class TestRetriableFileCopyCommand {
     long buffLength = 1024;
     long fileLength = 2058;
     RetriableFileCopyCommand retriableFileCopyCommand =
-            new RetriableFileCopyCommand("Testing NumBytesToRead ", FileAction.OVERWRITE);
+            new RetriableFileCopyCommand("Testing NumBytesToRead ",
+                    FileAction.OVERWRITE);
     long numBytes = retriableFileCopyCommand
             .getNumBytesToRead(fileLength, pos, buffLength);
     Assert.assertEquals(1024, numBytes);

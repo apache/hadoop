@@ -172,7 +172,9 @@ public final class DistCpConstants {
   /** Filename of sorted target listing. */
   public static final String TARGET_SORTED_FILE = "target_sorted.seq";
 
-  public static final String LENGTH_MISMATCH_ERROR_MSG = "Mismatch in length of source:";
+  public static final String LENGTH_MISMATCH_ERROR_MSG =
+          "Mismatch in length of source:";
 
-  public static final String CHECKSUM_MISMATCH_ERROR_MSG = "Checksum mismatch between ";
+  public static final String CHECKSUM_MISMATCH_ERROR_MSG =
+          "Checksum mismatch between ";
 }

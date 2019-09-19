@@ -143,8 +143,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           offset, context, fileAttributes, sourceChecksum);
 
       if (!source.isSplit()) {
-        DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS, sourcePath,
-            sourceChecksum, targetFS, targetPath, skipCrc, source.getLen());
+        DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
+                sourcePath, sourceChecksum, targetFS,
+                targetPath, skipCrc, source.getLen());
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.

@@ -1235,8 +1235,8 @@ public class TestDistCpUtils {
     DFSTestUtil.createFile(fs, dstWithLen2, 2, replFactor, srcSeed);
 
     intercept(IOException.class, DistCpConstants.LENGTH_MISMATCH_ERROR_MSG,
-            () -> DistCpUtils.compareFileLengthsAndChecksums(1, fs,
-                    srcWithLen1, null, fs, dstWithLen2, false, 2));
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1, fs,
+                srcWithLen1, null, fs, dstWithLen2, false, 2));
 
     // checksums matched
     Path srcWithChecksum1 = new Path(base + "srcChecksum1");
@@ -1256,9 +1256,9 @@ public class TestDistCpUtils {
     DFSTestUtil.createFile(fs, dstWithChecksum2, 1024,
         replFactor, dstSeed);
     intercept(IOException.class, DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG,
-            () -> DistCpUtils.compareFileLengthsAndChecksums(1024, fs,
-                    srcWithChecksum1, null, fs, dstWithChecksum2,
-                    false, 1024));
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1024, fs,
+               srcWithChecksum1, null, fs, dstWithChecksum2,
+               false, 1024));
 
     // checksums mismatched but skipped
     DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
