@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.fs.s3a;
 
-import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
-
 import com.amazonaws.auth.Signer;
 import com.amazonaws.auth.SignerFactory;
 import java.io.Closeable;
 import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 
 /**
  * Class to handle custom signers.
@@ -94,6 +95,5 @@ public class SignerManager implements Closeable {
 
   @Override
   public void close() throws IOException {
-
   }
 }
