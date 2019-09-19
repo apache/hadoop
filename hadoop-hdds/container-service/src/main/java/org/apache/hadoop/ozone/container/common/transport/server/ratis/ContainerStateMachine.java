@@ -448,7 +448,8 @@ public class ContainerStateMachine extends BaseStateMachine {
                 + write.getChunkData().getChunkName() + e);
             raftFuture.completeExceptionally(e);
             throw e;
-          }}, chunkExecutor);
+          }
+        }, chunkExecutor);
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +

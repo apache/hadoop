@@ -26,7 +26,8 @@ import java.util.NoSuchElementException;
 /**
  * RocksDB store iterator.
  */
-public class RocksDBStoreIterator implements MetaStoreIterator< MetadataStore.KeyValue > {
+public class RocksDBStoreIterator
+    implements MetaStoreIterator<MetadataStore.KeyValue> {
 
   private RocksIterator rocksDBIterator;
 
@@ -43,8 +44,9 @@ public class RocksDBStoreIterator implements MetaStoreIterator< MetadataStore.Ke
   @Override
   public MetadataStore.KeyValue next() {
     if (rocksDBIterator.isValid()) {
-      MetadataStore.KeyValue value = MetadataStore.KeyValue.create(rocksDBIterator.key(), rocksDBIterator
-          .value());
+      MetadataStore.KeyValue value =
+          MetadataStore.KeyValue.create(rocksDBIterator.key(), rocksDBIterator
+              .value());
       rocksDBIterator.next();
       return value;
     }

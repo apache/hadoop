@@ -133,7 +133,8 @@ public final class HddsClientUtils {
    *
    * @throws IllegalArgumentException
    */
-  public static void verifyResourceName(String resName) throws IllegalArgumentException {
+  public static void verifyResourceName(String resName)
+      throws IllegalArgumentException {
     if (resName == null) {
       throw new IllegalArgumentException("Bucket or Volume name is null");
     }
@@ -141,7 +142,8 @@ public final class HddsClientUtils {
     if (resName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH ||
         resName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH) {
       throw new IllegalArgumentException(
-          "Bucket or Volume length is illegal, valid length is 3-63 characters");
+          "Bucket or Volume length is illegal, "
+              + "valid length is 3-63 characters");
     }
 
     if (resName.charAt(0) == '.' || resName.charAt(0) == '-') {
@@ -151,7 +153,8 @@ public final class HddsClientUtils {
 
     if (resName.charAt(resName.length() - 1) == '.' ||
         resName.charAt(resName.length() - 1) == '-') {
-      throw new IllegalArgumentException("Bucket or Volume name cannot end with a period or dash");
+      throw new IllegalArgumentException("Bucket or Volume name "
+          + "cannot end with a period or dash");
     }
 
     boolean isIPv4 = true;

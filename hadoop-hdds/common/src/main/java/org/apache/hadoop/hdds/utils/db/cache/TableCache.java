@@ -85,7 +85,8 @@ public interface TableCache<CACHEKEY extends CacheKey,
    *  full cache. It return's {@link CacheResult} with null
    *  and status as {@link CacheResult.CacheStatus#NOT_EXIST}.
    *
-   *  If cache clean up policy is {@link TableCacheImpl.CacheCleanupPolicy#MANUAL} it means
+   *  If cache clean up policy is
+   *  {@link TableCacheImpl.CacheCleanupPolicy#MANUAL} it means
    *  table cache is partial cache. It return's {@link CacheResult} with
    *  null and status as MAY_EXIST.
    *
