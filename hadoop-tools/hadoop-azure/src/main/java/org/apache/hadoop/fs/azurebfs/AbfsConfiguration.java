@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
@@ -57,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+import org.apache.hadoop.fs.azurebfs.utils.Utils;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -478,13 +480,17 @@ public class AbfsConfiguration{
           String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
           tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
         } else if (tokenProviderClass == MsiTokenProvider.class) {
+          String authEndpoint = getMsiAuthEndpoint();
           String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          tokenProvider = new MsiTokenProvider(tenantGuid, clientId);
+          tokenProvider = new MsiTokenProvider(authEndpoint, tenantGuid,
+              clientId);
         } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
+          String authEndpoint = getRefreshTokenAuthEndpoint();
           String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          tokenProvider = new RefreshTokenBasedTokenProvider(clientId, refreshToken);
+          tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
+              clientId, refreshToken);
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
@@ -634,5 +640,25 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setEnableFlush(boolean enableFlush) {
     this.enableFlush = enableFlush;
+  }
+
+  private String getMsiAuthEndpoint() throws IOException {
+    String authEndpoint = getPasswordString(
+        FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+    if (Utils.isEmpty(authEndpoint)) {
+      authEndpoint =
+          AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
+    }
+    return authEndpoint;
+  }
+
+  private String getRefreshTokenAuthEndpoint() throws IOException {
+    String authEndpoint = getPasswordString(
+        FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
+    if (Utils.isEmpty(authEndpoint)) {
+      authEndpoint =
+          AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT;
+    }
+    return authEndpoint;
   }
 }

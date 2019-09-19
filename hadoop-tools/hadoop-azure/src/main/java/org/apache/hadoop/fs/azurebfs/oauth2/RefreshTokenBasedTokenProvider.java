@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
+  private final String authEndpoint;
+
   private final String clientId;
 
   private final String refreshToken;
@@ -41,9 +43,12 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
    */
-  public RefreshTokenBasedTokenProvider(String clientId, String refreshToken) {
+  public RefreshTokenBasedTokenProvider(final String authEndpoint,
+      String clientId, String refreshToken) {
+    Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(refreshToken, "refreshToken");
+    this.authEndpoint = authEndpoint;
     this.clientId = clientId;
     this.refreshToken = refreshToken;
   }
@@ -52,6 +57,7 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing refresh-token based token");
-    return AzureADAuthenticator.getTokenUsingRefreshToken(clientId, refreshToken);
+    return AzureADAuthenticator
+        .getTokenUsingRefreshToken(authEndpoint, clientId, refreshToken);
   }
 }
