@@ -231,20 +231,20 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private ContainerCommandRequestProto sanitizeForDebug(
       ContainerCommandRequestProto request) {
     switch (request.getCmdType()) {
-      case PutSmallFile:
-        return request.toBuilder()
-            .setPutSmallFile(request.getPutSmallFile().toBuilder()
-                .clearData()
-            )
-            .build();
-      case WriteChunk:
-        return request.toBuilder()
-            .setWriteChunk(request.getWriteChunk().toBuilder()
-                .clearData()
-            )
-            .build();
-      default:
-        return request;
+    case PutSmallFile:
+      return request.toBuilder()
+          .setPutSmallFile(request.getPutSmallFile().toBuilder()
+              .clearData()
+          )
+          .build();
+    case WriteChunk:
+      return request.toBuilder()
+          .setWriteChunk(request.getWriteChunk().toBuilder()
+              .clearData()
+          )
+          .build();
+    default:
+      return request;
     }
   }
 
