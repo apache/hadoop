@@ -88,7 +88,6 @@ public class CreateBucketHandler extends Handler {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
       if (bekName != null) {
-        bb.setBucketEncryptionKey(bekName);
         System.out.printf("Bucket Encryption enabled with Key Name: %s%n",
             bekName);
       }
