@@ -825,7 +825,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setFactor(keyArgs.getFactor())
         .setAcls(keyArgs.getAclsList().stream().map(a ->
             OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
-        .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
     resp.setVolumeName(multipartInfo.getVolumeName());
