@@ -268,6 +268,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public boolean mkdirs(final Path f) throws IOException {
+    return super.mkdirs(fullPath(f));
+  }
+
+  @Override
   public FSDataInputStream open(final Path f, final int bufferSize) 
     throws IOException {
     return super.open(fullPath(f), bufferSize);
