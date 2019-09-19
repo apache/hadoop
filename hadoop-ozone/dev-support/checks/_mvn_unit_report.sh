@@ -23,8 +23,11 @@ find "." -name 'TEST*.xml' -print0 \
     | tee "$REPORT_DIR/summary.txt"
 
 #Copy heap dump and dump leftovers
-find "." -name "*.hprof" -exec cp {} "$REPORT_DIR/" \;
-find "." -name "*.dump" -exec cp {} "$REPORT_DIR/" \;
+find "." -name "*.hprof" \
+    -or -name "*.dump" \
+    -or -name "*.dumpstream" \
+    -or -name "hs_err_*.log" \
+  -exec cp {} "$REPORT_DIR/" \;
 
 ## Add the tests where the JVM is crashed
 grep -A1 'Crashed tests' "${REPORT_DIR}/output.log" \
