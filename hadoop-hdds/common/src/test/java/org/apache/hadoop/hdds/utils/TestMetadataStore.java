@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.utils;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -27,6 +28,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.hdds.utils.MetadataKeyFilters.MetadataKeyFilter;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,13 +70,14 @@ public class TestMetadataStore {
   public ExpectedException expectedException = ExpectedException.none();
   private MetadataStore store;
   private File testDir;
+
   public TestMetadataStore(String metadataImpl) {
     this.storeImpl = metadataImpl;
   }
 
   @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][]{
+    return Arrays.asList(new Object[][] {
         {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB},
         {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB}
     });
@@ -121,7 +124,8 @@ public class TestMetadataStore {
 
     //As database is empty, check whether iterator is working as expected or
     // not.
-    MetaStoreIterator< MetadataStore.KeyValue > metaStoreIterator = dbStore.iterator();
+    MetaStoreIterator<MetadataStore.KeyValue> metaStoreIterator =
+        dbStore.iterator();
     assertFalse(metaStoreIterator.hasNext());
     try {
       metaStoreIterator.next();
@@ -162,7 +166,6 @@ public class TestMetadataStore {
 
   }
 
-
   @Test
   public void testMetaStoreConfigDifferentFromType() throws IOException {
 
@@ -198,7 +201,6 @@ public class TestMetadataStore {
     GenericTestUtils.setLogLevel(MetadataStoreBuilder.LOG, Level.DEBUG);
     GenericTestUtils.LogCapturer logCapturer =
         GenericTestUtils.LogCapturer.captureLogs(MetadataStoreBuilder.LOG);
-
 
     File dbDir = GenericTestUtils.getTestDir(getClass().getSimpleName()
         + "-" + storeImpl.toLowerCase() + "-test");

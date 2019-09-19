@@ -145,7 +145,8 @@ public final class OzoneUtils {
    *
    * @throws IllegalArgumentException
    */
-  public static void verifyResourceName(String resName) throws IllegalArgumentException {
+  public static void verifyResourceName(String resName)
+      throws IllegalArgumentException {
     HddsClientUtils.verifyResourceName(resName);
   }
 
