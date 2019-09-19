@@ -182,7 +182,8 @@ public class TestOzoneContainerWithTLS {
   }
 
   public static void createSecureContainerForTesting(XceiverClientSpi client,
-      long containerID, Token<OzoneBlockTokenIdentifier> token) throws Exception {
+      long containerID, Token<OzoneBlockTokenIdentifier> token)
+      throws Exception {
     ContainerProtos.ContainerCommandRequestProto request =
         ContainerTestHelper.getCreateContainerSecureRequest(
             containerID, client.getPipeline(), token);

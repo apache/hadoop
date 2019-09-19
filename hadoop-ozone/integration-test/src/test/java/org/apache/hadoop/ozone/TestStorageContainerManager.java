@@ -118,7 +118,7 @@ public class TestStorageContainerManager {
 
   @BeforeClass
   public static void setup() throws IOException {
-     xceiverClientManager = new XceiverClientManager(new OzoneConfiguration());
+    xceiverClientManager = new XceiverClientManager(new OzoneConfiguration());
   }
 
   @AfterClass

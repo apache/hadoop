@@ -17,20 +17,11 @@
  */
 package org.apache.hadoop.hdds.server;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 
 import org.apache.hadoop.hdds.server.ProfileServlet.Event;
 import org.apache.hadoop.hdds.server.ProfileServlet.Output;
-import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.metrics2.annotation.Metric;
-import org.apache.hadoop.metrics2.annotation.Metrics;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**

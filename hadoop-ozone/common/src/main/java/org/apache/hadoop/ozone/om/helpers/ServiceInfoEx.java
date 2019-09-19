@@ -26,10 +26,10 @@ import java.util.List;
  */
 public class ServiceInfoEx {
 
-  List<ServiceInfo> infoList;
+  private List<ServiceInfo> infoList;
 
   // PEM encoded string of SCM CA certificate.
-  String caCertificate;
+  private String caCertificate;
 
   public ServiceInfoEx(List<ServiceInfo> infoList,
       String caCertificate) {
