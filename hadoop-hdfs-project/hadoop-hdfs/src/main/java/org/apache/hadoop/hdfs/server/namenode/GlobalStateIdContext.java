@@ -149,7 +149,9 @@ class GlobalStateIdContext implements AlignmentContext {
 
   @Override
   public long getLastSeenStateId() {
-    return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+    // Should not need to call getCorrectLastAppliedOrWrittenTxId()
+    // see HDFS-14822.
+    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
   }
 
   @Override
