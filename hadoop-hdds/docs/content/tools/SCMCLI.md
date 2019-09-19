@@ -1,7 +1,7 @@
 ---
 title: "SCMCLI"
 date: 2017-08-10
-
+summary: Admin tool for managing SCM
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

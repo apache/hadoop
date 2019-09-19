@@ -1,7 +1,7 @@
 ---
 title: "Audit Parser"
 date: 2018-12-17
-
+summary: Audit Parser tool can be used for querying the ozone audit logs.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
