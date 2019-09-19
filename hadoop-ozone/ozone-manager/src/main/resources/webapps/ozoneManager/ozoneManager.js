@@ -76,7 +76,8 @@
                             var failed = numericalStatistic[3];
                             groupedMetrics.nums[type] = groupedMetrics.nums[type] || {
                                     failures: [],
-                                    all: []
+                                    all: [],
+                                    total: 0,
                                 };
                             if (failed) {
                                 groupedMetrics.nums[type].failures.push({
@@ -87,6 +88,7 @@
                                 if (name == "Ops") {
                                     groupedMetrics.nums[type].ops = metrics[key]
                                 } else {
+                                    groupedMetrics.nums[type].total += metrics[key];
                                     groupedMetrics.nums[type].all.push({
                                         key: name,
                                         value: metrics[key]
