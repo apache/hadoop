@@ -45,6 +45,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link ConfiguredRMFailoverProxyProvider} and 
+ * {@link AutoRefreshRMFailoverProxyProvider}
+ */
 public class TestRMFailoverProxyProvider {
   private Configuration conf;
 
@@ -181,9 +185,9 @@ public class TestRMFailoverProxyProvider {
   }
 
   /**
-   * Test that the {@link ConfiguredRMFailoverProxyProvider}
+   * Test that the {@link AutoRefreshRMFailoverProxyProvider}
    * will loop through its set of proxies when
-   * and {@link ConfiguredRMFailoverProxyProvider#performFailover(Object)}
+   * and {@link AutoRefreshRMFailoverProxyProvider#performFailover(Object)}
    * gets called.
    */
   @Test

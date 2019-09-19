@@ -71,6 +71,7 @@ Most of the failover functionality is tunable using various configuration proper
 | `yarn.resourcemanager.ha.automatic-failover.embedded` | Use embedded leader-elector to pick the Active RM, when automatic failover is enabled. By default, it is enabled only when HA is enabled. |
 | `yarn.resourcemanager.cluster-id` | Identifies the cluster. Used by the elector to ensure an RM doesn't take over as Active for another cluster. |
 | `yarn.client.failover-proxy-provider` | The class to be used by Clients, AMs and NMs to failover to the Active RM. |
+| `yarn.client.failover-no-ha-proxy-provider` | The class to be used by Clients, AMs and NMs to failover to the Active RM, when not running in HA mode |
 | `yarn.client.failover-max-attempts` | The max number of times FailoverProxyProvider should attempt failover. |
 | `yarn.client.failover-sleep-base-ms` | The sleep base (in milliseconds) to be used for calculating the exponential delay between failovers. |
 | `yarn.client.failover-sleep-max-ms` | The maximum sleep time (in milliseconds) between failovers. |
