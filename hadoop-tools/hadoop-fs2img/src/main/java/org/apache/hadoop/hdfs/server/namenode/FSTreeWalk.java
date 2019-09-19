@@ -29,6 +29,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MOUNT_ACLS_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MOUNT_ACLS_ENABLED_DEFAULT;
 
 /**
  * Traversal of an external FileSystem.
@@ -37,12 +45,28 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Unstable
 public class FSTreeWalk extends TreeWalk {
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSTreeWalk.class);
+
   private final Path root;
   private final FileSystem fs;
+  private final boolean enableACLs;
 
   public FSTreeWalk(Path root, Configuration conf) throws IOException {
     this.root = root;
     fs = root.getFileSystem(conf);
+
+    boolean mountACLsEnabled = conf.getBoolean(DFS_NAMENODE_MOUNT_ACLS_ENABLED,
+        DFS_NAMENODE_MOUNT_ACLS_ENABLED_DEFAULT);
+    boolean localACLsEnabled = conf.getBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY,
+        DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
+    if (!localACLsEnabled && mountACLsEnabled) {
+      LOG.warn("Mount ACLs have been enabled but HDFS ACLs are not. " +
+          "Disabling ACLs on the mount {}", root);
+      this.enableACLs = false;
+    } else {
+      this.enableACLs = mountACLsEnabled;
+    }
   }
 
   @Override
@@ -55,7 +79,7 @@ public class FSTreeWalk extends TreeWalk {
     try {
       ArrayList<TreePath> ret = new ArrayList<>();
       for (FileStatus s : fs.listStatus(path.getFileStatus().getPath())) {
-        ret.add(new TreePath(s, id, i, fs));
+        ret.add(new TreePath(s, id, i, fs, getAclStatus(fs, s.getPath())));
       }
       return ret;
     } catch (FileNotFoundException e) {
@@ -71,14 +95,24 @@ public class FSTreeWalk extends TreeWalk {
     }
 
     FSTreeIterator(TreePath p) {
+      AclStatus acls = null;
+      Path remotePath = p.getFileStatus().getPath();
+      try {
+        acls = getAclStatus(fs, remotePath);
+      } catch (IOException e) {
+        LOG.warn(
+            "Got exception when trying to get remote acls for path {} : {}",
+            remotePath, e.getMessage());
+      }
       getPendingQueue().addFirst(
-          new TreePath(p.getFileStatus(), p.getParentId(), this, fs));
+          new TreePath(p.getFileStatus(), p.getParentId(), this, fs, acls));
     }
 
     FSTreeIterator(Path p) throws IOException {
       try {
         FileStatus s = fs.getFileStatus(root);
-        getPendingQueue().addFirst(new TreePath(s, -1L, this, fs));
+        AclStatus acls = getAclStatus(fs, s.getPath());
+        getPendingQueue().addFirst(new TreePath(s, -1L, this, fs, acls));
       } catch (FileNotFoundException e) {
         if (p.equals(root)) {
           throw e;
@@ -97,6 +131,17 @@ public class FSTreeWalk extends TreeWalk {
 
   }
 
+  private AclStatus getAclStatus(FileSystem fs, Path path) throws IOException {
+    if (enableACLs) {
+      try {
+        return fs.getAclStatus(path);
+      } catch (UnsupportedOperationException e) {
+        LOG.warn("Remote filesystem {} doesn't support ACLs", fs);
+      }
+    }
+    return null;
+  }
+
   @Override
   public TreeIterator iterator() {
     try {
@@ -105,5 +150,4 @@ public class FSTreeWalk extends TreeWalk {
       throw new RuntimeException(e);
     }
   }
-
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.Path;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -50,7 +52,7 @@ public abstract class TreeWalk implements Iterable<TreePath> {
 
     private final Deque<TreePath> pending;
 
-    TreeIterator() {
+    public TreeIterator() {
       this(new ArrayDeque<TreePath>());
     }
 
