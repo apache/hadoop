@@ -49,7 +49,7 @@ public class AutoRefreshRMFailoverProxyProvider<T>
     //clears out all keys that map to currentProxy
     Set<String> rmIds = new HashSet<>();
     for (Entry<String, T> entry : proxies.entrySet()) {
-      T proxy = entry.getValue()
+      T proxy = entry.getValue();
       if (proxy.equals(currentProxy)) {
         String rmId = entry.getKey();
         rmIds.add(rmId);

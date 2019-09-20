@@ -159,7 +159,7 @@ public class RMProxy<T> {
     Class<? extends RMFailoverProxyProvider<T>> defaultProviderClass;
     try {
       defaultProviderClass = (Class<? extends RMFailoverProxyProvider<T>>)
-          Class.forName(defaultProviderClassName);
+          Class.forName(YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER);
     } catch (Exception e) {
       throw new YarnRuntimeException("Invalid default failover provider class" +
           YarnConfiguration.DEFAULT_CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER, e);
@@ -188,7 +188,7 @@ public class RMProxy<T> {
 
     RMFailoverProxyProvider<T> provider = ReflectionUtils.newInstance(
         conf.getClass(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
-            YarnConfiguration.DEFAULT_CLIENT_FAILOVER_PROXY_PROVIDER, RMFailoverProxyProvider.class), conf);
+            defaultProviderClass, RMFailoverProxyProvider.class), conf);
     provider.init(conf, (RMProxy<T>) this, protocol);
     return provider;
   }
