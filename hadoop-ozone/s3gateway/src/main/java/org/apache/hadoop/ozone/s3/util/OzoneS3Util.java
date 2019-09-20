@@ -19,7 +19,16 @@
 package org.apache.hadoop.ozone.s3.util;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.security.SecurityUtil;
+
+import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Objects;
+
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 
 /**
  * Ozone util for S3 related operations.
@@ -32,5 +41,23 @@ public final class OzoneS3Util {
   public static String getVolumeName(String userName) {
     Objects.requireNonNull(userName);
     return DigestUtils.md5Hex(userName);
+  }
+
+  public static String buildServiceNameForToken(
+      @Nonnull OzoneConfiguration configuration, @Nonnull String serviceId,
+      @Nonnull Collection<String> omNodeIds) {
+    StringBuilder rpcAddress = new StringBuilder();
+    for (String nodeId : omNodeIds) {
+      String rpcAddrKey = OmUtils.addKeySuffixes(OZONE_OM_ADDRESS_KEY,
+          serviceId, nodeId);
+      String rpcAddrStr = OmUtils.getOmRpcAddress(configuration, rpcAddrKey);
+      if (rpcAddrStr == null) {
+        throw new IllegalArgumentException("Could not find rpcAddress for " +
+            OZONE_OM_ADDRESS_KEY + "." + serviceId + "." + nodeId);
+      }
+      rpcAddress.append(SecurityUtil.buildTokenService(
+          NetUtils.createSocketAddr(rpcAddrStr)));
+    }
+    return rpcAddress.toString();
   }
 }
