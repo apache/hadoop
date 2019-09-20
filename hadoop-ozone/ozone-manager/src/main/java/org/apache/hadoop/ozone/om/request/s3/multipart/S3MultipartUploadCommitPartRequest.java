@@ -188,13 +188,13 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       omResponse.setCommitMultiPartUploadResponse(
           MultipartCommitUploadPartResponse.newBuilder().setPartName(partName));
       omClientResponse = new S3MultipartUploadCommitPartResponse(multipartKey,
-        openKey, keyArgs.getModificationTime(), omKeyInfo, multipartKeyInfo,
+        openKey, omKeyInfo, multipartKeyInfo,
           oldPartKeyInfo, omResponse.build());
 
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new S3MultipartUploadCommitPartResponse(multipartKey,
-          openKey, keyArgs.getModificationTime(), omKeyInfo, multipartKeyInfo,
+          openKey, omKeyInfo, multipartKeyInfo,
           oldPartKeyInfo, createErrorOMResponse(omResponse, exception));
     } finally {
       if (omClientResponse != null) {

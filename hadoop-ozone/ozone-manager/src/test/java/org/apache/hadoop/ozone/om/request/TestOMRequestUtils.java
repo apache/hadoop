@@ -28,13 +28,13 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -370,10 +370,16 @@ public final class TestOMRequestUtils {
 
     // Delete key from KeyTable and put in DeletedKeyTable
     omMetadataManager.getKeyTable().delete(ozoneKey);
-    String deletedKeyName = OmUtils.getDeletedKeyName(ozoneKey, Time.now());
-    omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
+    RepeatedOmKeyInfo repeatedOmKeyInfo =
+        omMetadataManager.getDeletedTable().get(ozoneKey);
+    if(repeatedOmKeyInfo == null) {
+      repeatedOmKeyInfo = new RepeatedOmKeyInfo(omKeyInfo);
+    } else {
+      repeatedOmKeyInfo.addOmKeyInfo(omKeyInfo);
+    }
+    omMetadataManager.getDeletedTable().put(ozoneKey, repeatedOmKeyInfo);
 
-    return deletedKeyName;
+    return ozoneKey;
   }
 
   /**
