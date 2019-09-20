@@ -97,14 +97,15 @@ public class FSTreeWalk extends TreeWalk {
 
     FSTreeIterator(TreePath p) {
       AclStatus acls = null;
-      Path remotePath = p.getFileStatus().getPath();
+      FileStatus fileStatus = p.getFileStatus();
+      Path remotePath = fileStatus.getPath();
       try {
         acls = getAclStatus(fs, remotePath);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-      getPendingQueue().addFirst(
-          new TreePath(p.getFileStatus(), p.getParentId(), this, fs, acls));
+      TreePath treePath = new TreePath(fileStatus, p.getParentId(), this, fs, acls);
+      getPendingQueue().addFirst(treePath);
     }
 
     FSTreeIterator(Path p) throws IOException {
