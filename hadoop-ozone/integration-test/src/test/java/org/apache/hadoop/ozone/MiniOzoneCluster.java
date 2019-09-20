@@ -240,7 +240,7 @@ public interface MiniOzoneCluster {
     protected static final int ACTIVE_OMS_NOT_SET = -1;
 
     protected final OzoneConfiguration conf;
-    protected final String path;
+    protected String path;
 
     protected String clusterId;
     protected String omServiceId;
@@ -269,9 +269,7 @@ public interface MiniOzoneCluster {
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
-      this.clusterId = UUID.randomUUID().toString();
-      this.path = GenericTestUtils.getTempPath(
-          MiniOzoneClusterImpl.class.getSimpleName() + "-" + clusterId);
+      setClusterId(UUID.randomUUID().toString());
     }
 
     /**
@@ -283,6 +281,8 @@ public interface MiniOzoneCluster {
      */
     public Builder setClusterId(String id) {
       clusterId = id;
+      path = GenericTestUtils.getTempPath(
+          MiniOzoneClusterImpl.class.getSimpleName() + "-" + clusterId);
       return this;
     }
 

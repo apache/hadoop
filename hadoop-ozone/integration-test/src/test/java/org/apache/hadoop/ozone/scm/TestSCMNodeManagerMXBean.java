@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -64,6 +65,13 @@ public class TestSCMNodeManagerMXBean {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     mbs = ManagementFactory.getPlatformMBeanServer();
+  }
+
+  @AfterClass
+  public static void cleanup() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   @Test
