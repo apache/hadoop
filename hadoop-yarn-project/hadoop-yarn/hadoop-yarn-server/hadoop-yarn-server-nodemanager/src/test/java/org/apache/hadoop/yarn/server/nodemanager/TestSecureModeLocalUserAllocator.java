@@ -25,7 +25,6 @@ public class TestSecureModeLocalUserAllocator {
     // non existing mapping won't hurt
     allocator.deallocate("user0", "app0");
     allocator.decrementFileOpCount("user0");
-    allocator.incrementFileOpCount("user0");
     allocator.decrementLogHandlingCount("user0");
     allocator.incrementLogHandlingCount("user0");
     Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
@@ -52,6 +51,8 @@ public class TestSecureModeLocalUserAllocator {
     allocator.allocate("user0", "app0");
     allocator.allocate("user1", "app1");
     allocator.allocate("user2", "app2");
+    // no available local pool users to allocate, but it should not fail
+    allocator.allocate("user3", "app3");
 
     allocator.incrementFileOpCount("user0");
     allocator.incrementLogHandlingCount("user1");
@@ -59,6 +60,8 @@ public class TestSecureModeLocalUserAllocator {
     Assert.assertEquals("smlu0", allocator.getRunAsLocalUser("user0"));
     Assert.assertEquals("smlu1", allocator.getRunAsLocalUser("user1"));
     Assert.assertEquals("smlu2", allocator.getRunAsLocalUser("user2"));
+    Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
+        allocator.getRunAsLocalUser("user3"));
 
     allocator.deallocate("user0", "app0");
     allocator.deallocate("user1", "app1");
@@ -75,5 +78,24 @@ public class TestSecureModeLocalUserAllocator {
         allocator.getRunAsLocalUser("user0"));
     Assert.assertEquals(SecureModeLocalUserAllocator.NONEXISTUSER,
         allocator.getRunAsLocalUser("user1"));
+  }
+
+  @Test
+  public void testIncrementOpCount() {
+    SecureModeLocalUserAllocator allocator = new SecureModeLocalUserAllocator(
+        conf);
+    // make sure calling incrementOpCount() with local pool user allocates
+    // the same local pool user.
+    allocator.incrementFileOpCount("smlu0");
+    Assert.assertEquals("smlu0", allocator.getRunAsLocalUser("smlu0"));
+    allocator.incrementFileOpCount("smlu0");
+    allocator.decrementFileOpCount("smlu0");
+    allocator.incrementFileOpCount("smlu2");
+    Assert.assertEquals("smlu2", allocator.getRunAsLocalUser("smlu2"));
+    Assert.assertEquals("smlu0", allocator.getRunAsLocalUser("smlu0"));
+
+    // make sure new app allocation won't use these allocated local pool user
+    allocator.allocate("user0", "app0");
+    Assert.assertEquals("smlu1", allocator.getRunAsLocalUser("user0"));
   }
 }

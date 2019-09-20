@@ -48,6 +48,7 @@ class LocalUserInfo {
  * a) all applications of the appUser is finished;
  * b) all FileDeletionTask for that appUser is executed;
  * c) all log aggregation/handling requests for appUser's applications are done
+ *
  * For now allocation is only maintained in memory so it does not support
  * node manager recovery mode.
  */
@@ -72,8 +73,13 @@ public class SecureModeLocalUserAllocator {
     localUserPrefix = conf.get(
         YarnConfiguration.NM_SECURE_MODE_POOL_USER_PREFIX,
         YarnConfiguration.DEFAULT_NM_SECURE_MODE_POOL_USER_PREFIX);
-    localUserCount = conf.getInt(YarnConfiguration.NM_VCORES,
-        YarnConfiguration.DEFAULT_NM_VCORES);
+    localUserCount = conf.getInt(
+        YarnConfiguration.NM_SECURE_MODE_POOL_USER_COUNT,
+        YarnConfiguration.DEFAULT_NM_SECURE_MODE_POOL_USER_COUNT);
+    if (localUserCount == -1) {
+      localUserCount = conf.getInt(YarnConfiguration.NM_VCORES,
+          YarnConfiguration.DEFAULT_NM_VCORES);
+    }
     allocated = new ArrayList<Boolean>(localUserCount);
     appUserToLocalUser = new HashMap<String, LocalUserInfo>(localUserCount);
     for (int i=0; i<localUserCount; ++i) {
@@ -109,7 +115,9 @@ public class SecureModeLocalUserAllocator {
    */
   synchronized public void allocate(String appUser, String appId) {
     LOG.info("Allocating local user for " + appUser + " for " + appId);
-    checkAndAllocateAppUser(appUser);
+    if (!checkAndAllocateAppUser(appUser)) {
+      return;
+    }
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
     localUserInfo.appCount++;
     LOG.info("Incremented appCount for appUser " + appUser +
@@ -139,13 +147,17 @@ public class SecureModeLocalUserAllocator {
 
   /**
    * Increment reference count for pending file operations
+   *
+   * Note that it is allowed to call incrementFileOpCount() before allocate().
+   * For example, during node manager restarts if there are old folders created
+   * by these local pool users, we should allocate the same named local user to
+   * the requested appUser, so that the local user is not allocated to new
+   * containers to use until the old folder deletions are done.
+   * The old app folders clean up code is in:
+   * ResourceLocalizationService.cleanUpFilesPerUserDir()
    */
   synchronized public void incrementFileOpCount(String appUser) {
-    if (!appUserToLocalUser.containsKey(appUser)) {
-      String msg =
-          "incrementPendingFileOp: No local user allocation for appUser " +
-          appUser;
-      LOG.warn(msg);
+    if (!checkAndAllocateAppUser(appUser)) {
       return;
     }
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
@@ -162,7 +174,7 @@ public class SecureModeLocalUserAllocator {
       String errMsg =
           "decrementFileOpCount: No local user allocation for appUser " +
           appUser;
-      LOG.warn(errMsg);
+      LOG.error(errMsg);
       return;
     }
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
@@ -181,7 +193,7 @@ public class SecureModeLocalUserAllocator {
       String errMsg =
           "incrementLogHandlingCount: No local user allocation for appUser " +
           appUser;
-      LOG.warn(errMsg);
+      LOG.error(errMsg);
       return;
     }
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
@@ -198,7 +210,7 @@ public class SecureModeLocalUserAllocator {
       String errMsg =
           "decrementLogHandlingCount: No local user allocation for appUser " +
           appUser;
-      LOG.warn(errMsg);
+      LOG.error(errMsg);
       return;
     }
     LocalUserInfo localUserInfo = appUserToLocalUser.get(appUser);
@@ -209,32 +221,64 @@ public class SecureModeLocalUserAllocator {
     checkAndDeallocateAppUser(appUser, localUserInfo);
   }
 
-  private void checkAndAllocateAppUser(String appUser) {
+  /**
+   * Check if a given user name is local pool user
+   * if yes return index, otherwise return -1
+   */
+  private int localUserIndex(String user) {
+    int result = -1;
+    if (!user.startsWith(localUserPrefix)) {
+      return result;
+    }
+    try {
+      result = Integer.parseInt(user.substring(localUserPrefix.length()));
+    }
+    catch(NumberFormatException e) {
+      result = -1;
+    }
+    if (result >= localUserCount) {
+      result = -1;
+    }
+    return result;
+  }
+
+  /**
+   * check if the appUser mapping exists, if not then allocate a local user.
+   * return true if appUser mapping exists or created,
+   * return false if not able to allocate local user.
+   */
+  private boolean checkAndAllocateAppUser(String appUser) {
     if (appUserToLocalUser.containsKey(appUser)) {
       // If appUser exists, don't need to allocate again
-      return;
+      return true;
     }
 
     LOG.info("Allocating local user for appUser " + appUser);
-    // find the first empty slot in the pool of local users
-    int index = -1;
-    for (int i=0; i<localUserCount; ++i) {
-      if (!allocated.get(i)) {
-        index = i;
-        allocated.set(i, true);
-        break;
+    // check if the appUser is one of the local user, if yes just use it
+    int index = localUserIndex(appUser);
+    if (index == -1) {
+      // otherwise find the first empty slot in the pool of local users
+      for (int i=0; i<localUserCount; ++i) {
+        if (!allocated.get(i)) {
+          index = i;
+          break;
+        }
       }
     }
     if (index == -1) {
       String errMsg = "Cannot allocate local users from a pool of " +
           localUserCount; 
       LOG.error(errMsg);
-      return;
+      return false;
+    }
+    else {
+      allocated.set(index, true);
     }
     appUserToLocalUser.put(appUser,
         new LocalUserInfo(localUserPrefix + index, index));
     LOG.info("Allocated local user index " + index + " for appUser "
         + appUser);
+    return true;
   }
 
   private void checkAndDeallocateAppUser(String appUser, LocalUserInfo localUserInfo) {

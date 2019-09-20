@@ -1625,7 +1625,7 @@ public class ResourceLocalizationService extends CompositeService
         String owner = status.getOwner();
         List<Path> pathList = new ArrayList<>();
         pathList.add(status.getPath());
-        FileDeletionTask deletionTask = new FileDeletionTask(del, null, null,
+        FileDeletionTask deletionTask = new FileDeletionTask(del, owner, null,
             pathList);
         deletionTask.addDeletionTaskDependency(dependentDeletionTask);
         deletionTasks.add(deletionTask);

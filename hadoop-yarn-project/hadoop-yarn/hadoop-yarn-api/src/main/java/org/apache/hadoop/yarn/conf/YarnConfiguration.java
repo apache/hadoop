@@ -2224,10 +2224,19 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_SECURE_MODE_USE_POOL_USER = false;
 
   /**
+   * The number of pool local users. If set to -1, we'll take the value from:
+   * NM_PREFIX + "resource.cpu-vcores"
+   */
+  public static final String NM_SECURE_MODE_POOL_USER_COUNT = NM_PREFIX +
+      "linux-container-executor.secure-mode.pool-user-count";
+
+  public static final int DEFAULT_NM_SECURE_MODE_POOL_USER_COUNT = -1;
+
+  /**
    * The prefix of the local pool users can be used by Yarn Secure Container.
    * The number of local pool users to use is specified by:
-   * NM_PREFIX + "resource.cpu-vcores"
-   * For example, if prefix is "user" and cpu-vcores configured to 20,
+   *
+   * For example, if prefix is "user" and pool-user-count configured to 20,
    * then local user names are:
    *   user0
    *   user1
