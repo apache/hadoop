@@ -548,7 +548,9 @@ public class SCMClientProtocolServer implements
    */
   private Set<DatanodeDetails> queryNodeState(HddsProtos.NodeState nodeState) {
     Set<DatanodeDetails> returnSet = new TreeSet<>();
-    List<DatanodeDetails> tmp = scm.getScmNodeManager().getNodes(nodeState);
+    // TODO - decomm states needed
+    List<DatanodeDetails> tmp = scm.getScmNodeManager()
+        .getNodes(null, nodeState);
     if ((tmp != null) && (tmp.size() > 0)) {
       returnSet.addAll(tmp);
     }

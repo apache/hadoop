@@ -923,7 +923,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @return int -- count
    */
   public int getNodeCount(NodeState nodestate) {
-    return scmNodeManager.getNodeCount(nodestate);
+    // TODO - decomm - this probably needs to accept opState and health
+    return scmNodeManager.getNodeCount(null, nodestate);
   }
 
   /**

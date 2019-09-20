@@ -22,12 +22,12 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.junit.Assert;
 import org.junit.Test;
 import static org.mockito.Matchers.anyObject;
@@ -50,7 +50,7 @@ public class TestSCMContainerPlacementRandom {
     }
 
     NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
-    when(mockNodeManager.getNodes(NodeState.HEALTHY))
+    when(mockNodeManager.getNodes(NodeStatus.inServiceHealthy()))
         .thenReturn(new ArrayList<>(datanodes));
 
     when(mockNodeManager.getNodeStat(anyObject()))

@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -63,18 +64,38 @@ public interface NodeManager extends StorageContainerNodeProtocol,
     EventHandler<CommandForDatanode>, NodeManagerMXBean, Closeable {
 
   /**
-   * Gets all Live Datanodes that is currently communicating with SCM.
-   * @param nodeState - State of the node
+   * Gets all Live Datanodes that are currently communicating with SCM.
+   * @param nodeStatus - Status of the node to return
    * @return List of Datanodes that are Heartbeating SCM.
    */
-  List<DatanodeDetails> getNodes(NodeState nodeState);
+  List<DatanodeDetails> getNodes(NodeStatus nodeStatus);
 
   /**
-   * Returns the Number of Datanodes that are communicating with SCM.
-   * @param nodeState - State of the node
+   * Gets all Live Datanodes that is currently communicating with SCM.
+   * @param opState - The operational state of the node
+   * @param health - The health of the node
+   * @return List of Datanodes that are Heartbeating SCM.
+   */
+  List<DatanodeDetails> getNodes(
+      NodeOperationalState opState, NodeState health);
+
+  /**
+   * Returns the Number of Datanodes that are communicating with SCM with the
+   * given status.
+   * @param nodeStatus - State of the node
    * @return int -- count
    */
-  int getNodeCount(NodeState nodeState);
+  int getNodeCount(NodeStatus nodeStatus);
+
+  /**
+   * Returns the Number of Datanodes that are communicating with SCM in the
+   * given state.
+   * @param opState - The operational state of the node
+   * @param health - The health of the node
+   * @return int -- count
+   */
+  int getNodeCount(
+      NodeOperationalState opState, NodeState health);
 
   /**
    * Get all datanodes known to SCM.

@@ -49,7 +49,6 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
@@ -66,6 +65,7 @@ import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -366,8 +366,7 @@ public class TestStorageContainerManager {
         NodeManager nodeManager = cluster.getStorageContainerManager()
             .getScmNodeManager();
         List<SCMCommand> commands = nodeManager.processHeartbeat(
-            nodeManager.getNodes(NodeState.HEALTHY).get(0));
-
+            nodeManager.getNodes(NodeStatus.inServiceHealthy()).get(0));
         if (commands != null) {
           for (SCMCommand cmd : commands) {
             if (cmd.getType() == SCMCommandProto.Type.deleteBlocksCommand) {

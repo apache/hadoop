@@ -149,10 +149,6 @@ public class TestSCMNodeMetrics {
         getMetrics(SCMNodeMetrics.class.getSimpleName()));
     assertGauge("DeadNodes", 0,
         getMetrics(SCMNodeMetrics.class.getSimpleName()));
-    assertGauge("DecommissioningNodes", 0,
-        getMetrics(SCMNodeMetrics.class.getSimpleName()));
-    assertGauge("DecommissionedNodes", 0,
-        getMetrics(SCMNodeMetrics.class.getSimpleName()));
     assertGauge("DiskCapacity", 100L,
         getMetrics(SCMNodeMetrics.class.getSimpleName()));
     assertGauge("DiskUsed", 10L,

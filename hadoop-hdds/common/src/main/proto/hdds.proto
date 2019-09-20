@@ -100,8 +100,14 @@ enum NodeState {
     HEALTHY = 1;
     STALE = 2;
     DEAD = 3;
-    DECOMMISSIONING = 4;
-    DECOMMISSIONED = 5;
+}
+
+enum NodeOperationalState {
+    IN_SERVICE = 1;
+    DECOMMISSIONING = 2;
+    DECOMMISSIONED = 3;
+    ENTERING_MAINTENANCE = 4;
+    IN_MAINTENANCE = 5;
 }
 
 enum QueryScope {

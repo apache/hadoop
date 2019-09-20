@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.net.Node;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -147,14 +148,28 @@ public class MockNodeManager implements NodeManager {
     this.safemode = safemode;
   }
 
+
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
    *
-   * @param nodestate - State of the node
+   * @param status The status of the node
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeDetails> getNodes(HddsProtos.NodeState nodestate) {
+  public List<DatanodeDetails> getNodes(NodeStatus status) {
+    return getNodes(status.getOperationalState(), status.getHealth());
+  }
+
+  /**
+   * Gets all Live Datanodes that is currently communicating with SCM.
+   *
+   * @param opState - The operational State of the node
+   * @param nodestate - The health of the node
+   * @return List of Datanodes that are Heartbeating SCM.
+   */
+  @Override
+  public List<DatanodeDetails> getNodes(
+      HddsProtos.NodeOperationalState opState, HddsProtos.NodeState nodestate) {
     if (nodestate == HEALTHY) {
       return healthyNodes;
     }
@@ -173,12 +188,24 @@ public class MockNodeManager implements NodeManager {
   /**
    * Returns the Number of Datanodes that are communicating with SCM.
    *
+   * @param status - Status of the node
+   * @return int -- count
+   */
+  @Override
+  public int getNodeCount(NodeStatus status) {
+    return getNodeCount(status.getOperationalState(), status.getHealth());
+  }
+
+  /**
+   * Returns the Number of Datanodes that are communicating with SCM.
+   *
    * @param nodestate - State of the node
    * @return int -- count
    */
   @Override
-  public int getNodeCount(HddsProtos.NodeState nodestate) {
-    List<DatanodeDetails> nodes = getNodes(nodestate);
+  public int getNodeCount(
+      HddsProtos.NodeOperationalState opState, HddsProtos.NodeState nodestate) {
+    List<DatanodeDetails> nodes = getNodes(opState, nodestate);
     if (nodes != null) {
       return nodes.size();
     }
@@ -419,7 +446,7 @@ public class MockNodeManager implements NodeManager {
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
     for (HddsProtos.NodeState state : HddsProtos.NodeState.values()) {
-      nodeCountMap.put(state.toString(), getNodeCount(state));
+      nodeCountMap.put(state.toString(), getNodeCount(null, state));
     }
     return nodeCountMap;
   }

@@ -150,7 +150,7 @@ public class TestContainerPlacement {
 
       //TODO: wait for heartbeat to be processed
       Thread.sleep(4 * 1000);
-      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(nodeCount, nodeManager.getNodeCount(null, HEALTHY));
       assertEquals(capacity * nodeCount,
           (long) nodeManager.getStats().getCapacity().get());
       assertEquals(used * nodeCount,

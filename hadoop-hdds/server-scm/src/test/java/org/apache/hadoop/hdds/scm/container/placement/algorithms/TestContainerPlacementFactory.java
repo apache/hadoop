@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.net.NodeSchema;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +88,7 @@ public class TestContainerPlacementFactory {
 
     // create mock node manager
     nodeManager = Mockito.mock(NodeManager.class);
-    when(nodeManager.getNodes(NodeState.HEALTHY))
+    when(nodeManager.getNodes(NodeStatus.inServiceHealthy()))
         .thenReturn(new ArrayList<>(datanodes));
     when(nodeManager.getNodeStat(anyObject()))
         .thenReturn(new SCMNodeMetric(storageCapacity, 0L, 100L));

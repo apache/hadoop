@@ -22,12 +22,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
@@ -141,7 +141,7 @@ public class RatisPipelineProvider implements PipelineProvider {
 
     // Get list of healthy nodes
     List<DatanodeDetails> dns =
-        nodeManager.getNodes(NodeState.HEALTHY)
+        nodeManager.getNodes(NodeStatus.inServiceHealthy())
             .parallelStream()
             .filter(dn -> !dnsUsed.contains(dn))
             .limit(factor.getNumber())
