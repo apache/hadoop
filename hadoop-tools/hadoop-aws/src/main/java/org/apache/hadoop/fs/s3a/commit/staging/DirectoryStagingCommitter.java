@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
-import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -107,7 +105,7 @@ public class DirectoryStagingCommitter extends StagingCommitter {
    */
   @Override
   protected void preCommitJob(JobContext context,
-      List<SinglePendingCommit> pending) throws IOException {
+      ActiveCommit pending) throws IOException {
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     Configuration fsConf = fs.getConf();

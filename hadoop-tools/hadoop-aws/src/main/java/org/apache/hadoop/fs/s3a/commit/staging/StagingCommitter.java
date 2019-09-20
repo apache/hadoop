@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
@@ -466,7 +465,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @throws IOException Any IO failure
    */
   @Override
-  protected List<SinglePendingCommit> listPendingUploadsToCommit(
+  protected ActiveCommit listPendingUploadsToCommit(
       JobContext context)
       throws IOException {
     return listPendingUploads(context, false);
@@ -480,7 +479,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * then this may not match the actual set of pending operations
    * @throws IOException shouldn't be raised, but retained for the compiler
    */
-  protected List<SinglePendingCommit> listPendingUploadsToAbort(
+  protected ActiveCommit listPendingUploadsToAbort(
       JobContext context) throws IOException {
     return listPendingUploads(context, true);
   }
@@ -493,13 +492,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * then this may not match the actual set of pending operations
    * @throws IOException Any IO failure which wasn't swallowed.
    */
-  protected List<SinglePendingCommit> listPendingUploads(
+  protected ActiveCommit listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
     try {
       Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
           context.getConfiguration());
-      return loadPendingsetFiles(context, suppressExceptions, attemptFS,
+      return ActiveCommit.fromStatusList(attemptFS,
           listAndFilter(attemptFS,
               wrappedJobAttemptPath, false,
               HIDDEN_FILE_FILTER));
@@ -512,7 +511,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       maybeIgnore(suppressExceptions, "Listing pending uploads", e);
     }
     // reached iff an IOE was caught and swallowed
-    return new ArrayList<>(0);
+    return ActiveCommit.empty();
   }
 
   @Override
@@ -551,6 +550,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     }
   }
 
+/*
   @Override
   protected void abortJobInternal(JobContext context,
       boolean suppressExceptions) throws IOException {
@@ -570,6 +570,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       super.abortJobInternal(context, failed || suppressExceptions);
     }
   }
+*/
 
   /**
    * Delete the working paths of a job.

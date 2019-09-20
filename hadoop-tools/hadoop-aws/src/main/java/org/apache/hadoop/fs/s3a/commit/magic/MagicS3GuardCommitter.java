@@ -109,11 +109,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return a list of pending commits.
    * @throws IOException Any IO failure
    */
-  protected List<SinglePendingCommit> listPendingUploadsToCommit(
+  protected ActiveCommit listPendingUploadsToCommit(
       JobContext context)
       throws IOException {
     FileSystem fs = getDestFS();
-    return loadPendingsetFiles(context, false, fs,
+    return ActiveCommit.fromStatusList(fs,
         listAndFilter(fs, getJobAttemptPath(context), false,
             CommitOperations.PENDINGSET_FILTER));
   }

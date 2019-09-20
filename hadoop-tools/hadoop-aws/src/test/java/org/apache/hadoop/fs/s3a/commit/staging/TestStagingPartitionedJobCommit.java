@@ -70,7 +70,7 @@ public class TestStagingPartitionedJobCommit
     }
 
     @Override
-    protected List<SinglePendingCommit> listPendingUploadsToCommit(
+    protected ActiveCommit listPendingUploadsToCommit(
         JobContext context) throws IOException {
       List<SinglePendingCommit> pending = Lists.newArrayList();
 
@@ -89,7 +89,7 @@ public class TestStagingPartitionedJobCommit
           pending.add(commit);
         }
       }
-      return pending;
+      return ActiveCommit.empty();
     }
 
     @Override

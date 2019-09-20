@@ -52,6 +52,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  *   <li>REPLACE: delete the destination partition in the job commit
  *   (i.e. after and only if all tasks have succeeded.</li>
  * </ul>
+ * To determine the paths, the precommit process actually has to read
+ * in all source files, independently of the final commit phase.
+ * This is inefficient, though some parallelization here helps.
  */
 public class PartitionedStagingCommitter extends StagingCommitter {
 
@@ -120,7 +123,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
    */
   @Override
   protected void preCommitJob(JobContext context,
-      List<SinglePendingCommit> pending) throws IOException {
+      ActiveCommit pending) throws IOException {
 
     FileSystem fs = getDestFS();
 
@@ -133,8 +136,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     case APPEND:
       // no check is needed because the output may exist for appending
       break;
-    case REPLACE:
-      Set<Path> partitions = pending.stream()
+    case REPLACE:  // TODO: will have to list all files and deal with resolution
+/*      Set<Path> partitions = pending.stream()
           .map(SinglePendingCommit::destinationPath)
           .map(Path::getParent)
           .collect(Collectors.toCollection(Sets::newLinkedHashSet));
@@ -142,7 +145,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
         LOG.debug("{}: removing partition path to be replaced: " +
             getRole(), partitionPath);
         fs.delete(partitionPath, true);
-      }
+      }*/
       break;
     default:
       throw new PathCommitException("",
