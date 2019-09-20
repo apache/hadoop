@@ -293,7 +293,7 @@ public class PBHelperClient {
   }
 
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
-    return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+    return HdfsProtos.ChecksumTypeProto.forNumber(type.id);
   }
 
   public static HdfsProtos.BlockChecksumTypeProto convert(
@@ -1115,7 +1115,7 @@ public class PBHelperClient {
   }
 
   public static FsActionProto convert(FsAction v) {
-    return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
+    return FsActionProto.forNumber(v != null ? v.ordinal() : 0);
   }
 
   public static XAttrProto convertXAttrProto(XAttr a) {
@@ -1157,7 +1157,7 @@ public class PBHelperClient {
   }
 
   static XAttrNamespaceProto convert(XAttr.NameSpace v) {
-    return XAttrNamespaceProto.valueOf(v.ordinal());
+    return XAttrNamespaceProto.forNumber(v.ordinal());
   }
 
   static XAttr.NameSpace convert(XAttrNamespaceProto v) {
@@ -1249,7 +1249,7 @@ public class PBHelperClient {
   }
 
   static AclEntryScopeProto convert(AclEntryScope v) {
-    return AclEntryScopeProto.valueOf(v.ordinal());
+    return AclEntryScopeProto.forNumber(v.ordinal());
   }
 
   private static AclEntryScope convert(AclEntryScopeProto v) {
@@ -1257,7 +1257,7 @@ public class PBHelperClient {
   }
 
   static AclEntryTypeProto convert(AclEntryType e) {
-    return AclEntryTypeProto.valueOf(e.ordinal());
+    return AclEntryTypeProto.forNumber(e.ordinal());
   }
 
   private static AclEntryType convert(AclEntryTypeProto v) {
@@ -3220,7 +3220,7 @@ public class PBHelperClient {
 
   public static HdfsProtos.ErasureCodingPolicyState convertECState(
       ErasureCodingPolicyState state) {
-    return HdfsProtos.ErasureCodingPolicyState.valueOf(state.getValue());
+    return HdfsProtos.ErasureCodingPolicyState.forNumber(state.getValue());
   }
 
   /**
@@ -3356,7 +3356,7 @@ public class PBHelperClient {
       EnumSet<AddBlockFlag> flags) {
     List<AddBlockFlagProto> ret = new ArrayList<>();
     for (AddBlockFlag flag : flags) {
-      AddBlockFlagProto abfp = AddBlockFlagProto.valueOf(flag.getMode());
+      AddBlockFlagProto abfp = AddBlockFlagProto.forNumber(flag.getMode());
       if (abfp != null) {
         ret.add(abfp);
       }
@@ -3409,7 +3409,8 @@ public class PBHelperClient {
       EnumSet<OpenFilesType> types) {
     List<OpenFilesTypeProto> typeProtos = new ArrayList<>();
     for (OpenFilesType type : types) {
-      OpenFilesTypeProto typeProto = OpenFilesTypeProto.valueOf(type.getMode());
+      OpenFilesTypeProto typeProto = OpenFilesTypeProto
+          .forNumber(type.getMode());
       if (typeProto != null) {
         typeProtos.add(typeProto);
       }
