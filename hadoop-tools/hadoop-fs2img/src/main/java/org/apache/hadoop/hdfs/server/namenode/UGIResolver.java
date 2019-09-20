@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,7 +28,6 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 
 /**
  * Pluggable class for mapping ownership and permissions from an external
@@ -139,88 +136,10 @@ public abstract class UGIResolver {
   }
 
   private long resolve(AclStatus aclStatus) {
-    return buildPermissionStatus(
-        user(aclStatus), group(aclStatus), permission(aclStatus).toShort());
-  }
-
-  /**
-   * Get the locally mapped user for external {@link AclStatus}.
-   *
-   * @param aclStatus AclStatus on external store.
-   * @return locally mapped user name.
-   */
-  public String user(AclStatus aclStatus) {
-    return aclStatus.getOwner();
-  }
-
-  /**
-   * Get the locally mapped group for the external {@link AclStatus}.
-   *
-   * @param aclStatus AclStatus on the external store.
-   * @return locally mapped group name.
-   */
-  public String group(AclStatus aclStatus) {
-    return aclStatus.getGroup();
-  }
-
-  /**
-   * Get the locally mapped {@link FsPermission} for the external
-   * {@link AclStatus}.
-   *
-   * @param aclStatus AclStatus on the external store.
-   * @return local {@link FsPermission} the external AclStatus maps to.
-   */
-  public FsPermission permission(AclStatus aclStatus) {
-    return aclStatus.getPermission();
-  }
-
-  /**
-   * Returns list of Acl entries to apply to local paths based on remote acls.
-   *
-   * @param aclStatus remote ACL status.
-   * @return local HDFS ACL entries.
-   */
-  public List<AclEntry> aclEntries(AclStatus aclStatus) {
-    List<AclEntry> newAclEntries = new ArrayList<>();
-    for (AclEntry entry : aclStatus.getEntries()) {
-      newAclEntries.add(getLocalAclEntry(entry));
-    }
-    return newAclEntries;
-  }
-
-  /**
-   * Map the {@link AclEntry} on the remote store to one on the local HDFS.
-   * @param remoteEntry the {@link AclEntry} on the remote store.
-   * @return the {@link AclEntry} on the local HDFS.
-   */
-  protected AclEntry getLocalAclEntry(AclEntry remoteEntry) {
-    return new AclEntry.Builder()
-        .setType(remoteEntry.getType())
-        .setName(remoteEntry.getName())
-        .setPermission(remoteEntry.getPermission())
-        .setScope(remoteEntry.getScope())
-        .build();
-  }
-
-  /**
-   * Get the local {@link PermissionStatus} the external {@link FileStatus} or
-   * {@link AclStatus} map to. {@code remoteAcl} is used when it
-   * is not null, otherwise {@code remoteStatus} is used.
-   *
-   * @param remoteStatus FileStatus on remote store.
-   * @param remoteAcl AclStatus on external store.
-   * @return the local {@link PermissionStatus}.
-   */
-  public PermissionStatus getPermissions(FileStatus remoteStatus,
-      AclStatus remoteAcl) {
-    addUGI(remoteStatus, remoteAcl);
-    if (remoteAcl == null) {
-      return new PermissionStatus(user(remoteStatus),
-          group(remoteStatus), permission(remoteStatus));
-    } else {
-      return new PermissionStatus(user(remoteAcl),
-          group(remoteAcl), permission(remoteAcl));
-    }
+    String owner = aclStatus.getOwner();
+    String group = aclStatus.getGroup();
+    short permission = aclStatus.getPermission().toShort();
+    return buildPermissionStatus(owner, group, permission);
   }
 
   /**
@@ -255,11 +174,12 @@ public abstract class UGIResolver {
       addGroup(remoteAcl.getGroup());
       for (AclEntry entry : remoteAcl.getEntries()) {
         // add the users and groups in this acl entry to ugi
-        if (entry.getName() != null) {
+        String name = entry.getName();
+        if (name != null) {
           if (entry.getType() == AclEntryType.USER) {
-            addUser(entry.getName());
+            addUser(name);
           } else if (entry.getType() == AclEntryType.GROUP) {
-            addGroup(entry.getName());
+            addGroup(name);
           }
         }
       }

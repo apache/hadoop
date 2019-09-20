@@ -79,7 +79,8 @@ public class FSTreeWalk extends TreeWalk {
     try {
       ArrayList<TreePath> ret = new ArrayList<>();
       for (FileStatus s : fs.listStatus(path.getFileStatus().getPath())) {
-        ret.add(new TreePath(s, id, i, fs, getAclStatus(fs, s.getPath())));
+        AclStatus aclStatus = getAclStatus(fs, s.getPath());
+        ret.add(new TreePath(s, id, i, fs, aclStatus));
       }
       return ret;
     } catch (FileNotFoundException e) {
@@ -100,9 +101,7 @@ public class FSTreeWalk extends TreeWalk {
       try {
         acls = getAclStatus(fs, remotePath);
       } catch (IOException e) {
-        LOG.warn(
-            "Got exception when trying to get remote acls for path {} : {}",
-            remotePath, e.getMessage());
+        throw new RuntimeException(e);
       }
       getPendingQueue().addFirst(
           new TreePath(p.getFileStatus(), p.getParentId(), this, fs, acls));
@@ -150,4 +149,5 @@ public class FSTreeWalk extends TreeWalk {
       throw new RuntimeException(e);
     }
   }
+
 }

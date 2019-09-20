@@ -159,8 +159,7 @@ public class TreePath {
       }
     }
     if (aclStatus != null) {
-      throw new UnsupportedOperationException(
-          "Acls not supported by ImageWriter");
+      throw new UnsupportedOperationException("ACLs not supported by ImageWriter");
     }
     //TODO: storage policy should be configurable per path; use BlockResolver
     long off = 0L;
@@ -188,8 +187,7 @@ public class TreePath {
         .setDsQuota(DEFAULT_STORAGE_SPACE_QUOTA)
         .setPermission(permissions);
     if (aclStatus != null) {
-      throw new UnsupportedOperationException(
-          "Acls not supported by ImageWriter");
+      throw new UnsupportedOperationException("ACLs not supported by ImageWriter");
     }
     INode.Builder ib = INode.newBuilder()
         .setType(INode.Type.DIRECTORY)
