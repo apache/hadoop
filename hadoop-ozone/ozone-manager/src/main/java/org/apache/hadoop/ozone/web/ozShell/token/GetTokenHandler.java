@@ -71,7 +71,7 @@ public class GetTokenHandler extends Handler {
     }
 
     System.out.printf("%s", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(token.encodeToUrlString())));
+        token.encodeToUrlString()));
     return null;
   }
 }

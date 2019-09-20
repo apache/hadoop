@@ -89,8 +89,8 @@ public class RemoveAclVolumeHandler extends Handler {
     boolean result = client.getObjectStore().removeAcl(obj,
         OzoneAcl.parseAcl(acl));
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString("Acl removed successfully: " + result)));
+    System.out.printf("%s%n", "Acl removed successfully: " +
+        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
     client.close();
     return null;
   }
