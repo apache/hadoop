@@ -444,23 +444,12 @@ public class UserGroupInformation {
   
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
-  private static final boolean is64Bit =
-      System.getProperty("os.arch").contains("64") ||
-      System.getProperty("os.arch").contains("s390x");
-  private static final boolean aix = System.getProperty("os.name").equals("AIX");
 
   /* Return the OS login module class name */
+  /* For IBM JDK, use the common OS login module class name for all platforms */
   private static String getOSLoginModuleName() {
     if (IBM_JAVA) {
-      if (windows) {
-        return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
-            : "com.ibm.security.auth.module.NTLoginModule";
-      } else if (aix) {
-        return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
-            : "com.ibm.security.auth.module.AIXLoginModule";
-      } else {
-        return "com.ibm.security.auth.module.LinuxLoginModule";
-      }
+      return "com.ibm.security.auth.module.JAASLoginModule";
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -468,23 +457,14 @@ public class UserGroupInformation {
   }
 
   /* Return the OS principal class */
+  /* For IBM JDK, use the common OS principal class for all platforms */
   @SuppressWarnings("unchecked")
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
       if (IBM_JAVA) {
-        if (is64Bit) {
-          principalClass = "com.ibm.security.auth.UsernamePrincipal";
-        } else {
-          if (windows) {
-            principalClass = "com.ibm.security.auth.NTUserPrincipal";
-          } else if (aix) {
-            principalClass = "com.ibm.security.auth.AIXPrincipal";
-          } else {
-            principalClass = "com.ibm.security.auth.LinuxPrincipal";
-          }
-        }
+        principalClass = "com.ibm.security.auth.UsernamePrincipal";
       } else {
         principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
             : "com.sun.security.auth.UnixPrincipal";
