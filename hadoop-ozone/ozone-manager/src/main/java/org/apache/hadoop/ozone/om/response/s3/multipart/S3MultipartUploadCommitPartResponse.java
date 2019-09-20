@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -69,9 +69,16 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
     if (getOMResponse().getStatus() == NO_SUCH_MULTIPART_UPLOAD_ERROR) {
       // Means by the time we try to commit part, some one has aborted this
       // multipart upload. So, delete this part information.
+      RepeatedOmKeyInfo repeatedOmKeyInfo =
+          omMetadataManager.getDeletedTable().get(openKey);
+      if(repeatedOmKeyInfo == null) {
+        repeatedOmKeyInfo = new RepeatedOmKeyInfo(deletePartKeyInfo);
+      } else {
+        repeatedOmKeyInfo.addOmKeyInfo(deletePartKeyInfo);
+      }
       omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-          OmUtils.getDeletedKeyName(openKey, deleteTimeStamp),
-          deletePartKeyInfo);
+          openKey,
+          repeatedOmKeyInfo);
     }
 
     if (getOMResponse().getStatus() == OK) {
@@ -85,10 +92,19 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       // This means for this multipart upload part upload, we have an old
       // part information, so delete it.
       if (oldMultipartKeyInfo != null) {
+        RepeatedOmKeyInfo repeatedOmKeyInfo = omMetadataManager.
+            getDeletedTable().get(oldMultipartKeyInfo.getPartName());
+        if(repeatedOmKeyInfo == null) {
+          repeatedOmKeyInfo = new RepeatedOmKeyInfo(
+              OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
+        } else {
+          repeatedOmKeyInfo.addOmKeyInfo(
+              OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
+        }
+
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            OmUtils.getDeletedKeyName(oldMultipartKeyInfo.getPartName(),
-                deleteTimeStamp),
-            OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
+            oldMultipartKeyInfo.getPartName(),
+            repeatedOmKeyInfo);
       }
 
 

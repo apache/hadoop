@@ -85,6 +85,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PartKeyInfo;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -781,9 +782,17 @@ public class KeyManagerImpl implements KeyManager {
           return;
         }
       }
-      metadataManager.getStore().move(objectKey,
-          metadataManager.getKeyTable(),
-          metadataManager.getDeletedTable());
+      //Check if key with same keyName exists in deletedTable and then
+      // insert/update accordingly.
+      RepeatedOmKeyInfo repeatedOmKeyInfo =
+          metadataManager.getDeletedTable().get(objectKey);
+      if(repeatedOmKeyInfo == null) {
+        repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
+      } else {
+        repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
+      }
+      metadataManager.getKeyTable().delete(objectKey);
+      metadataManager.getDeletedTable().put(objectKey, repeatedOmKeyInfo);
     } catch (OMException ex) {
       throw ex;
     } catch (IOException ex) {
@@ -1003,7 +1012,14 @@ public class KeyManagerImpl implements KeyManager {
         // will not be garbage collected, so move this part to delete table
         // and throw error
         // Move this part to delete table.
-        metadataManager.getDeletedTable().put(partName, keyInfo);
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            metadataManager.getDeletedTable().get(partName);
+        if(repeatedOmKeyInfo == null) {
+          repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
+        } else {
+          repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
+        }
+        metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
         throw new OMException("No such Multipart upload is with specified " +
             "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
@@ -1031,9 +1047,19 @@ public class KeyManagerImpl implements KeyManager {
           // Add the new entry in to the list of part keys.
           DBStore store = metadataManager.getStore();
           try (BatchOperation batch = store.initBatchOperation()) {
+            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
+                getDeletedTable().get(oldPartKeyInfo.getPartName());
+            if(repeatedOmKeyInfo == null) {
+              repeatedOmKeyInfo = new RepeatedOmKeyInfo(
+                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
+            } else {
+              repeatedOmKeyInfo.addOmKeyInfo(
+                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
+            }
+            metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
             metadataManager.getDeletedTable().putWithBatch(batch,
                 oldPartKeyInfo.getPartName(),
-                OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
+                repeatedOmKeyInfo);
             metadataManager.getOpenKeyTable().deleteWithBatch(batch, openKey);
             metadataManager.getMultipartInfoTable().putWithBatch(batch,
                 multipartKey, multipartKeyInfo);
@@ -1252,8 +1278,17 @@ public class KeyManagerImpl implements KeyManager {
             PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
             OmKeyInfo currentKeyPartInfo = OmKeyInfo.getFromProtobuf(
                 partKeyInfo.getPartKeyInfo());
+
+            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
+                getDeletedTable().get(partKeyInfo.getPartName());
+            if(repeatedOmKeyInfo == null) {
+              repeatedOmKeyInfo = new RepeatedOmKeyInfo(currentKeyPartInfo);
+            } else {
+              repeatedOmKeyInfo.addOmKeyInfo(currentKeyPartInfo);
+            }
+
             metadataManager.getDeletedTable().putWithBatch(batch,
-                partKeyInfo.getPartName(), currentKeyPartInfo);
+                partKeyInfo.getPartName(), repeatedOmKeyInfo);
           }
           // Finally delete the entry from the multipart info table and open
           // key table
