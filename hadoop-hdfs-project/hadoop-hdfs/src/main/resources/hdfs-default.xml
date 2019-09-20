@@ -5358,7 +5358,7 @@
   </property>
 
   <property>
-  <name>dfs.namenode.mount.acls.enabled</name>
+  <name>dfs.provided.acls.import.enabled</name>
     <value>false</value>
     <description>
       Set to true to inherit ACLs (Access Control Lists) from remote stores

@@ -42,7 +42,7 @@ public class TestFSTreeWalk {
   @Test
   public void testImportAcl() throws Exception {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_MOUNT_ACLS_ENABLED, true);
+    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED, true);
 
     FileSystem fs = mock(FileSystem.class);
     Path root = mock(Path.class);

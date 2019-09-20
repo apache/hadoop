@@ -35,8 +35,8 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MOUNT_ACLS_ENABLED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MOUNT_ACLS_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT;
 
 /**
  * Traversal of an external FileSystem.
@@ -56,8 +56,8 @@ public class FSTreeWalk extends TreeWalk {
     this.root = root;
     fs = root.getFileSystem(conf);
 
-    boolean mountACLsEnabled = conf.getBoolean(DFS_NAMENODE_MOUNT_ACLS_ENABLED,
-        DFS_NAMENODE_MOUNT_ACLS_ENABLED_DEFAULT);
+    boolean mountACLsEnabled = conf.getBoolean(DFS_PROVIDED_ACLS_IMPORT_ENABLED,
+                                               DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT);
     boolean localACLsEnabled = conf.getBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY,
         DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
     if (!localACLsEnabled && mountACLsEnabled) {
