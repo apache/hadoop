@@ -4098,6 +4098,18 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.client.block.reader.remote.buffer.size</name>
+    <value>8192</value>
+    <description>
+      The output stream buffer size of a DFSClient remote read. The buffer default value is 8KB. The buffer includes
+      only some request parameters that are: block, blockToken, clientName, startOffset, len, verifyChecksum,
+      cachingStrategy.
+      It is recommended to adjust the value according to the workload, which can reduce unnecessary memory
+      usage and the frequency of the garbage collection. A value of 512 might be reasonable.
+    </description>
+  </property>
+
 <property>
   <name>dfs.content-summary.limit</name>
   <value>5000</value>
