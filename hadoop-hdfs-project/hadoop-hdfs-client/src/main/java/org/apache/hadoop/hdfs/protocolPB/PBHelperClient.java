@@ -3409,7 +3409,8 @@ public class PBHelperClient {
       EnumSet<OpenFilesType> types) {
     List<OpenFilesTypeProto> typeProtos = new ArrayList<>();
     for (OpenFilesType type : types) {
-      OpenFilesTypeProto typeProto = OpenFilesTypeProto.forNumber(type.getMode());
+      OpenFilesTypeProto typeProto = OpenFilesTypeProto
+          .forNumber(type.getMode());
       if (typeProto != null) {
         typeProtos.add(typeProto);
       }
