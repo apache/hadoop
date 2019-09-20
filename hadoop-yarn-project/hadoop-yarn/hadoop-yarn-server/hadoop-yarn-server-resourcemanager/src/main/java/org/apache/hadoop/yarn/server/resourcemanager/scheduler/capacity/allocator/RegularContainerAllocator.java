@@ -834,7 +834,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Directly return if this check fails.
     ContainerAllocation result;
     ContainerAllocation lastReservation = null;
-
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
             schedulerKey);

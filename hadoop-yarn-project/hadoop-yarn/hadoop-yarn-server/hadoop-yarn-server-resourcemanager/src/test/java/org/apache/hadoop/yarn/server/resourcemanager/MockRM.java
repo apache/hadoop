@@ -926,6 +926,32 @@ public class MockRM extends ResourceManager {
     return am;
   }
 
+  public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM[] nms)
+      throws Exception {
+    MockAM am = launchAM(app, rm, nms);
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    return am;
+  }
+
+  public static MockAM launchAM(RMApp app, MockRM rm, MockNM[] nms)
+      throws Exception {
+    rm.drainEventsImplicitly();
+    RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
+    LOG.info("Launch AM " + attempt.getAppAttemptId());
+    for (MockNM nm : nms) {
+      nm.nodeHeartbeat(true);
+    }
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
+    rm.drainEventsImplicitly();
+    for (MockNM nm : nms) {
+      nm.nodeHeartbeat(true);
+    }
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
+    return am;
+  }
+
   public static MockAM launchUAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
     rm.drainEventsImplicitly();
