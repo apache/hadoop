@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.concurrent.TimeUnit;
+
 import com.amazonaws.SignableRequest;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.auth.SignerFactory;
-import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;

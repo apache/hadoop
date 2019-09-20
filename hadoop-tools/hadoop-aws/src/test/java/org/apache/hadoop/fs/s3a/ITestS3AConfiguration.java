@@ -22,7 +22,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.S3ClientOptions;
 
-import java.io.IOException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +38,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.File;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;

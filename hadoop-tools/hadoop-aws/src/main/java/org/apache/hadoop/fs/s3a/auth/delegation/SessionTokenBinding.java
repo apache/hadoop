@@ -31,12 +31,12 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
