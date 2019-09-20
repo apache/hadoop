@@ -32,11 +32,13 @@ import java.net.InetSocketAddress;
  * resolve the proxy DNS in the event of failover.
  * This provider doesn't support HA or Federation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class AutoRefreshNoHARMFailoverProxyProvider<T>
     extends DefaultNoHARMFailoverProxyProvider<T> {
-
   private static final Logger LOG =
-    LoggerFactory.getLogger(AutoRefreshNoHARMFailoverProxyProvider.class);
+      LoggerFactory.getLogger(AutoRefreshNoHARMFailoverProxyProvider.class);
+
   protected RMProxy<T> rmProxy;
   protected YarnConfiguration conf;
 
@@ -61,7 +63,8 @@ public class AutoRefreshNoHARMFailoverProxyProvider<T>
       final InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
       return rmProxy.getProxy(conf, protocol, rmAddress);
     } catch (IOException ioe) {
-      LOG.error("Unable to create proxy to the ResourceManager", ioe.getMessage());
+      LOG.error("Unable to create proxy to the ResourceManager", 
+          ioe.getMessage());
       return null;
     }
   }

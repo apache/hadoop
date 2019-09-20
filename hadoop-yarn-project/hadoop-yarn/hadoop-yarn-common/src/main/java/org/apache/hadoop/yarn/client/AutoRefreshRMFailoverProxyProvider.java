@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.client;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import java.util.Set;
@@ -33,14 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.conf.HAUtil;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
 
 /**
  * A subclass of {@link RMFailoverProxyProvider} which tries to
@@ -48,10 +35,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  * This provider supports YARN Resourcemanager's HA mode.
  * This provider doesn't support Federation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class AutoRefreshRMFailoverProxyProvider<T>
     extends ConfiguredRMFailoverProxyProvider<T> {
   private static final Logger LOG =
-    LoggerFactory.getLogger(AutoRefreshRMFailoverProxyProvider.class);
+      LoggerFactory.getLogger(AutoRefreshRMFailoverProxyProvider.class);
 
   @Override
   public synchronized void performFailover(T currentProxy) {
