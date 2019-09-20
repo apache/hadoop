@@ -119,7 +119,7 @@ public class ProfileServlet extends HttpServlet {
       Pattern.compile(FILE_PREFIX + "[0-9]+-[0-9A-Za-z\\-_]+-[0-9]+\\.[a-z]+");
 
   private Lock profilerLock = new ReentrantLock();
-  private Integer pid;
+  private final Integer pid;
   private String asyncProfilerHome;
   private transient Process process;
 
@@ -208,11 +208,11 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
     // if pid is explicitly specified, use it else default to current process
-    pid = getInteger(req, "pid", pid);
+    Integer processId = getInteger(req, "pid", pid);
 
     // if pid is not specified in query param and if current process pid
     // cannot be determined
-    if (pid == null) {
+    if (processId == null) {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
       resp.getWriter().write(
@@ -243,7 +243,7 @@ public class ProfileServlet extends HttpServlet {
             //Should be in sync with FILE_NAME_PATTERN
             File outputFile =
                 OUTPUT_DIR.resolve(
-                    ProfileServlet.generateFileName(pid, output, event))
+                    ProfileServlet.generateFileName(processId, output, event))
                     .toFile();
             List<String> cmd = new ArrayList<>();
             cmd.add(asyncProfilerHome + PROFILER_SCRIPT);
@@ -288,7 +288,7 @@ public class ProfileServlet extends HttpServlet {
             if (reverse) {
               cmd.add("--reverse");
             }
-            cmd.add(pid.toString());
+            cmd.add(processId.toString());
             process = runCmdAsync(cmd);
 
             // set response and set refresh header to output location
