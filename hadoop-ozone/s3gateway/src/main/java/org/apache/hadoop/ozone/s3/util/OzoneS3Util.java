@@ -43,6 +43,13 @@ public final class OzoneS3Util {
     return DigestUtils.md5Hex(userName);
   }
 
+  /**
+   * Generate service Name for token.
+   * @param configuration
+   * @param serviceId - ozone manager service ID
+   * @param omNodeIds - list of node ids for the given OM service.
+   * @return service Name.
+   */
   public static String buildServiceNameForToken(
       @Nonnull OzoneConfiguration configuration, @Nonnull String serviceId,
       @Nonnull Collection<String> omNodeIds) {
