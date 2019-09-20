@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.ozone.om.response.key;
 
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -35,13 +35,10 @@ import java.io.IOException;
  */
 public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
-  private long deleteTimestamp;
 
-  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, long deletionTime,
-      OMResponse omResponse) {
+  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
-    this.deleteTimestamp = deletionTime;
   }
 
   @Override
@@ -60,12 +57,22 @@ public class OMKeyDeleteResponse extends OMClientResponse {
       if (!isKeyEmpty(omKeyInfo)) {
         // If a deleted key is put in the table where a key with the same
         // name already exists, then the old deleted key information would be
-        // lost. To differentiate between keys with same name in
-        // deletedTable, we add the timestamp to the key name.
-        String deleteKeyName = OmUtils.getDeletedKeyName(
-            ozoneKey, deleteTimestamp);
+        // lost. To avoid this, first check if a key with same name exists.
+        // deletedTable in OM Metadata stores <KeyName, RepeatedOMKeyInfo>.
+        // The RepeatedOmKeyInfo is the structure that allows us to store a
+        // list of OmKeyInfo that can be tied to same key name. For a keyName
+        // if RepeatedOMKeyInfo structure is null, we create a new instance,
+        // if it is not null, then we simply add to the list and store this
+        // instance in deletedTable.
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            omMetadataManager.getDeletedTable().get(ozoneKey);
+        if(repeatedOmKeyInfo == null) {
+          repeatedOmKeyInfo = new RepeatedOmKeyInfo(omKeyInfo);
+        } else {
+          repeatedOmKeyInfo.addOmKeyInfo(omKeyInfo);
+        }
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            deleteKeyName, omKeyInfo);
+            ozoneKey, repeatedOmKeyInfo);
       }
     }
   }
