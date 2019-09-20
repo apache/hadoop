@@ -84,7 +84,7 @@
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
-    <protobuf.version>2.5.0</protobuf.version>
+    <protobuf.version>3.7.1</protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <zookeeper.version>3.4.13</zookeeper.version>
@@ -1918,6 +1918,9 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <protoc.path>/opt/protobuf-3.7/bin/protoc</protoc.path>
+      </properties>
       <build>
         <plugins>
           <plugin>

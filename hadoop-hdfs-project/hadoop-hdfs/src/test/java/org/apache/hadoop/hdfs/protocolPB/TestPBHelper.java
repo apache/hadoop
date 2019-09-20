@@ -910,7 +910,7 @@ public class TestPBHelper {
     b.setFileBufferSize(DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
     b.setEncryptDataTransfer(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
     b.setTrashInterval(DFSConfigKeys.FS_TRASH_INTERVAL_DEFAULT);
-    b.setChecksumType(HdfsProtos.ChecksumTypeProto.valueOf(
+    b.setChecksumType(HdfsProtos.ChecksumTypeProto.forNumber(
         DataChecksum.Type.valueOf(DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT).id));
     HdfsProtos.FsServerDefaultsProto proto = b.build();
 

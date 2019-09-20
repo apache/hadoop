@@ -75,7 +75,7 @@ public class PipelineAck {
     }
 
     static Status getStatus(int header) {
-      return Status.valueOf((int) STATUS.BITS.retrieve(header));
+      return Status.forNumber((int) STATUS.BITS.retrieve(header));
     }
 
     static ECN getECN(int header) {
