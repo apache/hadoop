@@ -133,14 +133,13 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
       }
 
       omClientResponse = new S3MultipartUploadAbortResponse(multipartKey,
-          keyArgs.getModificationTime(), multipartKeyInfo,
+          multipartKeyInfo,
           omResponse.setAbortMultiPartUploadResponse(
               MultipartUploadAbortResponse.newBuilder()).build());
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new S3MultipartUploadAbortResponse(multipartKey,
-          keyArgs.getModificationTime(), multipartKeyInfo,
-          createErrorOMResponse(omResponse, exception));
+          multipartKeyInfo, createErrorOMResponse(omResponse, exception));
     } finally {
       if (omClientResponse != null) {
         omClientResponse.setFlushFuture(

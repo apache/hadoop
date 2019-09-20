@@ -687,6 +687,10 @@ message KeyInfo {
     repeated OzoneAclInfo acls = 13;
 }
 
+message RepeatedKeyInfo {
+    repeated KeyInfo keyInfo = 1;
+}
+
 message OzoneFileStatusProto {
     required hadoop.fs.FileStatusProto status = 1;
 }
