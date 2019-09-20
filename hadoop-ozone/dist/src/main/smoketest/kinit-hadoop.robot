@@ -14,24 +14,12 @@
 # limitations under the License.
 
 *** Settings ***
-Documentation       Execute MR jobs
+Documentation       Kinit test user
 Library             OperatingSystem
 Resource            commonlib.robot
-Test Timeout        4 minute
+Test Timeout        2 minute
 
 
-*** Variables ***
-${volume}          vol1
-${bucket}          bucket1
-${hadoop.version}  3.2.0
-
-
-*** Test cases ***
-Execute PI calculation
-                    ${output} =      Execute                 yarn jar ./share/hadoop/mapreduce/hadoop-mapreduce-examples-${hadoop.version}.jar pi 3 3
-                    Should Contain   ${output}               completed successfully
-
-Execute WordCount
-                    ${random}        Generate Random String  2   [NUMBERS]
-                    ${output} =      Execute                 yarn jar ./share/hadoop/mapreduce/hadoop-mapreduce-examples-${hadoop.version}.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1-${random}.count
-                    Should Contain   ${output}               completed successfully
+*** Test Cases ***
+Kinit
+   Kinit test user     hadoop     hadoop.keytab
