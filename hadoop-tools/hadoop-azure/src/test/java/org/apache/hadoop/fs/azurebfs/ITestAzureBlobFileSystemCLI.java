@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 
 /**
- * Tests for Azure Blob FileSystem CLI
+ * Tests for Azure Blob FileSystem CLI.
  */
 public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
 
@@ -42,7 +42,7 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
 
   /**
    * Test for HADOOP-16138: hadoop fs mkdir / of nonexistent abfs
-   * container raises NPE
+   * container raises NPE.
    *
    * The command should return with 1 exit status, but there should be no NPE.
    *

@@ -76,7 +76,7 @@ class Mkdir extends FsCommand {
 
       if(itemParentPath == null) {
         throw new PathNotFoundException(String.format(
-            "Item: %s parent path's is null. This can happen if mkdir is " +
+            "Item: %s parent's path is null. This can happen if mkdir is " +
                 "called on root, so there's no parent.", itemPath.toString()));
       }
 
