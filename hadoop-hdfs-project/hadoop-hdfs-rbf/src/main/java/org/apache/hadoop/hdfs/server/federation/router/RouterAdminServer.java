@@ -269,16 +269,21 @@ public class RouterAdminServer extends AbstractService
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-
+    MountTable updateEntry = request.getEntry();
+    MountTable oldEntry = null;
+    if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
+      MountTableResolver mResolver =
+          (MountTableResolver) this.router.getSubclusterResolver();
+      oldEntry = mResolver.getMountPoint(updateEntry.getSourcePath());
+    }
     UpdateMountTableEntryResponse response = getMountTableStore()
         .updateMountTableEntry(request);
     try {
-      MountTable mountTable = request.getEntry();
-      if (mountTable != null && router.isQuotaEnabled()
-          && isQuotaUpdated(request, mountTable)) {
-        synchronizeQuota(mountTable.getSourcePath(),
-            mountTable.getQuota().getQuota(),
-            mountTable.getQuota().getSpaceQuota());
+      if (updateEntry != null && router.isQuotaEnabled()
+          && isQuotaUpdated(request, oldEntry)) {
+        synchronizeQuota(updateEntry.getSourcePath(),
+            updateEntry.getQuota().getQuota(),
+            updateEntry.getQuota().getSpaceQuota());
       }
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
@@ -289,29 +294,41 @@ public class RouterAdminServer extends AbstractService
     return response;
   }
 
+  /**
+   * Checks whether quota needs to be synchronized with namespace or not. Quota
+   * needs to be synchronized either if there is change in mount entry quota or
+   * there is change in remote destinations.
+   * @param request the update request.
+   * @param oldEntry the mount entry before getting updated.
+   * @return true if quota needs to be updated.
+   * @throws IOException
+   */
   private boolean isQuotaUpdated(UpdateMountTableEntryRequest request,
-      MountTable mountTable) throws IOException {
-    long nsQuota = -1;
-    long ssQuota = -1;
-
-    String path = request.getEntry().getSourcePath();
-    if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
-      MountTableResolver mResolver = (MountTableResolver) this.router
-          .getSubclusterResolver();
-      MountTable entry = mResolver.getMountPoint(path);
-      if (entry != null) {
-        RouterQuotaUsage preQuota = entry.getQuota();
-        nsQuota = preQuota.getQuota();
-        ssQuota = preQuota.getSpaceQuota();
+      MountTable oldEntry) throws IOException {
+    if (oldEntry != null) {
+      MountTable updateEntry = request.getEntry();
+      // If locations are changed, the new destinations need to be in sync with
+      // the mount quota.
+      if (!oldEntry.getDestinations().equals(updateEntry.getDestinations())) {
+        return true;
       }
-    }
-    RouterQuotaUsage mountQuota = mountTable.getQuota();
-    if (nsQuota != mountQuota.getQuota()
-        || ssQuota != mountQuota.getSpaceQuota()) {
+      // Previous quota.
+      RouterQuotaUsage preQuota = oldEntry.getQuota();
+      long nsQuota = preQuota.getQuota();
+      long ssQuota = preQuota.getSpaceQuota();
+      // New quota
+      RouterQuotaUsage mountQuota = updateEntry.getQuota();
+      // If there is change in quota, the new quota needs to be synchronized.
+      if (nsQuota != mountQuota.getQuota()
+          || ssQuota != mountQuota.getSpaceQuota()) {
+        return true;
+      }
+      return false;
+    } else {
+      // If old entry is not available, sync quota always, since we can't
+      // conclude no change in quota.
       return true;
     }
-
-    return false;
   }
 
   /**
@@ -323,15 +340,30 @@ public class RouterAdminServer extends AbstractService
    */
   private void synchronizeQuota(String path, long nsQuota, long ssQuota)
       throws IOException {
-    if (router.isQuotaEnabled() &&
-        (nsQuota != HdfsConstants.QUOTA_DONT_SET
-        || ssQuota != HdfsConstants.QUOTA_DONT_SET)) {
-      HdfsFileStatus ret = this.router.getRpcServer().getFileInfo(path);
-      if (ret != null) {
-        this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
-            ssQuota, null);
+    if (isQuotaSyncRequired(nsQuota, ssQuota)) {
+      if (iStateStoreCache) {
+        ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
+      }
+      Quota routerQuota = this.router.getRpcServer().getQuotaModule();
+      routerQuota.setQuota(path, nsQuota, ssQuota, null);
+    }
+  }
+
+  /**
+   * Checks if quota needs to be synchronized or not.
+   * @param nsQuota namespace quota to be set.
+   * @param ssQuota space quota to be set.
+   * @return true if the quota needs to be synchronized.
+   */
+  private boolean isQuotaSyncRequired(long nsQuota, long ssQuota) {
+    // Check if quota is enabled for router or not.
+    if (router.isQuotaEnabled()) {
+      if ((nsQuota != HdfsConstants.QUOTA_DONT_SET
+          || ssQuota != HdfsConstants.QUOTA_DONT_SET)) {
+        return true;
       }
     }
+    return false;
   }
 
   @Override
