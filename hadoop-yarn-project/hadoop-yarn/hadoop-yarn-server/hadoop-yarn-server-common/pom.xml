@@ -161,37 +161,18 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
             <id>compile-protoc</id>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>protoc</goal>
+              <goal>compile</goal>
             </goals>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>distributed_scheduling_am_protocol.proto</include>
-                  <include>yarn_server_common_protos.proto</include>
-                  <include>yarn_server_common_service_protos.proto</include>
-                  <include>yarn_server_common_service_protos.proto</include>
-                  <include>yarn_server_federation_protos.proto</include>
-                  <include>ResourceTracker.proto</include>
-                  <include>SCMUploader.proto</include>
-                  <include>collectornodemanager_protocol.proto</include>
-                </includes>
-              </source>
+              <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
             </configuration>
           </execution>
         </executions>

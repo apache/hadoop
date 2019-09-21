@@ -60,7 +60,8 @@ allowed_expr+="|^librocksdbjni-linux64.so"
 allowed_expr+="|^librocksdbjni-osx.jnilib"
 allowed_expr+="|^librocksdbjni-win64.dll"
 allowed_expr+="|^librocksdbjni-linux-ppc64le.so"
-
+# proto source files
+allowed_expr+="|^[A-Za-z_]*.proto$"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0

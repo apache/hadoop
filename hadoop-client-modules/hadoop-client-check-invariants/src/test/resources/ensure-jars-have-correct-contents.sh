@@ -67,6 +67,10 @@ allowed_expr+="|^krb5_udp-template.conf$"
 # Jetty uses this style sheet for directory listings. TODO ensure our
 # internal use of jetty disallows directory listings and remove this.
 allowed_expr+="|^jetty-dir.css$"
+# proto source files
+allowed_expr+="|^[A-Za-z_]*.proto$"
+allowed_expr+="|^server/$"
+allowed_expr+="|^server/[A-Za-z_]*.proto$"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0

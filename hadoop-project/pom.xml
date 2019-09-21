@@ -112,10 +112,10 @@
     <jna.version>5.2.0</jna.version>
 
     <!-- Maven protoc compiler -->
-    <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
-    <protobuf-compile.version>3.5.1</protobuf-compile.version>
+    <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
+    <protobuf-compile.version>3.7.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
-    <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
+    <os-maven-plugin.version>1.6.1</os-maven-plugin.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -1548,8 +1548,25 @@
   </dependencyManagement>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>${os-maven-plugin.version}</version>
+      </extension>
+    </extensions>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${protobuf-maven-plugin.version}</version>
+          <configuration>
+            <protocArtifact>com.google.protobuf:protoc:${protobuf-compile.version}:exe:${os.detected.classifier}</protocArtifact>
+            <clearOutputDirectory>false</clearOutputDirectory>
+            <checkStaleness>true</checkStaleness>
+          </configuration>
+        </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
