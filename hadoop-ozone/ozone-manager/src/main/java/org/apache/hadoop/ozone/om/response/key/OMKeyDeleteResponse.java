@@ -35,13 +35,10 @@ import java.io.IOException;
  */
 public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
-  private long deleteTimestamp;
 
-  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, long deletionTime,
-      OMResponse omResponse) {
+  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
-    this.deleteTimestamp = deletionTime;
   }
 
   @Override
