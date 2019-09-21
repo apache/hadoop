@@ -49,7 +49,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer
     .writeChunkForContainer;
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -64,16 +67,28 @@ public class TestContainerReplication {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
+  private OzoneConfiguration conf;
+  private MiniOzoneCluster cluster;
+
+  @Before
+  public void setup() throws Exception {
+    conf = newOzoneConfiguration();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
+        .setRandomContainerPort(true).build();
+  }
+
+  @After
+  public void teardown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testContainerReplication() throws Exception {
     //GIVEN
-    OzoneConfiguration conf = newOzoneConfiguration();
-
     long containerId = 1L;
 
-    MiniOzoneCluster cluster =
-        MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
-            .setRandomContainerPort(true).build();
     cluster.waitForClusterToBeReady();
 
     HddsDatanodeService firstDatanode = cluster.getHddsDatanodes().get(0);

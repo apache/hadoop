@@ -52,6 +52,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.zookeeper.CreateMode;
@@ -221,6 +222,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     String principal =
         config.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL, "").trim();
+    principal = SecurityUtil.getServerPrincipal(principal, "");
     if (principal == null || principal.length() == 0) {
       throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_PRINCIPAL
           + " must be specified");

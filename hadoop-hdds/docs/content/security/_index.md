@@ -23,7 +23,7 @@ weight: 5
     -->
 
 {{<jumbotron title="Securing Ozone">}}
-          Ozone is an enterprise class, secure storage system. There many
+          Ozone is an enterprise class, secure storage system. There are many
           optional security features in Ozone. Following pages discuss how
           you can leverage the security features of Ozone.
 {{</jumbotron>}}

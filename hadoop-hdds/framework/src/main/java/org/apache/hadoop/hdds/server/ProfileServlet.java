@@ -348,7 +348,6 @@ public class ProfileServlet extends HttpServlet {
       final HttpServletResponse resp)
       throws IOException {
 
-    ;
     String safeFileName = validateFileName(fileName);
     File requestedFile =
         ProfileServlet.OUTPUT_DIR
