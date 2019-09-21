@@ -36,8 +36,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RP
 public class ConfiguredFailoverProxyProvider<T> extends
     AbstractNNFailoverProxyProvider<T> {
 
-  public static final String RESET_PROXY_ON_FAILOVER = "dfs.client.failover.proxy.provider.reset-proxy-on-failure";
-
   protected final List<NNProxyInfo<T>> proxies;
 
   private int currentProxyIndex = 0;
@@ -63,12 +61,10 @@ public class ConfiguredFailoverProxyProvider<T> extends
   }
 
   @Override
-  public  void performFailover(T currentProxy) {
-    if(conf.getBoolean(RESET_PROXY_ON_FAILOVER, false)) {
-      //reset the IP address in case  the stale IP was the cause for failover
-      LOG.info("Resetting cached proxy");
-      resetProxyAddresses(proxies);
-    }
+  public void performFailover(T currentProxy) {
+    //reset the IP address in case  the stale IP was the cause for failover
+    LOG.info("Resetting cached proxy");
+    resetProxyAddress(proxies, currentProxyIndex);
     incrementProxyIndex();
   }
 

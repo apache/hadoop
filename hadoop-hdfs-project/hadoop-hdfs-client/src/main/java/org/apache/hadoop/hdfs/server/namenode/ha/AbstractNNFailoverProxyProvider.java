@@ -202,18 +202,15 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
   }
 
   /**
-   * Resets the NameNode proxy addresses in case they're stale
+   * Resets the NameNode proxy address in case it's stale
    */
-  protected void resetProxyAddresses(List<NNProxyInfo<T>> proxies) {
+  protected void resetProxyAddress(List<NNProxyInfo<T>> proxies, int index) {
     try {
-      for (int i = 0; i < proxies.size(); ++i) {
-        InetSocketAddress oldAddress = proxies.get(i).getAddress();
-        InetSocketAddress address = NetUtils.createSocketAddr(
-                oldAddress.getHostName() + ":" + oldAddress.getPort());
-        LOG.debug("oldAddress {}, newAddress {}",
-                oldAddress, address);
-        proxies.set(i, new NNProxyInfo<T>(address));
-      }
+      InetSocketAddress oldAddress = proxies.get(index).getAddress();
+      InetSocketAddress address = NetUtils.createSocketAddr(
+              oldAddress.getHostName() + ":" + oldAddress.getPort());
+      LOG.debug("oldAddress {}, newAddress {}", oldAddress, address);
+      proxies.set(index, new NNProxyInfo<T>(address));
     } catch (Exception e) {
       throw new RuntimeException("Could not refresh NN address", e);
     }

@@ -398,4 +398,50 @@ public class TestDFSClientFailover {
         HAUtil.useLogicalUri(config, nnUri));
   }
 
+  /**
+   * Test HDFS-14857 FS operations fail in HA mode: DataNode fails to connect to NameNode
+   */
+  @Test
+  public void testIpAddressResetOnPerformFailover() throws Exception {
+    NetUtilsTestResolver resolver = NetUtilsTestResolver.install();
+    resolver.addResolvedHost("nn1.b.", "1.1.1.1");
+    resolver.addResolvedHost("nn2.b.", "2.2.2.2");
+    conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, "nmnode-0");
+    conf.set("dfs.ha.namenodes.nmnode-0", "nn1,nn2");
+    conf.set("dfs.namenode.rpc-address.nmnode-0.nn1", "nn1.b:9000");
+    conf.set("dfs.namenode.rpc-address.nmnode-0.nn2", "nn2.b:9000");
+    conf.set("dfs.client.failover.proxy.provider.nmnode-0",
+            "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider");
+
+    URI uri  = new URI("hdfs://nmnode-0");
+    ConfiguredFailoverProxyProvider proxyProvider = (ConfiguredFailoverProxyProvider)NameNodeProxiesClient
+            .createFailoverProxyProvider(conf, uri, ClientProtocol.class,
+                    false, null);
+    assertNotNull(proxyProvider);
+
+    AbstractNNFailoverProxyProvider.NNProxyInfo proxyInfo =
+            (AbstractNNFailoverProxyProvider.NNProxyInfo)proxyProvider.getProxy();
+    assertNotNull(proxyInfo);
+    assertEquals(proxyInfo.getAddress().getAddress(), resolver.getByExactName(proxyInfo.getAddress().getHostName()));
+    //
+    // Getting ready to call performFailover() on the provider
+    // Note that the resetting of the ip address created a new ProxyInfo object in the
+    // internal list that the provider holds on to
+    // So the reference to proxyInfo we are holding is not good anymore
+    //
+    resolver.reset();
+    resolver.addResolvedHost("nn1.b.", "3.3.3.3");
+    resolver.addResolvedHost("nn2.b.", "4.4.4.4");
+    // after two back to back failovers both IP addresses must have got updated
+    proxyProvider.performFailover(proxyInfo);
+    proxyProvider.performFailover(proxyInfo);
+    // now the current proxy must be having the new IP address
+    proxyInfo = (AbstractNNFailoverProxyProvider.NNProxyInfo)proxyProvider.getProxy();
+    assertEquals(proxyInfo.getAddress().getAddress(), resolver.getByExactName(proxyInfo.getAddress().getHostName()));
+    // We need this additional failover so we can the 'next' proxyinfo to examine
+    proxyProvider.performFailover(proxyInfo);
+    proxyInfo = (AbstractNNFailoverProxyProvider.NNProxyInfo)proxyProvider.getProxy();
+    assertEquals(proxyInfo.getAddress().getAddress(), resolver.getByExactName(proxyInfo.getAddress().getHostName()));
+  }
+
 }
