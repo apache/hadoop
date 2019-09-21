@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
@@ -80,7 +81,8 @@ public interface DynamoDBClientFactory extends Configurable {
           "Should have been configured before usage");
 
       final Configuration conf = getConf();
-      final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
+      final ClientConfiguration awsConf = S3AUtils
+          .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_DDB);
 
       final String region = getRegion(conf, defaultRegion);
       LOG.debug("Creating DynamoDB client in region {}", region);
