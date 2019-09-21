@@ -22,6 +22,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -52,6 +54,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
   private Map<String, OzoneManager> ozoneManagerMap;
   private List<OzoneManager> ozoneManagers;
+  private String omServiceId;
 
   // Active OMs denote OMs which are up and running
   private List<OzoneManager> activeOMs;
@@ -74,12 +77,19 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
       List<OzoneManager> activeOMList,
       List<OzoneManager> inactiveOMList,
       StorageContainerManager scm,
-      List<HddsDatanodeService> hddsDatanodes) {
+      List<HddsDatanodeService> hddsDatanodes,
+      String omServiceId) {
     super(conf, scm, hddsDatanodes);
     this.ozoneManagerMap = omMap;
     this.ozoneManagers = new ArrayList<>(omMap.values());
     this.activeOMs = activeOMList;
     this.inactiveOMs = inactiveOMList;
+    this.omServiceId = omServiceId;
+  }
+
+  @Override
+  public String getServiceId() {
+    return omServiceId;
   }
 
   /**
@@ -89,6 +99,11 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   @Override
   public OzoneManager getOzoneManager() {
     return this.ozoneManagers.get(0);
+  }
+
+  @Override
+  public OzoneClient getRpcClient() throws IOException {
+    return OzoneClientFactory.getRpcClient(getServiceId(), getConf());
   }
 
   public boolean isOMActive(String omNodeId) {
@@ -188,7 +203,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(
-          conf, omMap, activeOMs, inactiveOMs, scm, hddsDatanodes);
+          conf, omMap, activeOMs, inactiveOMs, scm, hddsDatanodes, omServiceId);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
       }
@@ -236,19 +251,20 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
           for (int i = 1; i<= numOfOMs; i++) {
             // Set nodeId
             String nodeId = nodeIdBaseStr + i;
-            conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeId);
+            OzoneConfiguration config = new OzoneConfiguration(conf);
+            config.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeId);
             // Set the OM http(s) address to null so that the cluster picks
             // up the address set with service ID and node ID in initHAConfig
-            conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "");
-            conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "");
+            config.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "");
+            config.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "");
 
             // Set metadata/DB dir base path
             String metaDirPath = path + "/" + nodeId;
-            conf.set(OZONE_METADATA_DIRS, metaDirPath);
-            OMStorage omStore = new OMStorage(conf);
+            config.set(OZONE_METADATA_DIRS, metaDirPath);
+            OMStorage omStore = new OMStorage(config);
             initializeOmStorage(omStore);
 
-            OzoneManager om = OzoneManager.createOm(conf);
+            OzoneManager om = OzoneManager.createOm(config);
             om.setCertClient(certClient);
             omMap.put(nodeId, om);
 

@@ -37,6 +37,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AWSS3IOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -49,12 +50,17 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
   private static final Logger LOG = LoggerFactory.getLogger(
       MultiObjectDeleteSupport.class);
 
+  private final BulkOperationState operationState;
+
   /**
    * Initiate with a store context.
    * @param context store context.
+   * @param operationState any ongoing bulk operation.
    */
-  public MultiObjectDeleteSupport(final StoreContext context) {
+  public MultiObjectDeleteSupport(final StoreContext context,
+      final BulkOperationState operationState) {
     super(context);
+    this.operationState = operationState;
   }
 
   /**
@@ -178,7 +184,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
     //  metastore entries
     deleted.forEach(path -> {
       try {
-        metadataStore.delete(path);
+        metadataStore.delete(path, operationState);
       } catch (IOException e) {
         // trouble: we failed to delete the far end entry
         // try with the next one.

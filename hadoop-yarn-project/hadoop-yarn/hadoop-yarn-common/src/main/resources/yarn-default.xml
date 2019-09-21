@@ -108,6 +108,19 @@
   </property>
 
   <property>
+    <description>
+      The threshold used to trigger the logging of event types
+      and counts in RM's main event dispatcher. Default length is 5000,
+      which means RM will print events info when the queue size cumulatively
+      reaches 5000 every time. Such info can be used to reveal what kind of events
+      that RM is stuck at processing mostly, it can help to
+      narrow down certain performance issues.
+    </description>
+    <name>yarn.dispatcher.print-events-info.threshold</name>
+    <value>5000</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -1292,6 +1305,14 @@
   </property>
 
   <property>
+    <description>The log files created under NM Local Directories
+    will be logged if it exceeds the configured bytes. This
+    only takes effect if log4j level is at least Debug.</description>
+    <name>yarn.log-aggregation.debug.filesize</name>
+    <value>104857600</value>
+  </property>
+
+  <property>
     <description>Specify which log file controllers we will support. The first
     file controller we add will be used to write the aggregated logs.
     This comma separated configuration will work with the configuration:
@@ -1350,6 +1371,14 @@
     </description>
     <name>yarn.nodemanager.remote-app-log-dir-include-older</name>
     <value>true</value>
+  </property>
+
+  <property>
+    <description>If the NodeManager creates the remote-app-log-dir folder,
+    it will be created with this groupname.
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir.groupname</name>
+    <value></value>
   </property>
 
   <property>
@@ -3773,6 +3802,15 @@
   </property>
 
   <property>
+    <name>yarn.webapp.filter-invalid-xml-chars</name>
+    <value>false</value>
+    <description>
+      Flag to enable filter of invalid xml 1.0 characters present in the
+      value of diagnostics field of apps output from RM WebService.
+    </description>
+  </property>
+
+  <property>
     <description>
       The type of configuration store to use for scheduler configurations.
       Default is "file", which uses file based capacity-scheduler.xml to
@@ -3907,6 +3945,17 @@
       Acceptable values: { "yarn.io/gpu", "yarn.io/fpga"}.
     </description>
     <name>yarn.nodemanager.resource-plugins</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specifies whether the initialization of the Node Manager should continue
+      if a certain device (GPU, FPGA, etc) was not found in the system. If set
+      to "true", then an exception will be thrown if a device is missing or
+      an error occurred during discovery.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fail-fast</name>
     <value></value>
   </property>
 
@@ -4222,4 +4271,34 @@
     <name>yarn.resourcemanager.activities-manager.app-activities.max-queue-length</name>
     <value>100</value>
   </property>
+
+  <property>
+    <description>
+      Containers launcher implementation for determining how containers
+      are launched within NodeManagers.
+    </description>
+    <name>yarn.nodemanager.containers-launcher.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the Pre processing of Application Submission context with server side configuration
+    </description>
+    <name>yarn.resourcemanager.submission-preprocessor.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Path to file with hosts for the submission processor to handle.</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Submission processor refresh interval</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-refresh-interval-ms</name>
+    <value>60000</value>
+  </property>
+
 </configuration>

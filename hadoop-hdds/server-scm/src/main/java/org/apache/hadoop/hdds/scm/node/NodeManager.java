@@ -130,6 +130,17 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   void removePipeline(Pipeline pipeline);
 
   /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param datanodeDetails - DatanodeDetails
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  void addContainer(DatanodeDetails datanodeDetails,
+                    ContainerID containerId) throws NodeNotFoundException;
+
+  /**
    * Remaps datanode to containers mapping to the new set of containers.
    * @param datanodeDetails - DatanodeDetails
    * @param containerIds - Set of containerIDs

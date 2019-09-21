@@ -19,7 +19,6 @@ import re
 import time
 import logging
 import ozone.util
-import pytest
 
 from ozone.cluster import OzoneCluster
 
@@ -36,8 +35,6 @@ def teardown_function():
     cluster.stop()
 
 
-@pytest.mark.skip(reason="The test-case fails intermittently."
-                         "See HDDS-1817 for more info.")
 def test_client_failure_isolate_two_datanodes():
     """
     In this test, all DNs are isolated from each other.
@@ -79,7 +76,6 @@ def test_client_failure_isolate_two_datanodes():
     assert file_checksum == key_checksum
 
 
-@pytest.mark.skip(reason="HDDS-1817")
 def test_client_failure_isolate_one_datanode():
     """
     In this test, one of the DNs is isolated from all other nodes.

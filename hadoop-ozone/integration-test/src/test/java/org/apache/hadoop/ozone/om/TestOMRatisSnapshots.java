@@ -26,7 +26,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,6 +52,7 @@ public class TestOMRatisSnapshots {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omServiceId;
   private int numOfOMs = 3;
   private static final long SNAPSHOT_THRESHOLD = 50;
   private static final int LOG_PURGE_GAP = 50;
@@ -74,6 +75,7 @@ public class TestOMRatisSnapshots {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    omServiceId = "om-service-test1";
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
         SNAPSHOT_THRESHOLD);
@@ -86,7 +88,8 @@ public class TestOMRatisSnapshots {
         .setNumOfActiveOMs(2)
         .build();
     cluster.waitForClusterToBeReady();
-    objectStore = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    objectStore = OzoneClientFactory.getRpcClient(omServiceId, conf)
+        .getObjectStore();
   }
 
   /**
@@ -133,7 +136,6 @@ public class TestOMRatisSnapshots {
 
     long leaderOMappliedLogIndex =
         leaderRatisServer.getStateMachineLastAppliedIndex();
-    leaderOM.getOmRatisServer().getStateMachineLastAppliedIndex();
 
     List<String> keys = new ArrayList<>();
     while (leaderOMappliedLogIndex < 2000) {
@@ -143,7 +145,7 @@ public class TestOMRatisSnapshots {
     }
 
     // Get the latest db checkpoint from the leader OM.
-    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot(true);
+    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot();
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 

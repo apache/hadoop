@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.response.bucket;
 
 import java.util.UUID;
 
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,7 +39,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * This class tests OMBucketSetPropertyResponse.
@@ -79,9 +80,15 @@ public class TestOMBucketSetPropertyResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
-    Assert.assertEquals(omBucketInfo,
-        omMetadataManager.getBucketTable().get(
-            omMetadataManager.getBucketKey(volumeName, bucketName)));
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getBucketTable()));
+
+    Table.KeyValue<String, OmBucketInfo> keyValue =
+        omMetadataManager.getBucketTable().iterator().next();
+
+    Assert.assertEquals(omMetadataManager.getBucketKey(volumeName,
+        bucketName), keyValue.getKey());
+    Assert.assertEquals(omBucketInfo, keyValue.getValue());
   }
 
 

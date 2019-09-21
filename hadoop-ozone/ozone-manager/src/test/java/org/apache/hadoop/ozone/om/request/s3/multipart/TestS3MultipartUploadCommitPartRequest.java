@@ -65,7 +65,7 @@ public class TestS3MultipartUploadCommitPartRequest
 
     OMClientResponse omClientResponse =
         s3InitiateMultipartUploadRequest.validateAndUpdateCache(ozoneManager,
-        1L);
+        1L, ozoneManagerDoubleBufferHelper);
 
     long clientID = Time.now();
     String multipartUploadID = omClientResponse.getOMResponse()
@@ -84,7 +84,7 @@ public class TestS3MultipartUploadCommitPartRequest
 
     omClientResponse =
         s3MultipartUploadCommitPartRequest.validateAndUpdateCache(ozoneManager,
-        2L);
+        2L, ozoneManagerDoubleBufferHelper);
 
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
@@ -129,7 +129,7 @@ public class TestS3MultipartUploadCommitPartRequest
 
     OMClientResponse omClientResponse =
         s3MultipartUploadCommitPartRequest.validateAndUpdateCache(ozoneManager,
-            2L);
+            2L, ozoneManagerDoubleBufferHelper);
 
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
@@ -168,7 +168,7 @@ public class TestS3MultipartUploadCommitPartRequest
 
     OMClientResponse omClientResponse =
         s3MultipartUploadCommitPartRequest.validateAndUpdateCache(ozoneManager,
-            2L);
+            2L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND);
@@ -200,7 +200,7 @@ public class TestS3MultipartUploadCommitPartRequest
 
     OMClientResponse omClientResponse =
         s3MultipartUploadCommitPartRequest.validateAndUpdateCache(ozoneManager,
-            2L);
+            2L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND);

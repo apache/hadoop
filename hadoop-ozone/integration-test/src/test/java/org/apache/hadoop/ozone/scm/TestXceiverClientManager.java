@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
+import org.apache.hadoop.hdds.scm.XceiverClientManager.ScmClientConfig;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -39,8 +40,6 @@ import java.io.IOException;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
-import static org.apache.hadoop.hdds.scm
-    .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
 
 /**
  * Test for XceiverClientManager caching and eviction.
@@ -110,11 +109,13 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
     String metaDir = GenericTestUtils.getTempPath(
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -166,11 +167,13 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
     String metaDir = GenericTestUtils.getTempPath(
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -216,8 +219,10 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByRetryFailure() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 

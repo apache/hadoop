@@ -16,4 +16,4 @@
 # limitations under the License.
 #
 
-org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl$Renewer
+org.apache.hadoop.fs.ozone.BasicOzoneClientAdapterImpl$Renewer

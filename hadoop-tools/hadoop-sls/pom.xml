@@ -124,7 +124,6 @@
           <excludes>
             <exclude>src/main/data/2jobs2min-rumen-jh.json</exclude>
             <exclude>src/main/html/js/thirdparty/jquery.js</exclude>
-            <exclude>src/main/html/js/thirdparty/d3-LICENSE</exclude>
             <exclude>src/main/html/js/thirdparty/d3.v3.js</exclude>
             <exclude>src/main/html/simulate.html.template</exclude>
             <exclude>src/main/html/simulate.info.html.template</exclude>
@@ -140,6 +139,7 @@
             <exclude>src/test/resources/nodes-with-resources.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
             <exclude>src/test/resources/ongoing-invariants.txt</exclude>
+            <exclude>src/test/resources/sls_dag.json</exclude>
           </excludes>
         </configuration>
       </plugin>

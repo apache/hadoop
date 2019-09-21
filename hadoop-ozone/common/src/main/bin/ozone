@@ -51,6 +51,7 @@ function hadoop_usage
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "sh" client "command line interface for object store operations"
   hadoop_add_subcommand "s3" client "command line interface for s3 related operations"
+  hadoop_add_subcommand "insight" client "tool to get runtime opeartion information"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
   hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
@@ -67,6 +68,12 @@ function ozonecmd_case
 {
   subcmd=$1
   shift
+
+  ozone_default_log4j="${HADOOP_CONF_DIR}/log4j.properties"
+  ozone_shell_log4j="${HADOOP_CONF_DIR}/ozone-shell-log4j.properties"
+  if [ ! -f "${ozone_shell_log4j}" ]; then
+    ozone_shell_log4j=${ozone_default_log4j}
+  fi
 
   case ${subcmd} in
     auditparser)
@@ -117,6 +124,8 @@ function ozonecmd_case
     ;;
     freon)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.Freon
+      OZONE_FREON_OPTS="${OZONE_FREON_OPTS} -Dhadoop.log.file=ozone-freon.log -Dlog4j.configuration=file:${ozone_shell_log4j}"
+      HADOOP_OPTS="${HADOOP_OPTS} ${OZONE_FREON_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     genesis)
@@ -136,6 +145,8 @@ function ozonecmd_case
     ;;
     sh | shell)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      HDFS_OM_SH_OPTS="${HDFS_OM_SH_OPTS} -Dhadoop.log.file=ozone-shell.log
+      -Dlog4j.configuration=file:${ozone_shell_log4j}"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_SH_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
@@ -167,13 +178,18 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-recon"
     ;;
     fs)
-      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.ozone.OzoneFsShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     scmcli)
       HADOOP_CLASSNAME=org.apache.hadoop.hdds.scm.cli.SCMCLI
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_SCM_CLI_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-tools"
+    ;;
+    insight)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.insight.Insight
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_SCM_CLI_OPTS}"
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-insight"
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.util.OzoneVersionInfo

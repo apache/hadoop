@@ -33,7 +33,7 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.om.response.TestOMResponseUtils;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Class to test S3BucketCreateResponse.
@@ -74,10 +74,17 @@ public class TestS3BucketCreateResponse {
     Assert.assertNotNull(omMetadataManager.getS3Table().get(s3BucketName));
     Assert.assertEquals(s3BucketCreateResponse.getS3Mapping(),
         omMetadataManager.getS3Table().get(s3BucketName));
-    Assert.assertNotNull(omMetadataManager.getVolumeTable().get(
-        omMetadataManager.getVolumeKey(volumeName)));
-    Assert.assertNotNull(omMetadataManager.getBucketTable().get(
-        omMetadataManager.getBucketKey(volumeName, s3BucketName)));
+
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getBucketTable()));
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
+
+    Assert.assertEquals(omMetadataManager.getVolumeKey(volumeName),
+        omMetadataManager.getVolumeTable().iterator().next().getKey());
+    Assert.assertNotNull(omMetadataManager.getBucketKey(volumeName,
+        s3BucketName), omMetadataManager.getBucketTable().iterator().next()
+        .getKey());
 
   }
 }

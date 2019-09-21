@@ -263,5 +263,12 @@ export default Ember.Controller.extend({
   isLogAggregationNotSucceeded: Ember.computed("model.app", function() {
     const logAggregationStatus = this.get("model.app.logAggregationStatus");
     return logAggregationStatus !== "SUCCEEDED";
-  })
+  }),
+
+  isTimelineUnHealthy: function() {
+      if (this.model && this.model.timelineHealth) {
+        return this.model.timelineHealth.get('isTimelineUnHealthy');
+      }
+      return true;
+    }.property('model.timelineHealth')
 });

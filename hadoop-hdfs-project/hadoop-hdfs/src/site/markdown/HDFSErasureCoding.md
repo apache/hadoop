@@ -170,6 +170,7 @@ Deployment
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
          [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 

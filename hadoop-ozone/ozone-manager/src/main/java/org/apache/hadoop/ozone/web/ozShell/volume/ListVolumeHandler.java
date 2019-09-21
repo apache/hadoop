@@ -18,20 +18,16 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
-
 import org.apache.hadoop.security.UserGroupInformation;
+
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -93,20 +89,19 @@ public class ListVolumeHandler extends Handler {
       volumeIterator = client.getObjectStore().listVolumes(prefix);
     }
 
-    List<VolumeInfo> volumeInfos = new ArrayList<>();
-
+    int counter = 0;
     while (maxVolumes > 0 && volumeIterator.hasNext()) {
-      VolumeInfo volume = OzoneClientUtils.asVolumeInfo(volumeIterator.next());
-      volumeInfos.add(volume);
+      OzoneVolume next = volumeIterator.next();
+      ObjectPrinter.printObjectAsJson(next);
       maxVolumes -= 1;
+      counter++;
     }
 
     if (isVerbose()) {
-      System.out.printf("Found : %d volumes for user : %s ", volumeInfos.size(),
+      System.out.printf("Found : %d volumes for user : %s ", counter,
           userName);
     }
-    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(volumeInfos)));
+
     return null;
   }
 }

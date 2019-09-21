@@ -215,7 +215,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
       throws IOException {
     describe("Recursive deletion");
     NanoTimer deleteTimer = new NanoTimer();
-    ms.deleteSubtree(BUCKET_ROOT);
+    ms.deleteSubtree(BUCKET_ROOT, null);
     deleteTimer.end();
     printTiming(LOG, "delete", deleteTimer, count);
   }

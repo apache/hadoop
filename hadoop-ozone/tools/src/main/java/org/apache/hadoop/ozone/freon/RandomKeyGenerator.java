@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Scope;
 import io.opentracing.util.GlobalTracer;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -252,6 +252,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
   @Override
   public Void call() throws Exception {
     if (ozoneConfiguration != null) {
+      if (!ozoneConfiguration.getBoolean(
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA,
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT)) {
+        LOG.info("Override validateWrites to false, because "
+            + HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA + " is set to false.");
+        validateWrites = false;
+      }
       init(ozoneConfiguration);
     } else {
       init(freon.createOzoneConfiguration());
@@ -263,9 +270,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     // Compute the common initial digest for all keys without their UUID
     if (validateWrites) {
       commonInitialMD = DigestUtils.getDigest(DIGEST_ALGORITHM);
-      int uuidLength = UUID.randomUUID().toString().length();
-      keySize = Math.max(uuidLength, keySize);
-      for (long nrRemaining = keySize - uuidLength; nrRemaining > 0;
+      for (long nrRemaining = keySize; nrRemaining > 0;
           nrRemaining -= bufferSize) {
         int curSize = (int)Math.min(bufferSize, nrRemaining);
         commonInitialMD.update(keyValueBuffer, 0, curSize);
@@ -285,6 +290,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     LOG.info("Number of Keys per Bucket: {}.", numOfKeys);
     LOG.info("Key size: {} bytes", keySize);
     LOG.info("Buffer size: {} bytes", bufferSize);
+    LOG.info("validateWrites : {}", validateWrites);
     for (int i = 0; i < numOfThreads; i++) {
       executor.submit(new ObjectCreator());
     }
@@ -551,7 +557,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
    */
   @VisibleForTesting
   long getUnsuccessfulValidationCount() {
-    return writeValidationFailureCount;
+    return validateWrites ? writeValidationFailureCount : 0;
   }
 
   /**
@@ -682,7 +688,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
         + RandomStringUtils.randomNumeric(5);
     LOG.trace("Adding key: {} in bucket: {} of volume: {}",
         keyName, bucketName, volumeName);
-    byte[] randomValue = DFSUtil.string2Bytes(UUID.randomUUID().toString());
     try {
       try (Scope scope = GlobalTracer.get().buildSpan("createKey")
           .startActive(true)) {
@@ -697,12 +702,11 @@ public final class RandomKeyGenerator implements Callable<Void> {
         try (Scope writeScope = GlobalTracer.get().buildSpan("writeKeyData")
             .startActive(true)) {
           long keyWriteStart = System.nanoTime();
-          for (long nrRemaining = keySize - randomValue.length;
+          for (long nrRemaining = keySize;
                nrRemaining > 0; nrRemaining -= bufferSize) {
             int curSize = (int) Math.min(bufferSize, nrRemaining);
             os.write(keyValueBuffer, 0, curSize);
           }
-          os.write(randomValue);
           os.close();
 
           long keyWriteDuration = System.nanoTime() - keyWriteStart;
@@ -716,7 +720,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
       if (validateWrites) {
         MessageDigest tmpMD = (MessageDigest) commonInitialMD.clone();
-        tmpMD.update(randomValue);
         boolean validate = validationQueue.offer(
             new KeyValidate(bucket, keyName, tmpMD.digest()));
         if (validate) {

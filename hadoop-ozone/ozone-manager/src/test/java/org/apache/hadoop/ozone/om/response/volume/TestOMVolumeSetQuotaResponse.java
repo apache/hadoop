@@ -29,7 +29,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -85,9 +86,15 @@ public class TestOMVolumeSetQuotaResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
-    Assert.assertEquals(omVolumeArgs,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
+
+    Table.KeyValue<String, OmVolumeArgs> keyValue =
+        omMetadataManager.getVolumeTable().iterator().next();
+
+    Assert.assertEquals(omMetadataManager.getVolumeKey(volumeName),
+        keyValue.getKey());
+    Assert.assertEquals(omVolumeArgs, keyValue.getValue());
 
   }
 

@@ -337,7 +337,7 @@ public class ITestDynamoDBMetadataStoreScale
   private void retryingDelete(final Path path) {
     try {
       ddbms.getInvoker().retry("Delete ", path.toString(), true,
-          () -> ddbms.delete(path));
+          () -> ddbms.delete(path, null));
     } catch (IOException e) {
       LOG.warn("Failed to delete {}: ", path, e);
     }
@@ -432,7 +432,7 @@ public class ITestDynamoDBMetadataStoreScale
           OPERATIONS_PER_THREAD,
           expectThrottling(),
           () -> {
-            ddbms.delete(path);
+            ddbms.delete(path, null);
           });
     }
   }

@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.util.StringUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -189,8 +190,9 @@ public class TestTypeConverter {
       TypeConverter.fromYarn(queueInfo, new Configuration());
 
     //Verify that the converted queue has the 1 child we had added
-    Assert.assertEquals("QueueInfo children weren't properly converted",
-      returned.getQueueChildren().size(), 1);
+    assertThat(returned.getQueueChildren().size())
+        .withFailMessage("QueueInfo children weren't properly converted")
+        .isEqualTo(1);
   }
 
   @Test

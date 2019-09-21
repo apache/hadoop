@@ -78,6 +78,7 @@ public abstract class AbstractServiceSpec implements ServiceSpec {
     serviceSpec.setName(parameters.getName());
     serviceSpec.setVersion(String.valueOf(System.currentTimeMillis()));
     serviceSpec.setArtifact(getDockerArtifact(parameters.getDockerImageName()));
+    serviceSpec.setQueue(parameters.getQueue());
 
     KerberosPrincipal kerberosPrincipal = KerberosPrincipalFactory
         .create(fsOperations, remoteDirectoryManager, parameters);

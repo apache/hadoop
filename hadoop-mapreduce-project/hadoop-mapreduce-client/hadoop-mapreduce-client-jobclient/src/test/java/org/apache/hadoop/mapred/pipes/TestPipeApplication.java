@@ -137,7 +137,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
 
@@ -231,7 +231,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }
@@ -328,7 +328,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }
@@ -428,7 +428,7 @@ public class TestPipeApplication {
       if (psw != null) {
         // remove password files
         for (File file : psw) {
-          file.deleteOnExit();
+          file.delete();
         }
       }
     }

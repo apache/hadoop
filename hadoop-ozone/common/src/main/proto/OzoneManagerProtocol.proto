@@ -73,6 +73,7 @@ enum Type {
   ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
+  DBUpdates = 53;
 
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
@@ -89,6 +90,8 @@ enum Type {
   GetAcl = 78;
 
   PurgeKeys = 81;
+
+  ListMultipartUploads = 82;
 }
 
 message OMRequest {
@@ -136,10 +139,13 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+  optional DBUpdatesRequest                  dbUpdatesRequest              = 53;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
+  optional UpdateGetDelegationTokenRequest updateGetDelegationTokenRequest = 64;
+  optional UpdateRenewDelegationTokenRequest updatedRenewDelegationTokenRequest = 65;
 
   optional GetFileStatusRequest             getFileStatusRequest           = 70;
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
@@ -152,6 +158,9 @@ message OMRequest {
   optional GetAclRequest                    getAclRequest                  = 78;
 
   optional PurgeKeysRequest                 purgeKeysRequest               = 81;
+
+  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
+  optional ListMultipartUploadsRequest      listMultipartUploadsRequest    = 83;
 }
 
 message OMResponse {
@@ -202,6 +211,7 @@ message OMResponse {
   optional MultipartUploadListPartsResponse listMultipartUploadPartsResponse = 50;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
+  optional DBUpdatesResponse                 dbUpdatesResponse             = 52;
 
   optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
   optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
@@ -218,6 +228,8 @@ message OMResponse {
   optional GetAclResponse                    getAclResponse                = 78;
 
   optional PurgeKeysResponse                  purgeKeysResponse            = 81;
+
+  optional ListMultipartUploadsResponse listMultipartUploadsResponse = 82;
 }
 
 enum Status {
@@ -280,6 +292,11 @@ enum Status {
     S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
 
     RATIS_ERROR = 52;
+
+    INVALID_PATH_IN_ACL_REQUEST = 53; // Invalid path name in acl request.
+
+    USER_MISMATCH = 54; // Error code when requested user name passed is
+    // different from remote user.
 }
 
 
@@ -302,6 +319,25 @@ message UserInfo {
     optional string remoteAddress = 3;
 }
 
+/**
+  This will be used during OM HA, once leader generates token sends this
+  request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating token across a quorum of OMs.
+*/
+message UpdateGetDelegationTokenRequest {
+    required GetDelegationTokenResponseProto getDelegationTokenResponse = 1;
+}
+
+/**
+  This will be used during OM HA, once leader renews token, sends this
+   request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating renewed token information across a quorum of OMs.
+*/
+message UpdateRenewDelegationTokenRequest {
+    required hadoop.common.RenewDelegationTokenRequestProto
+    renewDelegationTokenRequest = 1;
+    required RenewDelegationTokenResponseProto renewDelegationTokenResponse = 2;
+}
 
 /**
     Creates a volume
@@ -464,8 +500,6 @@ message DataEncryptionKeyProto {
 message BucketArgs {
     required string volumeName = 1;
     required string bucketName = 2;
-    repeated OzoneAclInfo addAcls = 3;
-    repeated OzoneAclInfo removeAcls = 4;
     optional bool isVersionEnabled = 5;
     optional StorageTypeProto storageType = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
@@ -612,6 +646,7 @@ message KeyArgs {
     // value is used in setting creation/modification time depending on the
     // request type.
     optional uint64 modificationTime = 13;
+    optional bool sortDatanodes = 14;
 }
 
 message KeyLocation {
@@ -836,9 +871,21 @@ message AllocateBlockResponse {
 message ServiceListRequest {
 }
 
+message DBUpdatesRequest {
+    required uint64 sequenceNumber = 1;
+}
+
 message ServiceListResponse {
 
     repeated ServiceInfo serviceInfo = 2;
+    // When security is enabled, return SCM CA certificate to Ozone client
+    // to set up gRPC TLS for client to authenticate server(DN).
+    optional string caCertificate = 3;
+}
+
+message DBUpdatesResponse {
+    required uint64 sequenceNumber = 1;
+    repeated bytes data = 2;
 }
 
 message ServicePort {
@@ -975,9 +1022,32 @@ message MultipartUploadListPartsRequest {
 message MultipartUploadListPartsResponse {
 
     optional hadoop.hdds.ReplicationType type = 2;
-    optional uint32 nextPartNumberMarker = 3;
-    optional bool isTruncated = 4;
-    repeated PartInfo partsList = 5;
+    optional hadoop.hdds.ReplicationFactor factor = 3;
+    optional uint32 nextPartNumberMarker = 4;
+    optional bool isTruncated = 5;
+    repeated PartInfo partsList = 6;
+
+}
+
+message ListMultipartUploadsRequest {
+    required string volume = 1;
+    required string bucket = 2;
+    required string prefix = 3;
+}
+
+message ListMultipartUploadsResponse {
+    optional bool isTruncated = 1;
+    repeated MultipartUploadInfo uploadsList = 2;
+}
+
+message MultipartUploadInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required string uploadId = 4;
+    required uint64 creationTime = 5;
+    required hadoop.hdds.ReplicationType type = 6;
+    required hadoop.hdds.ReplicationFactor factor = 7;
 
 }
 
@@ -988,12 +1058,12 @@ message PartInfo {
     required uint64 size = 4;
 }
 
-message GetDelegationTokenResponseProto{
+message GetDelegationTokenResponseProto {
 
     optional hadoop.common.GetDelegationTokenResponseProto response = 2;
 }
 
-message RenewDelegationTokenResponseProto{
+message RenewDelegationTokenResponseProto {
 
     optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
 }
@@ -1014,6 +1084,15 @@ message GetS3SecretRequest {
 
 message GetS3SecretResponse {
     required S3Secret s3Secret = 2;
+}
+
+/**
+  This will be used internally by OM to replicate S3 Secret across quorum of
+  OM's.
+*/
+message UpdateGetS3SecretRequest {
+    required string kerberosID = 1;
+    required string awsSecret = 2;
 }
 
 /**

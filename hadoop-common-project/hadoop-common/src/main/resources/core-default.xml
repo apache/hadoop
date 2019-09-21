@@ -1092,8 +1092,8 @@
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
+    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
+       IAM credentials of any EC2 VM or AWS container in which the process is running.
   </description>
 </property>
 
@@ -1660,10 +1660,10 @@
 
 <property>
   <name>fs.s3a.retry.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests.
+    excluding throttling requests and S3Guard inconsistency resolution.
   </description>
 </property>
 
@@ -1671,8 +1671,8 @@
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between attempts to retry operations for any reason other
-    than S3 throttle errors.
+    Initial retry interval when retrying operations for any reason other
+    than S3 throttle errors and S3Guard inconsistency resolution.
   </description>
 </property>
 
@@ -1689,6 +1689,27 @@
   <value>1000ms</value>
   <description>
     Interval between retry attempts on throttled requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry attempts to read/open/copy files when
+    S3Guard believes a specific version of the file to be available,
+    but the S3 request does not find any version of a file, or a different
+    version.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.interval</name>
+  <value>2s</value>
+  <description>
+    Initial interval between attempts to retry operations while waiting for S3
+    to become consistent with the S3Guard data.
+    An exponential back-off is used here: every failure doubles the delay.
   </description>
 </property>
 
@@ -1952,6 +1973,20 @@
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.ssl.channel.mode</name>
+  <value>default_jsse</value>
+  <description>
+    If secure connections to S3 are enabled, configures the SSL
+    implementation used to encrypt connections to S3. Supported values are:
+    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
+    Secure Socket Extension package (JSSE). However, when running on Java 8,
+    the GCM cipher is removed from the list of enabled ciphers. This is due
+    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
+    the JSSE with the default list of cipher suites.
+  </description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
@@ -2196,7 +2231,7 @@
 
 <property>
   <name>ipc.server.listen.queue.size</name>
-  <value>128</value>
+  <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting
                client connections.
   </description>
@@ -2213,7 +2248,7 @@
 
 <property>
   <name>ipc.maximum.data.length</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
     accepted by the server. Messages larger than this value are rejected by the
     immediately to avoid possible OOMs. This setting should rarely need to be
@@ -2495,6 +2530,19 @@
   </description>
 </property>
 
+  <property>
+    <name>hadoop.http.authentication.kerberos.endpoint.whitelist</name>
+    <value></value>
+    <description>
+      The comma-separated list of the endpoints that skips Kerberos
+      authentication. The endpoint must start with '/' and must not
+      contain special characters afterwards. This parameter is for
+      the monitoring tools that do not support Kerberos authentication.
+      Administrator must configure this parameter very carefully
+      because it allows unauthenticated access to the daemons.
+    </description>
+  </property>
+
 <!-- HTTP CORS support -->
 <property>
   <name>hadoop.http.cross-origin.enabled</name>
@@ -2690,9 +2738,9 @@
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1.1,TLSv1.2</value>
+  <value>TLSv1.2</value>
   <description>
-    The supported SSL protocols. The parameter will only used from
+    The supported SSL protocols. The parameter will only be used from
     DatanodeHttpServer.
   </description>
 </property>
@@ -2739,6 +2787,15 @@
   <value>1000</value>
   <description>
     How long to sleep after an unexpected RPC error.
+  </description>
+</property>
+
+<property>
+  <name>ha.health-monitor.rpc.connect.max.retries</name>
+  <value>1</value>
+  <description>
+    The number of retries on connect error when establishing RPC proxy
+    connection to NameNode, used for monitorHealth() calls.
   </description>
 </property>
 
@@ -3351,6 +3408,20 @@
     </description>
   </property>
 
+  <property>
+    <name>adl.ssl.channel.mode</name>
+    <value></value>
+    <description>
+      Valid inputs are OpenSSL, Default_JSE and Default (case insensitive).
+      If config is missing or is invalid, SSL Channel mode will be set to Default.
+
+      When OpenSSL, SSL socket connections are created in OpenSSL mode.
+      When Default_JSE, SSL socket connections are created in the default JSE mode.
+      When Default, SSL socket connections are attempted with OpenSSL
+      and will fallback to Default_JSE mode if OpenSSL is not available at runtime.
+    </description>
+  </property>
+
   <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>
@@ -3492,6 +3563,36 @@
       If client choose to ignore KMS uri provided by NameNode then client
       should set KMS URI using 'hadoop.security.key.provider.path' to access
       the right KMS for encrypted files.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <description>
+      If set to true, prometheus compatible metric page on the HTTP servers
+      is enabled via '/prom' endpoint.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.classname</name>
+    <value></value>
+    <description>
+      The class that can tell estimate much space is used in a directory.
+      There are four impl classes that being supported:
+      org.apache.hadoop.fs.DU(default), org.apache.hadoop.fs.WindowsGetSpaceUsed
+      org.apache.hadoop.fs.DFCachingGetSpaceUsed and
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaCachingGetSpaceUsed.
+      And the ReplicaCachingGetSpaceUsed impl class only used in HDFS module.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.jitterMillis</name>
+    <value>60000</value>
+    <description>
+      fs space usage statistics refresh jitter in msec.
     </description>
   </property>
 </configuration>

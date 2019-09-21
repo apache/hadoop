@@ -404,6 +404,24 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        SCMAction.ACTIVATE_PIPELINE, null));
+    scm.getPipelineManager().activatePipeline(
+        PipelineID.getFromProtobuf(pipelineID));
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        SCMAction.DEACTIVATE_PIPELINE, null));
+    scm.getPipelineManager().deactivatePipeline(
+        PipelineID.getFromProtobuf(pipelineID));
+  }
+
+  @Override
   public void closePipeline(HddsProtos.PipelineID pipelineID)
       throws IOException {
     Map<String, String> auditMap = Maps.newHashMap();
@@ -467,6 +485,27 @@ public class SCMClientProtocolServer implements
         buildAuditMessageForSuccess(SCMAction.FORCE_EXIT_SAFE_MODE, null)
     );
     return scm.exitSafeMode();
+  }
+
+  @Override
+  public void startReplicationManager() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.START_REPLICATION_MANAGER, null));
+    scm.getReplicationManager().start();
+  }
+
+  @Override
+  public void stopReplicationManager() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.STOP_REPLICATION_MANAGER, null));
+    scm.getReplicationManager().stop();
+  }
+
+  @Override
+  public boolean getReplicationManagerStatus() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.GET_REPLICATION_MANAGER_STATUS, null));
+    return scm.getReplicationManager().isRunning();
   }
 
   /**

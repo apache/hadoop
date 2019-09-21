@@ -22,6 +22,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,14 +87,23 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = path("empty");
     fs.mkdirs(dir);
     resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
-    assertSame("not empty: " + status, status.isEmptyDirectory(),
-        Tristate.TRUE);
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
+    assertSame("not empty: " + status, Tristate.TRUE,
+        status.isEmptyDirectory());
 
     if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(2);
     }
     listRequests.assertDiffEquals(0);
+
+    // but now only ask for the directories and the file check is skipped.
+    resetMetricDiffs();
+    fs.innerGetFileStatus(dir, false,
+        StatusProbeEnum.DIRECTORIES);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(1);
+    }
   }
 
   @Test
@@ -128,7 +139,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path simpleFile = new Path(dir, "simple.txt");
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
     if (status.isEmptyDirectory() == Tristate.TRUE) {
       // erroneous state
       String fsState = fs.toString();

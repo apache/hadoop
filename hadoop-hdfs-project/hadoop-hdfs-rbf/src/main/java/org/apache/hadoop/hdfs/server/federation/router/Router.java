@@ -285,7 +285,7 @@ public class Router extends CompositeService implements
             MountTableRefresherService.class.getSimpleName());
       } else {
         LOG.warn(
-            "Service {} not enabled: depenendent service(s) {} not enabled.",
+            "Service {} not enabled: dependent service(s) {} not enabled.",
             MountTableRefresherService.class.getSimpleName(),
             disabledDependentServices);
       }

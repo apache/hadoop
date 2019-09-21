@@ -68,7 +68,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
 
     this.executorService =  Executors.newSingleThreadScheduledExecutor();
     this.numDatanodes = getHddsDatanodes().size();
-    LOG.info("Starting MiniOzoneChaosCluster with:{} datanodes" + numDatanodes);
+    LOG.info("Starting MiniOzoneChaosCluster with {} datanodes", numDatanodes);
     LogUtils.setLogLevel(GrpcClientProtocolClient.LOG, Level.WARN);
   }
 
@@ -108,7 +108,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("{} Completed restarting Datanode: {}", failString,
             dn.getUuid());
       } catch (Exception e) {
-
+        LOG.error("Failed to restartNodes Datanode {}", dn.getUuid(), e);
       }
     }
   }
@@ -119,7 +119,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
     for (int i = 0; i < numNodesToFail; i++) {
       boolean shouldStop = shouldStop();
       int failedNodeIndex = getNodeToFail();
-      String stopString = shouldStop ? "Stopping" : "Starting";
+      String stopString = shouldStop ? "Stopping" : "Restarting";
       DatanodeDetails dn =
           getHddsDatanodes().get(failedNodeIndex).getDatanodeDetails();
       try {
@@ -133,7 +133,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("Completed {} DataNode {}", stopString, dn.getUuid());
 
       } catch (Exception e) {
-
+        LOG.error("Failed {} Datanode {}", stopString, dn.getUuid(), e);
       }
     }
   }
@@ -247,6 +247,8 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
       conf.setInt(OzoneConfigKeys.OZONE_CONTAINER_CACHE_SIZE, 2);
       conf.setInt("hdds.scm.replication.thread.interval", 10 * 1000);
       conf.setInt("hdds.scm.replication.event.timeout", 20 * 1000);
+      conf.setInt(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY, 100);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP, 100);
     }
 
     @Override

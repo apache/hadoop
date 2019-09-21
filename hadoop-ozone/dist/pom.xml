@@ -136,6 +136,14 @@
                   <type>cp</type>
                   <destFileName>hadoop-ozone-upgrade.classpath</destFileName>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-insight</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <type>cp</type>
+                  <destFileName>hadoop-ozone-insight.classpath</destFileName>
+                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
@@ -325,6 +333,10 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-upgrade</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-insight</artifactId>
     </dependency>
   </dependencies>
   <profiles>

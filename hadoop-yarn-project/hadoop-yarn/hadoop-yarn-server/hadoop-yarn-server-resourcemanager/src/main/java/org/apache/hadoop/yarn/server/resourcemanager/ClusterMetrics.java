@@ -48,6 +48,8 @@ public class ClusterMetrics {
   @Metric("# of Shutdown NMs") MutableGaugeInt numShutdownNMs;
   @Metric("AM container launch delay") MutableRate aMLaunchDelay;
   @Metric("AM register delay") MutableRate aMRegisterDelay;
+  @Metric("AM container allocation delay")
+  private MutableRate aMContainerAllocationDelay;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
@@ -190,4 +192,11 @@ public class ClusterMetrics {
     aMRegisterDelay.add(delay);
   }
 
+  public void addAMContainerAllocationDelay(long delay) {
+    aMContainerAllocationDelay.add(delay);
+  }
+
+  public MutableRate getAMContainerAllocationDelay() {
+    return aMContainerAllocationDelay;
+  }
 }

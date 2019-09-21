@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import static org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestCreator.createRequest;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyFloat;
@@ -686,7 +687,7 @@ public class TestRMContainerAllocator {
       rm.drainEvents();
     }
     // only 1 allocated container should be assigned
-    Assert.assertEquals(assignedContainer, 1);
+    assertThat(assignedContainer).isEqualTo(1);
   }
 
   @Test

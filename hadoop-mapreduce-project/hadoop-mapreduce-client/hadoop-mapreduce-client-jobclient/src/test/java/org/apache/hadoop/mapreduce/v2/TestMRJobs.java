@@ -105,6 +105,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestMRJobs {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMRJobs.class);
@@ -433,17 +435,17 @@ public class TestMRJobs {
     job.setPriority(JobPriority.HIGH);
     waitForPriorityToUpdate(job, JobPriority.HIGH);
     // Verify the priority from job itself
-    Assert.assertEquals(job.getPriority(), JobPriority.HIGH);
+    assertThat(job.getPriority()).isEqualTo(JobPriority.HIGH);
 
     // Change priority to NORMAL (3) with new api
     job.setPriorityAsInteger(3); // Verify the priority from job itself
     waitForPriorityToUpdate(job, JobPriority.NORMAL);
-    Assert.assertEquals(job.getPriority(), JobPriority.NORMAL);
+    assertThat(job.getPriority()).isEqualTo(JobPriority.NORMAL);
 
     // Change priority to a high integer value with new api
     job.setPriorityAsInteger(89); // Verify the priority from job itself
     waitForPriorityToUpdate(job, JobPriority.UNDEFINED_PRIORITY);
-    Assert.assertEquals(job.getPriority(), JobPriority.UNDEFINED_PRIORITY);
+    assertThat(job.getPriority()).isEqualTo(JobPriority.UNDEFINED_PRIORITY);
 
     boolean succeeded = job.waitForCompletion(true);
     Assert.assertTrue(succeeded);
@@ -1386,12 +1388,14 @@ public class TestMRJobs {
     sleepJob.setConf(conf);
 
     Job job1 = sleepJob.createJob(1, 1, 1, 1, 1, 1);
-    Assert.assertEquals("Wrong default name of sleep job.",
-        job1.getJobName(), SleepJob.SLEEP_JOB_NAME);
+    assertThat(job1.getJobName())
+        .withFailMessage("Wrong default name of sleep job.")
+        .isEqualTo(SleepJob.SLEEP_JOB_NAME);
 
     String expectedJob2Name = SleepJob.SLEEP_JOB_NAME + " - test";
     Job job2 = sleepJob.createJob(1, 1, 1, 1, 1, 1, "test");
-    Assert.assertEquals("Wrong name of sleep job.",
-        job2.getJobName(), expectedJob2Name);
+    assertThat(job2.getJobName())
+        .withFailMessage("Wrong name of sleep job.")
+        .isEqualTo(expectedJob2Name);
   }
 }

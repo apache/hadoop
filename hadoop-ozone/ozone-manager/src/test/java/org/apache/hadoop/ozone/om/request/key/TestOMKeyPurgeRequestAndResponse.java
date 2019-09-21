@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PurgeKe
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PurgeKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Tests {@link OMKeyPurgeRequest} and {@link OMKeyPurgeResponse}.
@@ -107,7 +107,8 @@ public class TestOMKeyPurgeRequestAndResponse extends TestOMKeyRequest {
         new OMKeyPurgeRequest(preExecutedRequest);
 
     OMClientResponse omClientResponse =
-        omKeyPurgeRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omKeyPurgeRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = OMResponse.newBuilder()
         .setPurgeKeysResponse(PurgeKeysResponse.getDefaultInstance())

@@ -400,14 +400,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>.gitattributes</exclude>
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
+            <exclude>.github/pull_request_template.md</exclude>
             <exclude>.idea/**</exclude>
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
             <exclude>hadoop-hdds/**/</exclude>
             <exclude>hadoop-ozone/**/</exclude>
-            <exclude>hadoop-submarine/target/**</exclude>
-            <exclude>hadoop-submarine/**/target/**</exclude>
+            <exclude>hadoop-submarine/**/</exclude>
+            <exclude>licenses/**</exclude>
+            <exclude>licenses-binary/**</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -586,62 +588,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       </build>
     </profile>
     <profile>
-      <id>hdds-src</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <inherited>false</inherited>
-            <executions>
-              <execution>
-                <id>src-dist</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <attach>false</attach>
-                  <finalName>hadoop-${project.version}-src-with-hdds</finalName>
-                  <outputDirectory>hadoop-dist/target</outputDirectory>
-                  <!-- Not using descriptorRef and hadoop-assembly dependency -->
-                  <!-- to avoid making hadoop-main to depend on a module      -->
-                  <descriptors>
-                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-with-hdds.xml</descriptor>
-                  </descriptors>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <inherited>false</inherited>
-            <executions>
-              <execution>
-                <id>src-dist-msg</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <echo/>
-                    <echo>Hadoop source tar (including HDDS) available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-hdds.tar.gz</echo>
-                    <echo/>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
       <id>submarine-src</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -800,8 +746,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <activeByDefault>false</activeByDefault>
       </activation>
       <modules>
-        <module>hadoop-ozone</module>
         <module>hadoop-hdds</module>
+        <module>hadoop-ozone</module>
       </modules>
     </profile>
     <profile>

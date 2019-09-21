@@ -1,5 +1,6 @@
 ---
 title: Simple Single Ozone
+weight: 10
 
 ---
 <!---
@@ -30,7 +31,7 @@ The easiest way to start up an all-in-one ozone container is to use the latest
 docker image from docker hub:
 
 ```bash
-docker run -P 9878:9878 -P 9876:9876 apache/ozone
+docker run -p 9878:9878 -p 9876:9876 apache/ozone
 ```
 This command will pull down the ozone image from docker hub and start all
 ozone services in a single container. <br>
@@ -40,7 +41,7 @@ Container Manager) one data node  and the S3 compatible REST server
 
 # Local multi-container cluster
 
-If you would like to use a more realistic pseud-cluster where each components
+If you would like to use a more realistic pseudo-cluster where each components
 run in own containers, you can start it with a docker-compose file.
 
 We have shipped a docker-compose and an enviorment file as part of the
@@ -65,7 +66,7 @@ If you need multiple datanodes, we can just scale it up:
  ```
 # Running S3 Clients
 
-Once the cluster is booted up and ready, you can verify it is running by
+Once the cluster is booted up and ready, you can verify its status by
 connecting to the SCM's UI at [http://localhost:9876](http://localhost:9876).
 
 The S3 gateway endpoint will be exposed at port 9878. You can use Ozone's S3
@@ -103,7 +104,6 @@ our bucket.
 aws s3 --endpoint http://localhost:9878 ls s3://bucket1/testfile
 ```
 
-.
 <div class="alert alert-info" role="alert"> You can also check the internal
 bucket browser supported by Ozone S3 interface by clicking on the below link.
 <br>

@@ -80,7 +80,8 @@ public class TestOMAllocateBlockRequest extends TestOMKeyRequest {
     Assert.assertTrue(omKeyLocationInfo.size() == 0);
 
     OMClientResponse omAllocateBlockResponse =
-        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omAllocateBlockResponse.getOMResponse().getStatus());
@@ -126,7 +127,8 @@ public class TestOMAllocateBlockRequest extends TestOMKeyRequest {
 
 
     OMClientResponse omAllocateBlockResponse =
-        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omAllocateBlockResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND);
@@ -147,7 +149,8 @@ public class TestOMAllocateBlockRequest extends TestOMKeyRequest {
     TestOMRequestUtils.addVolumeToDB(volumeName, "ozone", omMetadataManager);
 
     OMClientResponse omAllocateBlockResponse =
-        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omAllocateBlockResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND);
@@ -169,7 +172,8 @@ public class TestOMAllocateBlockRequest extends TestOMKeyRequest {
 
 
     OMClientResponse omAllocateBlockResponse =
-        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omAllocateBlockRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omAllocateBlockResponse.getOMResponse().getStatus()
         == OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND);

@@ -475,14 +475,14 @@ public class FSDirAttrOp {
     boolean status = false;
     INode inode = iip.getLastINode();
     int latest = iip.getLatestSnapshotId();
-    if (mtime != -1) {
+    if (mtime >= 0) {
       inode = inode.setModificationTime(mtime, latest);
       status = true;
     }
 
     // if the last access time update was within the last precision interval,
     // then no need to store access time
-    if (atime != -1 && (status || force
+    if (atime >= 0 && (status || force
         || atime > inode.getAccessTime() + fsd.getAccessTimePrecision())) {
       inode.setAccessTime(atime, latest,
           fsd.getFSNamesystem().getSnapshotManager().

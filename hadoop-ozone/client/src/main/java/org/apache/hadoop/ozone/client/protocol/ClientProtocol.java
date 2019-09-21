@@ -174,28 +174,6 @@ public interface ClientProtocol {
                     BucketArgs bucketArgs)
       throws IOException;
 
-  /**
-   * Adds ACLs to the Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param addAcls ACLs to be added
-   * @throws IOException
-   */
-  void addBucketAcls(String volumeName, String bucketName,
-                     List<OzoneAcl> addAcls)
-      throws IOException;
-
-  /**
-   * Removes ACLs from a Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param removeAcls ACLs to be removed
-   * @throws IOException
-   */
-  void removeBucketAcls(String volumeName, String bucketName,
-                        List<OzoneAcl> removeAcls)
-      throws IOException;
-
 
   /**
    * Enables or disables Bucket Versioning.
@@ -476,6 +454,11 @@ public interface ClientProtocol {
       String bucketName, String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException;
 
+  /**
+   * Return with the inflight multipart uploads.
+   */
+  OzoneMultipartUploadList listMultipartUploads(String volumename,
+      String bucketName, String prefix) throws IOException;
 
   /**
    * Get a valid Delegation Token.

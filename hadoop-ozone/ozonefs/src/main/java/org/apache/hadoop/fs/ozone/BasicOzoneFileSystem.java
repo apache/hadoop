@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,9 +86,10 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
-  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
-      "should be either one of the two forms: " +
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
+      "should be one of the following formats: " +
       "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com/key  OR " +
       "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
@@ -99,6 +101,11 @@ public class BasicOzoneFileSystem extends FileSystem {
         "Invalid scheme provided in " + name);
 
     String authority = name.getAuthority();
+    if (authority == null) {
+      // authority is null when fs.defaultFS is not a qualified o3fs URI and
+      // o3fs:/// is passed to the client. matcher will NPE if authority is null
+      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+    }
 
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
@@ -110,16 +117,20 @@ public class BasicOzoneFileSystem extends FileSystem {
     String remaining = matcher.groupCount() == 3 ? matcher.group(3) : null;
 
     String omHost = null;
-    String omPort = String.valueOf(-1);
+    int omPort = -1;
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      if (parts.length != 2) {
+      // Array length should be either 1(hostname or service id) or 2(host:port)
+      if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      omPort = parts[1];
-      if (!isNumber(omPort)) {
-        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      if (parts.length == 2) {
+        try {
+          omPort = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+        }
       }
     }
 
@@ -161,7 +172,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
   protected OzoneClientAdapter createAdapter(Configuration conf,
       String bucketStr,
-      String volumeStr, String omHost, String omPort,
+      String volumeStr, String omHost, int omPort,
       boolean isolatedClassloader) throws IOException {
 
     if (isolatedClassloader) {
@@ -171,8 +182,7 @@ public class BasicOzoneFileSystem extends FileSystem {
 
     } else {
 
-      return new BasicOzoneClientAdapterImpl(omHost,
-          Integer.parseInt(omPort), conf,
+      return new BasicOzoneClientAdapterImpl(omHost, omPort, conf,
           volumeStr, bucketStr);
     }
   }
@@ -365,7 +375,11 @@ public class BasicOzoneFileSystem extends FileSystem {
       }
     }
     RenameIterator iterator = new RenameIterator(src, dst);
-    return iterator.iterate();
+    boolean result = iterator.iterate();
+    if (result) {
+      createFakeParentDirectory(src);
+    }
+    return result;
   }
 
   private class DeleteIterator extends OzoneListingIterator {
@@ -450,10 +464,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     if (result) {
       // If this delete operation removes all files/directories from the
       // parent direcotry, then an empty parent directory must be created.
-      Path parent = f.getParent();
-      if (parent != null && !parent.isRoot()) {
-        createFakeDirectoryIfNecessary(parent);
-      }
+      createFakeParentDirectory(f);
     }
 
     return result;
@@ -464,6 +475,19 @@ public class BasicOzoneFileSystem extends FileSystem {
    * other child of this parent directory exists.
    *
    * @param f path to the fake parent directory
+   * @throws IOException
+   */
+  private void createFakeParentDirectory(Path f) throws IOException {
+    Path parent = f.getParent();
+    if (parent != null && !parent.isRoot()) {
+      createFakeDirectoryIfNecessary(parent);
+    }
+  }
+
+  /**
+   * Create a fake directory key if it does not already exist.
+   *
+   * @param f path to the fake directory
    * @throws IOException
    */
   private void createFakeDirectoryIfNecessary(Path f) throws IOException {

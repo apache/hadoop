@@ -24,8 +24,8 @@ icon: user
 
 
 Apache Ranger™ is a framework to enable, monitor and manage comprehensive data
-security across the Hadoop platform. The next version(any version after 1.20)
-of Apache Ranger is aware of Ozone, and can manage an Ozone cluster.
+security across the Hadoop platform. Any version of Apache Ranger which is greater
+than 1.20 is aware of Ozone, and can manage an Ozone cluster.
 
 
 To use Apache Ranger, you must have Apache Ranger installed in your Hadoop

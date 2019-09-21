@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,14 +53,12 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.UniqueId;
-import org.apache.hadoop.utils.db.Table;
-import org.apache.hadoop.utils.db.TableIterator;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.DIRECTORY_EXISTS;
@@ -147,7 +146,8 @@ public class OMFileCreateRequest extends OMKeyRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     CreateFileRequest createFileRequest = getOmRequest().getCreateFileRequest();
     KeyArgs keyArgs = createFileRequest.getKeyArgs();
@@ -174,14 +174,10 @@ public class OMFileCreateRequest extends OMKeyRequest {
     OmKeyInfo omKeyInfo = null;
 
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
-
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, keyName);
-      }
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       // acquire lock
       acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
@@ -263,21 +259,33 @@ public class OMFileCreateRequest extends OMKeyRequest {
       omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
           omMetadataManager.getOzoneKey(volumeName, bucketName,
               keyName), keyArgs.getDataSize(), locations,
-          encryptionInfo.orNull());
+          encryptionInfo.orNull(), ozoneManager.getPrefixManager(), bucketInfo);
 
+      omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
+          locations, encryptionInfo.orNull(), exception,
+          createFileRequest.getClientID(), transactionLogIndex, volumeName,
+          bucketName, keyName, ozoneManager,
+          OMAction.CREATE_FILE, ozoneManager.getPrefixManager(), bucketInfo);
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
+          locations, encryptionInfo.orNull(), exception,
+          createFileRequest.getClientID(), transactionLogIndex,
+          volumeName, bucketName, keyName, ozoneManager,
+          OMAction.CREATE_FILE, ozoneManager.getPrefixManager(), null);
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquiredLock) {
         omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }
 
-    return prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
-        encryptionInfo.orNull(), exception, createFileRequest.getClientID(),
-        transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
-        OMAction.CREATE_FILE);
+    return omClientResponse;
   }
 
 

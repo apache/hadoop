@@ -42,8 +42,8 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,9 +126,9 @@ public class OMDBCheckpointServlet extends HttpServlet {
         // ratis snapshot first. This step also included flushing the OM DB.
         // Hence, we can set flush to false.
         flush = false;
-        ratisSnapshotIndex = om.saveRatisSnapshot(true);
+        ratisSnapshotIndex = om.saveRatisSnapshot();
       } else {
-        ratisSnapshotIndex = om.loadRatisSnapshotIndex();
+        ratisSnapshotIndex = om.getRatisSnapshotIndex();
       }
 
       DBCheckpoint checkpoint = omDbStore.getCheckpoint(flush);

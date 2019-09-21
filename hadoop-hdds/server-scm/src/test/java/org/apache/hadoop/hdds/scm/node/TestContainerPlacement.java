@@ -65,8 +65,6 @@ import static org.junit.Assert.assertEquals;
 public class TestContainerPlacement {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
-  private static XceiverClientManager xceiverClientManager =
-      new XceiverClientManager(new OzoneConfiguration());
 
   /**
    * Returns a new copy of Configuration.
@@ -109,7 +107,7 @@ public class TestContainerPlacement {
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
     PipelineManager pipelineManager =
-        new SCMPipelineManager(config, scmNodeManager, eventQueue);
+        new SCMPipelineManager(config, scmNodeManager, eventQueue, null);
     return new SCMContainerManager(config, scmNodeManager, pipelineManager,
         eventQueue);
 
@@ -144,6 +142,7 @@ public class TestContainerPlacement {
         createContainerManager(conf, nodeManager);
     List<DatanodeDetails> datanodes =
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
+    XceiverClientManager xceiverClientManager = null;
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
         nodeManager.processHeartbeat(datanodeDetails);
@@ -159,6 +158,8 @@ public class TestContainerPlacement {
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
 
+      xceiverClientManager= new XceiverClientManager(new OzoneConfiguration());
+
       ContainerInfo container = containerManager
           .allocateContainer(
           xceiverClientManager.getType(),
@@ -169,6 +170,9 @@ public class TestContainerPlacement {
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);
+      if (xceiverClientManager != null) {
+        xceiverClientManager.close();
+      }
       FileUtil.fullyDelete(testDir);
     }
   }

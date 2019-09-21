@@ -3358,10 +3358,11 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<String> results = null;
     try {
-      results = timelineReaderManager.getEntityTypes(
-          TimelineReaderWebServicesUtils.createTimelineReaderContext(
-          clusterId, userId, flowName, flowRunId, appId,
-              null, null, null));
+      TimelineReaderContext context = TimelineReaderWebServicesUtils.
+          createTimelineReaderContext(clusterId, userId, flowName, flowRunId,
+          appId, null, null, null);
+      results = timelineReaderManager.getEntityTypes(context);
+      checkAccess(getTimelineReaderManager(), callerUGI, context.getUserId());
       succeeded = true;
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");

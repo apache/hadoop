@@ -97,6 +97,13 @@ public interface MiniOzoneCluster {
   void waitTobeOutOfSafeMode() throws TimeoutException, InterruptedException;
 
   /**
+   * Returns OzoneManager Service ID.
+   *
+   * @return Service ID String
+   */
+  String getServiceId();
+
+  /**
    * Returns {@link StorageContainerManager} associated with this
    * {@link MiniOzoneCluster} instance.
    *
@@ -136,15 +143,6 @@ public interface MiniOzoneCluster {
    * @throws IOException
    */
   OzoneClient getRpcClient() throws IOException;
-
-  /**
-   * Returns an REST based {@link OzoneClient} to access the
-   * {@link MiniOzoneCluster}.
-   *
-   * @return {@link OzoneClient}
-   * @throws IOException
-   */
-  OzoneClient getRestClient() throws IOException;
 
   /**
    * Returns StorageContainerLocationClient to communicate with
@@ -225,6 +223,11 @@ public interface MiniOzoneCluster {
    * Start DataNodes.
    */
   void startHddsDatanodes();
+
+  /**
+   * Shuts down all the DataNodes.
+   */
+  void shutdownHddsDatanodes();
 
   /**
    * Builder class for MiniOzoneCluster.

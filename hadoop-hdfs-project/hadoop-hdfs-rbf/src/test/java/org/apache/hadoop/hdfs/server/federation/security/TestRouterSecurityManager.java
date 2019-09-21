@@ -21,24 +21,32 @@ package org.apache.hadoop.hdfs.server.federation.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.router.RouterHDFSContract;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.service.ServiceStateException;
 import org.junit.rules.ExpectedException;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS;
 
 import org.hamcrest.core.StringContains;
 import java.io.IOException;
@@ -70,6 +78,24 @@ public class TestRouterSecurityManager {
 
   @Rule
   public ExpectedException exceptionRule = ExpectedException.none();
+
+  @Test
+  public void testCreateSecretManagerUsingReflection() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(
+        DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
+        MockDelegationTokenSecretManager.class.getName());
+    conf.set(HADOOP_SECURITY_AUTHENTICATION,
+        UserGroupInformation.AuthenticationMethod.KERBEROS.name());
+    RouterSecurityManager routerSecurityManager =
+        new RouterSecurityManager(conf);
+    AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
+        secretManager = routerSecurityManager.getSecretManager();
+    assertNotNull(secretManager);
+    assertTrue(secretManager.isRunning());
+    routerSecurityManager.stop();
+    assertFalse(secretManager.isRunning());
+  }
 
   @Test
   public void testDelegationTokens() throws IOException {
@@ -163,5 +189,16 @@ public class TestRouterSecurityManager {
   private static String[] getUserGroupForTesting() {
     String[] groupsForTesting = {"router_group"};
     return groupsForTesting;
+  }
+
+  @Test
+  public void testWithoutSecretManager() throws Exception {
+    Configuration conf = initSecurity();
+    conf.set(DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
+        ZKDelegationTokenSecretManagerImpl.class.getName());
+    Router router = new Router();
+    // router will throw an exception since zookeeper isn't running
+    intercept(ServiceStateException.class, "Failed to create SecretManager",
+        () -> router.init(conf));
   }
 }

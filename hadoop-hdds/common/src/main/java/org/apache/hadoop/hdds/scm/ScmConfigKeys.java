@@ -36,21 +36,6 @@ public final class ScmConfigKeys {
   // performance.
   public static final String OZONE_SCM_DB_DIRS = "ozone.scm.db.dirs";
 
-  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
-      "scm.container.client.idle.threshold";
-  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
-      "10s";
-
-  public static final String SCM_CONTAINER_CLIENT_MAX_SIZE_KEY =
-      "scm.container.client.max.size";
-  public static final int SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT =
-      256;
-
-  public static final String SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS =
-      "scm.container.client.max.outstanding.requests";
-  public static final int SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS_DEFAULT
-      = 100;
-
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = "dfs.container.ratis.enabled";
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
@@ -90,6 +75,14 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.statemachinedata.sync.retries";
   public static final int
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT = -1;
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS =
+      "dfs.container.ratis.statemachine.max.pending.apply-transactions";
+  // The default value of maximum number of pending state machine apply
+  // transactions is kept same as default snapshot threshold.
+  public static final int
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT =
+      100000;
   public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS =
       "dfs.container.ratis.log.queue.num-elements";
   public static final int DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS_DEFAULT =
@@ -111,7 +104,7 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.log.purge.gap";
   // TODO: Set to 1024 once RATIS issue around purge is fixed.
   public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
-      1000000000;
+      1000000;
   // expiry interval stateMachineData cache entry inside containerStateMachine
   public static final String
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
@@ -357,17 +350,13 @@ public final class ScmConfigKeys {
       "hdds.scm.http.kerberos.principal";
   public static final String
       HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
-      "hdds.scm.http.kerberos.keytab.file";
+      "hdds.scm.http.kerberos.keytab";
 
   // Network topology
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE =
       "ozone.scm.network.topology.schema.file";
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =
       "network-topology-default.xml";
-  public static final String DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED =
-      "dfs.network.topology.aware.read.enable";
-  public static final String DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT =
-      "false";
 
   public static final String HDDS_TRACING_ENABLED = "hdds.tracing.enabled";
   public static final boolean HDDS_TRACING_ENABLED_DEFAULT = true;
