@@ -106,7 +106,7 @@ ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
