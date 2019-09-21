@@ -21,9 +21,7 @@ package org.apache.hadoop.ozone.om.response.key;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
