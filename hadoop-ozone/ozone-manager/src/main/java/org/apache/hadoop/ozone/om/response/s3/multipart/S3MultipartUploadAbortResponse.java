@@ -40,16 +40,12 @@ import java.util.TreeMap;
 public class S3MultipartUploadAbortResponse extends OMClientResponse {
 
   private String multipartKey;
-  private long timeStamp;
   private OmMultipartKeyInfo omMultipartKeyInfo;
 
   public S3MultipartUploadAbortResponse(String multipartKey,
-      long timeStamp,
-      OmMultipartKeyInfo omMultipartKeyInfo,
-      OMResponse omResponse) {
+      OmMultipartKeyInfo omMultipartKeyInfo, OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
-    this.timeStamp = timeStamp;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
   }
 

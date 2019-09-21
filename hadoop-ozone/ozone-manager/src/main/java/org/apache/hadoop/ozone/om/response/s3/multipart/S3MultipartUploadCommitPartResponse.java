@@ -41,21 +41,19 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
 
   private String multipartKey;
   private String openKey;
-  private long deleteTimeStamp;
   private OmKeyInfo deletePartKeyInfo;
   private OmMultipartKeyInfo omMultipartKeyInfo;
   private OzoneManagerProtocolProtos.PartKeyInfo oldMultipartKeyInfo;
 
 
   public S3MultipartUploadCommitPartResponse(String multipartKey,
-      String openKey, long deleteTimeStamp,
-      OmKeyInfo deletePartKeyInfo, OmMultipartKeyInfo omMultipartKeyInfo,
+      String openKey, OmKeyInfo deletePartKeyInfo,
+      OmMultipartKeyInfo omMultipartKeyInfo,
       OzoneManagerProtocolProtos.PartKeyInfo oldPartKeyInfo,
       OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.openKey = openKey;
-    this.deleteTimeStamp = deleteTimeStamp;
     this.deletePartKeyInfo = deletePartKeyInfo;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
     this.oldMultipartKeyInfo = oldPartKeyInfo;
