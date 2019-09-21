@@ -1918,9 +1918,6 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
-      <properties>
-        <protoc.path>/opt/protobuf-3.7/bin/protoc</protoc.path>
-      </properties>
       <build>
         <plugins>
           <plugin>
