@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
@@ -301,7 +302,8 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
 
       invoker = new Invoker(new S3ARetryPolicy(conf), LOG_EVENT);
       ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, uri.getHost());
+          S3AUtils.createAwsConf(conf, uri.getHost(),
+              Constants.AWS_SERVICE_IDENTIFIER_STS);
       AWSSecurityTokenService tokenService =
           STSClientFactory.builder(parentAuthChain,
               awsConf,
