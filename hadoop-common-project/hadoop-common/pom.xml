@@ -389,16 +389,8 @@
             <configuration><skip>false</skip></configuration>
           </execution>
           <execution>
-            <id>compile-test-protoc</id>
-            <phase>generate-test-resources</phase>
-            <goals>
-              <goal>test-compile</goal>
-            </goals>
-            <configuration>
-              <protoTestSourceRoot>${basedir}/src/test/proto</protoTestSourceRoot>
-              <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
-              <clearOutputDirectory>false</clearOutputDirectory>
-            </configuration>
+            <id>test-compile-protoc</id>
+            <configuration><skip>false</skip></configuration>
           </execution>
         </executions>
       </plugin>
