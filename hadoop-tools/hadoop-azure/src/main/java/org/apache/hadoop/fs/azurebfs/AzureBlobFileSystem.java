@@ -108,7 +108,8 @@ public class AzureBlobFileSystem extends FileSystem {
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      if (!this.fileSystemExists()) {
+
+      if (this.tryGetFileStatus(new Path("/")) == null) {
         try {
           this.createFileSystem();
         } catch (AzureBlobFileSystemException ex) {
