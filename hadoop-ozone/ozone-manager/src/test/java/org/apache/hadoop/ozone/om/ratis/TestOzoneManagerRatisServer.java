@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -70,6 +71,10 @@ public class TestOzoneManagerRatisServer {
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
   private OMMetadataManager omMetadataManager;
   private OzoneManager ozoneManager;
+
+  static {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+  }
 
   @Before
   public void init() throws Exception {

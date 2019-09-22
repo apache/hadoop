@@ -269,7 +269,7 @@ public final class XceiverServerRatis extends XceiverServer {
             .getDuration(), timeUnit);
     final TimeDuration nodeFailureTimeout =
         TimeDuration.valueOf(duration, timeUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);

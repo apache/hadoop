@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -61,6 +62,10 @@ public class TestCloseContainerCommandHandler {
   private final StateContext context = Mockito.mock(StateContext.class);
   private final Random random = new Random();
   private static File testDir;
+
+  static {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+  }
 
   @Test
   public void testCloseContainerViaRatis()
