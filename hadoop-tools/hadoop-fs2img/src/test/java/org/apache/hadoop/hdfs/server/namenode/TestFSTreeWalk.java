@@ -38,7 +38,9 @@ import static org.mockito.Mockito.when;
  * Validate FSTreeWalk specific behavior
  */
 public class TestFSTreeWalk {
-  // verify that the ACLs are fetched when configured
+  /**
+   * Verify that the ACLs are fetched when configured
+   */
   @Test
   public void testImportAcl() throws Exception {
     Configuration conf = new Configuration();

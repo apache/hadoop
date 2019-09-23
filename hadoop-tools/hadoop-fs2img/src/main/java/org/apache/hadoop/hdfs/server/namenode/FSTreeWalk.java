@@ -96,29 +96,18 @@ public class FSTreeWalk extends TreeWalk {
     }
 
     FSTreeIterator(TreePath p) {
-      AclStatus acls = null;
-      FileStatus fileStatus = p.getFileStatus();
-      Path remotePath = fileStatus.getPath();
+      this(p.getFileStatus(), p.getParentId());
+    }
+
+    FSTreeIterator(FileStatus fileStatus, long parentId) {
+      Path path = fileStatus.getPath();
+      AclStatus acls;
       try {
-        acls = getAclStatus(fs, remotePath);
+        acls = getAclStatus(fs, path);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-      TreePath treePath = new TreePath(fileStatus, p.getParentId(), this, fs, acls);
-      getPendingQueue().addFirst(treePath);
-    }
-
-    FSTreeIterator(Path p) throws IOException {
-      try {
-        FileStatus s = fs.getFileStatus(root);
-        AclStatus acls = getAclStatus(fs, s.getPath());
-        getPendingQueue().addFirst(new TreePath(s, -1L, this, fs, acls));
-      } catch (FileNotFoundException e) {
-        if (p.equals(root)) {
-          throw e;
-        }
-        throw new ConcurrentModificationException("FS modified");
-      }
+      getPendingQueue().addFirst(new TreePath(fileStatus, parentId, this, fs, acls));
     }
 
     @Override
@@ -145,7 +134,8 @@ public class FSTreeWalk extends TreeWalk {
   @Override
   public TreeIterator iterator() {
     try {
-      return new FSTreeIterator(root);
+      FileStatus s = fs.getFileStatus(root);
+      return new FSTreeIterator(s, -1L);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
