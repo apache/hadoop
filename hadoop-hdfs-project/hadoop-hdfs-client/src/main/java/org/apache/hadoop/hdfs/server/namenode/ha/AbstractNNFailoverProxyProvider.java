@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.net.DomainNameResolverFactory;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -199,21 +198,6 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     // underlying IPC addresses so that the IPC code can find it.
     HAUtilClient.cloneDelegationTokenForLogicalUri(ugi, uri, addressesOfNns);
     return proxies;
-  }
-
-  /**
-   * Resets the NameNode proxy address in case it's stale
-   */
-  protected void resetProxyAddress(List<NNProxyInfo<T>> proxies, int index) {
-    try {
-      InetSocketAddress oldAddress = proxies.get(index).getAddress();
-      InetSocketAddress address = NetUtils.createSocketAddr(
-              oldAddress.getHostName() + ":" + oldAddress.getPort());
-      LOG.debug("oldAddress {}, newAddress {}", oldAddress, address);
-      proxies.set(index, new NNProxyInfo<T>(address));
-    } catch (Exception e) {
-      throw new RuntimeException("Could not refresh NN address", e);
-    }
   }
 
   /**

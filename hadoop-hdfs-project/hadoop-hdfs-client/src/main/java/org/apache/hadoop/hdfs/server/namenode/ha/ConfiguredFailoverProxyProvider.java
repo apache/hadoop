@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 
@@ -95,5 +97,20 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public boolean useLogicalURI() {
     return true;
+  }
+
+  /**
+   * Resets the NameNode proxy address in case it's stale
+   */
+  protected void resetProxyAddress(List<NNProxyInfo<T>> proxies, int index) {
+    try {
+      InetSocketAddress oldAddress = proxies.get(index).getAddress();
+      InetSocketAddress address = NetUtils.createSocketAddr(
+              oldAddress.getHostName() + ":" + oldAddress.getPort());
+      LOG.debug("oldAddress {}, newAddress {}", oldAddress, address);
+      proxies.set(index, new NNProxyInfo<T>(address));
+    } catch (Exception e) {
+      throw new RuntimeException("Could not refresh NN address", e);
+    }
   }
 }
