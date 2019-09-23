@@ -17,7 +17,8 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
+
+import org.apache.hadoop.hdds.server.OzoneProtocolMessageDispatcher;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
@@ -33,7 +34,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRespo
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import io.opentracing.Scope;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.util.ExitUtils;
 import org.slf4j.Logger;
@@ -58,8 +58,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final boolean isRatisEnabled;
   private final OzoneManager ozoneManager;
   private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
-  private final ProtocolMessageMetrics protocolMessageMetrics;
   private final AtomicLong transactionIndex = new AtomicLong(0L);
+  private final OzoneProtocolMessageDispatcher<OMRequest, OMResponse>
+      dispatcher;
 
   /**
    * Constructs an instance of the server handler.
@@ -75,13 +76,15 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
     this.isRatisEnabled = enableRatis;
-    this.protocolMessageMetrics = metrics;
     this.ozoneManagerDoubleBuffer =
         new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(), (i) -> {
           // Do nothing.
           // For OM NON-HA code, there is no need to save transaction index.
           // As we wait until the double buffer flushes DB to disk.
         }, isRatisEnabled);
+
+    dispatcher = new OzoneProtocolMessageDispatcher<>("OzoneProtocol",
+        metrics, LOG);
 
   }
 
@@ -93,35 +96,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   @Override
   public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
-    Scope scope = TracingUtil
-        .importAndCreateScope(request.getCmdType().name(),
-            request.getTraceID());
-    try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(
-            "OzoneManagerProtocol {} request is received: <json>{}</json>",
-            request.getCmdType().toString(),
-            request.toString().replaceAll("\n", "\\\\n"));
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("OzoneManagerProtocol {} request is received",
-            request.getCmdType().toString());
-      }
-      protocolMessageMetrics.increment(request.getCmdType());
 
-      OMResponse omResponse = processRequest(request);
-
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(
-            "OzoneManagerProtocol {} request is processed. Response: "
-                + "<json>{}</json>",
-            request.getCmdType().toString(),
-            omResponse.toString().replaceAll("\n", "\\\\n"));
-      }
-      return omResponse;
-
-    } finally {
-      scope.close();
-    }
+    return dispatcher.processRequest(request, this::processRequest,
+        request.getCmdType(), request.getTraceID());
   }
 
   private OMResponse processRequest(OMRequest request) throws
