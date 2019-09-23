@@ -23,7 +23,6 @@ package org.apache.hadoop.yarn.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Before;
@@ -85,8 +84,8 @@ public class TestRMFailoverProxyProvider {
 
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
-    ConfiguredRMFailoverProxyProvider <RMProxy> fpp =
-        new ConfiguredRMFailoverProxyProvider <RMProxy> ();
+    ConfiguredRMFailoverProxyProvider<RMProxy> fpp =
+        new ConfiguredRMFailoverProxyProvider<RMProxy>();
 
     // generate two address with different ports.
     // Default port of yarn RM
@@ -103,7 +102,7 @@ public class TestRMFailoverProxyProvider {
 
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy1 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy1 = fpp.getProxy();
     assertEquals(
         "ConfiguredRMFailoverProxyProvider doesn't generate " +
         "expected proxy",
@@ -191,7 +190,7 @@ public class TestRMFailoverProxyProvider {
   @Test
   public void testAutoRefreshFailoverChange() throws Exception {
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
-        AutoRefreshRMFailoverProxyProvider.class, 
+        AutoRefreshRMFailoverProxyProvider.class,
         RMFailoverProxyProvider.class);
 
     class MockProxy extends Proxy implements Closeable {
@@ -214,8 +213,8 @@ public class TestRMFailoverProxyProvider {
     Proxy mockProxy3 = new MockProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
     RMProxy mockRMProxy = mock(RMProxy.class);
-    AutoRefreshRMFailoverProxyProvider <RMProxy> fpp =
-        new AutoRefreshRMFailoverProxyProvider <RMProxy> ();
+    AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
+        new AutoRefreshRMFailoverProxyProvider<RMProxy>();
 
     // generate two address with different ports.
     // Default port of yarn RM
@@ -288,7 +287,7 @@ public class TestRMFailoverProxyProvider {
         .getProxy(any(YarnConfiguration.class), any(Class.class),
         eq(mockAdd2));
 
-    // Mock RMProxy methods to generate the first proxy with a different address
+    // Mock RMProxy methods to generate a different address
     when(mockRMProxy.getRMAddress(
         any(YarnConfiguration.class),
         any(Class.class))).thenReturn(mockAdd3);
@@ -305,7 +304,7 @@ public class TestRMFailoverProxyProvider {
         "doesn't generate expected proxy after failover",
         mockProxy1, actualProxy3.proxy);
 
-    // verify that mockRMProxy.getProxy() has still only been invoked three times
+    // verify that mockRMProxy.getProxy() is still only been invoked thrice
     verify(mockRMProxy, times(1))
         .getProxy(any(YarnConfiguration.class), any(Class.class),
         eq(mockAdd1));

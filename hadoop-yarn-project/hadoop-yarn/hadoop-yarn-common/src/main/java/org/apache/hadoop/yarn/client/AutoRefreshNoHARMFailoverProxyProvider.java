@@ -65,7 +65,7 @@ public class AutoRefreshNoHARMFailoverProxyProvider<T>
       final InetSocketAddress rmAddress = rmProxy.getRMAddress(conf, protocol);
       return rmProxy.getProxy(conf, protocol, rmAddress);
     } catch (IOException ioe) {
-      LOG.error("Unable to create proxy to the ResourceManager", 
+      LOG.error("Unable to create proxy to the ResourceManager",
           ioe.getMessage());
       return null;
     }

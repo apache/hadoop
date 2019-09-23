@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
- * An implementation of {@link RMFailoverProxyProvider} which does nothing in 
+ * An implementation of {@link RMFailoverProxyProvider} which does nothing in
  * the event of failover, and always returns the same proxy object.
  * This is the default non-HA RM Failover proxy provider. It is used to replace
  * {@link DefaultFailoverProxyProvider} which was used as Yarn default non-HA.
@@ -55,7 +55,7 @@ public class DefaultNoHARMFailoverProxyProvider<T>
    */
   @Override
   public void init(Configuration conf, RMProxy<T> proxy,
-      Class<T> protocol) {
+                    Class<T> protocol) {
     this.protocol = protocol;
     try {
       YarnConfiguration yarnConf = new YarnConfiguration(conf);
