@@ -226,6 +226,9 @@ public class DFSNetworkTopology extends NetworkTopology {
           String nodeLocation = excludedNode.getNetworkLocation()
               + "/" + excludedNode.getName();
           DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+          if (dn == null) {
+            continue;
+          }
           availableCount -= dn.hasStorageType(type)? 1 : 0;
         } else {
           LOG.error("Unexpected node type: {}.", excludedNode.getClass());
