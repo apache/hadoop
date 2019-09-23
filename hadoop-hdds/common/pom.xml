@@ -135,7 +135,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>io.jaegertracing</groupId>
       <artifactId>jaeger-client</artifactId>
-      <version>0.33.1</version>
+      <version>${jaeger.version}</version>
     </dependency>
     <dependency>
       <groupId>io.opentracing</groupId>

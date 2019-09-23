@@ -684,7 +684,8 @@ public class RpcClient implements ClientProtocol {
         key.getDataSize(),
         key.getCreationTime(),
         key.getModificationTime(),
-        ReplicationType.valueOf(key.getType().toString())))
+        ReplicationType.valueOf(key.getType().toString()),
+        key.getFactor().getNumber()))
         .collect(Collectors.toList());
   }
 
@@ -712,7 +713,7 @@ public class RpcClient implements ClientProtocol {
         keyInfo.getKeyName(), keyInfo.getDataSize(), keyInfo.getCreationTime(),
         keyInfo.getModificationTime(), ozoneKeyLocations, ReplicationType
         .valueOf(keyInfo.getType().toString()), keyInfo.getMetadata(),
-        keyInfo.getFileEncryptionInfo());
+        keyInfo.getFileEncryptionInfo(), keyInfo.getFactor().getNumber());
   }
 
   @Override

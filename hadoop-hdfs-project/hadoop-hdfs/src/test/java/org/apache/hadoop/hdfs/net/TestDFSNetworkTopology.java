@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.Node;
@@ -37,8 +39,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 
 /**
  * This class tests the correctness of storage type info stored in
@@ -368,6 +372,18 @@ public class TestDFSNetworkTopology {
     }
   }
 
+  @Test
+  public void testChooseRandomWithStorageTypeWithExcludedforNullCheck()
+      throws Exception {
+    HashSet<Node> excluded = new HashSet<>();
+
+    excluded.add(new DatanodeInfoBuilder()
+        .setNodeID(DatanodeID.EMPTY_DATANODE_ID).build());
+    Node node = CLUSTER.chooseRandomWithStorageType("/", "/l1/d1/r1", excluded,
+        StorageType.ARCHIVE);
+
+    assertNotNull(node);
+  }
 
   /**
    * This test tests the wrapper method. The wrapper method only takes one scope

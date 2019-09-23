@@ -22,6 +22,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.S3ClientOptions;
 
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -30,12 +31,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.File;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -617,4 +620,69 @@ public class ITestS3AConfiguration {
         "override,base");
   }
 
+  @Test(timeout = 10_000L)
+  public void testS3SpecificSignerOverride() throws IOException {
+    ClientConfiguration clientConfiguration = null;
+    Configuration config;
+
+    String signerOverride = "testSigner";
+    String s3SignerOverride = "testS3Signer";
+
+    // Default SIGNING_ALGORITHM, overridden for S3 only
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
+    Assert.assertEquals(s3SignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+    Assert.assertNull(clientConfiguration.getSignerOverride());
+
+    // Configured base SIGNING_ALGORITHM, overridden for S3 only
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM, signerOverride);
+    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
+    Assert.assertEquals(s3SignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+    Assert
+        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+  }
+
+  @Test(timeout = 10_000L)
+  public void testDdbSpecificSignerOverride() throws IOException {
+    ClientConfiguration clientConfiguration = null;
+    Configuration config;
+
+    String signerOverride = "testSigner";
+    String ddbSignerOverride = "testDdbSigner";
+
+    // Default SIGNING_ALGORITHM, overridden for S3
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+    Assert.assertEquals(ddbSignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
+    Assert.assertNull(clientConfiguration.getSignerOverride());
+
+    // Configured base SIGNING_ALGORITHM, overridden for S3
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM, signerOverride);
+    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+    Assert.assertEquals(ddbSignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
+    Assert
+        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+  }
 }
