@@ -366,6 +366,43 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
+  public void decommissionNodes(List<String> nodes) throws IOException {
+    String remoteUser = getRpcRemoteUsername();
+    try {
+      getScm().checkAdminAccess(remoteUser);
+      scm.getScmDecommissionManager().decommissionNodes(nodes);
+    } catch (Exception ex) {
+      LOG.error("Failed to decommission nodes", ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public void recommissionNodes(List<String> nodes) throws IOException {
+    String remoteUser = getRpcRemoteUsername();
+    try {
+      getScm().checkAdminAccess(remoteUser);
+      scm.getScmDecommissionManager().recommissionNodes(nodes);
+    } catch (Exception ex) {
+      LOG.error("Failed to recommission nodes", ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public void startMaintenanceNodes(List<String> nodes, int endInHours)
+      throws IOException {
+    String remoteUser = getRpcRemoteUsername();
+    try {
+      getScm().checkAdminAccess(remoteUser);
+      scm.getScmDecommissionManager().startMaintenanceNodes(nodes, endInHours);
+    } catch (Exception ex) {
+      LOG.error("Failed to place nodes into maintenance mode", ex);
+      throw ex;
+    }
+  }
+
+  @Override
   public void notifyObjectStageChange(StorageContainerLocationProtocolProtos
       .ObjectStageChangeRequestProto.Type type, long id,
       StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto.Op

@@ -395,6 +395,21 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Sets the operational state of the given node. Intended to be called when
+   * a node is being decommissioned etc.
+   *
+   * @param dn The datanode having its state set
+   * @param newState The new operational State of the node.
+   */
+  public void setNodeOperationalState(DatanodeDetails dn,
+      NodeOperationalState newState)  throws NodeNotFoundException {
+    DatanodeInfo dni = nodeStateMap.getNodeInfo(dn.getUuid());
+    if (dni.getNodeStatus().getOperationalState() != newState) {
+      nodeStateMap.updateNodeOperationalState(dn.getUuid(), newState);
+    }
+  }
+
+  /**
    * Gets set of pipelineID a datanode belongs to.
    * @param dnId - Datanode ID
    * @return Set of PipelineID

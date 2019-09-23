@@ -112,6 +112,13 @@ public interface StorageContainerLocationProtocol extends Closeable {
   List<HddsProtos.Node> queryNode(HddsProtos.NodeState state,
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
+  void decommissionNodes(List<String> nodes) throws IOException;
+
+  void recommissionNodes(List<String> nodes) throws IOException;
+
+  void startMaintenanceNodes(List<String> nodes, int endInHours)
+      throws IOException;
+
   /**
    * Notify from client when begin or finish creating objects like pipeline
    * or containers on datanodes.

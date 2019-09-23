@@ -162,6 +162,35 @@ public interface ScmClient extends Closeable {
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**
+   * Allows a list of hosts to be decommissioned. The hosts are identified
+   * by their hostname and optionally port in the format foo.com:port.
+   * @param hosts A list of hostnames, optionally with port
+   * @throws IOException
+   */
+  void decommissionNodes(List<String> hosts) throws IOException;
+
+  /**
+   * Allows a list of hosts in maintenance or decommission states to be placed
+   * back in service. The hosts are identified by their hostname and optionally
+   * port in the format foo.com:port.
+   * @param hosts A list of hostnames, optionally with port
+   * @throws IOException
+   */
+  void recommissionNodes(List<String> hosts) throws IOException;
+
+  /**
+   * Place the list of datanodes into maintenance mode. If a non-null endDtm
+   * is passed, the hosts will automatically exit maintenance mode after the
+   * given time has passed. The hosts are identified by their hostname and
+   * optionally port in the format foo.com:port.
+   * @param hosts A list of hostnames, optionally with port
+   * @param endHours The number of hours from now which maintenance will end
+   * @throws IOException
+   */
+  void startMaintenanceNodes(List<String> hosts, int endHours)
+      throws IOException;
+
+  /**
    * Creates a specified replication pipeline.
    * @param type - Type
    * @param factor - Replication factor

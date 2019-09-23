@@ -262,8 +262,17 @@ public class MockNodeManager implements NodeManager {
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public HddsProtos.NodeState getNodeState(DatanodeDetails dd) {
+  public NodeStatus getNodeStatus(DatanodeDetails dd) {
     return null;
+  }
+
+  /**
+   * Set the operation state of a node.
+   * @param datanodeDetails The datanode to set the new state for
+   * @param newState The new operational state for the node
+   */
+  public void setNodeOperationalState(DatanodeDetails datanodeDetails,
+      HddsProtos.NodeOperationalState newState) throws NodeNotFoundException {
   }
 
   /**

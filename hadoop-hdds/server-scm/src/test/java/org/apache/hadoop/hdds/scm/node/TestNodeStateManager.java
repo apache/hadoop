@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
@@ -183,6 +184,22 @@ public class TestNodeStateManager {
     assertEquals(NodeState.HEALTHY, nsm.getNodeStatus(dn).getHealth());
     assertEquals("NON_HEALTHY_TO_HEALTHY_NODE",
         eventPublisher.getLastEvent().getName());
+  }
+
+  @Test
+  public void testNodeOpStateCanBeSet()
+      throws NodeAlreadyExistsException, NodeNotFoundException {
+    DatanodeDetails dn = generateDatanode();
+    nsm.addNode(dn);
+
+    nsm.setNodeOperationalState(dn,
+        HddsProtos.NodeOperationalState.DECOMMISSIONED);
+
+    NodeStatus newStatus = nsm.getNodeStatus(dn);
+    assertEquals(HddsProtos.NodeOperationalState.DECOMMISSIONED,
+        newStatus.getOperationalState());
+    assertEquals(NodeState.HEALTHY,
+        newStatus.getHealth());
   }
 
   private DatanodeDetails generateDatanode() {

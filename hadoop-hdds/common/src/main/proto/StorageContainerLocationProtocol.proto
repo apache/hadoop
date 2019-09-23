@@ -59,7 +59,9 @@ message ScmContainerLocationRequest {
   optional StartReplicationManagerRequestProto startReplicationManagerRequest = 21;
   optional StopReplicationManagerRequestProto stopReplicationManagerRequest = 22;
   optional ReplicationManagerStatusRequestProto seplicationManagerStatusRequest = 23;
-
+  optional DecommissionNodesRequestProto decommissionNodesRequest = 24;
+  optional RecommissionNodesRequestProto recommissionNodesRequest = 25;
+  optional StartMaintenanceNodesRequestProto startMaintenanceNodesRequest = 26;
 }
 
 message ScmContainerLocationResponse {
@@ -91,6 +93,9 @@ message ScmContainerLocationResponse {
   optional StartReplicationManagerResponseProto startReplicationManagerResponse = 21;
   optional StopReplicationManagerResponseProto stopReplicationManagerResponse = 22;
   optional ReplicationManagerStatusResponseProto replicationManagerStatusResponse = 23;
+  optional DecommissionNodesResponseProto decommissionNodesResponse = 24;
+  optional RecommissionNodesResponseProto recommissionNodesResponse = 25;
+  optional StartMaintenanceNodesResponseProto startMaintenanceNodesResponse = 26;
   enum Status {
     OK = 1;
     CONTAINER_ALREADY_EXISTS = 2;
@@ -118,6 +123,9 @@ enum Type {
   StartReplicationManager = 16;
   StopReplicationManager = 17;
   GetReplicationManagerStatus = 18;
+  DecommissionNodes = 19;
+  RecommissionNodes = 20;
+  StartMaintenanceNodes = 21;
 }
 
 /**
@@ -225,6 +233,40 @@ message NodeQueryResponseProto {
   repeated Node datanodes = 1;
 }
 
+/*
+  Decommission a list of hosts
+*/
+message DecommissionNodesRequestProto {
+  repeated string hosts = 1;
+}
+
+message DecommissionNodesResponseProto {
+  // empty response
+}
+
+/*
+  Recommission a list of hosts in maintenance or decommission states
+*/
+message RecommissionNodesRequestProto {
+  repeated string hosts = 1;
+}
+
+message RecommissionNodesResponseProto {
+  // empty response
+}
+
+/*
+  Place a list of hosts into maintenance mode
+*/
+message StartMaintenanceNodesRequestProto {
+  repeated string hosts = 1;
+  optional int64 endInHours = 2;
+}
+
+message StartMaintenanceNodesResponseProto {
+  // empty response
+}
+
 /**
   Request to create a replication pipeline.
  */
@@ -326,5 +368,4 @@ message ReplicationManagerStatusResponseProto {
  */
 service StorageContainerLocationProtocolService {
   rpc submitRequest (ScmContainerLocationRequest) returns (ScmContainerLocationResponse);
-
 }

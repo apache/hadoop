@@ -125,11 +125,19 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails);
 
   /**
-   * Returns the node state of a specific node.
+   * Returns the node status of a specific node.
    * @param datanodeDetails DatanodeDetails
-   * @return Healthy/Stale/Dead.
+   * @return NodeStatus for the node
    */
-  NodeState getNodeState(DatanodeDetails datanodeDetails);
+  NodeStatus getNodeStatus(DatanodeDetails datanodeDetails);
+
+  /**
+   * Set the operation state of a node.
+   * @param datanodeDetails The datanode to set the new state for
+   * @param newState The new operational state for the node
+   */
+  void setNodeOperationalState(DatanodeDetails datanodeDetails,
+      NodeOperationalState newState) throws NodeNotFoundException;
 
   /**
    * Get set of pipelines a datanode is part of.

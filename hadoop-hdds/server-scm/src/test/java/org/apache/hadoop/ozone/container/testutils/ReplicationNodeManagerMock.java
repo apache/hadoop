@@ -52,17 +52,17 @@ import java.util.LinkedList;
  * A Node Manager to test replication.
  */
 public class ReplicationNodeManagerMock implements NodeManager {
-  private final Map<DatanodeDetails, NodeState> nodeStateMap;
+  private final Map<DatanodeDetails, NodeStatus> nodeStateMap;
   private final CommandQueue commandQueue;
 
   /**
    * A list of Datanodes and current states.
-   * @param nodeState A node state map.
+   * @param nodeStatus A node state map.
    */
-  public ReplicationNodeManagerMock(Map<DatanodeDetails, NodeState> nodeState,
+  public ReplicationNodeManagerMock(Map<DatanodeDetails, NodeStatus> nodeStatus,
                                     CommandQueue commandQueue) {
-    Preconditions.checkNotNull(nodeState);
-    this.nodeStateMap = nodeState;
+    Preconditions.checkNotNull(nodeStatus);
+    this.nodeStateMap = nodeStatus;
     this.commandQueue = commandQueue;
   }
 
@@ -179,8 +179,24 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public NodeState getNodeState(DatanodeDetails dd) {
+  public NodeStatus getNodeStatus(DatanodeDetails dd) {
     return nodeStateMap.get(dd);
+  }
+
+  /**
+   * Set the operation state of a node.
+   * @param dd The datanode to set the new state for
+   * @param newState The new operational state for the node
+   */
+  @Override
+  public void setNodeOperationalState(DatanodeDetails dd,
+      HddsProtos.NodeOperationalState newState) throws NodeNotFoundException {
+    NodeStatus currentStatus = nodeStateMap.get(dd);
+    if (currentStatus != null) {
+      nodeStateMap.put(dd, new NodeStatus(newState, currentStatus.getHealth()));
+    } else {
+      throw new NodeNotFoundException();
+    }
   }
 
   /**
@@ -313,10 +329,10 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Adds a node to the existing Node manager. This is used only for test
    * purposes.
    * @param id DatanodeDetails
-   * @param state State you want to put that node to.
+   * @param status State you want to put that node to.
    */
-  public void addNode(DatanodeDetails id, NodeState state) {
-    nodeStateMap.put(id, state);
+  public void addNode(DatanodeDetails id, NodeStatus status) {
+    nodeStateMap.put(id, status);
   }
 
   @Override

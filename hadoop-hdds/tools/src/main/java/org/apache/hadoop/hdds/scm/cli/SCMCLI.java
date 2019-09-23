@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.cli.container.ContainerCommands;
 import org.apache.hadoop.hdds.scm.cli.pipeline.PipelineCommands;
+import org.apache.hadoop.hdds.scm.cli.node.DatanodeAdminCommands;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -76,7 +77,8 @@ import picocli.CommandLine.Option;
         ContainerCommands.class,
         PipelineCommands.class,
         TopologySubcommand.class,
-        ReplicationManagerCommands.class
+        ReplicationManagerCommands.class,
+        DatanodeAdminCommands.class
     },
     mixinStandardHelpOptions = true)
 public class SCMCLI extends GenericCli {

@@ -74,6 +74,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodeReportHandler;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.scm.node.StaleNodeHandler;
+import org.apache.hadoop.hdds.scm.node.NodeDecommissionManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineActionHandler;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineReportHandler;
@@ -160,6 +161,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private ContainerManager containerManager;
   private BlockManager scmBlockManager;
   private final SCMStorageConfig scmStorageConfig;
+  private NodeDecommissionManager scmDecommissionManager;
 
   private SCMMetadataStore scmMetadataStore;
 
@@ -334,6 +336,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     safeModeHandler = new SafeModeHandler(configuration,
         clientProtocolServer, scmBlockManager, replicationManager,
         pipelineManager);
+
+    scmDecommissionManager = new NodeDecommissionManager(conf, scmNodeManager,
+        pipelineManager, containerManager);
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.RETRIABLE_DATANODE_COMMAND, scmNodeManager);
@@ -925,6 +930,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   public int getNodeCount(NodeState nodestate) {
     // TODO - decomm - this probably needs to accept opState and health
     return scmNodeManager.getNodeCount(null, nodestate);
+  }
+
+  /**
+   * Returns the node decommission manager.
+   *
+   * @return NodeDecommissionManager The decommission manger for the used by
+   *         scm
+   */
+  public NodeDecommissionManager getScmDecommissionManager() {
+    return scmDecommissionManager;
   }
 
   /**

@@ -213,19 +213,30 @@ public class SCMNodeManager implements NodeManager {
   }
 
   /**
-   * Returns the node state of a specific node.
+   * Returns the node status of a specific node.
    *
    * @param datanodeDetails Datanode Details
-   * @return Healthy/Stale/Dead/Unknown.
+   * @return NodeStatus for the node
    */
   @Override
-  public NodeState getNodeState(DatanodeDetails datanodeDetails) {
+  public NodeStatus getNodeStatus(DatanodeDetails datanodeDetails) {
     try {
-      return nodeStateManager.getNodeStatus(datanodeDetails).getHealth();
+      return nodeStateManager.getNodeStatus(datanodeDetails);
     } catch (NodeNotFoundException e) {
       // TODO: should we throw NodeNotFoundException?
       return null;
     }
+  }
+
+  /**
+   * Set the operation state of a node.
+   * @param datanodeDetails The datanode to set the new state for
+   * @param newState The new operational state for the node
+   */
+  @Override
+  public void setNodeOperationalState(DatanodeDetails datanodeDetails,
+      NodeOperationalState newState) throws NodeNotFoundException{
+    nodeStateManager.setNodeOperationalState(datanodeDetails, newState);
   }
 
   /**

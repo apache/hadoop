@@ -210,6 +210,22 @@ public class ContainerOperationClient implements ScmClient {
         poolName);
   }
 
+  @Override
+  public void decommissionNodes(List<String> hosts) throws IOException {
+    storageContainerLocationClient.decommissionNodes(hosts);
+  }
+
+  @Override
+  public void recommissionNodes(List<String> hosts) throws IOException {
+    storageContainerLocationClient.recommissionNodes(hosts);
+  }
+
+  @Override
+  public void startMaintenanceNodes(List<String> hosts, int endHours)
+      throws IOException {
+    storageContainerLocationClient.startMaintenanceNodes(hosts, endHours);
+  }
+
   /**
    * Creates a specified replication pipeline.
    */
