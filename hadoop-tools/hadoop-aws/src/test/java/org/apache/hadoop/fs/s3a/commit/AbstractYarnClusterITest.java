@@ -196,8 +196,9 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
 
   protected Job createJob() throws IOException {
-    Job mrJob = Job.getInstance(getClusterBinding().getConf(),
-        getMethodName());
+    Configuration jobConf = getClusterBinding().getConf();
+    jobConf.addResource(getConfiguration());
+    Job mrJob = Job.getInstance(jobConf, getMethodName());
     patchConfigurationForCommitter(mrJob.getConfiguration());
     return mrJob;
   }
