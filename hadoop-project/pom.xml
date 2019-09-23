@@ -1715,9 +1715,56 @@
           <artifactId>frontend-maven-plugin</artifactId>
           <version>${frontend-maven-plugin.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${protobuf-maven-plugin.version}</version>
+          <extensions>true</extensions>
+          <configuration>
+            <protocArtifact>
+              com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+            </protocArtifact>
+            <attachProtoSources>false</attachProtoSources>
+          </configuration>
+          <executions>
+            <execution>
+              <id>src-compile-protoc</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+              <configuration>
+                <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
+                <protoSourceRoot>${basedir}/src/main/proto</protoSourceRoot>
+                <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
+                <clearOutputDirectory>false</clearOutputDirectory>
+                <skip>true</skip>
+              </configuration>
+            </execution>
+            <execution>
+              <id>src-test-compile-protoc</id>
+              <phase>generate-test-sources</phase>
+              <goals>
+                <goal>test-compile</goal>
+              </goals>
+              <configuration>
+                <protoTestSourceRoot>${basedir}/src/test/proto</protoTestSourceRoot>
+                <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
+                <clearOutputDirectory>false</clearOutputDirectory>
+                <skip>true</skip>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
-
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>${os-maven-plugin.version}</version>
+      </extension>
+    </extensions>
     <plugins>
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
