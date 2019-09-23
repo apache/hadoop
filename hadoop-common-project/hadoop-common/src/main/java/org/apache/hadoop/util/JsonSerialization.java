@@ -21,10 +21,10 @@ package org.apache.hadoop.util;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -185,12 +185,12 @@ public class JsonSerialization<T> {
    * Save to a local file. Any existing file is overwritten unless
    * the OS blocks that.
    * @param file file
-   * @param path path
+   * @param instance instance
    * @throws IOException IO exception
    */
   public void save(File file, T instance) throws
       IOException {
-    writeJsonAsBytes(instance, new FileOutputStream(file));
+    writeJsonAsBytes(instance, Files.newOutputStream(file.toPath()));
   }
 
   /**

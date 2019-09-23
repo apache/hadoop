@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -47,14 +48,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -199,11 +197,7 @@ public class TestCapacitySchedulerPerf {
     qb.setUserLimitFactor((float)0.0);
 
     // Quiet the loggers while measuring throughput
-    for (Enumeration<?> loggers = LogManager.getCurrentLoggers();
-         loggers.hasMoreElements(); )  {
-      Logger logger = (Logger) loggers.nextElement();
-      logger.setLevel(Level.WARN);
-    }
+    GenericTestUtils.setRootLogLevel(Level.WARN);
     final int topn = 20;
     final int iterations = 2000000;
     final int printInterval = 20000;

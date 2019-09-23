@@ -71,7 +71,7 @@ public interface CGroupsHandler {
     }
   }
 
-  String CGROUP_FILE_TASKS = "tasks";
+  String CGROUP_PROCS_FILE = "cgroup.procs";
   String CGROUP_PARAM_CLASSID = "classid";
   String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
 

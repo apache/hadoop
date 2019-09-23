@@ -16,15 +16,15 @@
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-ui</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN UI</name>
   <packaging>${packagingType}</packaging>
 
@@ -118,7 +118,48 @@
                         <exclude>bower_components/**/*</exclude>
                         <exclude>tmp/**/*</exclude>
                         <exclude>dist/**/*</exclude>
+                        <exclude>terminal/**/*</exclude>
                       </excludes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-terminal</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/src/main/webapp</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>terminal/**/*</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-xterm</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist/terminal/xterm</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/target/webapp/node_modules/xterm</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>dist/**/*</include>
+                      </includes>
                     </resource>
                   </resources>
                 </configuration>
@@ -202,6 +243,14 @@
             <groupId>ro.isdc.wro4j</groupId>
             <artifactId>wro4j-maven-plugin</artifactId>
             <version>1.7.9</version>
+            <dependencies>
+              <!-- TODO: Remove this dependency after upgrading wro4j-maven-plugin to 1.8.1 or later. -->
+              <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>2.18.0</version>
+              </dependency>
+            </dependencies>
             <executions>
               <execution>
                 <phase>prepare-package</phase>

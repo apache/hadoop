@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,8 +42,8 @@ import com.sun.jersey.api.client.Client;
 @Unstable
 public class DirectTimelineWriter extends TimelineWriter{
 
-  private static final Log LOG = LogFactory
-      .getLog(DirectTimelineWriter.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DirectTimelineWriter.class);
 
   public DirectTimelineWriter(UserGroupInformation authUgi,
       Client client, URI resURI) {

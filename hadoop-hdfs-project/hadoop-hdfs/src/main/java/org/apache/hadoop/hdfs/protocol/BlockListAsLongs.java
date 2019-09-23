@@ -201,7 +201,7 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
   /**
    * Very efficient encoding of the block report into a ByteString to avoid
    * the overhead of protobuf repeating fields.  Primitive repeating fields
-   * require re-allocs of an ArrayList<Long> and the associated (un)boxing
+   * require re-allocs of an ArrayList&lt;Long&gt; and the associated (un)boxing
    * overhead which puts pressure on GC.
    * 
    * The structure of the buffer is as follows:
@@ -276,12 +276,12 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
       try {
         // zig-zag to reduce size of legacy blocks
         cos.writeSInt64NoTag(replica.getBlockId());
-        cos.writeRawVarint64(replica.getBytesOnDisk());
-        cos.writeRawVarint64(replica.getGenerationStamp());
+        cos.writeUInt64NoTag(replica.getBytesOnDisk());
+        cos.writeUInt64NoTag(replica.getGenerationStamp());
         ReplicaState state = replica.getState();
         // although state is not a 64-bit value, using a long varint to
         // allow for future use of the upper bits
-        cos.writeRawVarint64(state.getValue());
+        cos.writeUInt64NoTag(state.getValue());
         if (state == ReplicaState.FINALIZED) {
           numFinalized++;
         }

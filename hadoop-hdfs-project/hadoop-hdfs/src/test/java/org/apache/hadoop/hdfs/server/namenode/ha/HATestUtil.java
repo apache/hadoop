@@ -17,35 +17,47 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.LongAccumulator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
@@ -55,7 +67,7 @@ import com.google.common.base.Supplier;
  * Static utility functions useful for testing HA.
  */
 public abstract class HATestUtil {
-  private static final Log LOG = LogFactory.getLog(HATestUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HATestUtil.class);
   
   private static final String LOGICAL_HOSTNAME = "ha-nn-uri-%d";
   
@@ -158,7 +170,98 @@ public abstract class HATestUtil {
     FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
     return (DistributedFileSystem)fs;
   }
-  
+
+  public static <P extends ObserverReadProxyProvider<?>>
+  DistributedFileSystem configureObserverReadFs(
+      MiniDFSCluster cluster, Configuration conf,
+      Class<P> classFPP, boolean isObserverReadEnabled)
+          throws IOException, URISyntaxException {
+    String logicalName = conf.get(DFSConfigKeys.DFS_NAMESERVICES);
+    URI nnUri = new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + logicalName);
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+        + "." + logicalName, classFPP.getName());
+    conf.set("fs.defaultFS", nnUri.toString());
+
+    DistributedFileSystem dfs = (DistributedFileSystem)
+        FileSystem.get(nnUri, conf);
+    @SuppressWarnings("unchecked")
+    P provider = (P) ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+        dfs.getClient().getNamenode())).getProxyProvider();
+    provider.setObserverReadEnabled(isObserverReadEnabled);
+    return dfs;
+  }
+
+  public static boolean isSentToAnyOfNameNodes(
+      DistributedFileSystem dfs,
+      MiniDFSCluster cluster, int... nnIndices) throws IOException {
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    FailoverProxyProvider.ProxyInfo<?> pi = provider.getLastProxy();
+    for (int nnIdx : nnIndices) {
+      if (pi.proxyInfo.equals(
+          cluster.getNameNode(nnIdx).getNameNodeAddress().toString())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static MiniQJMHACluster setUpObserverCluster(
+      Configuration conf, int numObservers, int numDataNodes,
+      boolean fastTailing) throws IOException {
+    return setUpObserverCluster(conf, numObservers, numDataNodes,
+        fastTailing, null, null);
+  }
+
+  public static MiniQJMHACluster setUpObserverCluster(
+      Configuration conf, int numObservers, int numDataNodes,
+      boolean fastTailing, long[] simulatedCapacities,
+      String[] racks) throws IOException {
+    // disable block scanner
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
+
+    conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, fastTailing);
+    if(fastTailing) {
+      conf.setTimeDuration(
+          DFS_HA_TAILEDITS_PERIOD_KEY, 100, TimeUnit.MILLISECONDS);
+    } else {
+      // disable fast tailing so that coordination takes time.
+      conf.setTimeDuration(DFS_HA_LOGROLL_PERIOD_KEY, 300, TimeUnit.SECONDS);
+      conf.setTimeDuration(DFS_HA_TAILEDITS_PERIOD_KEY, 200, TimeUnit.SECONDS);
+    }
+
+    MiniQJMHACluster.Builder qjmBuilder = new MiniQJMHACluster.Builder(conf)
+        .setNumNameNodes(2 + numObservers);
+    qjmBuilder.getDfsBuilder().numDataNodes(numDataNodes)
+        .simulatedCapacities(simulatedCapacities)
+        .racks(racks);
+    MiniQJMHACluster qjmhaCluster = qjmBuilder.build();
+    MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
+
+    dfsCluster.transitionToActive(0);
+    dfsCluster.waitActive(0);
+
+    for (int i = 0; i < numObservers; i++) {
+      dfsCluster.transitionToObserver(2 + i);
+    }
+    return qjmhaCluster;
+  }
+
+  public static <P extends FailoverProxyProvider<?>>
+  void setupHAConfiguration(MiniDFSCluster cluster,
+      Configuration conf, int nsIndex, Class<P> classFPP) {
+    MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
+    List<String> nnAddresses = new ArrayList<String>();
+    for (MiniDFSCluster.NameNodeInfo nn : nns) {
+      InetSocketAddress addr = nn.nameNode.getNameNodeAddress();
+      nnAddresses.add(
+          createUri(HdfsConstants.HDFS_URI_SCHEME, addr).toString());
+    }
+    setFailoverConfigurations(
+        conf, getLogicalHostname(cluster), nnAddresses, classFPP);
+  }
+
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf) {
     setFailoverConfigurations(cluster, conf, getLogicalHostname(cluster));
@@ -173,24 +276,34 @@ public abstract class HATestUtil {
   /** Sets the required configurations for performing failover.  */
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf, String logicalName, int nsIndex) {
+    setFailoverConfigurations(cluster, conf, logicalName, nsIndex,
+        ConfiguredFailoverProxyProvider.class);
+  }
+
+  /** Sets the required configurations for performing failover.  */
+  public static <P extends FailoverProxyProvider<?>> void
+      setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf,
+      String logicalName, int nsIndex, Class<P> classFPP) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
     List<InetSocketAddress> nnAddresses = new ArrayList<InetSocketAddress>(3);
     for (MiniDFSCluster.NameNodeInfo nn : nns) {
       nnAddresses.add(nn.nameNode.getNameNodeAddress());
     }
-    setFailoverConfigurations(conf, logicalName, nnAddresses);
+    setFailoverConfigurations(conf, logicalName, nnAddresses, classFPP);
   }
 
   public static void setFailoverConfigurations(Configuration conf, String logicalName,
       InetSocketAddress ... nnAddresses){
-    setFailoverConfigurations(conf, logicalName, Arrays.asList(nnAddresses));
+    setFailoverConfigurations(conf, logicalName, Arrays.asList(nnAddresses),
+        ConfiguredFailoverProxyProvider.class);
   }
 
   /**
    * Sets the required configurations for performing failover
    */
-  public static void setFailoverConfigurations(Configuration conf,
-      String logicalName, List<InetSocketAddress> nnAddresses) {
+  public static <P extends FailoverProxyProvider<?>> void
+      setFailoverConfigurations(Configuration conf, String logicalName,
+      List<InetSocketAddress> nnAddresses, Class<P> classFPP) {
     setFailoverConfigurations(conf, logicalName,
         Iterables.transform(nnAddresses, new Function<InetSocketAddress, String>() {
 
@@ -199,11 +312,13 @@ public abstract class HATestUtil {
           public String apply(InetSocketAddress addr) {
             return "hdfs://" + addr.getHostName() + ":" + addr.getPort();
           }
-        }));
+        }), classFPP);
   }
 
-  public static void setFailoverConfigurations(Configuration conf, String logicalName,
-      Iterable<String> nnAddresses) {
+  public static <P extends FailoverProxyProvider<?>>
+  void setFailoverConfigurations(
+      Configuration conf, String logicalName,
+      Iterable<String> nnAddresses, Class<P> classFPP) {
     List<String> nnids = new ArrayList<String>();
     int i = 0;
     for (String address : nnAddresses) {
@@ -215,8 +330,8 @@ public abstract class HATestUtil {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, logicalName),
         Joiner.on(',').join(nnids));
-    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
-        ConfiguredFailoverProxyProvider.class.getName());
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+        + "." + logicalName, classFPP.getName());
     conf.set("fs.defaultFS", "hdfs://" + logicalName);
   }
 
@@ -245,5 +360,22 @@ public abstract class HATestUtil {
         }
       }
     }
+  }
+
+  /**
+   * Customize stateId of the client AlignmentContext for testing.
+   */
+  public static long setACStateId(DistributedFileSystem dfs,
+      long stateId) throws Exception {
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    ClientGSIContext ac = (ClientGSIContext)(provider.getAlignmentContext());
+    Field f = ac.getClass().getDeclaredField("lastSeenStateId");
+    f.setAccessible(true);
+    LongAccumulator lastSeenStateId = (LongAccumulator)f.get(ac);
+    long currentStateId = lastSeenStateId.getThenReset();
+    lastSeenStateId.accumulate(stateId);
+    return currentStateId;
   }
 }

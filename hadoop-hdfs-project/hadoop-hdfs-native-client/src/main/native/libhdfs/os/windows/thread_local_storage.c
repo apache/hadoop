@@ -23,8 +23,13 @@
 #include <stdio.h>
 #include <windows.h>
 
+#define UNKNOWN "UNKNOWN"
+#define MAXTHRID 256
+
 /** Key that allows us to retrieve thread-local storage */
 static DWORD gTlsIndex = TLS_OUT_OF_INDEXES;
+
+static void get_current_thread_id(JNIEnv* env, char* id, int max);
 
 /**
  * If the current thread has a JNIEnv in thread-local storage, then detaches the
@@ -36,6 +41,8 @@ static void detachCurrentThreadFromJvm()
   JNIEnv *env = NULL;
   JavaVM *vm;
   jint ret;
+  char thr_name[MAXTHRID];
+
   if (threadLocalStorageGet(&state) || !state) {
     return;
   }
@@ -50,7 +57,15 @@ static void detachCurrentThreadFromJvm()
       ret);
     (*env)->ExceptionDescribe(env);
   } else {
-    (*vm)->DetachCurrentThread(vm);
+    ret = (*vm)->DetachCurrentThread(vm);
+
+    if (ret != JNI_OK) {
+      (*env)->ExceptionDescribe(env);
+      get_current_thread_id(env, thr_name, MAXTHRID);
+
+      fprintf(stderr, "detachCurrentThreadFromJvm: Unable to detach thread %s "
+          "from the JVM. Error code: %d\n", thr_name, ret);
+    }
   }
 
   /* Free exception strings */
@@ -59,6 +74,50 @@ static void detachCurrentThreadFromJvm()
 
   /* Free the state itself */
   free(state);
+}
+
+static void get_current_thread_id(JNIEnv* env, char* id, int max) {
+  jclass cls;
+  jmethodID mth;
+  jobject thr;
+  jstring thr_name;
+  jlong thr_id = 0;
+  const char *thr_name_str;
+
+  cls = (*env)->FindClass(env, "java/lang/Thread");
+  mth = (*env)->GetStaticMethodID(env, cls, "currentThread",
+      "()Ljava/lang/Thread;");
+  thr = (*env)->CallStaticObjectMethod(env, cls, mth);
+
+  if (thr != NULL) {
+    mth = (*env)->GetMethodID(env, cls, "getId", "()J");
+    thr_id = (*env)->CallLongMethod(env, thr, mth);
+    (*env)->ExceptionDescribe(env);
+
+    mth = (*env)->GetMethodID(env, cls, "toString", "()Ljava/lang/String;");
+    thr_name = (jstring)(*env)->CallObjectMethod(env, thr, mth);
+
+    if (thr_name != NULL) {
+      thr_name_str = (*env)->GetStringUTFChars(env, thr_name, NULL);
+
+      // Treating the jlong as a long *should* be safe
+      snprintf(id, max, "%s:%ld", thr_name_str, thr_id);
+
+      // Release the char*
+      (*env)->ReleaseStringUTFChars(env, thr_name, thr_name_str);
+    } else {
+      (*env)->ExceptionDescribe(env);
+
+      // Treating the jlong as a long *should* be safe
+      snprintf(id, max, "%s:%ld", UNKNOWN, thr_id);
+    }
+  } else {
+    (*env)->ExceptionDescribe(env);
+    snprintf(id, max, "%s", UNKNOWN);
+  }
+
+  // Make sure the id is null terminated in case we overflow the max length
+  id[max - 1] = '\0';
 }
 
 void hdfsThreadDestructor(void *v)
@@ -148,7 +207,7 @@ struct ThreadLocalState* threadLocalStorageCreate()
   state = (struct ThreadLocalState*)malloc(sizeof(struct ThreadLocalState));
   if (state == NULL) {
     fprintf(stderr,
-      "threadLocalStorageSet: OOM - Unable to allocate thread local state\n");
+      "threadLocalStorageCreate: OOM - Unable to allocate thread local state\n");
     return NULL;
   }
   state->lastExceptionStackTrace = NULL;

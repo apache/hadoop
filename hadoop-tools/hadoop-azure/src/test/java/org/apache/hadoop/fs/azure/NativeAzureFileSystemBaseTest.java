@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -51,6 +47,9 @@ import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.readStringFromFile;
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToFile;
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToStream;
 import static org.apache.hadoop.test.GenericTestUtils.*;
 
 /*
@@ -329,12 +328,12 @@ public abstract class NativeAzureFileSystemBaseTest
     FileSystem localFs = FileSystem.get(new Configuration());
     localFs.delete(localFilePath, true);
     try {
-      writeString(localFs, localFilePath, "Testing");
+      writeStringToFile(localFs, localFilePath, "Testing");
       Path dstPath = methodPath();
       assertTrue(FileUtil.copy(localFs, localFilePath, fs, dstPath, false,
           fs.getConf()));
       assertPathExists("coied from local", dstPath);
-      assertEquals("Testing", readString(fs, dstPath));
+      assertEquals("Testing", readStringFromFile(fs, dstPath));
       fs.delete(dstPath, true);
     } finally {
       localFs.delete(localFilePath, true);
@@ -361,26 +360,6 @@ public abstract class NativeAzureFileSystemBaseTest
     assertEquals(1, listed.length);
     assertFalse(listed[0].isDirectory());
     assertTrue(fs.delete(rootFolder, true));
-  }
-
-  @Test
-  public void testStatistics() throws Exception {
-    FileSystem.clearStatistics();
-    FileSystem.Statistics stats = FileSystem.getStatistics("wasb",
-        NativeAzureFileSystem.class);
-    assertEquals(0, stats.getBytesRead());
-    assertEquals(0, stats.getBytesWritten());
-    Path newFile = new Path("testStats");
-    writeString(newFile, "12345678");
-    assertEquals(8, stats.getBytesWritten());
-    assertEquals(0, stats.getBytesRead());
-    String readBack = readString(newFile);
-    assertEquals("12345678", readBack);
-    assertEquals(8, stats.getBytesRead());
-    assertEquals(8, stats.getBytesWritten());
-    assertTrue(fs.delete(newFile, true));
-    assertEquals(8, stats.getBytesRead());
-    assertEquals(8, stats.getBytesWritten());
   }
 
   @Test
@@ -767,7 +746,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Path renamePendingFile = new Path(renamePendingStr);
     FSDataOutputStream out = fs.create(renamePendingFile, true);
     assertTrue(out != null);
-    writeString(out, renameDescription);
+    writeStringToStream(out, renameDescription);
 
     // Redo the rename operation based on the contents of the -RenamePending.json file.
     // Trigger the redo by checking for existence of the original folder. It must appear
@@ -831,7 +810,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Path renamePendingFile = new Path(renamePendingStr);
     FSDataOutputStream out = fs.create(renamePendingFile, true);
     assertTrue(out != null);
-    writeString(out, pending.makeRenamePendingFileContents());
+    writeStringToStream(out, pending.makeRenamePendingFileContents());
 
     // Redo the rename operation based on the contents of the
     // -RenamePending.json file. Trigger the redo by checking for existence of
@@ -886,7 +865,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Path renamePendingFile = new Path(renamePendingStr);
     FSDataOutputStream out = fs.create(renamePendingFile, true);
     assertTrue(out != null);
-    writeString(out, pending.makeRenamePendingFileContents());
+    writeStringToStream(out, pending.makeRenamePendingFileContents());
 
     // Rename inner folder to simulate the scenario where rename has started and
     // only one directory has been renamed but not the files under it
@@ -1000,7 +979,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Path renamePendingFile = new Path(renamePendingStr);
     FSDataOutputStream out = fs.create(renamePendingFile, true);
     assertTrue(out != null);
-    writeString(out, pending.makeRenamePendingFileContents());
+    writeStringToStream(out, pending.makeRenamePendingFileContents());
 
     try {
       pending.redo();
@@ -1228,7 +1207,7 @@ public abstract class NativeAzureFileSystemBaseTest
       Path renamePendingFile = new Path(renamePendingStr);
       FSDataOutputStream out = fs.create(renamePendingFile, true);
       assertTrue(out != null);
-      writeString(out, renameDescription);
+      writeStringToStream(out, renameDescription);
     }
 
     // set whether a child is present or not
@@ -1488,7 +1467,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     long currentUtcTime = utc.getTime().getTime();
     FileStatus fileStatus = fs.getFileStatus(testPath);
-    final long errorMargin = 10 * 1000; // Give it +/-10 seconds
+    final long errorMargin = 60 * 1000; // Give it +/-60 seconds
     assertTrue("Modification time " +
         new Date(fileStatus.getModificationTime()) + " is not close to now: " +
         utc.getTime(),
@@ -1504,45 +1483,12 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   private String readString(Path testFile) throws IOException {
-    return readString(fs, testFile);
+    return readStringFromFile(fs, testFile);
   }
 
-  private String readString(FileSystem fs, Path testFile) throws IOException {
-    FSDataInputStream inputStream = fs.open(testFile);
-    String ret = readString(inputStream);
-    inputStream.close();
-    return ret;
-  }
-
-  private String readString(FSDataInputStream inputStream) throws IOException {
-    BufferedReader reader = new BufferedReader(new InputStreamReader(
-        inputStream));
-    final int BUFFER_SIZE = 1024;
-    char[] buffer = new char[BUFFER_SIZE];
-    int count = reader.read(buffer, 0, BUFFER_SIZE);
-    if (count > BUFFER_SIZE) {
-      throw new IOException("Exceeded buffer size");
-    }
-    inputStream.close();
-    return new String(buffer, 0, count);
-  }
 
   private void writeString(Path path, String value) throws IOException {
-    writeString(fs, path, value);
-  }
-
-  private void writeString(FileSystem fs, Path path, String value)
-      throws IOException {
-    FSDataOutputStream outputStream = fs.create(path, true);
-    writeString(outputStream, value);
-  }
-
-  private void writeString(FSDataOutputStream outputStream, String value)
-      throws IOException {
-    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-        outputStream));
-    writer.write(value);
-    writer.close();
+    writeStringToFile(fs, path, value);
   }
 
   @Test

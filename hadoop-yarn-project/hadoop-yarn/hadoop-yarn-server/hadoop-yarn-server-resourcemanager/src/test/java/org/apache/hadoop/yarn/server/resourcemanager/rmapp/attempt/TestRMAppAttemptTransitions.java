@@ -24,10 +24,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -43,8 +43,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -121,7 +121,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -129,8 +128,8 @@ import org.mockito.stubbing.Answer;
 @RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
 
-  private static final Log LOG = 
-      LogFactory.getLog(TestRMAppAttemptTransitions.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRMAppAttemptTransitions.class);
   
   private static final String EMPTY_DIAGNOSTICS = "";
   private static final String FAILED_DIAGNOSTICS = "Attempt failed by user.";
@@ -302,7 +301,7 @@ public class TestRMAppAttemptTransitions {
     when(appResUsgRpt.getMemorySeconds()).thenReturn(0L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(0L);
     when(resourceScheduler
-        .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any()))
+        .getAppResourceUsageReport(any()))
      .thenReturn(appResUsgRpt);
     spyRMContext = spy(rmContext);
     Mockito.doReturn(resourceScheduler).when(spyRMContext).getScheduler();
@@ -417,13 +416,8 @@ public class TestRMAppAttemptTransitions {
         unregisterAttempt(applicationAttempt.getAppAttemptId());
     // ATTEMPT_FAILED should be notified to app if app attempt is submitted to
     // failed state.
-    ArgumentMatcher<RMAppEvent> matcher = new ArgumentMatcher<RMAppEvent>() {
-      @Override
-      public boolean matches(Object o) {
-        RMAppEvent event = (RMAppEvent) o;
-        return event.getType() == RMAppEventType.ATTEMPT_FAILED;
-      }
-    };
+    ArgumentMatcher<RMAppEvent> matcher =
+        event -> event.getType() == RMAppEventType.ATTEMPT_FAILED;
     verify(application).handle(argThat(matcher));
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
@@ -495,7 +489,7 @@ public class TestRMAppAttemptTransitions {
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).allocate(any(ApplicationAttemptId.class),
-        any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(), any(List.class), any(), any(),
         any(ContainerUpdates.class));
     verify(nmTokenManager).clearNodeSetForAttempt(
       applicationAttempt.getAppAttemptId());
@@ -643,7 +637,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(), any(List.class), any(), any(),
         any(ContainerUpdates.class))).
     thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -986,7 +980,7 @@ public class TestRMAppAttemptTransitions {
   public void testAttemptAddedAtFinalSaving() {
     submitApplicationAttempt();
 
-    // SUBNITED->FINAL_SAVING
+    // SUBMITTED->FINAL_SAVING
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
                    .getAppAttemptId(), RMAppAttemptEventType.KILL));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
@@ -997,6 +991,56 @@ public class TestRMAppAttemptTransitions {
 
     assertEquals(RMAppAttemptState.FINAL_SAVING,
                    applicationAttempt.getAppAttemptState());
+  }
+
+  @Test(timeout = 10000)
+  public void testAttemptRegisteredAtFailed() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+
+    //send CONTAINER_FINISHED event
+    NodeId anyNodeId = NodeId.newInstance("host", 1234);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+        applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
+        amContainer.getId(), ContainerState.COMPLETE, "", 0,
+        amContainer.getResource()), anyNodeId));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+        applicationAttempt.getAppAttemptState());
+
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+
+    //send REGISTERED event
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+        .getAppAttemptId(), RMAppAttemptEventType.REGISTERED));
+
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+  }
+
+  @Test
+  public void testAttemptLaunchFailedAtFailed() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    //send CONTAINER_FINISHED event
+    NodeId anyNodeId = NodeId.newInstance("host", 1234);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+        applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
+        amContainer.getId(), ContainerState.COMPLETE, "", 0,
+        amContainer.getResource()), anyNodeId));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+        applicationAttempt.getAppAttemptState());
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+
+    //send LAUNCH_FAILED event
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+        .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED));
+
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
   }
 
   @Test
@@ -1161,7 +1205,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(amContainer));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(), any(List.class), any(), any(),
         any(ContainerUpdates.class)))
         .thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -1598,6 +1642,34 @@ public class TestRMAppAttemptTransitions {
     assertTrue(found);
   }
 
+  @Test
+  public void testContainerRemovedBeforeAllocate() {
+    scheduleApplicationAttempt();
+
+    // Mock the allocation of AM container
+    Container container = mock(Container.class);
+    Resource resource = BuilderUtils.newResource(2048, 1);
+    when(container.getId()).thenReturn(
+        BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
+    when(container.getResource()).thenReturn(resource);
+    Allocation allocation = mock(Allocation.class);
+    when(allocation.getContainers()).
+        thenReturn(Collections.singletonList(container));
+    when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
+        any(), any(), any(), any(),
+        any(ContainerUpdates.class))).
+        thenReturn(allocation);
+
+    //container removed, so return null
+    when(scheduler.getRMContainer(container.getId())).
+        thenReturn(null);
+
+    applicationAttempt.handle(
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.CONTAINER_ALLOCATED));
+    assertEquals(RMAppAttemptState.SCHEDULED,
+        applicationAttempt.getAppAttemptState());
+  }
 
   @SuppressWarnings("deprecation")
   @Test

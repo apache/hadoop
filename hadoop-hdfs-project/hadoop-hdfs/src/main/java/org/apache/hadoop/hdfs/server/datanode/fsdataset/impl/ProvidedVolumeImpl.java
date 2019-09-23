@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -41,32 +43,29 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
-import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
-import org.apache.hadoop.util.Timer;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Timer;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectReader;
 import org.codehaus.jackson.map.ObjectWriter;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Time;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES;
 
 /**
  * This class is used to create provided volumes.
@@ -227,9 +226,9 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       // nothing to do!
     }
 
-    public void compileReport(LinkedList<ScanInfo> report,
+    public void compileReport(Collection<ScanInfo> report,
         ReportCompiler reportCompiler)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       /* refresh the aliasMap and return the list of blocks found.
        * the assumption here is that the block ids in the external
        * block map, after the refresh, are consistent with those
@@ -240,9 +239,8 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null, bpid);
       for (FileRegion region : reader) {
         reportCompiler.throttle();
-        report.add(new ScanInfo(region.getBlock().getBlockId(),
-            providedVolume, region,
-            region.getProvidedStorageLocation().getLength()));
+        report.add(new ScanInfo(region.getBlock().getBlockId(), providedVolume,
+            region, region.getProvidedStorageLocation().getLength()));
       }
     }
 
@@ -336,7 +334,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
 
   @Override
   long getNumBlocks() {
-    long numBlocks = 0;
+    long numBlocks = 0L;
     for (ProvidedBlockPoolSlice s : bpSlices.values()) {
       numBlocks += s.getNumOfBlocks();
     }
@@ -381,7 +379,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       iterStartMs = Time.now();
       lastSavedMs = iterStartMs;
       atEnd = false;
-      lastBlockId = -1;
+      lastBlockId = -1L;
     }
 
     // The wall-clock ms since the epoch at which this iterator was last saved.
@@ -533,7 +531,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       final RamDiskReplicaTracker ramDiskReplicaMap)
           throws IOException {
     LOG.info("Creating volumemap for provided volume " + this);
-    for(ProvidedBlockPoolSlice s : bpSlices.values()) {
+    for (ProvidedBlockPoolSlice s : bpSlices.values()) {
       s.fetchVolumeMap(volumeMap, ramDiskReplicaMap, remoteFS);
     }
   }
@@ -611,14 +609,12 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   }
 
   @Override
-  public LinkedList<ScanInfo> compileReport(String bpid,
-      LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
-      throws InterruptedException, IOException {
-    LOG.info("Compiling report for volume: " + this + " bpid " + bpid);
-    if(bpSlices.containsKey(bpid)) {
+  public void compileReport(String bpid, Collection<ScanInfo> report,
+      ReportCompiler reportCompiler) throws InterruptedException, IOException {
+    LOG.info("Compiling report for volume: {}; bpid: {}", this, bpid);
+    if (bpSlices.containsKey(bpid)) {
       bpSlices.get(bpid).compileReport(report, reportCompiler);
     }
-    return report;
   }
 
   @Override

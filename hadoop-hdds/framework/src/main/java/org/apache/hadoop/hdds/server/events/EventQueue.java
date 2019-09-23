@@ -23,6 +23,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,10 @@ public class EventQueue implements EventPublisher, AutoCloseable {
   private final AtomicLong queuedCount = new AtomicLong(0);
 
   private final AtomicLong eventCount = new AtomicLong(0);
+
+  private boolean isRunning = true;
+
+  private static final Gson TRACING_SERIALIZER = new GsonBuilder().create();
 
   public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void addHandler(
       EVENT_TYPE event, EventHandler<PAYLOAD> handler) {
@@ -116,14 +122,16 @@ public class EventQueue implements EventPublisher, AutoCloseable {
   public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void addHandler(
       EVENT_TYPE event, EventExecutor<PAYLOAD> executor,
       EventHandler<PAYLOAD> handler) {
+    if (!isRunning) {
+      LOG.warn("Not adding handler for {}, EventQueue is not running", event);
+      return;
+    }
     validateEvent(event);
     executors.putIfAbsent(event, new HashMap<>());
     executors.get(event).putIfAbsent(executor, new ArrayList<>());
 
     executors.get(event).get(executor).add(handler);
   }
-
-
 
   /**
    * Route an event with payload to the right listener(s).
@@ -133,8 +141,14 @@ public class EventQueue implements EventPublisher, AutoCloseable {
    * @throws IllegalArgumentException If there is no EventHandler for
    *                                  the specific event.
    */
+  @Override
   public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
       EVENT_TYPE event, PAYLOAD payload) {
+
+    if (!isRunning) {
+      LOG.warn("Processing of {} is skipped, EventQueue is not running", event);
+      return;
+    }
 
     Map<EventExecutor, List<EventHandler>> eventExecutorListMap =
         this.executors.get(event);
@@ -147,11 +161,17 @@ public class EventQueue implements EventPublisher, AutoCloseable {
 
         for (EventHandler handler : executorAndHandlers.getValue()) {
           queuedCount.incrementAndGet();
-          if (LOG.isDebugEnabled()) {
+          if (LOG.isTraceEnabled()) {
+            LOG.debug(
+                "Delivering event {} to executor/handler {}: <json>{}</json>",
+                event.getName(),
+                executorAndHandlers.getKey().getName(),
+                TRACING_SERIALIZER.toJson(payload).replaceAll("\n", "\\\\n"));
+          } else if (LOG.isDebugEnabled()) {
             LOG.debug("Delivering event {} to executor/handler {}: {}",
                 event.getName(),
                 executorAndHandlers.getKey().getName(),
-                payload);
+                payload.getClass().getSimpleName());
           }
           executorAndHandlers.getKey()
               .onMessage(handler, payload, this);
@@ -187,6 +207,11 @@ public class EventQueue implements EventPublisher, AutoCloseable {
     long currentTime = Time.now();
     while (true) {
 
+      if (!isRunning) {
+        LOG.warn("Processing of event skipped. EventQueue is not running");
+        return;
+      }
+
       long processed = 0;
 
       Stream<EventExecutor> allExecutor = this.executors.values().stream()
@@ -203,7 +228,9 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.warn("Interrupted exception while sleeping.", e);
+        // We ignore this exception for time being. Review? should we
+        // propogate it back to caller?
       }
 
       if (Time.now() > currentTime + timeout) {
@@ -214,7 +241,10 @@ public class EventQueue implements EventPublisher, AutoCloseable {
     }
   }
 
+  @Override
   public void close() {
+
+    isRunning = false;
 
     Set<EventExecutor> allExecutors = this.executors.values().stream()
         .flatMap(handlerMap -> handlerMap.keySet().stream())
@@ -228,6 +258,5 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
     });
   }
-
 
 }

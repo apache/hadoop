@@ -24,21 +24,19 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,12 +51,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
-import java.util.LinkedList;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ratis.util.Preconditions.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -82,12 +81,14 @@ public class TestKeyValueContainer {
   private RoundRobinVolumeChoosingPolicy volumeChoosingPolicy;
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
+  private UUID datanodeId;
 
   @Before
   public void setUp() throws Exception {
     conf = new OzoneConfiguration();
+    datanodeId = UUID.randomUUID();
     HddsVolume hddsVolume = new HddsVolume.Builder(folder.getRoot()
-        .getAbsolutePath()).conf(conf).datanodeUuid(UUID.randomUUID()
+        .getAbsolutePath()).conf(conf).datanodeUuid(datanodeId
         .toString()).build();
 
     volumeSet = mock(VolumeSet.class);
@@ -96,7 +97,8 @@ public class TestKeyValueContainer {
         .thenReturn(hddsVolume);
 
     keyValueContainerData = new KeyValueContainerData(1L,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        datanodeId.toString());
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -106,7 +108,8 @@ public class TestKeyValueContainer {
   @Test
   public void testBlockIterator() throws Exception{
     keyValueContainerData = new KeyValueContainerData(100L,
-        (long) StorageUnit.GB.toBytes(1));
+        (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+        datanodeId.toString());
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
@@ -117,11 +120,11 @@ public class TestKeyValueContainer {
     addBlocks(blockCount);
     blockIterator = keyValueContainer.blockIterator();
     assertTrue(blockIterator.hasNext());
-    KeyData keyData;
+    BlockData blockData;
     int blockCounter = 0;
     while(blockIterator.hasNext()) {
-      keyData = blockIterator.nextBlock();
-      assertEquals(blockCounter++, keyData.getBlockID().getLocalID());
+      blockData = blockIterator.nextBlock();
+      assertEquals(blockCounter++, blockData.getBlockID().getLocalID());
     }
     assertEquals(blockCount, blockCounter);
   }
@@ -129,23 +132,24 @@ public class TestKeyValueContainer {
   private void addBlocks(int count) throws Exception {
     long containerId = keyValueContainerData.getContainerID();
 
-    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainer
-        .getContainerData(), conf);
-    for (int i=0; i < count; i++) {
-      // Creating KeyData
-      BlockID blockID = new BlockID(containerId, i);
-      KeyData keyData = new KeyData(blockID);
-      keyData.addMetadata("VOLUME", "ozone");
-      keyData.addMetadata("OWNER", "hdfs");
-      List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
-      ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), 0), 0, 1024);
-      chunkList.add(info.getProtoBufMessage());
-      keyData.setChunks(chunkList);
-      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), keyData
-          .getProtoBufMessage().toByteArray());
+    try(ReferenceCountedDB metadataStore = BlockUtils.getDB(keyValueContainer
+        .getContainerData(), conf)) {
+      for (int i = 0; i < count; i++) {
+        // Creating BlockData
+        BlockID blockID = new BlockID(containerId, i);
+        BlockData blockData = new BlockData(blockID);
+        blockData.addMetadata("VOLUME", "ozone");
+        blockData.addMetadata("OWNER", "hdfs");
+        List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
+        ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
+            .getLocalID(), 0), 0, 1024);
+        chunkList.add(info.getProtoBufMessage());
+        blockData.setChunks(chunkList);
+        metadataStore.getStore().put(Longs.toByteArray(blockID.getLocalID()),
+            blockData
+            .getProtoBufMessage().toByteArray());
+      }
     }
-
   }
 
   @SuppressWarnings("RedundantCast")
@@ -165,8 +169,6 @@ public class TestKeyValueContainer {
     // Check whether containerMetaDataPath and chunksPath exists or not.
     assertTrue(containerMetaDataPath != null);
     assertTrue(chunksPath != null);
-    File containerMetaDataLoc = new File(containerMetaDataPath);
-
     //Check whether container file and container db file exists or not.
     assertTrue(keyValueContainer.getContainerFile().exists(),
         ".Container File does not exist");
@@ -185,15 +187,19 @@ public class TestKeyValueContainer {
     keyValueContainerData = keyValueContainer
         .getContainerData();
 
-    keyValueContainerData.setState(ContainerLifeCycleState.CLOSED);
+    keyValueContainerData.setState(
+        ContainerProtos.ContainerDataProto.State.CLOSED);
 
     int numberOfKeysToWrite = 12;
     //write one few keys to check the key count after import
-    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainerData, conf);
-    for (int i = 0; i < numberOfKeysToWrite; i++) {
-      metadataStore.put(("test" + i).getBytes(), "test".getBytes());
+    try(ReferenceCountedDB metadataStore =
+        BlockUtils.getDB(keyValueContainerData, conf)) {
+      for (int i = 0; i < numberOfKeysToWrite; i++) {
+        metadataStore.getStore().put(("test" + i).getBytes(UTF_8),
+            "test".getBytes(UTF_8));
+      }
     }
-    metadataStore.close();
+    BlockUtils.removeDB(keyValueContainerData, conf);
 
     Map<String, String> metadata = new HashMap<>();
     metadata.put("key1", "value1");
@@ -211,12 +217,13 @@ public class TestKeyValueContainer {
     }
 
     //delete the original one
-    keyValueContainer.delete(true);
+    keyValueContainer.delete();
 
     //create a new one
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerId, 1,
-            keyValueContainerData.getMaxSize());
+            keyValueContainerData.getMaxSize(), UUID.randomUUID().toString(),
+            datanodeId.toString());
     KeyValueContainer container = new KeyValueContainer(containerData, conf);
 
     HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
@@ -248,7 +255,7 @@ public class TestKeyValueContainer {
         container.importContainerData(fis, packer);
       }
       fail("Container is imported twice. Previous files are overwritten");
-    } catch (Exception ex) {
+    } catch (IOException ex) {
       //all good
     }
 
@@ -286,12 +293,12 @@ public class TestKeyValueContainer {
 
   @Test
   public void testDeleteContainer() throws Exception {
-    keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
+    keyValueContainerData.setState(ContainerProtos.ContainerDataProto.State
         .CLOSED);
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
-    keyValueContainer.delete(true);
+    keyValueContainer.delete();
 
     String containerMetaDataPath = keyValueContainerData
         .getMetadataPath();
@@ -315,7 +322,7 @@ public class TestKeyValueContainer {
     keyValueContainerData = keyValueContainer
         .getContainerData();
 
-    assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+    assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
         keyValueContainerData.getState());
 
     //Check state in the .container file
@@ -325,8 +332,21 @@ public class TestKeyValueContainer {
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
-    assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+    assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
         keyValueContainerData.getState());
+  }
+
+  @Test
+  public void testReportOfUnhealthyContainer() throws Exception {
+    keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
+    Assert.assertNotNull(keyValueContainer.getContainerReport());
+    keyValueContainer.markContainerUnhealthy();
+    File containerFile = keyValueContainer.getContainerFile();
+    keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
+    assertEquals(ContainerProtos.ContainerDataProto.State.UNHEALTHY,
+        keyValueContainerData.getState());
+    Assert.assertNotNull(keyValueContainer.getContainerReport());
   }
 
   @Test
@@ -354,8 +374,8 @@ public class TestKeyValueContainer {
   @Test
   public void testUpdateContainerUnsupportedRequest() throws Exception {
     try {
-      keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
-          .CLOSED);
+      keyValueContainerData.setState(
+          ContainerProtos.ContainerDataProto.State.CLOSED);
       keyValueContainer = new KeyValueContainer(keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
       Map<String, String> metadata = new HashMap<>();

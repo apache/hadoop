@@ -19,9 +19,9 @@ package org.apache.hadoop.ozone.container.testutils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
     .BlockDeletingService;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
@@ -42,9 +42,9 @@ public class BlockDeletingServiceTestImpl
   private Thread testingThread;
   private AtomicInteger numOfProcessed = new AtomicInteger(0);
 
-  public BlockDeletingServiceTestImpl(ContainerSet containerSet,
+  public BlockDeletingServiceTestImpl(OzoneContainer container,
       int serviceInterval, Configuration conf) {
-    super(containerSet, serviceInterval, SERVICE_TIMEOUT_IN_MILLISECONDS,
+    super(container, serviceInterval, SERVICE_TIMEOUT_IN_MILLISECONDS,
         TimeUnit.MILLISECONDS, conf);
   }
 
@@ -67,7 +67,8 @@ public class BlockDeletingServiceTestImpl
   }
 
   // Override the implementation to start a single on-call control thread.
-  @Override public void start() {
+  @Override
+  public void start() {
     PeriodicalTask svc = new PeriodicalTask();
     // In test mode, relies on a latch countdown to runDeletingTasks tasks.
     Runnable r = () -> {

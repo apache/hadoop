@@ -21,7 +21,6 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,6 +28,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class implements debug operations on the HDFS command-line.
@@ -275,7 +276,7 @@ public class DebugAdmin extends Configured implements Tool {
 
         final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
         metaOut = new DataOutputStream(
-            new BufferedOutputStream(new FileOutputStream(srcMeta),
+            new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
                 smallBufferSize));
         BlockMetadataHeader.writeHeader(metaOut, checksum);
         metaOut.close();
@@ -458,11 +459,14 @@ public class DebugAdmin extends Configured implements Tool {
       if (!command.name.equals("help")) {
         System.out.println(command.usageText);
       }
+      System.out.println();
+      ToolRunner.printGenericCommandUsage(System.out);
     }
   }
 
-  public static void main(String[] argsArray) throws IOException {
+  public static void main(String[] argsArray) throws Exception {
     DebugAdmin debugAdmin = new DebugAdmin(new Configuration());
-    System.exit(debugAdmin.run(argsArray));
+    int res = ToolRunner.run(debugAdmin, argsArray);
+    System.exit(res);
   }
 }

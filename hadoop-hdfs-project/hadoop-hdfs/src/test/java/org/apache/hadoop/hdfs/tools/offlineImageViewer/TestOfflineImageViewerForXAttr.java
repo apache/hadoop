@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,8 +53,8 @@ import org.junit.Test;
  */
 public class TestOfflineImageViewerForXAttr {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestOfflineImageViewerForXAttr.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestOfflineImageViewerForXAttr.class);
 
   private static File originalFsimage = null;
 

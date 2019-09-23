@@ -35,58 +35,58 @@ public interface NameNodeMXBean {
   /**
    * Gets the version of Hadoop.
    * 
-   * @return the version
+   * @return the version.
    */
-  public String getVersion();
+  String getVersion();
 
   /**
-   * Get the version of software running on the Namenode
-   * @return a string representing the version
+   * Get the version of software running on the Namenode.
+   *
+   * @return a string representing the version.
    */
-  public String getSoftwareVersion();
+  String getSoftwareVersion();
 
   /**
    * Gets the used space by data nodes.
    * 
-   * @return the used space by data nodes
+   * @return the used space by data nodes.
    */
-  public long getUsed();
+  long getUsed();
   
   /**
    * Gets total non-used raw bytes.
    * 
-   * @return total non-used raw bytes
+   * @return total non-used raw bytes.
    */
-  public long getFree();
+  long getFree();
   
   /**
    * Gets total raw bytes including non-dfs used space.
    * 
-   * @return the total raw bytes including non-dfs used space
+   * @return the total raw bytes including non-dfs used space.
    */
-  public long getTotal();
+  long getTotal();
 
   /**
    * Gets capacity of the provided storage mounted, in bytes.
    *
    * @return the total raw bytes present in the provided storage.
    */
-  public long getProvidedCapacity();
+  long getProvidedCapacity();
 
   /**
-   * Gets the safemode status
+   * Gets the safemode status.
    * 
-   * @return the safemode status
-   * 
+   * @return the safemode status.
    */
-  public String getSafemode();
+  String getSafemode();
   
   /**
    * Checks if upgrade is finalized.
    * 
-   * @return true, if upgrade is finalized
+   * @return true, if upgrade is finalized.
    */
-  public boolean isUpgradeFinalized();
+  boolean isUpgradeFinalized();
 
   /**
    * Gets the RollingUpgrade information.
@@ -94,73 +94,82 @@ public interface NameNodeMXBean {
    * @return Rolling upgrade information if an upgrade is in progress. Else
    * (e.g. if there is no upgrade or the upgrade is finalized), returns null.
    */
-  public RollingUpgradeInfo.Bean getRollingUpgradeStatus();
+  RollingUpgradeInfo.Bean getRollingUpgradeStatus();
 
   /**
    * Gets total used space by data nodes for non DFS purposes such as storing
-   * temporary files on the local file system
+   * temporary files on the local file system.
    * 
-   * @return the non dfs space of the cluster
+   * @return the non dfs space of the cluster.
    */
-  public long getNonDfsUsedSpace();
+  long getNonDfsUsedSpace();
   
   /**
-   * Gets the total used space by data nodes as percentage of total capacity
+   * Gets the total used space by data nodes as percentage of total capacity.
    * 
    * @return the percentage of used space on the cluster.
    */
-  public float getPercentUsed();
+  float getPercentUsed();
   
   /**
    * Gets the total remaining space by data nodes as percentage of total 
-   * capacity
+   * capacity.
    * 
-   * @return the percentage of the remaining space on the cluster
+   * @return the percentage of the remaining space on the cluster.
    */
-  public float getPercentRemaining();
+  float getPercentRemaining();
 
   /**
-   * Returns the amount of cache used by the datanode (in bytes).
+   * Gets the amount of cache used by the datanode (in bytes).
+   *
+   * @return the amount of cache used by the datanode (in bytes).
    */
-  public long getCacheUsed();
+  long getCacheUsed();
 
   /**
-   * Returns the total cache capacity of the datanode (in bytes).
+   * Gets the total cache capacity of the datanode (in bytes).
+   *
+   * @return the total cache capacity of the datanode (in bytes).
    */
-  public long getCacheCapacity();
+  long getCacheCapacity();
   
   /**
-   * Get the total space used by the block pools of this namenode
+   * Get the total space used by the block pools of this namenode.
+   *
+   * @return the total space used by the block pools of this namenode.
    */
-  public long getBlockPoolUsedSpace();
+  long getBlockPoolUsedSpace();
   
   /**
-   * Get the total space used by the block pool as percentage of total capacity
+   * Get the total space used by the block pool as percentage of total capacity.
+   *
+   * @return the total space used by the block pool as percentage of total
+   * capacity.
    */
-  public float getPercentBlockPoolUsed();
+  float getPercentBlockPoolUsed();
     
   /**
    * Gets the total numbers of blocks on the cluster.
    * 
-   * @return the total number of blocks of the cluster
+   * @return the total number of blocks of the cluster.
    */
-  public long getTotalBlocks();
+  long getTotalBlocks();
   
   /**
-   * Gets the total number of missing blocks on the cluster
+   * Gets the total number of missing blocks on the cluster.
    * 
-   * @return the total number of missing blocks on the cluster
+   * @return the total number of missing blocks on the cluster.
    */
-  public long getNumberOfMissingBlocks();
+  long getNumberOfMissingBlocks();
   
   /**
    * Gets the total number of missing blocks on the cluster with
-   * replication factor 1
+   * replication factor 1.
    *
    * @return the total number of missing blocks on the cluster with
-   * replication factor 1
+   * replication factor 1.
    */
-  public long getNumberOfMissingBlocksWithReplicationFactorOne();
+  long getNumberOfMissingBlocksWithReplicationFactorOne();
 
   /**
    * Gets the total number of replicated low redundancy blocks on the cluster
@@ -169,72 +178,72 @@ public interface NameNodeMXBean {
    * @return the total number of low redundancy blocks on the cluster
    * with the highest risk of loss.
    */
-  public long getHighestPriorityLowRedundancyReplicatedBlocks();
+  long getHighestPriorityLowRedundancyReplicatedBlocks();
 
   /**
    * Gets the total number of erasure coded low redundancy blocks on the cluster
-   * with the highest risk of loss
+   * with the highest risk of loss.
    *
    * @return the total number of low redundancy blocks on the cluster
-   * with the highest risk of loss
+   * with the highest risk of loss.
    */
-  public long getHighestPriorityLowRedundancyECBlocks();
+  long getHighestPriorityLowRedundancyECBlocks();
 
   /**
    * Gets the total number of snapshottable dirs in the system.
    *
-   * @return the total number of snapshottable dirs in the system
+   * @return the total number of snapshottable dirs in the system.
    */
-  public long getNumberOfSnapshottableDirs();
+  long getNumberOfSnapshottableDirs();
 
   /**
    * Gets the number of threads.
    * 
-   * @return the number of threads
+   * @return the number of threads.
    */
-  public int getThreads();
+  int getThreads();
 
   /**
    * Gets the live node information of the cluster.
    * 
-   * @return the live node information
+   * @return the live node information.
    */
-  public String getLiveNodes();
+  String getLiveNodes();
   
   /**
    * Gets the dead node information of the cluster.
    * 
-   * @return the dead node information
+   * @return the dead node information.
    */
-  public String getDeadNodes();
+  String getDeadNodes();
   
   /**
    * Gets the decommissioning node information of the cluster.
    * 
-   * @return the decommissioning node information
+   * @return the decommissioning node information.
    */
-  public String getDecomNodes();
+  String getDecomNodes();
 
   /**
    * Gets the information on nodes entering maintenance.
    *
-   * @return the information on nodes entering maintenance
+   * @return the information on nodes entering maintenance.
    */
   String getEnteringMaintenanceNodes();
 
   /**
    * Gets the cluster id.
    * 
-   * @return the cluster id
+   * @return the cluster id.
    */
-  public String getClusterId();
+  String getClusterId();
   
   /**
    * Gets the block pool id.
    * 
-   * @return the block pool id
+   * @return the block pool id.
    */
-  public String getBlockPoolId();
+  String getBlockPoolId();
 
   /**
    * Get status information about the directories storing image and edits logs
@@ -242,65 +251,84 @@ public interface NameNodeMXBean {
    * 
    * @return the name dir status information, as a JSON string.
    */
-  public String getNameDirStatuses();
+  String getNameDirStatuses();
 
   /**
    * Get Max, Median, Min and Standard Deviation of DataNodes usage.
    *
    * @return the DataNode usage information, as a JSON string.
    */
-  public String getNodeUsage();
+  String getNodeUsage();
 
   /**
    * Get status information about the journals of the NN.
    *
    * @return the name journal status information, as a JSON string.
    */
-  public String getNameJournalStatus();
+  String getNameJournalStatus();
   
   /**
    * Get information about the transaction ID, including the last applied 
-   * transaction ID and the most recent checkpoint's transaction ID
+   * transaction ID and the most recent checkpoint's transaction ID.
+   *
+   * @return information about the transaction ID.
    */
-  public String getJournalTransactionInfo();
+  String getJournalTransactionInfo();
 
   /**
    * Gets the NN start time in milliseconds.
-   * @return the NN start time in msec
+   *
+   * @return the NN start time in msec.
    */
   long getNNStartedTimeInMillis();
 
   /**
-   * Get the compilation information which contains date, user and branch
+   * Get the compilation information which contains date, user and branch.
    *
    * @return the compilation information, as a JSON string.
    */
-  public String getCompileInfo();
+  String getCompileInfo();
 
   /**
-   * Get the list of corrupt files
+   * Get the list of corrupt files.
    *
    * @return the list of corrupt files, as a JSON string.
    */
-  public String getCorruptFiles();
+  String getCorruptFiles();
 
   /**
-   * Get the number of distinct versions of live datanodes
-   * 
-   * @return the number of distinct versions of live datanodes
+   * Get the length of the list of corrupt files.
+   *
+   * @return the length of the list of corrupt files.
    */
-  public int getDistinctVersionCount();
+  int getCorruptFilesCount();
 
   /**
-   * Get the number of live datanodes for each distinct versions
+   * Get the number of distinct versions of live datanodes.
    * 
-   * @return the number of live datanodes for each distinct versions
+   * @return the number of distinct versions of live datanodes.
    */
-  public Map<String, Integer> getDistinctVersions();
+  int getDistinctVersionCount();
+
+  /**
+   * Get the number of live datanodes for each distinct versions.
+   * 
+   * @return the number of live datanodes for each distinct versions.
+   */
+  Map<String, Integer> getDistinctVersions();
   
   /**
    * Get namenode directory size.
+   *
+   * @return namenode directory size.
    */
   String getNameDirSize();
+
+  /**
+   * Verifies whether the cluster setup can support all enabled EC policies.
+   *
+   * @return the result of the verification.
+   */
+  String getVerifyECWithTopologyResult();
 
 }

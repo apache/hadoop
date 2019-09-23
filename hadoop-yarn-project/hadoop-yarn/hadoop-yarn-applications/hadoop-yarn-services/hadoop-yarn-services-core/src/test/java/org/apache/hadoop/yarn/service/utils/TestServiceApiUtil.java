@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.service.api.records.PlacementScope;
 import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -44,11 +45,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for ServiceApiUtil helper methods.
@@ -268,7 +269,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
-    assertEquals(app.getLifetime(), DEFAULT_UNLIMITED_LIFETIME);
+    assertThat(app.getLifetime()).isEqualTo(DEFAULT_UNLIMITED_LIFETIME);
   }
 
   private static Resource createValidResource() {
@@ -592,33 +593,19 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     SliderFileSystem sfs = ServiceTestUtils.initMockFs();
     Service app = createValidApplication("comp-a");
     KerberosPrincipal kp = new KerberosPrincipal();
-    kp.setKeytab("/some/path");
+    kp.setKeytab("file:///tmp/a.keytab");
     kp.setPrincipalName("user/_HOST@domain.com");
     app.setKerberosPrincipal(kp);
 
+    // This should succeed
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
-      Assert.fail(EXCEPTION_PREFIX + "service with invalid keytab URI scheme");
     } catch (IllegalArgumentException e) {
-      assertEquals(
-          String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
-              kp.getKeytab()),
-          e.getMessage());
+      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
-    kp.setKeytab("/ blank / in / paths");
-    try {
-      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
-      Assert.fail(EXCEPTION_PREFIX + "service with invalid keytab");
-    } catch (IllegalArgumentException e) {
-      // strip out the %s at the end of the RestApiErrorMessages string constant
-      assertTrue(e.getMessage().contains(
-          RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID.substring(0,
-              RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID.length() - 2)));
-    }
-
-    kp.setKeytab("file:///tmp/a.keytab");
-    // now it should succeed
+    // Keytab with no URI scheme should succeed too
+    kp.setKeytab("/some/path");
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
@@ -650,6 +637,14 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+    }
+
+    kp.setPrincipalName(null);
+    kp.setKeytab(null);
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+    } catch (NullPointerException e) {
+        Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -731,6 +726,50 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       Assert.assertEquals("Components are not equal.", expected.get(i),
           order.get(i));
     }
+  }
+
+  @Test(timeout = 1500)
+  public void testNoServiceDependencies() {
+    Service service = createExampleApplication();
+    Component compa = createComponent("compa");
+    Component compb = createComponent("compb");
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> dependencies = new ArrayList<String>();
+    service.setDependencies(dependencies);
+    ServiceApiUtil.checkServiceDependencySatisified(service);
+  }
+
+  @Test
+  public void testServiceDependencies() {
+    Thread thread = new Thread() {
+      @Override
+      public void run() {
+        Service service = createExampleApplication();
+        Component compa = createComponent("compa");
+        Component compb = createComponent("compb");
+        service.addComponent(compa);
+        service.addComponent(compb);
+        List<String> dependencies = new ArrayList<String>();
+        dependencies.add("abc");
+        service.setDependencies(dependencies);
+        Service dependent = createExampleApplication();
+        dependent.setState(ServiceState.STOPPED);
+        ServiceApiUtil.checkServiceDependencySatisified(service);
+      }
+    };
+    thread.start();
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+    }
+    Assert.assertTrue(thread.isAlive());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testJvmOpts() {
+    String jvmOpts = "`ping -c 3 example.com`";
+    ServiceApiUtil.validateJvmOpts(jvmOpts);
   }
 
   public static Service createExampleApplication() {

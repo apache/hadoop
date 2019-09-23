@@ -16,40 +16,39 @@
  */
 package org.apache.hadoop.hdds.scm.block;
 
-import java.util.UUID;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.Mapping;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.management.ObjectName;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import javax.management.ObjectName;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.safemode.SafeModePrecheck;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hdds.utils.UniqueId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .CHILL_MODE_EXCEPTION;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .INVALID_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -61,6 +60,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
+
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private static final Logger LOG =
@@ -69,51 +69,40 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   // Currently only user of the block service is Ozone, CBlock manages blocks
   // by itself and does not rely on the Block service offered by SCM.
 
-  private final NodeManager nodeManager;
-  private final Mapping containerManager;
+  private final PipelineManager pipelineManager;
+  private final ContainerManager containerManager;
 
-  private final Lock lock;
   private final long containerSize;
 
   private final DeletedBlockLog deletedBlockLog;
   private final SCMBlockDeletingService blockDeletingService;
 
-  private final int containerProvisionBatchSize;
-  private final Random rand;
   private ObjectName mxBean;
+  private SafeModePrecheck safeModePrecheck;
 
   /**
    * Constructor.
    *
    * @param conf - configuration.
-   * @param nodeManager - node manager.
-   * @param containerManager - container manager.
-   * @param eventPublisher - event publisher.
+   * @param scm
    * @throws IOException
    */
   public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final Mapping containerManager,
-      EventPublisher eventPublisher)
-      throws IOException {
-    this.nodeManager = nodeManager;
-    this.containerManager = containerManager;
+                          final StorageContainerManager scm) {
+    Objects.requireNonNull(scm, "SCM cannot be null");
+    this.pipelineManager = scm.getPipelineManager();
+    this.containerManager = scm.getContainerManager();
 
     this.containerSize = (long)conf.getStorageSize(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.BYTES);
 
-    this.containerProvisionBatchSize =
-        conf.getInt(
-            ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
-            ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT);
-    rand = new Random();
-    this.lock = new ReentrantLock();
-
     mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
 
     // SCM block deleting transaction log and deleting service.
-    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
+    deletedBlockLog = new DeletedBlockLogImpl(conf, scm.getContainerManager(),
+        scm.getScmMetadataStore());
     long svcInterval =
         conf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
             OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
@@ -125,7 +114,9 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
             TimeUnit.MILLISECONDS);
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
-            nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
+            scm.getScmNodeManager(), scm.getEventQueue(), svcInterval,
+            serviceTimeout, conf);
+    safeModePrecheck = new SafeModePrecheck(conf);
   }
 
   /**
@@ -148,191 +139,116 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   }
 
   /**
-   * Pre allocate specified count of containers for block creation.
-   *
-   * @param count - Number of containers to allocate.
-   * @param type - Type of containers
-   * @param factor - how many copies needed for this container.
-   * @throws IOException
-   */
-  private void preAllocateContainers(int count, ReplicationType type,
-      ReplicationFactor factor, String owner)
-      throws IOException {
-    lock.lock();
-    try {
-      for (int i = 0; i < count; i++) {
-        ContainerWithPipeline containerWithPipeline;
-        try {
-          // TODO: Fix this later when Ratis is made the Default.
-          containerWithPipeline = containerManager.allocateContainer(
-              type, factor, owner);
-
-          if (containerWithPipeline == null) {
-            LOG.warn("Unable to allocate container.");
-            continue;
-          }
-        } catch (IOException ex) {
-          LOG.warn("Unable to allocate container: {}", ex);
-          continue;
-        }
-      }
-    } finally {
-      lock.unlock();
-    }
-  }
-
-  /**
    * Allocates a block in a container and returns that info.
    *
    * @param size - Block Size
    * @param type Replication Type
    * @param factor - Replication Factor
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return Allocated block
    * @throws IOException on failure.
    */
   @Override
-  public AllocatedBlock allocateBlock(final long size,
-      ReplicationType type, ReplicationFactor factor, String owner)
+  public AllocatedBlock allocateBlock(final long size, ReplicationType type,
+      ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
-
+    ScmUtils.preCheck(ScmOps.allocateBlock, safeModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
       throw new SCMException("Unsupported block size: " + size,
           INVALID_BLOCK_SIZE);
     }
 
-    if (!nodeManager.isOutOfChillMode()) {
-      LOG.warn("Not out of Chill mode.");
-      throw new SCMException("Unable to create block while in chill mode",
-          CHILL_MODE_EXCEPTION);
-    }
+    /*
+      Here is the high level logic.
 
-    lock.lock();
-    try {
-      /*
-               Here is the high level logic.
+      1. We try to find pipelines in open state.
 
-               1. First we check if there are containers in ALLOCATED state,
-               that is
-                SCM has allocated them in the SCM namespace but the
-                corresponding
-                container has not been created in the Datanode yet. If we
-                have any
-                in that state, we will return that to the client, which allows
-                client to finish creating those containers. This is a sort of
-                 greedy
-                 algorithm, our primary purpose is to get as many containers as
-                 possible.
+      2. If there are no pipelines in OPEN state, then we try to create one.
 
-                2. If there are no allocated containers -- Then we find a Open
-                container that matches that pattern.
+      3. We allocate a block from the available containers in the selected
+      pipeline.
 
-                3. If both of them fail, the we will pre-allocate a bunch of
-                conatainers in SCM and try again.
+      TODO : #CLUTIL Support random picking of two containers from the list.
+      So we can use different kind of policies.
+    */
 
-               TODO : Support random picking of two containers from the list.
-                So we
-               can use different kind of policies.
-      */
+    ContainerInfo containerInfo;
 
-      ContainerWithPipeline containerWithPipeline;
-
-      // Look for ALLOCATED container that matches all other parameters.
-      containerWithPipeline = containerManager
-          .getMatchingContainerWithPipeline(size, owner, type, factor,
-              HddsProtos.LifeCycleState.ALLOCATED);
-      if (containerWithPipeline != null) {
-        containerManager.updateContainerState(
-            containerWithPipeline.getContainerInfo().getContainerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-        return newBlock(containerWithPipeline,
-            HddsProtos.LifeCycleState.ALLOCATED);
+    while (true) {
+      List<Pipeline> availablePipelines =
+          pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
+      Pipeline pipeline = null;
+      if (availablePipelines.size() == 0) {
+        try {
+          // TODO: #CLUTIL Remove creation logic when all replication types and
+          // factors are handled by pipeline creator
+          pipeline = pipelineManager.createPipeline(type, factor);
+        } catch (IOException e) {
+          LOG.warn("Pipeline creation failed for type:{} factor:{}. Retrying " +
+                  "get pipelines call once.", type, factor, e);
+          availablePipelines = pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
+          if (availablePipelines.size() == 0) {
+            LOG.info("Could not find available pipeline of type:{} and " +
+                "factor:{} even after retrying", type, factor);
+            break;
+          }
+        }
       }
 
-      // Since we found no allocated containers that match our criteria, let us
+      if (null == pipeline) {
+        // TODO: #CLUTIL Make the selection policy driven.
+        pipeline = availablePipelines
+            .get((int) (Math.random() * availablePipelines.size()));
+      }
+
       // look for OPEN containers that match the criteria.
-      containerWithPipeline = containerManager
-          .getMatchingContainerWithPipeline(size, owner, type, factor,
-              HddsProtos.LifeCycleState.OPEN);
-      if (containerWithPipeline != null) {
-        return newBlock(containerWithPipeline, HddsProtos.LifeCycleState.OPEN);
+      containerInfo = containerManager.getMatchingContainer(size, owner,
+          pipeline, excludeList.getContainerIds());
+
+      if (containerInfo != null) {
+        return newBlock(containerInfo);
       }
-
-      // We found neither ALLOCATED or OPEN Containers. This generally means
-      // that most of our containers are full or we have not allocated
-      // containers of the type and replication factor. So let us go and
-      // allocate some.
-      preAllocateContainers(containerProvisionBatchSize, type, factor, owner);
-
-      // Since we just allocated a set of containers this should work
-      containerWithPipeline = containerManager
-          .getMatchingContainerWithPipeline(size, owner, type, factor,
-              HddsProtos.LifeCycleState.ALLOCATED);
-      if (containerWithPipeline != null) {
-        containerManager.updateContainerState(
-            containerWithPipeline.getContainerInfo().getContainerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-        return newBlock(containerWithPipeline,
-            HddsProtos.LifeCycleState.ALLOCATED);
-      }
-
-      // we have tried all strategies we know and but somehow we are not able
-      // to get a container for this block. Log that info and return a null.
-      LOG.error(
-          "Unable to allocate a block for the size: {}, type: {}, " +
-              "factor: {}",
-          size,
-          type,
-          factor);
-      return null;
-    } finally {
-      lock.unlock();
     }
-  }
 
-  private String getChannelName(ReplicationType type) {
-    switch (type) {
-    case RATIS:
-      return "RA" + UUID.randomUUID().toString().substring(3);
-    case STAND_ALONE:
-      return "SA" + UUID.randomUUID().toString().substring(3);
-    default:
-      return "RA" + UUID.randomUUID().toString().substring(3);
-    }
+    // we have tried all strategies we know and but somehow we are not able
+    // to get a container for this block. Log that info and return a null.
+    LOG.error(
+        "Unable to allocate a block for the size: {}, type: {}, factor: {}",
+        size, type, factor);
+    return null;
   }
 
   /**
    * newBlock - returns a new block assigned to a container.
    *
-   * @param containerWithPipeline - Container Info.
-   * @param state - Current state of the container.
+   * @param containerInfo - Container Info.
    * @return AllocatedBlock
    */
-  private AllocatedBlock newBlock(ContainerWithPipeline containerWithPipeline,
-      HddsProtos.LifeCycleState state) throws IOException {
-    ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    if (containerWithPipeline.getPipeline().getDatanodes().size() == 0) {
-      LOG.error("Pipeline Machine count is zero.");
+  private AllocatedBlock newBlock(ContainerInfo containerInfo) {
+    try {
+      final Pipeline pipeline = pipelineManager
+          .getPipeline(containerInfo.getPipelineID());
+      // TODO : Revisit this local ID allocation when HA is added.
+      long localID = UniqueId.next();
+      long containerID = containerInfo.getContainerID();
+      AllocatedBlock.Builder abb =  new AllocatedBlock.Builder()
+          .setContainerBlockID(new ContainerBlockID(containerID, localID))
+          .setPipeline(pipeline);
+      LOG.trace("New block allocated : {} Container ID: {}", localID,
+          containerID);
+      pipelineManager.incNumBlocksAllocatedMetric(pipeline.getId());
+      return abb.build();
+    } catch (PipelineNotFoundException ex) {
+      LOG.error("Pipeline Machine count is zero.", ex);
       return null;
     }
-
-    // TODO : Revisit this local ID allocation when HA is added.
-    // TODO: this does not work well if multiple allocation kicks in a tight
-    // loop.
-    long localID = Time.getUtcTime();
-    long containerID = containerInfo.getContainerID();
-
-    boolean createContainer = (state == HddsProtos.LifeCycleState.ALLOCATED);
-
-    AllocatedBlock.Builder abb =
-        new AllocatedBlock.Builder()
-            .setBlockID(new BlockID(containerID, localID))
-            .setPipeline(containerWithPipeline.getPipeline())
-            .setShouldCreateContainer(createContainer);
-    LOG.trace("New block allocated : {} Container ID: {}", localID,
-        containerID);
-    return abb.build();
   }
 
   /**
@@ -348,45 +264,36 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    */
   @Override
   public void deleteBlocks(List<BlockID> blockIDs) throws IOException {
-    if (!nodeManager.isOutOfChillMode()) {
-      throw new SCMException("Unable to delete block while in chill mode",
-          CHILL_MODE_EXCEPTION);
-    }
+    ScmUtils.preCheck(ScmOps.deleteBlock, safeModePrecheck);
 
-    lock.lock();
     LOG.info("Deleting blocks {}", StringUtils.join(",", blockIDs));
     Map<Long, List<Long>> containerBlocks = new HashMap<>();
     // TODO: track the block size info so that we can reclaim the container
     // TODO: used space when the block is deleted.
-    try {
-      for (BlockID block : blockIDs) {
-        // Merge blocks to a container to blocks mapping,
-        // prepare to persist this info to the deletedBlocksLog.
-        long containerID = block.getContainerID();
-        if (containerBlocks.containsKey(containerID)) {
-          containerBlocks.get(containerID).add(block.getLocalID());
-        } else {
-          List<Long> item = new ArrayList<>();
-          item.add(block.getLocalID());
-          containerBlocks.put(containerID, item);
-        }
+    for (BlockID block : blockIDs) {
+      // Merge blocks to a container to blocks mapping,
+      // prepare to persist this info to the deletedBlocksLog.
+      long containerID = block.getContainerID();
+      if (containerBlocks.containsKey(containerID)) {
+        containerBlocks.get(containerID).add(block.getLocalID());
+      } else {
+        List<Long> item = new ArrayList<>();
+        item.add(block.getLocalID());
+        containerBlocks.put(containerID, item);
       }
-
-      try {
-        deletedBlockLog.addTransactions(containerBlocks);
-      } catch (IOException e) {
-        throw new IOException(
-            "Skip writing the deleted blocks info to"
-                + " the delLog because addTransaction fails. Batch skipped: "
-                + StringUtils.join(",", blockIDs),
-            e);
-      }
-      // TODO: Container report handling of the deleted blocks:
-      // Remove tombstone and update open container usage.
-      // We will revisit this when the closed container replication is done.
-    } finally {
-      lock.unlock();
     }
+
+    try {
+      deletedBlockLog.addTransactions(containerBlocks);
+    } catch (IOException e) {
+      throw new IOException(
+          "Skip writing the deleted blocks info to"
+              + " the delLog because addTransaction fails. Batch skipped: "
+              + StringUtils.join(",", blockIDs), e);
+    }
+    // TODO: Container report handling of the deleted blocks:
+    // Remove tombstone and update open container usage.
+    // We will revisit this when the closed container replication is done.
   }
 
   @Override
@@ -425,4 +332,27 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   public SCMBlockDeletingService getSCMBlockDeletingService() {
     return this.blockDeletingService;
   }
+
+  @Override
+  public void setSafeModeStatus(boolean safeModeStatus) {
+    this.safeModePrecheck.setInSafeMode(safeModeStatus);
+  }
+
+  /**
+   * Returns status of scm safe mode determined by SAFE_MODE_STATUS event.
+   * */
+  public boolean isScmInSafeMode() {
+    return this.safeModePrecheck.isInSafeMode();
+  }
+
+  /**
+   * Get class logger.
+   * */
+  public static Logger getLogger() {
+    return LOG;
+  }
+
+  /**
+   * This class uses system current time milliseconds to generate unique id.
+   */
 }

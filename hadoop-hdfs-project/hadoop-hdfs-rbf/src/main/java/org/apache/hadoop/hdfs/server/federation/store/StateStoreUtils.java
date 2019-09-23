@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +45,7 @@ public final class StateStoreUtils {
    * Get the base class for a record class. If we get an implementation of a
    * record we will return the real parent record class.
    *
+   * @param <T> Type of the class of the data record to check.
    * @param clazz Class of the data record to check.
    * @return Base class for the record.
    */
@@ -67,6 +71,7 @@ public final class StateStoreUtils {
    * Get the base class for a record. If we get an implementation of a record we
    * will return the real parent record class.
    *
+   * @param <T> Type of the class of the data record.
    * @param record Record to check its main class.
    * @return Base class for the record.
    */
@@ -79,6 +84,7 @@ public final class StateStoreUtils {
    * Get the base class name for a record. If we get an implementation of a
    * record we will return the real parent record class.
    *
+   * @param <T> Type of the class of the data record.
    * @param clazz Class of the data record to check.
    * @return Name of the base class for the record.
    */
@@ -90,6 +96,7 @@ public final class StateStoreUtils {
   /**
    * Filters a list of records to find all records matching the query.
    *
+   * @param <T> Type of the class of the data record.
    * @param query Map of field names and objects to use to filter results.
    * @param records List of data records to filter.
    * @return List of all records matching the query (or empty list if none
@@ -106,4 +113,27 @@ public final class StateStoreUtils {
     }
     return matchingList;
   }
+
+  /**
+   * Returns address in form of host:port, empty string if address is null.
+   *
+   * @param address address
+   * @return host:port
+   */
+  public static String getHostPortString(InetSocketAddress address) {
+    if (null == address) {
+      return "";
+    }
+    String hostName = address.getHostName();
+    if (hostName.equals("0.0.0.0")) {
+      try {
+        hostName = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        LOG.error("Failed to get local host name", e);
+        return "";
+      }
+    }
+    return hostName + ":" + address.getPort();
+  }
+
 }

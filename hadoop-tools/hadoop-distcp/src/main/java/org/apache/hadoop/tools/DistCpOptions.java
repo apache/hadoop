@@ -155,6 +155,9 @@ public final class DistCpOptions {
 
   private final int copyBufferSize;
 
+  /** Whether data should be written directly to the target paths. */
+  private final boolean directWrite;
+
   /**
    * File attributes for preserve.
    *
@@ -216,6 +219,8 @@ public final class DistCpOptions {
     this.copyBufferSize = builder.copyBufferSize;
     this.verboseLog = builder.verboseLog;
     this.trackPath = builder.trackPath;
+
+    this.directWrite = builder.directWrite;
   }
 
   public Path getSourceFileListing() {
@@ -343,6 +348,10 @@ public final class DistCpOptions {
     return trackPath;
   }
 
+  public boolean shouldDirectWrite() {
+    return directWrite;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -391,6 +400,8 @@ public final class DistCpOptions {
       DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.NUM_LISTSTATUS_THREADS,
           Integer.toString(numListstatusThreads));
     }
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DIRECT_WRITE,
+            String.valueOf(directWrite));
   }
 
   /**
@@ -427,6 +438,7 @@ public final class DistCpOptions {
         ", blocksPerChunk=" + blocksPerChunk +
         ", copyBufferSize=" + copyBufferSize +
         ", verboseLog=" + verboseLog +
+        ", directWrite=" + directWrite +
         '}';
   }
 
@@ -475,6 +487,8 @@ public final class DistCpOptions {
 
     private int copyBufferSize =
             DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
+
+    private boolean directWrite = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -726,6 +740,11 @@ public final class DistCpOptions {
 
     public Builder withVerboseLog(boolean newVerboseLog) {
       this.verboseLog = newVerboseLog;
+      return this;
+    }
+
+    public Builder withDirectWrite(boolean newDirectWrite) {
+      this.directWrite = newDirectWrite;
       return this;
     }
   }

@@ -17,21 +17,29 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.google.common.base.Preconditions;
 
 /**
  * Args for key block. The block instance for the key requested in putKey.
  * This is returned from OM to client, and client use class to talk to
  * datanode. Also, this is the metadata written to om.db on server side.
  */
-public final class OmKeyInfo {
+public final class OmKeyInfo extends WithMetadata {
   private final String volumeName;
   private final String bucketName;
   // name of key client specified
@@ -42,11 +50,20 @@ public final class OmKeyInfo {
   private long modificationTime;
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
+  private FileEncryptionInfo encInfo;
+  /**
+   * ACL Information.
+   */
+  private List<OzoneAcl> acls;
 
-  private OmKeyInfo(String volumeName, String bucketName, String keyName,
-                    List<OmKeyLocationInfoGroup> versions, long dataSize,
-                    long creationTime, long modificationTime, HddsProtos.ReplicationType type,
-                    HddsProtos.ReplicationFactor factor) {
+  @SuppressWarnings("parameternumber")
+  OmKeyInfo(String volumeName, String bucketName, String keyName,
+      List<OmKeyLocationInfoGroup> versions, long dataSize,
+      long creationTime, long modificationTime,
+      HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor factor,
+      Map<String, String> metadata,
+      FileEncryptionInfo encInfo, List<OzoneAcl> acls) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -67,6 +84,9 @@ public final class OmKeyInfo {
     this.modificationTime = modificationTime;
     this.factor = factor;
     this.type = type;
+    this.metadata = metadata;
+    this.encInfo = encInfo;
+    this.acls = acls;
   }
 
   public String getVolumeName() {
@@ -119,7 +139,6 @@ public final class OmKeyInfo {
    * This will be called when the key is being committed to OzoneManager.
    *
    * @param locationInfoList list of locationInfo
-   * @throws IOException
    */
   public void updateLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
     long latestVersion = getLatestVersionLocations().getVersion();
@@ -146,17 +165,21 @@ public final class OmKeyInfo {
    * part of the latest version, not a new version.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime if true, will update modification time.
    * @throws IOException
    */
   public synchronized void appendNewBlocks(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     if (keyLocationVersions.size() == 0) {
       throw new IOException("Appending new block, but no version exist");
     }
     OmKeyLocationInfoGroup currentLatestVersion =
         keyLocationVersions.get(keyLocationVersions.size() - 1);
     currentLatestVersion.appendNewBlocks(newLocationList);
-    setModificationTime(Time.now());
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
   }
 
   /**
@@ -164,10 +187,12 @@ public final class OmKeyInfo {
    * version to the all version list.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime - if true, updates modification time.
    * @throws IOException
    */
   public synchronized long addNewVersion(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     long latestVersionNum;
     if (keyLocationVersions.size() == 0) {
       // no version exist, these blocks are the very first version.
@@ -183,7 +208,10 @@ public final class OmKeyInfo {
       keyLocationVersions.add(newVersion);
       latestVersionNum = newVersion.getVersion();
     }
-    setModificationTime(Time.now());
+
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
     return latestVersionNum;
   }
 
@@ -199,6 +227,26 @@ public final class OmKeyInfo {
     this.modificationTime = modificationTime;
   }
 
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return encInfo;
+  }
+
+  public List<OzoneAcl> getAcls() {
+    return acls;
+  }
+
+  public boolean addAcl(OzoneAcl acl) {
+    return OzoneAclUtil.addAcl(acls, acl);
+  }
+
+  public boolean removeAcl(OzoneAcl acl) {
+    return OzoneAclUtil.removeAcl(acls, acl);
+  }
+
+  public boolean setAcls(List<OzoneAcl> newAcls) {
+    return OzoneAclUtil.setAcl(acls, newAcls);
+  }
+
   /**
    * Builder of OmKeyInfo.
    */
@@ -207,11 +255,21 @@ public final class OmKeyInfo {
     private String bucketName;
     private String keyName;
     private long dataSize;
-    private List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups;
+    private List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups =
+        new ArrayList<>();
     private long creationTime;
     private long modificationTime;
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
+    private Map<String, String> metadata;
+    private FileEncryptionInfo encInfo;
+    private List<OzoneAcl> acls;
+
+    public Builder() {
+      this.metadata = new HashMap<>();
+      omKeyLocationInfoGroups = new ArrayList<>();
+      acls = new ArrayList<>();
+    }
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -249,27 +307,50 @@ public final class OmKeyInfo {
       return this;
     }
 
-    public Builder setReplicationFactor(HddsProtos.ReplicationFactor factor) {
-      this.factor = factor;
+    public Builder setReplicationFactor(HddsProtos.ReplicationFactor replFact) {
+      this.factor = replFact;
       return this;
     }
 
-    public Builder setReplicationType(HddsProtos.ReplicationType type) {
-      this.type = type;
+    public Builder setReplicationType(HddsProtos.ReplicationType replType) {
+      this.type = replType;
+      return this;
+    }
+
+    public Builder addMetadata(String key, String value) {
+      metadata.put(key, value);
+      return this;
+    }
+
+    public Builder addAllMetadata(Map<String, String> newMetadata) {
+      metadata.putAll(newMetadata);
+      return this;
+    }
+
+    public Builder setFileEncryptionInfo(FileEncryptionInfo feInfo) {
+      this.encInfo = feInfo;
+      return this;
+    }
+
+    public Builder setAcls(List<OzoneAcl> listOfAcls) {
+      if (listOfAcls != null) {
+        this.acls.addAll(listOfAcls);
+      }
       return this;
     }
 
     public OmKeyInfo build() {
       return new OmKeyInfo(
           volumeName, bucketName, keyName, omKeyLocationInfoGroups,
-          dataSize, creationTime, modificationTime, type, factor);
+          dataSize, creationTime, modificationTime, type, factor, metadata,
+          encInfo, acls);
     }
   }
 
   public KeyInfo getProtobuf() {
     long latestVersion = keyLocationVersions.size() == 0 ? -1 :
         keyLocationVersions.get(keyLocationVersions.size() - 1).getVersion();
-    return KeyInfo.newBuilder()
+    KeyInfo.Builder kb = KeyInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -282,22 +363,59 @@ public final class OmKeyInfo {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
-        .build();
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
+        .addAllAcls(OzoneAclUtil.toProtobuf(acls));
+    if (encInfo != null) {
+      kb.setFileEncryptionInfo(OMPBHelper.convert(encInfo));
+    }
+    return kb.build();
   }
 
   public static OmKeyInfo getFromProtobuf(KeyInfo keyInfo) {
-    return new OmKeyInfo(
-        keyInfo.getVolumeName(),
-        keyInfo.getBucketName(),
-        keyInfo.getKeyName(),
-        keyInfo.getKeyLocationListList().stream()
+    return new OmKeyInfo.Builder()
+        .setVolumeName(keyInfo.getVolumeName())
+        .setBucketName(keyInfo.getBucketName())
+        .setKeyName(keyInfo.getKeyName())
+        .setOmKeyLocationInfos(keyInfo.getKeyLocationListList().stream()
             .map(OmKeyLocationInfoGroup::getFromProtobuf)
-            .collect(Collectors.toList()),
-        keyInfo.getDataSize(),
-        keyInfo.getCreationTime(),
-        keyInfo.getModificationTime(),
-        keyInfo.getType(),
-        keyInfo.getFactor());
+            .collect(Collectors.toList()))
+        .setDataSize(keyInfo.getDataSize())
+        .setCreationTime(keyInfo.getCreationTime())
+        .setModificationTime(keyInfo.getModificationTime())
+        .setReplicationType(keyInfo.getType())
+        .setReplicationFactor(keyInfo.getFactor())
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()))
+        .setFileEncryptionInfo(keyInfo.hasFileEncryptionInfo() ?
+            OMPBHelper.convert(keyInfo.getFileEncryptionInfo()): null)
+        .setAcls(OzoneAclUtil.fromProtobuf(keyInfo.getAclsList()))
+        .build();
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmKeyInfo omKeyInfo = (OmKeyInfo) o;
+    return dataSize == omKeyInfo.dataSize &&
+        creationTime == omKeyInfo.creationTime &&
+        modificationTime == omKeyInfo.modificationTime &&
+        volumeName.equals(omKeyInfo.volumeName) &&
+        bucketName.equals(omKeyInfo.bucketName) &&
+        keyName.equals(omKeyInfo.keyName) &&
+        Objects
+            .equals(keyLocationVersions, omKeyInfo.keyLocationVersions) &&
+        type == omKeyInfo.type &&
+        factor == omKeyInfo.factor &&
+        Objects.equals(metadata, omKeyInfo.metadata) &&
+        Objects.equals(acls, omKeyInfo.acls);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(volumeName, bucketName, keyName);
+  }
 }

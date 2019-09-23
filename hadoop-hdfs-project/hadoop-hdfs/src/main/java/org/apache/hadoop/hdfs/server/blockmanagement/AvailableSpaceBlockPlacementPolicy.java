@@ -25,8 +25,8 @@ import java.util.Collection;
 import java.util.Random;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -39,8 +39,8 @@ import org.apache.hadoop.net.Node;
  */
 public class AvailableSpaceBlockPlacementPolicy extends
     BlockPlacementPolicyDefault {
-  private static final Log LOG = LogFactory
-      .getLog(AvailableSpaceBlockPlacementPolicy.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AvailableSpaceBlockPlacementPolicy.class);
   private static final Random RAND = new Random();
   private int balancedPreference =
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);

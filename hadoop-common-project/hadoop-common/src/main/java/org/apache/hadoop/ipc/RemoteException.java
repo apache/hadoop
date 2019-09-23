@@ -66,7 +66,7 @@ public class RemoteException extends IOException {
    * @return may be null if the code was newer than our protobuf definitions or none was given.
    */
   public RpcErrorCodeProto getErrorCode() {
-    return RpcErrorCodeProto.valueOf(errorCode);
+    return RpcErrorCodeProto.forNumber(errorCode);
   }
 
   /**
@@ -102,7 +102,7 @@ public class RemoteException extends IOException {
    * a <code>String</code> as a parameter.
    * Otherwise it returns this.
    * 
-   * @return <code>Throwable
+   * @return <code>Throwable</code>
    */
   public IOException unwrapRemoteException() {
     try {

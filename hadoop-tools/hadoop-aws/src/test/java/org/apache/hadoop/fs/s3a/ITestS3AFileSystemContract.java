@@ -54,6 +54,11 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
+  @Override
+  protected int getGlobalTimeout() {
+    return S3ATestConstants.S3A_TEST_TIMEOUT;
+  }
+
   @Before
   public void setUp() throws Exception {
     nameThread();

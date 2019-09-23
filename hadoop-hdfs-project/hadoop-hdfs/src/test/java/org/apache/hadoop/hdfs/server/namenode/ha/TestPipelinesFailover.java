@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -367,12 +366,12 @@ public class TestPipelinesFailover {
       DelayAnswer delayer = new DelayAnswer(LOG);
       Mockito.doAnswer(delayer).when(nnSpy).commitBlockSynchronization(
           Mockito.eq(blk),
-          Mockito.anyInt(), // new genstamp
+          Mockito.anyLong(), // new genstamp
           Mockito.anyLong(), // new length
           Mockito.eq(true), // close file
           Mockito.eq(false), // delete block
-          (DatanodeID[]) Mockito.anyObject(), // new targets
-          (String[]) Mockito.anyObject()); // new target storages
+          Mockito.any(),  // new targets
+          Mockito.any()); // new target storages
 
       DistributedFileSystem fsOtherUser = createFsAsOtherUser(cluster, conf);
       assertFalse(fsOtherUser.recoverLease(TEST_PATH));

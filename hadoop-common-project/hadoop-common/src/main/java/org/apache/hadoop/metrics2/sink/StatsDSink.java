@@ -47,10 +47,10 @@ import org.slf4j.LoggerFactory;
  * a daemon that is running on the localhost and will add the
  * hostname to the metric (such as the
  * <a href="https://collectd.org/">CollectD</a> StatsD plugin).
- * <br/>
+ * <br>
  * To configure this plugin, you will need to add the following
  * entries to your hadoop-metrics2.properties file:
- * <br/>
+ * <br>
  * <pre>
  * *.sink.statsd.class=org.apache.hadoop.metrics2.sink.StatsDSink
  * [prefix].sink.statsd.server.host=
@@ -122,9 +122,9 @@ public class StatsDSink implements MetricsSink, Closeable {
         buf.append(hn.substring(0, idx)).append(PERIOD);
       }
     }
-    buf.append(sn).append(PERIOD);
-    buf.append(ctx).append(PERIOD);
-    buf.append(record.name().replaceAll("\\.", "-")).append(PERIOD);
+    buf.append(sn).append(PERIOD)
+        .append(ctx).append(PERIOD)
+        .append(record.name().replaceAll("\\.", "-")).append(PERIOD);
 
     // Collect datapoints.
     for (AbstractMetric metric : record.metrics()) {

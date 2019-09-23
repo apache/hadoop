@@ -178,7 +178,6 @@ public class FileIoProvider {
    * Call sync_file_range on the given file descriptor.
    *
    * @param  volume target volume. null if unavailable.
-   * @throws IOException
    */
   public void syncFileRange(
       @Nullable FsVolumeSpi volume, FileDescriptor outFd,
@@ -198,7 +197,6 @@ public class FileIoProvider {
    * Call posix_fadvise on the given file descriptor.
    *
    * @param  volume target volume. null if unavailable.
-   * @throws IOException
    */
   public void posixFadvise(
       @Nullable FsVolumeSpi volume, String identifier, FileDescriptor outFd,
@@ -281,7 +279,10 @@ public class FileIoProvider {
           waitTime, transferTime);
       profilingEventHook.afterFileIo(volume, TRANSFER, begin, count);
     } catch (Exception e) {
-      onFailure(volume, begin);
+      String em = e.getMessage();
+      if (!em.startsWith("Broken pipe") && !em.startsWith("Connection reset")) {
+        onFailure(volume, begin);
+      }
       throw e;
     }
   }
@@ -394,7 +395,6 @@ public class FileIoProvider {
    * @param volume  target volume. null if unavailable.
    * @param fd  File descriptor object.
    * @return  FileOutputStream to the given file object.
-   * @throws  FileNotFoundException
    */
   public FileOutputStream getFileOutputStream(
       @Nullable FsVolumeSpi volume, FileDescriptor fd) {

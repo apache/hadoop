@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -700,6 +701,19 @@ public class TestHttpServer extends HttpServerFunctionalTest {
             "listeners");
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(backlogSize, listener.getAcceptQueueSize());
+  }
+
+  @Test
+  public void testIdleTimeout() throws Exception {
+    final int idleTimeout = 1000;
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_IDLE_TIMEOUT_MS_KEY, idleTimeout);
+    HttpServer2 srv = createServer("test", conf);
+    Field f = HttpServer2.class.getDeclaredField("listeners");
+    f.setAccessible(true);
+    List<?> listeners = (List<?>) f.get(srv);
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(idleTimeout, listener.getIdleTimeout());
   }
 
   @Test

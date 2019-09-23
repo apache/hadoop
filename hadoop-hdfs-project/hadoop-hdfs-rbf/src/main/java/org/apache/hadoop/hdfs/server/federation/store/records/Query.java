@@ -31,7 +31,7 @@ public class Query<T extends BaseRecord> {
   /**
    * Create a query to search for a partial record.
    *
-   * @param partial It defines the attributes to search.
+   * @param part It defines the attributes to search.
    */
   public Query(final T part) {
     this.partial = part;

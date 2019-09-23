@@ -25,7 +25,8 @@ import org.apache.hadoop.examples.pi.math.Summation;
 import org.apache.hadoop.io.Writable;
 
 /** A class for map task results or reduce task results. */
-public class TaskResult implements Container<Summation>, Combinable<TaskResult>, Writable {
+public class TaskResult implements Container<Summation>,
+    Combinable<TaskResult>, Writable {
   private Summation sigma;
   private long duration;
 
@@ -38,10 +39,14 @@ public class TaskResult implements Container<Summation>, Combinable<TaskResult>,
 
   /** {@inheritDoc} */
   @Override
-  public Summation getElement() {return sigma;}
+  public Summation getElement() {
+    return sigma;
+  }
 
   /** @return The time duration used */
-  long getDuration() {return duration;}
+  long getDuration() {
+    return duration;
+  }
 
   /** {@inheritDoc} */
   @Override
@@ -54,7 +59,7 @@ public class TaskResult implements Container<Summation>, Combinable<TaskResult>,
   public boolean equals(Object obj) {
     if (this == obj)
       return true;
-    else if (obj != null && obj instanceof TaskResult) {
+    else if (obj instanceof TaskResult) {
       final TaskResult that = (TaskResult)obj;
       return this.compareTo(that) == 0;
     }
@@ -62,7 +67,7 @@ public class TaskResult implements Container<Summation>, Combinable<TaskResult>,
       "obj.getClass()=" + obj.getClass());
   }
 
-  /** Not supported */
+  /** Not supported. */
   @Override
   public int hashCode() {
     throw new UnsupportedOperationException();
@@ -72,7 +77,7 @@ public class TaskResult implements Container<Summation>, Combinable<TaskResult>,
   @Override
   public TaskResult combine(TaskResult that) {
     final Summation s = sigma.combine(that.sigma);
-    return s == null? null: new TaskResult(s, this.duration + that.duration);
+    return s == null ? null : new TaskResult(s, this.duration + that.duration);
   }
 
   /** {@inheritDoc} */
@@ -92,22 +97,27 @@ public class TaskResult implements Container<Summation>, Combinable<TaskResult>,
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "sigma=" + sigma + ", duration=" + duration + "(" + Util.millis2String(duration) + ")";
+    return "sigma=" + sigma + ", duration=" + duration + "(" +
+        Util.millis2String(duration) + ")";
   }
 
-  /** Covert a String to a TaskResult */
+  /** Covert a String to a TaskResult. */
   public static TaskResult valueOf(String s) {
     int i = 0;
     int j = s.indexOf(", duration=");
     if (j < 0)
-      throw new IllegalArgumentException("i=" + i + ", j=" + j + " < 0, s=" + s);
-    final Summation sigma = Summation.valueOf(Util.parseStringVariable("sigma", s.substring(i, j)));
+      throw new IllegalArgumentException("i=" + i + ", j=" + j +
+          " < 0, s=" + s);
+    final Summation sigma =
+        Summation.valueOf(Util.parseStringVariable("sigma", s.substring(i, j)));
 
     i = j + 2;
     j = s.indexOf("(", i);
     if (j < 0)
-      throw new IllegalArgumentException("i=" + i + ", j=" + j + " < 0, s=" + s);
-    final long duration = Util.parseLongVariable("duration", s.substring(i, j));
+      throw new IllegalArgumentException("i=" + i + ", j=" + j +
+          " < 0, s=" + s);
+    final long duration =
+        Util.parseLongVariable("duration", s.substring(i, j));
 
     return new TaskResult(sigma, duration);
   }

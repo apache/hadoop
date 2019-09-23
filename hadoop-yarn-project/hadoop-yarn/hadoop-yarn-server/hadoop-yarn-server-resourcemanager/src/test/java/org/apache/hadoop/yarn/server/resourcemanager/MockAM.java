@@ -54,11 +54,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MockAM {
 
-  private static final Logger LOG = Logger.getLogger(MockAM.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MockAM.class);
 
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
@@ -205,6 +207,17 @@ public class MockAM {
             labelExpression, -1);
     return allocate(reqs, releases);
   }
+
+  public AllocateResponse allocate(
+      String host, Resource cap, int numContainers,
+      List<ContainerId> rels, String labelExpression) throws Exception {
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest oneReq =
+        createResourceReq(host, cap, numContainers,
+            labelExpression);
+    reqs.add(oneReq);
+    return allocate(reqs, rels);
+  }
   
   public List<ResourceRequest> createReq(String[] hosts, int memory,
       int priority, int containers, long allocationRequestId) throws Exception {
@@ -272,6 +285,22 @@ public class MockAM {
 
   }
 
+  public ResourceRequest createResourceReq(String host, Resource cap,
+      int containers, String labelExpression) throws Exception {
+    ResourceRequest req = Records.newRecord(ResourceRequest.class);
+    req.setResourceName(host);
+    req.setNumContainers(containers);
+    Priority pri = Records.newRecord(Priority.class);
+    pri.setPriority(1);
+    req.setPriority(pri);
+    req.setCapability(cap);
+    if (labelExpression != null) {
+      req.setNodeLabelExpression(labelExpression);
+    }
+    req.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
+    return req;
+
+  }
 
   public AllocateResponse allocate(
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)

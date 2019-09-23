@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -36,6 +38,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -68,6 +71,8 @@ public class OpportunisticContainerAllocator {
   private static final int NODE_LOCAL_LOOP = 0;
   private static final int RACK_LOCAL_LOOP = 1;
   private static final int OFF_SWITCH_LOOP = 2;
+
+  private int maxAllocationsPerAMHeartbeat = -1;
 
   /**
    * This class encapsulates application specific parameters used to build a
@@ -237,9 +242,15 @@ public class OpportunisticContainerAllocator {
     private final Map<String, AtomicInteger> nodeLocations = new HashMap<>();
     private final Map<String, AtomicInteger> rackLocations = new HashMap<>();
     private final ResourceRequest request;
+    private final long timestamp;
 
     EnrichedResourceRequest(ResourceRequest request) {
       this.request = request;
+      timestamp = Time.monotonicNow();
+    }
+
+    long getTimestamp() {
+      return timestamp;
     }
 
     ResourceRequest getRequest() {
@@ -291,6 +302,24 @@ public class OpportunisticContainerAllocator {
   }
 
   /**
+   * Create a new Opportunistic Container Allocator.
+   * @param tokenSecretManager TokenSecretManager
+   * @param maxAllocationsPerAMHeartbeat max number of containers to be
+   *                                     allocated in one AM heartbeat
+   */
+  public OpportunisticContainerAllocator(
+      BaseContainerTokenSecretManager tokenSecretManager,
+      int maxAllocationsPerAMHeartbeat) {
+    this.tokenSecretManager = tokenSecretManager;
+    this.maxAllocationsPerAMHeartbeat = maxAllocationsPerAMHeartbeat;
+  }
+
+  @VisibleForTesting
+  void setMaxAllocationsPerAMHeartbeat(int maxAllocationsPerAMHeartbeat) {
+    this.maxAllocationsPerAMHeartbeat = maxAllocationsPerAMHeartbeat;
+  }
+
+  /**
    * Allocate OPPORTUNISTIC containers.
    * @param blackList Resource BlackList Request
    * @param oppResourceReqs Opportunistic Resource Requests
@@ -315,8 +344,8 @@ public class OpportunisticContainerAllocator {
 
     // Add OPPORTUNISTIC requests to the outstanding ones.
     opportContext.addToOutstandingReqs(oppResourceReqs);
-
     Set<String> nodeBlackList = new HashSet<>(opportContext.getBlacklist());
+    Set<String> allocatedNodes = new HashSet<>();
     List<Container> allocatedContainers = new ArrayList<>();
 
     // Satisfy the outstanding OPPORTUNISTIC requests.
@@ -332,9 +361,21 @@ public class OpportunisticContainerAllocator {
         //          might be different than what is requested, which is why
         //          we need the requested capability (key) to match against
         //          the outstanding reqs)
+        int remAllocs = -1;
+        if (maxAllocationsPerAMHeartbeat > 0) {
+          remAllocs =
+              maxAllocationsPerAMHeartbeat - allocatedContainers.size()
+                  - getTotalAllocations(allocations);
+          if (remAllocs <= 0) {
+            LOG.info("Not allocating more containers as we have reached max "
+                    + "allocations per AM heartbeat {}",
+                maxAllocationsPerAMHeartbeat);
+            break;
+          }
+        }
         Map<Resource, List<Allocation>> allocation = allocate(
             rmIdentifier, opportContext, schedulerKey, applicationAttemptId,
-            appSubmitter, nodeBlackList);
+            appSubmitter, nodeBlackList, allocatedNodes, remAllocs);
         if (allocation.size() > 0) {
           allocations.add(allocation);
           continueLoop = true;
@@ -354,16 +395,42 @@ public class OpportunisticContainerAllocator {
     return allocatedContainers;
   }
 
+  private int getTotalAllocations(
+      List<Map<Resource, List<Allocation>>> allocations) {
+    int totalAllocs = 0;
+    for (Map<Resource, List<Allocation>> allocation : allocations) {
+      for (List<Allocation> allocs : allocation.values()) {
+        totalAllocs += allocs.size();
+      }
+    }
+    return totalAllocs;
+  }
+
   private Map<Resource, List<Allocation>> allocate(long rmIdentifier,
       OpportunisticContainerContext appContext, SchedulerRequestKey schedKey,
-      ApplicationAttemptId appAttId, String userName, Set<String> blackList)
+      ApplicationAttemptId appAttId, String userName, Set<String> blackList,
+      Set<String> allocatedNodes, int maxAllocations)
       throws YarnException {
     Map<Resource, List<Allocation>> containers = new HashMap<>();
     for (EnrichedResourceRequest enrichedAsk :
         appContext.getOutstandingOpReqs().get(schedKey).values()) {
+      int remainingAllocs = -1;
+      if (maxAllocations > 0) {
+        int totalAllocated = 0;
+        for (List<Allocation> allocs : containers.values()) {
+          totalAllocated += allocs.size();
+        }
+        remainingAllocs = maxAllocations - totalAllocated;
+        if (remainingAllocs <= 0) {
+          LOG.info("Not allocating more containers as max allocations per AM "
+                  + "heartbeat {} has reached", maxAllocationsPerAMHeartbeat);
+          break;
+        }
+      }
       allocateContainersInternal(rmIdentifier, appContext.getAppParams(),
-          appContext.getContainerIdGenerator(), blackList, appAttId,
-          appContext.getNodeMap(), userName, containers, enrichedAsk);
+          appContext.getContainerIdGenerator(), blackList, allocatedNodes,
+          appAttId, appContext.getNodeMap(), userName, containers, enrichedAsk,
+          remainingAllocs);
       ResourceRequest anyAsk = enrichedAsk.getRequest();
       if (!containers.isEmpty()) {
         LOG.info("Opportunistic allocation requested for [priority={}, "
@@ -378,10 +445,10 @@ public class OpportunisticContainerAllocator {
 
   private void allocateContainersInternal(long rmIdentifier,
       AllocationParams appParams, ContainerIdGenerator idCounter,
-      Set<String> blacklist, ApplicationAttemptId id,
-      Map<String, RemoteNode> allNodes, String userName,
-      Map<Resource, List<Allocation>> allocations,
-      EnrichedResourceRequest enrichedAsk)
+      Set<String> blacklist, Set<String> allocatedNodes,
+      ApplicationAttemptId id, Map<String, RemoteNode> allNodes,
+      String userName, Map<Resource, List<Allocation>> allocations,
+      EnrichedResourceRequest enrichedAsk, int maxAllocations)
       throws YarnException {
     if (allNodes.size() == 0) {
       LOG.info("No nodes currently available to " +
@@ -394,6 +461,9 @@ public class OpportunisticContainerAllocator {
             allocations.get(anyAsk.getCapability()).size());
     toAllocate = Math.min(toAllocate,
         appParams.getMaxAllocationsPerSchedulerKeyPerRound());
+    if (maxAllocations >= 0) {
+      toAllocate = Math.min(maxAllocations, toAllocate);
+    }
     int numAllocated = 0;
     // Node Candidates are selected as follows:
     // * Node local candidates selected in loop == 0
@@ -405,7 +475,8 @@ public class OpportunisticContainerAllocator {
     }
     while (numAllocated < toAllocate) {
       Collection<RemoteNode> nodeCandidates =
-          findNodeCandidates(loopIndex, allNodes, blacklist, enrichedAsk);
+          findNodeCandidates(loopIndex, allNodes, blacklist, allocatedNodes,
+              enrichedAsk);
       for (RemoteNode rNode : nodeCandidates) {
         String rNodeHost = rNode.getNodeId().getHost();
         // Ignore black list
@@ -421,6 +492,10 @@ public class OpportunisticContainerAllocator {
           } else {
             continue;
           }
+        } else if (allocatedNodes.contains(rNodeHost)) {
+          LOG.info("Opportunistic container has already been allocated on {}.",
+              rNodeHost);
+          continue;
         }
         if (loopIndex == RACK_LOCAL_LOOP) {
           if (enrichedAsk.getRackLocations().contains(rNode.getRackName())) {
@@ -433,11 +508,8 @@ public class OpportunisticContainerAllocator {
             idCounter, id, userName, allocations, location,
             anyAsk, rNode);
         numAllocated++;
-        // Try to spread the allocations across the nodes.
-        // But don't add if it is a node local request.
-        if (loopIndex != NODE_LOCAL_LOOP) {
-          blacklist.add(rNode.getNodeId().getHost());
-        }
+        updateMetrics(loopIndex);
+        allocatedNodes.add(rNodeHost);
         LOG.info("Allocated [" + container.getId() + "] as opportunistic at " +
             "location [" + location + "]");
         if (numAllocated >= toAllocate) {
@@ -459,9 +531,21 @@ public class OpportunisticContainerAllocator {
     }
   }
 
+  private void updateMetrics(int loopIndex) {
+    OpportunisticSchedulerMetrics metrics =
+        OpportunisticSchedulerMetrics.getMetrics();
+    if (loopIndex == NODE_LOCAL_LOOP) {
+      metrics.incrNodeLocalOppContainers();
+    } else if (loopIndex == RACK_LOCAL_LOOP) {
+      metrics.incrRackLocalOppContainers();
+    } else {
+      metrics.incrOffSwitchOppContainers();
+    }
+  }
+
   private Collection<RemoteNode> findNodeCandidates(int loopIndex,
       Map<String, RemoteNode> allNodes, Set<String> blackList,
-      EnrichedResourceRequest enrichedRR) {
+      Set<String> allocatedNodes, EnrichedResourceRequest enrichedRR) {
     LinkedList<RemoteNode> retList = new LinkedList<>();
     String partition = getRequestPartition(enrichedRR);
     if (loopIndex > 1) {
@@ -481,8 +565,9 @@ public class OpportunisticContainerAllocator {
               allNodes, enrichedRR, retList, numContainers);
         } else {
           // Rack local candidates
-          numContainers = collectRackLocalCandidates(
-              allNodes, enrichedRR, retList, blackList, numContainers);
+          numContainers =
+              collectRackLocalCandidates(allNodes, enrichedRR, retList,
+                  blackList, allocatedNodes, numContainers);
         }
         if (numContainers == enrichedRR.getRequest().getNumContainers()) {
           // If there is no change in numContainers, then there is no point
@@ -496,12 +581,16 @@ public class OpportunisticContainerAllocator {
 
   private int collectRackLocalCandidates(Map<String, RemoteNode> allNodes,
       EnrichedResourceRequest enrichedRR, LinkedList<RemoteNode> retList,
-      Set<String> blackList, int numContainers) {
+      Set<String> blackList, Set<String> allocatedNodes, int numContainers) {
     String partition = getRequestPartition(enrichedRR);
     for (RemoteNode rNode : allNodes.values()) {
       if (StringUtils.equals(partition, getRemoteNodePartition(rNode)) &&
           enrichedRR.getRackLocations().contains(rNode.getRackName())) {
-        if (blackList.contains(rNode.getNodeId().getHost())) {
+        String rHost = rNode.getNodeId().getHost();
+        if (blackList.contains(rHost)) {
+          continue;
+        }
+        if (allocatedNodes.contains(rHost)) {
           retList.addLast(rNode);
         } else {
           retList.addFirst(rNode);

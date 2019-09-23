@@ -63,7 +63,8 @@ public class TestSSLFactory {
       + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
       + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
-      + "SSL_RSA_WITH_RC4_128_MD5";
+      + "SSL_RSA_WITH_RC4_128_MD5,"
+      + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA";
 
   @BeforeClass
   public static void setUp() throws Exception {

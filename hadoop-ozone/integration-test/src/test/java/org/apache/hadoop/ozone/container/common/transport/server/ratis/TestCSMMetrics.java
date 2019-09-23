@@ -13,11 +13,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
+ * limitations under the License
  */
+
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getDoubleGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 import java.io.File;
@@ -25,35 +27,38 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
+      .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandResponseProto;
+      .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.scm.*;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.transport.server
-    .XceiverServerSpi;
+      .XceiverServerSpi;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
-import org.apache.ratis.RatisHelper;
-import org.apache.ratis.rpc.RpcType;
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.protocol.RaftPeer;
-import org.apache.ratis.protocol.RaftGroupId;
-import org.apache.ratis.util.CheckedBiConsumer;
+import static org.junit.Assert.assertTrue;
 
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.util.function.CheckedBiConsumer;
+
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import org.junit.Test;
@@ -63,9 +68,9 @@ import org.junit.Assert;
  * This class tests the metrics of ContainerStateMachine.
  */
 public class TestCSMMetrics {
-  static final String TEST_DIR
-      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
-
+  static final String TEST_DIR =
+      GenericTestUtils.getTestDir("dfs").getAbsolutePath()
+          + File.separator;
   @FunctionalInterface
   interface CheckedBiFunction<LEFT, RIGHT, OUT, THROWABLE extends Throwable> {
     OUT apply(LEFT left, RIGHT right) throws THROWABLE;
@@ -77,7 +82,7 @@ public class TestCSMMetrics {
         (pipeline, conf) -> RatisTestHelper.initRatisConf(GRPC, conf),
         XceiverClientRatis::newXceiverClientRatis,
         TestCSMMetrics::newXceiverServerRatis,
-        (dn, p) -> initXceiverServerRatis(GRPC, dn, p));
+        (dn, p) -> RatisTestHelper.initXceiverServerRatis(GRPC, dn, p));
   }
 
   static void runContainerStateMachineMetrics(
@@ -98,7 +103,7 @@ public class TestCSMMetrics {
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for (DatanodeDetails dn : pipeline.getMachines()) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
@@ -109,10 +114,22 @@ public class TestCSMMetrics {
       client.connect();
 
       // Before Read Chunk/Write Chunk
-      MetricsRecordBuilder metric = getMetrics(CSMMetrics.SOURCE_NAME);
+      MetricsRecordBuilder metric = getMetrics(CSMMetrics.SOURCE_NAME +
+          RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 0L, metric);
       assertCounter("NumReadStateMachineOps", 0L, metric);
       assertCounter("NumApplyTransactionOps", 0L, metric);
+      assertCounter("NumBytesWrittenCount", 0L, metric);
+      assertCounter("NumBytesCommittedCount", 0L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 0L, metric);
+      double applyTransactionLatency = getDoubleGauge(
+          "ApplyTransactionAvgTime", metric);
+      assertTrue(applyTransactionLatency == 0.0);
+      double writeStateMachineLatency = getDoubleGauge(
+          "WriteStateMachineDataAvgTime", metric);
+      assertTrue(writeStateMachineLatency == 0.0);
 
       // Write Chunk
       BlockID blockID = ContainerTestHelper.getTestBlockID(ContainerTestHelper.
@@ -125,9 +142,15 @@ public class TestCSMMetrics {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
-      metric = getMetrics(CSMMetrics.SOURCE_NAME);
+      metric = getMetrics(CSMMetrics.SOURCE_NAME +
+              RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 1L, metric);
+      assertCounter("NumBytesWrittenCount", 1024L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
+      assertCounter("NumBytesCommittedCount", 1024L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 1L, metric);
 
       //Read Chunk
       ContainerProtos.ContainerCommandRequestProto readChunkRequest =
@@ -137,9 +160,17 @@ public class TestCSMMetrics {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
-      metric = getMetrics(CSMMetrics.SOURCE_NAME);
-      assertCounter("NumReadStateMachineOps", 1L, metric);
+      metric = getMetrics(CSMMetrics.SOURCE_NAME +
+          RaftGroupId.valueOf(pipeline.getId().getId()).toString());
+      assertCounter("NumQueryStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
+      applyTransactionLatency = getDoubleGauge(
+          "ApplyTransactionAvgTime", metric);
+      assertTrue(applyTransactionLatency > 0.0);
+      writeStateMachineLatency = getDoubleGauge(
+          "WriteStateMachineDataAvgTime", metric);
+      assertTrue(writeStateMachineLatency > 0.0);
+
     } finally {
       if (client != null) {
         client.close();
@@ -156,16 +187,9 @@ public class TestCSMMetrics {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher);
-  }
-
-  static void initXceiverServerRatis(
-      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
-    final RaftPeer p = RatisHelper.toRaftPeer(dd);
-    final RaftClient client = RatisHelper.newRaftClient(rpc, p);
-    RaftGroupId groupId = pipeline.getId().getRaftGroupID();
-    client.reinitialize(RatisHelper.newRaftGroup(groupId,
-        pipeline.getMachines()), p.getId());
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        null, null);
   }
 
   private static class TestContainerDispatcher implements ContainerDispatcher {
@@ -177,8 +201,14 @@ public class TestCSMMetrics {
      */
     @Override
     public ContainerCommandResponseProto dispatch(
-        ContainerCommandRequestProto msg) {
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override
@@ -197,6 +227,11 @@ public class TestCSMMetrics {
     @Override
     public void setScmId(String scmId) {
 
+    }
+
+    @Override
+    public void buildMissingContainerSetAndValidate(
+        Map<Long, Long> container2BCSIDMap) {
     }
   }
 }

@@ -300,4 +300,29 @@ public abstract class AppAdminClient extends CompositeService {
   @Unstable
   public abstract int actionUpgradeExpress(String appName, File fileName)
       throws IOException, YarnException;
+
+  /**
+   * Cancels the upgrade of the service.
+   *
+   * @param appName the name of the application
+   * @return exit code
+   * @throws IOException
+   * @throws YarnException
+   */
+  @Public
+  @Unstable
+  public abstract int actionCancelUpgrade(String appName) throws IOException,
+      YarnException;
+
+  /**
+   * Decommission component instances of a long running service.
+   *
+   * @param appName            the name of the application.
+   * @param componentInstances the name of the component instances.
+   */
+  @Public
+  @Unstable
+  public abstract int actionDecommissionInstances(String appName,
+      List<String> componentInstances) throws IOException, YarnException;
+
 }

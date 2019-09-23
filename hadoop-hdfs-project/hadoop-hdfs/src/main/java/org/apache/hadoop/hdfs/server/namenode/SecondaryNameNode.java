@@ -38,8 +38,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -103,8 +103,8 @@ public class SecondaryNameNode implements Runnable,
   static{
     HdfsConfiguration.init();
   }
-  public static final Log LOG = 
-    LogFactory.getLog(SecondaryNameNode.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SecondaryNameNode.class.getName());
 
   private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
@@ -367,12 +367,12 @@ public class SecondaryNameNode implements Runnable,
         // Prevent a huge number of edits from being created due to
         // unrecoverable conditions and endless retries.
         if (checkpointImage.getMergeErrorCount() > maxRetries) {
-          LOG.fatal("Merging failed " + 
+          LOG.error("Merging failed " +
               checkpointImage.getMergeErrorCount() + " times.");
           terminate(1);
         }
       } catch (Throwable e) {
-        LOG.fatal("Throwable Exception in doCheckpoint", e);
+        LOG.error("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
         terminate(1, e);
       }
@@ -676,7 +676,7 @@ public class SecondaryNameNode implements Runnable,
   public static void main(String[] argv) throws Exception {
     CommandLineOpts opts = SecondaryNameNode.parseArgs(argv);
     if (opts == null) {
-      LOG.fatal("Failed to parse options");
+      LOG.error("Failed to parse options");
       terminate(1);
     } else if (opts.shouldPrintHelp()) {
       opts.usage();
@@ -703,7 +703,7 @@ public class SecondaryNameNode implements Runnable,
         secondary.join();
       }
     } catch (Throwable e) {
-      LOG.fatal("Failed to start secondary namenode", e);
+      LOG.error("Failed to start secondary namenode", e);
       terminate(1);
     }
   }

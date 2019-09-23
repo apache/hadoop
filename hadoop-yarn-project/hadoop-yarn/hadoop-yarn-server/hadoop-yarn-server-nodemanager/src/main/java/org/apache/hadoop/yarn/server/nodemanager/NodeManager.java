@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -66,6 +67,9 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeAttributesProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeAttributesProvider;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -123,6 +127,7 @@ public class NodeManager extends CompositeService
   private ApplicationACLsManager aclsManager;
   private NodeHealthCheckerService nodeHealthChecker;
   private NodeLabelsProvider nodeLabelsProvider;
+  private NodeAttributesProvider nodeAttributesProvider;
   private LocalDirsHandlerService dirsHandler;
   private Context context;
   private AsyncDispatcher dispatcher;
@@ -162,14 +167,42 @@ public class NodeManager extends CompositeService
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
       Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
     return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-        metrics, nodeLabelsProvider);
+        metrics);
   }
 
-  protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-      Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-      NodeLabelsProvider nodeLabelsProvider) {
-    return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-        metrics, nodeLabelsProvider);
+  protected NodeAttributesProvider createNodeAttributesProvider(
+      Configuration conf) throws IOException {
+    NodeAttributesProvider attributesProvider = null;
+    String providerString =
+        conf.get(YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_CONFIG, null);
+    if (providerString == null || providerString.trim().length() == 0) {
+      return attributesProvider;
+    }
+    switch (providerString.trim().toLowerCase()) {
+    case YarnConfiguration.CONFIG_NODE_DESCRIPTOR_PROVIDER:
+      attributesProvider = new ConfigurationNodeAttributesProvider();
+      break;
+    case YarnConfiguration.SCRIPT_NODE_DESCRIPTOR_PROVIDER:
+      attributesProvider = new ScriptBasedNodeAttributesProvider();
+      break;
+    default:
+      try {
+        Class<? extends NodeAttributesProvider> labelsProviderClass =
+            conf.getClass(YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_CONFIG,
+                null, NodeAttributesProvider.class);
+        attributesProvider = labelsProviderClass.newInstance();
+      } catch (InstantiationException | IllegalAccessException
+          | RuntimeException e) {
+        LOG.error("Failed to create NodeAttributesProvider"
+                + " based on Configuration", e);
+        throw new IOException(
+            "Failed to create NodeAttributesProvider : "
+                + e.getMessage(), e);
+      }
+    }
+    LOG.debug("Distributed Node Attributes is enabled with provider class"
+        + " as : {}", attributesProvider.getClass());
+    return attributesProvider;
   }
 
   protected NodeLabelsProvider createNodeLabelsProvider(Configuration conf)
@@ -182,10 +215,10 @@ public class NodeManager extends CompositeService
       return provider;
     }
     switch (providerString.trim().toLowerCase()) {
-    case YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER:
+    case YarnConfiguration.CONFIG_NODE_DESCRIPTOR_PROVIDER:
       provider = new ConfigurationNodeLabelsProvider();
       break;
-    case YarnConfiguration.SCRIPT_NODE_LABELS_PROVIDER:
+    case YarnConfiguration.SCRIPT_NODE_DESCRIPTOR_PROVIDER:
       provider = new ScriptBasedNodeLabelsProvider();
       break;
     default:
@@ -202,10 +235,8 @@ public class NodeManager extends CompositeService
             "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Labels is enabled"
-          + " with provider class as : " + provider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Labels is enabled"
+        + " with provider class as : {}", provider.getClass());
     return provider;
   }
 
@@ -350,6 +381,7 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
@@ -407,16 +439,19 @@ public class NodeManager extends CompositeService
     ((NMContext)context).setContainerExecutor(exec);
     ((NMContext)context).setDeletionService(del);
 
-    nodeLabelsProvider = createNodeLabelsProvider(conf);
+    nodeStatusUpdater =
+        createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
 
-    if (null == nodeLabelsProvider) {
-      nodeStatusUpdater =
-          createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
-    } else {
+    nodeLabelsProvider = createNodeLabelsProvider(conf);
+    if (nodeLabelsProvider != null) {
       addIfService(nodeLabelsProvider);
-      nodeStatusUpdater =
-          createNodeStatusUpdater(context, dispatcher, nodeHealthChecker,
-              nodeLabelsProvider);
+      nodeStatusUpdater.setNodeLabelsProvider(nodeLabelsProvider);
+    }
+
+    nodeAttributesProvider = createNodeAttributesProvider(conf);
+    if (nodeAttributesProvider != null) {
+      addIfService(nodeAttributesProvider);
+      nodeStatusUpdater.setNodeAttributesProvider(nodeAttributesProvider);
     }
 
     nodeResourceMonitor = createNodeResourceMonitor();
@@ -439,10 +474,14 @@ public class NodeManager extends CompositeService
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
     ((NMContext) context).setWebServer(webServer);
-
+    int maxAllocationsPerAMHeartbeat = conf.getInt(
+        YarnConfiguration.OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT,
+        YarnConfiguration.
+            DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
     ((NMContext) context).setQueueableContainerAllocator(
         new OpportunisticContainerAllocator(
-            context.getContainerTokenSecretManager()));
+            context.getContainerTokenSecretManager(),
+            maxAllocationsPerAMHeartbeat));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -488,9 +527,11 @@ public class NodeManager extends CompositeService
       DefaultMetricsSystem.shutdown();
 
       // Cleanup ResourcePluginManager
-      ResourcePluginManager rpm = context.getResourcePluginManager();
-      if (rpm != null) {
-        rpm.cleanup();
+      if (null != context) {
+        ResourcePluginManager rpm = context.getResourcePluginManager();
+        if (rpm != null) {
+          rpm.cleanup();
+        }
       }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
@@ -578,14 +619,10 @@ public class NodeManager extends CompositeService
           && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
         registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
         AppCollectorData data = entry.getValue();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
-              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
-        }
+        LOG.debug("{} : {}@<{}, {}>", entry.getKey(), data.getCollectorAddr(),
+            data.getRMIdentifier(), data.getVersion());
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Remove collector data for done app " + entry.getKey());
-        }
+        LOG.debug("Remove collector data for done app {}", entry.getKey());
       }
     }
     knownCollectors.clear();
@@ -645,6 +682,8 @@ public class NodeManager extends CompositeService
     private ResourcePluginManager resourcePluginManager;
 
     private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
+    private AuxServices auxServices;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -895,6 +934,16 @@ public class NodeManager extends CompositeService
     @Override
     public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
       return nmLogAggregationStatusTracker;
+    }
+
+    @Override
+    public void setAuxServices(AuxServices auxServices) {
+      this.auxServices = auxServices;
+    }
+
+    @Override
+    public AuxServices getAuxServices() {
+      return this.auxServices;
     }
   }
 

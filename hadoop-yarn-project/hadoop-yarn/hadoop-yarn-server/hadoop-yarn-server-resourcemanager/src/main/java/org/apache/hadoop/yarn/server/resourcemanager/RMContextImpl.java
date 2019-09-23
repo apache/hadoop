@@ -20,11 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -57,9 +58,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.Clock;
 
@@ -80,7 +83,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
  */
 public class RMContextImpl implements RMContext {
 
-  private static final Log LOG = LogFactory.getLog(RMContextImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMContextImpl.class);
   private static final String UNAVAILABLE = "N/A";
   /**
    * RM service contexts which runs through out RM life span. These are created
@@ -505,6 +509,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public void setNodeAttributesManager(NodeAttributesManager mgr) {
+    activeServiceContext.setNodeAttributesManager(mgr);
+  }
+
+  @Override
   public AllocationTagsManager getAllocationTagsManager() {
     return activeServiceContext.getAllocationTagsManager();
   }
@@ -564,7 +573,8 @@ public class RMContextImpl implements RMContext {
     activeServiceContext.setSystemClock(clock);
   }
 
-  public ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+  public ConcurrentMap<ApplicationId, SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps() {
     return activeServiceContext.getSystemCredentialsForApps();
   }
 
@@ -631,5 +641,41 @@ public class RMContextImpl implements RMContext {
   public void setResourceProfilesManager(ResourceProfilesManager mgr) {
     this.activeServiceContext.setResourceProfilesManager(mgr);
   }
+
+  @Override
+  public ProxyCAManager getProxyCAManager() {
+    return this.activeServiceContext.getProxyCAManager();
+  }
+
+  @Override
+  public void setProxyCAManager(ProxyCAManager proxyCAManager) {
+    this.activeServiceContext.setProxyCAManager(proxyCAManager);
+  }
+
+  @Override
+  public VolumeManager getVolumeManager() {
+    return activeServiceContext.getVolumeManager();
+  }
+
+  @Override
+  public void setVolumeManager(VolumeManager volumeManager) {
+    this.activeServiceContext.setVolumeManager(volumeManager);
+  }
+
   // Note: Read java doc before adding any services over here.
+
+  @Override
+  public NodeAttributesManager getNodeAttributesManager() {
+    return activeServiceContext.getNodeAttributesManager();
+  }
+
+  @Override
+  public long getTokenSequenceNo() {
+    return this.activeServiceContext.getTokenSequenceNo();
+  }
+
+  @Override
+  public void incrTokenSequenceNo() {
+    this.activeServiceContext.incrTokenSequenceNo();
+  }
 }

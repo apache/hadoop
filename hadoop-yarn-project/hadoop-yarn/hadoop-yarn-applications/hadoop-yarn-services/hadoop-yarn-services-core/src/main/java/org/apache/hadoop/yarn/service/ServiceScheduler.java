@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource.Builder;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +41,7 @@ import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -77,6 +81,7 @@ import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.utils.HttpUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
@@ -90,6 +95,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -109,6 +115,9 @@ import static org.apache.hadoop.yarn.api.records.ContainerExitStatus
     .KILLED_AFTER_APP_COMPLETION;
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
+import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes
     .EXIT_FALSE;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes
@@ -388,6 +397,8 @@ public class ServiceScheduler extends CompositeService {
 
     // Since AM has been started and registered, the service is in STARTED state
     app.setState(ServiceState.STARTED);
+
+    ServiceApiUtil.checkServiceDependencySatisified(context.service);
 
     // recover components based on containers sent from RM
     recoverComponents(response);
@@ -825,9 +836,8 @@ public class ServiceScheduler extends CompositeService {
         LOG.error("No component instance exists for {}", containerId);
         return;
       }
-      ComponentInstanceEvent becomeReadyEvent = new ComponentInstanceEvent(
-          containerId, ComponentInstanceEventType.BECOME_READY);
-      dispatcher.getEventHandler().handle(becomeReadyEvent);
+      dispatcher.getEventHandler().handle(
+          new ComponentInstanceEvent(containerId, START));
     }
 
     @Override
@@ -938,13 +948,53 @@ public class ServiceScheduler extends CompositeService {
     return hasAtLeastOnePlacementConstraint;
   }
 
+  public boolean terminateServiceIfNeeded(Component component) {
+    boolean serviceIsTerminated =
+        terminateServiceIfDominantComponentFinished(component) ||
+            terminateServiceIfAllComponentsFinished();
+    return serviceIsTerminated;
+  }
+
+  /**
+   * If the service state component is finished, the service is also terminated.
+   * @param component
+   */
+  private boolean terminateServiceIfDominantComponentFinished(Component
+      component) {
+    boolean shouldTerminate = false;
+    boolean componentIsDominant = component.getComponentSpec()
+        .getConfiguration().getPropertyBool(
+            CONTAINER_STATE_REPORT_AS_SERVICE_STATE, false);
+    if (componentIsDominant) {
+      ComponentRestartPolicy restartPolicy =
+          component.getRestartPolicyHandler();
+      if (restartPolicy.shouldTerminate(component)) {
+        shouldTerminate = true;
+        boolean isSucceeded = restartPolicy.hasCompletedSuccessfully(component);
+        org.apache.hadoop.yarn.service.api.records.ComponentState state
+            = isSucceeded ?
+            org.apache.hadoop.yarn.service.api.records.ComponentState.SUCCEEDED
+            : org.apache.hadoop.yarn.service.api.records.ComponentState.FAILED;
+        LOG.info("{} Component state changed from {} to {}",
+            component.getName(), component.getComponentSpec().getState(),
+            state);
+        component.getComponentSpec().setState(state);
+        LOG.info("Dominate component {} finished, exiting Service Master... " +
+                ", final status=" + (isSucceeded ? "Succeeded" : "Failed"),
+            component.getName());
+        terminateService(isSucceeded);
+      }
+    }
+    return shouldTerminate;
+  }
+
   /*
-* Check if all components of the scheduler finished.
-* If all components finished
-*   (which #failed-instances + #suceeded-instances = #total-n-containers)
-* The service will be terminated.
-*/
-  public void terminateServiceIfAllComponentsFinished() {
+   * Check if all components of the scheduler finished.
+   * If all components finished
+   * (which #failed-instances + #suceeded-instances = #total-n-containers)
+   * The service will be terminated.
+  */
+  private boolean terminateServiceIfAllComponentsFinished() {
     boolean shouldTerminate = true;
 
     // Succeeded comps and failed comps, for logging purposes.
@@ -956,19 +1006,19 @@ public class ServiceScheduler extends CompositeService {
 
       if (restartPolicy.shouldTerminate(comp)) {
         if (restartPolicy.hasCompletedSuccessfully(comp)) {
-          comp.getComponentSpec().setState(org.apache.hadoop
-              .yarn.service.api.records.ComponentState.SUCCEEDED);
           LOG.info("{} Component state changed from {} to {}",
               comp.getName(), comp.getComponentSpec().getState(),
               org.apache.hadoop
                   .yarn.service.api.records.ComponentState.SUCCEEDED);
-        } else {
           comp.getComponentSpec().setState(org.apache.hadoop
-              .yarn.service.api.records.ComponentState.FAILED);
+              .yarn.service.api.records.ComponentState.SUCCEEDED);
+        } else {
           LOG.info("{} Component state changed from {} to {}",
               comp.getName(), comp.getComponentSpec().getState(),
               org.apache.hadoop
                   .yarn.service.api.records.ComponentState.FAILED);
+          comp.getComponentSpec().setState(org.apache.hadoop
+              .yarn.service.api.records.ComponentState.FAILED);
         }
 
         if (isTimelineServiceEnabled()) {
@@ -1000,18 +1050,23 @@ public class ServiceScheduler extends CompositeService {
       LOG.info("Failed components: [" + org.apache.commons.lang3.StringUtils
           .join(failedComponents, ",") + "]");
 
-      int exitStatus = EXIT_SUCCESS;
-      if (failedComponents.isEmpty()) {
-        setGracefulStop(FinalApplicationStatus.SUCCEEDED);
-        app.setState(ServiceState.SUCCEEDED);
-      } else {
-        setGracefulStop(FinalApplicationStatus.FAILED);
-        app.setState(ServiceState.FAILED);
-        exitStatus = EXIT_FALSE;
-      }
-
-      getTerminationHandler().terminate(exitStatus);
+      terminateService(failedComponents.isEmpty());
     }
+    return shouldTerminate;
+  }
+
+  private void terminateService(boolean isSucceeded) {
+    int exitStatus = EXIT_SUCCESS;
+    if (isSucceeded) {
+      setGracefulStop(FinalApplicationStatus.SUCCEEDED);
+      app.setState(ServiceState.SUCCEEDED);
+    } else {
+      setGracefulStop(FinalApplicationStatus.FAILED);
+      app.setState(ServiceState.FAILED);
+      exitStatus = EXIT_FALSE;
+    }
+
+    getTerminationHandler().terminate(exitStatus);
   }
 
   public Clock getSystemClock() {
@@ -1024,5 +1079,66 @@ public class ServiceScheduler extends CompositeService {
 
   public ServiceUtils.ProcessTerminationHandler getTerminationHandler() {
     return terminationHandler;
+  }
+
+  public void syncSysFs(Service yarnApp) {
+    boolean success = true;
+    Configuration conf = getConfig();
+    String spec;
+    boolean useKerberos = UserGroupInformation.isSecurityEnabled();
+    boolean printSyncResult = false;
+    try {
+      String port = conf.get("yarn.nodemanager.webapp.address").split(":")[1];
+      spec = ServiceApiUtil.jsonSerDeser.toJson(yarnApp);
+      for (org.apache.hadoop.yarn.service.api.records.Component c :
+          yarnApp.getComponents()) {
+        Set<String> nodes = new HashSet<String>();
+        boolean update = Boolean.parseBoolean(c.getConfiguration()
+            .getEnv(ApplicationConstants.Environment
+                .YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE.name()));
+        if (!update) {
+          continue;
+        }
+        printSyncResult = true;
+        for (org.apache.hadoop.yarn.service.api.records.Container container :
+            c.getContainers()) {
+          String bareHost = container.getBareHost();
+          nodes.add(bareHost);
+        }
+        for (String bareHost : nodes) {
+          StringBuilder requestPath = new StringBuilder();
+          if (YarnConfiguration.useHttps(conf)) {
+            requestPath.append("https://");
+          } else {
+            requestPath.append("http://");
+          }
+          requestPath.append(bareHost)
+              .append(":")
+              .append(port)
+              .append("/ws/v1/node/yarn/sysfs/")
+              .append(UserGroupInformation.getCurrentUser()
+                  .getShortUserName())
+              .append("/")
+              .append(yarnApp.getId());
+          if (!useKerberos) {
+            requestPath.append("?user.name=")
+                .append(UserGroupInformation.getCurrentUser()
+                    .getShortUserName());
+          }
+          Builder builder = HttpUtil.connect(requestPath.toString());
+          ClientResponse response = builder.put(ClientResponse.class, spec);
+          if (response.getStatus()!=ClientResponse.Status.OK.getStatusCode()) {
+            LOG.warn("Error synchronize YARN sysfs: " +
+                response.getEntity(String.class));
+            success = false;
+          }
+        }
+      }
+      if (printSyncResult && success) {
+        LOG.info("YARN sysfs synchronized.");
+      }
+    } catch (IOException | URISyntaxException | InterruptedException e) {
+      LOG.error("Fail to sync service spec: {}", e);
+    }
   }
 }

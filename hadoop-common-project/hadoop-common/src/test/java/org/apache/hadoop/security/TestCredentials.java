@@ -39,8 +39,6 @@ import java.util.Collection;
 import javax.crypto.KeyGenerator;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -74,6 +72,9 @@ public class TestCredentials {
     Token<T> token2 = new Token();
     Text service1 = new Text("service1");
     Text service2 = new Text("service2");
+    Text alias1 = new Text("sometoken1");
+    Text alias2 = new Text("sometoken2");
+
     Collection<Text> services = new ArrayList<Text>();
 
     services.add(service1);
@@ -81,8 +82,8 @@ public class TestCredentials {
 
     token1.setService(service1);
     token2.setService(service2);
-    ts.addToken(new Text("sometoken1"), token1);
-    ts.addToken(new Text("sometoken2"), token2);
+    ts.addToken(alias1, token1);
+    ts.addToken(alias2, token2);
 
     // create keys and put it in
     final KeyGenerator kg = KeyGenerator.getInstance(DEFAULT_HMAC_ALGORITHM);
@@ -109,32 +110,32 @@ public class TestCredentials {
     dis.close();
 
     // get the tokens and compare the services
-    Collection<Token<? extends TokenIdentifier>> list = ts.getAllTokens();
-    assertEquals("getAllTokens should return collection of size 2",
-        list.size(), 2);
-    boolean foundFirst = false;
-    boolean foundSecond = false;
-    for (Token<? extends TokenIdentifier> token : list) {
-      if (token.getService().equals(service1)) {
-        foundFirst = true;
-      }
-      if (token.getService().equals(service2)) {
-        foundSecond = true;
-      }
-    }
-    assertTrue("Tokens for services service1 and service2 must be present",
-        foundFirst && foundSecond);
+    Map<Text, Token<? extends TokenIdentifier>> tokenMap = ts.getTokenMap();
+    assertEquals("getTokenMap should return collection of size 2", 2,
+        tokenMap.size());
+    assertTrue("Token for alias " + alias1 + " must be present",
+        tokenMap.containsKey(alias1));
+    assertTrue("Token for alias " + alias2 + " must be present",
+        tokenMap.containsKey(alias2));
+    assertEquals("Token for service " + service1 + " must be present", service1,
+        tokenMap.get(alias1).getService());
+    assertEquals("Token for service " + service2 + " must be present", service2,
+        tokenMap.get(alias2).getService());
+
+
     // compare secret keys
-    int mapLen = m.size();
-    assertEquals("wrong number of keys in the Storage",
-        mapLen, ts.numberOfSecretKeys());
-    for(Text a : m.keySet()) {
-      byte [] kTS = ts.getSecretKey(a);
-      byte [] kLocal = m.get(a);
-      assertTrue("keys don't match for " + a,
-          WritableComparator.compareBytes(kTS, 0, kTS.length, kLocal,
-              0, kLocal.length)==0);
+    Map<Text, byte[]> secretKeyMap = ts.getSecretKeyMap();
+    assertEquals("wrong number of keys in the Storage", m.size(),
+        ts.numberOfSecretKeys());
+
+    for (Map.Entry<Text, byte[]> entry : m.entrySet()) {
+      byte[] key = secretKeyMap.get(entry.getKey());
+      assertNotNull("Secret key for alias " + entry.getKey() + " not found",
+          key);
+      assertTrue("Keys don't match for alias " + entry.getKey(),
+          Arrays.equals(key, entry.getValue()));
     }
+
     tmpFileName.delete();
   }
 

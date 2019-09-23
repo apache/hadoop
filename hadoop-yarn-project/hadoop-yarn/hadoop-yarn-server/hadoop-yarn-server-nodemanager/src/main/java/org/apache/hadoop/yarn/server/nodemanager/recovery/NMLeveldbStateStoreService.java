@@ -67,6 +67,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.AbstractMap;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -153,6 +154,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
+
+  /**
+   * The Local Tracker State DB key locations - "completed" and "started".
+   * To seek through app tracker states in RecoveredUserResources
+   * we need to move from one app tracker state to another using key "zzz".
+   * zzz comes later in lexicographical order than started.
+   * Similarly to move one user to another in RLS,we can use "zzz",
+   * as RecoveredUserResources uses two keys appcache and filecache.
+   */
+  private static final String BEYOND_ENTRIES_SUFFIX = "zzz/";
 
   private static final String CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX =
       "/assignedResources_";
@@ -436,10 +447,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   public void storeContainer(ContainerId containerId, int containerVersion,
       long startTime, StartContainerRequest startRequest) throws IOException {
     String idStr = containerId.toString();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainer: containerId= " + idStr
-          + ", startRequest= " + startRequest);
-    }
+    LOG.debug("storeContainer: containerId= {}, startRequest= {}",
+        idStr, startRequest);
     final String keyVersion = getContainerVersionKey(idStr);
     final String keyRequest =
         getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
@@ -477,9 +486,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerQueued(ContainerId containerId) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerQueued: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_QUEUED_KEY_SUFFIX;
@@ -493,9 +500,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private void removeContainerQueued(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainerQueued: containerId=" + containerId);
-    }
+    LOG.debug("removeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_QUEUED_KEY_SUFFIX;
@@ -509,9 +514,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerPaused(ContainerId containerId) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerPaused: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_PAUSED_KEY_SUFFIX;
@@ -526,9 +529,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeContainerPaused(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainerPaused: containerId=" + containerId);
-    }
+    LOG.debug("removeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_PAUSED_KEY_SUFFIX;
@@ -543,10 +544,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerDiagnostics: containerId=" + containerId
-          + ", diagnostics=" + diagnostics);
-    }
+    LOG.debug("storeContainerDiagnostics: containerId={}, diagnostics=",
+        containerId, diagnostics);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_DIAGS_KEY_SUFFIX;
@@ -561,9 +560,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerLaunched(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerLaunched: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerLaunched: containerId={}", containerId);
 
     // Removing the container if queued for backward compatibility reasons
     removeContainerQueued(containerId);
@@ -580,9 +577,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerUpdateToken(ContainerId containerId,
       ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerUpdateToken: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerUpdateToken: containerId={}", containerId);
 
     String keyUpdateToken = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_UPDATE_TOKEN_SUFFIX;
@@ -610,9 +605,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerKilled(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerKilled: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerKilled: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_KILLED_KEY_SUFFIX;
@@ -627,9 +620,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerCompleted(ContainerId containerId,
       int exitCode) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerCompleted: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerCompleted: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_EXIT_CODE_KEY_SUFFIX;
@@ -695,9 +686,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeContainer(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainer: containerId=" + containerId);
-    }
+    LOG.debug("removeContainer: containerId={}", containerId);
 
     String keyPrefix = CONTAINERS_KEY_PREFIX + containerId.toString();
     try {
@@ -778,10 +767,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeApplication(ApplicationId appId,
       ContainerManagerApplicationProto p) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeApplication: appId=" + appId
-          + ", proto=" + p);
-    }
+    LOG.debug("storeApplication: appId={}, proto={}", appId, p);
 
     String key = APPLICATIONS_KEY_PREFIX + appId;
     try {
@@ -795,9 +781,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeApplication(ApplicationId appId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeApplication: appId=" + appId);
-    }
+    LOG.debug("removeApplication: appId={}", appId);
 
     try {
       WriteBatch batch = db.createWriteBatch();
@@ -862,112 +846,150 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   public RecoveredLocalizationState loadLocalizationState()
       throws IOException {
     RecoveredLocalizationState state = new RecoveredLocalizationState();
-    LeveldbIterator it = getLevelDBIterator(LOCALIZATION_PUBLIC_KEY_PREFIX);
-    state.publicTrackerState = loadResourceTrackerState(it,
+    state.publicTrackerState = loadResourceTrackerState(
         LOCALIZATION_PUBLIC_KEY_PREFIX);
     state.it = new UserResourcesIterator();
     return state;
   }
 
-  private LocalResourceTrackerState loadResourceTrackerState(
-      LeveldbIterator iter, String keyPrefix) throws IOException {
+  private LocalResourceTrackerState loadResourceTrackerState(String keyPrefix)
+      throws IOException {
     final String completedPrefix = keyPrefix + LOCALIZATION_COMPLETED_SUFFIX;
     final String startedPrefix = keyPrefix + LOCALIZATION_STARTED_SUFFIX;
-    LocalResourceTrackerState state = new LocalResourceTrackerState();
-    while (iter.hasNext()) {
-      Entry<byte[], byte[]> entry = iter.peekNext();
-      String key = asString(entry.getKey());
-      if (!key.startsWith(keyPrefix)) {
-        break;
-      }
 
-      if (key.startsWith(completedPrefix)) {
-        state.localizedResources = loadCompletedResources(iter,
-            completedPrefix);
-      } else if (key.startsWith(startedPrefix)) {
-        state.inProgressResources = loadStartedResources(iter, startedPrefix);
-      } else {
-        throw new IOException("Unexpected key in resource tracker state: "
-            + key);
-      }
-    }
+    RecoveryIterator<LocalizedResourceProto> crIt =
+        new CompletedResourcesIterator(completedPrefix);
+    RecoveryIterator<Entry<LocalResourceProto, Path>> srIt =
+        new StartedResourcesIterator(startedPrefix);
 
-    return state;
+    return new LocalResourceTrackerState(crIt, srIt);
   }
 
-  private List<LocalizedResourceProto> loadCompletedResources(
-      LeveldbIterator iter, String keyPrefix) throws IOException {
-    List<LocalizedResourceProto> rsrcs =
-        new ArrayList<LocalizedResourceProto>();
-    while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
-      String key = asString(entry.getKey());
-      if (!key.startsWith(keyPrefix)) {
-        break;
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading completed resource from " + key);
-      }
-      rsrcs.add(LocalizedResourceProto.parseFrom(entry.getValue()));
-      iter.next();
+  private class CompletedResourcesIterator extends
+      BaseRecoveryIterator<LocalizedResourceProto> {
+    private String startKey;
+    CompletedResourcesIterator(String startKey) throws IOException {
+      super(startKey);
+      this.startKey = startKey;
     }
 
-    return rsrcs;
+    @Override
+    protected LocalizedResourceProto getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextCompletedResource(it, startKey);
+    }
   }
 
-  private Map<LocalResourceProto, Path> loadStartedResources(
+  private LocalizedResourceProto getNextCompletedResource(
       LeveldbIterator iter, String keyPrefix) throws IOException {
-    Map<LocalResourceProto, Path> rsrcs =
-        new HashMap<LocalResourceProto, Path>();
-    while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+    LocalizedResourceProto nextCompletedResource = null;
+    if (iter.hasNext()){
+      Entry<byte[], byte[]> entry = iter.next();
       String key = asString(entry.getKey());
       if (!key.startsWith(keyPrefix)) {
-        break;
+        return null;
+      }
+
+      LOG.debug("Loading completed resource from {}", key);
+      nextCompletedResource = LocalizedResourceProto.parseFrom(
+          entry.getValue());
+    }
+    return nextCompletedResource;
+  }
+
+  private class StartedResourcesIterator extends
+      BaseRecoveryIterator<Entry<LocalResourceProto, Path>> {
+    private String startKey;
+    StartedResourcesIterator(String startKey) throws IOException {
+      super(startKey);
+      this.startKey = startKey;
+    }
+
+    @Override
+    protected Entry<LocalResourceProto, Path> getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextStartedResource(it, startKey);
+    }
+  }
+
+  private Entry<LocalResourceProto, Path> getNextStartedResource(
+      LeveldbIterator iter, String keyPrefix) throws IOException {
+    Entry<LocalResourceProto, Path> nextStartedResource = null;
+    if (iter.hasNext()){
+      Entry<byte[], byte[]> entry = iter.next();
+      String key = asString(entry.getKey());
+      if (!key.startsWith(keyPrefix)) {
+        return null;
       }
 
       Path localPath = new Path(key.substring(keyPrefix.length()));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading in-progress resource at " + localPath);
-      }
-      rsrcs.put(LocalResourceProto.parseFrom(entry.getValue()), localPath);
-      iter.next();
+      LOG.debug("Loading in-progress resource at {}", localPath);
+      nextStartedResource = new SimpleEntry<LocalResourceProto, Path>(
+          LocalResourceProto.parseFrom(entry.getValue()), localPath);
     }
+    return nextStartedResource;
+  }
 
-    return rsrcs;
+  private void seekPastPrefix(LeveldbIterator iter, String keyPrefix)
+      throws IOException {
+    try{
+      iter.seek(bytes(keyPrefix + BEYOND_ENTRIES_SUFFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (key.startsWith(keyPrefix)) {
+          iter.next();
+        } else {
+          break;
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
   }
 
   private RecoveredUserResources loadUserLocalizedResources(
       LeveldbIterator iter, String keyPrefix) throws IOException {
     RecoveredUserResources userResources = new RecoveredUserResources();
+
+    // seek through App cache
+    String appCachePrefix = keyPrefix + LOCALIZATION_APPCACHE_SUFFIX;
+    iter.seek(bytes(appCachePrefix));
     while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+      Entry<byte[], byte[]> entry = iter.peekNext();
       String key = asString(entry.getKey());
-      if (!key.startsWith(keyPrefix)) {
+
+      if (!key.startsWith(appCachePrefix)) {
         break;
       }
 
-      if (key.startsWith(LOCALIZATION_FILECACHE_SUFFIX, keyPrefix.length())) {
-        userResources.privateTrackerState = loadResourceTrackerState(iter,
-            keyPrefix + LOCALIZATION_FILECACHE_SUFFIX);
-      } else if (key.startsWith(LOCALIZATION_APPCACHE_SUFFIX,
-          keyPrefix.length())) {
-        int appIdStartPos = keyPrefix.length() +
-            LOCALIZATION_APPCACHE_SUFFIX.length();
-        int appIdEndPos = key.indexOf('/', appIdStartPos);
-        if (appIdEndPos < 0) {
-          throw new IOException("Unable to determine appID in resource key: "
-              + key);
-        }
-        ApplicationId appId = ApplicationId.fromString(
-            key.substring(appIdStartPos, appIdEndPos));
-        userResources.appTrackerStates.put(appId,
-            loadResourceTrackerState(iter, key.substring(0, appIdEndPos+1)));
-      } else {
-        throw new IOException("Unexpected user resource key " + key);
+      int appIdStartPos = appCachePrefix.length();
+      int appIdEndPos = key.indexOf('/', appIdStartPos);
+      if (appIdEndPos < 0) {
+        throw new IOException("Unable to determine appID in resource key: "
+            + key);
       }
+      ApplicationId appId = ApplicationId.fromString(
+          key.substring(appIdStartPos, appIdEndPos));
+      String trackerStateKey = key.substring(0, appIdEndPos+1);
+      userResources.appTrackerStates.put(appId,
+          loadResourceTrackerState(trackerStateKey));
+      // Seek to next application
+      seekPastPrefix(iter, trackerStateKey);
     }
+
+    // File Cache
+    String fileCachePrefix = keyPrefix + LOCALIZATION_FILECACHE_SUFFIX;
+    iter.seek(bytes(fileCachePrefix));
+    Entry<byte[], byte[]> entry = iter.peekNext();
+    String key = asString(entry.getKey());
+    if (key.startsWith(fileCachePrefix)) {
+      userResources.privateTrackerState =
+          loadResourceTrackerState(fileCachePrefix);
+    }
+
+    // seek to Next User.
+    seekPastPrefix(iter, keyPrefix);
     return userResources;
   }
 
@@ -989,9 +1011,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String localPath = proto.getLocalPath();
     String startedKey = getResourceStartedKey(user, appId, localPath);
     String completedKey = getResourceCompletedKey(user, appId, localPath);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing localized resource to " + completedKey);
-    }
+    LOG.debug("Storing localized resource to {}", completedKey);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -1013,9 +1033,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String localPathStr = localPath.toString();
     String startedKey = getResourceStartedKey(user, appId, localPathStr);
     String completedKey = getResourceCompletedKey(user, appId, localPathStr);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing local resource at " + localPathStr);
-    }
+    LOG.debug("Removing local resource at {}", localPathStr);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -1406,8 +1424,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String keyResChng = CONTAINERS_KEY_PREFIX + container.getContainerId().toString()
         + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
     try {
-      WriteBatch batch = db.createWriteBatch();
-      try {
+      try (WriteBatch batch = db.createWriteBatch()) {
         ResourceMappings.AssignedResources res =
             new ResourceMappings.AssignedResources();
         res.updateAssignedResources(assignedResources);
@@ -1415,8 +1432,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         // New value will overwrite old values for the same key
         batch.put(bytes(keyResChng), res.toBytes());
         db.write(batch);
-      } finally {
-        batch.close();
       }
     } catch (DBException e) {
       markStoreUnHealthy(e);
@@ -1452,9 +1467,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             break;
           }
           batch.delete(key);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("cleanup " + keyStr + " from leveldb");
-          }
+          LOG.debug("cleanup {} from leveldb", keyStr);
         }
         db.write(batch);
       } catch (DBException e) {

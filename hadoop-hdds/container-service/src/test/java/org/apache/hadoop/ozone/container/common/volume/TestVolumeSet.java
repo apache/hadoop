@@ -22,7 +22,6 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -36,7 +35,6 @@ import static org.apache.hadoop.ozone.container.common.volume.HddsVolume
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -69,7 +67,7 @@ public class TestVolumeSet {
   }
 
   @Rule
-  public Timeout testTimeout = new Timeout(300_000);
+  public Timeout testTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws Exception {
@@ -153,8 +151,7 @@ public class TestVolumeSet {
     assertTrue(volumeSet.getFailedVolumesList().get(0).isFailed());
 
     // Failed volume should not exist in VolumeMap
-    Path volume1Path = new Path(volume1);
-    assertFalse(volumeSet.getVolumeMap().containsKey(volume1Path));
+    assertFalse(volumeSet.getVolumeMap().containsKey(volume1));
   }
 
   @Test
@@ -215,16 +212,10 @@ public class TestVolumeSet {
 
     volumeSet.shutdown();
 
-    // Verify that the volumes are shutdown and the volumeUsage is set to null.
+    // Verify that volume usage can be queried during shutdown.
     for (HddsVolume volume : volumesList) {
-      Assert.assertNull(volume.getVolumeInfo().getUsageForTesting());
-      try {
-        // getAvailable() should throw null pointer exception as usage is null.
-        volume.getAvailable();
-        fail("Volume shutdown failed.");
-      } catch (NullPointerException ex) {
-        // Do Nothing. Exception is expected.
-      }
+      Assert.assertNotNull(volume.getVolumeInfo().getUsageForTesting());
+      volume.getAvailable();
     }
   }
 
@@ -239,13 +230,14 @@ public class TestVolumeSet {
     ozoneConfig.set(HDDS_DATANODE_DIR_KEY, readOnlyVolumePath.getAbsolutePath()
         + "," + volumePath.getAbsolutePath());
     volSet = new VolumeSet(UUID.randomUUID().toString(), ozoneConfig);
-    assertTrue(volSet.getFailedVolumesList().size() == 1);
+    assertEquals(1, volSet.getFailedVolumesList().size());
     assertEquals(readOnlyVolumePath, volSet.getFailedVolumesList().get(0)
         .getHddsRootDir());
 
     //Set back to writable
     try {
       readOnlyVolumePath.setWritable(true);
+      volSet.shutdown();
     } finally {
       FileUtil.fullyDelete(volumePath);
     }

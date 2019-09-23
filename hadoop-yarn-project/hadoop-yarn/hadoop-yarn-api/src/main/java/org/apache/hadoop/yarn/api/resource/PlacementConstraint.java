@@ -29,6 +29,7 @@ import java.util.Iterator;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 
 /**
  * {@code PlacementConstraint} represents a placement constraint for a resource
@@ -155,18 +156,34 @@ public class PlacementConstraint {
     private int minCardinality;
     private int maxCardinality;
     private Set<TargetExpression> targetExpressions;
+    private NodeAttributeOpCode attributeOpCode;
 
     public SingleConstraint(String scope, int minCardinality,
-        int maxCardinality, Set<TargetExpression> targetExpressions) {
+        int maxCardinality, NodeAttributeOpCode opCode,
+        Set<TargetExpression> targetExpressions) {
       this.scope = scope;
       this.minCardinality = minCardinality;
       this.maxCardinality = maxCardinality;
       this.targetExpressions = targetExpressions;
+      this.attributeOpCode = opCode;
+    }
+
+    public SingleConstraint(String scope, int minCardinality,
+        int maxCardinality, Set<TargetExpression> targetExpressions) {
+      this(scope, minCardinality, maxCardinality, NodeAttributeOpCode.NO_OP,
+          targetExpressions);
     }
 
     public SingleConstraint(String scope, int minC, int maxC,
         TargetExpression... targetExpressions) {
       this(scope, minC, maxC, new HashSet<>(Arrays.asList(targetExpressions)));
+    }
+
+    public SingleConstraint(String scope, int minC, int maxC,
+        NodeAttributeOpCode opCode,
+        TargetExpression... targetExpressions) {
+      this(scope, minC, maxC, opCode,
+          new HashSet<>(Arrays.asList(targetExpressions)));
     }
 
     /**
@@ -205,6 +222,15 @@ public class PlacementConstraint {
       return targetExpressions;
     }
 
+    /**
+     * Get the NodeAttributeOpCode of the constraint.
+     *
+     * @return nodeAttribute Op Code
+     */
+    public NodeAttributeOpCode getNodeAttributeOpCode() {
+      return attributeOpCode;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) {
@@ -225,6 +251,10 @@ public class PlacementConstraint {
       if (!getScope().equals(that.getScope())) {
         return false;
       }
+      if (getNodeAttributeOpCode() != null && !getNodeAttributeOpCode()
+          .equals(that.getNodeAttributeOpCode())) {
+        return false;
+      }
       return getTargetExpressions().equals(that.getTargetExpressions());
     }
 
@@ -233,6 +263,7 @@ public class PlacementConstraint {
       int result = getScope().hashCode();
       result = 31 * result + getMinCardinality();
       result = 31 * result + getMaxCardinality();
+      result = 31 * result + getNodeAttributeOpCode().hashCode();
       result = 31 * result + getTargetExpressions().hashCode();
       return result;
     }
@@ -257,6 +288,13 @@ public class PlacementConstraint {
           targetConstraints.add(new StringBuilder()
               .append("in").append(",")
               .append(getScope()).append(",")
+              .append(targetExpr)
+              .toString());
+        } else if (min == -1 && max == -1) {
+          // node attribute
+          targetConstraints.add(new StringBuilder()
+              .append(getScope()).append(",")
+              .append(getNodeAttributeOpCode()).append(",")
               .append(targetExpr)
               .toString());
         } else {

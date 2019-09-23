@@ -97,7 +97,7 @@ public abstract class ReservedSpaceCalculator {
 
   long getReservedFromConf(String key, long defaultValue) {
     return conf.getLong(key + "." + StringUtils.toLowerCase(
-        storageType.toString()), conf.getLong(key, defaultValue));
+        storageType.toString()), conf.getLongBytes(key, defaultValue));
   }
 
   /**

@@ -19,9 +19,12 @@
 package org.apache.hadoop.hdds.protocol;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.net.NetConstants;
+import org.apache.hadoop.hdds.scm.net.NodeImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +38,9 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DatanodeDetails implements Comparable<DatanodeDetails> {
-
-  /**
+public class DatanodeDetails extends NodeImpl implements
+    Comparable<DatanodeDetails> {
+/**
    * DataNode's unique identifier in the cluster.
    */
   private final UUID uuid;
@@ -45,7 +48,7 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
   private String ipAddress;
   private String hostName;
   private List<Port> ports;
-
+  private String certSerialId;
 
   /**
    * Constructs DatanodeDetails instance. DatanodeDetails.Builder is used
@@ -53,21 +56,28 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
    * @param uuid DataNode's UUID
    * @param ipAddress IP Address of this DataNode
    * @param hostName DataNode's hostname
+   * @param networkLocation DataNode's network location path
    * @param ports Ports used by the DataNode
+   * @param certSerialId serial id from SCM issued certificate.
    */
   private DatanodeDetails(String uuid, String ipAddress, String hostName,
-      List<Port> ports) {
+      String networkLocation, List<Port> ports, String certSerialId) {
+    super(hostName, networkLocation, NetConstants.NODE_COST_DEFAULT);
     this.uuid = UUID.fromString(uuid);
     this.ipAddress = ipAddress;
     this.hostName = hostName;
     this.ports = ports;
+    this.certSerialId = certSerialId;
   }
 
   protected DatanodeDetails(DatanodeDetails datanodeDetails) {
+    super(datanodeDetails.getHostName(), datanodeDetails.getNetworkLocation(),
+        datanodeDetails.getCost());
     this.uuid = datanodeDetails.uuid;
     this.ipAddress = datanodeDetails.ipAddress;
     this.hostName = datanodeDetails.hostName;
     this.ports = datanodeDetails.ports;
+    this.setNetworkName(datanodeDetails.getNetworkName());
   }
 
   /**
@@ -177,9 +187,18 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (datanodeDetailsProto.hasHostName()) {
       builder.setHostName(datanodeDetailsProto.getHostName());
     }
+    if (datanodeDetailsProto.hasCertSerialId()) {
+      builder.setCertSerialId(datanodeDetailsProto.getCertSerialId());
+    }
     for (HddsProtos.Port port : datanodeDetailsProto.getPortsList()) {
       builder.addPort(newPort(
           Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
+    }
+    if (datanodeDetailsProto.hasNetworkName()) {
+      builder.setNetworkName(datanodeDetailsProto.getNetworkName());
+    }
+    if (datanodeDetailsProto.hasNetworkLocation()) {
+      builder.setNetworkLocation(datanodeDetailsProto.getNetworkLocation());
     }
     return builder.build();
   }
@@ -198,6 +217,16 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (hostName != null) {
       builder.setHostName(hostName);
     }
+    if (certSerialId != null) {
+      builder.setCertSerialId(certSerialId);
+    }
+    if (!Strings.isNullOrEmpty(getNetworkName())) {
+      builder.setNetworkName(getNetworkName());
+    }
+    if (!Strings.isNullOrEmpty(getNetworkLocation())) {
+      builder.setNetworkLocation(getNetworkLocation());
+    }
+
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()
           .setName(port.getName().toString())
@@ -214,6 +243,9 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
         ipAddress +
         ", host: " +
         hostName +
+        ", networkLocation: " +
+        getNetworkLocation() +
+        ", certSerialId: " + certSerialId +
         "}";
   }
 
@@ -249,7 +281,10 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     private String id;
     private String ipAddress;
     private String hostName;
+    private String networkName;
+    private String networkLocation;
     private List<Port> ports;
+    private String certSerialId;
 
     /**
      * Default private constructor. To create Builder instance use
@@ -293,6 +328,28 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
 
     /**
+     * Sets the network name of DataNode.
+     *
+     * @param name network name
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setNetworkName(String name) {
+      this.networkName = name;
+      return this;
+    }
+
+    /**
+     * Sets the network location of DataNode.
+     *
+     * @param loc location
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setNetworkLocation(String loc) {
+      this.networkLocation = loc;
+      return this;
+    }
+
+    /**
      * Adds a DataNode Port.
      *
      * @param port DataNode port
@@ -305,15 +362,34 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
 
     /**
+     * Adds certificate serial id.
+     *
+     * @param certId Serial id of SCM issued certificate.
+     *
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setCertSerialId(String certId) {
+      this.certSerialId = certId;
+      return this;
+    }
+
+    /**
      * Builds and returns DatanodeDetails instance.
      *
      * @return DatanodeDetails
      */
     public DatanodeDetails build() {
       Preconditions.checkNotNull(id);
-      return new DatanodeDetails(id, ipAddress, hostName, ports);
+      if (networkLocation == null) {
+        networkLocation = NetConstants.DEFAULT_RACK;
+      }
+      DatanodeDetails dn = new DatanodeDetails(id, ipAddress, hostName,
+          networkLocation, ports, certSerialId);
+      if (networkName != null) {
+        dn.setNetworkName(networkName);
+      }
+      return dn;
     }
-
   }
 
   /**
@@ -398,4 +474,20 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
   }
 
+  /**
+   * Returns serial id of SCM issued certificate.
+   *
+   * @return certificate serial id
+   */
+  public String getCertSerialId() {
+    return certSerialId;
+  }
+
+  /**
+   * Set certificate serial id of SCM issued certificate.
+   *
+   */
+  public void setCertSerialId(String certSerialId) {
+    this.certSerialId = certSerialId;
+  }
 }

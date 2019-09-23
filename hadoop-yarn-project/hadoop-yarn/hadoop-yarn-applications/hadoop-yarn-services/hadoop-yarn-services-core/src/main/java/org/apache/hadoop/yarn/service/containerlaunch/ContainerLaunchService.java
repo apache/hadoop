@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
@@ -35,8 +34,12 @@ import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.apache.hadoop.yarn.service.provider.ProviderService.FAILED_LAUNCH_PARAMS;
 
 public class ContainerLaunchService extends AbstractService{
 
@@ -66,24 +69,27 @@ public class ContainerLaunchService extends AbstractService{
     super.serviceStop();
   }
 
-  public void launchCompInstance(Service service,
+  public Future<ProviderService.ResolvedLaunchParams> launchCompInstance(
+      Service service,
       ComponentInstance instance, Container container,
       ComponentLaunchContext componentLaunchContext) {
     ContainerLauncher launcher =
         new ContainerLauncher(service, instance, container,
             componentLaunchContext, false);
-    executorService.execute(launcher);
+    return executorService.submit(launcher);
   }
 
-  public void reInitCompInstance(Service service,
+  public Future<ProviderService.ResolvedLaunchParams> reInitCompInstance(
+      Service service,
       ComponentInstance instance, Container container,
       ComponentLaunchContext componentLaunchContext) {
     ContainerLauncher reInitializer = new ContainerLauncher(service, instance,
         container, componentLaunchContext, true);
-    executorService.execute(reInitializer);
+    return executorService.submit(reInitializer);
   }
 
-  private class ContainerLauncher implements Runnable {
+  private class ContainerLauncher implements
+      Callable<ProviderService.ResolvedLaunchParams> {
     public final Container container;
     public final Service service;
     public ComponentInstance instance;
@@ -100,12 +106,14 @@ public class ContainerLaunchService extends AbstractService{
       this.reInit = reInit;
     }
 
-    @Override public void run() {
+    @Override
+    public ProviderService.ResolvedLaunchParams call() {
       ProviderService provider = ProviderFactory.getProviderService(
           componentLaunchContext.getArtifact());
       AbstractLauncher launcher = new AbstractLauncher(context);
+      ProviderService.ResolvedLaunchParams resolvedParams = null;
       try {
-        provider.buildContainerLaunchContext(launcher, service,
+        resolvedParams = provider.buildContainerLaunchContext(launcher, service,
             instance, fs, getConfig(), container, componentLaunchContext);
         if (!reInit) {
           LOG.info("launching container {}", container.getId());
@@ -113,7 +121,8 @@ public class ContainerLaunchService extends AbstractService{
               .startContainerAsync(container,
                   launcher.completeContainerLaunch());
         } else {
-          LOG.info("reInitializing container {}", container.getId());
+          LOG.info("reInitializing container {} with version {}",
+              container.getId(), componentLaunchContext.getServiceVersion());
           instance.getComponent().getScheduler().getNmClient()
               .reInitializeContainerAsync(container.getId(),
                   launcher.completeContainerLaunch(), true);
@@ -125,6 +134,11 @@ public class ContainerLaunchService extends AbstractService{
             ComponentEventType.CONTAINER_COMPLETED)
             .setInstance(instance).setContainerId(container.getId());
         context.scheduler.getDispatcher().getEventHandler().handle(event);
+      }
+      if (resolvedParams != null) {
+        return resolvedParams;
+      } else {
+        return FAILED_LAUNCH_PARAMS;
       }
     }
   }

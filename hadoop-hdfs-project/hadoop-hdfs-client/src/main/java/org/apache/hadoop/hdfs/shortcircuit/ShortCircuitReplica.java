@@ -244,7 +244,7 @@ public class ShortCircuitReplica {
         suffix += "  munmapped.";
       }
     }
-    IOUtilsClient.cleanup(LOG, dataStream, metaStream);
+    IOUtilsClient.cleanupWithLogger(LOG, dataStream, metaStream);
     if (slot != null) {
       cache.scheduleSlotReleaser(slot);
       if (LOG.isTraceEnabled()) {

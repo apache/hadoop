@@ -18,28 +18,37 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.security.UserGroupInformation;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * This is a local, in-memory implementation of MetadataStore.
@@ -60,23 +69,6 @@ import java.util.concurrent.TimeUnit;
 public class LocalMetadataStore implements MetadataStore {
 
   public static final Logger LOG = LoggerFactory.getLogger(MetadataStore.class);
-  public static final int DEFAULT_MAX_RECORDS = 256;
-  public static final int DEFAULT_CACHE_ENTRY_TTL_MSEC = 10 * 1000;
-
-  /**
-   * Maximum number of records.
-   */
-  @InterfaceStability.Evolving
-  public static final String CONF_MAX_RECORDS =
-      "fs.metadatastore.local.max_records";
-
-  /**
-   * Time to live in milliseconds.  If zero, time-based expiration is
-   * disabled.
-   */
-  @InterfaceStability.Evolving
-  public static final String CONF_CACHE_ENTRY_TTL =
-      "fs.metadatastore.local.ttl";
 
   /** Contains directory and file listings. */
   private Cache<Path, LocalMetadataEntry> localCache;
@@ -85,8 +77,13 @@ public class LocalMetadataStore implements MetadataStore {
   /* Null iff this FS does not have an associated URI host. */
   private String uriHost;
 
+  private String username;
+
+  private ITtlTimeProvider ttlTimeProvider;
+
   @Override
-  public void initialize(FileSystem fileSystem) throws IOException {
+  public void initialize(FileSystem fileSystem,
+      ITtlTimeProvider ttlTp) throws IOException {
     Preconditions.checkNotNull(fileSystem);
     fs = fileSystem;
     URI fsURI = fs.getUri();
@@ -95,17 +92,20 @@ public class LocalMetadataStore implements MetadataStore {
       uriHost = null;
     }
 
-    initialize(fs.getConf());
+    initialize(fs.getConf(), ttlTp);
   }
 
   @Override
-  public void initialize(Configuration conf) throws IOException {
+  public void initialize(Configuration conf, ITtlTimeProvider ttlTp)
+      throws IOException {
     Preconditions.checkNotNull(conf);
-    int maxRecords = conf.getInt(CONF_MAX_RECORDS, DEFAULT_MAX_RECORDS);
+    int maxRecords = conf.getInt(S3GUARD_METASTORE_LOCAL_MAX_RECORDS,
+        DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS);
     if (maxRecords < 4) {
       maxRecords = 4;
     }
-    int ttl = conf.getInt(CONF_CACHE_ENTRY_TTL, DEFAULT_CACHE_ENTRY_TTL_MSEC);
+    int ttl = conf.getInt(S3GUARD_METASTORE_LOCAL_ENTRY_TTL,
+        DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL);
 
     CacheBuilder builder = CacheBuilder.newBuilder().maximumSize(maxRecords);
     if (ttl >= 0) {
@@ -113,6 +113,8 @@ public class LocalMetadataStore implements MetadataStore {
     }
 
     localCache = builder.build();
+    username = UserGroupInformation.getCurrentUser().getShortUserName();
+    this.ttlTimeProvider = ttlTp;
   }
 
   @Override
@@ -125,7 +127,9 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path p) throws IOException {
+  public void delete(Path p,
+      final BulkOperationState operationState)
+      throws IOException {
     doDelete(p, false, true);
   }
 
@@ -135,22 +139,31 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path) throws IOException {
+  public void deleteSubtree(Path path,
+      final BulkOperationState operationState)
+      throws IOException {
     doDelete(path, true, true);
   }
 
-  private synchronized void doDelete(Path p, boolean recursive, boolean
-      tombstone) {
+  private synchronized void doDelete(Path p, boolean recursive,
+      boolean tombstone) {
 
     Path path = standardize(p);
 
     // Delete entry from file cache, then from cached parent directory, if any
-
     deleteCacheEntries(path, tombstone);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
-      deleteEntryByAncestor(path, localCache, tombstone);
+      deleteEntryByAncestor(path, localCache, tombstone, ttlTimeProvider);
+    }
+  }
+
+  @Override
+  public void deletePaths(final Collection<Path> paths,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    for (Path path : paths) {
+      doDelete(path, false, true);
     }
   }
 
@@ -198,19 +211,30 @@ public class LocalMetadataStore implements MetadataStore {
       LOG.debug("listChildren({}) -> {}", path,
           listing == null ? "null" : listing.prettyPrint());
     }
-    // Make a copy so callers can mutate without affecting our state
-    return listing == null ? null : new DirListingMetadata(listing);
+
+    if (listing != null) {
+      listing.removeExpiredEntriesFromListing(
+          ttlTimeProvider.getMetadataTtl(), ttlTimeProvider.getNow());
+      LOG.debug("listChildren [after removing expired entries] ({}) -> {}",
+          path, listing.prettyPrint());
+      // Make a copy so callers can mutate without affecting our state
+      return new DirListingMetadata(listing);
+    }
+    return null;
   }
 
   @Override
-  public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+  public void move(@Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate,
+      @Nullable final BulkOperationState operationState) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
-    Preconditions.checkNotNull(pathsToDelete, "pathsToDelete is null");
-    Preconditions.checkNotNull(pathsToCreate, "pathsToCreate is null");
-    Preconditions.checkArgument(pathsToDelete.size() == pathsToCreate.size(),
-        "Must supply same number of paths to delete/create.");
+    if (pathsToCreate == null) {
+      pathsToCreate = Collections.emptyList();
+    }
+    if (pathsToDelete == null) {
+      pathsToDelete = Collections.emptyList();
+    }
 
     // I feel dirty for using reentrant lock. :-|
     synchronized (this) {
@@ -218,13 +242,13 @@ public class LocalMetadataStore implements MetadataStore {
       // 1. Delete pathsToDelete
       for (Path meta : pathsToDelete) {
         LOG.debug("move: deleting metadata {}", meta);
-        delete(meta);
+        delete(meta, null);
       }
 
       // 2. Create new destination path metadata
       for (PathMetadata meta : pathsToCreate) {
         LOG.debug("move: adding metadata {}", meta);
-        put(meta);
+        put(meta, null);
       }
 
       // 3. We now know full contents of all dirs in destination subtree
@@ -242,10 +266,16 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void put(PathMetadata meta) throws IOException {
+  public void put(final PathMetadata meta) throws IOException {
+    put(meta, null);
+  }
+
+  @Override
+  public void put(PathMetadata meta,
+      final BulkOperationState operationState) throws IOException {
 
     Preconditions.checkNotNull(meta);
-    FileStatus status = meta.getFileStatus();
+    S3AFileStatus status = meta.getFileStatus();
     Path path = standardize(status.getPath());
     synchronized (this) {
 
@@ -283,26 +313,38 @@ public class LocalMetadataStore implements MetadataStore {
       Path parentPath = path.getParent();
       if (parentPath != null) {
         LocalMetadataEntry parentMeta = localCache.getIfPresent(parentPath);
-        DirListingMetadata parentDirMeta =
-            new DirListingMetadata(parentPath, DirListingMetadata.EMPTY_DIR,
-                false);
-        parentDirMeta.put(status);
 
-        getDirListingMeta(parentPath);
-
+        // Create empty parent LocalMetadataEntry if it doesn't exist
         if (parentMeta == null){
-          localCache.put(parentPath, new LocalMetadataEntry(parentDirMeta));
-        } else if (!parentMeta.hasDirMeta()) {
+          parentMeta = new LocalMetadataEntry();
+          localCache.put(parentPath, parentMeta);
+        }
+
+        // If there is no directory metadata on the parent entry, create
+        // an empty one
+        if (!parentMeta.hasDirMeta()) {
+          DirListingMetadata parentDirMeta =
+              new DirListingMetadata(parentPath, DirListingMetadata.EMPTY_DIR,
+                  false);
+          parentDirMeta.setLastUpdated(meta.getLastUpdated());
           parentMeta.setDirListingMetadata(parentDirMeta);
-        } else {
-          parentMeta.getDirListingMeta().put(status);
+        }
+
+        // Add the child pathMetadata to the listing
+        parentMeta.getDirListingMeta().put(meta);
+
+        // Mark the listing entry as deleted if the meta is set to deleted
+        if(meta.isDeleted()) {
+          parentMeta.getDirListingMeta().markDeleted(path,
+              ttlTimeProvider.getNow());
         }
       }
     }
   }
 
   @Override
-  public synchronized void put(DirListingMetadata meta) throws IOException {
+  public synchronized void put(DirListingMetadata meta,
+      final BulkOperationState operationState) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("put dirMeta {}", meta.prettyPrint());
     }
@@ -313,13 +355,14 @@ public class LocalMetadataStore implements MetadataStore {
     } else {
       entry.setDirListingMetadata(meta);
     }
-    put(meta.getListing());
+    put(meta.getListing(), null);
   }
 
-  public synchronized void put(Collection<PathMetadata> metas) throws
+  public synchronized void put(Collection<? extends PathMetadata> metas,
+      final BulkOperationState operationState) throws
       IOException {
     for (PathMetadata meta : metas) {
-      put(meta);
+      put(meta, operationState);
     }
   }
 
@@ -336,18 +379,19 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void prune(long modTime) throws IOException{
-    prune(modTime, "");
+  public void prune(PruneMode pruneMode, long cutoff) throws IOException{
+    prune(pruneMode, cutoff, "");
   }
 
   @Override
-  public synchronized void prune(long modTime, String keyPrefix) {
+  public synchronized void prune(PruneMode pruneMode, long cutoff,
+      String keyPrefix) {
     // prune files
     // filter path_metadata (files), filter expired, remove expired
     localCache.asMap().entrySet().stream()
         .filter(entry -> entry.getValue().hasPathMeta())
-        .filter(entry -> expired(
-            entry.getValue().getFileMeta().getFileStatus(), modTime, keyPrefix))
+        .filter(entry -> expired(pruneMode,
+            entry.getValue().getFileMeta(), cutoff, keyPrefix))
         .forEach(entry -> localCache.invalidate(entry.getKey()));
 
 
@@ -362,28 +406,37 @@ public class LocalMetadataStore implements MetadataStore {
           Collection<PathMetadata> newChildren = new LinkedList<>();
 
           for (PathMetadata child : oldChildren) {
-            FileStatus status = child.getFileStatus();
-            if (!expired(status, modTime, keyPrefix)) {
+            if (!expired(pruneMode, child, cutoff, keyPrefix)) {
               newChildren.add(child);
             }
           }
-          if (newChildren.size() != oldChildren.size()) {
-            DirListingMetadata dlm =
-                new DirListingMetadata(path, newChildren, false);
-            localCache.put(path, new LocalMetadataEntry(dlm));
-            if (!path.isRoot()) {
-              DirListingMetadata parent = getDirListingMeta(path.getParent());
-              if (parent != null) {
-                parent.setAuthoritative(false);
-              }
-            }
-          }
+          removeAuthoritativeFromParent(path, oldChildren, newChildren);
         });
   }
 
-  private boolean expired(FileStatus status, long expiry, String keyPrefix) {
+  private void removeAuthoritativeFromParent(Path path,
+      Collection<PathMetadata> oldChildren,
+      Collection<PathMetadata> newChildren) {
+    if (newChildren.size() != oldChildren.size()) {
+      DirListingMetadata dlm =
+          new DirListingMetadata(path, newChildren, false);
+      localCache.put(path, new LocalMetadataEntry(dlm));
+      if (!path.isRoot()) {
+        DirListingMetadata parent = getDirListingMeta(path.getParent());
+        if (parent != null) {
+          parent.setAuthoritative(false);
+        }
+      }
+    }
+  }
+
+  private boolean expired(PruneMode pruneMode, PathMetadata metadata,
+      long cutoff, String keyPrefix) {
+    final S3AFileStatus status = metadata.getFileStatus();
+    final URI statusUri = status.getPath().toUri();
+
     // remove the protocol from path string to be able to compare
-    String bucket = status.getPath().toUri().getHost();
+    String bucket = statusUri.getHost();
     String statusTranslatedPath = "";
     if(bucket != null && !bucket.isEmpty()){
       // if there's a bucket, (well defined host in Uri) the pathToParentKey
@@ -393,18 +446,33 @@ public class LocalMetadataStore implements MetadataStore {
     } else {
       // if there's no bucket in the path the pathToParentKey will fail, so
       // this is the fallback to get the path from status
-      statusTranslatedPath = status.getPath().toUri().getPath();
+      statusTranslatedPath = statusUri.getPath();
     }
 
-    // Note: S3 doesn't track modification time on directories, so for
-    // consistency with the DynamoDB implementation we ignore that here
-    return status.getModificationTime() < expiry && !status.isDirectory()
-      && statusTranslatedPath.startsWith(keyPrefix);
+    boolean expired;
+    switch (pruneMode) {
+    case ALL_BY_MODTIME:
+      // Note: S3 doesn't track modification time on directories, so for
+      // consistency with the DynamoDB implementation we ignore that here
+      expired = status.getModificationTime() < cutoff && !status.isDirectory()
+          && statusTranslatedPath.startsWith(keyPrefix);
+      break;
+    case TOMBSTONES_BY_LASTUPDATED:
+      expired = metadata.getLastUpdated() < cutoff && metadata.isDeleted()
+          && statusTranslatedPath.startsWith(keyPrefix);
+      break;
+    default:
+      throw new UnsupportedOperationException("Unsupported prune mode: "
+          + pruneMode);
+    }
+
+    return expired;
   }
 
   @VisibleForTesting
   static void deleteEntryByAncestor(Path ancestor,
-      Cache<Path, LocalMetadataEntry> cache, boolean tombstone) {
+      Cache<Path, LocalMetadataEntry> cache, boolean tombstone,
+      ITtlTimeProvider ttlTimeProvider) {
 
     cache.asMap().entrySet().stream()
         .filter(entry -> isAncestorOf(ancestor, entry.getKey()))
@@ -414,7 +482,9 @@ public class LocalMetadataStore implements MetadataStore {
           if(meta.hasDirMeta()){
             cache.invalidate(path);
           } else if(tombstone && meta.hasPathMeta()){
-            meta.setPathMetadata(PathMetadata.tombstone(path));
+            final PathMetadata pmTombstone = PathMetadata.tombstone(path,
+                ttlTimeProvider.getNow());
+            meta.setPathMetadata(pmTombstone);
           } else {
             cache.invalidate(path);
           }
@@ -451,7 +521,8 @@ public class LocalMetadataStore implements MetadataStore {
     LOG.debug("delete file entry for {}", path);
     if(entry.hasPathMeta()){
       if (tombstone) {
-        PathMetadata pmd = PathMetadata.tombstone(path);
+        PathMetadata pmd = PathMetadata.tombstone(path,
+            ttlTimeProvider.getNow());
         entry.setPathMetadata(pmd);
       } else {
         entry.setPathMetadata(null);
@@ -477,7 +548,7 @@ public class LocalMetadataStore implements MetadataStore {
       if (dir != null) {
         LOG.debug("removing parent's entry for {} ", path);
         if (tombstone) {
-          dir.markDeleted(path);
+          dir.markDeleted(path, ttlTimeProvider.getNow());
         } else {
           dir.remove(path);
         }
@@ -535,4 +606,40 @@ public class LocalMetadataStore implements MetadataStore {
     }
   }
 
+  @Override
+  public RenameTracker initiateRenameOperation(final StoreContext storeContext,
+      final Path source,
+      final S3AFileStatus sourceStatus, final Path dest) throws IOException {
+    return new ProgressiveRenameTracker(storeContext, this, source, dest,
+        null);
+  }
+
+  @Override
+  public synchronized void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
+    this.ttlTimeProvider = ttlTimeProvider;
+  }
+
+  @Override
+  public synchronized void addAncestors(final Path qualifiedPath,
+      @Nullable final BulkOperationState operationState) throws IOException {
+
+    Collection<PathMetadata> newDirs = new ArrayList<>();
+    Path parent = qualifiedPath.getParent();
+    while (!parent.isRoot()) {
+      PathMetadata directory = get(parent);
+      if (directory == null || directory.isDeleted()) {
+        S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, parent,
+            username);
+        PathMetadata meta = new PathMetadata(status, Tristate.FALSE, false,
+            ttlTimeProvider.getNow());
+        newDirs.add(meta);
+      } else {
+        break;
+      }
+      parent = parent.getParent();
+    }
+    if (!newDirs.isEmpty()) {
+      put(newDirs, operationState);
+    }
+  }
 }

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +39,8 @@ import org.junit.Test;
  * deletion completes and handles new requests from other clients
  */
 public class TestLargeDirectoryDelete {
-  private static final Log LOG = LogFactory.getLog(TestLargeDirectoryDelete.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestLargeDirectoryDelete.class);
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int TOTAL_BLOCKS = 10000;
   private MiniDFSCluster mc = null;
@@ -168,7 +169,7 @@ public class TestLargeDirectoryDelete {
       try {
         execute();
       } catch (Throwable throwable) {
-        LOG.warn(throwable);
+        LOG.warn("{}", throwable);
         setThrown(throwable);
       } finally {
         synchronized (this) {

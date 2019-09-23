@@ -72,8 +72,7 @@ public class TestRMAuthenticationFilter {
 
         return null;
       }
-    }).when(container).addFilter(Mockito.<String>anyObject(),
-        Mockito.<String>anyObject(), Mockito.<Map<String, String>>anyObject());
+    }).when(container).addFilter(Mockito.any(), Mockito.any(), Mockito.any());
 
     new RMAuthenticationFilterInitializer().initFilter(container, conf);
   }

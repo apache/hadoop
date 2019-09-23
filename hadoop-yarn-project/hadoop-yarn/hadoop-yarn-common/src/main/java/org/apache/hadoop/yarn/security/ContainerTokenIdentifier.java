@@ -28,8 +28,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -68,7 +68,8 @@ import com.google.protobuf.TextFormat;
 @Evolving
 public class ContainerTokenIdentifier extends TokenIdentifier {
 
-  private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
+  private final static Logger LOG =
+      LoggerFactory.getLogger(ContainerTokenIdentifier.class);
 
   public static final Text KIND = new Text("ContainerToken");
 
@@ -325,7 +326,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
+    LOG.debug("Writing ContainerTokenIdentifier to RPC layer: {}", this);
     out.write(proto.toByteArray());
   }
 

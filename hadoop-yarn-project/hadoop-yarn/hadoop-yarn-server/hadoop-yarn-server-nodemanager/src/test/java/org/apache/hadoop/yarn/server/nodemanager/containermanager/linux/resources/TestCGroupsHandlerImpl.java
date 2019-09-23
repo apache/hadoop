@@ -48,7 +48,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -266,7 +266,7 @@ public class TestCGroupsHandlerImpl {
     Assert.assertEquals(expectedPath, path);
 
     String expectedPathTasks = expectedPath + Path.SEPARATOR
-        + CGroupsHandler.CGROUP_FILE_TASKS;
+        + CGroupsHandler.CGROUP_PROCS_FILE;
     path = cGroupsHandler.getPathForCGroupTasks(controller, testCGroup);
     Assert.assertEquals(expectedPathTasks, path);
 
@@ -597,5 +597,43 @@ public class TestCGroupsHandlerImpl {
     } finally {
       FileUtils.deleteQuietly(cpu);
     }
+  }
+
+  // Remove leading and trailing slashes
+  @Test
+  public void testCgroupsHierarchySetting() throws ResourceHandlerException {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "/hadoop-yarn");
+    CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+    String expectedRelativePath = "hadoop-yarn/c1";
+    Assert.assertEquals(expectedRelativePath,
+        cGroupsHandler.getRelativePathForCGroup("c1"));
+
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "hadoop-yarn");
+    cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+    Assert.assertEquals(expectedRelativePath,
+        cGroupsHandler.getRelativePathForCGroup("c1"));
+
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "hadoop-yarn/");
+    cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+    Assert.assertEquals(expectedRelativePath,
+        cGroupsHandler.getRelativePathForCGroup("c1"));
+
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "//hadoop-yarn//");
+    cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+    Assert.assertEquals(expectedRelativePath,
+        cGroupsHandler.getRelativePathForCGroup("c1"));
+
+    expectedRelativePath = "hadoop-yarn/root/c1";
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "//hadoop-yarn/root//");
+    cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+    Assert.assertEquals(expectedRelativePath,
+        cGroupsHandler.getRelativePathForCGroup("c1"));
   }
 }

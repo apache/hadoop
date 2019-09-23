@@ -20,18 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-
-import java.util.Optional;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface MemoryResourceHandler extends ResourceHandler {
-  /**
-   * check whether a container is under OOM.
-   * @param containerId the id of the container
-   * @return empty if the status is unknown, true is the container is under oom,
-   *         false otherwise
-   */
-  Optional<Boolean> isUnderOOM(ContainerId containerId);
 }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -221,6 +222,11 @@ public class TestNameNodeMXBean {
           "CorruptFiles"));
       assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(),
           corruptFiles);
+      // get attribute CorruptFilesCount
+      int corruptFilesCount = (int) (mbs.getAttribute(mxbeanName,
+          "CorruptFilesCount"));
+      assertEquals("Bad value for CorruptFilesCount",
+          fsn.getCorruptFilesCount(), corruptFilesCount);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
@@ -665,6 +671,7 @@ public class TestNameNodeMXBean {
   public void testNNDirectorySize() throws Exception{
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 0);
     MiniDFSCluster cluster = null;
     for (int i = 0; i < 5; i++) {
       try{
@@ -694,8 +701,6 @@ public class TestNameNodeMXBean {
 
       FSNamesystem nn0 = cluster.getNamesystem(0);
       FSNamesystem nn1 = cluster.getNamesystem(1);
-      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
-      checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
       cluster.transitionToActive(0);
       fs = cluster.getFileSystem(0);
       DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
@@ -725,6 +730,46 @@ public class TestNameNodeMXBean {
       File dir = new File(dirUrl);
       assertEquals(nnDirMap.get(dir.getAbsolutePath()).longValue(),
           FileUtils.sizeOfDirectory(dir));
+    }
+  }
+
+  @Test
+  public void testEnabledEcPoliciesMetric() throws Exception {
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem fs = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+
+      ErasureCodingPolicy defaultPolicy =
+          StripedFileTestUtil.getDefaultECPolicy();
+      int dataBlocks = defaultPolicy.getNumDataUnits();
+      int parityBlocks = defaultPolicy.getNumParityUnits();
+      int totalSize = dataBlocks + parityBlocks;
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(totalSize).build();
+      fs = cluster.getFileSystem();
+
+      final String defaultPolicyName = defaultPolicy.getName();
+      final String rs104PolicyName = "RS-10-4-1024k";
+
+      assertEquals("Enabled EC policies metric should return with " +
+          "the default EC policy", defaultPolicyName,
+          getEnabledEcPoliciesMetric());
+
+      fs.enableErasureCodingPolicy(rs104PolicyName);
+      assertEquals("Enabled EC policies metric should return with " +
+              "both enabled policies separated by a comma",
+          rs104PolicyName + ", " + defaultPolicyName,
+          getEnabledEcPoliciesMetric());
+
+      fs.disableErasureCodingPolicy(defaultPolicyName);
+      fs.disableErasureCodingPolicy(rs104PolicyName);
+      assertEquals("Enabled EC policies metric should return with " +
+          "an empty string if there is no enabled policy",
+          "", getEnabledEcPoliciesMetric());
+    } finally {
+      fs.close();
+      cluster.shutdown();
     }
   }
 
@@ -967,5 +1012,32 @@ public class TestNameNodeMXBean {
         expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
     assertEquals("Unexpected total ec block groups!",
         expectedTotalECBlockGroups, totalECBlockGroups.longValue());
+    verifyEcClusterSetupVerifyResult(mbs);
+  }
+
+  private String getEnabledEcPoliciesMetric() throws Exception {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=ECBlockGroupsState");
+    return (String) (mbs.getAttribute(mxbeanName,
+        "EnabledEcPolicies"));
+  }
+
+  private void verifyEcClusterSetupVerifyResult(MBeanServer mbs)
+      throws Exception{
+    ObjectName namenodeMXBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=NameNodeInfo");
+    String result = (String) mbs.getAttribute(namenodeMXBeanName,
+        "VerifyECWithTopologyResult");
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, String> resultMap = mapper.readValue(result, Map.class);
+    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    String resultMessage = resultMap.get("resultMessage");
+
+    assertFalse("Test cluster does not support all enabled " +
+        "erasure coding policies.", isSupported);
+    assertTrue(resultMessage.contains("3 racks are required for " +
+        "the erasure coding policies: RS-6-3-1024k. " +
+        "The number of racks is only 1."));
   }
 }

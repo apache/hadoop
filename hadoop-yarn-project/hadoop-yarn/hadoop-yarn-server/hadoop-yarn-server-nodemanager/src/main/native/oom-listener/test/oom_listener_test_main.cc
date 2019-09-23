@@ -159,7 +159,7 @@ TEST_F(OOMListenerTest, test_oom) {
   const int simulate_cgroups =
       mock_oom_event_as_user != -1;
 
-  __pid_t mem_hog_pid = fork();
+  pid_t mem_hog_pid = fork();
   if (!mem_hog_pid) {
     // Child process to consume too much memory
     if (simulate_cgroups) {
@@ -171,7 +171,7 @@ TEST_F(OOMListenerTest, test_oom) {
       // Wait until we are added to the cgroup
       // so that it is accounted for our mem
       // usage
-      __pid_t cgroupPid;
+      pid_t cgroupPid;
       do {
         std::ifstream tasks;
         tasks.open(tasks_file.c_str(), tasks.in);
@@ -210,7 +210,7 @@ TEST_F(OOMListenerTest, test_oom) {
     // There is no race condition with the process
     // running out of memory. If oom is 1 at startup
     // oom_listener will send an initial notification
-    __pid_t listener = fork();
+    pid_t listener = fork();
     if (listener == 0) {
       // child listener forwarding cgroup events
       _oom_listener_descriptors descriptors = {
@@ -253,8 +253,8 @@ TEST_F(OOMListenerTest, test_oom) {
       ASSERT_EQ(0, kill(mem_hog_pid, SIGKILL));
 
       // Verify that process was killed
-      __WAIT_STATUS mem_hog_status = {};
-      __pid_t exited0 = wait(mem_hog_status);
+      int* mem_hog_status = {};
+      pid_t exited0 = wait(mem_hog_status);
       ASSERT_EQ(mem_hog_pid, exited0)
         << "Wrong process exited";
       ASSERT_EQ(NULL, mem_hog_status)
@@ -272,8 +272,8 @@ TEST_F(OOMListenerTest, test_oom) {
                 << "Could not delete cgroup " << GetCGroup();
 
       // Check that oom_listener exited on the deletion of the cgroup
-      __WAIT_STATUS oom_listener_status = {};
-      __pid_t exited1 = wait(oom_listener_status);
+      int* oom_listener_status = {};
+      pid_t exited1 = wait(oom_listener_status);
       ASSERT_EQ(listener, exited1)
         << "Wrong process exited";
       ASSERT_EQ(NULL, oom_listener_status)

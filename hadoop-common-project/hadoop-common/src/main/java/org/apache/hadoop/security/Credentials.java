@@ -26,11 +26,12 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
+
   public enum SerializedFormat {
     WRITABLE((byte) 0x00),
     PROTOBUF((byte) 0x01);
@@ -141,6 +143,13 @@ public class Credentials implements Writable {
   }
 
   /**
+   * Returns an unmodifiable version of the full map of aliases to Tokens.
+   */
+  public Map<Text, Token<? extends TokenIdentifier>> getTokenMap() {
+    return Collections.unmodifiableMap(tokenMap);
+  }
+
+  /**
    * @return number of Tokens in the in-memory map
    */
   public int numberOfTokens() {
@@ -191,6 +200,13 @@ public class Credentials implements Writable {
   }
 
   /**
+   * Returns an unmodifiable version of the full map of aliases to secret keys.
+   */
+  public Map<Text, byte[]> getSecretKeyMap() {
+    return Collections.unmodifiableMap(secretKeysMap);
+  }
+
+  /**
    * Convenience method for reading a token storage file and loading its Tokens.
    * @param filename
    * @param conf
@@ -227,7 +243,7 @@ public class Credentials implements Writable {
     Credentials credentials = new Credentials();
     try {
       in = new DataInputStream(new BufferedInputStream(
-          new FileInputStream(filename)));
+          Files.newInputStream(filename.toPath())));
       credentials.readTokenStorageStream(in);
       return credentials;
     } catch(IOException ioe) {

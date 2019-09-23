@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +63,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue, CapacitySchedulerConfiguration>{
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       CapacitySchedulerQueueManager.class);
 
   static final Comparator<CSQueue> NON_PARTITIONED_QUEUE_COMPARATOR =
@@ -323,9 +323,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             LOG.info("Deleting Queue " + queueName + ", as it is not"
                 + " present in the modified capacity configuration xml");
           } else{
-            throw new IOException(oldQueue.getQueuePath() + " is deleted from"
-                + " the new capacity scheduler configuration, but the"
-                + " queue is not yet in stopped state. " + "Current State : "
+            throw new IOException(oldQueue.getQueuePath() + " cannot be"
+                + " deleted from the capacity scheduler configuration, as the"
+                + " queue is not yet in stopped state. Current State : "
                 + oldQueue.getState());
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {

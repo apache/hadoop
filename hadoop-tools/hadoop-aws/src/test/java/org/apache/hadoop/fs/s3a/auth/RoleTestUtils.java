@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -38,6 +43,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Helper class for testing roles.
@@ -75,12 +82,6 @@ public final class RoleTestUtils {
   public static final Policy RESTRICTED_POLICY = policy(
       DENY_S3_GET_OBJECT, STATEMENT_ALL_DDB, ALLOW_S3_GET_BUCKET_LOCATION
       );
-
-  /**
-   * Error message to get from the AWS SDK if you can't assume the role.
-   */
-  public static final String E_BAD_ROLE
-      = "Not authorized to perform sts:AssumeRole";
 
   private RoleTestUtils() {
   }
@@ -156,24 +157,96 @@ public final class RoleTestUtils {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
+    conf.unset(DelegationConstants.DELEGATION_TOKEN_BINDING);
     disableFilesystemCaching(conf);
     return conf;
   }
 
   /**
    * Assert that an operation is forbidden.
+   * @param <T> type of closure
    * @param contained contained text, may be null
    * @param eval closure to evaluate
-   * @param <T> type of closure
    * @return the access denied exception
    * @throws Exception any other exception
    */
   public static <T> AccessDeniedException forbidden(
-      String contained,
-      Callable<T> eval)
+      final String contained,
+      final Callable<T> eval)
       throws Exception {
-    return intercept(AccessDeniedException.class,
-        contained, eval);
+    return forbidden("", contained, eval);
   }
 
+  /**
+   * Assert that an operation is forbidden.
+   * @param <T> type of closure
+   * @param message error message
+   * @param contained contained text, may be null
+   * @param eval closure to evaluate
+   * @return the access denied exception
+   * @throws Exception any other exception
+   */
+  public static <T> AccessDeniedException forbidden(
+      final String message,
+      final String contained,
+      final Callable<T> eval)
+      throws Exception {
+    return intercept(AccessDeniedException.class,
+        contained, message, eval);
+  }
+
+  /**
+   * Get the Assumed role referenced by ASSUMED_ROLE_ARN;
+   * skip the test if it is unset.
+   * @param conf config
+   * @return the string
+   */
+  public static String probeForAssumedRoleARN(Configuration conf) {
+    String arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
+    Assume.assumeTrue("No ARN defined in " + ASSUMED_ROLE_ARN,
+        !arn.isEmpty());
+    return arn;
+  }
+
+  /**
+   * Assert that credentials are equal without printing secrets.
+   * Different assertions will have different message details.
+   * @param message message to use as base of error.
+   * @param expected expected credentials
+   * @param actual actual credentials.
+   */
+  public static void assertCredentialsEqual(final String message,
+      final MarshalledCredentials expected,
+      final MarshalledCredentials actual) {
+    // DO NOT use assertEquals() here, as that could print a secret to
+    // the test report.
+    assertEquals(message + ": access key",
+        expected.getAccessKey(),
+        actual.getAccessKey());
+    assertTrue(message + ": secret key",
+        expected.getSecretKey().equals(actual.getSecretKey()));
+    assertEquals(message + ": session token",
+        expected.getSessionToken(),
+        actual.getSessionToken());
+
+  }
+
+  /**
+   * Parallel-touch a set of files in the destination directory.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param range range 1..range inclusive of files to create.
+   * @return the list of paths created.
+   */
+  public static List<Path> touchFiles(final FileSystem fs,
+      final Path destDir,
+      final int range) throws IOException {
+    List<Path> paths = IntStream.rangeClosed(1, range)
+        .mapToObj((i) -> new Path(destDir, "file-" + i))
+                .collect(Collectors.toList());
+    for (Path path : paths) {
+      touch(fs, path);
+    }
+    return paths;
+  }
 }

@@ -18,6 +18,14 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatus;
 import org.apache.hadoop.hdds.scm.VersionInfo;
@@ -25,13 +33,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -65,12 +66,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   }
 
   // Map of datanode to containers
-  private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
-      new HashMap();
+  private Map<DatanodeDetails,
+      Map<String, ContainerReplicaProto>> nodeContainers =
+      new HashMap<>();
   private Map<DatanodeDetails, NodeReportProto> nodeReports = new HashMap<>();
   private AtomicInteger commandStatusReport = new AtomicInteger(0);
-  private List<CommandStatus> cmdStatusList = new LinkedList<>();
-  private List<SCMCommandProto> scmCommandRequests = new LinkedList<>();
+  private List<CommandStatus> cmdStatusList = new ArrayList<>();
+  private List<SCMCommandProto> scmCommandRequests = new ArrayList<>();
   /**
    * Returns the number of heartbeats made to this class.
    *
@@ -192,10 +194,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       sendHeartbeat(SCMHeartbeatRequestProto heartbeat) throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
-    if(heartbeat.hasCommandStatusReport()){
-      cmdStatusList.addAll(heartbeat.getCommandStatusReport()
-          .getCmdStatusList());
-      commandStatusReport.incrementAndGet();
+    if (heartbeat.getCommandStatusReportsCount() != 0) {
+      for (CommandStatusReportsProto statusReport : heartbeat
+          .getCommandStatusReportsList()) {
+        cmdStatusList.addAll(statusReport.getCmdStatusList());
+        commandStatusReport.incrementAndGet();
+      }
     }
     sleepIfNeeded();
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(
@@ -214,8 +218,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   public StorageContainerDatanodeProtocolProtos
       .SCMRegisteredResponseProto register(
           DatanodeDetailsProto datanodeDetailsProto, NodeReportProto nodeReport,
-          StorageContainerDatanodeProtocolProtos.ContainerReportsProto
-              containerReportsRequestProto)
+          ContainerReportsProto containerReportsRequestProto,
+          PipelineReportsProto pipelineReportsProto)
       throws IOException {
     rpcCount.incrementAndGet();
     updateNodeReport(datanodeDetailsProto, nodeReport);
@@ -271,7 +275,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         nodeContainers.put(datanode, containers);
       }
 
-      for (StorageContainerDatanodeProtocolProtos.ContainerInfo report : reports
+      for (ContainerReplicaProto report : reports
           .getReportsList()) {
         containers.put(report.getContainerID(), report);
       }
@@ -294,18 +298,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * @return count of storage reports of a datanode
    */
   public int getContainerCountsForDatanode(DatanodeDetails datanodeDetails) {
-    Map<String, ContainerInfo> cr = nodeContainers.get(datanodeDetails);
+    Map<String, ContainerReplicaProto> cr =
+        nodeContainers.get(datanodeDetails);
     if(cr != null) {
       return cr.size();
     }
     return 0;
-  }
-
-  @Override
-  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      ContainerBlocksDeletionACKProto request) throws IOException {
-    return ContainerBlocksDeletionACKResponseProto
-        .newBuilder().getDefaultInstanceForType();
   }
 
   /**

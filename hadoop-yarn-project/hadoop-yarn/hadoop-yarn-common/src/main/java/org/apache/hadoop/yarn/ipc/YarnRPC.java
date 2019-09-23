@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
@@ -35,7 +35,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
  */
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "YARN" })
 public abstract class YarnRPC {
-  private static final Log LOG = LogFactory.getLog(YarnRPC.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnRPC.class);
   
   public abstract Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf);
@@ -56,7 +57,7 @@ public abstract class YarnRPC {
   }
   
   public static YarnRPC create(Configuration conf) {
-    LOG.debug("Creating YarnRPC for " + 
+    LOG.debug("Creating YarnRPC for {}",
         conf.get(YarnConfiguration.IPC_RPC_IMPL));
     String clazzName = conf.get(YarnConfiguration.IPC_RPC_IMPL);
     if (clazzName == null) {

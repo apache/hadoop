@@ -96,6 +96,17 @@ can be queried to find if the path has an ACL. `getFileStatus(Path p).isEncrypte
 can be queried to find if the path is encrypted. `getFileStatus(Path p).isErasureCoded()`
 will tell if the path is erasure coded or not.
 
+YARN's distributed cache lets applications add paths to be cached across
+containers and applications via `Job.addCacheFile()` and `Job.addCacheArchive()`.
+The cache treats world-readable resources paths added as shareable across
+applications, and downloads them differently, unless they are declared as encrypted.
+
+To avoid failures during container launching, especially when delegation tokens
+are used, filesystems and object stores which not implement POSIX access permissions
+for both files and directories, MUST always return `true` to the `isEncrypted()`
+predicate. This can be done by setting the `encrypted` flag to true when creating
+the `FileStatus` instance.
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
@@ -209,21 +220,21 @@ directory contains many thousands of files.
 
 Consider a directory `"/d"` with the contents:
 
-	a
-	part-0000001
-	part-0000002
-	...
-	part-9999999
+    a
+    part-0000001
+    part-0000002
+    ...
+    part-9999999
 
 
 If the number of files is such that HDFS returns a partial listing in each
 response, then, if a listing `listStatus("/d")` takes place concurrently with the operation
 `rename("/d/a","/d/z"))`, the result may be one of:
 
-	[a, part-0000001, ... , part-9999999]
-	[part-0000001, ... , part-9999999, z]
-	[a, part-0000001, ... , part-9999999, z]
-	[part-0000001, ... , part-9999999]
+    [a, part-0000001, ... , part-9999999]
+    [part-0000001, ... , part-9999999, z]
+    [a, part-0000001, ... , part-9999999, z]
+    [part-0000001, ... , part-9999999]
 
 While this situation is likely to be a rare occurrence, it MAY happen. In HDFS
 these inconsistent views are only likely when listing a directory with many children.
@@ -544,15 +555,6 @@ atomic. The combined operation, including `mkdirs(parent(F))` MAY be atomic.
 The return value is always true&mdash;even if a new directory is not created
  (this is defined in HDFS).
 
-#### Implementation Notes: Local FileSystem
-
-The local FileSystem does not raise an exception if `mkdirs(p)` is invoked
-on a path that exists and is a file. Instead the operation returns false.
-
-    if isFile(FS, p):
-       FS' = FS
-       result = False
-
 ### <a name='FileSystem.create'></a> `FSDataOutputStream create(Path, ...)`
 
 
@@ -641,7 +643,7 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
     if not exists(FS, p) : raise FileNotFoundException
 
-    if not isFile(FS, p) : raise [FileNotFoundException, IOException]
+    if not isFile(FS, p) : raise [FileAlreadyExistsException, FileNotFoundException, IOException]
 
 #### Postconditions
 
@@ -702,9 +704,94 @@ symbolic links
 exists in the metadata, but no copies of any its blocks can be located;
 -`FileNotFoundException` would seem more accurate and useful.
 
+### `FSDataInputStreamBuilder openFile(Path path)`
+
+Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
+to construct a operation to open the file at `path` for reading.
+
+
+When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
+the builder parameters are verified and
+`openFileWithOptions(Path, Set<String>, Configuration, int)` invoked.
+
+This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
+which, when its `get()` method is called, either returns an input
+stream of the contents of opened file, or raises an exception.
+
+The base implementation of the `openFileWithOptions(PathHandle, Set<String>, Configuration, int)`
+ultimately invokes `open(Path, int)`.
+
+Thus the chain `openFile(path).build().get()` has the same preconditions
+and postconditions as `open(Path p, int bufferSize)`
+
+
+The `openFile()` operation may check the state of the filesystem during this
+call, but as the state of the filesystem may change betwen this call and
+the actual `build()` and `get()` operations, this file-specific
+preconditions (file exists, file is readable, etc) MUST NOT be checked here.
+
+FileSystem implementations which do not implement `open(Path, int)`
+MAY postpone raising an `UnsupportedOperationException` until either the
+`FSDataInputStreamBuilder.build()` or the subsequent `get()` call,
+else they MAY fail fast in the `openFile()` call.
+
+### Implementors notes
+
+The base implementation of `openFileWithOptions()` actually executes
+the `open(path)` operation synchronously, yet still returns the result
+or any failures in the `CompletableFuture<>`, so as to ensure that users
+code expecting this.
+
+Any filesystem where the time to open a file may be significant SHOULD
+execute it asynchronously by submitting the operation in some executor/thread
+pool. This is particularly recommended for object stores and other filesystems
+likely to be accessed over long-haul connections.
+
+Arbitrary filesystem-specific options MAY be supported; these MUST
+be prefixed with either the filesystem schema, e.g. `hdfs.`
+or in the "fs.SCHEMA" format as normal configuration settings `fs.hdfs`). The
+latter style allows the same configuration option to be used for both
+filesystem configuration and file-specific configuration.
+
+It SHOULD be possible to always open a file without specifying any options,
+so as to present a consistent model to users. However, an implementation MAY
+opt to require one or more mandatory options to be set.
+
+### `FSDataInputStreamBuilder openFile(PathHandle)`
+
+Creates a `FSDataInputStreamBuilder` to build an operation to open a file.
+Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
+to construct a operation to open the file identified by the given `PathHandle` for reading.
+
+When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
+the builder parameters are verified and
+`openFileWithOptions(PathHandle, Set<String>, Configuration, int)` invoked.
+
+This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
+which, when its `get()` method is called, either returns an input
+stream of the contents of opened file, or raises an exception.
+
+The base implementation of the `openFileWithOptions(Path,PathHandle, Set<String>, Configuration, int)` method
+returns a future which invokes `open(Path, int)`.
+
+Thus the chain `openFile(pathhandle).build().get()` has the same preconditions
+and postconditions as `open(Pathhandle, int)`
+
+As with `FSDataInputStreamBuilder openFile(PathHandle)`, the `openFile()`
+call must not be where path-specific preconditions are checked -that
+is postponed to the `build()` and `get()` calls.
+
+FileSystem implementations which do not implement `open(PathHandle handle, int bufferSize)`
+MAY postpone raising an `UnsupportedOperationException` until either the
+`FSDataInputStreamBuilder.build()` or the subsequent `get()` call,
+else they MAY fail fast in the `openFile()` call.
+
+The base implementation raises this exception in the `build()` operation;
+other implementations SHOULD copy this.
+
 ### `PathHandle getPathHandle(FileStatus stat, HandleOpt... options)`
 
-Implementaions without a compliant call MUST throw `UnsupportedOperationException`
+Implementations without a compliant call MUST throw `UnsupportedOperationException`
 
 #### Preconditions
 
@@ -877,7 +964,7 @@ A path referring to a file is removed, return value: `True`
 Deleting an empty root does not change the filesystem state
 and may return true or false.
 
-    if isDir(FS, p) and isRoot(p) and children(FS, p) == {} :
+    if isRoot(p) and children(FS, p) == {} :
         FS ' = FS
         result = (undetermined)
 
@@ -885,6 +972,9 @@ There is no consistent return code from an attempt to delete the root directory.
 
 Implementations SHOULD return true; this avoids code which checks for a false
 return value from overreacting.
+
+*Object Stores*: see [Object Stores: root directory deletion](#object-stores-rm-root).
+
 
 ##### Empty (non-root) directory `recursive == False`
 
@@ -899,7 +989,7 @@ return true.
 ##### Recursive delete of non-empty root directory
 
 Deleting a root path with children and `recursive==True`
- can do one of two things.
+can generally have three outcomes:
 
 1. The POSIX model assumes that if the user has
 the correct permissions to delete everything,
@@ -917,6 +1007,8 @@ filesystem is desired.
             FS' = FS
             result = False
 
+1. Object Stores: see [Object Stores: root directory deletion](#object-stores-rm-root).
+
 HDFS has the notion of *Protected Directories*, which are declared in
 the option `fs.protected.directories`. Any attempt to delete such a directory
 or a parent thereof raises an `AccessControlException`. Accordingly, any
@@ -931,6 +1023,23 @@ which only system administrators should be able to perform.
 Any filesystem client which interacts with a remote filesystem which lacks
 such a security model, MAY reject calls to `delete("/", true)` on the basis
 that it makes it too easy to lose data.
+
+
+### <a name="object-stores-rm-root"></a> Object Stores: root directory deletion
+
+Some of the object store based filesystem implementations always return
+false when deleting the root, leaving the state of the store unchanged.
+
+    if isRoot(p) :
+        FS ' = FS
+        result = False
+
+This is irrespective of the recursive flag status or the state of the directory.
+
+This is a simplification which avoids the inevitably non-atomic scan and delete
+of the contents of the store. It also avoids any confusion about whether
+the operation actually deletes that specific store/container itself, and
+adverse consequences of the simpler permissions models of stores.
 
 ##### Recursive delete of non-root directory
 

@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
-import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.node.states.NodeStateMap;
+import org.apache.hadoop.hdds.scm.node.states.*;
+import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.common.statemachine
@@ -39,14 +42,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
@@ -92,6 +90,10 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   private final NodeStateMap nodeStateMap;
   /**
+   * Maintains the mapping from node to pipelines a node is part of.
+   */
+  private final Node2PipelineMap node2PipelineMap;
+  /**
    * Used for publishing node state change events.
    */
   private final EventPublisher eventPublisher;
@@ -117,12 +119,33 @@ public class NodeStateManager implements Runnable, Closeable {
   private final long deadNodeIntervalMs;
 
   /**
+   * The future is used to pause/unpause the scheduled checks.
+   */
+  private ScheduledFuture<?> healthCheckFuture;
+
+  /**
+   * Test utility - tracks if health check has been paused (unit tests).
+   */
+  private boolean checkPaused;
+
+  /**
+   * timestamp of the latest heartbeat check process.
+   */
+  private long lastHealthCheck;
+
+  /**
+   * number of times the heart beat check was skipped.
+   */
+  private long skippedHealthChecks;
+
+  /**
    * Constructs a NodeStateManager instance with the given configuration.
    *
    * @param conf Configuration
    */
   public NodeStateManager(Configuration conf, EventPublisher eventPublisher) {
     this.nodeStateMap = new NodeStateMap();
+    this.node2PipelineMap = new Node2PipelineMap();
     this.eventPublisher = eventPublisher;
     this.state2EventMap = new HashMap<>();
     initialiseState2EventMap();
@@ -142,8 +165,11 @@ public class NodeStateManager implements Runnable, Closeable {
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
-    executorService.schedule(this, heartbeatCheckerIntervalMs,
-        TimeUnit.MILLISECONDS);
+
+    skippedHealthChecks = 0;
+    checkPaused = false; // accessed only from test functions
+
+    scheduleNextHealthCheck();
   }
 
   /**
@@ -152,6 +178,8 @@ public class NodeStateManager implements Runnable, Closeable {
   private void initialiseState2EventMap() {
     state2EventMap.put(NodeState.STALE, SCMEvents.STALE_NODE);
     state2EventMap.put(NodeState.DEAD, SCMEvents.DEAD_NODE);
+    state2EventMap
+        .put(NodeState.HEALTHY, SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE);
   }
 
   /*
@@ -248,6 +276,14 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Adds a pipeline in the node2PipelineMap.
+   * @param pipeline - Pipeline to be added
+   */
+  public void addPipeline(Pipeline pipeline) {
+    node2PipelineMap.addPipeline(pipeline);
+  }
+
+  /**
    * Get information about the node.
    *
    * @param datanodeDetails DatanodeDetails
@@ -291,7 +327,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of healthy nodes
    */
-  public List<DatanodeDetails> getHealthyNodes() {
+  public List<DatanodeInfo> getHealthyNodes() {
     return getNodes(NodeState.HEALTHY);
   }
 
@@ -300,7 +336,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of stale nodes
    */
-  public List<DatanodeDetails> getStaleNodes() {
+  public List<DatanodeInfo> getStaleNodes() {
     return getNodes(NodeState.STALE);
   }
 
@@ -309,7 +345,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of dead nodes
    */
-  public List<DatanodeDetails> getDeadNodes() {
+  public List<DatanodeInfo> getDeadNodes() {
     return getNodes(NodeState.DEAD);
   }
 
@@ -320,12 +356,12 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of nodes
    */
-  public List<DatanodeDetails> getNodes(NodeState state) {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+  public List<DatanodeInfo> getNodes(NodeState state) {
+    List<DatanodeInfo> nodes = new ArrayList<>();
     nodeStateMap.getNodes(state).forEach(
         uuid -> {
           try {
-            nodes.add(nodeStateMap.getNodeDetails(uuid));
+            nodes.add(nodeStateMap.getNodeInfo(uuid));
           } catch (NodeNotFoundException e) {
             // This should not happen unless someone else other than
             // NodeStateManager is directly modifying NodeStateMap and removed
@@ -341,12 +377,12 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return all the managed nodes
    */
-  public List<DatanodeDetails> getAllNodes() {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+  public List<DatanodeInfo> getAllNodes() {
+    List<DatanodeInfo> nodes = new ArrayList<>();
     nodeStateMap.getAllNodes().forEach(
         uuid -> {
           try {
-            nodes.add(nodeStateMap.getNodeDetails(uuid));
+            nodes.add(nodeStateMap.getNodeInfo(uuid));
           } catch (NodeNotFoundException e) {
             // This should not happen unless someone else other than
             // NodeStateManager is directly modifying NodeStateMap and removed
@@ -355,6 +391,15 @@ public class NodeStateManager implements Runnable, Closeable {
           }
         });
     return nodes;
+  }
+
+  /**
+   * Gets set of pipelineID a datanode belongs to.
+   * @param dnId - Datanode ID
+   * @return Set of PipelineID
+   */
+  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
+    return node2PipelineMap.getPipelines(dnId);
   }
 
   /**
@@ -405,15 +450,46 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Removes a node from NodeStateManager.
-   *
-   * @param datanodeDetails DatanodeDetails
-   *
-   * @throws NodeNotFoundException if the node is not present
+   * Removes a pipeline from the node2PipelineMap.
+   * @param pipeline - Pipeline to be removed
    */
-  public void removeNode(DatanodeDetails datanodeDetails)
+  public void removePipeline(Pipeline pipeline) {
+    node2PipelineMap.removePipeline(pipeline);
+  }
+
+  /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param uuid - datanode uuid
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  public void addContainer(final UUID uuid,
+                           final ContainerID containerId)
       throws NodeNotFoundException {
-    nodeStateMap.removeNode(datanodeDetails.getUuid());
+    nodeStateMap.addContainer(uuid, containerId);
+  }
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws NodeNotFoundException - if datanode is not known.
+   */
+  public void setContainers(UUID uuid, Set<ContainerID> containerIds)
+      throws NodeNotFoundException {
+    nodeStateMap.setContainers(uuid, containerIds);
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  public Set<ContainerID> getContainers(UUID uuid)
+      throws NodeNotFoundException {
+    return nodeStateMap.getContainers(uuid);
   }
 
   /**
@@ -425,6 +501,42 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   @Override
   public void run() {
+
+    if (shouldSkipCheck()) {
+      skippedHealthChecks++;
+      LOG.info("Detected long delay in scheduling HB processing thread. "
+          + "Skipping heartbeat checks for one iteration.");
+    } else {
+      checkNodesHealth();
+    }
+
+    // we purposefully make this non-deterministic. Instead of using a
+    // scheduleAtFixedFrequency  we will just go to sleep
+    // and wake up at the next rendezvous point, which is currentTime +
+    // heartbeatCheckerIntervalMs. This leads to the issue that we are now
+    // heart beating not at a fixed cadence, but clock tick + time taken to
+    // work.
+    //
+    // This time taken to work can skew the heartbeat processor thread.
+    // The reason why we don't care is because of the following reasons.
+    //
+    // 1. checkerInterval is general many magnitudes faster than datanode HB
+    // frequency.
+    //
+    // 2. if we have too much nodes, the SCM would be doing only HB
+    // processing, this could lead to SCM's CPU starvation. With this
+    // approach we always guarantee that  HB thread sleeps for a little while.
+    //
+    // 3. It is possible that we will never finish processing the HB's in the
+    // thread. But that means we have a mis-configured system. We will warn
+    // the users by logging that information.
+    //
+    // 4. And the most important reason, heartbeats are not blocked even if
+    // this thread does not run, they will go into the processing queue.
+    scheduleNextHealthCheck();
+  }
+
+  private void checkNodesHealth() {
 
     /*
      *
@@ -520,39 +632,36 @@ public class NodeStateManager implements Runnable, Closeable {
           heartbeatCheckerIntervalMs);
     }
 
-    // we purposefully make this non-deterministic. Instead of using a
-    // scheduleAtFixedFrequency  we will just go to sleep
-    // and wake up at the next rendezvous point, which is currentTime +
-    // heartbeatCheckerIntervalMs. This leads to the issue that we are now
-    // heart beating not at a fixed cadence, but clock tick + time taken to
-    // work.
-    //
-    // This time taken to work can skew the heartbeat processor thread.
-    // The reason why we don't care is because of the following reasons.
-    //
-    // 1. checkerInterval is general many magnitudes faster than datanode HB
-    // frequency.
-    //
-    // 2. if we have too much nodes, the SCM would be doing only HB
-    // processing, this could lead to SCM's CPU starvation. With this
-    // approach we always guarantee that  HB thread sleeps for a little while.
-    //
-    // 3. It is possible that we will never finish processing the HB's in the
-    // thread. But that means we have a mis-configured system. We will warn
-    // the users by logging that information.
-    //
-    // 4. And the most important reason, heartbeats are not blocked even if
-    // this thread does not run, they will go into the processing queue.
+  }
+
+  private void scheduleNextHealthCheck() {
 
     if (!Thread.currentThread().isInterrupted() &&
         !executorService.isShutdown()) {
-      executorService.schedule(this, heartbeatCheckerIntervalMs,
-          TimeUnit.MILLISECONDS);
+      //BUGBUG: The return future needs to checked here to make sure the
+      // exceptions are handled correctly.
+      healthCheckFuture = executorService.schedule(this,
+          heartbeatCheckerIntervalMs, TimeUnit.MILLISECONDS);
     } else {
-      LOG.info("Current Thread is interrupted, shutting down HB processing " +
+      LOG.warn("Current Thread is interrupted, shutting down HB processing " +
           "thread for Node Manager.");
     }
 
+    lastHealthCheck = Time.monotonicNow();
+  }
+
+  /**
+   * if the time since last check exceeds the stale|dead node interval, skip.
+   * such long delays might be caused by a JVM pause. SCM cannot make reliable
+   * conclusions about datanode health in such situations.
+   * @return : true indicates skip HB checks
+   */
+  private boolean shouldSkipCheck() {
+
+    long currentTime = Time.monotonicNow();
+    long minInterval = Math.min(staleNodeIntervalMs, deadNodeIntervalMs);
+
+    return ((currentTime - lastHealthCheck) >= minInterval);
   }
 
   /**
@@ -599,5 +708,58 @@ public class NodeStateManager implements Runnable, Closeable {
       executorService.shutdownNow();
       Thread.currentThread().interrupt();
     }
+  }
+
+  /**
+   * Test Utility : return number of times heartbeat check was skipped.
+   * @return : count of times HB process was skipped
+   */
+  @VisibleForTesting
+  long getSkippedHealthChecks() {
+    return skippedHealthChecks;
+  }
+
+  /**
+   * Test Utility : Pause the periodic node hb check.
+   * @return ScheduledFuture for the scheduled check that got cancelled.
+   */
+  @VisibleForTesting
+  ScheduledFuture pause() {
+
+    if (executorService.isShutdown() || checkPaused) {
+      return null;
+    }
+
+    checkPaused = healthCheckFuture.cancel(false);
+
+    return healthCheckFuture;
+  }
+
+  /**
+   * Test utility : unpause the periodic node hb check.
+   * @return ScheduledFuture for the next scheduled check
+   */
+  @VisibleForTesting
+  ScheduledFuture unpause() {
+
+    if (executorService.isShutdown()) {
+      return null;
+    }
+
+    if (checkPaused) {
+      Preconditions.checkState(((healthCheckFuture == null)
+          || healthCheckFuture.isCancelled()
+          || healthCheckFuture.isDone()));
+
+      checkPaused = false;
+      /**
+       * We do not call scheduleNextHealthCheck because we are
+       * not updating the lastHealthCheck timestamp.
+       */
+      healthCheckFuture = executorService.schedule(this,
+          heartbeatCheckerIntervalMs, TimeUnit.MILLISECONDS);
+    }
+
+    return healthCheckFuture;
   }
 }

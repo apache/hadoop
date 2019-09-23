@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -49,8 +49,8 @@ import java.util.Map;
 public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     MutableConfigurationProvider {
 
-  public static final Log LOG =
-      LogFactory.getLog(MutableCSConfigurationProvider.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(MutableCSConfigurationProvider.class);
 
   private Configuration schedConf;
   private Configuration oldConf;
@@ -280,12 +280,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       String keyPrefix = CapacitySchedulerConfiguration.PREFIX
           + queuePath + CapacitySchedulerConfiguration.DOT;
       for (Map.Entry<String, String> kv : updateInfo.getParams().entrySet()) {
-        if (kv.getValue() == null) {
+        String keyValue = kv.getValue();
+        if (keyValue == null || keyValue.isEmpty()) {
+          keyValue = null;
           proposedConf.unset(keyPrefix + kv.getKey());
         } else {
-          proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
+          proposedConf.set(keyPrefix + kv.getKey(), keyValue);
         }
-        confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+        confUpdate.put(keyPrefix + kv.getKey(), keyValue);
       }
     }
   }

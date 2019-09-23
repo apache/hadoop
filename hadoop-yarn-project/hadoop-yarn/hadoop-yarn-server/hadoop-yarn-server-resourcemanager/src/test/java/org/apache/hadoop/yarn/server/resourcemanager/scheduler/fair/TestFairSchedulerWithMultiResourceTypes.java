@@ -21,6 +21,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -33,6 +35,8 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.util.resource.ResourceUtils.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.util.resource.ResourceUtils.UNITS;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestFairSchedulerWithMultiResourceTypes
     extends FairSchedulerTestBase {
@@ -44,6 +48,11 @@ public class TestFairSchedulerWithMultiResourceTypes
     scheduler = new FairScheduler();
     conf = createConfiguration();
     initResourceTypes(conf);
+    // since this runs outside of the normal context we need to set one
+    RMContext rmContext = mock(RMContext.class);
+    PlacementManager placementManager = new PlacementManager();
+    when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
+    scheduler.setRMContext(rmContext);
   }
 
   @After

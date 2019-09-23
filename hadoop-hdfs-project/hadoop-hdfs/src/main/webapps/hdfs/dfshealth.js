@@ -303,10 +303,13 @@
           .attr("class", "bar")
           .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; });
 
+      window.liveNodes = dnData.LiveNodes;
+
       bar.append("rect")
           .attr("x", 1)
           .attr("width", x(bins[0].x1) - x(bins[0].x0) - 1)
-          .attr("height", function(d) { return height - y(d.length); });
+          .attr("height", function(d) { return height - y(d.length); })
+          .attr("onclick", function (d) { return "open_hostip_list(" + d.x0 + "," + d.x1 + ")"; });
 
       bar.append("text")
           .attr("dy", ".75em")
@@ -330,7 +333,11 @@
           $('#tab-datanode').html(out);
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'columnDefs': [
+              { 'targets': [ 0 ], 'visible': false, 'searchable': false }
+             ],
             'columns': [
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
               { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
               { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": ""},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
@@ -339,7 +346,22 @@
               { 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'string' , "defaultContent": ""}
-            ]});
+              ],
+              initComplete: function () {
+                var column = this.api().column([0]);
+                var select = $('<select class="datanodestatus form-control input-sm"><option value="">All</option></select>')
+                              .appendTo('#datanodefilter')
+                              .on('change', function () {
+                                var val = $.fn.dataTable.util.escapeRegex(
+                                $(this).val());
+                                column.search(val ? '^' + val + '$' : '', true, false).draw();
+                              });
+                console.log(select);
+                column.data().unique().sort().each(function (d, j) {
+                  select.append('<option value="' + d + '">' + d + '</option>');
+                });
+            }
+          });
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
@@ -425,3 +447,45 @@
     load_page();
   });
 })();
+
+function open_hostip_list(x0, x1) {
+  close_hostip_list();
+  var ips = new Array();
+  for (var i = 0; i < liveNodes.length; i++) {
+    var dn = liveNodes[i];
+    var index = (dn.usedSpace / dn.capacity) * 100.0;
+    if (index == 0) {
+      index = 1;
+    }
+    //More than 100% do not care,so not record in 95%-100% bar
+    if (index > x0 && index <= x1) {
+      ips.push(dn.infoAddr.split(":")[0]);
+    }
+  }
+  var ipsText = '';
+  for (var i = 0; i < ips.length; i++) {
+    ipsText += ips[i] + '\n';
+  }
+  var histogram_div = document.getElementById('datanode-usage-histogram');
+  histogram_div.setAttribute('style', 'position: relative');
+  var ips_div = document.createElement("textarea");
+  ips_div.setAttribute('id', 'datanode_ips');
+  ips_div.setAttribute('rows', '8');
+  ips_div.setAttribute('cols', '14');
+  ips_div.setAttribute('style', 'position: absolute;top: 0px;right: -38px;');
+  ips_div.setAttribute('readonly', 'readonly');
+  histogram_div.appendChild(ips_div);
+
+  var close_div = document.createElement("div");
+  histogram_div.appendChild(close_div);
+  close_div.setAttribute('id', 'close_ips');
+  close_div.setAttribute('style', 'position: absolute;top: 0px;right: -62px;width:20px;height;20px');
+  close_div.setAttribute('onclick', 'close_hostip_list()');
+  close_div.innerHTML = "X";
+  ips_div.innerHTML = ipsText;
+}
+
+function close_hostip_list() {
+  $("#datanode_ips").remove();
+  $("#close_ips").remove();
+}

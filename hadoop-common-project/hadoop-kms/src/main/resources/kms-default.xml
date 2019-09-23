@@ -101,6 +101,13 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.http.idle_timeout.ms</name>
+    <value>1000</value>
+    <description>
+      KMS Server connection timeout in milliseconds.
+    </description>
+  </property>
   <!-- KMS Backend KeyProvider -->
 
   <property>

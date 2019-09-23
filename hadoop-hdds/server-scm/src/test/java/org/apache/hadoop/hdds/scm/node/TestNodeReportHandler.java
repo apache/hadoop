@@ -24,7 +24,9 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -32,9 +34,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test for the Node Report Handler.
+ */
 public class TestNodeReportHandler implements EventPublisher {
 
   private static final Logger LOG = LoggerFactory
@@ -47,7 +53,11 @@ public class TestNodeReportHandler implements EventPublisher {
   @Before
   public void resetEventCollector() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    nodeManager = new SCMNodeManager(conf, "cluster1", null, new EventQueue());
+    SCMStorageConfig storageConfig = Mockito.mock(SCMStorageConfig.class);
+    Mockito.when(storageConfig.getClusterID()).thenReturn("cluster1");
+    nodeManager =
+        new SCMNodeManager(conf, storageConfig, new EventQueue(), Mockito.mock(
+            NetworkTopology.class));
     nodeReportHandler = new NodeReportHandler(nodeManager);
   }
 
@@ -57,9 +67,11 @@ public class TestNodeReportHandler implements EventPublisher {
     StorageReportProto storageOne = TestUtils
         .createStorageReport(dn.getUuid(), storagePath, 100, 10, 90, null);
 
-    nodeReportHandler.onMessage(
-        getNodeReport(dn, storageOne), this);
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
+    Assert.assertNull(nodeMetric);
+
+    nodeManager.register(dn, getNodeReport(dn, storageOne).getReport(), null);
+    nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 100);
     Assert.assertTrue(nodeMetric.get().getRemaining().get() == 90);

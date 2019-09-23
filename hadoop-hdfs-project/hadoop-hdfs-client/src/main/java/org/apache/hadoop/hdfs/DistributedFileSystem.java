@@ -102,8 +102,8 @@ import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Progressable;
 
@@ -132,8 +132,6 @@ public class DistributedFileSystem extends FileSystem
     implements KeyProviderTokenIssuer {
   private Path workingDir;
   private URI uri;
-  private String homeDirPrefix =
-      HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT;
 
   DFSClient dfs;
   private boolean verifyChecksum = true;
@@ -149,7 +147,6 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
    *
    * @return <code>hdfs</code>
    */
@@ -170,9 +167,6 @@ public class DistributedFileSystem extends FileSystem
     if (host == null) {
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
-    homeDirPrefix = conf.get(
-        HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
-        HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
 
     this.dfs = new DFSClient(uri, conf, statistics);
     this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
@@ -215,8 +209,7 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path(homeDirPrefix + "/"
-        + dfs.ugi.getShortUserName()));
+    return makeQualified(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi));
   }
 
   /**
@@ -564,13 +557,17 @@ public class DistributedFileSystem extends FileSystem
    * replication policy from its ancestor (the default).
    * ecPolicyName and SHOULD_REPLICATE CreateFlag are mutually exclusive. It's
    * invalid to set both SHOULD_REPLICATE and a non-null ecPolicyName.
+   * The third addition is storagePolicyName. A non-null storage Policy
+   * specifies an explicit storage policy for this file, overriding the
+   * inherited policy.
    *
    */
   private HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,
-      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName,
+      final String storagePolicy)
       throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
@@ -580,7 +577,7 @@ public class DistributedFileSystem extends FileSystem
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, true, replication, blockSize, progress, bufferSize,
-            checksumOpt, favoredNodes, ecPolicyName);
+            checksumOpt, favoredNodes, ecPolicyName, storagePolicy);
         return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
@@ -589,7 +586,8 @@ public class DistributedFileSystem extends FileSystem
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.create(p, permission, flag, bufferSize, replication,
-              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName);
+              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName,
+              storagePolicy);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "
@@ -620,14 +618,15 @@ public class DistributedFileSystem extends FileSystem
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
    * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
-   * additional parameters, i.e., favoredNodes and ecPolicyName.
+   * additional parameters, i.e., favoredNodes, ecPolicyName and
+   * storagePolicyName.
    */
   private HdfsDataOutputStream createNonRecursive(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,
-      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
-      throws IOException {
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName,
+      final String storagePolicyName) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
     Path absF = fixRelativePart(f);
@@ -636,7 +635,7 @@ public class DistributedFileSystem extends FileSystem
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, false, replication, blockSize, progress, bufferSize,
-            checksumOpt, favoredNodes, ecPolicyName);
+            checksumOpt, favoredNodes, ecPolicyName, storagePolicyName);
         return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
@@ -646,7 +645,7 @@ public class DistributedFileSystem extends FileSystem
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.createNonRecursive(p, permission, flag, bufferSize,
               replication, blockSize, progress, checksumOpt, favoredNodes,
-              ecPolicyName);
+              ecPolicyName, storagePolicyName);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "
@@ -1001,8 +1000,11 @@ public class DistributedFileSystem extends FileSystem
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String,
    * long, long, StorageType)
    */
+  @Override
   public void setQuota(Path src, final long namespaceQuota,
       final long storagespaceQuota) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_QUOTA_USAGE);
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -1028,9 +1030,12 @@ public class DistributedFileSystem extends FileSystem
    * @param quota value of the specific storage type quota to be modified.
    * Maybe {@link HdfsConstants#QUOTA_RESET} to clear quota by storage type.
    */
+  @Override
   public void setQuotaByStorageType(Path src, final StorageType type,
       final long quota)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_QUOTA_BYTSTORAGEYPE);
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -1860,7 +1865,7 @@ public class DistributedFileSystem extends FileSystem
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 
-  /** @see HdfsAdmin#allowSnapshot(Path) */
+  /** @see org.apache.hadoop.hdfs.client.HdfsAdmin#allowSnapshot(Path) */
   public void allowSnapshot(final Path path) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.ALLOW_SNAPSHOT);
@@ -1888,7 +1893,7 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
-  /** @see HdfsAdmin#disallowSnapshot(Path) */
+  /** @see org.apache.hadoop.hdfs.client.HdfsAdmin#disallowSnapshot(Path) */
   public void disallowSnapshot(final Path path) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.DISALLOW_SNAPSHOT);
@@ -1973,8 +1978,11 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @return All the snapshottable directories
-   * @throws IOException
+   * Get the list of snapshottable directories that are owned
+   * by the current user. Return all the snapshottable directories if the
+   * current user is a super user.
+   * @return The list of all the current snapshottable directories.
+   * @throws IOException If an I/O error occurred.
    */
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
@@ -2207,7 +2215,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @see {@link #addCacheDirective(CacheDirectiveInfo, EnumSet)}
+   * @see #addCacheDirective(CacheDirectiveInfo, EnumSet)
    */
   public long addCacheDirective(CacheDirectiveInfo info) throws IOException {
     return addCacheDirective(info, EnumSet.noneOf(CacheFlag.class));
@@ -2223,6 +2231,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public long addCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ADD_CACHE_DIRECTIVE);
     Preconditions.checkNotNull(info.getPath());
     Path path = new Path(getPathName(fixRelativePart(info.getPath()))).
         makeQualified(getUri(), getWorkingDirectory());
@@ -2234,7 +2244,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @see {@link #modifyCacheDirective(CacheDirectiveInfo, EnumSet)}
+   * @see #modifyCacheDirective(CacheDirectiveInfo, EnumSet)
    */
   public void modifyCacheDirective(CacheDirectiveInfo info) throws IOException {
     modifyCacheDirective(info, EnumSet.noneOf(CacheFlag.class));
@@ -2250,6 +2260,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void modifyCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.MODIFY_CACHE_DIRECTIVE);
     if (info.getPath() != null) {
       info = new CacheDirectiveInfo.Builder(info).
           setPath(new Path(getPathName(fixRelativePart(info.getPath()))).
@@ -2266,6 +2278,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void removeCacheDirective(long id)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_CACHE_DIRECTIVE);
     dfs.removeCacheDirective(id);
   }
 
@@ -2278,6 +2292,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
       CacheDirectiveInfo filter) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.LIST_CACHE_DIRECTIVE);
     if (filter == null) {
       filter = new CacheDirectiveInfo.Builder().build();
     }
@@ -2318,6 +2334,8 @@ public class DistributedFileSystem extends FileSystem
    *          If the request could not be completed.
    */
   public void addCachePool(CachePoolInfo info) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ADD_CACHE_POOL);
     CachePoolInfo.validate(info);
     dfs.addCachePool(info);
   }
@@ -2331,6 +2349,8 @@ public class DistributedFileSystem extends FileSystem
    *          If the request could not be completed.
    */
   public void modifyCachePool(CachePoolInfo info) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.MODIFY_CACHE_POOL);
     CachePoolInfo.validate(info);
     dfs.modifyCachePool(info);
   }
@@ -2344,6 +2364,8 @@ public class DistributedFileSystem extends FileSystem
    *          if the cache pool did not exist, or could not be removed.
    */
   public void removeCachePool(String poolName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_CACHE_POOL);
     CachePoolInfo.validateName(poolName);
     dfs.removeCachePool(poolName);
   }
@@ -2357,6 +2379,8 @@ public class DistributedFileSystem extends FileSystem
    *          If there was an error listing cache pools.
    */
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.LIST_CACHE_POOL);
     return dfs.listCachePools();
   }
 
@@ -2498,6 +2522,8 @@ public class DistributedFileSystem extends FileSystem
   /* HDFS only */
   public void createEncryptionZone(final Path path, final String keyName)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE_ENCRYPTION_ZONE);
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -2525,6 +2551,8 @@ public class DistributedFileSystem extends FileSystem
   /* HDFS only */
   public EncryptionZone getEZForPath(final Path path)
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_ENCRYPTION_ZONE);
     Preconditions.checkNotNull(path);
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<EncryptionZone>() {
@@ -2552,6 +2580,8 @@ public class DistributedFileSystem extends FileSystem
   /* HDFS only */
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.LIST_ENCRYPTION_ZONE);
     return dfs.listEncryptionZones();
   }
 
@@ -2819,11 +2849,13 @@ public class DistributedFileSystem extends FileSystem
   }
 
   @Override
-  public Token<?>[] addDelegationTokens(
-      final String renewer, Credentials credentials) throws IOException {
-    Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    return HdfsKMSUtil.addDelegationTokensForKeyProvider(
-        this, renewer, credentials, uri, tokens);
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[]{(DelegationTokenIssuer)keyProvider};
+    }
+    return null;
   }
 
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
@@ -2844,6 +2876,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void setErasureCodingPolicy(final Path path,
       final String ecPolicyName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_EC_POLICY);
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -2867,15 +2901,13 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * Set the source path to satisfy storage policy. This API is non-recursive
-   * in nature, i.e., if the source path is a directory then all the files
-   * immediately under the directory would be considered for satisfying the
-   * policy and the sub-directories if any under this path will be skipped.
-   *
+   * Set the source path to satisfy storage policy.
    * @param path The source path referring to either a directory or a file.
    * @throws IOException
    */
   public void satisfyStoragePolicy(final Path path) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SATISFY_STORAGE_POLICY);
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
 
@@ -2911,6 +2943,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_POLICY);
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<ErasureCodingPolicy>() {
       @Override
@@ -2942,6 +2976,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_POLICIES);
     return Arrays.asList(dfs.getErasureCodingPolicies());
   }
 
@@ -2954,6 +2990,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public Map<String, String> getAllErasureCodingCodecs()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_CODECS);
     return dfs.getErasureCodingCodecs();
   }
 
@@ -2970,6 +3008,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies)  throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ADD_EC_POLICY);
     return dfs.addErasureCodingPolicies(policies);
   }
 
@@ -2981,6 +3021,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_EC_POLICY);
     dfs.removeErasureCodingPolicy(ecPolicyName);
   }
 
@@ -2992,6 +3034,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void enableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ENABLE_EC_POLICY);
     dfs.enableErasureCodingPolicy(ecPolicyName);
   }
 
@@ -3003,6 +3047,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DISABLE_EC_POLICY);
     dfs.disableErasureCodingPolicy(ecPolicyName);
   }
 
@@ -3013,6 +3059,8 @@ public class DistributedFileSystem extends FileSystem
    * @throws IOException
    */
   public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.UNSET_EC_POLICY);
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -3137,6 +3185,7 @@ public class DistributedFileSystem extends FileSystem
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
+    private String storagePolicyName = null;
 
     /**
      * Construct a HdfsDataOutputStream builder for a file.
@@ -3149,7 +3198,7 @@ public class DistributedFileSystem extends FileSystem
     }
 
     @Override
-    protected HdfsDataOutputStreamBuilder getThisBuilder() {
+    public HdfsDataOutputStreamBuilder getThisBuilder() {
       return this;
     }
 
@@ -3205,6 +3254,22 @@ public class DistributedFileSystem extends FileSystem
      */
     public HdfsDataOutputStreamBuilder noLocalWrite() {
       getFlags().add(CreateFlag.NO_LOCAL_WRITE);
+      return this;
+    }
+
+    @VisibleForTesting
+    String getStoragePolicyName() {
+      return storagePolicyName;
+    }
+
+    /**
+     * Enforce a file to follow the specified storage policy irrespective of the
+     * storage policy of its parent directory.
+     */
+    public HdfsDataOutputStreamBuilder storagePolicyName(
+        @Nonnull final String policyName) {
+      Preconditions.checkNotNull(policyName);
+      storagePolicyName = policyName;
       return this;
     }
 
@@ -3274,11 +3339,12 @@ public class DistributedFileSystem extends FileSystem
           return dfs.create(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(),
               getProgress(), getChecksumOpt(), getFavoredNodes(),
-              getEcPolicyName());
+              getEcPolicyName(), getStoragePolicyName());
         } else {
           return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(), getProgress(),
-              getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+              getChecksumOpt(), getFavoredNodes(), getEcPolicyName(),
+              getStoragePolicyName());
         }
       } else if (getFlags().contains(CreateFlag.APPEND)) {
         return dfs.append(getPath(), getFlags(), getBufferSize(), getProgress(),
@@ -3305,15 +3371,21 @@ public class DistributedFileSystem extends FileSystem
    * Returns a RemoteIterator which can be used to list all open files
    * currently managed by the NameNode. For large numbers of open files,
    * iterator will fetch the list in batches of configured size.
-   * <p/>
+   * <p>
    * Since the list is fetched in batches, it does not represent a
    * consistent snapshot of the all open files.
-   * <p/>
+   * <p>
    * This method can only be called by HDFS superusers.
    */
   @Deprecated
   public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
     return dfs.listOpenFiles();
+  }
+
+  @Deprecated
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+    return dfs.listOpenFiles(openFilesTypes);
   }
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(

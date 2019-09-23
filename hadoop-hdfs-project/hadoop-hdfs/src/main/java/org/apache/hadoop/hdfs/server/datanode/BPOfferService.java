@@ -123,7 +123,7 @@ class BPOfferService {
   }
 
   BPOfferService(
-      final String nameserviceId,
+      final String nameserviceId, List<String> nnIds,
       List<InetSocketAddress> nnAddrs,
       List<InetSocketAddress> lifelineNnAddrs,
       DataNode dn) {
@@ -135,12 +135,13 @@ class BPOfferService {
     this.dn = dn;
 
     for (int i = 0; i < nnAddrs.size(); ++i) {
-      this.bpServices.add(new BPServiceActor(nnAddrs.get(i),
-          lifelineNnAddrs.get(i), this));
+      this.bpServices.add(new BPServiceActor(nameserviceId, nnIds.get(i),
+          nnAddrs.get(i), lifelineNnAddrs.get(i), this));
     }
   }
 
-  void refreshNNList(ArrayList<InetSocketAddress> addrs,
+  void refreshNNList(String serviceId, List<String> nnIds,
+      ArrayList<InetSocketAddress> addrs,
       ArrayList<InetSocketAddress> lifelineAddrs) throws IOException {
     Set<InetSocketAddress> oldAddrs = Sets.newHashSet();
     for (BPServiceActor actor : bpServices) {
@@ -151,7 +152,8 @@ class BPOfferService {
     // Process added NNs
     Set<InetSocketAddress> addedNNs = Sets.difference(newAddrs, oldAddrs);
     for (InetSocketAddress addedNN : addedNNs) {
-      BPServiceActor actor = new BPServiceActor(addedNN,
+      BPServiceActor actor = new BPServiceActor(serviceId,
+          nnIds.get(addrs.indexOf(addedNN)), addedNN,
           lifelineAddrs.get(addrs.indexOf(addedNN)), this);
       actor.start();
       bpServices.add(actor);

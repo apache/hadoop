@@ -37,9 +37,10 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -88,8 +89,8 @@ import javax.management.ObjectName;
 public class TestStartup {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
-  private static final Log LOG =
-    LogFactory.getLog(TestStartup.class.getName());
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestStartup.class.getName());
   private Configuration config;
   private File hdfsDir=null;
   static final long seed = 0xAAAAEEFL;
@@ -104,7 +105,7 @@ public class TestStartup {
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
 
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
+    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
     LOG.info("--hdfsdir is " + hdfsDir.getAbsolutePath());
@@ -790,4 +791,27 @@ public class TestStartup {
     return;
   }
 
+  @Test(timeout = 60000)
+  public void testDirectoryPermissions() throws Exception {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster dfsCluster
+             = new MiniDFSCluster.Builder(conf).build()) {
+      dfsCluster.waitActive();
+      // name and edits
+      List<StorageDirectory> nameDirs =
+          dfsCluster.getNameNode().getFSImage().getStorage().getStorageDirs();
+      Collection<URI> nameDirUris = nameDirs.stream().map(d -> d
+          .getCurrentDir().toURI()).collect(Collectors.toList());
+      assertNotNull(nameDirUris);
+      LocalFileSystem fs = LocalFileSystem.getLocal(config);
+      FsPermission permission = new FsPermission(conf.get(
+          DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_KEY,
+          DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_DEFAULT));
+      for (URI uri : nameDirUris) {
+        FileStatus fileStatus = fs.getFileLinkStatus(new Path(uri));
+        assertEquals(permission.toOctal(),
+            fileStatus.getPermission().toOctal());
+      }
+    }
+  }
 }

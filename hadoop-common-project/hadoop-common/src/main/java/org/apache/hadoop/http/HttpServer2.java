@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -60,12 +61,17 @@ import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -84,12 +90,12 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.AllowSymLinkAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -107,9 +113,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
  * to serve up status information for the server. There are three contexts:
- * "/logs/" -> points to the log directory "/static/" -> points to common static
- * files (src/webapps/static) "/" -> the jsp server code from
- * (src/webapps/<name>)
+ * "/logs/" {@literal ->} points to the log directory "/static/" {@literal ->}
+ * points to common static files (src/webapps/static) "/" {@literal ->} the
+ * jsp server code from (src/webapps/{@literal <}name{@literal >})
  *
  * This class is a fork of the old HttpServer. HttpServer exists for
  * compatibility reasons. See HBASE-10336 for more details.
@@ -141,6 +147,10 @@ public final class HttpServer2 implements FilterContainer {
       "hadoop.http.selector.count";
   // -1 to use default behavior of setting count based on CPU core count
   public static final int HTTP_SELECTOR_COUNT_DEFAULT = -1;
+  // idle timeout in milliseconds
+  public static final String HTTP_IDLE_TIMEOUT_MS_KEY =
+      "hadoop.http.idle_timeout.ms";
+  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 10000;
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
   public static final String FILTER_INITIALIZER_PROPERTY
@@ -150,7 +160,7 @@ public final class HttpServer2 implements FilterContainer {
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   public static final String ADMINS_ACL = "admins.acl";
-  public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String SPNEGO_FILTER = "authentication";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
@@ -184,6 +194,11 @@ public final class HttpServer2 implements FilterContainer {
   private static final String X_FRAME_OPTIONS = "X-FRAME-OPTIONS";
   private static final Pattern PATTERN_HTTP_HEADER_REGEX =
           Pattern.compile(HTTP_HEADER_REGEX);
+
+  private boolean prometheusSupport;
+  protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
+  private PrometheusMetricsSink prometheusMetricsSink;
+
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -428,7 +443,9 @@ public final class HttpServer2 implements FilterContainer {
 
       HttpServer2 server = new HttpServer2(this);
 
-      if (this.securityEnabled) {
+      if (this.securityEnabled &&
+          !this.conf.get(authFilterConfigurationPrefix + "type").
+          equals(PseudoAuthenticationHandler.TYPE)) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
@@ -445,6 +462,8 @@ public final class HttpServer2 implements FilterContainer {
       int responseHeaderSize = conf.getInt(
           HTTP_MAX_RESPONSE_HEADER_SIZE_KEY,
           HTTP_MAX_RESPONSE_HEADER_SIZE_DEFAULT);
+      int idleTimeout = conf.getInt(HTTP_IDLE_TIMEOUT_MS_KEY,
+          HTTP_IDLE_TIMEOUT_MS_DEFAULT);
 
       HttpConfiguration httpConfig = new HttpConfiguration();
       httpConfig.setRequestHeaderSize(requestHeaderSize);
@@ -470,6 +489,7 @@ public final class HttpServer2 implements FilterContainer {
         connector.setHost(ep.getHost());
         connector.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         connector.setAcceptQueueSize(backlogSize);
+        connector.setIdleTimeout(idleTimeout);
         server.addListener(connector);
       }
       server.loadListeners();
@@ -483,7 +503,13 @@ public final class HttpServer2 implements FilterContainer {
           conf.getInt(HTTP_SELECTOR_COUNT_KEY, HTTP_SELECTOR_COUNT_DEFAULT));
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
       conn.addConnectionFactory(connFactory);
-      configureChannelConnector(conn);
+      if(Shell.WINDOWS) {
+        // result of setting the SO_REUSEADDR flag is different on Windows
+        // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
+        // without this 2 NN's can start on the same machine and listen on
+        // the same port with indeterminate routing of incoming requests to them
+        conn.setReuseAddress(false);
+      }
       return conn;
     }
 
@@ -594,12 +620,18 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     addDefaultServlets();
+    addPrometheusServlet(conf);
+  }
 
-    if (pathSpecs != null) {
-      for (String path : pathSpecs) {
-        LOG.info("adding path spec: " + path);
-        addFilterPathMapping(path, webAppContext);
-      }
+  private void addPrometheusServlet(Configuration conf) {
+    prometheusSupport = conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED_DEFAULT);
+    if (prometheusSupport) {
+      prometheusMetricsSink = new PrometheusMetricsSink();
+      getWebAppContext().getServletContext()
+          .setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
+      addServlet("prometheus", "/prom", PrometheusServlet.class);
     }
   }
 
@@ -611,7 +643,7 @@ public final class HttpServer2 implements FilterContainer {
       AccessControlList adminsAcl, final String appDir) {
     WebAppContext ctx = new WebAppContext();
     ctx.setDefaultsDescriptor(null);
-    ServletHolder holder = new ServletHolder(new DefaultServlet());
+    ServletHolder holder = new ServletHolder(new WebServlet());
     Map<String, String> params = ImmutableMap. <String, String> builder()
             .put("acceptRanges", "true")
             .put("dirAllowed", "false")
@@ -659,17 +691,6 @@ public final class HttpServer2 implements FilterContainer {
                  Collections.<String, String> emptyMap(), new String[] { "/*" });
   }
 
-  private static void configureChannelConnector(ServerConnector c) {
-    c.setIdleTimeout(10000);
-    if(Shell.WINDOWS) {
-      // result of setting the SO_REUSEADDR flag is different on Windows
-      // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
-      // without this 2 NN's can start on the same machine and listen on
-      // the same port with indeterminate routing of incoming requests to them
-      c.setReuseAddress(false);
-    }
-  }
-
   /** Get an array of FilterConfiguration specified in the conf */
   private static FilterInitializer[] getFilterInitializers(Configuration conf) {
     if (conf == null) {
@@ -681,10 +702,16 @@ public final class HttpServer2 implements FilterContainer {
       return null;
     }
 
-    FilterInitializer[] initializers = new FilterInitializer[classes.length];
-    for(int i = 0; i < classes.length; i++) {
+    List<Class<?>> classList = new ArrayList<>(Arrays.asList(classes));
+    if (classList.contains(AuthenticationFilterInitializer.class) &&
+        classList.contains(ProxyUserAuthenticationFilterInitializer.class)) {
+      classList.remove(AuthenticationFilterInitializer.class);
+    }
+
+    FilterInitializer[] initializers = new FilterInitializer[classList.size()];
+    for(int i = 0; i < classList.size(); i++) {
       initializers[i] = (FilterInitializer)ReflectionUtils.newInstance(
-          classes[i], conf);
+          classList.get(i), conf);
     }
     return initializers;
   }
@@ -723,6 +750,7 @@ public final class HttpServer2 implements FilterContainer {
         asm.getSessionCookieConfig().setSecure(true);
       }
       logContext.setSessionHandler(handler);
+      logContext.addAliasCheck(new AllowSymLinkAliasChecker());
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext);
       defaultContexts.put(logContext, true);
@@ -731,7 +759,7 @@ public final class HttpServer2 implements FilterContainer {
     ServletContextHandler staticContext =
         new ServletContextHandler(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
-    staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.addServlet(WebServlet.class, "/*");
     staticContext.setDisplayName("static");
     @SuppressWarnings("unchecked")
     Map<String, String> params = staticContext.getInitParams();
@@ -745,6 +773,7 @@ public final class HttpServer2 implements FilterContainer {
       asm.getSessionCookieConfig().setSecure(true);
     }
     staticContext.setSessionHandler(handler);
+    staticContext.addAliasCheck(new AllowSymLinkAliasChecker());
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -789,12 +818,27 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
+    addJerseyResourcePackage(packageName, pathSpec,
+        Collections.<String, String>emptyMap());
+  }
+
+  /**
+   * Add a Jersey resource package.
+   * @param packageName The Java package name containing the Jersey resource.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourcePackage(final String packageName,
+      final String pathSpec, Map<String, String> params) {
     LOG.info("addJerseyResourcePackage: packageName=" + packageName
         + ", pathSpec=" + pathSpec);
     final ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
         "com.sun.jersey.api.core.PackagesResourceConfig");
     sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
     webAppContext.addServlet(sh, pathSpec);
   }
 
@@ -807,7 +851,6 @@ public final class HttpServer2 implements FilterContainer {
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     addInternalServlet(name, pathSpec, clazz, false);
-    addFilterPathMapping(pathSpec, webAppContext);
   }
 
   /**
@@ -864,16 +907,6 @@ public final class HttpServer2 implements FilterContainer {
       }
     }
     webAppContext.addServlet(holder, pathSpec);
-
-    if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
-      LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
-      ServletHandler handler = webAppContext.getServletHandler();
-      FilterMapping fmap = new FilterMapping();
-      fmap.setPathSpec(pathSpec);
-      fmap.setFilterName(SPNEGO_FILTER);
-      fmap.setDispatches(FilterMapping.ALL);
-      handler.addFilterMapping(fmap);
-    }
   }
 
   /**
@@ -940,8 +973,8 @@ public final class HttpServer2 implements FilterContainer {
       Map<String, String> parameters) {
 
     FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
-    final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
-    FilterMapping fmap = getFilterMapping(name, USER_FACING_URLS);
+    final String[] userFacingUrls = {"/", "/*" };
+    FilterMapping fmap = getFilterMapping(name, userFacingUrls);
     defineFilter(webAppContext, filterHolder, fmap);
     LOG.info(
         "Added filter " + name + " (class=" + classname + ") to context "
@@ -1124,7 +1157,6 @@ public final class HttpServer2 implements FilterContainer {
       params.put("kerberos.keytab", httpKeytab);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
-
     defineFilter(webAppContext, SPNEGO_FILTER,
                  AuthenticationFilter.class.getName(), params, null);
   }
@@ -1137,6 +1169,11 @@ public final class HttpServer2 implements FilterContainer {
       try {
         openListeners();
         webServer.start();
+        if (prometheusSupport) {
+          DefaultMetricsSystem.instance()
+              .register("prometheus", "Hadoop metrics prometheus exporter",
+                  prometheusMetricsSink);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
@@ -1362,10 +1399,10 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Checks the user has privileges to access to instrumentation servlets.
-   * <p/>
+   * <p>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to FALSE
    * (default value) it always returns TRUE.
-   * <p/>
+   * <p>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to TRUE
    * it will check that if the current user is in the admin ACLS. If the user is
    * in the admin ACLs it returns TRUE, otherwise it returns FALSE.

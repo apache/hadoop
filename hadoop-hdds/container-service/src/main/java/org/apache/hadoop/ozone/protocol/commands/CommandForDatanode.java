@@ -20,16 +20,19 @@ package org.apache.hadoop.ozone.protocol.commands;
 import java.util.UUID;
 
 import com.google.protobuf.GeneratedMessage;
+import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
 
 /**
  * Command for the datanode with the destination address.
  */
-public class CommandForDatanode<T extends GeneratedMessage> {
+public class CommandForDatanode<T extends GeneratedMessage> implements
+    IdentifiableEventPayload {
 
   private final UUID datanodeId;
 
   private final SCMCommand<T> command;
 
+  // TODO: Command for datanode should take DatanodeDetails as parameter.
   public CommandForDatanode(UUID datanodeId, SCMCommand<T> command) {
     this.datanodeId = datanodeId;
     this.command = command;
@@ -41,5 +44,9 @@ public class CommandForDatanode<T extends GeneratedMessage> {
 
   public SCMCommand<T> getCommand() {
     return command;
+  }
+
+  public long getId() {
+    return command.getId();
   }
 }

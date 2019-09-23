@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -48,7 +48,8 @@ public abstract class ACLsTestBase {
   protected static final String QUEUEB = "queueB";
   protected static final String QUEUEC = "queueC";
 
-  protected static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationACLs.class);
 
   protected MockRM resourceManager;
   Configuration conf;

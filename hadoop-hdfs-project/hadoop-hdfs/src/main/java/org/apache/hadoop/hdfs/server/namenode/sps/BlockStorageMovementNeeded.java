@@ -106,8 +106,8 @@ public class BlockStorageMovementNeeded {
    * Add the itemInfo to tracking list for which storage movement expected if
    * necessary.
    *
-   * @param itemInfoList
-   *          - List of child in the directory
+   * @param itemInfo
+   *          - child in the directory
    * @param scanCompleted
    *          -Indicates whether the ItemInfo start id directory has no more
    *          elements to scan.
@@ -191,7 +191,6 @@ public class BlockStorageMovementNeeded {
   /**
    * Clean all the movements in spsDirsToBeTraveresed/storageMovementNeeded
    * and notify to clean up required resources.
-   * @throws IOException
    */
   public synchronized void clearQueuesWithNotification() {
     // Remove xAttr from directories

@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -302,7 +303,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // simulate log aggregation completion
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
 
@@ -362,7 +363,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
     // application is still in NM context.
     assertEquals(1, context.getApplications().size());
 
@@ -386,7 +387,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // is needed.
     app.handle(new ApplicationEvent(app.getAppId(),
         ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
-    assertEquals(app.getApplicationState(), ApplicationState.FINISHED);
+    assertThat(app.getApplicationState()).isEqualTo(ApplicationState.FINISHED);
 
     // simulate log aggregation failed.
     app.handle(new ApplicationEvent(app.getAppId(),
@@ -527,8 +528,9 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
 
     ResourceUtilization utilization =
-        ResourceUtilization.newInstance(1024, 2048, 0.25F);
-    assertEquals(cm.getContainerScheduler().getNumRunningContainers(), 1);
+        ResourceUtilization.newInstance(1024, 2048, 1.0F);
+    assertThat(cm.getContainerScheduler().getNumRunningContainers()).
+        isEqualTo(1);
     assertEquals(utilization,
         cm.getContainerScheduler().getCurrentUtilization());
 
@@ -544,7 +546,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
     waitForNMContainerState(cm, cid, ContainerState.RUNNING);
 
-    assertEquals(cm.getContainerScheduler().getNumRunningContainers(), 1);
+    assertThat(cm.getContainerScheduler().getNumRunningContainers()).
+        isEqualTo(1);
     assertEquals(utilization,
         cm.getContainerScheduler().getCurrentUtilization());
     cm.stop();
@@ -736,7 +739,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       @Override
       protected void authorizeGetAndStopContainerRequest(
           ContainerId containerId, Container container,
-          boolean stopRequest, NMTokenIdentifier identifier)
+          boolean stopRequest, NMTokenIdentifier identifier,
+          String remoteUser)
           throws YarnException {
         if(container == null || container.getUser().equals("Fail")){
           throw new YarnException("Reject this container");

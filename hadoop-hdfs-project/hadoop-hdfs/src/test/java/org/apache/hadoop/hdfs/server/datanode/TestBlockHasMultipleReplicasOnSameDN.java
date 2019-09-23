@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -56,7 +56,8 @@ import static org.junit.Assert.assertThat;
  * the same DataNode. Excess replicas on the same DN should be ignored by the NN.
  */
 public class TestBlockHasMultipleReplicasOnSameDN {
-  public static final Log LOG = LogFactory.getLog(TestBlockHasMultipleReplicasOnSameDN.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockHasMultipleReplicasOnSameDN.class);
 
   private static final short NUM_DATANODES = 2;
   private static final int BLOCK_SIZE = 1024;

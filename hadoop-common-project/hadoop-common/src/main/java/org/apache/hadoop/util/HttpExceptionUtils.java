@@ -34,10 +34,10 @@ import java.util.Map;
 /**
  * HTTP utility class to help propagate server side exception to the client
  * over HTTP as a JSON payload.
- * <p/>
+ * <p>
  * It creates HTTP Servlet and JAX-RPC error responses including details of the
  * exception that allows a client to recreate the remote exception.
- * <p/>
+ * <p>
  * It parses HTTP client connections and recreates the exception.
  */
 @InterfaceAudience.Private
@@ -125,7 +125,7 @@ public class HttpExceptionUtils {
    * expected HTTP status code. If the current status code is not the expected
    * one it throws an exception with a detail message using Server side error
    * messages if available.
-   * <p/>
+   * <p>
    * <b>NOTE:</b> this method will throw the deserialized exception even if not
    * declared in the <code>throws</code> of the method signature.
    *
@@ -154,18 +154,20 @@ public class HttpExceptionUtils {
             toThrow = (Exception) constr.newInstance(exMsg);
           } catch (Exception ex) {
             toThrow = new IOException(String.format(
-                "HTTP status [%d], exception [%s], message [%s] ",
-                conn.getResponseCode(), exClass, exMsg));
+                "HTTP status [%d], exception [%s], message [%s], URL [%s]",
+                conn.getResponseCode(), exClass, exMsg, conn.getURL()));
           }
         } else {
           String msg = (exMsg != null) ? exMsg : conn.getResponseMessage();
           toThrow = new IOException(String.format(
-              "HTTP status [%d], message [%s]", conn.getResponseCode(), msg));
+              "HTTP status [%d], message [%s], URL [%s]",
+              conn.getResponseCode(), msg, conn.getURL()));
         }
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
-            "HTTP status [%d], message [%s]", conn.getResponseCode(),
-            conn.getResponseMessage()));
+            "HTTP status [%d], message [%s], URL [%s], exception [%s]",
+            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
+            ex.toString()), ex);
       } finally {
         if (es != null) {
           try {

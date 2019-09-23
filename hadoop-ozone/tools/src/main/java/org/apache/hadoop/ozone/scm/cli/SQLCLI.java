@@ -36,11 +36,11 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.hdds.utils.MetadataStore;
+import org.apache.hadoop.hdds.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +83,6 @@ public class SQLCLI  extends Configured implements Tool {
           "replicationType TEXT NOT NULL," +
           "replicationFactor TEXT NOT NULL," +
           "usedBytes LONG NOT NULL," +
-          "allocatedBytes LONG NOT NULL," +
           "owner TEXT," +
           "numberOfKeys LONG)";
   private static final String CREATE_DATANODE_INFO =
@@ -94,8 +93,8 @@ public class SQLCLI  extends Configured implements Tool {
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
       "INSERT INTO containerInfo (containerID, replicationType, "
-          + "replicationFactor, usedBytes, allocatedBytes, owner, "
-          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", \"%d\", "
+          + "replicationFactor, usedBytes, owner, "
+          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", "
           + "\"%s\", \"%d\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
@@ -470,7 +469,7 @@ public class SQLCLI  extends Configured implements Tool {
         long containerID = Longs.fromByteArray(key);
         ContainerInfo containerInfo = null;
         containerInfo = ContainerInfo.fromProtobuf(
-            HddsProtos.SCMContainerInfo.PARSER.parseFrom(value));
+            HddsProtos.ContainerInfoProto.PARSER.parseFrom(value));
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema
@@ -498,7 +497,6 @@ public class SQLCLI  extends Configured implements Tool {
         containerInfo.getReplicationType(),
         containerInfo.getReplicationFactor(),
         containerInfo.getUsedBytes(),
-        containerInfo.getAllocatedBytes(),
         containerInfo.getOwner(),
         containerInfo.getNumberOfKeys());
 

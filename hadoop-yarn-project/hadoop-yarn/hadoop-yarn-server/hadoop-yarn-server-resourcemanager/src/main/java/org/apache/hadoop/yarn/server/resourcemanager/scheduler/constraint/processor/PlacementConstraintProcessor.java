@@ -175,11 +175,19 @@ public class PlacementConstraintProcessor extends AbstractPlacementProcessor {
   private void dispatchRequestsForPlacement(ApplicationAttemptId appAttemptId,
       List<SchedulingRequest> schedulingRequests) {
     if (schedulingRequests != null && !schedulingRequests.isEmpty()) {
+      SchedulerApplicationAttempt appAttempt =
+          scheduler.getApplicationAttempt(appAttemptId);
+      String queueName = null;
+      if(appAttempt != null) {
+        queueName = appAttempt.getQueueName();
+      }
+      Resource maxAllocation =
+          scheduler.getMaximumResourceCapability(queueName);
       // Normalize the Requests before dispatching
       schedulingRequests.forEach(req -> {
         Resource reqResource = req.getResourceSizing().getResources();
-        req.getResourceSizing()
-            .setResources(this.scheduler.getNormalizedResource(reqResource));
+        req.getResourceSizing().setResources(
+            this.scheduler.getNormalizedResource(reqResource, maxAllocation));
       });
       this.placementDispatcher.dispatch(new BatchedRequests(iteratorType,
           appAttemptId.getApplicationId(), schedulingRequests, 1));

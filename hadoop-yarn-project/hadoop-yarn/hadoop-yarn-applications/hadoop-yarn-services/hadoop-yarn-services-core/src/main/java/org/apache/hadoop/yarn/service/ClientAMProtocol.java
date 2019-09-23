@@ -19,8 +19,12 @@
 package org.apache.hadoop.yarn.service;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
@@ -60,4 +64,11 @@ public interface ClientAMProtocol {
 
   GetCompInstancesResponseProto getCompInstances(
       GetCompInstancesRequestProto request) throws IOException, YarnException;
+
+  CancelUpgradeResponseProto cancelUpgrade(
+      CancelUpgradeRequestProto request) throws IOException, YarnException;
+
+  DecommissionCompInstancesResponseProto decommissionCompInstances(
+      DecommissionCompInstancesRequestProto request) throws IOException,
+      YarnException;
 }

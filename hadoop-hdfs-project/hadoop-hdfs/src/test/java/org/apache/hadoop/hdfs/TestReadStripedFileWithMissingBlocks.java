@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
@@ -38,8 +38,8 @@ import java.io.IOException;
  * in the block locations returned by the NameNode).
  */
 public class TestReadStripedFileWithMissingBlocks {
-  public static final Log LOG = LogFactory
-      .getLog(TestReadStripedFileWithMissingBlocks.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestReadStripedFileWithMissingBlocks.class);
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private DFSClient dfsClient;

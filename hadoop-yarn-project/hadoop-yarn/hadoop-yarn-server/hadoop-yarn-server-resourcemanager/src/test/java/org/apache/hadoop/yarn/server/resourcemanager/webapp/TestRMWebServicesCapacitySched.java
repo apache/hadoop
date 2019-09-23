@@ -100,6 +100,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       conf = new YarnConfiguration(csConf);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
 		    ResourceScheduler.class);
+      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+          YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);

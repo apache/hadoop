@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -45,8 +45,8 @@ import com.google.protobuf.TextFormat;
 
 public class ApplicationAttemptStateDataPBImpl extends
     ApplicationAttemptStateData {
-  private static Log LOG =
-      LogFactory.getLog(ApplicationAttemptStateDataPBImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ApplicationAttemptStateDataPBImpl.class);
   ApplicationAttemptStateDataProto proto = 
       ApplicationAttemptStateDataProto.getDefaultInstance();
   ApplicationAttemptStateDataProto.Builder builder = null;

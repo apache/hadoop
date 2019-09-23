@@ -73,7 +73,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *
  * <ul>
  *   <li>
- *     {@value YarnConfiguration#YARN_CONTAINER_SANDBOX} :
+ *     {@value
+ *     org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX} :
  *     This yarn-site.xml setting has three options:
  *     <ul>
  *     <li>disabled - Default behavior. {@link LinuxContainerRuntime}
@@ -86,26 +87,33 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     </ul>
  *   </li>
  *   <li>
- *     {@value YarnConfiguration#YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS} :
+ *     {@value
+ *     org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS}
+ *     :
  *     Determines the file permissions for the application directories.  The
  *     permissions come in the form of comma separated values
  *     (e.g. read,write,execute,delete). Defaults to {@code read} for read-only.
  *   </li>
  *   <li>
- *     {@value YarnConfiguration#YARN_CONTAINER_SANDBOX_POLICY} :
+ *     {@value
+ *     org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX_POLICY}
+ *     :
  *     Accepts canonical path to a java policy file on the local filesystem.
  *     This file will be loaded as the base policy, any additional container
  *     grants will be appended to this base file.  If not specified, the default
  *     java.policy file provided with hadoop resources will be used.
  *   </li>
  *   <li>
- *     {@value YarnConfiguration#YARN_CONTAINER_SANDBOX_WHITELIST_GROUP} :
+ *     {@value
+ *     org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX_WHITELIST_GROUP}
+ *     :
  *     Optional setting to specify a YARN queue which will be exempt from the
  *     sand-boxing process.
  *   </li>
  *   <li>
  *     {@value
- *     YarnConfiguration#YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX}$groupName :
+ *     org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX_POLICY_GROUP_PREFIX}$groupName
+ *     :
  *     Optional setting to map groups to java policy files.  The value is a path
  *     to the java policy file for $groupName.  A user which is a member of
  *     multiple groups with different policies will receive the superset of all
@@ -197,9 +205,10 @@ public class JavaSandboxLinuxContainerRuntime
    *  <br>
    *  The Java Sandbox will be circumvented if the user is a member of the
    *  group specified in:
-   *  {@value YarnConfiguration#YARN_CONTAINER_SANDBOX_WHITELIST_GROUP} and if
-   *  they do not include the JVM flag:
-   *  {@value NMContainerPolicyUtils#SECURITY_FLAG}
+   *  {@value
+   *  org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX_WHITELIST_GROUP}
+   *  and if they do not include the JVM flag
+   *  <code>-Djava.security.manager</code>.
    *
    * @param ctx The {@link ContainerRuntimeContext} containing container
    *            setup properties.
@@ -281,10 +290,13 @@ public class JavaSandboxLinuxContainerRuntime
   /**
    * Determine if JVMSandboxLinuxContainerRuntime should be used.  This is
    * decided based on the value of
-   * {@value YarnConfiguration#YARN_CONTAINER_SANDBOX}
+   * {@value
+   * org.apache.hadoop.yarn.conf.YarnConfiguration#YARN_CONTAINER_SANDBOX}
+   * @param env the environment variable settings for the operation
    * @return true if Sandbox is requested, false otherwise
    */
-  boolean isSandboxContainerRequested() {
+  @Override
+  public boolean isRuntimeRequested(Map<String, String> env) {
     return sandboxMode != SandboxMode.disabled;
   }
 

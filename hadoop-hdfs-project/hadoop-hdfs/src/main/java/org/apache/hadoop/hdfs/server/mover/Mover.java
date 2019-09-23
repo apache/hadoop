@@ -22,8 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.cli.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -70,7 +70,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @InterfaceAudience.Private
 public class Mover {
-  static final Log LOG = LogFactory.getLog(Mover.class);
+  static final Logger LOG = LoggerFactory.getLogger(Mover.class);
 
   private static class StorageMap {
     private final StorageGroupMap<Source> sources
@@ -631,11 +631,11 @@ public class Mover {
     final long sleeptime =
         conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
             DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
-            TimeUnit.SECONDS) * 2000 +
+            TimeUnit.SECONDS, TimeUnit.MILLISECONDS) * 2 +
         conf.getTimeDuration(
             DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
             DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
-            TimeUnit.SECONDS) * 1000;
+            TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     AtomicInteger retryCount = new AtomicInteger(0);
     // TODO: Need to limit the size of the pinned blocks to limit memory usage
     Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks = new HashMap<>();
@@ -659,7 +659,7 @@ public class Mover {
           final ExitStatus r = m.run();
 
           if (r == ExitStatus.SUCCESS) {
-            IOUtils.cleanup(LOG, nnc);
+            IOUtils.cleanupWithLogger(LOG, nnc);
             iter.remove();
           } else if (r != ExitStatus.IN_PROGRESS) {
             if (r == ExitStatus.NO_MOVE_PROGRESS) {
@@ -682,7 +682,7 @@ public class Mover {
       return ExitStatus.SUCCESS.getExitCode();
     } finally {
       for (NameNodeConnector nnc : connectors) {
-        IOUtils.cleanup(LOG, nnc);
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
   }
@@ -720,7 +720,7 @@ public class Mover {
           }
         }
       } finally {
-        IOUtils.cleanup(LOG, reader);
+        IOUtils.cleanupWithLogger(LOG, reader);
       }
       return list.toArray(new String[list.size()]);
     }

@@ -34,8 +34,7 @@
   function load_overview() {
     var BEANS = [
       {"name": "federation",  "url": "/jmx?qry=Hadoop:service=Router,name=FederationState"},
-      {"name": "routerstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
-      {"name": "router",      "url": "/jmx?qrt=Hadoop:service=NameNode,name=NameNodeInfo"},
+      {"name": "router",  "url": "/jmx?qry=Hadoop:service=Router,name=Router"},
       {"name": "mem",         "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 
@@ -156,7 +155,7 @@
           $('#tab-namenode').html(out);
           $('#ui-tabs a[href="#tab-namenode"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function load_router_info() {
@@ -220,7 +219,7 @@
           $('#tab-router').html(out);
           $('#ui-tabs a[href="#tab-router"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   // TODO Copied directly from dfshealth.js; is there a way to import this function?
@@ -306,7 +305,7 @@
             ]});
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function load_mount_table() {
@@ -317,14 +316,27 @@
         for (var i = 0, e = mountTable.length; i < e; ++i) {
           if (mountTable[i].readonly == true) {
             mountTable[i].readonly = "true"
+            mountTable[i].status = "Read only"
           } else {
             mountTable[i].readonly = "false"
           }
         }
       }
 
+      function augment_fault_tolerant(mountTable) {
+        for (var i = 0, e = mountTable.length; i < e; ++i) {
+          if (mountTable[i].faulttolerant == true) {
+            mountTable[i].faulttolerant = "true"
+            mountTable[i].ftStatus = "Fault tolerant"
+          } else {
+            mountTable[i].faulttolerant = "false"
+          }
+        }
+      }
+
       resource.MountTable = JSON.parse(resource.MountTable)
       augment_read_only(resource.MountTable)
+      augment_fault_tolerant(resource.MountTable)
       return resource;
     }
 
@@ -337,7 +349,7 @@
           $('#tab-mounttable').html(out);
           $('#ui-tabs a[href="#tab-mounttable"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function toTitleCase(str) {

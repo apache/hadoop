@@ -24,8 +24,8 @@ import java.io.OutputStream;
 import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Writer;
@@ -43,7 +43,8 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class EditsDoubleBuffer {
-  protected static final Log LOG = LogFactory.getLog(EditsDoubleBuffer.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(EditsDoubleBuffer.class);
 
   private TxnBuffer bufCurrent; // current buffer for writing
   private TxnBuffer bufReady; // buffer ready for flushing
@@ -55,9 +56,9 @@ public class EditsDoubleBuffer {
     bufReady = new TxnBuffer(initBufferSize);
 
   }
-    
-  public void writeOp(FSEditLogOp op) throws IOException {
-    bufCurrent.writeOp(op);
+
+  public void writeOp(FSEditLogOp op, int logVersion) throws IOException {
+    bufCurrent.writeOp(op, logVersion);
   }
 
   public void writeRaw(byte[] bytes, int offset, int length) throws IOException {
@@ -148,13 +149,13 @@ public class EditsDoubleBuffer {
       reset();
     }
 
-    public void writeOp(FSEditLogOp op) throws IOException {
+    public void writeOp(FSEditLogOp op, int logVersion) throws IOException {
       if (firstTxId == HdfsServerConstants.INVALID_TXID) {
         firstTxId = op.txid;
       } else {
         assert op.txid > firstTxId;
       }
-      writer.writeOp(op);
+      writer.writeOp(op, logVersion);
       numTxns++;
     }
     

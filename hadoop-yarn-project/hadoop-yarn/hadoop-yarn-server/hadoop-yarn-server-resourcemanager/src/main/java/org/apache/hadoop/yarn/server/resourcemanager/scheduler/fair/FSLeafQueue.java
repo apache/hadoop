@@ -30,8 +30,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,7 +51,8 @@ import static org.apache.hadoop.yarn.util.resource.Resources.none;
 @Private
 @Unstable
 public class FSLeafQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(FSLeafQueue.class.getName());
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FSLeafQueue.class.getName());
   private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
   private FSContext context;
@@ -352,10 +353,8 @@ public class FSLeafQueue extends FSQueue {
       }
       assigned = sched.assignContainer(node);
       if (!assigned.equals(none())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Assigned container in queue:" + getName() + " " +
-              "container:" + assigned);
-        }
+        LOG.debug("Assigned container in queue:{} container:{}",
+            getName(), assigned);
         break;
       }
     }
@@ -457,6 +456,20 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
+  @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      if (runnableApps.size() > 0 || nonRunnableApps.size() > 0 ||
+          assignedApps.size() > 0) {
+        return false;
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
+  }
+
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
@@ -491,17 +504,22 @@ public class FSLeafQueue extends FSQueue {
   */
   private Resource computeMaxAMResource() {
     Resource maxResource = Resources.clone(getFairShare());
+    Resource maxShare = getMaxShare();
+
     if (maxResource.getMemorySize() == 0) {
       maxResource.setMemorySize(
           Math.min(scheduler.getRootQueueMetrics().getAvailableMB(),
-                   getMaxShare().getMemorySize()));
+                   maxShare.getMemorySize()));
     }
 
     if (maxResource.getVirtualCores() == 0) {
       maxResource.setVirtualCores(Math.min(
           scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
-          getMaxShare().getVirtualCores()));
+          maxShare.getVirtualCores()));
     }
+
+    scheduler.getRootQueueMetrics()
+        .fillInValuesFromAvailableResources(maxShare, maxResource);
 
     // Round up to allow AM to run when there is only one vcore on the cluster
     return Resources.multiplyAndRoundUp(maxResource, maxAMShare);
@@ -545,6 +563,16 @@ public class FSLeafQueue extends FSQueue {
    */
   public void setWeights(float weight) {
     this.weights = weight;
+  }
+
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
   }
 
   /**
@@ -637,6 +665,20 @@ public class FSLeafQueue extends FSQueue {
     writeLock.lock();
     try {
       assignedApps.add(applicationId);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * This method is called when an application is removed from this queue
+   * during the submit process.
+   * @param applicationId the application's id
+   */
+  public void removeAssignedApp(ApplicationId applicationId) {
+    writeLock.lock();
+    try {
+      assignedApps.remove(applicationId);
     } finally {
       writeLock.unlock();
     }

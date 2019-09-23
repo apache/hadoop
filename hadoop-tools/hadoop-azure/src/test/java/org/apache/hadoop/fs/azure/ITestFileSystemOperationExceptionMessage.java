@@ -29,6 +29,7 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.NO_ACCESS_TO_CONTAINER_MSG;
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.verifyWasbAccountNameInConfig;
 
 /**
  * Test for error messages coming from SDK.
@@ -46,7 +47,7 @@ public class ITestFileSystemOperationExceptionMessage
         AzureBlobStorageTestAccount.createTestAccount(conf);
     AzureTestUtils.assume("No test account", account != null);
 
-    String testStorageAccount = conf.get("fs.azure.test.account.name");
+    String testStorageAccount = verifyWasbAccountNameInConfig(conf);
     conf = new Configuration();
     conf.set("fs.AbstractFileSystem.wasb.impl",
         "org.apache.hadoop.fs.azure.Wasb");

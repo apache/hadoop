@@ -21,8 +21,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,8 +39,8 @@ import org.junit.Test;
  * This class tests various cases where faults are injected to DataNode.
  */
 public class TestDataNodeFaultInjector {
-  private static final Log LOG = LogFactory
-      .getLog(TestDataNodeFaultInjector.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestDataNodeFaultInjector.class);
 
   private static class MetricsDataNodeFaultInjector
       extends DataNodeFaultInjector {

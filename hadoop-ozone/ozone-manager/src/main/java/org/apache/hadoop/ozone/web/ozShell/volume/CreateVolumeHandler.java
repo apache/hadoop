@@ -18,76 +18,68 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes the create volume call for the shell.
  */
+@Command(name = "create",
+    description = "Creates a volume for the specified user")
 public class CreateVolumeHandler extends Handler {
 
-  private String rootName;
+  @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
+  private String uri;
+
+  @Option(names = {"--user", "-u"},
+      description = "Owner of of the volume")
   private String userName;
-  private String volumeName;
+
+  @Option(names = {"--quota", "-q"},
+      description =
+          "Quota of the newly created volume (eg. 1G)")
   private String quota;
+
+  @Option(names = {"--root"},
+      description = "Development flag to execute the "
+          + "command as the admin (hdfs) user.")
+  private boolean root;
 
   /**
    * Executes the Create Volume.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.CREATE_VOLUME)) {
-      throw new OzoneClientException(
-          "Incorrect call : createVolume is missing");
+  public Void call() throws Exception {
+    if(userName == null) {
+      userName = UserGroupInformation.getCurrentUser().getUserName();
     }
 
-    String ozoneURIString = cmd.getOptionValue(Shell.CREATE_VOLUME);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    // we need to skip the slash in the URI path
-    // getPath returns /volumeName needs to remove the initial slash.
-    volumeName = ozoneURI.getPath().replaceAll("^/+", "");
-    if (volumeName.isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to create a volume");
-    }
+    String volumeName = address.getVolumeName();
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);
     }
-    if (cmd.hasOption(Shell.RUNAS)) {
+
+    String rootName;
+    if (root) {
       rootName = "hdfs";
     } else {
-      rootName = System.getProperty("user.name");
+      rootName = UserGroupInformation.getCurrentUser().getShortUserName();
     }
-
-    if (!cmd.hasOption(Shell.USER)) {
-      throw new OzoneClientException(
-          "User name is needed in createVolume call.");
-    }
-
-    if (cmd.hasOption(Shell.QUOTA)) {
-      quota = cmd.getOptionValue(Shell.QUOTA);
-    }
-
-    userName = cmd.getOptionValue(Shell.USER);
 
     VolumeArgs.Builder volumeArgsBuilder = VolumeArgs.newBuilder()
         .setAdmin(rootName)
@@ -97,11 +89,12 @@ public class CreateVolumeHandler extends Handler {
     }
     client.getObjectStore().createVolume(volumeName, volumeArgsBuilder.build());
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
-      System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-          JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(vol))));
+      ObjectPrinter.printObjectAsJson(vol);
     }
+    return null;
   }
+
 }
 

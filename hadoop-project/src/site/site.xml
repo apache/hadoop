@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
+      <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -62,6 +62,7 @@
 
     <menu name="Common" inherit="top">
       <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
+      <item name="Fair Call Queue" href="hadoop-project-dist/hadoop-common/FairCallQueue.html"/>
       <item name="Native Libraries" href="hadoop-project-dist/hadoop-common/NativeLibraries.html"/>
       <item name="Proxy User" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
       <item name="Rack Awareness" href="hadoop-project-dist/hadoop-common/RackAwareness.html"/>
@@ -80,6 +81,7 @@
       <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="NameNode HA With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="NameNode HA With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
+      <item name="Observer NameNode" href="hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="ViewFs" href="hadoop-project-dist/hadoop-hdfs/ViewFs.html"/>
       <item name="Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
@@ -142,6 +144,7 @@
       <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Resource Model" href="hadoop-yarn/hadoop-yarn-site/ResourceModel.html"/>
       <item name="Node Labels" href="hadoop-yarn/hadoop-yarn-site/NodeLabel.html"/>
+      <item name="Node Attributes" href="hadoop-yarn/hadoop-yarn-site/NodeAttributes.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html"/>
@@ -160,6 +163,7 @@
       <item name="Using GPU" href="hadoop-yarn/hadoop-yarn-site/UsingGpus.html"/>
       <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
       <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
+      <item name="YARN UI2" href="hadoop-yarn/hadoop-yarn-site/YarnUI2.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -177,6 +181,12 @@
       <item name="Yarn Service API" href="hadoop-yarn/hadoop-yarn-site/yarn-service/YarnServiceAPI.html"/>
       <item name="Service Discovery" href="hadoop-yarn/hadoop-yarn-site/yarn-service/ServiceDiscovery.html"/>
       <item name="System Services" href="hadoop-yarn/hadoop-yarn-site/yarn-service/SystemServices.html"/>
+    </menu>
+
+    <menu name="Submarine" inherit="top">
+      <item name="Index" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Index.html"/>
+      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/QuickStart.html"/>
+      <item name="Examples" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Examples.html"/>
     </menu>
 
     <menu name="Hadoop Compatible File Systems" inherit="top">
@@ -205,6 +215,7 @@
       <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="Hadoop Benchmarking" href="hadoop-project-dist/hadoop-common/Benchmarking.html"/>
+      <item name="Dynamometer" href="hadoop-dynamometer/Dynamometer.html"/>
     </menu>
 
     <menu name="Reference" inherit="top">

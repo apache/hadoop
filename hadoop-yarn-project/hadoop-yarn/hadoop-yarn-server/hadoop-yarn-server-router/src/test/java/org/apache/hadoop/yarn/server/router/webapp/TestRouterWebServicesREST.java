@@ -44,6 +44,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.IN
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.LABELS;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.LABEL_MAPPINGS;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.METRICS;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODE_RESOURCE;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES_NODEID;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES_NODEID_GETLABELS;
@@ -63,6 +64,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.ST
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.TIME;
 import static org.apache.hadoop.yarn.server.router.webapp.HTTPMethods.POST;
 import static org.apache.hadoop.yarn.server.router.webapp.HTTPMethods.PUT;
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getNMWebAppURLWithoutScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRMWebAppURLWithScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLWithScheme;
@@ -87,6 +89,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -116,11 +120,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -131,6 +137,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource.Builder;
 
 import net.jcip.annotations.NotThreadSafe;
@@ -465,6 +472,47 @@ public class TestRouterWebServicesREST {
     assertEquals(
         rmResponse.getVersion(),
         routerResponse.getVersion());
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link RMWebServiceProtocol#updateNodeResources()} inside Router.
+   */
+  @Test
+  public void testUpdateNodeResource() throws Exception {
+
+    // wait until a node shows up and check the resources
+    GenericTestUtils.waitFor(() -> getNodeId() != null, 100, 5 * 1000);
+    String nodeId = getNodeId();
+
+    // assert memory and default vcores
+    List<NodeInfo> responses0 = performGetCalls(
+        RM_WEB_SERVICE_PATH + format(NODES_NODEID, getNodeId()),
+        NodeInfo.class, null, null);
+    NodeInfo nodeInfo0 = responses0.get(0);
+    assertEquals(8192, nodeInfo0.getTotalResource().getMemorySize());
+    assertEquals(8, nodeInfo0.getTotalResource().getvCores());
+
+    // update memory to 4096MB and 5 cores
+    Resource resource = Resource.newInstance(4096, 5);
+    ResourceOptionInfo resourceOption = new ResourceOptionInfo(
+        ResourceOption.newInstance(resource, 1000));
+    ClientResponse routerResponse = performCall(
+        RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, nodeId),
+        null, null, resourceOption, POST);
+    assertResponseStatusCode(Status.OK, routerResponse.getStatusInfo());
+    JSONObject json = routerResponse.getEntity(JSONObject.class);
+    JSONObject totalResource = json.getJSONObject("resourceInfo");
+    assertEquals(resource.getMemorySize(), totalResource.getLong("memory"));
+    assertEquals(resource.getVirtualCores(), totalResource.getLong("vCores"));
+
+    // assert updated memory and cores
+    List<NodeInfo> responses1 = performGetCalls(
+        RM_WEB_SERVICE_PATH + format(NODES_NODEID, getNodeId()),
+        NodeInfo.class, null, null);
+    NodeInfo nodeInfo1 = responses1.get(0);
+    assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
+    assertEquals(5, nodeInfo1.getTotalResource().getvCores());
   }
 
   /**
@@ -1338,7 +1386,11 @@ public class TestRouterWebServicesREST {
     ClientResponse response =
         toRM.accept(APPLICATION_XML).get(ClientResponse.class);
     NodesInfo ci = response.getEntity(NodesInfo.class);
-    return ci.getNodes().get(0).getNodeId();
+    List<NodeInfo> nodes = ci.getNodes();
+    if (nodes.isEmpty()) {
+      return null;
+    }
+    return nodes.get(0).getNodeId();
   }
 
   private NewApplication getNewApplicationId() {

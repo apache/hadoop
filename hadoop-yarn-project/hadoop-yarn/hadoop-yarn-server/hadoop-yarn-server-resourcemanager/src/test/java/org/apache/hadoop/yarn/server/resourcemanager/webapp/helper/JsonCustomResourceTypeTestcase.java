@@ -50,8 +50,17 @@ public class JsonCustomResourceTypeTestcase {
   public JsonCustomResourceTypeTestcase(WebResource path,
                                         BufferedClientResponse response) {
     this.path = path;
+    verifyStatus(response);
     this.response = response;
     this.parsedResponse = response.getEntity(JSONObject.class);
+  }
+
+  private void verifyStatus(BufferedClientResponse response) {
+    String responseStr = response.getEntity(String.class);
+    assertEquals("HTTP status should be 200, " +
+                    "status info: " + response.getStatusInfo() +
+            " response as string: " + responseStr,
+            200, response.getStatus());
   }
 
   public void verify(Consumer<JSONObject> verifier) {

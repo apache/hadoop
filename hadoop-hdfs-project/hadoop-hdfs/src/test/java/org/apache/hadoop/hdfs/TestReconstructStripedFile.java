@@ -34,8 +34,8 @@ import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -66,7 +66,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestReconstructStripedFile {
-  public static final Log LOG = LogFactory.getLog(TestReconstructStripedFile.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestReconstructStripedFile.class);
 
   private ErasureCodingPolicy ecPolicy;
   private int dataBlkNum;

@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 public class FileSystemBasedConfigurationProvider
     extends ConfigurationProvider {
 
-  private static final Log LOG = LogFactory
-      .getLog(FileSystemBasedConfigurationProvider.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(FileSystemBasedConfigurationProvider.class);
   private FileSystem fs;
   private Path configDir;
 
@@ -71,10 +71,20 @@ public class FileSystemBasedConfigurationProvider
   @Override
   public synchronized void initInternal(Configuration bootstrapConf)
       throws Exception {
+    Configuration conf = new Configuration(bootstrapConf);
     configDir =
-        new Path(bootstrapConf.get(YarnConfiguration.FS_BASED_RM_CONF_STORE,
+        new Path(conf.get(YarnConfiguration.FS_BASED_RM_CONF_STORE,
             YarnConfiguration.DEFAULT_FS_BASED_RM_CONF_STORE));
-    fs = configDir.getFileSystem(bootstrapConf);
+    String scheme = configDir.toUri().getScheme();
+    if (scheme == null) {
+      scheme = FileSystem.getDefaultUri(conf).getScheme();
+    }
+    if (scheme != null) {
+      String disableCacheName = String.format("fs.%s.impl.disable.cache",
+          scheme);
+      conf.setBoolean(disableCacheName, true);
+    }
+    fs = configDir.getFileSystem(conf);
     fs.mkdirs(configDir);
   }
 

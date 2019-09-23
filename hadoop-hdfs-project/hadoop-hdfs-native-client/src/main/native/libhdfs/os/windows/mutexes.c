@@ -20,8 +20,8 @@
 
 #include <windows.h>
 
-mutex hdfsHashMutex;
 mutex jvmMutex;
+mutex jclassInitMutex;
 
 /**
  * Unfortunately, there is no simple static initializer for a critical section.
@@ -34,8 +34,8 @@ mutex jvmMutex;
  * http://msdn.microsoft.com/en-us/library/bb918180.aspx
  */
 static void __cdecl initializeMutexes(void) {
-  InitializeCriticalSection(&hdfsHashMutex);
   InitializeCriticalSection(&jvmMutex);
+  InitializeCriticalSection(&jclassInitMutex);
 }
 #pragma section(".CRT$XCU", read)
 __declspec(allocate(".CRT$XCU"))

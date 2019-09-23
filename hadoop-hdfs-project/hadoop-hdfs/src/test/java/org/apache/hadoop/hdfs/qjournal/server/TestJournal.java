@@ -17,19 +17,26 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.primitives.Bytes;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
@@ -38,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
@@ -71,6 +79,8 @@ public class TestJournal {
   public void setup() throws Exception {
     FileUtil.fullyDelete(TEST_LOG_DIR);
     conf = new Configuration();
+    // Enable fetching edits via RPC
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     journal = new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
       mockErrorReporter);
     journal.format(FAKE_NSINFO, false);
@@ -114,6 +124,48 @@ public class TestJournal {
     assertFalse(segmentState.getIsInProgress());
     Assert.assertEquals(numTxns, segmentState.getEndTxId());
     Assert.assertEquals(1, segmentState.getStartTxId());
+  }
+
+  /**
+   * Test for HDFS-14557 to ensure that a edit file that failed to fully
+   * allocate and has a header byte of -1 is moved aside to allow startup
+   * to progress.
+   */
+  @Test
+  public void testEmptyEditsInProgressMovedAside() throws Exception {
+    // First, write 5 transactions to the journal
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1);
+    final int numTxns = 5;
+    byte[] ops = QJMTestUtil.createTxnData(1, 5);
+    journal.journal(makeRI(2), 1, 1, numTxns, ops);
+    // Now close the segment
+    journal.finalizeLogSegment(makeRI(3), 1, numTxns);
+
+    // Create a new segment creating a new edits_inprogress file
+    journal.startLogSegment(makeRI(4), 6,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1);
+    ops = QJMTestUtil.createTxnData(6, 5);
+    journal.journal(makeRI(5), 6, 6, numTxns, ops);
+    File eip = journal.getStorage().getInProgressEditLog(6);
+
+    // Now stop the journal without finalizing the segment
+    journal.close();
+
+    // Now "zero out" the EIP file with -1 bytes, similar to how it would
+    // appear if the pre-allocation failed
+    RandomAccessFile rwf = new RandomAccessFile(eip, "rw");
+    for (int i=0; i<rwf.length(); i++) {
+      rwf.write(-1);
+    }
+    rwf.close();
+
+    // Finally start the Journal again, and ensure the "zeroed out" file
+    // is renamed with a .empty extension
+    journal = new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
+        mockErrorReporter);
+    File movedTo = new File(eip.getAbsolutePath()+".empty");
+    assertTrue(movedTo.exists());
   }
 
   @Test (timeout = 10000)
@@ -432,6 +484,44 @@ public class TestJournal {
           "Can't format the storage directory because the current "
               + "directory is not empty.", ioe);
     }
+  }
+
+  @Test
+  public void testReadFromCache() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    journal.journal(makeRI(2), 1, 1, 5, QJMTestUtil.createTxnData(1, 5));
+    journal.journal(makeRI(3), 1, 6, 5, QJMTestUtil.createTxnData(6, 5));
+    journal.journal(makeRI(4), 1, 11, 5, QJMTestUtil.createTxnData(11, 5));
+    assertJournaledEditsTxnCountAndContents(1, 7, 7,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    assertJournaledEditsTxnCountAndContents(1, 30, 15,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+
+    journal.finalizeLogSegment(makeRI(5), 1, 15);
+    int newLayoutVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
+    journal.startLogSegment(makeRI(6), 16, newLayoutVersion);
+    journal.journal(makeRI(7), 16, 16, 5, QJMTestUtil.createTxnData(16, 5));
+
+    assertJournaledEditsTxnCountAndContents(16, 10, 20, newLayoutVersion);
+  }
+
+  private void assertJournaledEditsTxnCountAndContents(int startTxn,
+      int requestedMaxTxns, int expectedEndTxn, int layoutVersion)
+      throws Exception {
+    GetJournaledEditsResponseProto result =
+        journal.getJournaledEdits(startTxn, requestedMaxTxns);
+    int expectedTxnCount = expectedEndTxn - startTxn + 1;
+    ByteArrayOutputStream headerBytes = new ByteArrayOutputStream();
+    EditLogFileOutputStream.writeHeader(layoutVersion,
+        new DataOutputStream(headerBytes));
+    assertEquals(expectedTxnCount, result.getTxnCount());
+    assertArrayEquals(
+        Bytes.concat(
+            headerBytes.toByteArray(),
+            QJMTestUtil.createTxnData(startTxn, expectedTxnCount)),
+        result.getEditLog().toByteArray());
   }
 
   @Test

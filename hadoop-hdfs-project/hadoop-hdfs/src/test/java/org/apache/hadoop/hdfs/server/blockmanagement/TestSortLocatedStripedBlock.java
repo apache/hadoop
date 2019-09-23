@@ -452,7 +452,7 @@ public class TestSortLocatedStripedBlock {
         locs[index].setDecommissioned();
         decommNodeInfo.add(locs[index].toString());
         // Removing it from the list to ensure that all the given nodes are
-        // successfully marked as decomissioned.
+        // successfully marked as decommissioned.
         decommnNodeIndices.remove(new Integer(index));
       }
     }
@@ -471,7 +471,7 @@ public class TestSortLocatedStripedBlock {
         locs[j].setDecommissioned();
         decommNodeInfo.add(locs[j].toString());
         // Removing it from the list to ensure that all the given nodes are
-        // successfully marked as decomissioned.
+        // successfully marked as decommissioned.
         decommnNodeIndices.remove(new Integer(index));
       }
     }
@@ -493,7 +493,7 @@ public class TestSortLocatedStripedBlock {
         locs[index].setDecommissioned();
         decommNodeInfo.add(locs[index].toString());
         // Removing it from the list to ensure that all the given nodes are
-        // successfully marked as decomissioned.
+        // successfully marked as decommissioned.
         decommnNodeIndices.remove(new Integer(blkIndexPos));
       }
     }

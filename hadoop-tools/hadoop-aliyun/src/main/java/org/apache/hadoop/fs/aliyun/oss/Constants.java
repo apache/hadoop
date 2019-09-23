@@ -37,6 +37,8 @@ public final class Constants {
   public static final String CREDENTIALS_PROVIDER_KEY =
       "fs.oss.credentials.provider";
 
+  public static final int OSS_DEFAULT_PORT = -1;
+
   // OSS access verification
   public static final String ACCESS_KEY_ID = "fs.oss.accessKeyId";
   public static final String ACCESS_KEY_SECRET = "fs.oss.accessKeySecret";

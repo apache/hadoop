@@ -23,6 +23,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [YARN-7190](https://issues.apache.org/jira/browse/YARN-7190) | *Major* | **Ensure only NM classpath in 2.x gets TSv2 related hbase jars, not the user classpath**
+
+Ensure only NM classpath in 2.x gets TSv2 related hbase jars, not the user classpath.
+
+
+---
+
 * [HDFS-13099](https://issues.apache.org/jira/browse/HDFS-13099) | *Minor* | **RBF: Use the ZooKeeper as the default State Store**
 
 Change default State Store from local file to ZooKeeper. This will require additional zk address to be configured.

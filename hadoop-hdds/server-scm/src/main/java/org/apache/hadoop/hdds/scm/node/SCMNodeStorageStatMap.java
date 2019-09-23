@@ -147,7 +147,7 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
    * @param datanodeID - UUID of DN.
    * @param report - set of Storage Reports for the Datanode.
    * @throws SCMException - if we don't know about this datanode, for new DN
-   *                      use insertNewDatanode.
+   *                        use addDatanodeInContainerMap.
    */
   public void updateDatanodeMap(UUID datanodeID,
       Set<StorageLocationReport> report) throws SCMException {

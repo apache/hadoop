@@ -24,7 +24,7 @@ import org.mockito.ArgumentMatcher;
  * {@link DockerContainerDeletionTask}.
  */
 public class DockerContainerDeletionMatcher
-    extends ArgumentMatcher<DockerContainerDeletionTask> {
+    implements ArgumentMatcher<DockerContainerDeletionTask> {
 
   private final DeletionService delService;
   private final String containerId;
@@ -36,8 +36,7 @@ public class DockerContainerDeletionMatcher
   }
 
   @Override
-  public boolean matches(Object o) {
-    DockerContainerDeletionTask task = (DockerContainerDeletionTask)o;
+  public boolean matches(DockerContainerDeletionTask task) {
     if (task.getContainerId() == null && containerId == null) {
       return true;
     }

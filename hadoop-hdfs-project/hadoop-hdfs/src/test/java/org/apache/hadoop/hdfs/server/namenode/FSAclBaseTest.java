@@ -1150,7 +1150,7 @@ public abstract class FSAclBaseTest {
     AclStatus s = fs.getAclStatus(dirPath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission(dirPath, (short)010750);
+    assertPermission(dirPath, (short)010770);
     assertAclFeature(dirPath, true);
     s = fs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);

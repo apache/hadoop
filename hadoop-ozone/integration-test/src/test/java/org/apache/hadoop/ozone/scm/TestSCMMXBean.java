@@ -20,30 +20,35 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.ContainerStat;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.TabularData;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  *
@@ -110,42 +115,87 @@ public class TestSCMMXBean {
       assertEquals("nodeID", key);
       assertEquals(stat.toJsonString(), value);
     }
+
+    boolean inSafeMode = (boolean) mbs.getAttribute(bean,
+        "InSafeMode");
+    assertEquals(scm.isInSafeMode(), inSafeMode);
+
+    double containerThreshold = (double) mbs.getAttribute(bean,
+        "SafeModeCurrentContainerThreshold");
+    assertEquals(scm.getCurrentContainerThreshold(), containerThreshold, 0);
   }
 
   @Test
-  public void testSCMNodeManagerMXBean() throws Exception {
-    final NodeManager scmNm = scm.getScmNodeManager();
+  public void testSCMContainerStateCount() throws Exception {
+
     ObjectName bean = new ObjectName(
-        "Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo");
+        "Hadoop:service=StorageContainerManager,"
+            + "name=StorageContainerManagerInfo,"
+            + "component=ServerRuntime");
+    TabularData data = (TabularData) mbs.getAttribute(
+        bean, "ContainerStateCount");
+    Map<String, Integer> containerStateCount = scm.getContainerStateCount();
+    verifyEquals(data, containerStateCount);
 
-    Integer minChillNodes = (Integer)mbs.getAttribute(bean,
-        "MinimumChillModeNodes");
-    assertEquals(scmNm.getMinimumChillModeNodes(),
-        minChillNodes.intValue());
+    // Do some changes like allocate containers and change the container states
+    ContainerManager scmContainerManager = scm.getContainerManager();
 
-    boolean isOutOfChillMode = (boolean)mbs.getAttribute(bean,
-        "OutOfChillMode");
-    assertEquals(scmNm.isOutOfChillMode(), isOutOfChillMode);
+    List<ContainerInfo> containerInfoList = new ArrayList<>();
+    for (int i=0; i < 10; i++) {
+      containerInfoList.add(scmContainerManager.allocateContainer(HddsProtos
+          .ReplicationType.STAND_ALONE, HddsProtos.ReplicationFactor.ONE,
+          UUID.randomUUID().toString()));
+    }
+    long containerID;
+    for (int i=0; i < 10; i++) {
+      if (i % 2 == 0) {
+        containerID = containerInfoList.get(i).getContainerID();
+        scmContainerManager.updateContainerState(
+            new ContainerID(containerID), HddsProtos.LifeCycleEvent.FINALIZE);
+        assertEquals(scmContainerManager.getContainer(new ContainerID(
+            containerID)).getState(), HddsProtos.LifeCycleState.CLOSING);
+      } else {
+        containerID = containerInfoList.get(i).getContainerID();
+        scmContainerManager.updateContainerState(
+            new ContainerID(containerID), HddsProtos.LifeCycleEvent.FINALIZE);
+        scmContainerManager.updateContainerState(
+            new ContainerID(containerID), HddsProtos.LifeCycleEvent.CLOSE);
+        assertEquals(scmContainerManager.getContainer(new ContainerID(
+            containerID)).getState(), HddsProtos.LifeCycleState.CLOSED);
+      }
 
-    String chillStatus = (String)mbs.getAttribute(bean,
-        "ChillModeStatus");
-    assertEquals(scmNm.getChillModeStatus(), chillStatus);
+    }
 
-    TabularData nodeCountObj = (TabularData)mbs.getAttribute(bean,
-        "NodeCount");
-    verifyEquals(nodeCountObj, scm.getScmNodeManager().getNodeCount());
+    data = (TabularData) mbs.getAttribute(
+        bean, "ContainerStateCount");
+    containerStateCount = scm.getContainerStateCount();
+
+    containerStateCount.forEach((k, v) -> {
+      if(k == HddsProtos.LifeCycleState.CLOSING.toString()) {
+        assertEquals((int)v, 5);
+      } else if (k == HddsProtos.LifeCycleState.CLOSED.toString()) {
+        assertEquals((int)v, 5);
+      } else  {
+        // Remaining all container state count should be zero.
+        assertEquals((int)v, 0);
+      }
+    });
+
+    verifyEquals(data, containerStateCount);
+
   }
+
 
   /**
    * An internal function used to compare a TabularData returned
    * by JMX with the expected data in a Map.
    */
-  private void verifyEquals(TabularData data1,
-      Map<String, Integer> data2) {
-    if (data1 == null || data2 == null) {
+  private void verifyEquals(TabularData actualData,
+      Map<String, Integer> expectedData) {
+    if (actualData == null || expectedData == null) {
       fail("Data should not be null.");
     }
-    for (Object obj : data1.values()) {
+    for (Object obj : actualData.values()) {
       // Each TabularData is a set of CompositeData
       assertTrue(obj instanceof CompositeData);
       CompositeData cds = (CompositeData) obj;
@@ -154,8 +204,9 @@ public class TestSCMMXBean {
       String key = it.next().toString();
       String value = it.next().toString();
       int num = Integer.parseInt(value);
-      assertTrue(data2.containsKey(key));
-      assertEquals(data2.get(key).intValue(), num);
+      assertTrue(expectedData.containsKey(key));
+      assertEquals(expectedData.remove(key).intValue(), num);
     }
+    assertTrue(expectedData.isEmpty());
   }
 }

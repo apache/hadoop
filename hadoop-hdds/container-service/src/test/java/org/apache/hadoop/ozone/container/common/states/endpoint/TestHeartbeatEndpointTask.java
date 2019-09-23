@@ -77,7 +77,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertFalse(heartbeat.hasNodeReport());
     Assert.assertFalse(heartbeat.hasContainerReport());
-    Assert.assertFalse(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() == 0);
     Assert.assertFalse(heartbeat.hasContainerActions());
   }
 
@@ -108,7 +108,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertTrue(heartbeat.hasNodeReport());
     Assert.assertFalse(heartbeat.hasContainerReport());
-    Assert.assertFalse(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() == 0);
     Assert.assertFalse(heartbeat.hasContainerActions());
   }
 
@@ -139,7 +139,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertFalse(heartbeat.hasNodeReport());
     Assert.assertTrue(heartbeat.hasContainerReport());
-    Assert.assertFalse(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() == 0);
     Assert.assertFalse(heartbeat.hasContainerActions());
   }
 
@@ -170,7 +170,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertFalse(heartbeat.hasNodeReport());
     Assert.assertFalse(heartbeat.hasContainerReport());
-    Assert.assertTrue(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() != 0);
     Assert.assertFalse(heartbeat.hasContainerActions());
   }
 
@@ -201,7 +201,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertFalse(heartbeat.hasNodeReport());
     Assert.assertFalse(heartbeat.hasContainerReport());
-    Assert.assertFalse(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() == 0);
     Assert.assertTrue(heartbeat.hasContainerActions());
   }
 
@@ -235,7 +235,7 @@ public class TestHeartbeatEndpointTask {
     Assert.assertTrue(heartbeat.hasDatanodeDetails());
     Assert.assertTrue(heartbeat.hasNodeReport());
     Assert.assertTrue(heartbeat.hasContainerReport());
-    Assert.assertTrue(heartbeat.hasCommandStatusReport());
+    Assert.assertTrue(heartbeat.getCommandStatusReportsCount() != 0);
     Assert.assertTrue(heartbeat.hasContainerActions());
   }
 

@@ -88,6 +88,12 @@ package org.apache.hadoop.ozone.audit;
  * It will generate a message formatted as:
  * user=xxx ip=xxx op=XXXX_XXXX {key=val, key1=val1..} ret=XXXXXX
  *
+ * *** Auditor ***
+ * Interface to mark an actor class as Auditor
+ * Must be implemented by class where we want to log audit events
+ * Implementing class must override and implement methods
+ * buildAuditMessageForSuccess and buildAuditMessageForFailure.
+ *
  * ****************************************************************************
  *                              Usage
  * ****************************************************************************
@@ -99,12 +105,12 @@ package org.apache.hadoop.ozone.audit;
  *
  * 3. Log Read/Write and Success/Failure event as needed.
  * Example
- * AUDIT.logWriteSuccess(Level level, AuditMessage msg)
+ * AUDIT.logWriteSuccess(buildAuditMessageForSuccess(params))
  *
- * If logging is done without specifying Level, then Level implicitly
- * defaults to INFO for xxxxSuccess() and ERROR for xxxxFailure()
- * AUDIT.logWriteSuccess(AuditMessage msg)
- * AUDIT.logWriteFailure(AuditMessage msg)
+ * 4. Log Level implicitly defaults to INFO for xxxxSuccess() and ERROR for
+ * xxxxFailure()
+ * AUDIT.logWriteSuccess(buildAuditMessageForSuccess(params))
+ * AUDIT.logWriteFailure(buildAuditMessageForSuccess(params))
  *
  * See sample invocations in src/test in the following class:
  * org.apache.hadoop.ozone.audit.TestOzoneAuditLogger

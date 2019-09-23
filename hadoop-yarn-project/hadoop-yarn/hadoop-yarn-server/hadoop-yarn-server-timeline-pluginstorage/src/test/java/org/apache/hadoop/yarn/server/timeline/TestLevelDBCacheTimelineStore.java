@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 
@@ -44,6 +46,17 @@ public class TestLevelDBCacheTimelineStore extends TimelineStoreTestUtils {
 
   public TimelineStore getTimelineStore() {
     return store;
+  }
+
+  @Test
+  public void testDefaultConstructor() {
+    TimelineStore store = null;
+    try {
+      store = ReflectionUtils.newInstance(LevelDBCacheTimelineStore.class,
+          new YarnConfiguration());
+    } finally {
+      assertNotNull("LevelDBCacheTimelineStore failed to instantiate", store);
+    }
   }
 
   @Test

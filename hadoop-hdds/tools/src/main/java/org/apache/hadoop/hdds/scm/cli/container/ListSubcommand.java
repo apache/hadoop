@@ -24,7 +24,7 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import org.slf4j.Logger;
@@ -52,7 +52,7 @@ public class ListSubcommand implements Callable<Void> {
 
   @Option(names = {"-s", "--start"},
       description = "Container id to start the iteration", required = true)
-  private long startId;
+  private long startId = 1;
 
   @Option(names = {"-c", "--count"},
       description = "Maximum number of containers to list",

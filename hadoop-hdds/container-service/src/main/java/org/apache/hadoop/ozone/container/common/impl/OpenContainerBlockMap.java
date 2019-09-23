@@ -22,7 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,9 +33,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 /**
- * Map: containerId -> (localId -> {@link KeyData}).
+ * Map: containerId {@literal ->} (localId {@literal ->} {@link BlockData}).
  * The outer container map does not entail locking for a better performance.
- * The inner {@link KeyDataMap} is synchronized.
+ * The inner {@link BlockDataMap} is synchronized.
  *
  * This class will maintain list of open keys per container when closeContainer
  * command comes, it should autocommit all open keys of a open container before
@@ -43,16 +43,16 @@ import java.util.function.Function;
  */
 public class OpenContainerBlockMap {
   /**
-   * Map: localId -> KeyData.
+   * Map: localId {@literal ->} BlockData.
    *
    * In order to support {@link #getAll()}, the update operations are
    * synchronized.
    */
-  static class KeyDataMap {
-    private final ConcurrentMap<Long, KeyData> blocks =
+  static class BlockDataMap {
+    private final ConcurrentMap<Long, BlockData> blocks =
         new ConcurrentHashMap<>();
 
-    KeyData get(long localId) {
+    BlockData get(long localId) {
       return blocks.get(localId);
     }
 
@@ -61,12 +61,12 @@ public class OpenContainerBlockMap {
       return blocks.size();
     }
 
-    synchronized KeyData computeIfAbsent(
-        long localId, Function<Long, KeyData> f) {
+    synchronized BlockData computeIfAbsent(
+        long localId, Function<Long, BlockData> f) {
       return blocks.computeIfAbsent(localId, f);
     }
 
-    synchronized List<KeyData> getAll() {
+    synchronized List<BlockData> getAll() {
       return new ArrayList<>(blocks.values());
     }
   }
@@ -79,7 +79,7 @@ public class OpenContainerBlockMap {
    *
    * For now, we will track all open blocks of a container in the blockMap.
    */
-  private final ConcurrentMap<Long, KeyDataMap> containers =
+  private final ConcurrentMap<Long, BlockDataMap> containers =
       new ConcurrentHashMap<>();
 
   /**
@@ -94,9 +94,9 @@ public class OpenContainerBlockMap {
 
   public void addChunk(BlockID blockID, ChunkInfo info) {
     Preconditions.checkNotNull(info);
-    containers.computeIfAbsent(blockID.getContainerID(), id -> new KeyDataMap())
-        .computeIfAbsent(blockID.getLocalID(), id -> new KeyData(blockID))
-        .addChunk(info);
+    containers.computeIfAbsent(blockID.getContainerID(),
+        id -> new BlockDataMap()).computeIfAbsent(blockID.getLocalID(),
+          id -> new BlockData(blockID)).addChunk(info);
   }
 
   /**
@@ -113,21 +113,21 @@ public class OpenContainerBlockMap {
   }
 
   /**
-   * Returns the list of open to the openContainerBlockMap.
+   * Returns the list of open blocks to the openContainerBlockMap.
    * @param containerId container id
-   * @return List of open Keys(blocks)
+   * @return List of open blocks
    */
-  public List<KeyData> getOpenKeys(long containerId) {
+  public List<BlockData> getOpenBlocks(long containerId) {
     return Optional.ofNullable(containers.get(containerId))
-        .map(KeyDataMap::getAll)
+        .map(BlockDataMap::getAll)
         .orElseGet(Collections::emptyList);
   }
 
   /**
    * removes the block from the block map.
-   * @param blockID
+   * @param blockID - block ID
    */
-  public void removeFromKeyMap(BlockID blockID) {
+  public void removeFromBlockMap(BlockID blockID) {
     Preconditions.checkNotNull(blockID);
     containers.computeIfPresent(blockID.getContainerID(), (containerId, blocks)
         -> blocks.removeAndGetSize(blockID.getLocalID()) == 0? null: blocks);
@@ -136,16 +136,16 @@ public class OpenContainerBlockMap {
   /**
    * Returns true if the block exists in the map, false otherwise.
    *
-   * @param blockID
+   * @param blockID  - Block ID.
    * @return True, if it exists, false otherwise
    */
   public boolean checkIfBlockExists(BlockID blockID) {
-    KeyDataMap keyDataMap = containers.get(blockID.getContainerID());
+    BlockDataMap keyDataMap = containers.get(blockID.getContainerID());
     return keyDataMap != null && keyDataMap.get(blockID.getLocalID()) != null;
   }
 
   @VisibleForTesting
-  KeyDataMap getKeyDataMap(long containerId) {
+  BlockDataMap getBlockDataMap(long containerId) {
     return containers.get(containerId);
   }
 }

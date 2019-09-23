@@ -25,6 +25,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -52,7 +53,7 @@ public class TestApps {
     String badEnv = "1,,2=a=b,3=a=,4==,5==a,==,c-3=3,=";
     environment.clear();
     Apps.setEnvFromInputString(environment, badEnv, File.pathSeparator);
-    assertEquals(environment.size(), 0);
+    assertThat(environment).isEmpty();
 
     // Test "=" in the value part
     environment.clear();

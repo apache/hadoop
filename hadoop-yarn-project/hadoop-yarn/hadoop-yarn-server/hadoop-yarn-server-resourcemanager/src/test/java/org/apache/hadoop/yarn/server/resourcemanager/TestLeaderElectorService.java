@@ -31,9 +31,7 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
@@ -58,8 +56,7 @@ public class TestLeaderElectorService {
   TestingCluster zkCluster;
   @Before
   public void setUp() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.INFO);
+    GenericTestUtils.setRootLogLevel(Level.INFO);
     conf = new Configuration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.setBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR, true);

@@ -19,15 +19,21 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto
+    .ContainerProtos.ContainerType;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -35,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 
+import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
 import org.apache.hadoop.ozone.container.replication
     .OnDemandContainerReplicationSource;
@@ -45,60 +52,94 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 
 /**
- * Ozone main class sets up the network server and initializes the container
+ * Ozone main class sets up the network servers and initializes the container
  * layer.
  */
 public class OzoneContainer {
 
-  public static final Logger LOG = LoggerFactory.getLogger(
+  private static final Logger LOG = LoggerFactory.getLogger(
       OzoneContainer.class);
 
   private final HddsDispatcher hddsDispatcher;
-  private final DatanodeDetails dnDetails;
+  private final Map<ContainerType, Handler> handlers;
   private final OzoneConfiguration config;
   private final VolumeSet volumeSet;
   private final ContainerSet containerSet;
-  private final XceiverServerSpi[] server;
+  private final XceiverServerSpi writeChannel;
+  private final XceiverServerSpi readChannel;
+  private final ContainerController controller;
+  private ContainerMetadataScanner metadataScanner;
+  private List<ContainerDataScanner> dataScanners;
+  private final BlockDeletingService blockDeletingService;
 
   /**
    * Construct OzoneContainer object.
    * @param datanodeDetails
    * @param conf
+   * @param certClient
    * @throws DiskOutOfSpaceException
    * @throws IOException
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
-      conf, StateContext context) throws IOException {
-    this.dnDetails = datanodeDetails;
+      conf, StateContext context, CertificateClient certClient)
+      throws IOException {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
+    this.metadataScanner = null;
+
     buildContainerSet();
-    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
+    final ContainerMetrics metrics = ContainerMetrics.create(conf);
+    this.handlers = Maps.newHashMap();
+    for (ContainerType containerType : ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, context, containerSet, volumeSet, metrics));
+    }
+    this.hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
+        handlers, context, metrics);
+
+    /*
+     * ContainerController is the control plane
+     * XceiverServerRatis is the write channel
+     * XceiverServerGrpc is the read channel
+     */
+    this.controller = new ContainerController(containerSet, handlers);
+    this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
+        datanodeDetails, config, hddsDispatcher, controller, certClient,
         context);
-    server = new XceiverServerSpi[]{
-        new XceiverServerGrpc(datanodeDetails, this.config, this
-            .hddsDispatcher, createReplicationService()),
-        XceiverServerRatis.newXceiverServerRatis(datanodeDetails, this
-            .config, hddsDispatcher)
-    };
-
-
+    this.readChannel = new XceiverServerGrpc(
+        datanodeDetails, config, hddsDispatcher, certClient,
+        createReplicationService());
+    long svcInterval = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    long serviceTimeout = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    this.blockDeletingService =
+        new BlockDeletingService(this, svcInterval, serviceTimeout,
+            TimeUnit.MILLISECONDS, config);
   }
 
   private GrpcReplicationService createReplicationService() {
     return new GrpcReplicationService(
-        new OnDemandContainerReplicationSource(containerSet));
+        new OnDemandContainerReplicationSource(controller));
   }
 
   /**
    * Build's container map.
    */
-  public void buildContainerSet() {
+  private void buildContainerSet() {
     Iterator<HddsVolume> volumeSetIterator = volumeSet.getVolumesList()
         .iterator();
     ArrayList<Thread> volumeThreads = new ArrayList<Thread>();
@@ -107,7 +148,6 @@ public class OzoneContainer {
     // And also handle disk failure tolerance need to be added
     while (volumeSetIterator.hasNext()) {
       HddsVolume volume = volumeSetIterator.next();
-      File hddsVolumeRootDir = volume.getHddsRootDir();
       Thread thread = new Thread(new ContainerReader(volumeSet, volume,
           containerSet, config));
       thread.start();
@@ -124,17 +164,63 @@ public class OzoneContainer {
 
   }
 
+
+  /**
+   * Start background daemon thread for performing container integrity checks.
+   */
+  private void startContainerScrub() {
+    ContainerScrubberConfiguration c = config.getObject(
+        ContainerScrubberConfiguration.class);
+    boolean enabled = c.isEnabled();
+    long metadataScanInterval = c.getMetadataScanInterval();
+    long bytesPerSec = c.getBandwidthPerVolume();
+
+    if (!enabled) {
+      LOG.info("Background container scanner has been disabled.");
+    } else {
+      if (this.metadataScanner == null) {
+        this.metadataScanner = new ContainerMetadataScanner(config, controller,
+            metadataScanInterval);
+      }
+      this.metadataScanner.start();
+
+      dataScanners = new ArrayList<>();
+      for (HddsVolume v : volumeSet.getVolumesList()) {
+        ContainerDataScanner s = new ContainerDataScanner(config, controller,
+            v, bytesPerSec);
+        s.start();
+        dataScanners.add(s);
+      }
+    }
+  }
+
+  /**
+   * Stop the scanner thread and wait for thread to die.
+   */
+  private void stopContainerScrub() {
+    if (metadataScanner == null) {
+      return;
+    }
+    metadataScanner.shutdown();
+    metadataScanner = null;
+    for (ContainerDataScanner s : dataScanners) {
+      s.shutdown();
+    }
+  }
+
   /**
    * Starts serving requests to ozone container.
    *
    * @throws IOException
    */
-  public void start() throws IOException {
+  public void start(String scmId) throws IOException {
     LOG.info("Attempting to start container services.");
-    for (XceiverServerSpi serverinstance : server) {
-      serverinstance.start();
-    }
+    startContainerScrub();
+    writeChannel.start();
+    readChannel.start();
     hddsDispatcher.init();
+    hddsDispatcher.setScmId(scmId);
+    blockDeletingService.start();
   }
 
   /**
@@ -143,10 +229,14 @@ public class OzoneContainer {
   public void stop() {
     //TODO: at end of container IO integration work.
     LOG.info("Attempting to stop container services.");
-    for(XceiverServerSpi serverinstance: server) {
-      serverinstance.stop();
-    }
+    stopContainerScrub();
+    writeChannel.stop();
+    readChannel.stop();
+    this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
+    volumeSet.shutdown();
+    blockDeletingService.shutdown();
+    ContainerMetrics.remove();
   }
 
 
@@ -157,103 +247,25 @@ public class OzoneContainer {
   /**
    * Returns container report.
    * @return - container report.
-   * @throws IOException
    */
-  public StorageContainerDatanodeProtocolProtos.ContainerReportsProto
-      getContainerReport() throws IOException {
-    return this.containerSet.getContainerReport();
+
+  public PipelineReportsProto getPipelineReport() {
+    PipelineReportsProto.Builder pipelineReportsProto =
+        PipelineReportsProto.newBuilder();
+    pipelineReportsProto.addAllPipelineReport(writeChannel.getPipelineReport());
+    return pipelineReportsProto.build();
   }
 
-  /**
-   * Submit ContainerRequest.
-   * @param request
-   * @param replicationType
-   * @param pipelineID
-   * @throws IOException
-   */
-  public void submitContainerRequest(
-      ContainerProtos.ContainerCommandRequestProto request,
-      HddsProtos.ReplicationType replicationType,
-      HddsProtos.PipelineID pipelineID) throws IOException {
-    XceiverServerSpi serverInstance;
-    long containerId = getContainerIdForCmd(request);
-    if (replicationType == HddsProtos.ReplicationType.RATIS) {
-      serverInstance = getRatisSerer();
-      Preconditions.checkNotNull(serverInstance);
-      serverInstance.submitRequest(request, pipelineID);
-      LOG.info("submitting {} request over RATIS server for container {}",
-          request.getCmdType(), containerId);
-    } else {
-      serverInstance = getStandaAloneSerer();
-      Preconditions.checkNotNull(serverInstance);
-      getStandaAloneSerer().submitRequest(request, pipelineID);
-      LOG.info(
-          "submitting {} request over STAND_ALONE server for container {}",
-          request.getCmdType(), containerId);
-    }
-
+  public XceiverServerSpi getWriteChannel() {
+    return writeChannel;
   }
 
-  private long getContainerIdForCmd(
-      ContainerProtos.ContainerCommandRequestProto request)
-      throws IllegalArgumentException {
-    ContainerProtos.Type type = request.getCmdType();
-    switch (type) {
-    case CloseContainer:
-      return request.getContainerID();
-      // Right now, we handle only closeContainer via queuing it over the
-      // over the XceiVerServer. For all other commands we throw Illegal
-      // argument exception here. Will need to extend the switch cases
-      // in case we want add another commands here.
-    default:
-      throw new IllegalArgumentException("Cmd " + request.getCmdType()
-          + " not supported over HearBeat Response");
-    }
+  public XceiverServerSpi getReadChannel() {
+    return readChannel;
   }
 
-  private XceiverServerSpi getRatisSerer() {
-    for (XceiverServerSpi serverInstance : server) {
-      if (serverInstance instanceof XceiverServerRatis) {
-        return serverInstance;
-      }
-    }
-    return null;
-  }
-
-  private XceiverServerSpi getStandaAloneSerer() {
-    for (XceiverServerSpi serverInstance : server) {
-      if (!(serverInstance instanceof XceiverServerRatis)) {
-        return serverInstance;
-      }
-    }
-    return null;
-  }
-
-  private int getPortbyType(HddsProtos.ReplicationType replicationType) {
-    for (XceiverServerSpi serverinstance : server) {
-      if (serverinstance.getServerType() == replicationType) {
-        return serverinstance.getIPCPort();
-      }
-    }
-    return INVALID_PORT;
-  }
-
-  /**
-   * Returns the container server IPC port.
-   *
-   * @return Container server IPC port.
-   */
-  public int getContainerServerPort() {
-    return getPortbyType(HddsProtos.ReplicationType.STAND_ALONE);
-  }
-
-  /**
-   * Returns the Ratis container Server IPC port.
-   *
-   * @return Ratis port.
-   */
-  public int getRatisContainerServerPort() {
-    return getPortbyType(HddsProtos.ReplicationType.RATIS);
+  public ContainerController getController() {
+    return controller;
   }
 
   /**

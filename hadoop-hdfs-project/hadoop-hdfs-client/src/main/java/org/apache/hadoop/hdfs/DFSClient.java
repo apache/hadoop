@@ -61,6 +61,7 @@ import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -92,6 +93,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -131,6 +133,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
@@ -204,7 +207,7 @@ import com.google.common.net.InetAddresses;
  ********************************************************/
 @InterfaceAudience.Private
 public class DFSClient implements java.io.Closeable, RemotePeerFactory,
-    DataEncryptionKeyFactory {
+    DataEncryptionKeyFactory, KeyProviderTokenIssuer {
   public static final Logger LOG = LoggerFactory.getLogger(DFSClient.class);
 
   private final Configuration conf;
@@ -369,7 +372,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_READS) == null) ?
             null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_READS, false);
     Long readahead = (conf.get(DFS_CLIENT_CACHE_READAHEAD) == null) ?
-        null : conf.getLong(DFS_CLIENT_CACHE_READAHEAD, 0);
+        null : conf.getLongBytes(DFS_CLIENT_CACHE_READAHEAD, 0);
     this.serverDefaultsValidityPeriod =
             conf.getLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
       DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT);
@@ -681,6 +684,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @InterfaceAudience.LimitedPrivate( { "HDFS" })
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
+  }
+
+  @Override
+  public Token<?>getDelegationToken(String renewer) throws IOException {
+    return getDelegationToken(renewer == null ? null : new Text(renewer));
   }
 
   /**
@@ -1053,8 +1061,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
-   * default <code>replication</code> and <code>blockSize<code> and null <code>
-   * progress</code>.
+   * default <code>replication</code> and <code>blockSize</code> and null
+   * <code>progress</code>.
    */
   public OutputStream create(String src, boolean overwrite)
       throws IOException {
@@ -1064,7 +1072,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
-   * default <code>replication</code> and <code>blockSize<code>.
+   * default <code>replication</code> and <code>blockSize</code>.
    */
   public OutputStream create(String src,
       boolean overwrite, Progressable progress) throws IOException {
@@ -1203,13 +1211,31 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       long blockSize, Progressable progress, int buffersize,
       ChecksumOpt checksumOpt, InetSocketAddress[] favoredNodes,
       String ecPolicyName) throws IOException {
+    return create(src, permission, flag, createParent, replication, blockSize,
+        progress, buffersize, checksumOpt, favoredNodes, ecPolicyName, null);
+  }
+
+  /**
+   * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
+   * addition of Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
+   * with the storagePolicy that is used to specify a specific storage policy
+   * instead of inheriting any policy from this new file's parent directory.
+   * This policy will be persisted in HDFS. A value of null means inheriting
+   * parent groups' whatever policy.
+   */
+  public DFSOutputStream create(String src, FsPermission permission,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      ChecksumOpt checksumOpt, InetSocketAddress[] favoredNodes,
+      String ecPolicyName, String storagePolicy)
+      throws IOException {
     checkOpen();
     final FsPermission masked = applyUMask(permission);
     LOG.debug("{}: masked={}", src, masked);
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
         dfsClientConf.createChecksum(checksumOpt),
-        getFavoredNodesStr(favoredNodes), ecPolicyName);
+        getFavoredNodesStr(favoredNodes), ecPolicyName, storagePolicy);
     beginFileLease(result.getFileId(), result);
     return result;
   }
@@ -1263,7 +1289,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, checksum,
-          null, null);
+          null, null, null);
     }
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1872,7 +1898,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return PBHelperClient.convert(
           reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
-      IOUtilsClient.cleanup(null, pair.in, pair.out);
+      IOUtilsClient.cleanupWithLogger(LOG, pair.in, pair.out);
     }
   }
 
@@ -2157,6 +2183,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       String fromSnapshot, String toSnapshot) throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
+      Preconditions.checkArgument(fromSnapshot != null,
+          "null fromSnapshot");
+      Preconditions.checkArgument(toSnapshot != null,
+          "null toSnapshot");
       return namenode
           .getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
     } catch (RemoteException re) {
@@ -2750,7 +2780,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,
           UnresolvedPathException.class,
-          FileNotFoundException.class);
+          FileNotFoundException.class, NoECPolicySetException.class);
     }
   }
 
@@ -2933,7 +2963,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return peer;
     } finally {
       if (!success) {
-        IOUtilsClient.cleanup(LOG, peer);
+        IOUtilsClient.cleanupWithLogger(LOG, peer);
         IOUtils.closeSocket(sock);
       }
     }
@@ -3024,7 +3054,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  URI getKeyProviderUri() throws IOException {
+  @Override
+  public URI getKeyProviderUri() throws IOException {
     return HdfsKMSUtil.getKeyProviderUri(ugi, namenodeUri,
         getServerDefaults().getKeyProviderUri(), conf);
   }
@@ -3168,5 +3199,31 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     checkOpen();
     return new OpenFilesIterator(namenode, tracer, openFilesTypes, path);
+  }
+
+  /**
+   * A blocking call to wait for Observer NameNode state ID to reach to the
+   * current client state ID. Current client state ID is given by the client
+   * alignment context.
+   * An assumption is that client alignment context has the state ID set at this
+   * point. This is become ObserverReadProxyProvider sets up the initial state
+   * ID when it is being created.
+   *
+   * @throws IOException
+   */
+  public void msync() throws IOException {
+    namenode.msync();
+  }
+
+  /**
+   * An unblocking call to get the HA service state of NameNode.
+   *
+   * @return HA state of NameNode
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    return namenode.getHAServiceState();
   }
 }

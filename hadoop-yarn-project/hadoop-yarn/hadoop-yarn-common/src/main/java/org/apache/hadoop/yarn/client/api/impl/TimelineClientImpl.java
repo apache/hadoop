@@ -28,8 +28,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +58,8 @@ import com.sun.jersey.api.client.Client;
 @Evolving
 public class TimelineClientImpl extends TimelineClient {
 
-  private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineClientImpl.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
 

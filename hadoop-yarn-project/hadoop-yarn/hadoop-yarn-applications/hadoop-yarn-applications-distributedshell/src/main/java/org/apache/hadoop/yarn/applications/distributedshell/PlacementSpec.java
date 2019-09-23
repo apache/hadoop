@@ -37,14 +37,30 @@ public class PlacementSpec {
       LoggerFactory.getLogger(PlacementSpec.class);
 
   public final String sourceTag;
-  public final int numContainers;
   public final PlacementConstraint constraint;
+  private int numContainers;
 
   public PlacementSpec(String sourceTag, int numContainers,
       PlacementConstraint constraint) {
     this.sourceTag = sourceTag;
     this.numContainers = numContainers;
     this.constraint = constraint;
+  }
+
+  /**
+   * Get the number of container for this spec.
+   * @return container count
+   */
+  public int getNumContainers() {
+    return numContainers;
+  }
+
+  /**
+   * Set number of containers for this spec.
+   * @param numContainers number of containers.
+   */
+  public void setNumContainers(int numContainers) {
+    this.numContainers = numContainers;
   }
 
   // Placement specification should be of the form:
@@ -71,6 +87,7 @@ public class PlacementSpec {
   public static Map<String, PlacementSpec> parse(String specs)
       throws IllegalArgumentException {
     LOG.info("Parsing Placement Specs: [{}]", specs);
+
     Map<String, PlacementSpec> pSpecs = new HashMap<>();
     Map<SourceTags, PlacementConstraint> parsed;
     try {
@@ -79,8 +96,12 @@ public class PlacementSpec {
           parsed.entrySet()) {
         LOG.info("Parsed source tag: {}, number of allocations: {}",
             entry.getKey().getTag(), entry.getKey().getNumOfAllocations());
-        LOG.info("Parsed constraint: {}", entry.getValue()
-            .getConstraintExpr().getClass().getSimpleName());
+        if (entry.getValue() != null) {
+          LOG.info("Parsed constraint: {}", entry.getValue()
+              .getConstraintExpr().getClass().getSimpleName());
+        } else {
+          LOG.info("Parsed constraint Empty");
+        }
         pSpecs.put(entry.getKey().getTag(), new PlacementSpec(
             entry.getKey().getTag(),
             entry.getKey().getNumOfAllocations(),

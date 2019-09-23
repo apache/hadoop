@@ -20,16 +20,20 @@ package org.apache.hadoop.hdds.scm.protocolPB;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .ScmBlockLocationProtocolService;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * Protocol used from an HDFS node to StorageContainerManager.  This extends the
  * Protocol Buffers service interface to add Hadoop-specific annotations.
  */
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.ScmBlockLocationProtocol",
+    "org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol",
     protocolVersion = 1)
 @InterfaceAudience.Private
+@KerberosInfo(
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ScmBlockLocationProtocolPB
     extends ScmBlockLocationProtocolService.BlockingInterface {
 }

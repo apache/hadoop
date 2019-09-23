@@ -30,6 +30,7 @@ import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
@@ -182,6 +183,8 @@ class BlockSender implements java.io.Closeable {
   // would risk sending too much unnecessary data. 512 (1 disk sector)
   // is likely to result in minimal extra IO.
   private static final long CHUNK_SIZE = 512;
+
+  private static final String EIO_ERROR = "Input/output error";
   /**
    * Constructor
    * 
@@ -258,7 +261,7 @@ class BlockSender implements java.io.Closeable {
       }
       if (replica.getState() == ReplicaState.RBW) {
         final ReplicaInPipeline rbw = (ReplicaInPipeline) replica;
-        waitForMinLength(rbw, startOffset + length);
+        rbw.waitForMinLength(startOffset + length, 3, TimeUnit.SECONDS);
         chunkChecksum = rbw.getLastChecksumAndDataLen();
       }
       if (replica instanceof FinalizedReplica) {
@@ -323,13 +326,22 @@ class BlockSender implements java.io.Closeable {
             // storage.  The header is important for determining the checksum
             // type later when lazy persistence copies the block to non-transient
             // storage and computes the checksum.
+            int expectedHeaderSize = BlockMetadataHeader.getHeaderSize();
             if (!replica.isOnTransientStorage() &&
-                metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
+                metaIn.getLength() >= expectedHeaderSize) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, IO_FILE_BUFFER_SIZE));
-  
+
               csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
               keepMetaInOpen = true;
+            } else if (!replica.isOnTransientStorage() &&
+                metaIn.getLength() < expectedHeaderSize) {
+              LOG.warn("The meta file length {} is less than the expected " +
+                  "header length {}, indicating the meta file is corrupt",
+                  metaIn.getLength(), expectedHeaderSize);
+              throw new CorruptMetaHeaderException("The meta file length "+
+                  metaIn.getLength()+" is less than the expected length "+
+                  expectedHeaderSize);
             }
           } else {
             LOG.warn("Could not find metadata file for " + block);
@@ -493,30 +505,6 @@ class BlockSender implements java.io.Closeable {
     }
     return replica;
   }
-  
-  /**
-   * Wait for rbw replica to reach the length
-   * @param rbw replica that is being written to
-   * @param len minimum length to reach
-   * @throws IOException on failing to reach the len in given wait time
-   */
-  private static void waitForMinLength(ReplicaInPipeline rbw, long len)
-      throws IOException {
-    // Wait for 3 seconds for rbw replica to reach the minimum length
-    for (int i = 0; i < 30 && rbw.getBytesOnDisk() < len; i++) {
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
-    }
-    long bytesOnDisk = rbw.getBytesOnDisk();
-    if (bytesOnDisk < len) {
-      throw new IOException(
-          String.format("Need %d bytes, but only %d bytes available", len,
-              bytesOnDisk));
-    }
-  }
 
   /**
    * Converts an IOExcpetion (not subclasses) to SocketException.
@@ -599,7 +587,14 @@ class BlockSender implements java.io.Closeable {
     
     int dataOff = checksumOff + checksumDataLen;
     if (!transferTo) { // normal transfer
-      ris.readDataFully(buf, dataOff, dataLen);
+      try {
+        ris.readDataFully(buf, dataOff, dataLen);
+      } catch (IOException ioe) {
+        if (ioe.getMessage().startsWith(EIO_ERROR)) {
+          throw new DiskFileCorruptException("A disk IO error occurred", ioe);
+        }
+        throw ioe;
+      }
 
       if (verifyChecksum) {
         verifyChecksum(buf, dataOff, dataLen, numChunks, checksumOff);
@@ -646,6 +641,13 @@ class BlockSender implements java.io.Closeable {
          * It was done here because the NIO throws an IOException for EPIPE.
          */
         String ioem = e.getMessage();
+        /*
+         * If we got an EIO when reading files or transferTo the client socket,
+         * it's very likely caused by bad disk track or other file corruptions.
+         */
+        if (ioem.startsWith(EIO_ERROR)) {
+          throw new DiskFileCorruptException("A disk IO error occurred", e);
+        }
         if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
           LOG.error("BlockSender.sendChunks() exception: ", e);
           datanode.getBlockScanner().markSuspectBlock(
@@ -682,16 +684,17 @@ class BlockSender implements java.io.Closeable {
           + " at offset " + offset + " for block " + block, e);
       ris.closeChecksumStream();
       if (corruptChecksumOk) {
-        if (checksumOffset < checksumLen) {
+        if (checksumLen > 0) {
           // Just fill the array with zeros.
-          Arrays.fill(buf, checksumOffset, checksumLen, (byte) 0);
+          Arrays.fill(buf, checksumOffset, checksumOffset + checksumLen,
+              (byte) 0);
         }
       } else {
         throw e;
       }
     }
   }
-  
+
   /**
    * Compute checksum for chunks and verify the checksum that is read from
    * the metadata file is correct.

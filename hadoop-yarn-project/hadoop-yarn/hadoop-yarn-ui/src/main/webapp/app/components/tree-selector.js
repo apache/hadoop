@@ -192,7 +192,8 @@ export default Ember.Component.extend({
       .style(
         "fill",
         function(d) {
-          const usedCapacity = getUsedCapacity(d.queueData.get("partitionMap"), this.filteredPartition);
+          const usedCapacity = getUsedCapacity(d.queueData, this.filteredPartition);
+
           if (usedCapacity <= 60.0) {
             return "#60cea5";
           } else if (usedCapacity <= 100.0) {
@@ -216,7 +217,8 @@ export default Ember.Component.extend({
       })
       .text(
         function(d) {
-          const usedCapacity = getUsedCapacity(d.queueData.get("partitionMap"), this.filteredPartition);
+          const usedCapacity = getUsedCapacity(d.queueData, this.filteredPartition);
+
           if (usedCapacity >= 100.0) {
             return usedCapacity.toFixed(0) + "%";
           } else {
@@ -372,6 +374,39 @@ export default Ember.Component.extend({
 });
 
 
-const getUsedCapacity = (partitionMap, filter=PARTITION_LABEL) => {
-  return partitionMap[filter].absoluteUsedCapacity;
+const getUsedCapacity = (queueData, filter=PARTITION_LABEL) => {
+
+  const type = queueData.get("type");
+  var result;
+
+  switch (type) {
+    case "capacity":
+      const partitionMap = queueData.get("partitionMap");
+      if (null == partitionMap || null == partitionMap[filter] || null == partitionMap[filter].absoluteUsedCapacity) {
+        result = 0.0;
+      } else {
+        result = partitionMap[filter].absoluteUsedCapacity;
+      }
+      break;
+
+    case "fair":
+       if (null == queueData.get("fairResources") || null == queueData.get("fairResources").memory || null == queueData.get("usedResources") || null == queueData.get("usedResources").memory || 0 == queueData.get("fairResources").memory) {
+         result = 0.0;
+       } else {
+         result = queueData.get("usedResources").memory / queueData.get("fairResources").memory * 100;
+       }
+      break;
+
+    case "fifo":
+       if (null == queueData.get("usedCapacity") || (null == queueData.get("capacity")) || (queueData.get("capacity") == 0)) {
+         result = 0.0;
+       } else {
+         result = queueData.get("usedCapacity") / queueData.get("capacity") * 100;
+       }
+       break;
+
+    default:
+      result = 0.0;
+  }
+  return result;
 };

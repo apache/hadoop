@@ -25,9 +25,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,9 +59,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -136,8 +134,8 @@ import com.google.common.collect.Sets;
  * A JUnit test for doing fsck.
  */
 public class TestFsck {
-  private static final Log LOG =
-      LogFactory.getLog(TestFsck.class.getName());
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestFsck.class.getName());
 
   static final String AUDITLOG_FILE =
       GenericTestUtils.getTempPath("TestFsck-audit.log");
@@ -166,18 +164,20 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
-  static String runFsck(Configuration conf, int expectedErrCode, 
+  public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
                         throws Exception {
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bStream, true);
-    GenericTestUtils.setLogLevel(FSPermissionChecker.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(
+        FSPermissionChecker.LOG, org.slf4j.event.Level.TRACE);
     int errCode = ToolRunner.run(new DFSck(conf, out), path);
     LOG.info("OUTPUT = " + bStream.toString());
     if (checkErrorCode) {
       assertEquals(expectedErrCode, errCode);
     }
-    GenericTestUtils.setLogLevel(FSPermissionChecker.LOG, Level.INFO);
+    GenericTestUtils.setLogLevel(
+        FSPermissionChecker.LOG, org.slf4j.event.Level.INFO);
     return bStream.toString();
   }
 
@@ -1353,7 +1353,7 @@ public class TestFsck {
     when(fsName.getBlockManager()).thenReturn(blockManager);
     when(fsName.getFSDirectory()).thenReturn(fsd);
     when(fsd.getFSNamesystem()).thenReturn(fsName);
-    when(fsd.resolvePath(anyObject(), anyString(), any(DirOp.class))).thenReturn(iip);
+    when(fsd.resolvePath(any(), anyString(), any(DirOp.class))).thenReturn(iip);
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
     NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,

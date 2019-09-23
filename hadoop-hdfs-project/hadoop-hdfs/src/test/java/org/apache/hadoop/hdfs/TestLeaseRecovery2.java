@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -62,7 +62,8 @@ import org.slf4j.event.Level;
 
 public class TestLeaseRecovery2 {
   
-  public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLeaseRecovery2.class);
   
   {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
@@ -170,7 +171,7 @@ public class TestLeaseRecovery2 {
     // set the soft limit to be 1 hour but recoverLease should
     // close the file immediately
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, LONG_LEASE_PERIOD);
-    int size = AppendTestUtil.nextInt(FILE_SIZE);
+    int size = AppendTestUtil.nextInt((int) BLOCK_SIZE);
     String filestr = "/testCloseWhileRecoverLease";
 
     AppendTestUtil.LOG.info("filestr=" + filestr);
@@ -561,17 +562,6 @@ public class TestLeaseRecovery2 {
     
     // set the hard limit to be 1 second 
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
-    
-    // Make sure lease recovery begins.
-    final String path = fileStr;
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        String holder =
-            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
-        return holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
-      }
-    }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 10);
 
     // Normally, the in-progress edit log would be finalized by
     // FSEditLog#endCurrentLogSegment.  For testing purposes, we
@@ -579,6 +569,18 @@ public class TestLeaseRecovery2 {
     FSEditLog spyLog = spy(cluster.getNameNode().getFSImage().getEditLog());
     doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
     DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
+
+    // Make sure lease recovery begins.
+    final String path = fileStr;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        String holder =
+            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
+        return holder!=null && holder
+            .startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+      }
+    }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 20);
 
     cluster.restartNameNode(false);
     

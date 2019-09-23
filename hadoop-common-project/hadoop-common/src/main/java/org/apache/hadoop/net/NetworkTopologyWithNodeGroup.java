@@ -168,7 +168,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
   }
 
   /** Add a leaf node
-   * Update node counter & rack counter if necessary
+   * Update node counter &amp; rack counter if necessary
    * @param node node to be added; can be null
    * @exception IllegalArgumentException if add a node to a leave 
    *                                     or node to be added is not a leaf
@@ -272,7 +272,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
 
   /**
    * Sort nodes array by their distances to <i>reader</i>.
-   * <p/>
+   * <p>
    * This is the same as {@link NetworkTopology#sortByDistance(Node, Node[],
    * int)} except with a four-level network topology which contains the
    * additional network distance of a "node group" which is between local and

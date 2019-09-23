@@ -18,11 +18,23 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
+import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -36,30 +48,29 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.ratis.RatisHelper;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
@@ -70,47 +81,38 @@ import static org.mockito.Mockito.mock;
  */
 @Ignore("Takes too long to run this test. Ignoring for time being.")
 public class TestContainerServer {
-  static final String TEST_DIR
-      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
+  static final String TEST_DIR = GenericTestUtils.getTestDir("dfs")
+      .getAbsolutePath() + File.separator;
+  private static final OzoneConfiguration CONF = new OzoneConfiguration();
+  private static CertificateClient caClient;
 
-  @Test
-  public void testPipeline() throws IOException {
-    EmbeddedChannel channel = null;
-    String containerName = OzoneUtils.getRequestID();
-    try {
-      channel = new EmbeddedChannel(new XceiverServerHandler(
-          new TestContainerDispatcher()));
-      ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(
-              ContainerTestHelper.getTestContainerID(),
-              ContainerTestHelper.createSingleNodePipeline());
-      channel.writeInbound(request);
-      Assert.assertTrue(channel.finish());
+  private GrpcReplicationService createReplicationService(
+      ContainerController containerController) {
+    return new GrpcReplicationService(
+        new OnDemandContainerReplicationSource(containerController));
+  }
 
-      Object responseObject = channel.readOutbound();
-      Assert.assertTrue(responseObject instanceof
-          ContainerCommandResponseProto);
-      ContainerCommandResponseProto  response =
-          (ContainerCommandResponseProto) responseObject;
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-    } finally {
-      if (channel != null) {
-        channel.close();
-      }
-    }
+  @BeforeClass
+  static public void setup() {
+    CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
+    caClient = new DNCertificateClient(new SecurityConfig(CONF));
   }
 
   @Test
   public void testClientServer() throws Exception {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    runTestClientServer(1,
-        (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-            pipeline.getLeader()
-                .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
-        XceiverClient::new,
-        (dn, conf) -> new XceiverServer(datanodeDetails, conf,
-            new TestContainerDispatcher()),
-        (dn, p) -> {});
+    ContainerSet containerSet = new ContainerSet();
+    ContainerController controller = new ContainerController(
+        containerSet, null);
+    runTestClientServer(1, (pipeline, conf) -> conf
+            .setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+                pipeline.getFirstNode()
+                    .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
+        XceiverClientGrpc::new,
+        (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
+            new TestContainerDispatcher(), caClient,
+            createReplicationService(controller)), (dn, p) -> {
+        });
   }
 
   @FunctionalInterface
@@ -138,16 +140,10 @@ public class TestContainerServer {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher);
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        caClient, null);
   }
-
-  static void initXceiverServerRatis(
-      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
-    final RaftPeer p = RatisHelper.toRaftPeer(dd);
-    final RaftClient client = RatisHelper.newRaftClient(rpc, p);
-    client.reinitialize(RatisHelper.newRaftGroup(pipeline), p.getId());
-  }
-
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
       throws Exception {
@@ -155,12 +151,12 @@ public class TestContainerServer {
         (pipeline, conf) -> RatisTestHelper.initRatisConf(rpc, conf),
         XceiverClientRatis::newXceiverClientRatis,
         TestContainerServer::newXceiverServerRatis,
-        (dn, p) -> initXceiverServerRatis(rpc, dn, p));
+        (dn, p) -> RatisTestHelper.initXceiverServerRatis(rpc, dn, p));
   }
 
   static void runTestClientServer(
       int numDatanodes,
-      BiConsumer<Pipeline, OzoneConfiguration> initConf,
+      CheckedBiConsumer<Pipeline, OzoneConfiguration, IOException> initConf,
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
           IOException> createClient,
       CheckedBiFunction<DatanodeDetails, OzoneConfiguration, XceiverServerSpi,
@@ -171,18 +167,18 @@ public class TestContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
-      final OzoneConfiguration conf = new OzoneConfiguration();
-      initConf.accept(pipeline, conf);
+      final Pipeline pipeline =
+          ContainerTestHelper.createPipeline(numDatanodes);
+      initConf.accept(pipeline, CONF);
 
-      for(DatanodeDetails dn : pipeline.getMachines()) {
-        final XceiverServerSpi s = createServer.apply(dn, conf);
+      for (DatanodeDetails dn : pipeline.getNodes()) {
+        final XceiverServerSpi s = createServer.apply(dn, CONF);
         servers.add(s);
         s.start();
         initServer.accept(dn, pipeline);
       }
 
-      client = createClient.apply(pipeline, conf);
+      client = createClient.apply(pipeline, CONF);
       client.connect();
 
       final ContainerCommandRequestProto request =
@@ -192,7 +188,6 @@ public class TestContainerServer {
       Assert.assertNotNull(request.getTraceID());
 
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertEquals(request.getTraceID(), response.getTraceID());
     } finally {
       if (client != null) {
         client.close();
@@ -203,22 +198,44 @@ public class TestContainerServer {
 
   @Test
   public void testClientServerWithContainerDispatcher() throws Exception {
-    XceiverServer server = null;
-    XceiverClient client = null;
-
+    XceiverServerGrpc server = null;
+    XceiverClientGrpc client = null;
+    UUID scmId = UUID.randomUUID();
     try {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader()
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
-      HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
-      dispatcher.init();
+      ContainerSet containerSet = new ContainerSet();
+      VolumeSet volumeSet = mock(VolumeSet.class);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-      server = new XceiverServer(datanodeDetails, conf, dispatcher);
-      client = new XceiverClient(pipeline, conf);
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
+      StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails())
+          .thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
+
+
+      for (ContainerProtos.ContainerType containerType :
+          ContainerProtos.ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
+      }
+      HddsDispatcher dispatcher = new HddsDispatcher(
+          conf, containerSet, volumeSet, handlers, context, metrics);
+      dispatcher.setScmId(scmId.toString());
+      dispatcher.init();
+
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
+          caClient, createReplicationService(
+              new ContainerController(containerSet, null)));
+      client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();
       client.connect();
@@ -227,7 +244,6 @@ public class TestContainerServer {
           ContainerTestHelper.getCreateContainerRequest(
               ContainerTestHelper.getTestContainerID(), pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     } finally {
       if (client != null) {
@@ -247,13 +263,19 @@ public class TestContainerServer {
      * @return Command Response
      */
     @Override
-    public ContainerCommandResponseProto
-        dispatch(ContainerCommandRequestProto msg)  {
+    public ContainerCommandResponseProto dispatch(
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
     }
 
     @Override
     public void init() {
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override
@@ -267,6 +289,11 @@ public class TestContainerServer {
     @Override
     public void setScmId(String scmId) {
 
+    }
+
+    @Override
+    public void buildMissingContainerSetAndValidate(
+        Map<Long, Long> container2BCSIDMap) {
     }
   }
 }

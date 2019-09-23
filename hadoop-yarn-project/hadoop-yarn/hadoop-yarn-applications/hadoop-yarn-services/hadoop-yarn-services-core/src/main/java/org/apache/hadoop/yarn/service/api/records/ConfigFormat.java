@@ -31,10 +31,9 @@ public enum ConfigFormat {
   PROPERTIES("properties"),
   XML("xml"),
   HADOOP_XML("hadoop_xml"),
-  ENV("env"),
   TEMPLATE("template"),
-  YAML("yaml"),
-  ;
+  YAML("yaml");
+
   ConfigFormat(String suffix) {
     this.suffix = suffix;
   }

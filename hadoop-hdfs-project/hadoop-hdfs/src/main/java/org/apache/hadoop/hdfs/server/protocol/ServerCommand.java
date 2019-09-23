@@ -55,9 +55,9 @@ public abstract class ServerCommand {
 
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    sb.append(getClass().getSimpleName());
-    sb.append("/");
-    sb.append(action);
+    sb.append(getClass().getSimpleName())
+        .append("/")
+        .append(action);
     return sb.toString();
   }
 }

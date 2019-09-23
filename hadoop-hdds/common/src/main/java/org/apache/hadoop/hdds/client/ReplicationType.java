@@ -18,11 +18,31 @@
 
 package org.apache.hadoop.hdds.client;
 
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+
 /**
  * The replication type to be used while writing key into ozone.
  */
 public enum ReplicationType {
     RATIS,
     STAND_ALONE,
-    CHAINED
+  CHAINED;
+
+  public static ReplicationType fromProto(
+      HddsProtos.ReplicationType replicationType) {
+    if (replicationType == null) {
+      return null;
+    }
+    switch (replicationType) {
+    case RATIS:
+      return ReplicationType.RATIS;
+    case STAND_ALONE:
+      return ReplicationType.STAND_ALONE;
+    case CHAINED:
+      return ReplicationType.CHAINED;
+    default:
+      throw new IllegalArgumentException(
+          "Unsupported ProtoBuf replication type: " + replicationType);
+    }
+  }
 }

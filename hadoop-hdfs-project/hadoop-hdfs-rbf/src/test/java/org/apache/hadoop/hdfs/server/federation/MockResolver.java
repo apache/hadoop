@@ -57,6 +57,8 @@ public class MockResolver
   private Map<String, List<RemoteLocation>> locations = new HashMap<>();
   private Set<FederationNamespaceInfo> namespaces = new HashSet<>();
   private String defaultNamespace = null;
+  private boolean disableDefaultNamespace = false;
+  private volatile boolean disableRegistration = false;
 
   public MockResolver() {
     this.cleanRegistrations();
@@ -97,6 +99,15 @@ public class MockResolver
     this.namespaces = new HashSet<>();
   }
 
+  /*
+   * Disable NameNode auto registration for test. This method usually used after
+   * {@link MockResolver#cleanRegistrations()}, and before {@link
+   * MockResolver#registerNamenode()}
+   */
+  public void setDisableRegistration(boolean isDisable) {
+    disableRegistration = isDisable;
+  }
+
   @Override
   public void updateActiveNamenode(
       String nsId, InetSocketAddress successfulAddress) {
@@ -124,7 +135,7 @@ public class MockResolver
   }
 
   @Override
-  public List<? extends FederationNamenodeContext>
+  public synchronized List<? extends FederationNamenodeContext>
       getNamenodesForNameserviceId(String nameserviceId) {
     // Return a copy of the list because it is updated periodically
     List<? extends FederationNamenodeContext> namenodes =
@@ -136,8 +147,8 @@ public class MockResolver
   }
 
   @Override
-  public List<? extends FederationNamenodeContext> getNamenodesForBlockPoolId(
-      String blockPoolId) {
+  public synchronized List<? extends FederationNamenodeContext>
+      getNamenodesForBlockPoolId(String blockPoolId) {
     // Return a copy of the list because it is updated periodically
     List<? extends FederationNamenodeContext> namenodes =
         this.resolver.get(blockPoolId);
@@ -225,6 +236,9 @@ public class MockResolver
   @Override
   public synchronized boolean registerNamenode(NamenodeStatusReport report)
       throws IOException {
+    if (disableRegistration) {
+      return false;
+    }
 
     MockNamenodeContext context = new MockNamenodeContext(
         report.getRpcAddress(), report.getServiceAddress(),
@@ -262,8 +276,9 @@ public class MockResolver
   }
 
   @Override
-  public Set<FederationNamespaceInfo> getNamespaces() throws IOException {
-    return this.namespaces;
+  public synchronized Set<FederationNamespaceInfo> getNamespaces()
+      throws IOException {
+    return Collections.unmodifiableSet(this.namespaces);
   }
 
   @Override
@@ -303,15 +318,16 @@ public class MockResolver
 
   @Override
   public List<String> getMountPoints(String path) throws IOException {
+    // Mounts only supported under root level
+    if (!path.equals("/")) {
+      return null;
+    }
     List<String> mounts = new ArrayList<>();
-    if (path.equals("/")) {
-      // Mounts only supported under root level
-      for (String mount : this.locations.keySet()) {
-        if (mount.length() > 1) {
-          // Remove leading slash, this is the behavior of the mount tree,
-          // return only names.
-          mounts.add(mount.replace("/", ""));
-        }
+    for (String mount : this.locations.keySet()) {
+      if (mount.length() > 1) {
+        // Remove leading slash, this is the behavior of the mount tree,
+        // return only names.
+        mounts.add(mount.replace("/", ""));
       }
     }
     return mounts;
@@ -321,8 +337,19 @@ public class MockResolver
   public void setRouterId(String router) {
   }
 
+  /**
+   * Mocks the availability of default namespace.
+   * @param b if true default namespace is unset.
+   */
+  public void setDisableNamespace(boolean b) {
+    this.disableDefaultNamespace = b;
+  }
+
   @Override
   public String getDefaultNamespace() {
+    if (disableDefaultNamespace) {
+      return "";
+    }
     return defaultNamespace;
   }
 }

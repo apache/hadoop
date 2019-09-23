@@ -26,12 +26,13 @@ import java.util.Map;
 public class AuditMessage implements Message {
 
   private String message;
+  private Throwable throwable;
 
-  public AuditMessage(String user, String ip, String op,
-      Map<String, String> params, String ret){
+  private static final String MSG_PATTERN =
+      "user=%s | ip=%s | op=%s %s | ret=%s";
 
-    this.message = String.format("user=%s ip=%s op=%s %s ret=%s",
-                                  user, ip, op, params, ret);
+  public AuditMessage(){
+
   }
 
   @Override
@@ -51,7 +52,7 @@ public class AuditMessage implements Message {
 
   @Override
   public Throwable getThrowable() {
-    return null;
+    return throwable;
   }
 
   /**
@@ -60,5 +61,71 @@ public class AuditMessage implements Message {
    */
   private void appendMessage(String customMessage) {
     this.message += customMessage;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
+  public void setThrowable(Throwable throwable) {
+    this.throwable = throwable;
+  }
+
+  /**
+   * Builder class for AuditMessage.
+   */
+  public static class Builder {
+    private Throwable throwable;
+    private String user;
+    private String ip;
+    private String op;
+    private Map<String, String> params;
+    private String ret;
+
+    public Builder(){
+
+    }
+
+    public Builder setUser(String usr){
+      this.user = usr;
+      return this;
+    }
+
+    public Builder atIp(String ipAddr){
+      this.ip = ipAddr;
+      return this;
+    }
+
+    public Builder forOperation(String operation){
+      this.op = operation;
+      return this;
+    }
+
+    public Builder withParams(Map<String, String> args){
+      this.params = args;
+      return this;
+    }
+
+    public Builder withResult(String result){
+      this.ret = result;
+      return this;
+    }
+
+    public Builder withException(Throwable ex){
+      this.throwable = ex;
+      return this;
+    }
+
+    public AuditMessage build(){
+      AuditMessage auditMessage = new AuditMessage();
+      auditMessage.message = String.format(MSG_PATTERN,
+          this.user, this.ip, this.op, this.params, this.ret);
+      auditMessage.throwable = this.throwable;
+      return auditMessage;
+    }
   }
 }

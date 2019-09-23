@@ -25,12 +25,13 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 
+import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -51,10 +52,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Deletes the container.
    *
-   * @param forceDelete   - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
-  void delete(boolean forceDelete) throws StorageContainerException;
+  void delete() throws StorageContainerException;
 
   /**
    * Update the container.
@@ -70,7 +70,6 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get metadata about the container.
    *
    * @return ContainerData - Container Data.
-   * @throws StorageContainerException
    */
   CONTAINERDATA getContainerData();
 
@@ -78,13 +77,30 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get the Container Lifecycle state.
    *
    * @return ContainerLifeCycleState - Container State.
-   * @throws StorageContainerException
    */
-  ContainerLifeCycleState getContainerState();
+  ContainerProtos.ContainerDataProto.State getContainerState();
 
   /**
-   * Closes a open container, if it is already closed or does not exist a
+   * Marks the container for closing. Moves the container to CLOSING state.
+   */
+  void markContainerForClose() throws StorageContainerException;
+
+  /**
+   * Marks the container replica as unhealthy.
+   */
+  void markContainerUnhealthy() throws StorageContainerException;
+
+  /**
+   * Quasi Closes a open container, if it is already closed or does not exist a
    * StorageContainerException is thrown.
+   *
+   * @throws StorageContainerException
+   */
+  void quasiClose() throws StorageContainerException;
+
+  /**
+   * Closes a open/quasi closed container, if it is already closed or does not
+   * exist a StorageContainerException is thrown.
    *
    * @throws StorageContainerException
    */
@@ -130,6 +146,43 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Returns containerReport for the container.
    */
-  StorageContainerDatanodeProtocolProtos.ContainerInfo getContainerReport()
+  ContainerReplicaProto getContainerReport()
       throws StorageContainerException;
+
+  /**
+   * updates the blockCommitSequenceId.
+   */
+  void updateBlockCommitSequenceId(long blockCommitSequenceId);
+
+  /**
+   * Returns the blockCommitSequenceId.
+   */
+  long getBlockCommitSequenceId();
+
+  /**
+   * check and report the structural integrity of the container.
+   * @return true if the integrity checks pass
+   * Scan the container metadata to detect corruption.
+   */
+  boolean scanMetaData();
+
+  /**
+   * Return if the container data should be checksum verified to detect
+   * corruption. The result depends upon the current state of the container
+   * (e.g. if a container is accepting writes, it may not be a good idea to
+   * perform checksum verification to avoid concurrency issues).
+   */
+  boolean shouldScanData();
+
+  /**
+   * Perform checksum verification for the container data.
+   *
+   * @param throttler A reference of {@link DataTransferThrottler} used to
+   *                  perform I/O bandwidth throttling
+   * @param canceler  A reference of {@link Canceler} used to cancel the
+   *                  I/O bandwidth throttling (e.g. for shutdown purpose).
+   * @return true if the checksum verification succeeds
+   *         false otherwise
+   */
+  boolean scanData(DataTransferThrottler throttler, Canceler canceler);
 }

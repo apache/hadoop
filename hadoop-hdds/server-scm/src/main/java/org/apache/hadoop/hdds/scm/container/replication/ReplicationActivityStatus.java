@@ -20,35 +20,42 @@ package org.apache.hadoop.hdds.scm.container.replication;
 import javax.management.ObjectName;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.metrics2.util.MBeans;
 
+
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.utils.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Event listener to track the current state of replication.
  */
-public class ReplicationActivityStatus
-    implements EventHandler<Boolean>, ReplicationActivityStatusMXBean,
-    Closeable {
+public class ReplicationActivityStatus implements
+    ReplicationActivityStatusMXBean, Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ReplicationActivityStatus.class);
 
+  private Scheduler scheduler;
   private AtomicBoolean replicationEnabled = new AtomicBoolean();
-
   private ObjectName jmxObjectName;
 
+  public ReplicationActivityStatus(Scheduler scheduler) {
+    this.scheduler = scheduler;
+  }
+
+  @Override
   public boolean isReplicationEnabled() {
     return replicationEnabled.get();
   }
 
   @VisibleForTesting
+  @Override
   public void setReplicationEnabled(boolean enabled) {
     replicationEnabled.set(enabled);
   }
@@ -58,13 +65,6 @@ public class ReplicationActivityStatus
     replicationEnabled.set(true);
   }
 
-  /**
-   * The replication status could be set by async events.
-   */
-  @Override
-  public void onMessage(Boolean enabled, EventPublisher publisher) {
-    replicationEnabled.set(enabled);
-  }
 
   public void start() {
     try {
@@ -83,4 +83,22 @@ public class ReplicationActivityStatus
       MBeans.unregister(jmxObjectName);
     }
   }
+
+  /**
+   * Waits for
+   * {@link HddsConfigKeys#HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT} and set
+   * replicationEnabled to start replication monitor thread.
+   */
+  public void fireReplicationStart(boolean safeModeStatus,
+      long waitTime) {
+    if (!safeModeStatus) {
+      scheduler.schedule(() -> {
+        setReplicationEnabled(true);
+        LOG.info("Replication Timer sleep for {} ms completed. Enable "
+            + "Replication", waitTime);
+      }, waitTime, TimeUnit.MILLISECONDS);
+    }
+  }
+
+
 }

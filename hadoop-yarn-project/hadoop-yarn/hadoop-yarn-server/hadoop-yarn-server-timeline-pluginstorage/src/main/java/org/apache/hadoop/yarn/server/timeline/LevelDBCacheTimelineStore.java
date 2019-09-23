@@ -37,8 +37,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LevelDB implementation of {@link KeyValueBasedTimelineStore}. This
@@ -64,6 +64,8 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
   private String dbId;
   private DB entityDb;
   private Configuration configuration;
+  private static final AtomicInteger DB_COUNTER = new AtomicInteger(0);
+  private static final String CACHED_LDB_FILENAME = "db";
 
   public LevelDBCacheTimelineStore(String id, String name) {
     super(name);
@@ -75,6 +77,11 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
 
   public LevelDBCacheTimelineStore(String id) {
     this(id, LevelDBCacheTimelineStore.class.getName());
+  }
+
+  public LevelDBCacheTimelineStore() {
+    this(CACHED_LDB_FILENAME + String.valueOf(DB_COUNTER.getAndIncrement()),
+        LevelDBCacheTimelineStore.class.getName());
   }
 
   @Override
@@ -211,18 +218,18 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
     }
 
     @Override
-    public Iterator<V> valueSetIterator() {
+    public CloseableIterator<V> valueSetIterator() {
       return getIterator(null, Long.MAX_VALUE);
     }
 
     @Override
-    public Iterator<V> valueSetIterator(V minV) {
+    public CloseableIterator<V> valueSetIterator(V minV) {
       return getIterator(
           new EntityIdentifier(minV.getEntityId(), minV.getEntityType()),
           minV.getStartTime());
     }
 
-    private Iterator<V> getIterator(
+    private CloseableIterator<V> getIterator(
         EntityIdentifier startId, long startTimeMax) {
 
       final DBIterator internalDbIterator = entityDb.iterator();
@@ -247,7 +254,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
           = entityPrefixKeyBuilder.getBytesForLookup();
       internalDbIterator.seek(startPrefixBytes);
 
-      return new Iterator<V>() {
+      return new CloseableIterator<V>() {
         @Override
         public boolean hasNext() {
           if (!internalDbIterator.hasNext()) {
@@ -283,6 +290,11 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         public void remove() {
           LOG.error("LevelDB map adapter does not support iterate-and-remove"
               + " use cases. ");
+        }
+
+        @Override
+        public void close() throws IOException {
+          internalDbIterator.close();
         }
       };
     }

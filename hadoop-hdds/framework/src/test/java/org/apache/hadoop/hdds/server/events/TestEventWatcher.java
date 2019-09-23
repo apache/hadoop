@@ -1,24 +1,21 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdds.server.events;
 
-import java.util.List;
-import java.util.Objects;
 import org.apache.hadoop.hdds.HddsIdFactory;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lease.LeaseManager;
@@ -26,6 +23,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Test the basic functionality of event watcher.
@@ -41,7 +41,7 @@ public class TestEventWatcher {
   private static final TypedEvent<ReplicationCompletedEvent>
       REPLICATION_COMPLETED = new TypedEvent<>(ReplicationCompletedEvent.class);
 
-  LeaseManager<Long> leaseManager;
+  private LeaseManager<Long> leaseManager;
 
   @Before
   public void startLeaseManager() {
@@ -55,7 +55,6 @@ public class TestEventWatcher {
     leaseManager.shutdown();
     DefaultMetricsSystem.shutdown();
   }
-
 
   @Test
   public void testEventHandling() throws InterruptedException {
@@ -180,48 +179,60 @@ public class TestEventWatcher {
 
     queue.fireEvent(REPLICATION_COMPLETED, event1Completed);
 
-    Thread.sleep(2200l);
+    //lease manager timeout = 2000L
+    Thread.sleep(3 * 2000L);
+
+    queue.processAll(2000L);
 
     //until now: 3 in-progress activities are tracked with three
     // UnderreplicatedEvents. The first one is completed, the remaining two
-    // are timed out (as the timeout -- defined in the leasmanager -- is 2000ms.
+    // are timed out (as the timeout -- defined in the lease manager -- is
+    // 2000ms).
 
     EventWatcherMetrics metrics = replicationWatcher.getMetrics();
 
     //3 events are received
     Assert.assertEquals(3, metrics.getTrackedEvents().value());
 
-    //one is finished. doesn't need to be resent
-    Assert.assertEquals(1, metrics.getCompletedEvents().value());
+    //completed + timed out = all messages
+    Assert.assertEquals(
+        "number of timed out and completed messages should be the same as the"
+            + " all messages",
+        metrics.getTrackedEvents().value(),
+        metrics.getCompletedEvents().value() + metrics.getTimedOutEvents()
+            .value());
 
-    //Other two are timed out and resent
-    Assert.assertEquals(2, metrics.getTimedOutEvents().value());
+    //_at least_ two are timed out.
+    Assert.assertTrue("At least two events should be timed out.",
+        metrics.getTimedOutEvents().value() >= 2);
 
     DefaultMetricsSystem.shutdown();
   }
 
   private EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent>
-  createEventWatcher() {
+      createEventWatcher() {
     return new CommandWatcherExample(WATCH_UNDER_REPLICATED,
         REPLICATION_COMPLETED, leaseManager);
   }
 
-  private class CommandWatcherExample
+  private static class CommandWatcherExample
       extends EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent> {
 
-    public CommandWatcherExample(Event<UnderreplicatedEvent> startEvent,
+    CommandWatcherExample(Event<UnderreplicatedEvent> startEvent,
         Event<ReplicationCompletedEvent> completionEvent,
         LeaseManager<Long> leaseManager) {
       super("TestCommandWatcher", startEvent, completionEvent, leaseManager);
     }
 
     @Override
-    protected void onTimeout(EventPublisher publisher, UnderreplicatedEvent payload) {
+    protected void onTimeout(EventPublisher publisher,
+        UnderreplicatedEvent payload) {
       publisher.fireEvent(UNDER_REPLICATED, payload);
     }
 
     @Override
-    protected void onFinished(EventPublisher publisher, UnderreplicatedEvent payload) {
+    protected void onFinished(EventPublisher publisher,
+        UnderreplicatedEvent payload) {
       //Good job. We did it.
     }
 
@@ -240,13 +251,14 @@ public class TestEventWatcher {
 
     private final String datanodeId;
 
-    public ReplicationCompletedEvent(long id, String containerId,
+    ReplicationCompletedEvent(long id, String containerId,
         String datanodeId) {
       this.id = id;
       this.containerId = containerId;
       this.datanodeId = datanodeId;
     }
 
+    @Override
     public long getId() {
       return id;
     }
@@ -279,11 +291,12 @@ public class TestEventWatcher {
 
     private final String containerId;
 
-    public UnderreplicatedEvent(long id, String containerId) {
+    UnderreplicatedEvent(long id, String containerId) {
       this.containerId = containerId;
       this.id = id;
     }
 
+    @Override
     public long getId() {
       return id;
     }

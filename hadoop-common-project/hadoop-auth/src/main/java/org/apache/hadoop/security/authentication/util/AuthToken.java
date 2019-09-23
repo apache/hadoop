@@ -128,7 +128,7 @@ public class AuthToken implements Principal {
    * Generates the token.
    */
   private void generateToken() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append(USER_NAME).append("=").append(getUserName()).append(ATTR_SEPARATOR);
     sb.append(PRINCIPAL).append("=").append(getName()).append(ATTR_SEPARATOR);
     sb.append(TYPE).append("=").append(getType()).append(ATTR_SEPARATOR);

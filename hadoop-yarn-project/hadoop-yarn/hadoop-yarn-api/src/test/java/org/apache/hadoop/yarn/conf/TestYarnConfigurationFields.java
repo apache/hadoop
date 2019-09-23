@@ -106,6 +106,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS);
     configurationPropsToSkipCompare
+        .add(YarnConfiguration.FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS);
+    configurationPropsToSkipCompare
         .add(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
 
     // Federation StateStore ZK implementation configs to be ignored

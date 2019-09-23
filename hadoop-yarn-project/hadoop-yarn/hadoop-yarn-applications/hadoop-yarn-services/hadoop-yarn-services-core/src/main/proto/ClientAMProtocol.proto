@@ -28,12 +28,16 @@ service ClientAMProtocolService {
   rpc stop(StopRequestProto) returns (StopResponseProto);
   rpc upgradeService(UpgradeServiceRequestProto)
     returns (UpgradeServiceResponseProto);
+  rpc cancelUpgrade(CancelUpgradeRequestProto)
+    returns (CancelUpgradeResponseProto);
   rpc restartService(RestartServiceRequestProto)
     returns (RestartServiceResponseProto);
   rpc upgrade(CompInstancesUpgradeRequestProto) returns
     (CompInstancesUpgradeResponseProto);
   rpc getCompInstances(GetCompInstancesRequestProto) returns
     (GetCompInstancesResponseProto);
+  rpc decommissionCompInstances(DecommissionCompInstancesRequestProto)
+    returns (DecommissionCompInstancesResponseProto);
 }
 
 message FlexComponentsRequestProto {
@@ -73,6 +77,12 @@ message UpgradeServiceResponseProto {
   optional string error = 1;
 }
 
+message CancelUpgradeRequestProto {
+}
+
+message CancelUpgradeResponseProto {
+}
+
 message RestartServiceRequestProto {
 }
 
@@ -94,4 +104,11 @@ message GetCompInstancesRequestProto {
 
 message GetCompInstancesResponseProto {
   optional string compInstances = 1;
+}
+
+message DecommissionCompInstancesRequestProto {
+  repeated string compInstances = 1;
+}
+
+message DecommissionCompInstancesResponseProto {
 }

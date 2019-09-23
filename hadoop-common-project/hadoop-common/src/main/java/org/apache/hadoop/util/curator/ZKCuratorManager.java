@@ -196,7 +196,10 @@ public final class ZKCuratorManager {
    */
   public String getStringData(final String path) throws Exception {
     byte[] bytes = getData(path);
-    return new String(bytes, Charset.forName("UTF-8"));
+    if (bytes != null) {
+      return new String(bytes, Charset.forName("UTF-8"));
+    }
+    return null;
   }
 
   /**
@@ -208,7 +211,10 @@ public final class ZKCuratorManager {
    */
   public String getStringData(final String path, Stat stat) throws Exception {
     byte[] bytes = getData(path, stat);
-    return new String(bytes, Charset.forName("UTF-8"));
+    if (bytes != null) {
+      return new String(bytes, Charset.forName("UTF-8"));
+    }
+    return null;
   }
 
   /**

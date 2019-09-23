@@ -18,19 +18,26 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
 import org.apache.hadoop.ozone.container.common.DataNodeLayoutVersion;
 import org.apache.hadoop.ozone.container.common.helpers.DatanodeVersionFile;
 import org.apache.hadoop.ozone.container.common.impl.ChunkLayOutVersion;
 import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
 
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Time;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,17 +45,20 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * HddsVolume represents volume in a datanode. {@link VolumeSet} maitains a
+ * HddsVolume represents volume in a datanode. {@link VolumeSet} maintains a
  * list of HddsVolumes, one for each volume in the Datanode.
  * {@link VolumeInfo} in encompassed by this class.
- *
+ * <p>
  * The disk layout per volume is as follows:
- * ../hdds/VERSION
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/metadata
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/<<dataDir>>
- *
+ * <p>../hdds/VERSION
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >>/metadata}
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >>/<<dataDir>>}
+ * <p>
  * Each hdds volume has its own VERSION file. The hdds volume will have one
  * scmUuid directory for each SCM it is a part of (currently only one SCM is
  * supported).
@@ -56,7 +66,11 @@ import java.util.UUID;
  * During DN startup, if the VERSION file exists, we verify that the
  * clusterID in the version file matches the clusterID from SCM.
  */
-public final class HddsVolume {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+@SuppressWarnings("finalclass")
+public class HddsVolume
+    implements Checkable<Boolean, VolumeCheckResult> {
 
   private static final Logger LOG = LoggerFactory.getLogger(HddsVolume.class);
 
@@ -73,6 +87,20 @@ public final class HddsVolume {
   private String datanodeUuid;    // id of the DataNode
   private long cTime;             // creation time of the file system state
   private int layoutVersion;      // layout version of the storage data
+  private final AtomicLong committedBytes; // till Open containers become full
+
+  /**
+   * Run a check on the current volume to determine if it is healthy.
+   * @param unused context for the check, ignored.
+   * @return result of checking the volume.
+   * @throws Exception if an exception was encountered while running
+   *            the volume check.
+   */
+  @Override
+  public VolumeCheckResult check(@Nullable Boolean unused) throws Exception {
+    DiskChecker.checkDir(hddsRootDir);
+    return VolumeCheckResult.HEALTHY;
+  }
 
   /**
    * Builder for HddsVolume.
@@ -143,6 +171,7 @@ public final class HddsVolume {
               .storageType(b.storageType)
               .configuredCapacity(b.configuredCapacity);
       this.volumeInfo = volumeBuilder.build();
+      this.committedBytes = new AtomicLong(0);
 
       LOG.info("Creating Volume: " + this.hddsRootDir + " of  storage type : " +
           b.storageType + " and capacity : " + volumeInfo.getCapacity());
@@ -156,6 +185,7 @@ public final class HddsVolume {
       volumeInfo = null;
       storageID = UUID.randomUUID().toString();
       state = VolumeState.FAILED;
+      committedBytes = null;
     }
   }
 
@@ -174,7 +204,7 @@ public final class HddsVolume {
     switch (intialVolumeState) {
     case NON_EXISTENT:
       // Root directory does not exist. Create it.
-      if (!hddsRootDir.mkdir()) {
+      if (!hddsRootDir.mkdirs()) {
         throw new IOException("Cannot create directory " + hddsRootDir);
       }
       setState(VolumeState.NOT_FORMATTED);
@@ -377,14 +407,14 @@ public final class HddsVolume {
 
   /**
    * VolumeState represents the different states a HddsVolume can be in.
-   * NORMAL          => Volume can be used for storage
-   * FAILED          => Volume has failed due and can no longer be used for
+   * NORMAL          =&gt; Volume can be used for storage
+   * FAILED          =&gt; Volume has failed due and can no longer be used for
    *                    storing containers.
-   * NON_EXISTENT    => Volume Root dir does not exist
-   * INCONSISTENT    => Volume Root dir is not empty but VERSION file is
+   * NON_EXISTENT    =&gt; Volume Root dir does not exist
+   * INCONSISTENT    =&gt; Volume Root dir is not empty but VERSION file is
    *                    missing or Volume Root dir is not a directory
-   * NOT_FORMATTED   => Volume Root exists but not formatted (no VERSION file)
-   * NOT_INITIALIZED => VERSION file exists but has not been verified for
+   * NOT_FORMATTED   =&gt; Volume Root exists but not formatted(no VERSION file)
+   * NOT_INITIALIZED =&gt; VERSION file exists but has not been verified for
    *                    correctness.
    */
   public enum VolumeState {
@@ -394,6 +424,23 @@ public final class HddsVolume {
     INCONSISTENT,
     NOT_FORMATTED,
     NOT_INITIALIZED
+  }
+
+  /**
+   * add "delta" bytes to committed space in the volume.
+   * @param delta bytes to add to committed space counter
+   * @return bytes of committed space
+   */
+  public long incCommittedBytes(long delta) {
+    return committedBytes.addAndGet(delta);
+  }
+
+  /**
+   * return the committed space in the volume.
+   * @return bytes of committed space
+   */
+  public long getCommittedBytes() {
+    return committedBytes.get();
   }
 
   /**

@@ -152,7 +152,7 @@ Currently, the following two types of alias maps are supported.
 
 This is a LevelDB-based alias map that runs as a separate server in Namenode.
 The alias map itself can be created using the `fs2img` tool using the option
-`-Ddfs.provided.aliasmap.leveldb.path=file:///path/to/leveldb/map/dingos.db -o org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap`
+`-Ddfs.provided.aliasmap.leveldb.path=file:///path/to/leveldb/map/dingos.db -b org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap`
 as in the example above.
 
 Datanodes contact this alias map using the `org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol` protocol.

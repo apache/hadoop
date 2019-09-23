@@ -60,8 +60,11 @@ public interface FileSubclusterResolver {
    * Get a list of mount points for a path. Results are from the mount table
    * cache.
    *
-   * @return List of mount points present at this path or zero-length list if
-   *         none are found.
+   * @param path Path to get the mount points under.
+   * @return List of mount points present at this path. Return zero-length
+   *         list if the path is a mount point but there are no mount points
+   *         under the path. Return null if the path is not a mount point
+   *         and there are no mount points under the path.
    * @throws IOException Throws exception if the data is not available.
    */
   List<String> getMountPoints(String path) throws IOException;

@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -33,7 +37,9 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -46,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -53,6 +60,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -137,29 +145,35 @@ public class TestRouterQuota {
     addMountTable(mountTable2);
 
     final FileSystem routerFs = routerContext.getFileSystem();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-
-      @Override
-      public Boolean get() {
-        boolean isNsQuotaViolated = false;
-        try {
-          // create new directory to trigger NSQuotaExceededException
-          routerFs.mkdirs(new Path("/nsquota/" + UUID.randomUUID()));
-          routerFs.mkdirs(new Path("/nsquota/subdir/" + UUID.randomUUID()));
-        } catch (NSQuotaExceededException e) {
-          isNsQuotaViolated = true;
-        } catch (IOException ignored) {
-        }
-        return isNsQuotaViolated;
+    final List<Path> created = new ArrayList<>();
+    GenericTestUtils.waitFor(() -> {
+      boolean isNsQuotaViolated = false;
+      try {
+        // create new directory to trigger NSQuotaExceededException
+        Path p = new Path("/nsquota/" + UUID.randomUUID());
+        routerFs.mkdirs(p);
+        created.add(p);
+        p = new Path("/nsquota/subdir/" + UUID.randomUUID());
+        routerFs.mkdirs(p);
+        created.add(p);
+      } catch (NSQuotaExceededException e) {
+        isNsQuotaViolated = true;
+      } catch (IOException ignored) {
       }
+      return isNsQuotaViolated;
     }, 5000, 60000);
+
     // mkdir in real FileSystem should be okay
     nnFs1.mkdirs(new Path("/testdir1/" + UUID.randomUUID()));
     nnFs2.mkdirs(new Path("/testdir2/" + UUID.randomUUID()));
 
-    // delete/rename call should be still okay
-    routerFs.delete(new Path("/nsquota"), true);
-    routerFs.rename(new Path("/nsquota/subdir"), new Path("/nsquota/subdir"));
+    // rename/delete call should be still okay
+    assertFalse(created.isEmpty());
+    for(Path src: created) {
+      final Path dst = new Path(src.toString()+"-renamed");
+      routerFs.rename(src, dst);
+      routerFs.delete(dst, true);
+    }
   }
 
   @Test
@@ -233,6 +247,25 @@ public class TestRouterQuota {
   }
 
   /**
+   * Update a mount table entry to the mount table through the admin API.
+   * @param entry Mount table entry to update.
+   * @return If it was successfully updated
+   * @throws IOException Problems update entries
+   */
+  private boolean updateMountTable(final MountTable entry) throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(entry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTableManager.updateMountTableEntry(updateRequest);
+
+    // Reload the Router cache
+    resolver.loadCache(true);
+    return updateResponse.getStatus();
+  }
+
+  /**
    * Append data in specified file.
    * @param path Path of file.
    * @param client DFS Client.
@@ -300,9 +333,11 @@ public class TestRouterQuota {
     // /getquota --> ns0---/testdir7
     // /getquota/subdir1 --> ns0---/testdir7/subdir
     // /getquota/subdir2 --> ns1---/testdir8
+    // /getquota/subdir3 --> ns1---/testdir8-ext
     nnFs1.mkdirs(new Path("/testdir7"));
     nnFs1.mkdirs(new Path("/testdir7/subdir"));
     nnFs2.mkdirs(new Path("/testdir8"));
+    nnFs2.mkdirs(new Path("/testdir8-ext"));
     MountTable mountTable1 = MountTable.newInstance("/getquota",
         Collections.singletonMap("ns0", "/testdir7"));
     mountTable1
@@ -318,11 +353,16 @@ public class TestRouterQuota {
         Collections.singletonMap("ns1", "/testdir8"));
     addMountTable(mountTable3);
 
+    MountTable mountTable4 = MountTable.newInstance("/getquota/subdir3",
+            Collections.singletonMap("ns1", "/testdir8-ext"));
+    addMountTable(mountTable4);
+
     // use router client to create new files
     DFSClient routerClient = routerContext.getClient();
     routerClient.create("/getquota/file", true).close();
     routerClient.create("/getquota/subdir1/file", true).close();
     routerClient.create("/getquota/subdir2/file", true).close();
+    routerClient.create("/getquota/subdir3/file", true).close();
 
     ClientProtocol clientProtocol = routerContext.getClient().getNamenode();
     RouterQuotaUpdateService updateService = routerContext.getRouter()
@@ -330,7 +370,7 @@ public class TestRouterQuota {
     updateService.periodicInvoke();
     final QuotaUsage quota = clientProtocol.getQuotaUsage("/getquota");
     // the quota should be aggregated
-    assertEquals(6, quota.getFileAndDirectoryCount());
+    assertEquals(8, quota.getFileAndDirectoryCount());
   }
 
   @Test
@@ -372,7 +412,7 @@ public class TestRouterQuota {
 
   /**
    * Remove a mount table entry to the mount table through the admin API.
-   * @param entry Mount table entry to remove.
+   * @param path Mount table entry to remove.
    * @return If it was successfully removed.
    * @throws IOException Problems removing entries.
    */
@@ -435,6 +475,14 @@ public class TestRouterQuota {
     assertEquals(ssQuota, quota.getSpaceQuota());
     assertEquals(3, quota.getFileAndDirectoryCount());
     assertEquals(BLOCK_SIZE, quota.getSpaceConsumed());
+
+    // verify quota sync on adding new destination to mount entry.
+    updatedMountTable = getMountTable(path);
+    nnFs1.mkdirs(new Path("/newPath"));
+    updatedMountTable.setDestinations(
+        Collections.singletonList(new RemoteLocation("ns0", "/newPath", path)));
+    updateMountTable(updatedMountTable);
+    assertEquals(nsQuota, nnFs1.getQuotaUsage(new Path("/newPath")).getQuota());
   }
 
   /**
@@ -484,11 +532,7 @@ public class TestRouterQuota {
 
     mountTable.setQuota(new RouterQuotaUsage.Builder().quota(updateNsQuota)
         .spaceQuota(updateSsQuota).build());
-    UpdateMountTableEntryRequest updateRequest = UpdateMountTableEntryRequest
-        .newInstance(mountTable);
-    RouterClient client = routerContext.getAdminClient();
-    MountTableManager mountTableManager = client.getMountTableManager();
-    mountTableManager.updateMountTableEntry(updateRequest);
+    updateMountTable(mountTable);
 
     // verify if the quota is updated in real path
     realQuota = nnContext1.getFileSystem().getQuotaUsage(
@@ -500,18 +544,21 @@ public class TestRouterQuota {
     mountTable.setQuota(new RouterQuotaUsage.Builder()
         .quota(HdfsConstants.QUOTA_RESET)
         .spaceQuota(HdfsConstants.QUOTA_RESET).build());
-
-    updateRequest = UpdateMountTableEntryRequest
-        .newInstance(mountTable);
-    client = routerContext.getAdminClient();
-    mountTableManager = client.getMountTableManager();
-    mountTableManager.updateMountTableEntry(updateRequest);
+    updateMountTable(mountTable);
 
     // verify if the quota is updated in real path
     realQuota = nnContext1.getFileSystem().getQuotaUsage(
         new Path("/testsync"));
     assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getSpaceQuota());
+
+    // Verify updating mount entry with actual destinations not present.
+    mountTable = MountTable.newInstance("/testupdate",
+        Collections.singletonMap("ns0", "/testupdate"), Time.now(), Time.now());
+    addMountTable(mountTable);
+    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(1)
+        .spaceQuota(2).build());
+    assertTrue(updateMountTable(mountTable));
   }
 
   @Test
@@ -605,7 +652,7 @@ public class TestRouterQuota {
   @Test
   public void testQuotaRefreshWhenDestinationNotPresent() throws Exception {
     long nsQuota = 5;
-    long ssQuota = 3*BLOCK_SIZE;
+    long ssQuota = 3 * BLOCK_SIZE;
     final FileSystem nnFs = nnContext1.getFileSystem();
 
     // Add three mount tables:
@@ -673,8 +720,8 @@ public class TestRouterQuota {
     assertEquals(BLOCK_SIZE, mountQuota2.getSpaceConsumed());
 
     FileSystem routerFs = routerContext.getFileSystem();
-    // Remove destination directory for the mount entry
-    routerFs.delete(new Path("/setdir1"), true);
+    // Remove file in setdir1. The target directory still exists.
+    routerFs.delete(new Path("/setdir1/file1"), true);
 
     // Create file
     routerClient.create("/setdir2/file3", true).close();
@@ -695,9 +742,9 @@ public class TestRouterQuota {
     updatedMountTable = getMountTable("/setdir2");
     mountQuota2 = updatedMountTable.getQuota();
 
-    // If destination is not present the quota usage should be reset to 0
-    assertEquals(0, cacheQuota1.getFileAndDirectoryCount());
-    assertEquals(0, mountQuota1.getFileAndDirectoryCount());
+    // The quota usage should be reset.
+    assertEquals(1, cacheQuota1.getFileAndDirectoryCount());
+    assertEquals(1, mountQuota1.getFileAndDirectoryCount());
     assertEquals(0, cacheQuota1.getSpaceConsumed());
     assertEquals(0, mountQuota1.getSpaceConsumed());
 
@@ -708,5 +755,117 @@ public class TestRouterQuota {
     assertEquals(updatedSpace, quota2.getSpaceConsumed());
     assertEquals(updatedSpace, cacheQuota2.getSpaceConsumed());
     assertEquals(updatedSpace, mountQuota2.getSpaceConsumed());
+  }
+
+  @Test
+  public void testClearQuotaDefAfterRemovingMountTable() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 3 * BLOCK_SIZE;
+    final FileSystem nnFs = nnContext1.getFileSystem();
+
+    // Add one mount tables:
+    // /setdir --> ns0---testdir15
+    // Create destination directory
+    nnFs.mkdirs(new Path("/testdir15"));
+
+    MountTable mountTable = MountTable.newInstance("/setdir",
+        Collections.singletonMap("ns0", "/testdir15"));
+    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(nsQuota)
+        .spaceQuota(ssQuota).build());
+    addMountTable(mountTable);
+
+    // Update router quota
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+
+    RouterQuotaManager quotaManager =
+        routerContext.getRouter().getQuotaManager();
+    ClientProtocol client = nnContext1.getClient().getNamenode();
+    QuotaUsage routerQuota = quotaManager.getQuotaUsage("/setdir");
+    QuotaUsage subClusterQuota = client.getQuotaUsage("/testdir15");
+
+    // Verify current quota definitions
+    assertEquals(nsQuota, routerQuota.getQuota());
+    assertEquals(ssQuota, routerQuota.getSpaceQuota());
+    assertEquals(nsQuota, subClusterQuota.getQuota());
+    assertEquals(ssQuota, subClusterQuota.getSpaceQuota());
+
+    // Remove mount table
+    removeMountTable("/setdir");
+    updateService.periodicInvoke();
+    routerQuota = quotaManager.getQuotaUsage("/setdir");
+    subClusterQuota = client.getQuotaUsage("/testdir15");
+
+    // Verify quota definitions are cleared after removing the mount table
+    assertNull(routerQuota);
+    assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getSpaceQuota());
+
+    // Verify removing mount entry with actual destinations not present.
+    mountTable = MountTable.newInstance("/mount",
+        Collections.singletonMap("ns0", "/testdir16"));
+    addMountTable(mountTable);
+    assertTrue(removeMountTable("/mount"));
+  }
+
+  @Test
+  public void testSetQuotaNotMountTable() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 100;
+    final FileSystem nnFs1 = nnContext1.getFileSystem();
+
+    // setQuota should run for any directory
+    MountTable mountTable1 = MountTable.newInstance("/setquotanmt",
+        Collections.singletonMap("ns0", "/testdir16"));
+
+    addMountTable(mountTable1);
+
+    // Add a directory not present in mount table.
+    nnFs1.mkdirs(new Path("/testdir16/testdir17"));
+
+    routerContext.getRouter().getRpcServer().setQuota("/setquotanmt/testdir17",
+        nsQuota, ssQuota, null);
+
+    RouterQuotaUpdateService updateService = routerContext.getRouter()
+        .getQuotaCacheUpdateService();
+    // ensure setQuota RPC call was invoked
+    updateService.periodicInvoke();
+
+    ClientProtocol client1 = nnContext1.getClient().getNamenode();
+    final QuotaUsage quota1 = client1.getQuotaUsage("/testdir16/testdir17");
+
+    assertEquals(nsQuota, quota1.getQuota());
+    assertEquals(ssQuota, quota1.getSpaceQuota());
+  }
+
+  @Test
+  public void testNoQuotaaExceptionForUnrelatedOperations() throws Exception {
+    FileSystem nnFs = nnContext1.getFileSystem();
+    DistributedFileSystem routerFs =
+        (DistributedFileSystem) routerContext.getFileSystem();
+    Path path = new Path("/quota");
+    nnFs.mkdirs(new Path("/dir"));
+    MountTable mountTable1 = MountTable.newInstance("/quota",
+        Collections.singletonMap("ns0", "/dir"));
+    mountTable1.setQuota(new RouterQuotaUsage.Builder().quota(0).build());
+    addMountTable(mountTable1);
+    routerFs.mkdirs(new Path("/quota/1"));
+    routerContext.getRouter().getQuotaCacheUpdateService().periodicInvoke();
+
+    // Quota check for related operation.
+    intercept(NSQuotaExceededException.class,
+        "The NameSpace quota (directories and files) is exceeded",
+        () -> routerFs.mkdirs(new Path("/quota/2")));
+
+    //Quotas shouldn't be checked for unrelated operations.
+    routerFs.setStoragePolicy(path, "COLD");
+    routerFs.setErasureCodingPolicy(path, "RS-6-3-1024k");
+    routerFs.unsetErasureCodingPolicy(path);
+    routerFs.setPermission(path, new FsPermission((short) 01777));
+    routerFs.setOwner(path, "user", "group");
+    routerFs.setTimes(path, 1L, 1L);
+    routerFs.listStatus(path);
+    routerFs.getContentSummary(path);
   }
 }

@@ -24,8 +24,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -73,7 +73,7 @@ import java.util.concurrent.TimeUnit;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeManager {
-  static final Log LOG = LogFactory.getLog(DatanodeManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(DatanodeManager.class);
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
@@ -1134,7 +1134,6 @@ public class DatanodeManager {
           nodeDescr.setDependentHostNames(
               getNetworkDependenciesWithDefault(nodeDescr));
         }
-        networktopology.add(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
         resolveUpgradeDomain(nodeDescr);
 
@@ -1251,6 +1250,13 @@ public class DatanodeManager {
   /** @return the number of dead datanodes. */
   public int getNumDeadDataNodes() {
     return getDatanodeListForReport(DatanodeReportType.DEAD).size();
+  }
+
+  /** @return the number of datanodes. */
+  public int getNumOfDataNodes() {
+    synchronized (this) {
+      return datanodeMap.size();
+    }
   }
 
   /** @return list of datanodes where decommissioning is in progress. */

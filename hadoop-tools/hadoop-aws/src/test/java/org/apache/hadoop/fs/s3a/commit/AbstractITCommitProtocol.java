@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -59,6 +58,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
@@ -153,8 +153,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     taskAttempt1 = TaskAttemptID.forName(attempt1);
 
     outDir = path(getMethodName());
-    S3AFileSystem fileSystem = getFileSystem();
-    bindFileSystem(fileSystem, outDir, fileSystem.getConf());
     abortMultipartUploadsUnderPath(outDir);
     cleanupDestDir();
   }
@@ -194,18 +192,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     disableFilesystemCaching(conf);
     bindCommitter(conf);
     return conf;
-  }
-
-  /**
-   * Bind a path to the FS in the cache.
-   * @param fs filesystem
-   * @param path s3 path
-   * @param conf configuration
-   * @throws IOException any problem
-   */
-  private void bindFileSystem(FileSystem fs, Path path, Configuration conf)
-      throws IOException {
-    FileSystemTestHelper.addFileSystemForTesting(path.toUri(), conf, fs);
   }
 
   /***

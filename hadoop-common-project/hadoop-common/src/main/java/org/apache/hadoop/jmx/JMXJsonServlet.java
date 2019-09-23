@@ -70,7 +70,7 @@ import java.util.Set;
  * <p>
  * The optional <code>get</code> parameter is used to query an specific 
  * attribute of a JMX bean.  The format of the URL is
- * <code>http://.../jmx?get=MXBeanName::AttributeName<code>
+ * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
  * <p>
  * For example 
  * <code>
@@ -85,7 +85,7 @@ import java.util.Set;
  * <p>
  * The return format is JSON and in the form
  * <p>
- *  <code><pre>
+ *  <pre><code>
  *  {
  *    "beans" : [
  *      {
@@ -94,7 +94,7 @@ import java.util.Set;
  *      }
  *    ]
  *  }
- *  </pre></code>
+ *  </code></pre>
  *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
@@ -348,7 +348,8 @@ public class JMXJsonServlet extends HttpServlet {
     } catch (RuntimeErrorException e) {
       // RuntimeErrorException happens when an unexpected failure occurs in getAttribute
       // for example https://issues.apache.org/jira/browse/DAEMON-120
-      LOG.debug("getting attribute "+attName+" of "+oname+" threw an exception", e);
+      LOG.error("getting attribute {} of {} threw an exception",
+          attName, oname, e);
       return;
     } catch (AttributeNotFoundException e) {
       //Ignored the attribute was not found, which should never happen because the bean

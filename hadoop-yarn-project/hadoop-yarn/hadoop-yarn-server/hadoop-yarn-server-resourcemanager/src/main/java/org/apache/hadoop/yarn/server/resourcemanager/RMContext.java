@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +27,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -51,9 +52,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
 
 /**
  * Context of the ResourceManager.
@@ -69,8 +72,9 @@ public interface RMContext extends ApplicationMasterServiceContext {
   RMStateStore getStateStore();
 
   ConcurrentMap<ApplicationId, RMApp> getRMApps();
-  
-  ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
+
+  ConcurrentMap<ApplicationId, SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps();
 
   ConcurrentMap<NodeId, RMNode> getInactiveRMNodes();
 
@@ -133,6 +137,10 @@ public interface RMContext extends ApplicationMasterServiceContext {
   
   public void setNodeLabelManager(RMNodeLabelsManager mgr);
 
+  NodeAttributesManager getNodeAttributesManager();
+
+  void setNodeAttributesManager(NodeAttributesManager mgr);
+
   RMDelegatedNodeLabelsUpdater getRMDelegatedNodeLabelsUpdater();
 
   void setRMDelegatedNodeLabelsUpdater(
@@ -183,4 +191,16 @@ public interface RMContext extends ApplicationMasterServiceContext {
 
   void setMultiNodeSortingManager(
       MultiNodeSortingManager<SchedulerNode> multiNodeSortingManager);
+
+  ProxyCAManager getProxyCAManager();
+
+  void setProxyCAManager(ProxyCAManager proxyCAManager);
+
+  VolumeManager getVolumeManager();
+
+  void setVolumeManager(VolumeManager volumeManager);
+
+  long getTokenSequenceNo();
+
+  void incrTokenSequenceNo();
 }

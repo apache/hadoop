@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 
 /**
@@ -149,6 +151,19 @@ public interface RMWebServiceProtocol {
   NodeInfo getNode(String nodeId);
 
   /**
+   * This method changes the resources of a specific node, and it is reachable
+   * by using {@link RMWSConsts#NODE_RESOURCE}.
+   *
+   * @param hsr The servlet request.
+   * @param nodeId The node we want to retrieve the information for.
+   *               It is a PathParam.
+   * @param resourceOption The resource change.
+   * @throws AuthorizationException If the user is not authorized.
+   */
+  ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException;
+
+  /**
    * This method retrieves all the app reports in the cluster, and it is
    * reachable by using {@link RMWSConsts#APPS}.
    *
@@ -189,9 +204,12 @@ public interface RMWebServiceProtocol {
    * @param hsr the servlet request
    * @param nodeId the node we want to retrieve the activities. It is a
    *          QueryParam.
+   * @param groupBy the groupBy type by which the activities should be
+   *          aggregated. It is a QueryParam.
    * @return all the activities in the specific node
    */
-  ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId);
+  ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy);
 
   /**
    * This method retrieves all the activities for a specific app for a specific
@@ -203,10 +221,22 @@ public interface RMWebServiceProtocol {
    *          QueryParam.
    * @param time for how long we want to retrieve the activities. It is a
    *          QueryParam.
+   * @param requestPriorities the request priorities we want to retrieve the
+   *          activities. It is a QueryParam.
+   * @param allocationRequestIds the allocation request ids we want to retrieve
+   *          the activities. It is a QueryParam.
+   * @param groupBy the groupBy type by which the activities should be
+   *          aggregated. It is a QueryParam.
+   * @param limit set a limit of the result. It is a QueryParam.
+   * @param actions the required actions of app activities. It is a QueryParam.
+   * @param summarize whether app activities in multiple scheduling processes
+   *          need to be summarized. It is a QueryParam.
    * @return all the activities about a specific app for a specific time
    */
   AppActivitiesInfo getAppActivities(HttpServletRequest hsr, String appId,
-      String time);
+      String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize);
 
   /**
    * This method retrieves all the statistics for a specific app, and it is
@@ -687,4 +717,17 @@ public interface RMWebServiceProtocol {
   RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr)
       throws AuthorizationException;
+
+  /**
+   * This method sends a signal to container.
+   * @param containerId containerId
+   * @param command signal command, it could be OUTPUT_THREAD_DUMP/
+   *                GRACEFUL_SHUTDOWN/FORCEFUL_SHUTDOWN
+   * @param req request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *                                method.
+   */
+  Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException;
 }

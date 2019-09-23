@@ -18,46 +18,45 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
-
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
-
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
-import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
-import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
-import org.apache.hadoop.ozone.container.common.volume.HddsVolume.VolumeState;
-import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
-import org.apache.hadoop.util.AutoCloseableLock;
-import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.util.InstrumentedLock;
-import org.apache.hadoop.util.ShutdownHookManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
+import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
+import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume.VolumeState;
+import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.Timer;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * VolumeSet to manage volumes in a DataNode.
+ * VolumeSet to manage HDDS volumes in a DataNode.
  */
 public class VolumeSet {
 
@@ -84,16 +83,26 @@ public class VolumeSet {
   private EnumMap<StorageType, List<HddsVolume>> volumeStateMap;
 
   /**
-   * Lock to synchronize changes to the VolumeSet. Any update to
-   * {@link VolumeSet#volumeMap}, {@link VolumeSet#failedVolumeMap}, or
-   * {@link VolumeSet#volumeStateMap} should be done after acquiring this lock.
+   * An executor for periodic disk checks.
    */
-  private final AutoCloseableLock volumeSetLock;
+  private final ScheduledExecutorService diskCheckerservice;
+  private final ScheduledFuture<?> periodicDiskChecker;
+
+  private static final long DISK_CHECK_INTERVAL_MINUTES = 15;
+
+  /**
+   * A Reentrant Read Write Lock to synchronize volume operations in VolumeSet.
+   * Any update to {@link VolumeSet#volumeMap},
+   * {@link VolumeSet#failedVolumeMap}, or {@link VolumeSet#volumeStateMap}
+   * should be done after acquiring the write lock.
+   */
+  private final ReentrantReadWriteLock volumeSetRWLock;
 
   private final String datanodeUuid;
   private String clusterID;
 
   private Runnable shutdownHook;
+  private final HddsVolumeChecker volumeChecker;
 
   public VolumeSet(String dnUuid, Configuration conf)
       throws IOException {
@@ -105,22 +114,31 @@ public class VolumeSet {
     this.datanodeUuid = dnUuid;
     this.clusterID = clusterID;
     this.conf = conf;
-    this.volumeSetLock = new AutoCloseableLock(
-        new InstrumentedLock(getClass().getName(), LOG,
-            new ReentrantLock(true),
-            conf.getTimeDuration(
-                OzoneConfigKeys.HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
-                OzoneConfigKeys.HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT,
-                TimeUnit.MILLISECONDS),
-            conf.getTimeDuration(
-                OzoneConfigKeys.HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_KEY,
-                OzoneConfigKeys.HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT,
-                TimeUnit.MILLISECONDS)));
-
+    this.volumeSetRWLock = new ReentrantReadWriteLock();
+    this.volumeChecker = getVolumeChecker(conf);
+    this.diskCheckerservice = Executors.newScheduledThreadPool(
+        1, r -> new Thread(r, "Periodic HDDS volume checker"));
+    this.periodicDiskChecker =
+      diskCheckerservice.scheduleWithFixedDelay(() -> {
+        try {
+          checkAllVolumes();
+        } catch (IOException e) {
+          LOG.warn("Exception while checking disks", e);
+        }
+      }, DISK_CHECK_INTERVAL_MINUTES, DISK_CHECK_INTERVAL_MINUTES,
+        TimeUnit.MINUTES);
     initializeVolumeSet();
   }
 
-  // Add DN volumes configured through ConfigKeys to volumeMap.
+  @VisibleForTesting
+  HddsVolumeChecker getVolumeChecker(Configuration configuration)
+      throws DiskChecker.DiskErrorException {
+    return new HddsVolumeChecker(configuration, new Timer());
+  }
+
+  /**
+   * Add DN volumes configured through ConfigKeys to volumeMap.
+   */
   private void initializeVolumeSet() throws IOException {
     volumeMap = new ConcurrentHashMap<>();
     failedVolumeMap = new ConcurrentHashMap<>();
@@ -137,7 +155,7 @@ public class VolumeSet {
     }
 
     for (StorageType storageType : StorageType.values()) {
-      volumeStateMap.put(storageType, new ArrayList<HddsVolume>());
+      volumeStateMap.put(storageType, new ArrayList<>());
     }
 
     for (String locationString : rawLocations) {
@@ -149,10 +167,16 @@ public class VolumeSet {
 
         checkAndSetClusterID(hddsVolume.getClusterID());
 
-        volumeMap.put(hddsVolume.getHddsRootDir().getPath(), hddsVolume);
-        volumeStateMap.get(hddsVolume.getStorageType()).add(hddsVolume);
         LOG.info("Added Volume : {} to VolumeSet",
             hddsVolume.getHddsRootDir().getPath());
+
+        if (!hddsVolume.getHddsRootDir().mkdirs() &&
+            !hddsVolume.getHddsRootDir().exists()) {
+          throw new IOException("Failed to create HDDS storage dir " +
+              hddsVolume.getHddsRootDir());
+        }
+        volumeMap.put(hddsVolume.getHddsRootDir().getPath(), hddsVolume);
+        volumeStateMap.get(hddsVolume.getStorageType()).add(hddsVolume);
       } catch (IOException e) {
         HddsVolume volume = new HddsVolume.Builder(locationString)
             .failedVolume(true).build();
@@ -161,9 +185,13 @@ public class VolumeSet {
       }
     }
 
+    // First checking if we have any volumes, if all volumes are failed the
+    // volumeMap size will be zero, and we throw Exception.
     if (volumeMap.size() == 0) {
-      throw new DiskOutOfSpaceException("No storage location configured");
+      throw new DiskOutOfSpaceException("No storage locations configured");
     }
+
+    checkAllVolumes();
 
     // Ensure volume threads are stopped and scm df is saved during shutdown.
     shutdownHook = () -> {
@@ -171,6 +199,52 @@ public class VolumeSet {
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
+  }
+
+  /**
+   * Run a synchronous parallel check of all HDDS volumes, removing
+   * failed volumes.
+   */
+  private void checkAllVolumes() throws IOException {
+    List<HddsVolume> allVolumes = getVolumesList();
+    Set<HddsVolume> failedVolumes;
+    try {
+      failedVolumes = volumeChecker.checkAllVolumes(allVolumes);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted while running disk check", e);
+    }
+
+    if (failedVolumes.size() > 0) {
+      LOG.warn("checkAllVolumes got {} failed volumes - {}",
+          failedVolumes.size(), failedVolumes);
+      handleVolumeFailures(failedVolumes);
+    } else {
+      LOG.debug("checkAllVolumes encountered no failures");
+    }
+  }
+
+  /**
+   * Handle one or more failed volumes.
+   * @param failedVolumes
+   */
+  private void handleVolumeFailures(Set<HddsVolume> failedVolumes) {
+    for (HddsVolume v: failedVolumes) {
+      this.writeLock();
+      try {
+        // Immediately mark the volume as failed so it is unavailable
+        // for new containers.
+        volumeMap.remove(v.getHddsRootDir().getPath());
+        failedVolumeMap.putIfAbsent(v.getHddsRootDir().getPath(), v);
+      } finally {
+        this.writeUnlock();
+      }
+
+      // TODO:
+      // 1. Mark all closed containers on the volume as unhealthy.
+      // 2. Consider stopping IO on open containers and tearing down
+      //    active pipelines.
+      // 3. Handle Ratis log disk failure.
+    }
   }
 
   /**
@@ -198,13 +272,34 @@ public class VolumeSet {
     }
   }
 
-  public void acquireLock() {
-    volumeSetLock.acquire();
+  /**
+   * Acquire Volume Set Read lock.
+   */
+  public void readLock() {
+    volumeSetRWLock.readLock().lock();
   }
 
-  public void releaseLock() {
-    volumeSetLock.release();
+  /**
+   * Release Volume Set Read lock.
+   */
+  public void readUnlock() {
+    volumeSetRWLock.readLock().unlock();
   }
+
+  /**
+   * Acquire Volume Set Write lock.
+   */
+  public void writeLock() {
+    volumeSetRWLock.writeLock().lock();
+  }
+
+  /**
+   * Release Volume Set Write lock.
+   */
+  public void writeUnlock() {
+    volumeSetRWLock.writeLock().unlock();
+  }
+
 
   private HddsVolume createVolume(String locationString,
       StorageType storageType) throws IOException {
@@ -218,16 +313,17 @@ public class VolumeSet {
 
 
   // Add a volume to VolumeSet
-  public boolean addVolume(String dataDir) {
+  boolean addVolume(String dataDir) {
     return addVolume(dataDir, StorageType.DEFAULT);
   }
 
   // Add a volume to VolumeSet
-  public boolean addVolume(String volumeRoot, StorageType storageType) {
+  private boolean addVolume(String volumeRoot, StorageType storageType) {
     String hddsRoot = HddsVolumeUtil.getHddsRoot(volumeRoot);
     boolean success;
 
-    try (AutoCloseableLock lock = volumeSetLock.acquire()) {
+    this.writeLock();
+    try {
       if (volumeMap.containsKey(hddsRoot)) {
         LOG.warn("Volume : {} already exists in VolumeMap", hddsRoot);
         success = false;
@@ -247,6 +343,8 @@ public class VolumeSet {
     } catch (IOException ex) {
       LOG.error("Failed to add volume " + volumeRoot + " to VolumeSet", ex);
       success = false;
+    } finally {
+      this.writeUnlock();
     }
     return success;
   }
@@ -255,7 +353,8 @@ public class VolumeSet {
   public void failVolume(String dataDir) {
     String hddsRoot = HddsVolumeUtil.getHddsRoot(dataDir);
 
-    try (AutoCloseableLock lock = volumeSetLock.acquire()) {
+    this.writeLock();
+    try {
       if (volumeMap.containsKey(hddsRoot)) {
         HddsVolume hddsVolume = volumeMap.get(hddsRoot);
         hddsVolume.failVolume();
@@ -270,6 +369,8 @@ public class VolumeSet {
       } else {
         LOG.warn("Volume : {} does not exist in VolumeSet", hddsRoot);
       }
+    } finally {
+      this.writeUnlock();
     }
   }
 
@@ -277,7 +378,8 @@ public class VolumeSet {
   public void removeVolume(String dataDir) throws IOException {
     String hddsRoot = HddsVolumeUtil.getHddsRoot(dataDir);
 
-    try (AutoCloseableLock lock = volumeSetLock.acquire()) {
+    this.writeLock();
+    try {
       if (volumeMap.containsKey(hddsRoot)) {
         HddsVolume hddsVolume = volumeMap.get(hddsRoot);
         hddsVolume.shutdown();
@@ -295,12 +397,9 @@ public class VolumeSet {
       } else {
         LOG.warn("Volume : {} does not exist in VolumeSet", hddsRoot);
       }
+    } finally {
+      this.writeUnlock();
     }
-  }
-
-  public HddsVolume chooseVolume(long containerSize,
-      VolumeChoosingPolicy choosingPolicy) throws IOException {
-    return choosingPolicy.chooseVolume(getVolumesList(), containerSize);
   }
 
   /**
@@ -319,14 +418,20 @@ public class VolumeSet {
   }
 
   /**
-   * Shutdown's the volumeset, if saveVolumeSetUsed is false, call's
-   * {@link VolumeSet#saveVolumeSetUsed}.
+   * Shutdown the volumeset.
    */
   public void shutdown() {
     saveVolumeSetUsed();
+    stopDiskChecker();
     if (shutdownHook != null) {
       ShutdownHookManager.get().removeShutdownHook(shutdownHook);
     }
+  }
+
+  private void stopDiskChecker() {
+    periodicDiskChecker.cancel(true);
+    volumeChecker.shutdownAndWait(0, TimeUnit.SECONDS);
+    diskCheckerservice.shutdownNow();
   }
 
   @VisibleForTesting
@@ -352,55 +457,63 @@ public class VolumeSet {
   public StorageContainerDatanodeProtocolProtos.NodeReportProto getNodeReport()
       throws IOException {
     boolean failed;
-    StorageLocationReport[] reports = new StorageLocationReport[volumeMap
-        .size() + failedVolumeMap.size()];
-    int counter = 0;
-    HddsVolume hddsVolume;
-    for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
-      hddsVolume = entry.getValue();
-      VolumeInfo volumeInfo = hddsVolume.getVolumeInfo();
-      long scmUsed = 0;
-      long remaining = 0;
-      failed = false;
-      try {
-        scmUsed = volumeInfo.getScmUsed();
-        remaining = volumeInfo.getAvailable();
-      } catch (IOException ex) {
-        LOG.warn("Failed to get scmUsed and remaining for container " +
-            "storage location {}", volumeInfo.getRootDir());
-        // reset scmUsed and remaining if df/du failed.
-        scmUsed = 0;
-        remaining = 0;
-        failed = true;
-      }
+    this.readLock();
+    try {
+      StorageLocationReport[] reports = new StorageLocationReport[volumeMap
+          .size() + failedVolumeMap.size()];
+      int counter = 0;
+      HddsVolume hddsVolume;
+      for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
+        hddsVolume = entry.getValue();
+        VolumeInfo volumeInfo = hddsVolume.getVolumeInfo();
+        long scmUsed;
+        long remaining;
+        long capacity;
+        failed = false;
+        try {
+          scmUsed = volumeInfo.getScmUsed();
+          remaining = volumeInfo.getAvailable();
+          capacity = volumeInfo.getCapacity();
+        } catch (IOException ex) {
+          LOG.warn("Failed to get scmUsed and remaining for container " +
+              "storage location {}", volumeInfo.getRootDir(), ex);
+          // reset scmUsed and remaining if df/du failed.
+          scmUsed = 0;
+          remaining = 0;
+          capacity = 0;
+          failed = true;
+        }
 
-      StorageLocationReport.Builder builder =
-          StorageLocationReport.newBuilder();
-      builder.setStorageLocation(volumeInfo.getRootDir())
-          .setId(hddsVolume.getStorageID())
-          .setFailed(failed)
-          .setCapacity(hddsVolume.getCapacity())
-          .setRemaining(remaining)
-          .setScmUsed(scmUsed)
-          .setStorageType(hddsVolume.getStorageType());
-      StorageLocationReport r = builder.build();
-      reports[counter++] = r;
+        StorageLocationReport.Builder builder =
+            StorageLocationReport.newBuilder();
+        builder.setStorageLocation(volumeInfo.getRootDir())
+            .setId(hddsVolume.getStorageID())
+            .setFailed(failed)
+            .setCapacity(capacity)
+            .setRemaining(remaining)
+            .setScmUsed(scmUsed)
+            .setStorageType(hddsVolume.getStorageType());
+        StorageLocationReport r = builder.build();
+        reports[counter++] = r;
+      }
+      for (Map.Entry<String, HddsVolume> entry : failedVolumeMap.entrySet()) {
+        hddsVolume = entry.getValue();
+        StorageLocationReport.Builder builder = StorageLocationReport
+            .newBuilder();
+        builder.setStorageLocation(hddsVolume.getHddsRootDir()
+            .getAbsolutePath()).setId(hddsVolume.getStorageID()).setFailed(true)
+            .setCapacity(0).setRemaining(0).setScmUsed(0).setStorageType(
+            hddsVolume.getStorageType());
+        StorageLocationReport r = builder.build();
+        reports[counter++] = r;
+      }
+      NodeReportProto.Builder nrb = NodeReportProto.newBuilder();
+      for (int i = 0; i < reports.length; i++) {
+        nrb.addStorageReport(reports[i].getProtoBufMessage());
+      }
+      return nrb.build();
+    } finally {
+      this.readUnlock();
     }
-    for (Map.Entry<String, HddsVolume> entry : failedVolumeMap.entrySet()) {
-      hddsVolume = entry.getValue();
-      StorageLocationReport.Builder builder = StorageLocationReport
-          .newBuilder();
-      builder.setStorageLocation(hddsVolume.getHddsRootDir()
-          .getAbsolutePath()).setId(hddsVolume.getStorageID()).setFailed(true)
-          .setCapacity(0).setRemaining(0).setScmUsed(0).setStorageType(
-              hddsVolume.getStorageType());
-      StorageLocationReport r = builder.build();
-      reports[counter++] = r;
-    }
-    NodeReportProto.Builder nrb = NodeReportProto.newBuilder();
-    for (int i = 0; i < reports.length; i++) {
-      nrb.addStorageReport(reports[i].getProtoBufMessage());
-    }
-    return nrb.build();
   }
 }

@@ -85,6 +85,15 @@
 </property>
 
 <property>
+  <name>mapreduce.job.dfs.storage.capacity.kill-limit-exceed</name>
+  <value>false</value>
+  <description>Whether to fast fail the task when exceeds allocated storage
+    capacity in the cluster filesystem(ClusterStorageCapacityExceededException
+    happens), for example, exceeds the dfs quota limitation. If true, the
+    task will fast fail. If false, the task will get retried.</description>
+</property>
+
+<property>
   <name>mapreduce.job.maps</name>
   <value>2</value>
   <description>The default number of map tasks per job.
@@ -149,7 +158,7 @@
 
   <property>
     <name>mapreduce.job.max.split.locations</name>
-    <value>10</value>
+    <value>15</value>
     <description>The max number of block locations to store for each split for
     locality calculation.
     </description>
@@ -264,6 +273,16 @@
   <description>The number of milliseconds before a task will be
   terminated if it neither reads an input, writes an output, nor
   updates its status string.  A value of 0 disables the timeout.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.task.stuck.timeout-ms</name>
+  <value>600000</value>
+  <description>The max timeout before receiving remote task's first heartbeat.
+    This parameter is in order to avoid waiting for the container
+    to start indefinitely, which made task stuck in the NEW state.
+    A value of 0 disables the timeout.
   </description>
 </property>
 
@@ -1295,9 +1314,9 @@
 </property>
 
 <property>
- <name>mapreduce.job.counters.limit</name>
+ <name>mapreduce.job.counters.max</name>
   <value>120</value>
-  <description>Limit on the number of user counters allowed per job.
+  <description>The max number of user counters allowed per job.
   </description>
 </property>
 
@@ -1479,6 +1498,27 @@
   <description>Range of ports that the MapReduce AM can use for its webapp when binding.
     Leave blank if you want all possible ports.
     For example 50000-50050,50100-50200</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.webapp.https.enabled</name>
+  <value>false</value>
+  <description>True if the MR AM should use HTTPS for its webapp.  If
+    yarn.resourcemanager.application-https.policy is set to LENIENT or STRICT,
+    the MR AM will automatically use the keystore provided by YARN with a
+    certificate for the MR AM webapp, unless provided by the user.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.webapp.https.client.auth</name>
+  <value>false</value>
+  <description>True if the MR AM webapp should require client HTTPS
+    authentication (i.e. the proxy server (RM) should present a certificate to
+    the MR AM webapp). If yarn.resourcemanager.application-https.policy is set
+    to LENIENT or STRICT, the MR AM will automatically use the truststore
+    provided by YARN with the RMs certificate, unless provided by the user.
+  </description>
 </property>
 
 <property>

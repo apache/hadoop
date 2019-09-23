@@ -262,8 +262,8 @@ public class ZStandardDecompressor implements Decompressor {
 
     int originalPosition = dst.position();
     int n = inflateBytesDirect(
-        src, src.position(), src.remaining(), dst, dst.position(),
-        dst.remaining()
+        src, src.position(), src.limit(), dst, dst.position(),
+        dst.limit()
     );
     dst.position(originalPosition + n);
     if (bytesInCompressedBuffer > 0) {

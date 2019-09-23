@@ -18,6 +18,10 @@
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
+import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH;
+import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +33,14 @@ import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
+import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
+import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservice;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.zookeeper.CreateMode;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,6 +53,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
 
   private static TestingServer curatorTestingServer;
   private static CuratorFramework curatorFramework;
+  private static String baseZNode;
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -61,6 +73,9 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
+
+    baseZNode = conf.get(FEDERATION_STORE_ZK_PARENT_PATH,
+        FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
     getStateStore(conf);
   }
 
@@ -76,6 +91,44 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   @Before
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
+  }
+
+  private <T extends BaseRecord> String generateFakeZNode(
+      Class<T> recordClass) throws IOException {
+    String nodeName = StateStoreUtils.getRecordName(recordClass);
+    String primaryKey = "test";
+
+    if (nodeName != null) {
+      return baseZNode + "/" + nodeName + "/" + primaryKey;
+    }
+    return null;
+  }
+
+  private void testGetNullRecord(StateStoreDriver driver) throws Exception {
+    testGetNullRecord(driver, MembershipState.class);
+    testGetNullRecord(driver, MountTable.class);
+    testGetNullRecord(driver, RouterState.class);
+    testGetNullRecord(driver, DisabledNameservice.class);
+  }
+
+  private <T extends BaseRecord> void testGetNullRecord(
+      StateStoreDriver driver, Class<T> recordClass) throws Exception {
+    driver.removeAll(recordClass);
+
+    String znode = generateFakeZNode(recordClass);
+    assertNull(curatorFramework.checkExists().forPath(znode));
+
+    curatorFramework.create().withMode(CreateMode.PERSISTENT)
+        .withACL(null).forPath(znode, null);
+    assertNotNull(curatorFramework.checkExists().forPath(znode));
+
+    driver.get(recordClass);
+    assertNull(curatorFramework.checkExists().forPath(znode));
+  }
+
+  @Test
+  public void testGetNullRecord() throws Exception {
+    testGetNullRecord(getStateStoreDriver());
   }
 
   @Test

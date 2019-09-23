@@ -40,9 +40,6 @@ import io.swagger.annotations.ApiModelProperty;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "Placement constraint details.")
-@javax.annotation.Generated(
-    value = "class io.swagger.codegen.languages.JavaClientCodegen",
-    date = "2018-02-16T10:20:12.927-07:00")
 public class PlacementConstraint implements Serializable {
   private static final long serialVersionUID = 1518017165676511762L;
 
@@ -251,22 +248,22 @@ public class PlacementConstraint implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class PlacementConstraint {\n");
+    sb.append("class PlacementConstraint {\n")
 
-    sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    scope: ").append(toIndentedString(scope)).append("\n");
-    sb.append("    targetTags: ").append(toIndentedString(targetTags))
-        .append("\n");
-    sb.append("    nodeAttributes: ").append(toIndentedString(nodeAttributes))
-        .append("\n");
-    sb.append("    nodePartitions: ").append(toIndentedString(nodePartitions))
-    .append("\n");
-    sb.append("    minCardinality: ").append(toIndentedString(minCardinality))
-        .append("\n");
-    sb.append("    maxCardinality: ").append(toIndentedString(maxCardinality))
-        .append("\n");
-    sb.append("}");
+        .append("    name: ").append(toIndentedString(name)).append("\n")
+        .append("    type: ").append(toIndentedString(type)).append("\n")
+        .append("    scope: ").append(toIndentedString(scope)).append("\n")
+        .append("    targetTags: ").append(toIndentedString(targetTags))
+        .append("\n")
+        .append("    nodeAttributes: ").append(toIndentedString(nodeAttributes))
+        .append("\n")
+        .append("    nodePartitions: ").append(toIndentedString(nodePartitions))
+        .append("\n")
+        .append("    minCardinality: ").append(toIndentedString(minCardinality))
+        .append("\n")
+        .append("    maxCardinality: ").append(toIndentedString(maxCardinality))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -17,59 +17,82 @@
  */
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.junit.AfterClass;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.util.NavigableSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
-    .ReplicationFactor.THREE;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
-    .ReplicationType.RATIS;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor.THREE;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType.RATIS;
 
+/**
+ * Tests for Pipeline Closing.
+ */
 public class TestPipelineClose {
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
-  private static StorageContainerManager scm;
-  private static ContainerWithPipeline ratisContainer1;
-  private static ContainerWithPipeline ratisContainer2;
-  private static ContainerStateMap stateMap;
-  private static ContainerMapping mapping;
-  private static PipelineSelector pipelineSelector;
+  private MiniOzoneCluster cluster;
+  private OzoneConfiguration conf;
+  private StorageContainerManager scm;
+  private ContainerWithPipeline ratisContainer;
+  private ContainerManager containerManager;
+  private PipelineManager pipelineManager;
 
+  private long pipelineDestroyTimeoutInMillis;
   /**
    * Create a MiniDFSCluster for testing.
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(6).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
+    conf.setTimeDuration(HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL, 1000,
+        TimeUnit.MILLISECONDS);
+    pipelineDestroyTimeoutInMillis = 5000;
+    conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_DESTROY_TIMEOUT,
+        pipelineDestroyTimeoutInMillis, TimeUnit.MILLISECONDS);
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
-    mapping = (ContainerMapping)scm.getScmContainerManager();
-    stateMap = mapping.getStateManager().getContainerStateMap();
-    ratisContainer1 = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    ratisContainer2 = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    pipelineSelector = mapping.getPipelineSelector();
+    containerManager = scm.getContainerManager();
+    pipelineManager = scm.getPipelineManager();
+    ContainerInfo containerInfo = containerManager
+        .allocateContainer(RATIS, THREE, "testOwner");
+    ratisContainer = new ContainerWithPipeline(containerInfo,
+        pipelineManager.getPipeline(containerInfo.getPipelineID()));
+    pipelineManager = scm.getPipelineManager();
     // At this stage, there should be 2 pipeline one with 1 open container each.
     // Try closing the both the pipelines, one with a closed container and
     // the other with an open container.
@@ -78,71 +101,164 @@ public class TestPipelineClose {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-
   @Test
   public void testPipelineCloseWithClosedContainer() throws IOException {
-    NavigableSet<ContainerID> set = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getId());
+    Set<ContainerID> set = pipelineManager
+        .getContainersInPipeline(ratisContainer.getPipeline().getId());
 
-    long cId = ratisContainer1.getContainerInfo().getContainerID();
+    ContainerID cId = ratisContainer.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
-    Assert.assertEquals(cId, set.first().getId());
+    set.forEach(containerID -> Assert.assertEquals(containerID, cId));
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline
-    mapping
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    mapping
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
 
-    NavigableSet<ContainerID> setClosed = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getId());
+    Set<ContainerID> setClosed = pipelineManager
+        .getContainersInPipeline(ratisContainer.getPipeline().getId());
     Assert.assertEquals(0, setClosed.size());
 
-    pipelineSelector.finalizePipeline(ratisContainer1.getPipeline());
-    Pipeline pipeline1 = pipelineSelector
-        .getPipeline(ratisContainer1.getPipeline().getId(),
-            ratisContainer1.getContainerInfo().getReplicationType());
-    Assert.assertNull(pipeline1);
-    Assert.assertEquals(ratisContainer1.getPipeline().getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSED);
-    for (DatanodeDetails dn : ratisContainer1.getPipeline().getMachines()) {
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
+    for (DatanodeDetails dn : ratisContainer.getPipeline().getNodes()) {
       // Assert that the pipeline has been removed from Node2PipelineMap as well
-      Assert.assertEquals(pipelineSelector.getNode2PipelineMap()
-          .getPipelines(dn.getUuid()).size(), 0);
+      Assert.assertFalse(scm.getScmNodeManager().getPipelines(dn)
+          .contains(ratisContainer.getPipeline().getId()));
     }
   }
 
   @Test
-  public void testPipelineCloseWithOpenContainer() throws IOException,
-      TimeoutException, InterruptedException {
-    NavigableSet<ContainerID> setOpen = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer2.getPipeline().getId());
+  public void testPipelineCloseWithOpenContainer()
+      throws IOException, TimeoutException, InterruptedException {
+    Set<ContainerID> setOpen = pipelineManager.getContainersInPipeline(
+        ratisContainer.getPipeline().getId());
     Assert.assertEquals(1, setOpen.size());
 
-    long cId2 = ratisContainer2.getContainerInfo().getContainerID();
-    mapping
-        .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATE);
-    mapping
-        .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATED);
-    pipelineSelector.finalizePipeline(ratisContainer2.getPipeline());
-    Assert.assertEquals(ratisContainer2.getPipeline().getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSING);
-    Pipeline pipeline2 = pipelineSelector
-        .getPipeline(ratisContainer2.getPipeline().getId(),
-            ratisContainer2.getContainerInfo().getReplicationType());
-    Assert.assertEquals(pipeline2.getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSING);
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return containerManager
+            .getContainer(ratisContainer.getContainerInfo().containerID())
+            .getState() == HddsProtos.LifeCycleState.CLOSING;
+      } catch (ContainerNotFoundException e) {
+        return false;
+      }
+    }, 100, 10000);
+  }
+
+  @Test
+  public void testPipelineCloseWithPipelineAction() throws Exception {
+    List<DatanodeDetails> dns = ratisContainer.getPipeline().getNodes();
+    PipelineActionsFromDatanode
+        pipelineActionsFromDatanode = TestUtils
+        .getPipelineActionFromDatanode(dns.get(0),
+            ratisContainer.getPipeline().getId());
+    // send closing action for pipeline
+    PipelineActionHandler pipelineActionHandler =
+        new PipelineActionHandler(pipelineManager, conf);
+    pipelineActionHandler
+        .onMessage(pipelineActionsFromDatanode, new EventQueue());
+    Thread.sleep((int) (pipelineDestroyTimeoutInMillis * 1.2));
+    OzoneContainer ozoneContainer =
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
+            .getContainer();
+    List<PipelineReport> pipelineReports =
+        ozoneContainer.getPipelineReport().getPipelineReportList();
+    for (PipelineReport pipelineReport : pipelineReports) {
+      // ensure the pipeline is not reported by any dn
+      Assert.assertNotEquals(
+          PipelineID.getFromProtobuf(pipelineReport.getPipelineID()),
+          ratisContainer.getPipeline().getId());
+    }
+
+    try {
+      pipelineManager.getPipeline(ratisContainer.getPipeline().getId());
+      Assert.fail("Pipeline should not exist in SCM");
+    } catch (PipelineNotFoundException e) {
+    }
+  }
+
+  @Test
+  public void testPipelineCloseWithLogFailure() throws IOException {
+
+    EventQueue eventQ = (EventQueue) scm.getEventQueue();
+    PipelineActionHandler pipelineActionTest =
+        Mockito.mock(PipelineActionHandler.class);
+    eventQ.addHandler(SCMEvents.PIPELINE_ACTIONS, pipelineActionTest);
+    ArgumentCaptor<PipelineActionsFromDatanode> actionCaptor =
+        ArgumentCaptor.forClass(PipelineActionsFromDatanode.class);
+
+    ContainerInfo containerInfo = containerManager
+        .allocateContainer(RATIS, THREE, "testOwner");
+    ContainerWithPipeline containerWithPipeline =
+        new ContainerWithPipeline(containerInfo,
+            pipelineManager.getPipeline(containerInfo.getPipelineID()));
+    Pipeline openPipeline = containerWithPipeline.getPipeline();
+    RaftGroupId groupId = RaftGroupId.valueOf(openPipeline.getId().getId());
+
+    try {
+      pipelineManager.getPipeline(openPipeline.getId());
+    } catch (PipelineNotFoundException e) {
+      Assert.assertTrue("pipeline should exist", false);
+    }
+
+    DatanodeDetails datanodeDetails = openPipeline.getNodes().get(0);
+    int index = cluster.getHddsDatanodeIndex(datanodeDetails);
+
+    XceiverServerRatis xceiverRatis =
+        (XceiverServerRatis) cluster.getHddsDatanodes().get(index)
+        .getDatanodeStateMachine().getContainer().getWriteChannel();
+
+    /**
+     * Notify Datanode Ratis Server endpoint of a Ratis log failure.
+     * This is expected to trigger an immediate pipeline actions report to SCM
+     */
+    xceiverRatis.handleNodeLogFailure(groupId, null);
+
+    // verify SCM receives a pipeline action report "immediately"
+    Mockito.verify(pipelineActionTest, Mockito.timeout(100))
+        .onMessage(
+            actionCaptor.capture(),
+            Mockito.any(EventPublisher.class));
+
+    PipelineActionsFromDatanode actionsFromDatanode =
+        actionCaptor.getValue();
+
+    // match the pipeline id
+    verifyCloseForPipeline(openPipeline, actionsFromDatanode);
+  }
+
+  private boolean verifyCloseForPipeline(Pipeline pipeline,
+      PipelineActionsFromDatanode report) {
+    UUID uuidToFind = pipeline.getId().getId();
+
+    boolean found = false;
+    for (StorageContainerDatanodeProtocolProtos.PipelineAction action :
+        report.getReport().getPipelineActionsList()) {
+      if (action.getAction() ==
+          StorageContainerDatanodeProtocolProtos.PipelineAction.Action.CLOSE) {
+        PipelineID closedPipelineId = PipelineID.
+              getFromProtobuf(action.getClosePipeline().getPipelineID());
+
+        if (closedPipelineId.getId().equals(uuidToFind)) {
+          found = true;
+        }
+      }
+    }
+
+    Assert.assertTrue("SCM did not receive a Close action for the Pipeline",
+        found);
+    return found;
   }
 }

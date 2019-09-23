@@ -13,16 +13,16 @@
  limitations under the License. See accompanying LICENSE file.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -318,6 +318,10 @@
           <groupId>commons-net</groupId>
           <artifactId>commons-net</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>dnsjava</groupId>
+          <artifactId>dnsjava</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module
@@ -381,7 +385,7 @@
     <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
@@ -473,7 +477,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-registry</artifactId>
+          <artifactId>hadoop-registry</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -662,7 +666,13 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>log4j:log4j</exclude>
+                      <exclude>org.eclipse.jetty.websocket:*</exclude>
+                      <exclude>javax.websocket:javax.websocket-api</exclude>
+                      <exclude>javax.annotation:javax.annotation-api</exclude>
+                      <exclude>org.eclipse.jetty:jetty-jndi</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
+                      <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
+                      <exclude>org.bouncycastle:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -709,9 +719,17 @@
                         <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
+                    <!-- Skip terminal html and javascript -->
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-yarn-server-nodemanager:*</artifact>
+                      <excludes>
+                        <exclude>TERMINAL/**/*</exclude>
+                      </excludes>
+                    </filter>
+
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
-                      <artifact>org.mockito:mockito-all</artifact>
+                      <artifact>org.mockito:mockito-core</artifact>
                       <excludes>
                         <exclude>asm-license.txt</exclude>
                         <exclude>cglib-license.txt</exclude>
@@ -719,6 +737,8 @@
                         <exclude>objenesis-license.txt</exclude>
                         <exclude>org/hamcrest/**/*.class</exclude>
                         <exclude>org/hamcrest/*.class</exclude>
+                        <exclude>org/objenesis/**/*.class</exclude>
+                        <exclude>org/objenesis/*.class</exclude>
                       </excludes>
                     </filter>
                     <!-- skip grizzly internals we don't need to run. -->
@@ -773,19 +793,24 @@
                         <exclude>ehcache-core.xsd</exclude>
                       </excludes>
                     </filter>
-
-                   <!-- remove utility classes which are not required from
-                        dnsjava -->
                     <filter>
-                      <artifact>dnsjava:dnsjava</artifact>
+                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
                       <excludes>
-                        <excldue>dig*</excldue>
-                        <exclude>jnamed*</exclude>
-                        <exlcude>lookup*</exlcude>
-                        <exclude>update*</exclude>
+                        <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-
+                    <filter>
+                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-io</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->

@@ -686,7 +686,7 @@ class BlockReaderLocalLegacy implements BlockReader {
 
   @Override
   public synchronized void close() throws IOException {
-    IOUtilsClient.cleanup(LOG, dataIn, checksumIn);
+    IOUtilsClient.cleanupWithLogger(LOG, dataIn, checksumIn);
     if (slowReadBuff != null) {
       bufferPool.returnBuffer(slowReadBuff);
       slowReadBuff = null;

@@ -26,13 +26,16 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
+import org.apache.ratis.util.TimeDuration;
 
 /**
  * Set of Utility functions used in ozone.
@@ -114,16 +117,6 @@ public final class OzoneUtils {
   }
 
   /**
-   * Get the path for datanode id file.
-   *
-   * @param conf - Configuration
-   * @return the path of datanode id as string
-   */
-  public static String getDatanodeIdFilePath(Configuration conf) {
-    return HddsUtils.getDatanodeIdFilePath(conf);
-  }
-
-  /**
    * Convert time in millisecond to a human readable format required in ozone.
    * @return a human readable string for the input time
    */
@@ -154,74 +147,28 @@ public final class OzoneUtils {
    */
   public static void verifyResourceName(String resName)
       throws IllegalArgumentException {
+    HddsClientUtils.verifyResourceName(resName);
+  }
 
-    if (resName == null) {
-      throw new IllegalArgumentException("Bucket or Volume name is null");
-    }
+  /**
+   * Return the TimeDuration configured for the given key. If not configured,
+   * return the default value.
+   */
+  public static TimeDuration getTimeDuration(Configuration conf, String key,
+      TimeDuration defaultValue) {
+    TimeUnit defaultTimeUnit = defaultValue.getUnit();
+    long timeDurationInDefaultUnit = conf.getTimeDuration(key,
+        defaultValue.getDuration(), defaultTimeUnit);
+    return TimeDuration.valueOf(timeDurationInDefaultUnit, defaultTimeUnit);
+  }
 
-    if ((resName.length() < OzoneConsts.OZONE_MIN_BUCKET_NAME_LENGTH) ||
-        (resName.length() > OzoneConsts.OZONE_MAX_BUCKET_NAME_LENGTH)) {
-      throw new IllegalArgumentException(
-          "Bucket or Volume length is illegal, " +
-              "valid length is 3-63 characters");
-    }
-
-    if ((resName.charAt(0) == '.') || (resName.charAt(0) == '-')) {
-      throw new IllegalArgumentException(
-          "Bucket or Volume name cannot start with a period or dash");
-    }
-
-    if ((resName.charAt(resName.length() - 1) == '.') ||
-        (resName.charAt(resName.length() - 1) == '-')) {
-      throw new IllegalArgumentException(
-          "Bucket or Volume name cannot end with a period or dash");
-    }
-
-    boolean isIPv4 = true;
-    char prev = (char) 0;
-
-    for (int index = 0; index < resName.length(); index++) {
-      char currChar = resName.charAt(index);
-
-      if (currChar != '.') {
-        isIPv4 = ((currChar >= '0') && (currChar <= '9')) && isIPv4;
-      }
-
-      if (currChar > 'A' && currChar < 'Z') {
-        throw new IllegalArgumentException(
-            "Bucket or Volume name does not support uppercase characters");
-      }
-
-      if ((currChar != '.') && (currChar != '-')) {
-        if ((currChar < '0') || (currChar > '9' && currChar < 'a') ||
-            (currChar > 'z')) {
-          throw new IllegalArgumentException("Bucket or Volume name has an " +
-              "unsupported character : " +
-              currChar);
-        }
-      }
-
-      if ((prev == '.') && (currChar == '.')) {
-        throw new IllegalArgumentException("Bucket or Volume name should not " +
-            "have two contiguous periods");
-      }
-
-      if ((prev == '-') && (currChar == '.')) {
-        throw new IllegalArgumentException(
-            "Bucket or Volume name should not have period after dash");
-      }
-
-      if ((prev == '.') && (currChar == '-')) {
-        throw new IllegalArgumentException(
-            "Bucket or Volume name should not have dash after period");
-      }
-      prev = currChar;
-    }
-
-    if (isIPv4) {
-      throw new IllegalArgumentException(
-          "Bucket or Volume name cannot be an IPv4 address or all numeric");
-    }
+  /**
+   * Return the time configured for the given key in milliseconds.
+   */
+  public static long getTimeDurationInMS(Configuration conf, String key,
+      TimeDuration defaultValue) {
+    return getTimeDuration(conf, key, defaultValue)
+        .toLong(TimeUnit.MILLISECONDS);
   }
 
 }

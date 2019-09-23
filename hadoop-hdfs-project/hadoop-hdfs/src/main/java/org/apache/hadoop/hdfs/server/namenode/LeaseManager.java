@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -208,7 +209,7 @@ public class LeaseManager {
    * read or write lock.
    *
    * @param ancestorDir the ancestor {@link INodeDirectory}
-   * @return Set<INodesInPath>
+   * @return {@code Set<INodesInPath>}
    */
   public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
       ancestorDir) throws IOException {
@@ -302,7 +303,9 @@ public class LeaseManager {
 
     int count = 0;
     String fullPathName = null;
-    for (Long inodeId: inodeIds) {
+    Iterator<Long> inodeIdIterator = inodeIds.iterator();
+    while (inodeIdIterator.hasNext()) {
+      Long inodeId = inodeIdIterator.next();
       final INodeFile inodeFile =
           fsnamesystem.getFSDirectory().getInode(inodeId).asFile();
       if (!inodeFile.isUnderConstruction()) {
@@ -323,7 +326,8 @@ public class LeaseManager {
         break;
       }
     }
-    boolean hasMore = (numResponses < remainingLeases.size());
+    // avoid rescanning all leases when we have checked all leases already
+    boolean hasMore = inodeIdIterator.hasNext();
     return new BatchedListEntries<>(openFileEntries, hasMore);
   }
 

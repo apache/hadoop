@@ -40,11 +40,13 @@ public interface S3ClientFactory {
    * @param name raw input S3A file system URI
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @param credentialSet credentials to use
+   * @param userAgentSuffix optional suffix for the UA field.
    * @return S3 client
    * @throws IOException IO problem
    */
   AmazonS3 createS3Client(URI name,
-      final String bucket,
-      final AWSCredentialsProvider credentialSet) throws IOException;
+      String bucket,
+      AWSCredentialsProvider credentialSet,
+      String userAgentSuffix) throws IOException;
 
 }

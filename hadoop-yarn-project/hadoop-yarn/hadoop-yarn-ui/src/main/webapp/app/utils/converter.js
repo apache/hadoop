@@ -119,7 +119,7 @@ export default {
       if (splitLen < 2) {
         return null;
       }
-      return [splits[0], splits[1]];
+      return splits[2] ? [splits[0], splits[1], splits[2]] : [splits[0], splits[1]];
     }
   },
   memoryToSimpliedUnit: function(mb) {

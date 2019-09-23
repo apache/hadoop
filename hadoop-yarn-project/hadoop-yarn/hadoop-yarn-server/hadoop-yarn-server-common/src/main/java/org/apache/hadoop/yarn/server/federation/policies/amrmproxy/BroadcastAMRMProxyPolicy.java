@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -49,7 +50,8 @@ public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();

@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.service.component;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import static org.apache.hadoop.yarn.service.api.records.Component
@@ -44,7 +43,6 @@ import org.apache.hadoop.yarn.service.ServiceEventType;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
 import org.apache.hadoop.yarn.service.ContainerFailureTracker;
 import org.apache.hadoop.yarn.service.ServiceContext;
@@ -58,7 +56,9 @@ import org.apache.hadoop.yarn.service.monitor.ComponentHealthThresholdMonitor;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -80,6 +80,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,6 +90,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.*;
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
+import static org.apache.hadoop.yarn.service.component.ComponentEventType.CANCEL_UPGRADE;
+import static org.apache.hadoop.yarn.service.component.ComponentEventType.UPGRADE;
 import static org.apache.hadoop.yarn.service.component.ComponentState.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
@@ -126,9 +129,8 @@ public class Component implements EventHandler<ComponentEvent> {
       new ConcurrentHashMap<>();
   private boolean healthThresholdMonitorEnabled = false;
 
-  private AtomicBoolean upgradeInProgress = new AtomicBoolean(false);
-  private ComponentEvent upgradeEvent;
-  private AtomicLong numContainersThatNeedUpgrade = new AtomicLong(0);
+  private UpgradeStatus upgradeStatus = new UpgradeStatus();
+  private UpgradeStatus cancelUpgradeStatus = new UpgradeStatus();
 
   private StateMachine<ComponentState, ComponentEventType, ComponentEvent>
       stateMachine;
@@ -143,6 +145,9 @@ public class Component implements EventHandler<ComponentEvent> {
           // container recovered on AM restart
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
               new ContainerRecoveredTransition())
+          // instance decommissioned
+          .addTransition(INIT, INIT, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
 
           // container recovered in AM heartbeat
           .addTransition(FLEXING, FLEXING, CONTAINER_RECOVERED,
@@ -160,6 +165,11 @@ public class Component implements EventHandler<ComponentEvent> {
           // Flex while previous flex is still in progress
           .addTransition(FLEXING, EnumSet.of(FLEXING, STABLE), FLEX,
               new FlexComponentTransition())
+          .addTransition(FLEXING, EnumSet.of(UPGRADING, FLEXING, STABLE),
+              CHECK_STABLE, new CheckStableTransition())
+          // instance decommissioned
+          .addTransition(FLEXING, FLEXING, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
 
           // container failed while stable
           .addTransition(STABLE, FLEXING, CONTAINER_COMPLETED,
@@ -172,19 +182,37 @@ public class Component implements EventHandler<ComponentEvent> {
           // For flex down, go to STABLE state
           .addTransition(STABLE, EnumSet.of(STABLE, FLEXING),
               FLEX, new FlexComponentTransition())
-          .addTransition(STABLE, UPGRADING, ComponentEventType.UPGRADE,
-              new ComponentNeedsUpgradeTransition())
-          //Upgrade while previous upgrade is still in progress
-          .addTransition(UPGRADING, UPGRADING, ComponentEventType.UPGRADE,
-              new ComponentNeedsUpgradeTransition())
+          // instance decommissioned
+          .addTransition(STABLE, STABLE, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
+          // upgrade component
+          .addTransition(STABLE, UPGRADING, UPGRADE,
+              new NeedsUpgradeTransition())
+          .addTransition(STABLE, CANCEL_UPGRADING, CANCEL_UPGRADE,
+              new NeedsUpgradeTransition())
+          .addTransition(STABLE, EnumSet.of(STABLE, FLEXING), CHECK_STABLE,
+              new CheckStableTransition())
+
+          // Cancel upgrade while previous upgrade is still in progress
+          .addTransition(UPGRADING, CANCEL_UPGRADING,
+              CANCEL_UPGRADE, new NeedsUpgradeTransition())
           .addTransition(UPGRADING, EnumSet.of(UPGRADING, FLEXING, STABLE),
               CHECK_STABLE, new CheckStableTransition())
-          .addTransition(FLEXING, EnumSet.of(UPGRADING, FLEXING, STABLE),
-              CHECK_STABLE, new CheckStableTransition())
-          .addTransition(STABLE, EnumSet.of(STABLE), CHECK_STABLE,
-              new CheckStableTransition())
-          .addTransition(UPGRADING, FLEXING, CONTAINER_COMPLETED,
-              new ContainerCompletedTransition())
+          .addTransition(UPGRADING, UPGRADING, CONTAINER_COMPLETED,
+              new CompletedAfterUpgradeTransition())
+          // instance decommissioned
+          .addTransition(UPGRADING, UPGRADING, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
+
+          .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, FLEXING,
+              STABLE), CHECK_STABLE, new CheckStableTransition())
+          .addTransition(CANCEL_UPGRADING, CANCEL_UPGRADING,
+              CONTAINER_COMPLETED, new CompletedAfterUpgradeTransition())
+          .addTransition(CANCEL_UPGRADING, FLEXING, CONTAINER_ALLOCATED,
+              new ContainerAllocatedTransition())
+          // instance decommissioned
+          .addTransition(CANCEL_UPGRADING, CANCEL_UPGRADING,
+              DECOMMISSION_INSTANCE, new DecommissionInstanceTransition())
           .installTopology();
 
   public Component(
@@ -231,6 +259,11 @@ public class Component implements EventHandler<ComponentEvent> {
     ComponentInstanceId id =
         new ComponentInstanceId(instanceIdCounter.getAndIncrement(),
             componentSpec.getName());
+    while (componentSpec.getDecommissionedInstances().contains(id
+        .getCompInstanceName())) {
+      id = new ComponentInstanceId(instanceIdCounter.getAndIncrement(),
+          componentSpec.getName());
+    }
     ComponentInstance instance = new ComponentInstance(this, id);
     compInstances.put(instance.getCompInstanceName(), instance);
     pendingInstances.add(instance);
@@ -332,7 +365,7 @@ public class Component implements EventHandler<ComponentEvent> {
                 + before + " to " + event.getDesired());
         component.requestContainers(delta);
         component.createNumCompInstances(delta);
-        component.componentSpec.setState(
+        component.setComponentState(
             org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
         component.getScheduler().getApp().setState(ServiceState.STARTED);
         return FLEXING;
@@ -364,6 +397,38 @@ public class Component implements EventHandler<ComponentEvent> {
             event.getDesired() + " instances, ignoring");
         return STABLE;
       }
+    }
+  }
+
+  private static class DecommissionInstanceTransition extends BaseTransition {
+    @Override
+    public void transition(Component component, ComponentEvent event) {
+      String instanceName = event.getInstanceName();
+      String hostnameSuffix = component.getHostnameSuffix();
+      if (instanceName.endsWith(hostnameSuffix)) {
+        instanceName = instanceName.substring(0,
+            instanceName.length() - hostnameSuffix.length());
+      }
+      if (component.getComponentSpec().getDecommissionedInstances()
+          .contains(instanceName)) {
+        LOG.info("Instance {} already decommissioned", instanceName);
+        return;
+      }
+      component.getComponentSpec().addDecommissionedInstance(instanceName);
+      ComponentInstance instance = component.getComponentInstance(instanceName);
+      if (instance == null) {
+        LOG.info("Instance was null for decommissioned instance {}",
+            instanceName);
+        return;
+      }
+      // remove the instance
+      component.compInstances.remove(instance.getCompInstanceName());
+      component.pendingInstances.remove(instance);
+      component.scheduler.getServiceMetrics().containersDesired.decr();
+      component.componentMetrics.containersDesired.decr();
+      component.getComponentSpec().setNumberOfContainers(component
+          .getComponentSpec().getNumberOfContainers() - 1);
+      instance.destroy();
     }
   }
 
@@ -430,11 +495,11 @@ public class Component implements EventHandler<ComponentEvent> {
     if (component.getNumRunningInstances() + component
         .getNumSucceededInstances() + component.getNumFailedInstances()
         < component.getComponentSpec().getNumberOfContainers()) {
-      component.componentSpec.setState(
+      component.setComponentState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
       return FLEXING;
     } else{
-      component.componentSpec.setState(
+      component.setComponentState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
       return STABLE;
     }
@@ -444,22 +509,22 @@ public class Component implements EventHandler<ComponentEvent> {
       Component component) {
     // if desired == running
     if (component.componentMetrics.containersReady.value() == component
-        .getComponentSpec().getNumberOfContainers()
-        && component.numContainersThatNeedUpgrade.get() == 0) {
-      component.componentSpec.setState(
+        .getComponentSpec().getNumberOfContainers() &&
+        !component.doesNeedUpgrade()) {
+      component.setComponentState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
       return STABLE;
+    } else if (component.doesNeedUpgrade()) {
+      component.setComponentState(org.apache.hadoop.yarn.service.api.records.
+          ComponentState.NEEDS_UPGRADE);
+      return component.getState();
     } else if (component.componentMetrics.containersReady.value() != component
         .getComponentSpec().getNumberOfContainers()) {
-      component.componentSpec.setState(
+      component.setComponentState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
       return FLEXING;
-    } else {
-      //  component.numContainersThatNeedUpgrade.get() > 0
-      component.componentSpec.setState(org.apache.hadoop.yarn.service.api.
-          records.ComponentState.NEEDS_UPGRADE);
-      return UPGRADING;
     }
+    return component.getState();
   }
 
   // This method should be called whenever there is an increment or decrement
@@ -467,22 +532,16 @@ public class Component implements EventHandler<ComponentEvent> {
   //This should not matter for terminating components
   private static synchronized void checkAndUpdateComponentState(
       Component component, boolean isIncrement) {
-    org.apache.hadoop.yarn.service.api.records.ComponentState curState =
-        component.componentSpec.getState();
 
     if (component.getRestartPolicyHandler().isLongLived()) {
       if (isIncrement) {
         // check if all containers are in READY state
-        if (component.numContainersThatNeedUpgrade.get() == 0
-            && component.componentMetrics.containersReady.value()
-            == component.componentMetrics.containersDesired.value()) {
-          component.componentSpec.setState(
+        if (!component.upgradeStatus.areContainersUpgrading() &&
+            !component.cancelUpgradeStatus.areContainersUpgrading() &&
+            component.componentMetrics.containersReady.value() ==
+                component.componentMetrics.containersDesired.value()) {
+          component.setComponentState(
               org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
-          if (curState != component.componentSpec.getState()) {
-            LOG.info("[COMPONENT {}] state changed from {} -> {}",
-                component.componentSpec.getName(), curState,
-                component.componentSpec.getState());
-          }
           // component state change will trigger re-check of service state
           component.context.getServiceManager().checkAndUpdateServiceState();
         }
@@ -491,18 +550,13 @@ public class Component implements EventHandler<ComponentEvent> {
         // still need to verify the count before changing the component state
         if (component.componentMetrics.containersReady.value()
             < component.componentMetrics.containersDesired.value()) {
-          component.componentSpec.setState(
+          component.setComponentState(
               org.apache.hadoop.yarn.service.api.records.ComponentState
                   .FLEXING);
         } else if (component.componentMetrics.containersReady.value()
             == component.componentMetrics.containersDesired.value()) {
-          component.componentSpec.setState(
+          component.setComponentState(
               org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
-        }
-        if (curState != component.componentSpec.getState()) {
-          LOG.info("[COMPONENT {}] state changed from {} -> {}",
-              component.componentSpec.getName(), curState,
-              component.componentSpec.getState());
         }
         // component state change will trigger re-check of service state
         component.context.getServiceManager().checkAndUpdateServiceState();
@@ -511,8 +565,8 @@ public class Component implements EventHandler<ComponentEvent> {
       // component state change will trigger re-check of service state
       component.context.getServiceManager().checkAndUpdateServiceState();
     }
-    // when the service is stable then the state of component needs to
-    // transition to stable
+    // triggers the state machine in component to reach appropriate state
+    // once the state in spec is changed.
     component.dispatcher.getEventHandler().handle(
         new ComponentEvent(component.getName(),
             ComponentEventType.CHECK_STABLE));
@@ -544,25 +598,43 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
-  private static class ComponentNeedsUpgradeTransition extends BaseTransition {
+  private static class CompletedAfterUpgradeTransition extends BaseTransition {
     @Override
     public void transition(Component component, ComponentEvent event) {
-      component.upgradeInProgress.set(true);
-      component.upgradeEvent = event;
-      component.componentSpec.setState(org.apache.hadoop.yarn.service.api.
-          records.ComponentState.NEEDS_UPGRADE);
-      component.numContainersThatNeedUpgrade.set(
+      Preconditions.checkNotNull(event.getContainerId());
+      component.updateMetrics(event.getStatus());
+      component.dispatcher.getEventHandler().handle(
+          new ComponentInstanceEvent(event.getContainerId(), STOP)
+              .setStatus(event.getStatus()));
+    }
+  }
+
+  private static class NeedsUpgradeTransition extends BaseTransition {
+    @Override
+    public void transition(Component component, ComponentEvent event) {
+      boolean isCancel = event.getType().equals(CANCEL_UPGRADE);
+      UpgradeStatus status = !isCancel ? component.upgradeStatus :
+          component.cancelUpgradeStatus;
+
+      status.inProgress.set(true);
+      status.targetSpec = event.getTargetSpec();
+      status.targetVersion = event.getUpgradeVersion();
+      LOG.info("[COMPONENT {}]: need upgrade to {}",
+          component.getName(), status.targetVersion);
+
+      status.containersNeedUpgrade.set(
           component.componentSpec.getNumberOfContainers());
-      component.componentSpec.getContainers().forEach(container -> {
-        container.setState(ContainerState.NEEDS_UPGRADE);
-        if (event.isExpressUpgrade()) {
-          ComponentInstanceEvent upgradeEvent = new ComponentInstanceEvent(
-              ContainerId.fromString(container.getId()),
-                  ComponentInstanceEventType.UPGRADE);
-          LOG.info("Upgrade container {}", container.getId());
-          component.dispatcher.getEventHandler().handle(upgradeEvent);
-        }
+
+      component.setComponentState(org.apache.hadoop.yarn.service.api.
+          records.ComponentState.NEEDS_UPGRADE);
+
+      component.getAllComponentInstances().forEach(instance -> {
+        instance.setContainerState(ContainerState.NEEDS_UPGRADE);
       });
+
+      if (event.getType().equals(CANCEL_UPGRADE)) {
+        component.upgradeStatus.reset();
+      }
     }
   }
 
@@ -572,22 +644,22 @@ public class Component implements EventHandler<ComponentEvent> {
     @Override
     public ComponentState transition(Component component,
         ComponentEvent componentEvent) {
-      org.apache.hadoop.yarn.service.api.records.ComponentState currState =
-          component.componentSpec.getState();
-      if (currState.equals(org.apache.hadoop.yarn.service.api.records
-          .ComponentState.STABLE)) {
-        return ComponentState.STABLE;
-      }
       // checkIfStable also updates the state in definition when STABLE
       ComponentState targetState = checkIfStable(component);
-      if (targetState.equals(STABLE) && component.upgradeInProgress.get()) {
-        component.componentSpec.overwrite(
-            component.upgradeEvent.getTargetSpec());
-        component.upgradeEvent = null;
+
+      if (targetState.equals(STABLE) &&
+          !(component.upgradeStatus.isCompleted() &&
+              component.cancelUpgradeStatus.isCompleted())) {
+        // Component stable after upgrade or cancel upgrade
+        UpgradeStatus status = !component.cancelUpgradeStatus.isCompleted() ?
+            component.cancelUpgradeStatus : component.upgradeStatus;
+
+        component.componentSpec.overwrite(status.getTargetSpec());
+        status.reset();
+
         ServiceEvent checkStable = new ServiceEvent(ServiceEventType.
             CHECK_STABLE);
         component.dispatcher.getEventHandler().handle(checkStable);
-        component.upgradeInProgress.set(false);
       }
       return targetState;
     }
@@ -625,16 +697,22 @@ public class Component implements EventHandler<ComponentEvent> {
         "[COMPONENT {}]: Assigned {} to component instance {} and launch on host {} ",
         getName(), container.getId(), instance.getCompInstanceName(),
         container.getNodeId());
-    if (upgradeInProgress.get()) {
-      scheduler.getContainerLaunchService()
+    Future<ProviderService.ResolvedLaunchParams> resolvedParamFuture;
+    if (!(upgradeStatus.isCompleted() && cancelUpgradeStatus.isCompleted())) {
+      UpgradeStatus status = !cancelUpgradeStatus.isCompleted() ?
+          cancelUpgradeStatus : upgradeStatus;
+
+      resolvedParamFuture = scheduler.getContainerLaunchService()
           .launchCompInstance(scheduler.getApp(), instance, container,
-              createLaunchContext(upgradeEvent.getTargetSpec(),
-                  upgradeEvent.getUpgradeVersion()));
+              createLaunchContext(status.getTargetSpec(),
+                  status.getTargetVersion()));
     } else {
-      scheduler.getContainerLaunchService().launchCompInstance(
+      resolvedParamFuture = scheduler.getContainerLaunchService()
+          .launchCompInstance(
           scheduler.getApp(), instance, container,
           createLaunchContext(componentSpec, scheduler.getApp().getVersion()));
     }
+    instance.updateResolvedLaunchParams(resolvedParamFuture);
   }
 
   public ContainerLaunchService.ComponentLaunchContext createLaunchContext(
@@ -681,7 +759,9 @@ public class Component implements EventHandler<ComponentEvent> {
             org.apache.hadoop.yarn.api.records.ResourceInformation.newInstance(
                 entry.getKey(),
                 specInfo.getUnit(),
-                specInfo.getValue());
+                specInfo.getValue(),
+                specInfo.getTags(),
+                specInfo.getAttributes());
         resource.setResourceInformation(resourceName, ri);
       }
     }
@@ -787,10 +867,8 @@ public class Component implements EventHandler<ComponentEvent> {
 
   private void setDesiredContainers(int n) {
     int delta = n - scheduler.getServiceMetrics().containersDesired.value();
-    if (delta > 0) {
+    if (delta != 0) {
       scheduler.getServiceMetrics().containersDesired.incr(delta);
-    } else {
-      scheduler.getServiceMetrics().containersDesired.decr(delta);
     }
     componentMetrics.containersDesired.set(n);
   }
@@ -828,6 +906,12 @@ public class Component implements EventHandler<ComponentEvent> {
       failureTracker.incNodeFailure(host);
       currentContainerFailure.getAndIncrement();
     }
+  }
+
+  private boolean doesNeedUpgrade() {
+    return cancelUpgradeStatus.areContainersUpgrading() ||
+        upgradeStatus.areContainersUpgrading() ||
+        upgradeStatus.failed.get();
   }
 
   public boolean areDependenciesReady() {
@@ -911,10 +995,6 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
-  public void decContainersThatNeedUpgrade() {
-    numContainersThatNeedUpgrade.decrementAndGet();
-  }
-
   public int getNumReadyInstances() {
     return componentMetrics.containersReady.value();
   }
@@ -972,10 +1052,33 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
-  public ComponentEvent getUpgradeEvent() {
+  /**
+   * Returns whether a component is upgrading or not.
+   */
+  public boolean isUpgrading() {
+    this.readLock.lock();
+
+    try {
+      return !(upgradeStatus.isCompleted() &&
+          cancelUpgradeStatus.isCompleted());
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public UpgradeStatus getUpgradeStatus() {
     this.readLock.lock();
     try {
-      return upgradeEvent;
+      return upgradeStatus;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public UpgradeStatus getCancelUpgradeStatus() {
+    this.readLock.lock();
+    try {
+      return cancelUpgradeStatus;
     } finally {
       this.readLock.unlock();
     }
@@ -987,8 +1090,8 @@ public class Component implements EventHandler<ComponentEvent> {
 
   @Override
   public void handle(ComponentEvent event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       ComponentState oldState = getState();
       try {
         stateMachine.doTransition(event.getType(), event);
@@ -1010,6 +1113,70 @@ public class Component implements EventHandler<ComponentEvent> {
 
     @Override public void transition(Component component,
         ComponentEvent event) {
+    }
+  }
+
+  /**
+   * Sets the state of the component in the component spec.
+   * @param state component state
+   */
+  private void setComponentState(
+      org.apache.hadoop.yarn.service.api.records.ComponentState state) {
+    org.apache.hadoop.yarn.service.api.records.ComponentState curState =
+        componentSpec.getState();
+    if (!curState.equals(state)) {
+      componentSpec.setState(state);
+      LOG.info("[COMPONENT {}] spec state changed from {} -> {}",
+          componentSpec.getName(), curState, state);
+    }
+  }
+
+  /**
+   * Status of upgrade.
+   */
+  public static class UpgradeStatus {
+    private org.apache.hadoop.yarn.service.api.records.Component targetSpec;
+    private String targetVersion;
+    private AtomicBoolean inProgress = new AtomicBoolean(false);
+    private AtomicLong containersNeedUpgrade = new AtomicLong(0);
+    private AtomicBoolean failed = new AtomicBoolean(false);
+
+    public org.apache.hadoop.yarn.service.api.records.
+        Component getTargetSpec() {
+      return targetSpec;
+    }
+
+    public String getTargetVersion() {
+      return targetVersion;
+    }
+
+    /*
+     * @return whether the upgrade is completed or not
+     */
+    public boolean isCompleted() {
+      return !inProgress.get();
+    }
+
+    public void decContainersThatNeedUpgrade() {
+      if (inProgress.get()) {
+        containersNeedUpgrade.decrementAndGet();
+      }
+    }
+
+    public void containerFailedUpgrade() {
+      failed.set(true);
+    }
+
+    void reset() {
+      containersNeedUpgrade.set(0);
+      targetSpec = null;
+      targetVersion = null;
+      inProgress.set(false);
+      failed.set(false);
+    }
+
+    boolean areContainersUpgrading() {
+      return containersNeedUpgrade.get() != 0;
     }
   }
 
@@ -1092,5 +1259,10 @@ public class Component implements EventHandler<ComponentEvent> {
   public ComponentRestartPolicy getRestartPolicyHandler() {
     RestartPolicyEnum restartPolicyEnum = getComponentSpec().getRestartPolicy();
     return getRestartPolicyHandler(restartPolicyEnum);
+  }
+
+  public String getHostnameSuffix() {
+    return ServiceApiUtil.getHostnameSuffix(context.service.getName(),
+        scheduler.getConfig());
   }
 }

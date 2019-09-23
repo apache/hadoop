@@ -47,4 +47,21 @@ public interface SCMMXBean extends ServiceRuntimeInfo {
    * @return The datanodeUUid to report json string mapping
    */
   Map<String, String> getContainerReport();
+
+  /**
+   * Returns safe mode status.
+   * @return boolean
+   */
+  boolean isInSafeMode();
+
+  /**
+   * Returns live safe mode container threshold.
+   * @return String
+   */
+  double getSafeModeCurrentContainerThreshold();
+
+  /**
+   * Returns the container count in all states.
+   */
+  Map<String, Integer> getContainerStateCount();
 }

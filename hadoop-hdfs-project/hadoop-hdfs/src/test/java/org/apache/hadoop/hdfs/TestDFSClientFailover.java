@@ -36,8 +36,6 @@ import javax.net.SocketFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -57,12 +55,11 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 import sun.net.spi.nameservice.NameService;
@@ -171,15 +168,15 @@ public class TestDFSClientFailover {
       return spy;
     }
 
-    private class MatchesPort extends BaseMatcher<SocketAddress> {
+    private class MatchesPort implements ArgumentMatcher<SocketAddress> {
       @Override
-      public boolean matches(Object arg0) {
+      public boolean matches(SocketAddress arg0) {
         return ((InetSocketAddress)arg0).getPort() == portToInjectOn;
       }
 
       @Override
-      public void describeTo(Description desc) {
-        desc.appendText("matches port " + portToInjectOn);
+      public String toString() {
+        return "matches port " + portToInjectOn;
       }
     }
   }

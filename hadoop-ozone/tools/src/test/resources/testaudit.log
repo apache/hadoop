@@ -1,0 +1,15 @@
+2018-09-06 01:57:22,996 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=ALLOCATE_KEY {volume=vol-7-67105, bucket=bucket-0-68911, key=key-246-29031, dataSize=10240, replicationType=STAND_ALONE, replicationFactor=ONE, keyLocationInfo=null} | ret=SUCCESS |
+2018-09-06 01:57:22,997 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=COMMIT_KEY {volume=vol-4-88912, bucket=bucket-0-27678, key=key-241-42688, dataSize=10240, replicationType=null, replicationFactor=null, keyLocationInfo=[org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo@25bd7387], clientID=61987500296} | ret=SUCCESS |
+2018-09-06 01:57:22,997 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=COMMIT_KEY {volume=vol-1-59303, bucket=bucket-0-47510, key=key-248-17213, dataSize=10240, replicationType=null, replicationFactor=null, keyLocationInfo=[org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo@788f5bea], clientID=61990833797} | ret=SUCCESS |
+2018-09-06 01:58:08,035 | ERROR | OMAudit | user=hadoop | ip=172.18.0.4 | op=CREATE_VOLUME {admin=hadoop, owner=tom, volume=dcv, creationTime=0, quotaInBytes=1152921504606846976} | ret=FAILURE | org.apache.hadoop.ozone.om.exceptions.OMException
+at org.apache.hadoop.ozone.om.VolumeManagerImpl.createVolume(VolumeManagerImpl.java:137)
+at org.apache.hadoop.ozone.om.OzoneManager.createVolume(OzoneManager.java:469)
+2018-09-06 01:58:18,447 | ERROR | OMAudit | user=hadoop | ip=172.18.0.4 | op=CREATE_BUCKET {volume=dcv, bucket=dcb, acls=[USER:hadoop:rw, GROUP:users:rw], isVersionEnabled=false, storageType=DISK, creationTime=0} | ret=FAILURE | org.apache.hadoop.ozone.om.exceptions.OMException: Bucket already exist
+at org.apache.hadoop.ozone.om.BucketManagerImpl.createBucket(BucketManagerImpl.java:98)
+at org.apache.hadoop.ozone.om.OzoneManager.createBucket(OzoneManager.java:694)
+2018-09-06 01:59:36,686 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=DELETE_KEY {volume=dcv, bucket=dcb, key=dck1, dataSize=0, replicationType=null, replicationFactor=null, keyLocationInfo=null} | ret=SUCCESS |
+2018-09-06 01:59:41,027 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=DELETE_KEY {volume=dcv, bucket=dcb, key=dck2, dataSize=0, replicationType=null, replicationFactor=null, keyLocationInfo=null} | ret=SUCCESS |
+2018-09-06 01:59:47,169 | ERROR | OMAudit | user=hadoop | ip=172.18.0.4 | op=DELETE_KEY {volume=dcv, bucket=dcb, key=dck2, dataSize=0, replicationType=null, replicationFactor=null, keyLocationInfo=null} | ret=FAILURE | org.apache.hadoop.ozone.om.exceptions.OMException: Key not found
+at org.apache.hadoop.ozone.om.KeyManagerImpl.deleteKey(KeyManagerImpl.java:448)
+at org.apache.hadoop.ozone.om.OzoneManager.deleteKey(OzoneManager.java:892)
+2018-09-06 01:60:22,900 | INFO  | OMAudit | user=hadoop | ip=172.18.0.4 | op=ALLOCATE_KEY {volume=vol-8-67105, bucket=bucket-0-68911, key=key-246-29031, dataSize=10240, replicationType=STAND_ALONE, replicationFactor=ONE, keyLocationInfo=null} | ret=SUCCESS |

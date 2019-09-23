@@ -18,8 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 
 /**
  * Module that implements the quota relevant RPC calls
@@ -62,7 +66,7 @@ public class Quota {
    * @param namespaceQuota Name space quota.
    * @param storagespaceQuota Storage space quota.
    * @param type StorageType that the space quota is intended to be set on.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public void setQuota(String path, long namespaceQuota,
       long storagespaceQuota, StorageType type) throws IOException {
@@ -91,7 +95,7 @@ public class Quota {
    * Get quota usage for the federation path.
    * @param path Federation path.
    * @return Aggregated quota.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
@@ -121,37 +125,31 @@ public class Quota {
     final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
 
     // NameService -> Locations
-    Map<String, List<RemoteLocation>> validLocations = new HashMap<>();
-    for (RemoteLocation loc : locations) {
-      String nsId = loc.getNameserviceId();
-      List<RemoteLocation> dests = validLocations.get(nsId);
-      if (dests == null) {
-        dests = new LinkedList<>();
-        dests.add(loc);
-        validLocations.put(nsId, dests);
-      } else {
-        // Ensure the paths in the same nameservice is different.
-        // Don't include parent-child paths.
-        boolean isChildPath = false;
-        for (RemoteLocation d : dests) {
-          if (loc.getDest().startsWith(d.getDest())) {
-            isChildPath = true;
-            break;
-          }
-        }
+    ListMultimap<String, RemoteLocation> validLocations =
+        ArrayListMultimap.create();
 
-        if (!isChildPath) {
-          dests.add(loc);
+    for (RemoteLocation loc : locations) {
+      final String nsId = loc.getNameserviceId();
+      final Collection<RemoteLocation> dests = validLocations.get(nsId);
+
+      // Ensure the paths in the same nameservice is different.
+      // Do not include parent-child paths.
+      boolean isChildPath = false;
+
+      for (RemoteLocation d : dests) {
+        if (FederationUtil.isParentEntry(loc.getDest(), d.getDest())) {
+          isChildPath = true;
+          break;
         }
+      }
+
+      if (!isChildPath) {
+        validLocations.put(nsId, loc);
       }
     }
 
-    List<RemoteLocation> quotaLocs = new LinkedList<>();
-    for (List<RemoteLocation> locs : validLocations.values()) {
-      quotaLocs.addAll(locs);
-    }
-
-    return quotaLocs;
+    return Collections
+        .unmodifiableList(new ArrayList<>(validLocations.values()));
   }
 
   /**
@@ -164,7 +162,7 @@ public class Quota {
     long ssCount = 0;
     long nsQuota = HdfsConstants.QUOTA_RESET;
     long ssQuota = HdfsConstants.QUOTA_RESET;
-    boolean hasQuotaUnSet = false;
+    boolean hasQuotaUnset = false;
 
     for (Map.Entry<RemoteLocation, QuotaUsage> entry : results.entrySet()) {
       RemoteLocation loc = entry.getKey();
@@ -173,7 +171,7 @@ public class Quota {
         // If quota is not set in real FileSystem, the usage
         // value will return -1.
         if (usage.getQuota() == -1 && usage.getSpaceQuota() == -1) {
-          hasQuotaUnSet = true;
+          hasQuotaUnset = true;
         }
         nsQuota = usage.getQuota();
         ssQuota = usage.getSpaceQuota();
@@ -190,7 +188,7 @@ public class Quota {
 
     QuotaUsage.Builder builder = new QuotaUsage.Builder()
         .fileAndDirectoryCount(nsCount).spaceConsumed(ssCount);
-    if (hasQuotaUnSet) {
+    if (hasQuotaUnset) {
       builder.quota(HdfsConstants.QUOTA_RESET)
           .spaceQuota(HdfsConstants.QUOTA_RESET);
     } else {
@@ -209,15 +207,20 @@ public class Quota {
    */
   private List<RemoteLocation> getQuotaRemoteLocations(String path)
       throws IOException {
-    List<RemoteLocation> locations = new LinkedList<>();
+    List<RemoteLocation> locations = new ArrayList<>();
     RouterQuotaManager manager = this.router.getQuotaManager();
     if (manager != null) {
       Set<String> childrenPaths = manager.getPaths(path);
       for (String childPath : childrenPaths) {
-        locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
+        locations.addAll(
+            rpcServer.getLocationsForPath(childPath, false, false));
       }
     }
-
-    return locations;
+    if (locations.size() >= 1) {
+      return locations;
+    } else {
+      locations.addAll(rpcServer.getLocationsForPath(path, false, false));
+      return locations;
+    }
   }
 }

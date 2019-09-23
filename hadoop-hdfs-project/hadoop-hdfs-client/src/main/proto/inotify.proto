@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 // This file contains protocol buffers used to communicate edits to clients
 // as part of the inotify system.
 
@@ -80,6 +80,7 @@ message CreateEventProto {
   optional string symlinkTarget = 8;
   optional bool overwrite = 9;
   optional int64 defaultBlockSize = 10 [default=0];
+  optional bool erasureCoded = 11;
 }
 
 message CloseEventProto {

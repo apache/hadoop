@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * Abstract Checksumed Fs.
  * It provide a basic implementation of a Checksumed Fs,
  * which creates a checksum file for each raw file.
- * It generates & verifies checksums at the client side.
+ * It generates &amp; verifies checksums at the client side.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
@@ -468,6 +468,32 @@ public abstract class ChecksumFs extends FilterFs {
           getMyFs().rename(checkFile, dst);
         } else {
           getMyFs().rename(checkFile, getChecksumFile(dst));
+        }
+      }
+    }
+  }
+
+  @Override
+  public void renameInternal(Path src, Path dst, boolean overwrite)
+      throws AccessControlException, FileAlreadyExistsException,
+      FileNotFoundException, ParentNotDirectoryException,
+      UnresolvedLinkException, IOException {
+    Options.Rename renameOpt = Options.Rename.NONE;
+    if (overwrite) {
+      renameOpt = Options.Rename.OVERWRITE;
+    }
+
+    if (isDirectory(src)) {
+      getMyFs().rename(src, dst, renameOpt);
+    } else {
+      getMyFs().rename(src, dst, renameOpt);
+
+      Path checkFile = getChecksumFile(src);
+      if (exists(checkFile)) { //try to rename checksum
+        if (isDirectory(dst)) {
+          getMyFs().rename(checkFile, dst, renameOpt);
+        } else {
+          getMyFs().rename(checkFile, getChecksumFile(dst), renameOpt);
         }
       }
     }

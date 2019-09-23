@@ -41,8 +41,9 @@ public interface StateStoreRecordOperations {
    * of the records on each call. It is recommended to override the default
    * implementations for better performance.
    *
+   * @param <T> Record class of the records.
    * @param clazz Class of record to fetch.
-   * @return List of all records that match the clazz.
+   * @return List of all records that match the class.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @Idempotent
@@ -51,6 +52,7 @@ public interface StateStoreRecordOperations {
   /**
    * Get a single record from the store that matches the query.
    *
+   * @param <T> Record class of the records.
    * @param clazz Class of record to fetch.
    * @param query Query to filter results.
    * @return A single record matching the query. Null if there are no matching
@@ -67,10 +69,11 @@ public interface StateStoreRecordOperations {
    * assumes the underlying driver does not support filtering. If the driver
    * supports filtering it should overwrite this method.
    *
+   * @param <T> Record class of the records.
    * @param clazz Class of record to fetch.
    * @param query Query to filter results.
-   * @return Records of type clazz that match the query or empty list if none
-   *         are found.
+   * @return Records of type class that match the query or empty list if none
+   * are found.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @Idempotent
@@ -81,6 +84,7 @@ public interface StateStoreRecordOperations {
    * Creates a single record. Optionally updates an existing record with same
    * primary key.
    *
+   * @param <T> Record class of the records.
    * @param record The record to insert or update.
    * @param allowUpdate True if update of exiting record is allowed.
    * @param errorIfExists True if an error should be returned when inserting
@@ -97,9 +101,9 @@ public interface StateStoreRecordOperations {
    * Creates multiple records. Optionally updates existing records that have
    * the same primary key.
    *
+   * @param <T> Record class of the records.
    * @param records List of data records to update or create. All records must
    *                be of class clazz.
-   * @param clazz Record class of records.
    * @param allowUpdate True if update of exiting record is allowed.
    * @param errorIfExists True if an error should be returned when inserting
    *          an existing record. Only used if allowUpdate = false.
@@ -115,6 +119,7 @@ public interface StateStoreRecordOperations {
   /**
    * Remove a single record.
    *
+   * @param <T> Record class of the records.
    * @param record Record to be removed.
    * @return true If the record was successfully removed. False if the record
    *              could not be removed or not stored.
@@ -126,6 +131,7 @@ public interface StateStoreRecordOperations {
   /**
    * Remove all records of this class from the store.
    *
+   * @param <T> Record class of the records.
    * @param clazz Class of records to remove.
    * @return True if successful.
    * @throws IOException Throws exception if unable to query the data store.
@@ -137,6 +143,7 @@ public interface StateStoreRecordOperations {
    * Remove multiple records of a specific class that match a query. Requires
    * the getAll implementation to fetch fresh records on each call.
    *
+   * @param <T> Record class of the records.
    * @param query Query to filter what to remove.
    * @return The number of records removed.
    * @throws IOException Throws exception if unable to query the data store.

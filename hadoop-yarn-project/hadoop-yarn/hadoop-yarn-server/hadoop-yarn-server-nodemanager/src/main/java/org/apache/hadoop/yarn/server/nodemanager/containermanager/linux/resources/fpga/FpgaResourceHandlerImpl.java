@@ -19,13 +19,18 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -37,29 +42,29 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.AbstractFpgaVendorPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDiscoverer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
+import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
 public class FpgaResourceHandlerImpl implements ResourceHandler {
-
-  static final Log LOG = LogFactory.getLog(FpgaResourceHandlerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FpgaResourceHandlerImpl.class);
 
   private final String REQUEST_FPGA_IP_ID_KEY = "REQUESTED_FPGA_IP_ID";
 
-  private AbstractFpgaVendorPlugin vendorPlugin;
+  private final AbstractFpgaVendorPlugin vendorPlugin;
 
-  private FpgaResourceAllocator allocator;
+  private final FpgaResourceAllocator allocator;
 
-  private CGroupsHandler cGroupsHandler;
+  private final CGroupsHandler cGroupsHandler;
+
+  private final FpgaDiscoverer fpgaDiscoverer;
 
   public static final String EXCLUDED_FPGAS_CLI_OPTION = "--excluded_fpgas";
   public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
@@ -69,41 +74,44 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   public FpgaResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor,
-      AbstractFpgaVendorPlugin plugin) {
+      AbstractFpgaVendorPlugin plugin,
+      FpgaDiscoverer fpgaDiscoverer) {
     this.allocator = new FpgaResourceAllocator(nmContext);
     this.vendorPlugin = plugin;
-    FpgaDiscoverer.getInstance().setResourceHanderPlugin(vendorPlugin);
+    this.fpgaDiscoverer = fpgaDiscoverer;
     this.cGroupsHandler = cGroupsHandler;
     this.privilegedOperationExecutor = privilegedOperationExecutor;
   }
 
   @VisibleForTesting
-  public FpgaResourceAllocator getFpgaAllocator() {
+  FpgaResourceAllocator getFpgaAllocator() {
     return allocator;
   }
 
   public String getRequestedIPID(Container container) {
-    String r= container.getLaunchContext().getEnvironment().
+    return container.getLaunchContext().getEnvironment().
         get(REQUEST_FPGA_IP_ID_KEY);
-    return r == null ? "" : r;
   }
 
   @Override
-  public List<PrivilegedOperation> bootstrap(Configuration configuration) throws ResourceHandlerException {
+  public List<PrivilegedOperation> bootstrap(Configuration configuration)
+      throws ResourceHandlerException {
     // The plugin should be initilized by FpgaDiscoverer already
     if (!vendorPlugin.initPlugin(configuration)) {
-      throw new ResourceHandlerException("FPGA plugin initialization failed", null);
+      throw new ResourceHandlerException("FPGA plugin initialization failed");
     }
     LOG.info("FPGA Plugin bootstrap success.");
     // Get avialable devices minor numbers from toolchain or static configuration
-    List<FpgaResourceAllocator.FpgaDevice> fpgaDeviceList = FpgaDiscoverer.getInstance().discover();
-    allocator.addFpga(vendorPlugin.getFpgaType(), fpgaDeviceList);
-    this.cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.DEVICES);
+    List<FpgaDevice> fpgaDeviceList = fpgaDiscoverer.discover();
+    allocator.addFpgaDevices(vendorPlugin.getFpgaType(), fpgaDeviceList);
+    this.cGroupsHandler.initializeCGroupController(
+        CGroupsHandler.CGroupController.DEVICES);
     return null;
   }
 
   @Override
-  public List<PrivilegedOperation> preStart(Container container) throws ResourceHandlerException {
+  public List<PrivilegedOperation> preStart(Container container)
+      throws ResourceHandlerException {
     // 1. Get requested FPGA type and count, choose corresponding FPGA plugin(s)
     // 2. Use allocator.assignFpga(type, count) to get FPGAAllocation
     // 3. If required, download to ensure IP file exists and configure IP file for all devices
@@ -121,12 +129,26 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
     try {
 
       // allocate even request 0 FPGA because we need to deny all device numbers for this container
+      final String requestedIPID = getRequestedIPID(container);
+      String localizedIPIDHash = null;
+      ipFilePath = vendorPlugin.retrieveIPfilePath(
+          requestedIPID, container.getWorkDir(),
+          container.getResourceSet().getLocalizedResources());
+      if (ipFilePath != null) {
+        try (FileInputStream fis = new FileInputStream(ipFilePath)) {
+          localizedIPIDHash = DigestUtils.sha256Hex(fis);
+        } catch (IOException e) {
+          throw new ResourceHandlerException("Could not calculate SHA-256", e);
+        }
+      }
+
       FpgaResourceAllocator.FpgaAllocation allocation = allocator.assignFpga(
           vendorPlugin.getFpgaType(), deviceCount,
-          container, getRequestedIPID(container));
+          container, localizedIPIDHash);
       LOG.info("FpgaAllocation:" + allocation);
 
-      PrivilegedOperation privilegedOperation = new PrivilegedOperation(PrivilegedOperation.OperationType.FPGA,
+      PrivilegedOperation privilegedOperation =
+          new PrivilegedOperation(PrivilegedOperation.OperationType.FPGA,
           Arrays.asList(CONTAINER_ID_CLI_OPTION, containerIdStr));
       if (!allocation.getDenied().isEmpty()) {
         List<Integer> denied = new ArrayList<>();
@@ -134,7 +156,8 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
         privilegedOperation.appendArgs(Arrays.asList(EXCLUDED_FPGAS_CLI_OPTION,
             StringUtils.join(",", denied)));
       }
-      privilegedOperationExecutor.executePrivilegedOperation(privilegedOperation, true);
+      privilegedOperationExecutor.executePrivilegedOperation(
+          privilegedOperation, true);
 
       if (deviceCount > 0) {
         /**
@@ -152,28 +175,33 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
          * for different devices
          *
          * */
-        ipFilePath = vendorPlugin.downloadIP(getRequestedIPID(container), container.getWorkDir(),
+        ipFilePath = vendorPlugin.retrieveIPfilePath(
+            getRequestedIPID(container),
+            container.getWorkDir(),
             container.getResourceSet().getLocalizedResources());
-        if (ipFilePath.isEmpty()) {
-          LOG.warn("FPGA plugin failed to download IP but continue, please check the value of environment viable: " +
-              REQUEST_FPGA_IP_ID_KEY + " if you want yarn to help");
+        if (ipFilePath == null) {
+          LOG.warn("FPGA plugin failed to downloaded IP, please check the" +
+              " value of environment viable: " + REQUEST_FPGA_IP_ID_KEY +
+              " if you want YARN to program the device");
         } else {
           LOG.info("IP file path:" + ipFilePath);
-          List<FpgaResourceAllocator.FpgaDevice> allowed = allocation.getAllowed();
+          List<FpgaDevice> allowed = allocation.getAllowed();
           String majorMinorNumber;
           for (int i = 0; i < allowed.size(); i++) {
-            majorMinorNumber = allowed.get(i).getMajor() + ":" + allowed.get(i).getMinor();
-            String currentIPID = allowed.get(i).getIPID();
-            if (null != currentIPID &&
-                currentIPID.equalsIgnoreCase(getRequestedIPID(container))) {
-              LOG.info("IP already in device \"" + allowed.get(i).getAliasDevName() + "," +
+            FpgaDevice device = allowed.get(i);
+            majorMinorNumber = device.getMajor() + ":" + device.getMinor();
+            String currentHash = allowed.get(i).getAocxHash();
+            if (currentHash != null &&
+                currentHash.equalsIgnoreCase(localizedIPIDHash)) {
+              LOG.info("IP already in device \""
+                  + allowed.get(i).getAliasDevName() + "," +
                   majorMinorNumber + "\", skip reprogramming");
               continue;
             }
-            if (vendorPlugin.configureIP(ipFilePath, majorMinorNumber)) {
+            if (vendorPlugin.configureIP(ipFilePath, device)) {
               // update the allocator that we update an IP of a device
               allocator.updateFpga(containerIdStr, allowed.get(i),
-                  getRequestedIPID(container));
+                  requestedIPID, localizedIPIDHash);
               //TODO: update the node constraint label
             }
           }
@@ -186,7 +214,8 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
       throw re;
     } catch (PrivilegedOperationException e) {
       allocator.cleanupAssignFpgas(containerIdStr);
-      cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES, containerIdStr);
+      cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
+          containerIdStr);
       LOG.warn("Could not update cgroup for container", e);
       throw new ResourceHandlerException(e);
     }
@@ -200,7 +229,8 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   }
 
   @Override
-  public List<PrivilegedOperation> reacquireContainer(ContainerId containerId) throws ResourceHandlerException {
+  public List<PrivilegedOperation> reacquireContainer(ContainerId containerId)
+      throws ResourceHandlerException {
     allocator.recoverAssignedFpgas(containerId);
     return null;
   }
@@ -212,7 +242,8 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   }
 
   @Override
-  public List<PrivilegedOperation> postComplete(ContainerId containerId) throws ResourceHandlerException {
+  public List<PrivilegedOperation> postComplete(ContainerId containerId)
+      throws ResourceHandlerException {
     allocator.cleanupAssignFpgas(containerId.toString());
     cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerId.toString());
@@ -222,5 +253,13 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return FpgaResourceHandlerImpl.class.getName() + "{" +
+        "vendorPlugin=" + vendorPlugin +
+        ", allocator=" + allocator +
+        '}';
   }
 }

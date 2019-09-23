@@ -19,8 +19,10 @@
 package org.apache.hadoop.fs.s3a;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.FileNotFoundException;
 import java.util.Collections;
@@ -39,10 +41,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 
 /**
  * S3A tests for getFileStatus using mock S3 client.
@@ -155,25 +155,10 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
         .thenReturn(v2Result);
   }
 
-  private Matcher<GetObjectMetadataRequest> correctGetMetadataRequest(
+  private ArgumentMatcher<GetObjectMetadataRequest> correctGetMetadataRequest(
       String bucket, String key) {
-    return new BaseMatcher<GetObjectMetadataRequest>() {
-
-      @Override
-      public void describeTo(Description description) {
-        description.appendText("bucket and key match");
-      }
-
-      @Override
-      public boolean matches(Object o) {
-        if(o instanceof GetObjectMetadataRequest) {
-          GetObjectMetadataRequest getObjectMetadataRequest =
-              (GetObjectMetadataRequest)o;
-          return getObjectMetadataRequest.getBucketName().equals(bucket)
-            && getObjectMetadataRequest.getKey().equals(key);
-        }
-        return false;
-      }
-    };
+    return request -> request != null
+        && request.getBucketName().equals(bucket)
+        && request.getKey().equals(key);
   }
 }

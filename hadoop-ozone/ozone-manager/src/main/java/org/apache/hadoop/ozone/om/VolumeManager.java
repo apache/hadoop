@@ -26,13 +26,14 @@ import java.util.List;
 /**
  * OM volume manager interface.
  */
-public interface VolumeManager {
+public interface VolumeManager extends IOzoneAcl {
 
   /**
    * Create a new volume.
    * @param args - Volume args to create a volume
    */
-  void createVolume(OmVolumeArgs args) throws IOException;
+  void createVolume(OmVolumeArgs args)
+      throws IOException;
 
   /**
    * Changes the owner of a volume.
@@ -41,7 +42,8 @@ public interface VolumeManager {
    * @param owner - Name of the owner.
    * @throws IOException
    */
-  void setOwner(String volume, String owner) throws IOException;
+  void setOwner(String volume, String owner)
+      throws IOException;
 
   /**
    * Changes the Quota on a volume.
@@ -96,5 +98,6 @@ public interface VolumeManager {
    * @throws IOException
    */
   List<OmVolumeArgs> listVolumes(String userName, String prefix,
-                                 String startKey, int maxKeys) throws IOException;
+      String startKey, int maxKeys) throws IOException;
+
 }

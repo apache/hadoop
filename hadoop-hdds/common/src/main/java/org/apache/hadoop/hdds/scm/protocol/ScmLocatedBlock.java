@@ -68,7 +68,7 @@ public final class ScmLocatedBlock {
   /**
    * Returns the nodes that currently host the block.
    *
-   * @return List<DatanodeInfo> nodes that currently host the block
+   * @return {@literal List<DatanodeInfo>} nodes that currently host the block
    */
   public List<DatanodeInfo> getLocations() {
     return this.locations;

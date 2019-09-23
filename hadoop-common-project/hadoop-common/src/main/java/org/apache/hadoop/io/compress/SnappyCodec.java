@@ -57,7 +57,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
   }
 
   /**
-   * Are the native snappy libraries loaded & initialized?
+   * Are the native snappy libraries loaded &amp; initialized?
    */
   public static void checkNativeCodeLoaded() {
     if (!NativeCodeLoader.buildSupportsSnappy()) {

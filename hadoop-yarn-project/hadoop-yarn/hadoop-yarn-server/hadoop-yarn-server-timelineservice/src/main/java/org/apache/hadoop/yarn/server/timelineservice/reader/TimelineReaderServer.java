@@ -31,6 +31,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.security.TimelineRea
 import org.apache.hadoop.yarn.server.timelineservice.reader.security.TimelineReaderWhitelistAuthorizationFilterInitializer;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.util.timeline.TimelineServerUtils;
+import org.apache.hadoop.yarn.server.webapp.LogWebService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -158,9 +160,15 @@ public class TimelineReaderServer extends CompositeService {
     String initializers = conf.get("hadoop.http.filter.initializers", "");
     Set<String> defaultInitializers = new LinkedHashSet<String>();
     if (!initializers.contains(
-        TimelineReaderAuthenticationFilterInitializer.class.getName())) {
+        ProxyUserAuthenticationFilterInitializer.class.getName())) {
+      if (!initializers.contains(
+          TimelineReaderAuthenticationFilterInitializer.class.getName())) {
+        defaultInitializers.add(
+            TimelineReaderAuthenticationFilterInitializer.class.getName());
+      }
+    } else {
       defaultInitializers.add(
-          TimelineReaderAuthenticationFilterInitializer.class.getName());
+          ProxyUserAuthenticationFilterInitializer.class.getName());
     }
 
     defaultInitializers.add(
@@ -201,7 +209,8 @@ public class TimelineReaderServer extends CompositeService {
       readerWebServer.addJerseyResourcePackage(
           TimelineReaderWebServices.class.getPackage().getName() + ";"
               + GenericExceptionHandler.class.getPackage().getName() + ";"
-              + YarnJacksonJaxbJsonProvider.class.getPackage().getName(),
+              + YarnJacksonJaxbJsonProvider.class.getPackage().getName()+ ";"
+              + LogWebService.class.getPackage().getName(),
           "/*");
       readerWebServer.setAttribute(TIMELINE_READER_MANAGER_ATTR,
           timelineReaderManager);

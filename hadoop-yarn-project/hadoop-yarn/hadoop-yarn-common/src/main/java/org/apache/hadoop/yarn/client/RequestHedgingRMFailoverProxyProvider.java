@@ -34,8 +34,8 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -55,8 +55,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public class RequestHedgingRMFailoverProxyProvider<T>
     extends ConfiguredRMFailoverProxyProvider<T> {
 
-  private static final Log LOG =
-      LogFactory.getLog(RequestHedgingRMFailoverProxyProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RequestHedgingRMFailoverProxyProvider.class);
 
   private volatile String successfulProxy = null;
   private ProxyInfo<T> wrappedProxy = null;

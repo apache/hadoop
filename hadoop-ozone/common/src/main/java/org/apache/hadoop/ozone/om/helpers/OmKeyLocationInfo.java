@@ -17,7 +17,13 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.UnknownPipelineStateException;
+import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLocation;
+import org.apache.hadoop.security.token.Token;
+
+import java.util.Objects;
 
 /**
  * One key can be too huge to fit in one container. In which case it gets split
@@ -25,19 +31,31 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLoca
  */
 public final class OmKeyLocationInfo {
   private final BlockID blockID;
-  private final boolean shouldCreateContainer;
   // the id of this subkey in all the subkeys.
   private long length;
   private final long offset;
+  // Block token, required for client authentication when security is enabled.
+  private Token<OzoneBlockTokenIdentifier> token;
   // the version number indicating when this block was added
   private long createVersion;
 
-  private OmKeyLocationInfo(BlockID blockID, boolean shouldCreateContainer,
-                            long length, long offset) {
+  private Pipeline pipeline;
+
+  private OmKeyLocationInfo(BlockID blockID, Pipeline pipeline, long length,
+                            long offset) {
     this.blockID = blockID;
-    this.shouldCreateContainer = shouldCreateContainer;
+    this.pipeline = pipeline;
     this.length = length;
     this.offset = offset;
+  }
+
+  private OmKeyLocationInfo(BlockID blockID, Pipeline pipeline, long length,
+      long offset, Token<OzoneBlockTokenIdentifier> token) {
+    this.blockID = blockID;
+    this.pipeline = pipeline;
+    this.length = length;
+    this.offset = offset;
+    this.token = token;
   }
 
   public void setCreateVersion(long version) {
@@ -60,8 +78,8 @@ public final class OmKeyLocationInfo {
     return blockID.getLocalID();
   }
 
-  public boolean getShouldCreateContainer() {
-    return shouldCreateContainer;
+  public Pipeline getPipeline() {
+    return pipeline;
   }
 
   public long getLength() {
@@ -76,22 +94,40 @@ public final class OmKeyLocationInfo {
     return offset;
   }
 
+  public long getBlockCommitSequenceId() {
+    return blockID.getBlockCommitSequenceId();
+  }
+
+  public Token<OzoneBlockTokenIdentifier> getToken() {
+    return token;
+  }
+
+  public void setToken(Token<OzoneBlockTokenIdentifier> token) {
+    this.token = token;
+  }
+
+  public void setPipeline(Pipeline pipeline) {
+    this.pipeline = pipeline;
+  }
+
   /**
    * Builder of OmKeyLocationInfo.
    */
   public static class Builder {
     private BlockID blockID;
-    private boolean shouldCreateContainer;
     private long length;
     private long offset;
+    private Token<OzoneBlockTokenIdentifier> token;
+    private Pipeline pipeline;
 
     public Builder setBlockID(BlockID blockId) {
       this.blockID = blockId;
       return this;
     }
 
-    public Builder setShouldCreateContainer(boolean create) {
-      this.shouldCreateContainer = create;
+    @SuppressWarnings("checkstyle:hiddenfield")
+    public Builder setPipeline(Pipeline pipeline) {
+      this.pipeline = pipeline;
       return this;
     }
 
@@ -105,29 +141,90 @@ public final class OmKeyLocationInfo {
       return this;
     }
 
+    public Builder setToken(Token<OzoneBlockTokenIdentifier> bToken) {
+      this.token = bToken;
+      return this;
+    }
+
     public OmKeyLocationInfo build() {
-      return new OmKeyLocationInfo(blockID,
-          shouldCreateContainer, length, offset);
+      if (token == null) {
+        return new OmKeyLocationInfo(blockID, pipeline, length, offset);
+      } else {
+        return new OmKeyLocationInfo(blockID, pipeline, length, offset, token);
+      }
     }
   }
 
   public KeyLocation getProtobuf() {
-    return KeyLocation.newBuilder()
+    KeyLocation.Builder builder = KeyLocation.newBuilder()
         .setBlockID(blockID.getProtobuf())
-        .setShouldCreateContainer(shouldCreateContainer)
         .setLength(length)
         .setOffset(offset)
-        .setCreateVersion(createVersion)
-        .build();
+        .setCreateVersion(createVersion);
+    if (this.token != null) {
+      builder.setToken(this.token.toTokenProto());
+    }
+    try {
+      builder.setPipeline(pipeline.getProtobufMessage());
+    } catch (UnknownPipelineStateException e) {
+      //TODO: fix me: we should not return KeyLocation without pipeline.
+    }
+    return builder.build();
+  }
+
+  private static Pipeline getPipeline(KeyLocation keyLocation) {
+    try {
+      return keyLocation.hasPipeline() ?
+          Pipeline.getFromProtobuf(keyLocation.getPipeline()) : null;
+    } catch (UnknownPipelineStateException e) {
+      return null;
+    }
   }
 
   public static OmKeyLocationInfo getFromProtobuf(KeyLocation keyLocation) {
     OmKeyLocationInfo info = new OmKeyLocationInfo(
         BlockID.getFromProtobuf(keyLocation.getBlockID()),
-        keyLocation.getShouldCreateContainer(),
+        getPipeline(keyLocation),
         keyLocation.getLength(),
         keyLocation.getOffset());
+    if(keyLocation.hasToken()) {
+      info.token =  new Token<>(keyLocation.getToken());
+    }
     info.setCreateVersion(keyLocation.getCreateVersion());
     return info;
+  }
+
+  @Override
+  public String toString() {
+    return "{blockID={containerID=" + blockID.getContainerID() +
+        ", localID=" + blockID.getLocalID() + "}" +
+        ", length=" + length +
+        ", offset=" + offset +
+        ", token=" + token +
+        ", pipeline=" + pipeline +
+        ", createVersion=" + createVersion + '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmKeyLocationInfo that = (OmKeyLocationInfo) o;
+    return length == that.length &&
+        offset == that.offset &&
+        createVersion == that.createVersion &&
+        Objects.equals(blockID, that.blockID) &&
+        Objects.equals(token, that.token) &&
+        Objects.equals(pipeline, that.pipeline);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(blockID, length, offset, token, createVersion,
+        pipeline);
   }
 }

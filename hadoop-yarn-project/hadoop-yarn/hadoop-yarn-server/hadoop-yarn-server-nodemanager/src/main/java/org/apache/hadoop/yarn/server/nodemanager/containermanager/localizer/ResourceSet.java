@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,8 +50,8 @@ public class ResourceSet {
       new ConcurrentHashMap<>();
   private Map<LocalResourceRequest, Set<String>> pendingResources =
       new ConcurrentHashMap<>();
-  private Set<LocalResourceRequest> resourcesFailedToBeLocalized =
-      new HashSet<>();
+  private final List<LocalizationStatus> resourcesFailedToBeLocalized =
+      new ArrayList<>();
 
   // resources by visibility (public, private, app)
   private final List<LocalResourceRequest> publicRsrcs =
@@ -135,13 +137,20 @@ public class ResourceSet {
     }
   }
 
-  public void resourceLocalizationFailed(LocalResourceRequest request) {
+  public void resourceLocalizationFailed(LocalResourceRequest request,
+      String diagnostics) {
     // Skip null request when localization failed for running container
     if (request == null) {
       return;
     }
-    pendingResources.remove(request);
-    resourcesFailedToBeLocalized.add(request);
+    Set<String> keys = pendingResources.remove(request);
+    if (keys != null) {
+      synchronized (resourcesFailedToBeLocalized) {
+        keys.forEach(key ->
+            resourcesFailedToBeLocalized.add(LocalizationStatus.newInstance(key,
+                LocalizationState.FAILED, diagnostics)));
+      }
+    }
   }
 
   public synchronized Map<LocalResourceVisibility,
@@ -219,4 +228,30 @@ public class ResourceSet {
     }
     return merged;
   }
+
+  /**
+   * Get all the localization statuses.
+   * @return the localization statuses.
+   */
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    List<LocalizationStatus> statuses = new ArrayList<>();
+    localizedResources.forEach((key, path) -> {
+      LocalizationStatus status = LocalizationStatus.newInstance(key,
+          LocalizationState.COMPLETED);
+      statuses.add(status);
+    });
+
+    pendingResources.forEach((lrReq, keys) ->
+        keys.forEach(key -> {
+          LocalizationStatus status = LocalizationStatus.newInstance(key,
+              LocalizationState.PENDING);
+          statuses.add(status);
+        }));
+
+    synchronized (resourcesFailedToBeLocalized) {
+      statuses.addAll(resourcesFailedToBeLocalized);
+    }
+    return statuses;
+  }
+
 }

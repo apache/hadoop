@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.RecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
@@ -91,6 +92,10 @@ public class RouterHeartbeatService extends PeriodicService {
             getStateStoreVersion(MembershipStore.class),
             getStateStoreVersion(MountTableStore.class));
         record.setStateStoreVersion(stateStoreVersion);
+        // if admin server not started then hostPort will be empty
+        String hostPort =
+            StateStoreUtils.getHostPortString(router.getAdminServerAddress());
+        record.setAdminAddress(hostPort);
         RouterHeartbeatRequest request =
             RouterHeartbeatRequest.newInstance(record);
         RouterHeartbeatResponse response = routerStore.routerHeartbeat(request);

@@ -31,8 +31,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
@@ -77,7 +77,8 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestAMRMTokens {
 
-  private static final Log LOG = LogFactory.getLog(TestAMRMTokens.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAMRMTokens.class);
 
   private final Configuration conf;
   private static final int maxWaitAttempts = 50;

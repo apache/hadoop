@@ -330,8 +330,8 @@ public enum Separator {
     StringBuilder sb = new StringBuilder(encode(items[0].toString()));
     // Start at 1, we've already grabbed the first value at index 0
     for (int i = 1; i < items.length; i++) {
-      sb.append(this.value);
-      sb.append(encode(items[i].toString()));
+      sb.append(this.value)
+          .append(encode(items[i].toString()));
     }
 
     return sb.toString();

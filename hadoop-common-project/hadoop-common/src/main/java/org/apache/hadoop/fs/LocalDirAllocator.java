@@ -241,9 +241,8 @@ public class LocalDirAllocator {
    *  @param pathStr the requested file (this will be searched)
    *  @param conf the Configuration object
    *  @return true if files exist. false otherwise
-   *  @throws IOException
    */
-  public boolean ifExists(String pathStr,Configuration conf) {
+  public boolean ifExists(String pathStr, Configuration conf) {
     AllocatorPerContext context = obtainContext(contextCfgItemName);
     return context.ifExists(pathStr, conf);
   }

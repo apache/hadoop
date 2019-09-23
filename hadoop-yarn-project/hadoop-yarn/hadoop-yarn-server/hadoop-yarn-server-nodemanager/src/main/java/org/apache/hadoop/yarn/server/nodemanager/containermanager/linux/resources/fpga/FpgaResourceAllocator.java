@@ -21,22 +21,26 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDiscoverer;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
-
 
 /**
  * This FPGA resource allocator tends to be used by different FPGA vendor's plugin
@@ -44,25 +48,27 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
  * */
 public class FpgaResourceAllocator {
 
-  static final Log LOG = LogFactory.getLog(FpgaResourceAllocator.class);
+  static final Logger LOG = LoggerFactory.
+      getLogger(FpgaResourceAllocator.class);
 
   private List<FpgaDevice> allowedFpgas = new LinkedList<>();
 
   //key is resource type of FPGA, vendor plugin supported ID
-  private LinkedHashMap<String, List<FpgaDevice>> availableFpga = new LinkedHashMap<>();
+  private Map<String, List<FpgaDevice>> availableFpgas = new HashMap<>();
 
-  //key is requetor, aka. container ID
-  private LinkedHashMap<String, List<FpgaDevice>> usedFpgaByRequestor = new LinkedHashMap<>();
+  //key is the container ID
+  private Map<String, List<FpgaDevice>> containerToFpgaMapping =
+      new HashMap<>();
 
   private Context nmContext;
 
   @VisibleForTesting
-  public HashMap<String, List<FpgaDevice>> getAvailableFpga() {
-    return availableFpga;
+  Map<String, List<FpgaDevice>> getAvailableFpga() {
+    return availableFpgas;
   }
 
   @VisibleForTesting
-  public List<FpgaDevice> getAllowedFpga() {
+  List<FpgaDevice> getAllowedFpga() {
     return allowedFpgas;
   }
 
@@ -71,25 +77,31 @@ public class FpgaResourceAllocator {
   }
 
   @VisibleForTesting
-  public int getAvailableFpgaCount() {
+  int getAvailableFpgaCount() {
     int count = 0;
-    for (List<FpgaDevice> l : availableFpga.values()) {
-      count += l.size();
-    }
+
+    count = availableFpgas.values()
+      .stream()
+      .mapToInt(i -> i.size())
+      .sum();
+
     return count;
   }
 
   @VisibleForTesting
-  public HashMap<String, List<FpgaDevice>> getUsedFpga() {
-    return usedFpgaByRequestor;
+  Map<String, List<FpgaDevice>> getUsedFpga() {
+    return containerToFpgaMapping;
   }
 
   @VisibleForTesting
-  public int getUsedFpgaCount() {
+  int getUsedFpgaCount() {
     int count = 0;
-    for (List<FpgaDevice> l : usedFpgaByRequestor.values()) {
-      count += l.size();
-    }
+
+    count = containerToFpgaMapping.values()
+        .stream()
+        .mapToInt(i -> i.size())
+        .sum();
+
     return count;
   }
 
@@ -133,33 +145,33 @@ public class FpgaResourceAllocator {
     }
   }
 
-  public static class FpgaDevice implements Comparable<FpgaDevice>, Serializable {
+  /** A class that represents an FPGA card. */
+  public static class FpgaDevice implements Serializable {
+    private static final long serialVersionUID = -4678487141824092751L;
+    private final String type;
+    private final int major;
+    private final int minor;
 
-    private static final long serialVersionUID = 1L;
-
-    private String type;
-    private Integer major;
-    private Integer minor;
-    // IP file identifier. matrix multiplication for instance
-    private String IPID;
-    // the device name under /dev
-    private String devName;
     // the alias device name. Intel use acl number acl0 to acl31
-    private String aliasDevName;
-    // lspci output's bus number: 02:00.00 (bus:slot.func)
-    private String busNum;
-    private String temperature;
-    private String cardPowerUsage;
+    private final String aliasDevName;
+
+    // IP file identifier. matrix multiplication for instance (mutable)
+    private String IPID;
+    // SHA-256 hash of the uploaded aocx file (mutable)
+    private String aocxHash;
+
+    // cached hash value
+    private Integer hashCode;
 
     public String getType() {
       return type;
     }
 
-    public Integer getMajor() {
+    public int getMajor() {
       return major;
     }
 
-    public Integer getMinor() {
+    public int getMinor() {
       return minor;
     }
 
@@ -167,61 +179,28 @@ public class FpgaResourceAllocator {
       return IPID;
     }
 
+    public String getAocxHash() {
+      return aocxHash;
+    }
+
+    public void setAocxHash(String hash) {
+      this.aocxHash = hash;
+    }
+
     public void setIPID(String IPID) {
       this.IPID = IPID;
-    }
-
-    public String getDevName() {
-      return devName;
-    }
-
-    public void setDevName(String devName) {
-      this.devName = devName;
     }
 
     public String getAliasDevName() {
       return aliasDevName;
     }
 
-    public void setAliasDevName(String aliasDevName) {
-      this.aliasDevName = aliasDevName;
-    }
-
-    public String getBusNum() {
-      return busNum;
-    }
-
-    public void setBusNum(String busNum) {
-      this.busNum = busNum;
-    }
-
-    public String getTemperature() {
-      return temperature;
-    }
-
-    public String getCardPowerUsage() {
-      return cardPowerUsage;
-    }
-
-    public FpgaDevice(String type, Integer major, Integer minor, String IPID) {
-      this.type = type;
+    public FpgaDevice(String type, int major, int minor, String aliasDevName) {
+      this.type = Preconditions.checkNotNull(type, "type must not be null");
       this.major = major;
       this.minor = minor;
-      this.IPID = IPID;
-    }
-
-    public FpgaDevice(String type, Integer major,
-      Integer minor, String IPID, String devName,
-        String aliasDevName, String busNum, String temperature, String cardPowerUsage) {
-      this.type = type;
-      this.major = major;
-      this.minor = minor;
-      this.IPID = IPID;
-      this.devName = devName;
-      this.aliasDevName = aliasDevName;
-      this.busNum = busNum;
-      this.temperature = temperature;
-      this.cardPowerUsage = cardPowerUsage;
+      this.aliasDevName = Preconditions.checkNotNull(aliasDevName,
+          "aliasDevName must not be null");
     }
 
     @Override
@@ -232,73 +211,83 @@ public class FpgaResourceAllocator {
       if (obj == null) {
         return false;
       }
-      if (!(obj instanceof FpgaDevice)) {
+      if (getClass() != obj.getClass()) {
         return false;
       }
       FpgaDevice other = (FpgaDevice) obj;
-      if (other.getType().equals(this.type) &&
-          other.getMajor().equals(this.major) &&
-          other.getMinor().equals(this.minor)) {
-        return true;
+      if (aliasDevName == null) {
+        if (other.aliasDevName != null) {
+          return false;
+        }
+      } else if (!aliasDevName.equals(other.aliasDevName)) {
+        return false;
       }
-      return false;
+      if (major != other.major) {
+        return false;
+      }
+      if (minor != other.minor) {
+        return false;
+      }
+      if (type == null) {
+        if (other.type != null) {
+          return false;
+        }
+      } else if (!type.equals(other.type)) {
+        return false;
+      }
+      return true;
     }
 
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((type == null) ? 0 : type.hashCode());
-      result = prime * result + ((major == null) ? 0 : major.hashCode());
-      result = prime * result + ((minor == null) ? 0 : minor.hashCode());
-      return result;
-    }
+      if (hashCode == null) {
+        final int prime = 31;
+        int result = 1;
 
-    @Override
-    public int compareTo(FpgaDevice o) {
-      return 0;
+        result = prime * result + major;
+        result = prime * result + type.hashCode();
+        result = prime * result + minor;
+        result = prime * result + aliasDevName.hashCode();
+
+        hashCode = result;
+      }
+
+      return hashCode;
     }
 
     @Override
     public String toString() {
       return "FPGA Device:(Type: " + this.type + ", Major: " +
-          this.major + ", Minor: " + this.minor + ", IPID: " + this.IPID + ")";
+          this.major + ", Minor: " + this.minor + ", IPID: " +
+          this.IPID + ", Hash: " + this.aocxHash + ")";
     }
   }
 
-  public synchronized void addFpga(String type, List<FpgaDevice> list) {
-    availableFpga.putIfAbsent(type, new LinkedList<>());
+  // called once during initialization
+  public synchronized void addFpgaDevices(String type, List<FpgaDevice> list) {
+    availableFpgas.putIfAbsent(type, new LinkedList<>());
+    List<FpgaDevice> fpgaDevices = new LinkedList<>();
+
     for (FpgaDevice device : list) {
       if (!allowedFpgas.contains(device)) {
-        allowedFpgas.add(device);
-        availableFpga.get(type).add(device);
+        fpgaDevices.add(device);
+        availableFpgas.get(type).add(device);
+      } else {
+        LOG.warn("Duplicate device found: " + device + ". Ignored");
       }
     }
-    LOG.info("Add a list of FPGA Devices: " + list);
+
+    allowedFpgas = ImmutableList.copyOf(fpgaDevices);
+    LOG.info("Added a list of FPGA Devices: " + allowedFpgas);
   }
 
   public synchronized void updateFpga(String requestor,
-      FpgaDevice device, String newIPID) {
-    List<FpgaDevice> usedFpgas = usedFpgaByRequestor.get(requestor);
-    int index = findMatchedFpga(usedFpgas, device);
-    if (-1 != index) {
-      usedFpgas.get(index).setIPID(newIPID);
-    } else {
-      LOG.warn("Failed to update FPGA due to unknown reason " +
-          "that no record for this allocated device:" + device);
-    }
+      FpgaDevice device, String newIPID, String newHash) {
+    device.setIPID(newIPID);
+    device.setAocxHash(newHash);
     LOG.info("Update IPID to " + newIPID +
-        " for this allocated device:" + device);
-  }
-
-  private synchronized int findMatchedFpga(List<FpgaDevice> devices, FpgaDevice item) {
-    int i = 0;
-    for (; i < devices.size(); i++) {
-      if (devices.get(i) == item) {
-        return i;
-      }
-    }
-    return -1;
+        " for this allocated device: " + device);
+    LOG.info("Update IP hash to " + newHash);
   }
 
   /**
@@ -306,13 +295,14 @@ public class FpgaResourceAllocator {
    * @param type vendor plugin supported FPGA device type
    * @param count requested FPGA slot count
    * @param container container id
-   * @param IPIDPreference allocate slot with this IPID first
+   * @param ipidHash hash of the localized aocx file
    * @return Instance consists two List of allowed and denied {@link FpgaDevice}
    * @throws ResourceHandlerException When failed to allocate or write state store
    * */
   public synchronized FpgaAllocation assignFpga(String type, long count,
-      Container container, String IPIDPreference) throws ResourceHandlerException {
-    List<FpgaDevice> currentAvailableFpga = availableFpga.get(type);
+      Container container, String ipidHash) throws ResourceHandlerException {
+    List<FpgaDevice> currentAvailableFpga = availableFpgas.get(type);
+
     String requestor = container.getContainerId().toString();
     if (null == currentAvailableFpga) {
       throw new ResourceHandlerException("No such type of FPGA resource available: " + type);
@@ -326,8 +316,9 @@ public class FpgaResourceAllocator {
       List<FpgaDevice> assignedFpgas = new LinkedList<>();
       int matchIPCount = 0;
       for (int i = 0; i < currentAvailableFpga.size(); i++) {
-        if ( null != currentAvailableFpga.get(i).getIPID() &&
-            currentAvailableFpga.get(i).getIPID().equalsIgnoreCase(IPIDPreference)) {
+        String deviceIPIDhash = currentAvailableFpga.get(i).getAocxHash();
+        if (deviceIPIDhash != null &&
+            deviceIPIDhash.equalsIgnoreCase(ipidHash)) {
           assignedFpgas.add(currentAvailableFpga.get(i));
           currentAvailableFpga.remove(i);
           matchIPCount++;
@@ -351,8 +342,8 @@ public class FpgaResourceAllocator {
         }
 
         // update state store success, update internal used FPGAs
-        usedFpgaByRequestor.putIfAbsent(requestor, new LinkedList<>());
-        usedFpgaByRequestor.get(requestor).addAll(assignedFpgas);
+        containerToFpgaMapping.putIfAbsent(requestor, new LinkedList<>());
+        containerToFpgaMapping.get(requestor).addAll(assignedFpgas);
       }
 
       return new FpgaAllocation(assignedFpgas, currentAvailableFpga);
@@ -400,14 +391,13 @@ public class FpgaResourceAllocator {
   }
 
   public synchronized void cleanupAssignFpgas(String requestor) {
-    List<FpgaDevice> usedFpgas = usedFpgaByRequestor.get(requestor);
+    List<FpgaDevice> usedFpgas = containerToFpgaMapping.get(requestor);
     if (usedFpgas != null) {
       for (FpgaDevice device : usedFpgas) {
         // Add back to availableFpga
-        availableFpga.get(device.getType()).add(device);
+        availableFpgas.get(device.getType()).add(device);
       }
-      usedFpgaByRequestor.remove(requestor);
+      containerToFpgaMapping.remove(requestor);
     }
   }
-
 }

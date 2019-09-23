@@ -86,7 +86,7 @@ Usage:
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
               [-storagepolicies] [-maintenance]
-              [-blockId <blk_Id>]
+              [-blockId <blk_Id>] [-replicate]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -106,6 +106,7 @@ Usage:
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
 | `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
+| `-replicate` | Initiate replication work to make mis-replicated blocks satisfy block placement policy. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
@@ -277,6 +278,7 @@ Usage:
               [-blockpools <comma-separated list of blockpool ids>]
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
+              [-asService]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -288,6 +290,7 @@ Usage:
 | `-blockpools` \<comma-separated list of blockpool ids\> | The balancer will only run on blockpools included in this list. |
 | `-idleiterations` \<iterations\> | Maximum number of idle iterations before exit. This overwrites the default idleiterations(5). |
 | `-runDuringUpgrade` | Whether to run the balancer during an ongoing HDFS upgrade. This is usually not desired since it will not affect used space on over-utilized machines. |
+| `-asService` | Run Balancer as a long running service. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 
 Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the rebalancing process. See [Balancer](./HdfsUserGuide.html#Balancer) for more details.
@@ -295,6 +298,8 @@ Runs a cluster balancing utility. An administrator can simply press Ctrl-C to st
 Note that the `blockpool` policy is more strict than the `datanode` policy.
 
 Besides the above command options, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
+
+If you want to run Balancer as a long running service, please start Balancer using `-asService` parameter with daemon-mode. You can do this by using the following command: `hdfs --daemon start balancer -asService`, or just use sbin/start-balancer.sh script with parameter `-asService`.
 
 ### `cacheadmin`
 
@@ -372,7 +377,7 @@ Usage:
         hdfs dfsadmin [-evictWriters <datanode_host:ipc_port>]
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
         hdfs dfsadmin [-metasave filename]
-        hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
+        hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode] <namenode_host:ipc_port>]
         hdfs dfsadmin [-listOpenFiles [-blockingDecommission] [-path <path>]]
         hdfs dfsadmin [-help [cmd]]
 
@@ -410,8 +415,8 @@ Usage:
 | `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
 | `-metasave` filename | Save Namenode's primary data structures to *filename* in the directory specified by hadoop.log.dir property. *filename* is overwritten if it exists. *filename* will contain one line for each of the following<br/>1. Datanodes heart beating with Namenode<br/>2. Blocks waiting to be replicated<br/>3. Blocks currently being replicated<br/>4. Blocks waiting to be deleted |
-| `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. |
-| `-listOpenFiles` `[-blockingDecommission]` `[-path <path>]` | List all open files currently managed by the NameNode along with client name and client machine accessing them. Open files list will be filtered by given type and path. |
+| `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> `[-namenode]` \<namenode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. If '-namenode \<host\>:\<port\>' is given, it only sends block report to a specified namenode. |
+| `-listOpenFiles` `[-blockingDecommission]` `[-path <path>]` | List all open files currently managed by the NameNode along with client name and client machine accessing them. Open files list will be filtered by given type and path. Add -blockingDecommission option if you only want to list open files that are blocking the DataNode decommissioning. |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 Runs a HDFS dfsadmin client.
@@ -427,27 +432,33 @@ Runs the DFS router. See [Router](../hadoop-hdfs-rbf/HDFSRouterFederation.html#R
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
-          [-update <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
-          [-ls <path>]
+          [-ls [-d] <path>]
+          [-getDestination <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
           [-clrQuota <path>]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
+          [-refresh]
+          [-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
-| `-update` *source* *nameservices* *destination* | Update a mount table entry or create one if it does not exist. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry attribures. |
 | `-rm` *source* | Remove mount point of specified path. |
-| `-ls` *path* | List mount points under specified path. |
+| `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|
+| `-getDestination` *path* | Get the subcluster where a file is or should be created. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-clrQuota` *path* | Clear quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
 | `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
 | `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
+| `-refresh` | Update mount table cache of the connected router. |
+| `refreshRouterArgs` \<host:ipc\_port\> \<key\> [arg1..argn] | To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server. |
 
 The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 
@@ -487,6 +498,8 @@ Usage:
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
+         [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 
 | COMMAND\_OPTION | Description |
@@ -499,6 +512,8 @@ Usage:
 |-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 |-enablePolicy| Enable an ErasureCoding policy in system|
 |-disablePolicy| Disable an ErasureCoding policy in system|
+|-removePolicy| Remove an ErasureCoding policy from system|
+|-verifyClusterSetup| Verify if the cluster setup can support a list of erasure coding policies|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
 
@@ -508,6 +523,7 @@ Usage:
 
         hdfs haadmin -transitionToActive <serviceId> [--forceactive]
         hdfs haadmin -transitionToStandby <serviceId>
+        hdfs haadmin -transitionToObserver <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
         hdfs haadmin -getAllServiceState
@@ -523,6 +539,7 @@ Usage:
 | `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
+| `-transitionToObserver` | transition the state of the given NameNode to Observer (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_commands) or [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands) for more information on this command.

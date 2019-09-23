@@ -137,7 +137,7 @@ abstract public class LocalReplica extends ReplicaInfo {
       return;
     }
 
-    ReplicaDirInfo dirInfo = parseBaseDir(dir);
+    ReplicaDirInfo dirInfo = parseBaseDir(dir, getBlockId());
     this.hasSubdirs = dirInfo.hasSubidrs;
 
     synchronized (internedBaseDirs) {
@@ -163,16 +163,21 @@ abstract public class LocalReplica extends ReplicaInfo {
   }
 
   @VisibleForTesting
-  public static ReplicaDirInfo parseBaseDir(File dir) {
-
+  public static ReplicaDirInfo parseBaseDir(File dir, long blockId) {
     File currentDir = dir;
     boolean hasSubdirs = false;
     while (currentDir.getName().startsWith(DataStorage.BLOCK_SUBDIR_PREFIX)) {
       hasSubdirs = true;
       currentDir = currentDir.getParentFile();
     }
-
-    return new ReplicaDirInfo(currentDir.getAbsolutePath(), hasSubdirs);
+    if (hasSubdirs) {
+      // set baseDir to currentDir if it matches id(idToBlockDir).
+      File idToBlockDir = DatanodeUtil.idToBlockDir(currentDir, blockId);
+      if (idToBlockDir.equals(dir)) {
+        return new ReplicaDirInfo(currentDir.getAbsolutePath(), true);
+      }
+    }
+    return new ReplicaDirInfo(dir.getAbsolutePath(), false);
   }
 
   /**

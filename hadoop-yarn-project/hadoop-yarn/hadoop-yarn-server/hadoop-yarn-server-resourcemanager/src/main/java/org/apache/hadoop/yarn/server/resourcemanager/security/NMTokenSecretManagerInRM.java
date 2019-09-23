@@ -24,8 +24,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -43,8 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
 
-  private static Log LOG = LogFactory
-      .getLog(NMTokenSecretManagerInRM.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(NMTokenSecretManagerInRM.class);
 
   private MasterKeyData nextMasterKey;
   private Configuration conf;
@@ -191,8 +191,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
 
   public NMToken createAndGetNMToken(String applicationSubmitter,
       ApplicationAttemptId appAttemptId, Container container) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       HashSet<NodeId> nodeSet = this.appAttemptToNodeKeyMap.get(appAttemptId);
       NMToken nmToken = null;
       if (nodeSet != null) {
@@ -213,8 +213,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   }
 
   public void registerApplicationAttempt(ApplicationAttemptId appAttemptId) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       this.appAttemptToNodeKeyMap.put(appAttemptId, new HashSet<NodeId>());
     } finally {
       this.writeLock.unlock();
@@ -225,8 +225,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   @VisibleForTesting
   public boolean isApplicationAttemptRegistered(
       ApplicationAttemptId appAttemptId) {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.appAttemptToNodeKeyMap.containsKey(appAttemptId);
     } finally {
       this.readLock.unlock();
@@ -237,8 +237,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   @VisibleForTesting
   public boolean isApplicationAttemptNMTokenPresent(
       ApplicationAttemptId appAttemptId, NodeId nodeId) {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       HashSet<NodeId> nodes = this.appAttemptToNodeKeyMap.get(appAttemptId);
       if (nodes != null && nodes.contains(nodeId)) {
         return true;
@@ -251,8 +251,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   }
   
   public void unregisterApplicationAttempt(ApplicationAttemptId appAttemptId) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       this.appAttemptToNodeKeyMap.remove(appAttemptId);
     } finally {
       this.writeLock.unlock();
@@ -265,8 +265,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
    * @param nodeId
    */
   public void removeNodeKey(NodeId nodeId) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       Iterator<HashSet<NodeId>> appNodeKeySetIterator =
           this.appAttemptToNodeKeyMap.values().iterator();
       while (appNodeKeySetIterator.hasNext()) {

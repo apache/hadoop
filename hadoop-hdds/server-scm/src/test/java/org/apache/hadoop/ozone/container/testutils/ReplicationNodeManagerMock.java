@@ -17,6 +17,11 @@
 package org.apache.hadoop.ozone.container.testutils;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.CommandQueue;
@@ -37,6 +42,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -58,26 +64,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   /**
-   * Get the minimum number of nodes to get out of chill mode.
-   *
-   * @return int
-   */
-  @Override
-  public int getMinimumChillModeNodes() {
-    return 0;
-  }
-
-  /**
-   * Returns a chill mode status string.
-   *
-   * @return String
-   */
-  @Override
-  public String getChillModeStatus() {
-    return null;
-  }
-
-  /**
    * Get the number of data nodes that in all states.
    *
    * @return A state to number of nodes that in this state mapping
@@ -87,17 +73,9 @@ public class ReplicationNodeManagerMock implements NodeManager {
     return null;
   }
 
-  /**
-   * Removes a data node from the management of this Node Manager.
-   *
-   * @param node - DataNode.
-   * @throws NodeNotFoundException
-   */
   @Override
-  public void removeNode(DatanodeDetails node)
-      throws NodeNotFoundException {
-    nodeStateMap.remove(node);
-
+  public Map<String, Long> getNodeInfo() {
+    return null;
   }
 
   /**
@@ -133,44 +111,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   /**
-   * Chill mode is the period when node manager waits for a minimum
-   * configured number of datanodes to report in. This is called chill mode
-   * to indicate the period before node manager gets into action.
-   * <p>
-   * Forcefully exits the chill mode, even if we have not met the minimum
-   * criteria of the nodes reporting in.
-   */
-  @Override
-  public void forceExitChillMode() {
-
-  }
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  @Override
-  public void enterChillMode() {
-
-  }
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  @Override
-  public void exitChillMode() {
-
-  }
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  @Override
-  public boolean isOutOfChillMode() {
-    return !nodeStateMap.isEmpty();
-  }
-
-  /**
    * Returns the aggregated node stats.
    *
    * @return the aggregated node stats.
@@ -186,7 +126,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<UUID, SCMNodeStat> getNodeStats() {
+  public Map<DatanodeDetails, SCMNodeStat> getNodeStats() {
     return null;
   }
 
@@ -194,7 +134,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Return the node stat of the specified datanode.
    *
    * @param dd - datanode details.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails dd) {
@@ -211,6 +152,64 @@ public class ReplicationNodeManagerMock implements NodeManager {
   @Override
   public NodeState getNodeState(DatanodeDetails dd) {
     return nodeStateMap.get(dd);
+  }
+
+  /**
+   * Get set of pipelines a datanode is part of.
+   * @param dnId - datanodeID
+   * @return Set of PipelineID
+   */
+  @Override
+  public Set<PipelineID> getPipelines(DatanodeDetails dnId) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  /**
+   * Add pipeline information in the NodeManager.
+   * @param pipeline - Pipeline to be added
+   */
+  @Override
+  public void addPipeline(Pipeline pipeline) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  /**
+   * Remove a pipeline information from the NodeManager.
+   * @param pipeline - Pipeline to be removed
+   */
+  @Override
+  public void removePipeline(Pipeline pipeline) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  @Override
+  public void addContainer(DatanodeDetails datanodeDetails,
+                           ContainerID containerId)
+      throws NodeNotFoundException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                                 use addDatanodeInContainerMap call.
+   */
+  @Override
+  public void setContainers(DatanodeDetails uuid, Set<ContainerID> containerIds)
+      throws NodeNotFoundException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  @Override
+  public Set<ContainerID> getContainers(DatanodeDetails uuid) {
+    throw new UnsupportedOperationException("Not yet implemented");
   }
 
   /**
@@ -252,7 +251,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   @Override
   public RegisteredCommand register(DatanodeDetails dd,
-                                    NodeReportProto nodeReport) {
+                                    NodeReportProto nodeReport,
+                                    PipelineReportsProto pipelineReportsProto) {
     return null;
   }
 
@@ -264,6 +264,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   @Override
   public List<SCMCommand> processHeartbeat(DatanodeDetails dd) {
+    return null;
+  }
+
+  @Override
+  public Boolean isNodeRegistered(
+      DatanodeDetails datanodeDetails) {
     return null;
   }
 
@@ -295,7 +301,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @param nodeReport
    */
   @Override
-  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
+  public void processNodeReport(DatanodeDetails dnUuid,
+                                NodeReportProto nodeReport) {
     // do nothing.
   }
 
@@ -303,5 +310,20 @@ public class ReplicationNodeManagerMock implements NodeManager {
   public void onMessage(CommandForDatanode commandForDatanode,
                         EventPublisher publisher) {
     // do nothing.
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return null;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByUuid(String address) {
+    return null;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByAddress(String address) {
+    return null;
   }
 }

@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -30,7 +30,8 @@ import java.util.concurrent.TimeUnit;
 
 @InterfaceAudience.Private
 public class CheckpointConf {
-  private static final Log LOG = LogFactory.getLog(CheckpointConf.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CheckpointConf.class);
   
   /** How often to checkpoint regardless of number of txns */
   private final long checkpointPeriod;    // in seconds

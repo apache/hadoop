@@ -28,25 +28,6 @@ import java.util.Map;
  */
 @InterfaceAudience.Private
 public interface NodeManagerMXBean {
-  /**
-   * Get the minimum number of nodes to get out of chill mode.
-   *
-   * @return int
-   */
-  int getMinimumChillModeNodes();
-
-  /**
-   * Returns a chill mode status string.
-   * @return String
-   */
-  String getChillModeStatus();
-
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  boolean isOutOfChillMode();
 
   /**
    * Get the number of data nodes that in all states.
@@ -54,4 +35,11 @@ public interface NodeManagerMXBean {
    * @return A state to number of nodes that in this state mapping
    */
   Map<String, Integer> getNodeCount();
+
+  /**
+   * Get the disk metrics like capacity, usage and remaining based on the
+   * storage type.
+   */
+  Map<String, Long> getNodeInfo();
+
 }

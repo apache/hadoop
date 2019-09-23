@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -186,7 +187,8 @@ public class RMAdminCLI extends HAAdmin {
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")
-          || cmdEntry.getKey().equals("-failover")) {
+          || cmdEntry.getKey().equals("-failover")
+          || cmdEntry.getKey().equals("-transitionToObserver")) {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
@@ -290,8 +292,8 @@ public class RMAdminCLI extends HAAdmin {
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
-    summary.append(" [-help [cmd]]");
-    summary.append("\n");
+    summary.append(" [-help [cmd]]")
+        .append("\n");
 
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -301,7 +303,8 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (isHAEnabled) {
       for (String cmdKey : USAGE.keySet()) {
-        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")) {
+        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
+            && !cmdKey.equals("-transitionToObserver")) {
           buildHelpMsg(cmdKey, helpBuilder);
           helpBuilder.append("\n");
         }
@@ -510,8 +513,8 @@ public class RMAdminCLI extends HAAdmin {
       StringBuilder sb = new StringBuilder();
       sb.append(username + " :");
       for (String group : adminProtocol.getGroupsForUser(username)) {
-        sb.append(" ");
-        sb.append(group);
+        sb.append(" ")
+            .append(group);
       }
       System.out.println(sb);
     }
@@ -930,8 +933,14 @@ public class RMAdminCLI extends HAAdmin {
         if (resourceTypesFromRM.containsKey(resName)) {
           String[] resourceValue = ResourceUtils.parseResourceValue(resValue);
           if (resourceValue.length == 2) {
+            long value = Long.parseLong(resourceValue[1]);
+            if (!resourceTypesFromRM.get(resName).getUnits()
+                .equals(resourceValue[0])) {
+              value = UnitsConversionUtil.convert(resourceValue[0],
+                  resourceTypesFromRM.get(resName).getUnits(), value);
+            }
             ResourceInformation ri = ResourceInformation.newInstance(resName,
-                resourceValue[0], Long.parseLong(resourceValue[1]));
+                resourceValue[0], value);
             resource.setResourceInformation(resName, ri);
           } else {
             throw new IllegalArgumentException("Invalid resource value: " +

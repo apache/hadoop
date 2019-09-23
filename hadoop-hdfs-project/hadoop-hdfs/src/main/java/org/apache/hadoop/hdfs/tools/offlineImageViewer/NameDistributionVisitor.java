@@ -26,11 +26,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 /**
  * File name distribution visitor. 
  * <p>
- * It analyzes file names in fsimage and prints the following information: 
+ * It analyzes file names in fsimage and prints the following information:
+ * <ul>
  * <li>Number of unique file names</li> 
  * <li>Number file names and the corresponding number range of files that use 
  * these same names</li>
  * <li>Heap saved if the file name objects are reused</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public class NameDistributionVisitor extends TextWriterImageVisitor {

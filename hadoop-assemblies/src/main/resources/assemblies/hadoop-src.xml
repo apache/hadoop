@@ -32,6 +32,12 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>./licenses</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>.</directory>
       <useDefaultExcludes>true</useDefaultExcludes>
       <excludes>
@@ -52,6 +58,7 @@
         <exclude>**/SecurityAuth.audit*</exclude>
         <exclude>hadoop-ozone/**</exclude>
         <exclude>hadoop-hdds/**</exclude>
+        <exclude>hadoop-submarine/**</exclude>
       </excludes>
     </fileSet>
   </fileSets>

@@ -29,8 +29,8 @@ import javax.management.ObjectName;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +53,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
-  public static final Log LOG = LogFactory.getLog(TestDataNodeMXBean.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeMXBean.class);
 
   @Test
   public void testDataNodeMXBean() throws Exception {

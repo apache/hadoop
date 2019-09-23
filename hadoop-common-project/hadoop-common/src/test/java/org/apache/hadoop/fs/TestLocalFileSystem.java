@@ -35,10 +35,12 @@ import java.io.*;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
@@ -729,7 +731,7 @@ public class TestLocalFileSystem {
     }
 
     @Override
-    protected BuilderWithSupportedKeys getThisBuilder() {
+    public BuilderWithSupportedKeys getThisBuilder() {
       return this;
     }
 
@@ -773,5 +775,230 @@ public class TestLocalFileSystem {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "unsupported key found", builder::build
     );
+  }
+
+  private static final int CRC_SIZE = 12;
+
+  private static final byte[] DATA = "1234567890".getBytes();
+
+  /**
+   * Get the statistics for the file schema. Contains assertions
+   * @return the statistics on all file:// IO.
+   */
+  protected Statistics getFileStatistics() {
+    final List<Statistics> all = FileSystem.getAllStatistics();
+    final List<Statistics> fileStats = all
+        .stream()
+        .filter(s -> s.getScheme().equals("file"))
+        .collect(Collectors.toList());
+    assertEquals("Number of statistics counters for file://",
+        1, fileStats.size());
+    // this should be used for local and rawLocal, as they share the
+    // same schema (although their class is different)
+    return fileStats.get(0);
+  }
+
+  /**
+   * Write the byte array {@link #DATA} to the given output stream.
+   * @param s stream to write to.
+   * @throws IOException failure to write/close the file
+   */
+  private void writeData(FSDataOutputStream s) throws IOException {
+    s.write(DATA);
+    s.close();
+  }
+
+  /**
+   * Evaluate the closure while counting bytes written during
+   * its execution, and verify that the count included the CRC
+   * write as well as the data.
+   * After the operation, the file is deleted.
+   * @param operation operation for assertion method.
+   * @param path path to write
+   * @param callable expression evaluated
+   * @param delete should the file be deleted after?
+   */
+  private void assertWritesCRC(String operation, Path path,
+      LambdaTestUtils.VoidCallable callable, boolean delete) throws Exception {
+    final Statistics stats = getFileStatistics();
+    final long bytesOut0 = stats.getBytesWritten();
+    try {
+      callable.call();
+      assertEquals("Bytes written in " + operation + "; stats=" + stats,
+          CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0);
+    } finally {
+      if (delete) {
+        // clean up
+        try {
+          fileSys.delete(path, false);
+        } catch (IOException ignored) {
+          // ignore this cleanup failure
+        }
+      }
+    }
+  }
+
+  /**
+   * Verify that File IO through the classic non-builder APIs generate
+   * statistics which imply that CRCs were read and written.
+   */
+  @Test
+  public void testCRCwithClassicAPIs() throws Throwable {
+    final Path file = new Path(TEST_ROOT_DIR, "testByteCountersClassicAPIs");
+    assertWritesCRC("create()",
+        file,
+        () -> writeData(fileSys.create(file, true)),
+        false);
+
+    final Statistics stats = getFileStatistics();
+    final long bytesRead0 = stats.getBytesRead();
+    fileSys.open(file).close();
+    final long bytesRead1 = stats.getBytesRead();
+    assertEquals("Bytes read in open() call with stats " + stats,
+        CRC_SIZE, bytesRead1 - bytesRead0);
+  }
+
+  /**
+   * create/7 to use write the CRC.
+   */
+  @Test
+  public void testCRCwithCreate7() throws Throwable {
+    final Path file = new Path(TEST_ROOT_DIR, "testCRCwithCreate7");
+    assertWritesCRC("create/7",
+        file,
+        () -> writeData(
+            fileSys.create(file,
+                FsPermission.getFileDefault(),
+                true,
+                8192,
+                (short)1,
+                16384,
+                null)),
+        true);
+  }
+
+  /**
+   * Create with ChecksumOpt to create checksums.
+   * If the LocalFS ever interpreted the flag, this test may fail.
+   */
+  @Test
+  public void testCRCwithCreateChecksumOpt() throws Throwable {
+    final Path file = new Path(TEST_ROOT_DIR, "testCRCwithCreateChecksumOpt");
+    assertWritesCRC("create with checksum opt",
+        file,
+        () -> writeData(
+            fileSys.create(file,
+                FsPermission.getFileDefault(),
+                EnumSet.of(CreateFlag.CREATE),
+                8192,
+                (short)1,
+                16384,
+                null,
+                Options.ChecksumOpt.createDisabled())),
+        true);
+  }
+
+  /**
+   * Create createNonRecursive/6.
+   */
+  @Test
+  public void testCRCwithCreateNonRecursive6() throws Throwable {
+    fileSys.mkdirs(TEST_PATH);
+    final Path file = new Path(TEST_ROOT_DIR,
+        "testCRCwithCreateNonRecursive6");
+    assertWritesCRC("create with checksum opt",
+        file,
+        () -> writeData(
+            fileSys.createNonRecursive(file,
+                FsPermission.getFileDefault(),
+                true,
+                8192,
+                (short)1,
+                16384,
+                null)),
+        true);
+  }
+
+  /**
+   * Create createNonRecursive with CreateFlags.
+   */
+  @Test
+  public void testCRCwithCreateNonRecursiveCreateFlags() throws Throwable {
+    fileSys.mkdirs(TEST_PATH);
+    final Path file = new Path(TEST_ROOT_DIR,
+        "testCRCwithCreateNonRecursiveCreateFlags");
+    assertWritesCRC("create with checksum opt",
+        file,
+        () -> writeData(
+            fileSys.createNonRecursive(file,
+                FsPermission.getFileDefault(),
+                EnumSet.of(CreateFlag.CREATE),
+                8192,
+                (short)1,
+                16384,
+                null)),
+        true);
+  }
+
+
+  /**
+   * This relates to MAPREDUCE-7184, where the openFile() call's
+   * CRC count wasn't making into the statistics for the current thread.
+   * If the evaluation was in a separate thread you'd expect that,
+   * but if the completable future is in fact being synchronously completed
+   * it should not happen.
+   */
+  @Test
+  public void testReadIncludesCRCwithBuilders() throws Throwable {
+
+    final Path file = new Path(TEST_ROOT_DIR,
+        "testReadIncludesCRCwithBuilders");
+    Statistics stats = getFileStatistics();
+    // write the file using the builder API
+    assertWritesCRC("createFile()",
+        file,
+        () -> writeData(
+            fileSys.createFile(file)
+                .overwrite(true).recursive()
+                .build()),
+        false);
+
+    // now read back the data, again with the builder API
+    final long bytesRead0 = stats.getBytesRead();
+    fileSys.openFile(file).build().get().close();
+    assertEquals("Bytes read in openFile() call with stats " + stats,
+        CRC_SIZE, stats.getBytesRead() - bytesRead0);
+    // now write with overwrite = true
+    assertWritesCRC("createFileNonRecursive()",
+        file,
+        () -> {
+          try (FSDataOutputStream s = fileSys.createFile(file)
+              .overwrite(true)
+              .build()) {
+            s.write(DATA);
+          }
+        },
+        true);
+  }
+
+  /**
+   * Write with the builder, using the normal recursive create
+   * with create flags containing the overwrite option.
+   */
+  @Test
+  public void testWriteWithBuildersRecursive() throws Throwable {
+
+    final Path file = new Path(TEST_ROOT_DIR,
+        "testWriteWithBuildersRecursive");
+    Statistics stats = getFileStatistics();
+    // write the file using the builder API
+    assertWritesCRC("createFile()",
+        file,
+        () -> writeData(
+            fileSys.createFile(file)
+                .overwrite(false)
+                .recursive()
+                .build()),
+        true);
   }
 }

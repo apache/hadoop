@@ -600,7 +600,7 @@ public class JobHistoryParser implements HistoryEventHandler {
     public TaskInfo() {
       startTime = finishTime = -1;
       error = splitLocations = "";
-      attemptsMap = new HashMap<TaskAttemptID, TaskAttemptInfo>();
+      attemptsMap = new HashMap<TaskAttemptID, TaskAttemptInfo>(2);
     }
     
     public void printAll() {

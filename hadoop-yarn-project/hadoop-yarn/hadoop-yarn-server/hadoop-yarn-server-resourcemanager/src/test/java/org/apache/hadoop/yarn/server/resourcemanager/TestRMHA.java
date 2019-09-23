@@ -22,6 +22,7 @@ import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,8 +33,8 @@ import java.net.InetSocketAddress;
 
 import javax.ws.rs.core.MediaType;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -72,7 +73,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 public class TestRMHA {
-  private Log LOG = LogFactory.getLog(TestRMHA.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
   private Configuration configuration;
   private MockRM rm = null;
   private MockNM nm = null;
@@ -381,14 +382,14 @@ public class TestRMHA {
     rm = new MockRM(conf);
     rm.init(conf);
 
-    assertEquals(conf.get(YarnConfiguration.RM_HA_ID), RM2_NODE_ID);
+    assertThat(conf.get(YarnConfiguration.RM_HA_ID)).isEqualTo(RM2_NODE_ID);
 
     //test explicitly lookup HA-ID
     configuration.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
     conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf);
     rm.init(conf);
-    assertEquals(conf.get(YarnConfiguration.RM_HA_ID), RM1_NODE_ID);
+    assertThat(conf.get(YarnConfiguration.RM_HA_ID)).isEqualTo(RM1_NODE_ID);
 
     //test if RM_HA_ID can not be found
     configuration

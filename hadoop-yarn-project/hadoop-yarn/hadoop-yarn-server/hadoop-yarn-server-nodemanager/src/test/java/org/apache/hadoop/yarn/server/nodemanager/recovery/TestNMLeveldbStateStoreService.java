@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -25,7 +26,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -75,6 +77,9 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
@@ -192,6 +197,28 @@ public class TestNMLeveldbStateStoreService {
     return containerTokens;
   }
 
+  private List<LocalizedResourceProto> loadCompletedResources(
+      RecoveryIterator<LocalizedResourceProto> it) throws IOException {
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    while (it != null && it.hasNext()) {
+      completedResources.add(it.next());
+    }
+    return completedResources;
+  }
+
+  private Map<LocalResourceProto, Path> loadStartedResources(
+      RecoveryIterator <Map.Entry<LocalResourceProto, Path>> it)
+      throws IOException {
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+    while (it != null &&it.hasNext()) {
+      Map.Entry<LocalResourceProto, Path> entry = it.next();
+      startedResources.put(entry.getKey(), entry.getValue());
+    }
+    return startedResources;
+  }
+
   private void restartStateStore() throws IOException {
     // need to close so leveldb releases database lock
     if (stateStore != null) {
@@ -207,8 +234,10 @@ public class TestNMLeveldbStateStoreService {
     assertNotNull(state);
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
     assertNotNull(pubts);
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
+    assertTrue(loadCompletedResources(pubts.getCompletedResourcesIterator())
+        .isEmpty());
+    assertTrue(loadStartedResources(pubts.getStartedResourcesIterator())
+        .isEmpty());
     assertTrue(loadUserResources(state.getIterator()).isEmpty());
   }
 
@@ -542,6 +571,111 @@ public class TestNMLeveldbStateStoreService {
   }
 
   @Test
+  public void testLocalTrackerStateIterator() throws IOException {
+    String user1 = "somebody";
+    ApplicationId appId1 = ApplicationId.newInstance(1, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(2, 2);
+
+    String user2 = "someone";
+    ApplicationId appId3 = ApplicationId.newInstance(3, 3);
+
+    // start and finish local resource for applications
+    Path appRsrcPath1 = new Path("hdfs://some/app/resource1");
+    LocalResourcePBImpl rsrcPb1 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath1),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto1 = rsrcPb1.getProto();
+    Path appRsrcLocalPath1 = new Path("/some/local/dir/for/apprsrc1");
+    Path appRsrcPath2 = new Path("hdfs://some/app/resource2");
+    LocalResourcePBImpl rsrcPb2 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath2),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto2 = rsrcPb2.getProto();
+    Path appRsrcLocalPath2 = new Path("/some/local/dir/for/apprsrc2");
+    Path appRsrcPath3 = new Path("hdfs://some/app/resource3");
+    LocalResourcePBImpl rsrcPb3 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath3),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto3 = rsrcPb3.getProto();
+    Path appRsrcLocalPath3 = new Path("/some/local/dir/for/apprsrc2");
+
+    stateStore.startResourceLocalization(user1, appId1, appRsrcProto1,
+        appRsrcLocalPath1);
+    stateStore.startResourceLocalization(user1, appId2, appRsrcProto2,
+        appRsrcLocalPath2);
+    stateStore.startResourceLocalization(user2, appId3, appRsrcProto3,
+        appRsrcLocalPath3);
+
+    LocalizedResourceProto appLocalizedProto1 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto1)
+            .setLocalPath(appRsrcLocalPath1.toString())
+            .setSize(1234567L)
+            .build();
+    LocalizedResourceProto appLocalizedProto2 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto2)
+            .setLocalPath(appRsrcLocalPath2.toString())
+            .setSize(1234567L)
+            .build();
+    LocalizedResourceProto appLocalizedProto3 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto3)
+            .setLocalPath(appRsrcLocalPath3.toString())
+            .setSize(1234567L)
+            .build();
+
+
+    stateStore.finishResourceLocalization(user1, appId1, appLocalizedProto1);
+    stateStore.finishResourceLocalization(user1, appId2, appLocalizedProto2);
+    stateStore.finishResourceLocalization(user2, appId3, appLocalizedProto3);
+
+
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
+    // restart and verify two users exist and two apps completed for user1.
+    restartStateStore();
+    RecoveredLocalizationState state = stateStore.loadLocalizationState();
+    Map<String, RecoveredUserResources> userResources =
+        loadUserResources(state.getIterator());
+    assertEquals(2, userResources.size());
+
+    RecoveredUserResources uResource = userResources.get(user1);
+    assertEquals(2, uResource.getAppTrackerStates().size());
+    LocalResourceTrackerState app1ts =
+        uResource.getAppTrackerStates().get(appId1);
+    assertNotNull(app1ts);
+    completedResources = loadCompletedResources(
+        app1ts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        app1ts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
+    assertEquals(appLocalizedProto1,
+        completedResources.iterator().next());
+    LocalResourceTrackerState app2ts =
+        uResource.getAppTrackerStates().get(appId2);
+    assertNotNull(app2ts);
+    completedResources = loadCompletedResources(
+        app2ts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        app2ts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
+    assertEquals(appLocalizedProto2,
+        completedResources.iterator().next());
+  }
+
+  @Test
   public void testStartResourceLocalization() throws IOException {
     String user = "somebody";
     ApplicationId appId = ApplicationId.newInstance(1, 1);
@@ -558,27 +692,44 @@ public class TestNMLeveldbStateStoreService {
     stateStore.startResourceLocalization(user, appId, appRsrcProto,
         appRsrcLocalPath);
 
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
     // restart and verify only app resource is marked in-progress
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     Map<String, RecoveredUserResources> userResources =
         loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     RecoveredUserResources rur = userResources.get(user);
     LocalResourceTrackerState privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertTrue(privts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     LocalResourceTrackerState appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getLocalizedResources().isEmpty());
-    assertEquals(1, appts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(appRsrcLocalPath,
-        appts.getInProgressResources().get(appRsrcProto));
+        startedResources.get(appRsrcProto));
 
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
@@ -613,28 +764,40 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLocalizationState();
     pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertEquals(2, pubts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(2, startedResources.size());
     assertEquals(pubRsrcLocalPath1,
-        pubts.getInProgressResources().get(pubRsrcProto1));
+        startedResources.get(pubRsrcProto1));
     assertEquals(pubRsrcLocalPath2,
-        pubts.getInProgressResources().get(pubRsrcProto2));
+        startedResources.get(pubRsrcProto2));
     userResources = loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     rur = userResources.get(user);
     privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertEquals(1, privts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(privRsrcLocalPath,
-        privts.getInProgressResources().get(privRsrcProto));
+        startedResources.get(privRsrcProto));
     assertEquals(1, rur.getAppTrackerStates().size());
     appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getLocalizedResources().isEmpty());
-    assertEquals(1, appts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(appRsrcLocalPath,
-        appts.getInProgressResources().get(appRsrcProto));
+        startedResources.get(appRsrcProto));
   }
 
   @Test
@@ -661,27 +824,44 @@ public class TestNMLeveldbStateStoreService {
           .build();
     stateStore.finishResourceLocalization(user, appId, appLocalizedProto);
 
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
     // restart and verify only app resource is completed
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     Map<String, RecoveredUserResources> userResources =
         loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     RecoveredUserResources rur = userResources.get(user);
     LocalResourceTrackerState privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertTrue(privts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     LocalResourceTrackerState appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getInProgressResources().isEmpty());
-    assertEquals(1, appts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(appLocalizedProto,
-        appts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
 
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
@@ -732,28 +912,40 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLocalizationState();
     pubts = state.getPublicTrackerState();
-    assertEquals(1, pubts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertEquals(1, completedResources.size());
     assertEquals(pubLocalizedProto1,
-        pubts.getLocalizedResources().iterator().next());
-    assertEquals(1, pubts.getInProgressResources().size());
+        completedResources.iterator().next());
+    assertEquals(1, startedResources.size());
     assertEquals(pubRsrcLocalPath2,
-        pubts.getInProgressResources().get(pubRsrcProto2));
+        startedResources.get(pubRsrcProto2));
     userResources = loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     rur = userResources.get(user);
     privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertEquals(1, privts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertEquals(1, completedResources.size());
     assertEquals(privLocalizedProto,
-        privts.getLocalizedResources().iterator().next());
-    assertTrue(privts.getInProgressResources().isEmpty());
+        completedResources.iterator().next());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getInProgressResources().isEmpty());
-    assertEquals(1, appts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(appLocalizedProto,
-        appts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
   }
 
   @Test
@@ -841,10 +1033,14 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getInProgressResources().isEmpty());
-    assertEquals(1, pubts.getLocalizedResources().size());
+    List<LocalizedResourceProto> completedResources =
+        loadCompletedResources(pubts.getCompletedResourcesIterator());
+    Map<LocalResourceProto, Path> startedResources =
+        loadStartedResources(pubts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(pubLocalizedProto1,
-        pubts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
     Map<String, RecoveredUserResources> userResources =
         loadUserResources(state.getIterator());
     assertTrue(userResources.isEmpty());
@@ -1159,9 +1355,9 @@ public class TestNMLeveldbStateStoreService {
   @Test
   public void testAMRMProxyStorage() throws IOException {
     RecoveredAMRMProxyState state = stateStore.loadAMRMProxyState();
-    assertEquals(state.getCurrentMasterKey(), null);
-    assertEquals(state.getNextMasterKey(), null);
-    assertEquals(state.getAppContexts().size(), 0);
+    assertThat(state.getCurrentMasterKey()).isNull();
+    assertThat(state.getNextMasterKey()).isNull();
+    assertThat(state.getAppContexts()).isEmpty();
 
     ApplicationId appId1 = ApplicationId.newInstance(1, 1);
     ApplicationId appId2 = ApplicationId.newInstance(1, 2);
@@ -1193,18 +1389,18 @@ public class TestNMLeveldbStateStoreService {
       state = stateStore.loadAMRMProxyState();
       assertEquals(state.getCurrentMasterKey(),
           secretManager.getCurrentMasterKeyData().getMasterKey());
-      assertEquals(state.getNextMasterKey(), null);
-      assertEquals(state.getAppContexts().size(), 2);
+      assertThat(state.getNextMasterKey()).isNull();
+      assertThat(state.getAppContexts()).hasSize(2);
       // app1
       Map<String, byte[]> map = state.getAppContexts().get(attemptId1);
       assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
       // app2
       map = state.getAppContexts().get(attemptId2);
       assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
 
@@ -1223,14 +1419,14 @@ public class TestNMLeveldbStateStoreService {
       assertEquals(state.getAppContexts().size(), 2);
       // app1
       map = state.getAppContexts().get(attemptId1);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
       // app2
       map = state.getAppContexts().get(attemptId2);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 1);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(1);
       assertTrue(Arrays.equals(map.get(key2), data2));
 
       // Activate next master key and remove all entries of app1
@@ -1243,12 +1439,12 @@ public class TestNMLeveldbStateStoreService {
       state = stateStore.loadAMRMProxyState();
       assertEquals(state.getCurrentMasterKey(),
           secretManager.getCurrentMasterKeyData().getMasterKey());
-      assertEquals(state.getNextMasterKey(), null);
-      assertEquals(state.getAppContexts().size(), 1);
+      assertThat(state.getNextMasterKey()).isNull();
+      assertThat(state.getAppContexts()).hasSize(1);
       // app2 only
       map = state.getAppContexts().get(attemptId2);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 1);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(1);
       assertTrue(Arrays.equals(map.get(key2), data2));
     } finally {
       secretManager.stop();
@@ -1257,7 +1453,7 @@ public class TestNMLeveldbStateStoreService {
 
   @Test
   public void testStateStoreForResourceMapping() throws IOException {
-    // test empty when no state
+    // test that stateStore is initially empty
     List<RecoveredContainerState> recoveredContainers =
         loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
@@ -1273,38 +1469,43 @@ public class TestNMLeveldbStateStoreService {
     ResourceMappings resourceMappings = new ResourceMappings();
     when(container.getResourceMappings()).thenReturn(resourceMappings);
 
-    // Store ResourceMapping
     stateStore.storeAssignedResources(container, "gpu",
-        Arrays.asList("1", "2", "3"));
-    // This will overwrite above
-    List<Serializable> gpuRes1 = Arrays.asList("1", "2", "4");
+        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 2),
+            new GpuDevice(3, 3)));
+
+    // This will overwrite the above
+    List<Serializable> gpuRes1 = Arrays.asList(
+        new GpuDevice(1, 1), new GpuDevice(2, 2), new GpuDevice(4, 4));
     stateStore.storeAssignedResources(container, "gpu", gpuRes1);
-    List<Serializable> fpgaRes = Arrays.asList("3", "4", "5", "6");
+
+    List<Serializable> fpgaRes = Arrays.asList(
+        new FpgaDevice("testType", 3, 3, "testIPID"),
+        new FpgaDevice("testType", 4, 4, "testIPID"),
+        new FpgaDevice("testType", 5, 5, "testIPID"),
+        new FpgaDevice("testType", 6, 6, "testIPID"));
     stateStore.storeAssignedResources(container, "fpga", fpgaRes);
-    List<Serializable> numaRes = Arrays.asList("numa1");
+
+    List<Serializable> numaRes = Arrays.asList(
+        new NumaResourceAllocation("testmemNodeId", 2048, "testCpuNodeId", 10));
     stateStore.storeAssignedResources(container, "numa", numaRes);
 
-    // add a invalid key
     restartStateStore();
     recoveredContainers =
         loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
-    List<Serializable> res = rcs.getResourceMappings()
+    List<Serializable> resources = rcs.getResourceMappings()
         .getAssignedResources("gpu");
-    Assert.assertTrue(res.equals(gpuRes1));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("gpu").equals(gpuRes1));
+    Assert.assertEquals(gpuRes1, resources);
+    Assert.assertEquals(gpuRes1, resourceMappings.getAssignedResources("gpu"));
 
-    res = rcs.getResourceMappings().getAssignedResources("fpga");
-    Assert.assertTrue(res.equals(fpgaRes));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("fpga").equals(fpgaRes));
+    resources = rcs.getResourceMappings().getAssignedResources("fpga");
+    Assert.assertEquals(fpgaRes, resources);
+    Assert.assertEquals(fpgaRes, resourceMappings.getAssignedResources("fpga"));
 
-    res = rcs.getResourceMappings().getAssignedResources("numa");
-    Assert.assertTrue(res.equals(numaRes));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("numa").equals(numaRes));
+    resources = rcs.getResourceMappings().getAssignedResources("numa");
+    Assert.assertEquals(numaRes, resources);
+    Assert.assertEquals(numaRes, resourceMappings.getAssignedResources("numa"));
   }
 
   @Test

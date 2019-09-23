@@ -69,7 +69,7 @@ NodeManager hosts. A simple way to load an image is by issuing a Docker pull
 request. For example:
 
 ```
-    sudo docker pull images/hadoop-docker:latest
+    sudo docker pull library/openjdk:8
 ```
 
 The following properties should be set in yarn-site.xml:
@@ -111,6 +111,32 @@ The following properties should be set in yarn-site.xml:
       Comma separated list of runtimes that are allowed when using
       LinuxContainerExecutor. The allowed values are default, docker, and
       javasandbox.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.type</name>
+    <value></value>
+    <description>
+      Optional. Sets the default container runtime to use.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.image-name</name>
+    <value></value>
+    <description>
+      Optional. Default docker image to be used when the docker runtime is
+      selected.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.image-update</name>
+    <value>false</value>
+    <description>
+      Optional. Default option to decide whether to pull the latest image
+      or not.
     </description>
   </property>
 
@@ -179,7 +205,7 @@ The following properties should be set in yarn-site.xml:
     <value></value>
     <description>
       Optional. A comma-separated list of users who are allowed to request
-      privileged contains if privileged containers are allowed.
+      privileged containers if privileged containers are allowed.
     </description>
   </property>
 
@@ -227,7 +253,7 @@ The following properties should be set in yarn-site.xml:
 </configuration>
 ```
 
-In addition, a container-executer.cfg file must exist and contain settings for
+In addition, a container-executor.cfg file must exist and contain settings for
 the container executor. The file must be owned by root with permissions 0400.
 The format of the file is the standard Java properties file format, for example
 
@@ -254,9 +280,11 @@ are allowed. It contains the following properties:
 | `docker.allowed.volume-drivers` | Comma separated list of volume drivers which are allowed to be used. By default, no volume drivers are allowed. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
+| `docker.privileged-containers.registries` | Comma separated list of privileged docker registries for running privileged docker containers.  By default, no registries are defined. |
 | `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
+| `docker.allowed.runtimes` | Comma seperated runtimes that containers are allowed to use. By default no runtimes are allowed to be added.|
 
 Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
 
@@ -270,6 +298,7 @@ The following properties are optional:
 | `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
 | `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
 | `feature.tc.enabled` | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed. |
+| `feature.yarn.sysfs.enabled` | Must be "true" or "false". See YARN sysfs support for detail. The default setting is disabled. |
 
 Part of a container-executor.cfg which allows Docker containers to be launched is below:
 
@@ -278,6 +307,7 @@ yarn.nodemanager.linux-container-executor.group=yarn
 [docker]
   module.enabled=true
   docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local
   docker.trusted.registries=centos
   docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
   docker.allowed.networks=bridge,host,none
@@ -329,13 +359,65 @@ implicitly perform a Docker pull command. Both MapReduce and Spark assume that
 tasks which take more that 10 minutes to report progress have stalled, so
 specifying a large Docker image may cause the application to fail.
 
+CGroups configuration Requirements
+----------------------------------
+The Docker plugin utilizes cgroups to limit resource usage of individual containers.
+Since launched containers belong to YARN, the command line option `--cgroup-parent` is
+used to define the appropriate control group.
+
+Docker supports two different cgroups driver: `cgroupfs` and `systemd`. Note that only
+`cgroupfs` is supported - attempt to launch a Docker container with `systemd` results in the
+following, similar error message:
+
+```
+Container id: container_1561638268473_0006_01_000002
+Exit code: 7
+Exception message: Launch container failed
+Shell error output: /usr/bin/docker-current: Error response from daemon: cgroup-parent for systemd cgroup should be a valid slice named as "xxx.slice".
+See '/usr/bin/docker-current run --help'.
+Shell output: main : command provided 4
+```
+
+This means you have to reconfigure the Docker deamon on each host where `systemd` driver is used.
+
+Depending on what OS Hadoop is running on, reconfiguration might require different steps. However,
+if `systemd` was chosen for cgroups driver, it is likely that the `systemctl` command is available
+on the system.
+
+Check the `ExecStart` property of the Docker daemon:
+
+```
+~$ systemctl show --no-pager --property=ExecStart docker.service
+ExecStart={ path=/usr/bin/dockerd-current ; argv[]=/usr/bin/dockerd-current --add-runtime
+docker-runc=/usr/libexec/docker/docker-runc-current --default-runtime=docker-runc --exec-opt native.cgroupdriver=systemd
+--userland-proxy-path=/usr/libexec/docker/docker-proxy-current
+--init-path=/usr/libexec/docker/docker-init-current
+--seccomp-profile=/etc/docker/seccomp.json
+$OPTIONS $DOCKER_STORAGE_OPTIONS $DOCKER_NETWORK_OPTIONS $ADD_REGISTRY $BLOCK_REGISTRY $INSECURE_REGISTRY $REGISTRIES ;
+ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+```
+
+This example shows that the `native.cgroupdriver` is `systemd`. You have to modify that in the unit file of the daemon.
+
+```
+~$ sudo systemctl edit --full docker.service
+```
+
+This brings up the whole configuration for editing. Just replace the `systemd` string to `cgroupfs`. Save the
+changes and restart both the systemd and Docker daemon:
+
+```
+~$ sudo systemctl daemon-reload
+~$ sudo systemctl restart docker.service
+```
+
 Application Submission
 ----------------------
 
 Before attempting to launch a Docker container, make sure that the LCE
 configuration is working for applications requesting regular YARN containers.
 If after enabling the LCE one or more NodeManagers fail to start, the cause is
-most likely that the ownership and/or permissions on the container-executer
+most likely that the ownership and/or permissions on the container-executor
 binary are incorrect. Check the logs to confirm.
 
 In order to run an application in a Docker container, set the following
@@ -347,11 +429,13 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_IMAGE` | Names which image will be used to launch the Docker container. Any image name that could be passed to the Docker client's run command may be used. The image name may include a repo prefix. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE` | Controls whether the Docker container's default command is overridden.  When set to true, the Docker container's command will be "bash _path\_to\_launch\_script_". When unset or set to false, the Docker container's default command is used. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK` | Sets the network type to be used by the Docker container. It must be a valid value as determined by the yarn.nodemanager.runtime.linux.docker.allowed-container-networks property. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING` | Allows a user to specify ports mapping for the bridge network Docker container. The value of the environment variable should be a comma-separated list of ports mapping. It's the same to "-p" option for the Docker run command. If the value is empty, "-P" will be added. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE` | Controls which PID namespace will be used by the Docker container. By default, each Docker container has its own PID namespace. To share the namespace of the host, the yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed property must be set to true. If the host PID namespace is allowed and this environment variable is set to host, the Docker container will share the host's PID namespace. No other value is allowed. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER` | Controls whether the Docker container is a privileged container. In order to use privileged containers, the yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed property must be set to true, and the application owner must appear in the value of the yarn.nodemanager.runtime.linux.docker.privileged-containers.acl property. If this environment variable is set to true, a privileged Docker container will be used if allowed. No other value is allowed, so the environment variable should be left unset rather than setting it to false. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as `source:dest[:mode]` and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. If neither is specified, read-write will be  assumed. The mode may include a bind propagation option. In that case, the mode should either be of the form `[option]`, `rw+[option]`, or `ro+[option]`. Valid bind propagation options are shared, rshared, slave, rslave, private, and rprivate. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for `docker.allowed.ro-mounts` and `docker.allowed.rw-mounts`. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS` | Adds additional tmpfs mounts to the Docker container. The value of the environment variable should be a comma-separated list of absolute mount points within the container. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
+| `YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE` | Enable mounting of container working directory sysfs sub-directory into Docker container /hadoop/yarn/sysfs.  This is useful for populating cluster information into container. |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -610,9 +694,38 @@ Privileged Container Security Consideration
 
 Privileged docker container can interact with host system devices.  This can cause harm to host operating system without proper care.  In order to mitigate risk of allowing privileged container to run on Hadoop cluster, we implemented a controlled process to sandbox unauthorized privileged docker images.
 
-The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
+The default behavior disallows any privileged docker containers.  Privileged docker is only allowed with ENTRYPOINT enabled docker image, and `docker.privileged-containers.enabled` is set to enabled.  Docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet with some restrictions to prevent harm to host operating system.
 
-When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.  System administrator may choose to allow official docker images from Docker Hub to be part of trusted registries.  "library" is the name to use for trusting official docker images.  Container-executor.cfg example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.trusted.registries=library
+```
+
+Fine grained access control can also be defined using `docker.privileged-containers.registries` to allow only a subset of Docker images to run as privileged containers.  If `docker.privileged-containers.registries` is not defined, YARN will fall back to use `docker.trusted.registries` as access control for privileged Docker images.  Fine grained access control example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local/centos:latest
+  docker.trusted.registries=library
+```
+
+In development environment, local images can be tagged with a repository name prefix to enable trust.  The recommendation of choosing a repository name is using a local hostname and port number to prevent accidentially pulling docker images from Docker Hub or use reserved Docker Hub keyword: "local".  Docker run will look for docker images on Docker Hub, if the image does not exist locally.  Using a local hostname and port in image name can prevent accidental pulling of canonical images from docker hub.  Example of tagging image with localhost:5000 as trusted registry:
+
+```
+docker tag centos:latest localhost:5000/centos:latest
+```
+
+Let's say you have an Ubuntu-based image with some changes in the local repository and you wish to use it.
+The following example tags the `local_ubuntu` image:
+```
+docker tag local_ubuntu local/ubuntu:latest
+```
+
+Next, you have to add `local` to `docker.trusted.registries`. The image can be referenced by using `local/ubuntu`.
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
@@ -633,8 +746,8 @@ will fail and the container will be killed on NodeManager restart.
 proc     /proc     proc     nosuid,nodev,noexec,hidepid=2,gid=yarn     0 0
 ```
 
-Connecting to a Secure Docker Repository
-----------------------------------------
+Connecting to a Docker Trusted Registry
+--------------------------------------
 
 The Docker client command will draw its configuration from the default location,
 which is $HOME/.docker/config.json on the NodeManager host. The Docker
@@ -662,35 +775,244 @@ host into the secure repo using the Docker login command:
 Note that this approach means that all users will have access to the secure
 repo.
 
+Hadoop integrates with Docker Trusted Registry via YARN service API.  Docker registry can store Docker images on HDFS, S3 or external storage using CSI driver.
+
+### Docker Registry on HDFS
+
+NFS Gateway provides capability to mount HDFS as NFS mount point.  Docker Registry can configure to write to HDFS mount point using standard file system API.
+
+In hdfs-site.xml, configure NFS configuration:
+
+```
+    <property>
+      <name>nfs.exports.allowed.hosts</name>
+      <value>* rw</value>
+    </property>
+
+    <property>
+      <name>nfs.file.dump.dir</name>
+      <value>/tmp/.hdfs-nfs</value>
+    </property>
+
+    <property>
+      <name>nfs.kerberos.principal</name>
+      <value>nfs/_HOST@EXAMPLE.COM</value>
+    </property>
+
+    <property>
+      <name>nfs.keytab.file</name>
+      <value>/etc/security/keytabs/nfs.service.keytab</value>
+    </property>
+```
+
+Run NFS Gateway on all datanodes as hdfs user using:
+
+```
+$ $HADOOP_HOME/bin/hdfs --daemon start nfs3
+```
+
+On each datanode, nfs mount point is exposed to /hdfs, using:
+
+```
+# mount -t nfs -o vers=3,proto=tcp,nolock,noacl,sync $DN_IP:/ /hdfs
+```
+
+Where DN_IP is the IP address of the datanode.
+
+Container-executor.cfg is configured to allow trusted Docker images from library.
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.trusted.registries=library,registry.docker-registry.registry.example.com:5000
+  docker.allowed.rw-mounts=/tmp,/usr/local/hadoop/logs,/hdfs
+```
+
+Docker Registry can be started using YARN service:
+registry.json
+
+```
+{
+  "name": "docker-registry",
+  "version": "1.0",
+  "kerberos_principal" : {
+    "principal_name" : "registry/_HOST@EXAMPLE.COM",
+    "keytab" : "file:///etc/security/keytabs/registry.service.keytab"
+  },
+  "components" :
+  [
+    {
+      "name": "registry",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "registry:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "run_privileged_container": true,
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS":"/hdfs/apps/docker/registry:/var/lib/registry"
+        },
+        "properties": {
+          "docker.network": "host"
+        }
+      }
+    }
+  ]
+}
+```
+
+YARN service configures docker mounts from /hdfs/apps/docker/registry to /var/lib/registry inside docker container.
+
+```
+yarn app -launch docker-registry /tmp/registry.json
+```
+
+Docker trusted registry is deployed in YARN framework, and the URL to access the registry following Hadoop Registry DNS format:
+
+```
+registry.docker-registry.$USER.$DOMAIN:5000
+```
+
+When docker-registry application reaches STABLE state in YARN, user can push or pull docker images to Docker Trusted Registry by prefix image name with registry.docker-registry.registry.example.com:5000/.
+
+### Docker Registry on S3
+
+Docker Registry provides its own S3 driver and YAML configuration.  YARN service configuration can generate YAML template, and enable direct Docker Registry to S3 storage.  This option is the top choice for deploying Docker Trusted Registry on AWS.
+Configuring Docker registry storage driver to S3 requires mounting /etc/docker/registry/config.yml file (through YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS), which needs to configure an S3 bucket with its corresponding accesskey and secretKey.
+
+Sample config.yml
+```
+version: 0.1
+log:
+    fields:
+        service: registry
+http:
+    addr: :5000
+storage:
+    cache:
+        blobdescriptor: inmemory
+    s3:
+        accesskey: #AWS_KEY#
+        secretkey: #AWS_SECRET#
+        region: #AWS_REGION#
+        bucket: #AWS_BUCKET#
+        encrypt: #ENCRYPT#
+        secure:  #SECURE#
+        chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
+        rootdirectory: #STORAGE_PATH#
+```
+
+Docker Registry can be started using YARN service:
+registry.json
+
+```
+{
+  "name": "docker-registry",
+  "version": "1.0",
+  "kerberos_principal" : {
+    "principal_name" : "registry/_HOST@EXAMPLE.COM",
+    "keytab" : "file:///etc/security/keytabs/registry.service.keytab"
+  },
+  "components" :
+  [
+    {
+      "name": "registry",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "registry:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "run_privileged_container": true,
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS":"<path to config.yml>:/etc/docker/registry/config.yml",
+        },
+        "properties": {
+          "docker.network": "host"
+        }
+      }
+    }
+  ]
+}
+```
+
+For further details and parameters that could be configured in the S3 storage driver, please refer https://docs.docker.com/registry/storage-drivers/s3/.
+
 Example: MapReduce
 ------------------
+
+This example assumes that Hadoop is installed to `/usr/local/hadoop`.
+
+Additionally, `docker.allowed.ro-mounts` in `container-executor.cfg` has been
+updated to include the directories: `/usr/local/hadoop,/etc/passwd,/etc/group`.
 
 To submit the pi job to run in Docker containers, run the following commands:
 
 ```
-    vars="YARN_CONTAINER_RUNTIME_TYPE=docker,YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker"
-    hadoop jar hadoop-examples.jar pi -Dyarn.app.mapreduce.am.env=$vars \
-        -Dmapreduce.map.env=$vars -Dmapreduce.reduce.env=$vars 10 100
+  HADOOP_HOME=/usr/local/hadoop
+  YARN_EXAMPLES_JAR=$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar
+  MOUNTS="$HADOOP_HOME:$HADOOP_HOME:ro,/etc/passwd:/etc/passwd:ro,/etc/group:/etc/group:ro"
+  IMAGE_ID="library/openjdk:8"
+
+  export YARN_CONTAINER_RUNTIME_TYPE=docker
+  export YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID
+  export YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS
+
+  yarn jar $YARN_EXAMPLES_JAR pi \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    1 40000
 ```
 
 Note that the application master, map tasks, and reduce tasks are configured
-independently. In this example, we are using the hadoop-docker image for all
-three.
+independently. In this example, we are using the `openjdk:8` image for all three.
 
 Example: Spark
 --------------
 
+This example assumes that Hadoop is installed to `/usr/local/hadoop` and Spark
+is installed to `/usr/local/spark`.
+
+Additionally, `docker.allowed.ro-mounts` in `container-executor.cfg` has been
+updated to include the directories: `/usr/local/hadoop,/etc/passwd,/etc/group`.
+
 To run a Spark shell in Docker containers, run the following command:
 
 ```
-    spark-shell --master yarn --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
-        --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker \
-        --conf spark.yarn.AppMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker \
-        --conf spark.yarn.AppMasterEnv.YARN_CONTAINER_RUNTIME_TYPE=docker
+  HADOOP_HOME=/usr/local/hadoop
+  SPARK_HOME=/usr/local/spark
+  MOUNTS="$HADOOP_HOME:$HADOOP_HOME:ro,/etc/passwd:/etc/passwd:ro,/etc/group:/etc/group:ro"
+  IMAGE_ID="library/openjdk:8"
+
+  $SPARK_HOME/bin/spark-shell --master yarn \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS
 ```
 
 Note that the application master and executors are configured
-independently. In this example, we are using the hadoop-docker image for both.
+independently. In this example, we are using the `openjdk:8` image for both.
 
 Docker Container ENTRYPOINT Support
 ------------------------------------
@@ -718,3 +1040,43 @@ In yarn-env.sh, define:
 ```
 export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true
 ```
+
+Requirements when not using ENTRYPOINT (YARN mode)
+--------------------------------------------------
+There are two requirements when ENTRYPOINT is not used:
+
+1. `/bin/bash` must be available inside the image. This is generally true,
+however, tiny Docker images (eg. ones which use busybox for shell commands)
+might not have bash installed. In this case, the following error is
+displayed:
+
+    ```
+    Container id: container_1561638268473_0015_01_000002
+    Exit code: 7
+    Exception message: Launch container failed
+    Shell error output: /usr/bin/docker-current: Error response from daemon: oci runtime error: container_linux.go:235: starting container process caused "exec: \"bash\": executable file not found in $PATH".
+    Shell output: main : command provided 4
+    ```
+
+2. `find` command must also be available inside the image. Not having
+`find` causes this error:
+
+    ```
+    Container exited with a non-zero exit code 127. Error file: prelaunch.err.
+    Last 4096 bytes of prelaunch.err :
+    /tmp/hadoop-systest/nm-local-dir/usercache/hadoopuser/appcache/application_1561638268473_0017/container_1561638268473_0017_01_000002/launch_container.sh: line 44: find: command not found
+    ```
+
+Docker Container YARN SysFS Support
+-----------------------------------
+
+YARN SysFS is a pseudo file system provided by the YARN framework that
+exports information about clustering information to Docker container.
+Cluster information is exported to /hadoop/yarn/sysfs path.  This
+API allows application developer to obtain clustering information
+without external service dependencies.  Custom application master can
+populate cluster information by calling node manager REST API.
+YARN service framework automatically populates cluster information
+to /hadoop/yarn/sysfs/app.json.  For more information about
+YARN service, see: [YARN Service](./yarn-service/Overview.html).
+

@@ -17,34 +17,32 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Objects;
+
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.Auditable;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
+
+import com.google.common.base.Preconditions;
 
 
 /**
  * A class that encapsulates the OmVolumeArgs Args.
  */
-public final class OmVolumeArgs implements Auditable{
+public final class OmVolumeArgs extends WithMetadata implements Auditable {
   private final String adminName;
-  private final String ownerName;
+  private String ownerName;
   private final String volume;
-  private final long creationTime;
-  private final long quotaInBytes;
-  private final Map<String, String> keyValueMap;
+  private long creationTime;
+  private long quotaInBytes;
   private final OmOzoneAclMap aclMap;
 
   /**
@@ -53,20 +51,45 @@ public final class OmVolumeArgs implements Auditable{
    * @param ownerName  - Volume owner's name
    * @param volume - volume name
    * @param quotaInBytes - Volume Quota in bytes.
-   * @param keyValueMap - keyValue map.
+   * @param metadata - metadata map for custom key/value data.
    * @param aclMap - User to access rights map.
    * @param creationTime - Volume creation time.
    */
   private OmVolumeArgs(String adminName, String ownerName, String volume,
-                       long quotaInBytes, Map<String, String> keyValueMap,
+                       long quotaInBytes, Map<String, String> metadata,
                        OmOzoneAclMap aclMap, long creationTime) {
     this.adminName = adminName;
     this.ownerName = ownerName;
     this.volume = volume;
     this.quotaInBytes = quotaInBytes;
-    this.keyValueMap = keyValueMap;
+    this.metadata = metadata;
     this.aclMap = aclMap;
     this.creationTime = creationTime;
+  }
+
+
+  public void setOwnerName(String newOwner) {
+    this.ownerName = newOwner;
+  }
+
+  public void setQuotaInBytes(long quotaInBytes) {
+    this.quotaInBytes = quotaInBytes;
+  }
+
+  public void setCreationTime(long time) {
+    this.creationTime = time;
+  }
+
+  public void addAcl(OzoneAcl acl) throws OMException {
+    this.aclMap.addAcl(acl);
+  }
+
+  public void setAcls(List<OzoneAcl> acls) throws OMException {
+    this.aclMap.setAcls(acls);
+  }
+
+  public void removeAcl(OzoneAcl acl) throws OMException {
+    this.aclMap.removeAcl(acl);
   }
 
   /**
@@ -109,10 +132,6 @@ public final class OmVolumeArgs implements Auditable{
     return quotaInBytes;
   }
 
-  public Map<String, String> getKeyValueMap() {
-    return keyValueMap;
-  }
-
   public OmOzoneAclMap getAclMap() {
     return aclMap;
   }
@@ -136,6 +155,28 @@ public final class OmVolumeArgs implements Auditable{
     return auditMap;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmVolumeArgs that = (OmVolumeArgs) o;
+    return creationTime == that.creationTime &&
+        quotaInBytes == that.quotaInBytes &&
+        Objects.equals(adminName, that.adminName) &&
+        Objects.equals(ownerName, that.ownerName) &&
+        Objects.equals(volume, that.volume);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(adminName, ownerName, volume, creationTime,
+        quotaInBytes);
+  }
+
   /**
    * Builder for OmVolumeArgs.
    */
@@ -145,14 +186,14 @@ public final class OmVolumeArgs implements Auditable{
     private String volume;
     private long creationTime;
     private long quotaInBytes;
-    private Map<String, String> keyValueMap;
+    private Map<String, String> metadata;
     private OmOzoneAclMap aclMap;
 
     /**
      * Constructs a builder.
      */
-    Builder() {
-      keyValueMap = new HashMap<>();
+    public Builder() {
+      metadata = new HashMap<>();
       aclMap = new OmOzoneAclMap();
     }
 
@@ -182,7 +223,14 @@ public final class OmVolumeArgs implements Auditable{
     }
 
     public Builder addMetadata(String key, String value) {
-      keyValueMap.put(key, value); // overwrite if present.
+      metadata.put(key, value); // overwrite if present.
+      return this;
+    }
+
+    public Builder addAllMetadata(Map<String, String> additionalMetaData) {
+      if (additionalMetaData != null) {
+        metadata.putAll(additionalMetaData);
+      }
       return this;
     }
 
@@ -200,16 +248,13 @@ public final class OmVolumeArgs implements Auditable{
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(volume);
       return new OmVolumeArgs(adminName, ownerName, volume, quotaInBytes,
-          keyValueMap, aclMap, creationTime);
+          metadata, aclMap, creationTime);
     }
+
   }
 
   public VolumeInfo getProtobuf() {
-    List<KeyValue> metadataList = new LinkedList<>();
-    for (Map.Entry<String, String> entry : keyValueMap.entrySet()) {
-      metadataList.add(KeyValue.newBuilder().setKey(entry.getKey()).
-          setValue(entry.getValue()).build());
-    }
+
     List<OzoneAclInfo> aclList = aclMap.ozoneAclGetProtobuf();
 
     return VolumeInfo.newBuilder()
@@ -217,21 +262,26 @@ public final class OmVolumeArgs implements Auditable{
         .setOwnerName(ownerName)
         .setVolume(volume)
         .setQuotaInBytes(quotaInBytes)
-        .addAllMetadata(metadataList)
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
         .addAllVolumeAcls(aclList)
-        .setCreationTime(creationTime)
+        .setCreationTime(
+            creationTime == 0 ? System.currentTimeMillis() : creationTime)
         .build();
   }
 
-  public static OmVolumeArgs getFromProtobuf(VolumeInfo volInfo) {
-    Map<String, String> kvMap = volInfo.getMetadataList().stream()
-        .collect(Collectors.toMap(KeyValue::getKey,
-            KeyValue::getValue));
+  public static OmVolumeArgs getFromProtobuf(VolumeInfo volInfo)
+      throws OMException {
+
     OmOzoneAclMap aclMap =
         OmOzoneAclMap.ozoneAclGetFromProtobuf(volInfo.getVolumeAclsList());
 
-    return new OmVolumeArgs(volInfo.getAdminName(), volInfo.getOwnerName(),
-        volInfo.getVolume(), volInfo.getQuotaInBytes(), kvMap, aclMap,
+    return new OmVolumeArgs(
+        volInfo.getAdminName(),
+        volInfo.getOwnerName(),
+        volInfo.getVolume(),
+        volInfo.getQuotaInBytes(),
+        KeyValueUtil.getFromProtobuf(volInfo.getMetadataList()),
+        aclMap,
         volInfo.getCreationTime());
   }
 }

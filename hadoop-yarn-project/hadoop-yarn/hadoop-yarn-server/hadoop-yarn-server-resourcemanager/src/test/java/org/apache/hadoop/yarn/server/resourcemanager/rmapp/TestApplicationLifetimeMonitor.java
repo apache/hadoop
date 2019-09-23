@@ -32,6 +32,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -59,9 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -106,8 +105,7 @@ public class TestApplicationLifetimeMonitor {
     // Always run for CS, since other scheduler do not support this.
     conf.setClass(YarnConfiguration.RM_SCHEDULER,
         scheduler, ResourceScheduler.class);
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
     conf.setLong(YarnConfiguration.RM_APPLICATION_MONITOR_INTERVAL_MS,
         3000L);
@@ -206,13 +204,12 @@ public class TestApplicationLifetimeMonitor {
         // app4 submitted exceeding queue max lifetime,
         // so killed after queue max lifetime.
         rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
-        long totalTimeRun =
-            (app4.getFinishTime() - app4.getSubmitTime()) / 1000;
+        long totalTimeRun = app4.getFinishTime() - app4.getSubmitTime();
         Assert.assertTrue("Application killed before lifetime value",
-            totalTimeRun > maxLifetime);
+            totalTimeRun > (maxLifetime * 1000));
         Assert.assertTrue(
             "Application killed before lifetime value " + totalTimeRun,
-            totalTimeRun < maxLifetime + 10L);
+            totalTimeRun < ((maxLifetime + 10L) * 1000));
       }
     } finally {
       stopRM(rm);

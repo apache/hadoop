@@ -23,7 +23,9 @@ import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Test {@link MountTableResolver} initialization.
@@ -43,40 +45,26 @@ public class TestInitializeMountTableResolver {
     conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, "");
     MountTableResolver mountTable = new MountTableResolver(conf);
     assertEquals("", mountTable.getDefaultNamespace());
+    assertFalse("Default NS should be disabled if default NS is set empty",
+        mountTable.isDefaultNSEnable());
   }
 
   @Test
   public void testRouterDefaultNameservice() {
     Configuration conf = new Configuration();
-    conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, "router_ns"); // this is priority
-    conf.set(DFS_NAMESERVICE_ID, "ns_id");
-    conf.set(DFS_NAMESERVICES, "nss");
+    conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, "router_ns");
     MountTableResolver mountTable = new MountTableResolver(conf);
     assertEquals("router_ns", mountTable.getDefaultNamespace());
   }
 
+  // Default NS should be empty if configured false.
   @Test
-  public void testNameserviceID() {
+  public void testRouterDefaultNameserviceDisabled() {
     Configuration conf = new Configuration();
-    conf.set(DFS_NAMESERVICE_ID, "ns_id"); // this is priority
+    conf.setBoolean(DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE, false);
+    conf.set(DFS_NAMESERVICE_ID, "ns_id");
     conf.set(DFS_NAMESERVICES, "nss");
     MountTableResolver mountTable = new MountTableResolver(conf);
-    assertEquals("ns_id", mountTable.getDefaultNamespace());
-  }
-
-  @Test
-  public void testSingleNameservices() {
-    Configuration conf = new Configuration();
-    conf.set(DFS_NAMESERVICES, "ns1");
-    MountTableResolver mountTable = new MountTableResolver(conf);
-    assertEquals("ns1", mountTable.getDefaultNamespace());
-  }
-
-  @Test
-  public void testMultipleNameservices() {
-    Configuration conf = new Configuration();
-    conf.set(DFS_NAMESERVICES, "ns1,ns2");
-    MountTableResolver mountTable = new MountTableResolver(conf);
-    assertEquals("ns1", mountTable.getDefaultNamespace());
+    assertEquals("", mountTable.getDefaultNamespace());
   }
 }

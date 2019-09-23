@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,8 +32,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -105,9 +108,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,7 +115,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFifoScheduler {
-  private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFifoScheduler.class);
   private final int GB = 1024;
 
   private ResourceManager resourceManager = null;
@@ -333,7 +334,7 @@ public class TestFifoScheduler {
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node0);
     scheduler.handle(nodeEvent1);
     
-    assertEquals(scheduler.getNumClusterNodes(), 1);
+    assertThat(scheduler.getNumClusterNodes()).isEqualTo(1);
     
     Resource newResource = Resources.createResource(1024, 4);
     
@@ -654,8 +655,7 @@ public class TestFifoScheduler {
   @Test(timeout = 60000)
   public void testAllocateContainerOnNodeWithoutOffSwitchSpecified()
       throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -686,8 +686,7 @@ public class TestFifoScheduler {
 
   @Test(timeout = 60000)
   public void testFifoScheduling() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
@@ -1288,20 +1287,20 @@ public class TestFifoScheduler {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemorySize(), 1 * GB);
-    Assert.assertEquals(usedResource.getVirtualCores(), 1);
+    assertThat(usedResource.getMemorySize()).isEqualTo(1 * GB);
+    assertThat(usedResource.getVirtualCores()).isEqualTo(1);
     // Check total resource of scheduler node is also changed to 1 GB 1 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemorySize(), 1 * GB);
-    Assert.assertEquals(totalResource.getVirtualCores(), 1);
+    assertThat(totalResource.getMemorySize()).isEqualTo(1 * GB);
+    assertThat(totalResource.getVirtualCores()).isEqualTo(1);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemorySize(), 0);
-    Assert.assertEquals(availableResource.getVirtualCores(), 0);
+    assertThat(availableResource.getMemorySize()).isEqualTo(0);
+    assertThat(availableResource.getVirtualCores()).isEqualTo(0);
   }
 
   private void checkApplicationResourceUsage(int expected, 

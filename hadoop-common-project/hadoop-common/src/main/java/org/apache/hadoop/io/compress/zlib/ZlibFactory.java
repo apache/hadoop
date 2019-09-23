@@ -73,11 +73,11 @@ public class ZlibFactory {
     ZlibFactory.nativeZlibLoaded = isLoaded;
   }
   /**
-   * Check if native-zlib code is loaded & initialized correctly and 
+   * Check if native-zlib code is loaded &amp; initialized correctly and
    * can be loaded for this job.
    * 
    * @param conf configuration
-   * @return <code>true</code> if native-zlib is loaded & initialized 
+   * @return <code>true</code> if native-zlib is loaded &amp; initialized
    *         and can be loaded for this job, else <code>false</code>
    */
   public static boolean isNativeZlibLoaded(Configuration conf) {

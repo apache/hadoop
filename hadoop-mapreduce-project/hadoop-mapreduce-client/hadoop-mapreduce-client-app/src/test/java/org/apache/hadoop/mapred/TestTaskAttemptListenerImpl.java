@@ -66,8 +66,9 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -219,7 +220,7 @@ public class TestTaskAttemptListenerImpl {
       JVMId.forName("jvm_001_002_m_004_006");
       fail();
     } catch (IllegalArgumentException e) {
-      assertEquals(e.getMessage(),
+      assertThat(e.getMessage()).isEqualTo(
           "TaskId string : jvm_001_002_m_004_006 is not properly formed");
     }
 
@@ -342,18 +343,7 @@ public class TestTaskAttemptListenerImpl {
   @Test
   public void testCheckpointIDTracking()
     throws IOException, InterruptedException{
-    SystemClock clock = SystemClock.getInstance();
-
     configureMocks();
-
-    org.apache.hadoop.mapreduce.v2.app.job.Task mockTask =
-        mock(org.apache.hadoop.mapreduce.v2.app.job.Task.class);
-    when(mockTask.canCommit(any(TaskAttemptId.class))).thenReturn(true);
-    Job mockJob = mock(Job.class);
-    when(mockJob.getTask(any(TaskId.class))).thenReturn(mockTask);
-    when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
-    when(appCtx.getClock()).thenReturn(clock);
-
     listener = new MockTaskAttemptListenerImpl(
         appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
@@ -559,7 +549,6 @@ public class TestTaskAttemptListenerImpl {
         TaskStatus.State.RUNNING, "", "RUNNING", "",
         TaskStatus.Phase.REDUCE, new Counters());
 
-    when(dispatcher.getEventHandler()).thenReturn(ea);
     when(appCtx.getEventHandler()).thenReturn(ea);
     policy = new CheckpointAMPreemptionPolicy();
     policy.init(appCtx);

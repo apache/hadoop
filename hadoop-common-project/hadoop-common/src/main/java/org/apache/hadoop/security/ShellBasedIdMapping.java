@@ -19,11 +19,11 @@ package org.apache.hadoop.security;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -583,7 +583,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     Map<Integer, Integer> gidMapping = new HashMap<Integer, Integer>();
     
     BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(staticMapFile), StandardCharsets.UTF_8));
+        Files.newInputStream(staticMapFile.toPath()), StandardCharsets.UTF_8));
     
     try {
       String line = null;

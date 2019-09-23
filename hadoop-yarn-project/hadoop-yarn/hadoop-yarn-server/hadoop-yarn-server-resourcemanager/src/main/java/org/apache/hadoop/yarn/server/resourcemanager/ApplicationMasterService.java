@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -83,8 +83,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 public class ApplicationMasterService extends AbstractService implements
     ApplicationMasterProtocol {
-  private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
-  private static final int PRE_REGISTER_RESPONSE_ID = -1;
+  private static final Logger LOG = LoggerFactory.
+      getLogger(ApplicationMasterService.class);
 
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
@@ -94,8 +94,11 @@ public class ApplicationMasterService extends AbstractService implements
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
+  private final ConcurrentHashMap<ApplicationAttemptId, Boolean>
+      finishedAttemptCache = new ConcurrentHashMap<>();
   protected final RMContext rmContext;
   private final AMSProcessingChain amsProcessingChain;
+  private boolean timelineServiceV2Enabled;
 
   public ApplicationMasterService(RMContext rmContext,
       YarnScheduler scheduler) {
@@ -213,6 +216,9 @@ public class ApplicationMasterService extends AbstractService implements
                                YarnConfiguration.RM_SCHEDULER_ADDRESS,
                                YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
                                server.getListenerAddress());
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
+
     super.serviceStart();
   }
 
@@ -303,7 +309,7 @@ public class ApplicationMasterService extends AbstractService implements
         rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
 
     // Remove collector address when app get finished.
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       ((RMAppImpl) rmApp).removeCollectorData();
     }
     // checking whether the app exits in RMStateStore at first not to throw
@@ -335,11 +341,14 @@ public class ApplicationMasterService extends AbstractService implements
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
-      this.amLivelinessMonitor.receivedPing(applicationAttemptId);
       FinishApplicationMasterResponse response =
           FinishApplicationMasterResponse.newInstance(false);
-      this.amsProcessingChain.finishApplicationMaster(
-          applicationAttemptId, request, response);
+      if (finishedAttemptCache.putIfAbsent(applicationAttemptId, true)
+          == null) {
+        this.amsProcessingChain
+            .finishApplicationMaster(applicationAttemptId, request, response);
+      }
+      this.amLivelinessMonitor.receivedPing(applicationAttemptId);
       return response;
     }
   }
@@ -377,11 +386,6 @@ public class ApplicationMasterService extends AbstractService implements
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
       EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
 
-  private int getNextResponseId(int responseId) {
-    // Loop between 0 to Integer.MAX_VALUE
-    return (responseId + 1) & Integer.MAX_VALUE;
-  }
-
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
@@ -415,8 +419,8 @@ public class ApplicationMasterService extends AbstractService implements
       }
 
       // Normally request.getResponseId() == lastResponse.getResponseId()
-      if (getNextResponseId(request.getResponseId()) == lastResponse
-          .getResponseId()) {
+      if (AMRMClientUtils.getNextResponseId(
+          request.getResponseId()) == lastResponse.getResponseId()) {
         // heartbeat one step old, simply return lastReponse
         return lastResponse;
       } else if (request.getResponseId() != lastResponse.getResponseId()) {
@@ -461,7 +465,8 @@ public class ApplicationMasterService extends AbstractService implements
        * need to worry about unregister call occurring in between (which
        * removes the lock object).
        */
-      response.setResponseId(getNextResponseId(lastResponse.getResponseId()));
+      response.setResponseId(
+          AMRMClientUtils.getNextResponseId(lastResponse.getResponseId()));
       lock.setAllocateResponse(response);
       return response;
     }
@@ -472,7 +477,7 @@ public class ApplicationMasterService extends AbstractService implements
         recordFactory.newRecordInstance(AllocateResponse.class);
     // set response id to -1 before application master for the following
     // attemptID get registered
-    response.setResponseId(PRE_REGISTER_RESPONSE_ID);
+    response.setResponseId(AMRMClientUtils.PRE_REGISTER_RESPONSE_ID);
     LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, new AllocateResponseLock(response));
     rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
@@ -492,6 +497,7 @@ public class ApplicationMasterService extends AbstractService implements
   public void unregisterAttempt(ApplicationAttemptId attemptId) {
     LOG.info("Unregistering app attempt : " + attemptId);
     responseMap.remove(attemptId);
+    finishedAttemptCache.remove(attemptId);
     rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
   }
 
@@ -506,6 +512,8 @@ public class ApplicationMasterService extends AbstractService implements
     if (this.server != null) {
       this.server.stop();
     }
+    responseMap.clear();
+    finishedAttemptCache.clear();
     super.serviceStop();
   }
   

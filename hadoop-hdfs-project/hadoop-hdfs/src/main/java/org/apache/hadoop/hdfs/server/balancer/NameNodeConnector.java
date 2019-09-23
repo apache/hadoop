@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,11 +43,11 @@ import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
+import org.apache.hadoop.hdfs.server.protocol.BalancerProtocols;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -62,7 +62,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class NameNodeConnector implements Closeable {
-  private static final Log LOG = LogFactory.getLog(NameNodeConnector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeConnector.class);
 
   public static final int DEFAULT_MAX_IDLE_ITERATIONS = 5;
   private static boolean write2IdFile = true;
@@ -110,8 +111,7 @@ public class NameNodeConnector implements Closeable {
   private final URI nameNodeUri;
   private final String blockpoolID;
 
-  private final NamenodeProtocol namenode;
-  private final ClientProtocol client;
+  private final BalancerProtocols namenode;
   private final KeyManager keyManager;
   final AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
 
@@ -135,9 +135,7 @@ public class NameNodeConnector implements Closeable {
     this.maxNotChangedIterations = maxNotChangedIterations;
 
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
-        NamenodeProtocol.class).getProxy();
-    this.client = NameNodeProxies.createProxy(conf, nameNodeUri,
-        ClientProtocol.class, fallbackToSimpleAuth).getProxy();
+        BalancerProtocols.class, fallbackToSimpleAuth).getProxy();
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
@@ -193,7 +191,7 @@ public class NameNodeConnector implements Closeable {
   /** @return live datanode storage reports. */
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
-    return client.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    return namenode.getDatanodeStorageReport(DatanodeReportType.LIVE);
   }
 
   /** @return the key manager */

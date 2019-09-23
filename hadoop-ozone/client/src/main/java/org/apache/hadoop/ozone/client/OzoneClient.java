@@ -24,6 +24,8 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import java.io.Closeable;
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * OzoneClient connects to Ozone Cluster and
  * perform basic operations.
@@ -84,6 +86,11 @@ public class OzoneClient implements Closeable {
     this.objectStore = new ObjectStore(conf, this.proxy);
   }
 
+  @VisibleForTesting
+  protected OzoneClient(ObjectStore objectStore) {
+    this.objectStore = objectStore;
+    this.proxy = null;
+  }
   /**
    * Returns the object store associated with the Ozone Cluster.
    * @return ObjectStore

@@ -21,8 +21,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.Range;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.junit.Assert;
@@ -40,7 +40,8 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
  * Generic helper class to validate protocol records.
  */
 public class BasePBImplRecordsTest {
-  static final Log LOG = LogFactory.getLog(BasePBImplRecordsTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BasePBImplRecordsTest.class);
 
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected static HashMap<Type, Object> typeValueCache =

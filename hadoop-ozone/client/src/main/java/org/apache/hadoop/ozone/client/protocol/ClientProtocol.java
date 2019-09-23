@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.ozone.client.protocol;
 
-import org.apache.hadoop.fs.StorageType;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
@@ -26,9 +29,23 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * An implementer of this interface is capable of connecting to Ozone Cluster
@@ -38,6 +55,7 @@ import java.util.List;
  * includes: {@link org.apache.hadoop.ozone.client.rpc.RpcClient} for RPC and
  * {@link  org.apache.hadoop.ozone.client.rest.RestClient} for REST.
  */
+@KerberosInfo(serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
 public interface ClientProtocol {
 
   /**
@@ -156,28 +174,6 @@ public interface ClientProtocol {
                     BucketArgs bucketArgs)
       throws IOException;
 
-  /**
-   * Adds ACLs to the Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param addAcls ACLs to be added
-   * @throws IOException
-   */
-  void addBucketAcls(String volumeName, String bucketName,
-                     List<OzoneAcl> addAcls)
-      throws IOException;
-
-  /**
-   * Removes ACLs from a Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param removeAcls ACLs to be removed
-   * @throws IOException
-   */
-  void removeBucketAcls(String volumeName, String bucketName,
-                        List<OzoneAcl> removeAcls)
-      throws IOException;
-
 
   /**
    * Enables or disables Bucket Versioning.
@@ -251,12 +247,14 @@ public interface ClientProtocol {
    * @param bucketName Name of the Bucket
    * @param keyName Name of the Key
    * @param size Size of the data
+   * @param metadata custom key value metadata
    * @return {@link OzoneOutputStream}
    *
    */
   OzoneOutputStream createKey(String volumeName, String bucketName,
                               String keyName, long size, ReplicationType type,
-                              ReplicationFactor factor)
+                              ReplicationFactor factor,
+                              Map<String, String> metadata)
       throws IOException;
 
   /**
@@ -322,8 +320,329 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  void createS3Bucket(String userName, String s3BucketName) throws IOException;
+
+  /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param bucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  void deleteS3Bucket(String bucketName) throws IOException;
+
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  String getOzoneBucketMapping(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  String getOzoneVolumeName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  String getOzoneBucketName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns Iterator to iterate over all buckets after prevBucket for a
+   * specific user. If prevBucket is null it returns an iterator to iterate over
+   * all the buckets of a user. The result can be restricted using bucket
+   * prefix, will return all buckets if bucket prefix is null.
+   *
+   * @param userName user name
+   * @param bucketPrefix Bucket prefix to match
+   * @param prevBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   * @throws IOException
+   */
+  List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                String prevBucket, int maxListResult)
+      throws IOException;
+
+  /**
    * Close and release the resources.
    */
   void close() throws IOException;
+
+  /**
+   * Initiate Multipart upload.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param type
+   * @param factor
+   * @return {@link OmMultipartInfo}
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(String volumeName, String
+      bucketName, String keyName, ReplicationType type, ReplicationFactor
+      factor) throws IOException;
+
+  /**
+   * Create a part key for a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
+  OzoneOutputStream createMultipartKey(String volumeName, String bucketName,
+                                       String keyName, long size,
+                                       int partNumber, String uploadID)
+      throws IOException;
+
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException;
+
+  /**
+   * Abort Multipart upload request for the given key with given uploadID.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  void abortMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID) throws IOException;
+
+  /**
+   * Returns list of parts of a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker - returns parts with part number which are greater
+   * than this partNumberMarker.
+   * @param maxParts
+   * @return OmMultipartUploadListParts
+   */
+  OzoneMultipartUploadPartListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException;
+
+  /**
+   * Return with the inflight multipart uploads.
+   */
+  OzoneMultipartUploadList listMultipartUploads(String volumename,
+      String bucketName, String prefix) throws IOException;
+
+  /**
+   * Get a valid Delegation Token.
+   *
+   * @param renewer the designated renewer for the token
+   * @return Token<OzoneDelegationTokenSelector>
+   * @throws IOException
+   */
+  Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
+      throws IOException;
+
+  /**
+   * Renew an existing delegation token.
+   *
+   * @param token delegation token obtained earlier
+   * @return the new expiration time
+   * @throws IOException
+   */
+  long renewDelegationToken(Token<OzoneTokenIdentifier> token)
+      throws IOException;
+
+  /**
+   * Cancel an existing delegation token.
+   *
+   * @param token delegation token
+   * @throws IOException
+   */
+  void cancelDelegationToken(Token<OzoneTokenIdentifier> token)
+      throws IOException;
+
+  /**
+   * returns S3 Secret given kerberos user.
+   * @param kerberosID
+   * @return S3SecretValue
+   * @throws IOException
+   */
+  S3SecretValue getS3Secret(String kerberosID) throws IOException;
+
+  @VisibleForTesting
+  OMFailoverProxyProvider getOMProxyProvider();
+
+  /**
+   * Get KMS client provider.
+   * @return KMS client provider.
+   * @throws IOException
+   */
+  KeyProvider getKeyProvider() throws IOException;
+
+  /**
+   * Get KMS client provider uri.
+   * @return KMS client provider uri.
+   * @throws IOException
+   */
+  URI getKeyProviderUri() throws IOException;
+
+  /**
+   * Get CanonicalServiceName for ozone delegation token.
+   * @return Canonical Service Name of ozone delegation token.
+   */
+  String getCanonicalServiceName();
+
+  /**
+   * Get the Ozone File Status for a particular Ozone key.
+   *
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName    key name.
+   * @return OzoneFileStatus for the key.
+   * @throws OMException if file does not exist
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OzoneFileStatus getOzoneFileStatus(String volumeName, String bucketName,
+      String keyName) throws IOException;
+
+  /**
+   * Creates directory with keyName as the absolute path for the directory.
+   *
+   * @param volumeName Volume name
+   * @param bucketName Bucket name
+   * @param keyName    Absolute path for the directory
+   * @throws OMException if any entry in the path exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  void createDirectory(String volumeName, String bucketName, String keyName)
+      throws IOException;
+
+  /**
+   * Creates an input stream for reading file contents.
+   *
+   * @param volumeName Volume name
+   * @param bucketName Bucket name
+   * @param keyName    Absolute path of the file to be read
+   * @return Input stream for reading the file
+   * @throws OMException if any entry in the path exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OzoneInputStream readFile(String volumeName, String bucketName,
+      String keyName) throws IOException;
+
+  /**
+   * Creates an output stream for writing to a file.
+   *
+   * @param volumeName Volume name
+   * @param bucketName Bucket name
+   * @param keyName    Absolute path of the file to be written
+   * @param size       Size of data to be written
+   * @param type       Replication Type
+   * @param factor     Replication Factor
+   * @param overWrite  if true existing file at the location will be overwritten
+   * @param recursive  if true file would be created even if parent directories
+   *                   do not exist
+   * @return Output stream for writing to the file
+   * @throws OMException if given key is a directory
+   *                     if file exists and isOverwrite flag is false
+   *                     if an ancestor exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  @SuppressWarnings("checkstyle:parameternumber")
+  OzoneOutputStream createFile(String volumeName, String bucketName,
+      String keyName, long size, ReplicationType type, ReplicationFactor factor,
+      boolean overWrite, boolean recursive) throws IOException;
+
+  /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param volumeName Volume name
+   * @param bucketName Bucket name
+   * @param keyName    Absolute path of the entry to be listed
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException;
+
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for
+   * given object to list of ACLs provided in argument.
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException;
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   * @param obj Ozone object.
+   *
+   * @throws IOException if there is error.
+   * */
+  List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
 
 }

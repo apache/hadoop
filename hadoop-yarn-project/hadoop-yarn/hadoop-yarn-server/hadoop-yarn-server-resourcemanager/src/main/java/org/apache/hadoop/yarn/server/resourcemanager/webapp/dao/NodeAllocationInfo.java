@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.NodeAllocation;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -32,20 +33,38 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NodeAllocationInfo {
-  protected String allocatedContainerId;
-  protected String finalAllocationState;
-  protected ActivityNodeInfo root = null;
+  private String partition;
+  private String updatedContainerId;
+  private String finalAllocationState;
+  private ActivityNodeInfo root = null;
 
-  private static final Log LOG = LogFactory.getLog(NodeAllocationInfo.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeAllocationInfo.class);
 
   NodeAllocationInfo() {
   }
 
-  NodeAllocationInfo(NodeAllocation allocation) {
-    this.allocatedContainerId = allocation.getContainerId();
+  NodeAllocationInfo(NodeAllocation allocation,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
+    this.partition = allocation.getPartition();
+    this.updatedContainerId = allocation.getContainerId();
     this.finalAllocationState = allocation.getFinalAllocationState().name();
+    root = new ActivityNodeInfo(allocation.getRoot(), groupBy);
+  }
 
-    root = new ActivityNodeInfo(allocation.getRoot());
+  public String getPartition() {
+    return partition;
+  }
 
+  public String getUpdatedContainerId() {
+    return updatedContainerId;
+  }
+
+  public String getFinalAllocationState() {
+    return finalAllocationState;
+  }
+
+  public ActivityNodeInfo getRoot() {
+    return root;
   }
 }

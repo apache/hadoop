@@ -95,6 +95,15 @@ public class Dispatcher extends HttpServlet {
     if (uri.equals("/")) {
       String redirectPath = webApp.getRedirectPath();
       if (redirectPath != null && !redirectPath.isEmpty()) {
+        if (req.getQueryString()!=null) {
+          StringBuilder query = new StringBuilder();
+          query.append(redirectPath);
+          query.append("?");
+          // Prevent HTTP response splitting vulnerability
+          query.append(req.getQueryString().replaceAll("\r", "")
+              .replaceAll("\n", ""));
+          redirectPath = query.toString();
+        }
         res.sendRedirect(redirectPath);
         return;
       }
@@ -179,10 +188,10 @@ public class Dispatcher extends HttpServlet {
     String st = devMode ? ErrorPage.toStackTrace(e, 1024 * 3) // spec: min 4KB
                         : "See logs for stack trace";
     res.setStatus(res.SC_FOUND);
-    Cookie cookie = new Cookie(STATUS_COOKIE, String.valueOf(500));
+    Cookie cookie = createCookie(STATUS_COOKIE, String.valueOf(500));
     cookie.setPath(path);
     res.addCookie(cookie);
-    cookie = new Cookie(ERROR_COOKIE, st);
+    cookie = createCookie(ERROR_COOKIE, st);
     cookie.setPath(path);
     res.addCookie(cookie);
     res.setHeader("Location", path);
@@ -196,7 +205,7 @@ public class Dispatcher extends HttpServlet {
   public static void removeCookie(HttpServletResponse res, String name,
                                   String path) {
     LOG.debug("removing cookie {} on {}", name, path);
-    Cookie c = new Cookie(name, "");
+    Cookie c = createCookie(name, "");
     c.setMaxAge(0);
     c.setPath(path);
     res.addCookie(c);
@@ -248,5 +257,11 @@ public class Dispatcher extends HttpServlet {
         System.exit(0); // FINDBUG: this is intended in dev mode
       }
     }, 18); // enough time for the last local request to complete
+  }
+
+  private static Cookie createCookie(String name, String val) {
+    Cookie cookie = new Cookie(name, val);
+    cookie.setHttpOnly(true);
+    return cookie;
   }
 }

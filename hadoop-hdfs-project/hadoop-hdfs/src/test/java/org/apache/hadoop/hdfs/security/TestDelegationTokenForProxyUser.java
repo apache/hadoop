@@ -29,8 +29,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -67,7 +67,8 @@ public class TestDelegationTokenForProxyUser {
   private static UserGroupInformation ugi;
   private static UserGroupInformation proxyUgi;
   
-  private static final Log LOG = LogFactory.getLog(TestDoAsEffectiveUser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDoAsEffectiveUser.class);
   
   private static void configureSuperUserIPAddresses(Configuration conf,
       String superUserShortName) throws IOException {

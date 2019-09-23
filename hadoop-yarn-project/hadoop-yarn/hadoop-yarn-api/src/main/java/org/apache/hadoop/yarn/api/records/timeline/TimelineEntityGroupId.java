@@ -136,9 +136,9 @@ public class TimelineEntityGroupId implements
     StringBuilder sb = new StringBuilder();
     sb.append(TIMELINE_ENTITY_GROUPID_STR_PREFIX + "_");
     ApplicationId appId = getApplicationId();
-    sb.append(appId.getClusterTimestamp()).append("_");
-    sb.append(appId.getId()).append("_");
-    sb.append(getTimelineEntityGroupId());
+    sb.append(appId.getClusterTimestamp()).append("_")
+        .append(appId.getId()).append("_")
+        .append(getTimelineEntityGroupId());
     return sb.toString();
   }
 

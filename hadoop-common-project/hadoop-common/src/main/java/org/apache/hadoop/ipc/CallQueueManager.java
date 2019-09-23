@@ -61,6 +61,7 @@ public class CallQueueManager<E extends Schedulable>
   }
 
   private volatile boolean clientBackOffEnabled;
+  private boolean serverFailOverEnabled;
 
   // Atomic refs point to active callQueue
   // We have two so we can better control swapping
@@ -79,19 +80,25 @@ public class CallQueueManager<E extends Schedulable>
     BlockingQueue<E> bq = createCallQueueInstance(backingClass,
         priorityLevels, maxQueueSize, namespace, conf);
     this.clientBackOffEnabled = clientBackOffEnabled;
+    this.serverFailOverEnabled = conf.getBoolean(
+        namespace + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT);
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
-    LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
-        maxQueueSize + " scheduler: " + schedulerClass);
+    LOG.info("Using callQueue: {}, queueCapacity: {}, " +
+        "scheduler: {}, ipcBackoff: {}.",
+        backingClass, maxQueueSize, schedulerClass, clientBackOffEnabled);
   }
 
   @VisibleForTesting // only!
   CallQueueManager(BlockingQueue<E> queue, RpcScheduler scheduler,
-      boolean clientBackOffEnabled) {
+      boolean clientBackOffEnabled, boolean serverFailOverEnabled) {
     this.putRef = new AtomicReference<BlockingQueue<E>>(queue);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(queue);
     this.scheduler = scheduler;
     this.clientBackOffEnabled = clientBackOffEnabled;
+    this.serverFailOverEnabled = serverFailOverEnabled;
   }
 
   private static <T extends RpcScheduler> T createScheduler(
@@ -192,13 +199,11 @@ public class CallQueueManager<E extends Schedulable>
     return scheduler.shouldBackOff(e);
   }
 
-  void addResponseTime(String name, int priorityLevel, int queueTime,
-      int processingTime) {
-    scheduler.addResponseTime(name, priorityLevel, queueTime, processingTime);
+  void addResponseTime(String name, Schedulable e, ProcessingDetails details) {
+    scheduler.addResponseTime(name, e, details);
   }
 
   // This should be only called once per call and cached in the call object
-  // each getPriorityLevel call will increment the counter for the caller
   int getPriorityLevel(Schedulable e) {
     return scheduler.getPriorityLevel(e);
   }
@@ -221,12 +226,21 @@ public class CallQueueManager<E extends Schedulable>
     } else if (shouldBackOff(e)) {
       throwBackoff();
     } else {
-      add(e);
+      // No need to re-check backoff criteria since they were just checked
+      addInternal(e, false);
     }
   }
 
   @Override
   public boolean add(E e) {
+    return addInternal(e, true);
+  }
+
+  @VisibleForTesting
+  boolean addInternal(E e, boolean checkBackoff) {
+    if (checkBackoff && isClientBackoffEnabled() && shouldBackOff(e)) {
+      throwBackoff();
+    }
     try {
       return putRef.get().add(e);
     } catch (CallQueueOverflowException ex) {
@@ -241,7 +255,9 @@ public class CallQueueManager<E extends Schedulable>
 
   // ideally this behavior should be controllable too.
   private void throwBackoff() throws IllegalStateException {
-    throw CallQueueOverflowException.DISCONNECT;
+    throw serverFailOverEnabled ?
+        CallQueueOverflowException.FAILOVER :
+        CallQueueOverflowException.DISCONNECT;
   }
 
   /**
@@ -413,7 +429,10 @@ public class CallQueueManager<E extends Schedulable>
         new CallQueueOverflowException(
             new RetriableException(TOO_BUSY + " - disconnecting"),
             RpcStatusProto.FATAL);
-
+    static final CallQueueOverflowException FAILOVER =
+        new CallQueueOverflowException(
+            new StandbyException(TOO_BUSY + " - disconnect and failover"),
+            RpcStatusProto.FATAL);
     CallQueueOverflowException(final IOException ioe,
         final RpcStatusProto status) {
       super("Queue full", new RpcServerException(ioe.getMessage(), ioe){

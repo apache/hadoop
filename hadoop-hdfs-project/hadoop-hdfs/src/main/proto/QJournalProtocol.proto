@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.qjournal.protocol";
 option java_outer_classname = "QJournalProtocolProtos";
 option java_generic_services = true;
@@ -286,6 +286,21 @@ message GetEditLogManifestResponseProto {
 }
 
 /**
+ * getJournaledEdits()
+ */
+message GetJournaledEditsRequestProto {
+  required JournalIdProto jid = 1;
+  required uint64 sinceTxId = 2;
+  required uint32 maxTxns = 3;
+  optional string nameServiceId = 4;
+}
+
+message GetJournaledEditsResponseProto {
+  required uint32 txnCount = 1;
+  optional bytes editLog = 2;
+}
+
+/**
  * prepareRecovery()
  */
 message PrepareRecoveryRequestProto {
@@ -363,6 +378,9 @@ service QJournalProtocolService {
 
   rpc getEditLogManifest(GetEditLogManifestRequestProto)
       returns (GetEditLogManifestResponseProto);
+
+  rpc getJournaledEdits(GetJournaledEditsRequestProto)
+  returns (GetJournaledEditsResponseProto);
 
   rpc prepareRecovery(PrepareRecoveryRequestProto)
       returns (PrepareRecoveryResponseProto);

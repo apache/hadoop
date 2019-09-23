@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.azure.metrics;
 
-import static org.junit.Assert.*;
-import org.junit.*;
+import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class TestRollingWindowAverage {
   /**

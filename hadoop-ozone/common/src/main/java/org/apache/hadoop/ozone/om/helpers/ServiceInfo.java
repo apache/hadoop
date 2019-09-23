@@ -24,13 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,15 +107,25 @@ public final class ServiceInfo {
   }
 
   /**
-   * Returns the port for given type, null if the service doesn't support
-   * the type.
+   * Returns the port for given type.
    *
    * @param type the type of port.
    *             ex: RPC, HTTP, HTTPS, etc..
+   * @throws NullPointerException if the service doesn't support the given type
    */
   @JsonIgnore
   public int getPort(ServicePort.Type type) {
     return ports.get(type);
+  }
+
+  /**
+   * Returns the address of the service (hostname with port of the given type).
+   * @param portType the type of port, eg. RPC, HTTP, etc.
+   * @return service address (hostname with port of the given type)
+   */
+  @JsonIgnore
+  public String getServiceAddress(ServicePort.Type portType) {
+    return hostname + ":" + getPort(portType);
   }
 
   /**
@@ -153,27 +161,6 @@ public final class ServiceInfo {
     return new ServiceInfo(serviceInfo.getNodeType(),
         serviceInfo.getHostname(),
         serviceInfo.getServicePortsList());
-  }
-
-  /**
-   * Returns a JSON string of this object.
-   *
-   * @return String - json string
-   * @throws IOException
-   */
-  public String toJsonString() throws IOException {
-    return WRITER.writeValueAsString(this);
-  }
-
-  /**
-   * Parse a JSON string into ServiceInfo Object.
-   *
-   * @param jsonString Json String
-   * @return BucketInfo
-   * @throws IOException
-   */
-  public static BucketInfo parse(String jsonString) throws IOException {
-    return READER.readValue(jsonString);
   }
 
   /**

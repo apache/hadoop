@@ -19,18 +19,25 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * MetadataStore unit test for {@link LocalMetadataStore}.
@@ -71,6 +78,11 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   public AbstractMSContract createContract(Configuration conf) throws
       IOException {
     return new LocalMSContract(conf);
+  }
+
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception{
+    return path;
   }
 
   @Test
@@ -157,6 +169,41 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     assertNull("PathMetadata should be null after eviction", pm1);
   }
 
+
+  @Test
+  public void testUpdateParentLastUpdatedOnPutNewParent() throws Exception {
+    Assume.assumeTrue("This test only applies if metadatastore does not allow"
+        + " missing values (skip for NullMS).", !allowMissing());
+
+    ITtlTimeProvider tp = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = getTtlTimeProvider();
+
+    long now = 100L;
+
+    final String parent = "/parentUpdated-" + UUID.randomUUID();
+    final String child = parent + "/file1";
+
+    try {
+      when(tp.getNow()).thenReturn(now);
+
+      // create a file
+      ms.put(new PathMetadata(makeFileStatus(child, 100), tp.getNow()),
+          null);
+      final PathMetadata fileMeta = ms.get(strToPath(child));
+      assertEquals("lastUpdated field of first file should be equal to the "
+          + "mocked value", now, fileMeta.getLastUpdated());
+
+      final DirListingMetadata listing = ms.listChildren(strToPath(parent));
+      assertEquals("Listing lastUpdated field should be equal to the mocked "
+          + "time value.", now, listing.getLastUpdated());
+
+    } finally {
+      ms.setTtlTimeProvider(originalTimeProvider);
+    }
+
+  }
+
+
   private static void populateMap(Cache<Path, LocalMetadataEntry> cache,
       String prefix) {
     populateEntry(cache, new Path(prefix + "/dirA/dirB/"));
@@ -168,8 +215,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   private static void populateEntry(Cache<Path, LocalMetadataEntry> cache,
       Path path) {
-    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
-    cache.put(path, new LocalMetadataEntry(new PathMetadata(fileStatus)));
+    S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.UNKNOWN, path, null);
+    cache.put(path, new LocalMetadataEntry(new PathMetadata(s3aStatus)));
   }
 
   private static long sizeOfMap(Cache<Path, LocalMetadataEntry> cache) {
@@ -182,7 +229,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
       String prefixStr, String pathStr, int leftoverSize) throws IOException {
     populateMap(cache, prefixStr);
     LocalMetadataStore.deleteEntryByAncestor(new Path(prefixStr + pathStr),
-        cache, true);
+        cache, true, getTtlTimeProvider());
     assertEquals(String.format("Cache should have %d entries", leftoverSize),
         leftoverSize, sizeOfMap(cache));
     cache.invalidateAll();
@@ -196,9 +243,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  protected void verifyDirStatus(FileStatus status) {
-    S3ATestUtils.verifyDirStatus(status, REPLICATION, getModTime(),
-        getAccessTime(), OWNER, GROUP, PERMISSION);
+  protected void verifyDirStatus(S3AFileStatus status) {
+    S3ATestUtils.verifyDirStatus(status, REPLICATION, OWNER);
   }
 
 }

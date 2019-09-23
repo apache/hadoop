@@ -37,8 +37,8 @@ import java.util.concurrent.TimeoutException;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -93,7 +93,8 @@ import com.google.common.collect.HashMultimap;
 
 @NotThreadSafe
 public class TestShortCircuitCache {
-  static final Log LOG = LogFactory.getLog(TestShortCircuitCache.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestShortCircuitCache.class);
   
   private static class TestFileDescriptorPair {
     final TemporarySocketDirectory dir = new TemporarySocketDirectory();
@@ -126,7 +127,7 @@ public class TestShortCircuitCache {
     }
 
     public void close() throws IOException {
-      IOUtils.cleanup(LOG, fis);
+      IOUtils.cleanupWithLogger(LOG, fis);
       dir.close();
     }
 

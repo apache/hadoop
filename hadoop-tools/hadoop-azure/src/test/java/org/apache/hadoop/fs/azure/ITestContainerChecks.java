@@ -119,9 +119,6 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     }
     assertFalse(container.exists());
 
-    // Create a container outside of the WASB FileSystem
-    container.create();
-
     // Write should succeed
     assertTrue(fs.createNewFile(new Path("/foo")));
     assertTrue(container.exists());
@@ -164,9 +161,6 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // Neither should a rename
     assertFalse(fs.rename(foo, bar));
     assertFalse(container.exists());
-
-    // Create a container outside of the WASB FileSystem
-    container.create();
 
     // But a write should.
     assertTrue(fs.createNewFile(foo));

@@ -17,19 +17,21 @@
 
 package org.apache.hadoop.ozone.client.io;
 
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
+
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
  * OzoneOutputStream is used to write data into Ozone.
- * It uses SCM's {@link ChunkGroupOutputStream} for writing the data.
+ * It uses SCM's {@link KeyOutputStream} for writing the data.
  */
 public class OzoneOutputStream extends OutputStream {
 
   private final OutputStream outputStream;
 
   /**
-   * Constructs OzoneOutputStream with ChunkGroupOutputStream.
+   * Constructs OzoneOutputStream with KeyOutputStream.
    *
    * @param outputStream
    */
@@ -56,6 +58,14 @@ public class OzoneOutputStream extends OutputStream {
   public synchronized void close() throws IOException {
     //commitKey can be done here, if needed.
     outputStream.close();
+  }
+
+  public OmMultipartCommitUploadPartInfo getCommitUploadPartInfo() {
+    if (outputStream instanceof KeyOutputStream) {
+      return ((KeyOutputStream) outputStream).getCommitUploadPartInfo();
+    }
+    // Otherwise return null.
+    return null;
   }
 
   public OutputStream getOutputStream() {

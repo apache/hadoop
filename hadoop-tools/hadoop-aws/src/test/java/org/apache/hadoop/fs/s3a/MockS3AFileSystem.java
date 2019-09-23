@@ -37,8 +37,12 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Relays FS calls to the mocked FS, allows for some extra logging with
@@ -71,6 +75,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   /** Log the entire stack of where operations are called: {@value}.  */
   public static final int LOG_STACK = 2;
 
+  private final Path root;
+
   /**
    * This can be edited to set the log level of events through the
    * mock FS.
@@ -85,8 +91,10 @@ public class MockS3AFileSystem extends S3AFileSystem {
       Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome) {
     this.mock = mock;
     this.outcome = outcome;
-    setUri(FS_URI);
+    setUri(FS_URI, false);
     setBucket(BUCKET);
+    setEncryptionSecrets(new EncryptionSecrets());
+    root = new Path(FS_URI.toString());
   }
 
   public Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors>
@@ -119,8 +127,18 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
+  public URI getUri() {
+    return FS_URI;
+  }
+
+  @Override
   public Path getWorkingDirectory() {
-    return new Path("s3a://" + BUCKET + "/work");
+    return new Path(root, "work");
+  }
+
+  @Override
+  public Path qualify(final Path path) {
+    return path.makeQualified(FS_URI, getWorkingDirectory());
   }
 
   @Override
@@ -162,7 +180,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key, long length) {
+  void finishedWrite(String key, long length, String eTag, String versionId,
+          BulkOperationState operationState) {
 
   }
 
@@ -224,6 +243,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
+  public boolean mkdirs(Path f) throws IOException {
+    event("mkdirs(%s)", f);
+    return mock.mkdirs(f);
+  }
+
+  @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     event("mkdirs(%s)", f);
     return mock.mkdirs(f, permission);
@@ -232,7 +257,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     event("getFileStatus(%s)", f);
-    return mock.getFileStatus(f);
+    return checkNotNull(mock.getFileStatus(f),
+        "Mock getFileStatus(%s) returned null", f);
   }
 
   @Override
@@ -290,7 +316,10 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void deleteObjectAtPath(Path f, String key, boolean isFile)
+  void deleteObjectAtPath(Path f,
+      String key,
+      boolean isFile,
+      final BulkOperationState operationState)
       throws AmazonClientException, IOException {
     deleteObject(key);
   }

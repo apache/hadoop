@@ -68,4 +68,9 @@ public @interface Metric {
    * @return optional type (counter|gauge) of the metric
    */
   Type type() default Type.DEFAULT;
+
+  /**
+   * @return optional roll over interval in secs for MutableQuantiles
+   */
+  int interval() default 10;
 }

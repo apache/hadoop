@@ -22,11 +22,11 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.common.Storage;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * OMStorage is responsible for management of the StorageDirectories used by
@@ -36,13 +36,14 @@ public class OMStorage extends Storage {
 
   public static final String STORAGE_DIR = "om";
   public static final String OM_ID = "omUuid";
+  public static final String OM_CERT_SERIAL_ID = "omCertSerialId";
 
   /**
    * Construct OMStorage.
    * @throws IOException if any directories are inaccessible.
    */
   public OMStorage(OzoneConfiguration conf) throws IOException {
-    super(NodeType.OM, getOzoneMetaDirPath(conf), STORAGE_DIR);
+    super(NodeType.OM, OmUtils.getOmDbDir(conf), STORAGE_DIR);
   }
 
   public void setScmId(String scmId) throws IOException {
@@ -51,6 +52,10 @@ public class OMStorage extends Storage {
     } else {
       getStorageInfo().setProperty(SCM_ID, scmId);
     }
+  }
+
+  public void setOmCertSerialId(String certSerialId) throws IOException {
+    getStorageInfo().setProperty(OM_CERT_SERIAL_ID, certSerialId);
   }
 
   public void setOmId(String omId) throws IOException {
@@ -77,6 +82,14 @@ public class OMStorage extends Storage {
     return getStorageInfo().getProperty(OM_ID);
   }
 
+  /**
+   * Retrieves the serial id of certificate issued by SCM.
+   * @return OM_ID
+   */
+  public String getOmCertSerialId() {
+    return getStorageInfo().getProperty(OM_CERT_SERIAL_ID);
+  }
+
   @Override
   protected Properties getNodeProperties() {
     String omId = getOmId();
@@ -85,6 +98,10 @@ public class OMStorage extends Storage {
     }
     Properties omProperties = new Properties();
     omProperties.setProperty(OM_ID, omId);
+
+    if (getOmCertSerialId() != null) {
+      omProperties.setProperty(OM_CERT_SERIAL_ID, getOmCertSerialId());
+    }
     return omProperties;
   }
 }

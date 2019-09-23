@@ -37,7 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * This class provides secure APIs for opening and creating files on the local
  * disk. The main issue this class tries to handle is that of symlink traversal.
- * <br/>
+ * <br>
  * An example of such an attack is:
  * <ol>
  * <li> Malicious user removes his task's syslog file, and puts a link to the
@@ -50,7 +50,7 @@ import com.google.common.annotations.VisibleForTesting;
  * </ol>
  * A similar attack is possible involving task log truncation, but in that case
  * due to an insecure write to a file.
- * <br/>
+ * <br>
  */
 public class SecureIOUtils {
 

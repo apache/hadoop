@@ -20,41 +20,28 @@ package org.apache.hadoop.hdds.scm.container.states;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 
 /**
  * Class that acts as the container state.
  */
 public class ContainerState {
-  private final HddsProtos.ReplicationType type;
   private final String owner;
-  private final HddsProtos.ReplicationFactor replicationFactor;
+  private final PipelineID pipelineID;
 
   /**
    * Constructs a Container Key.
    *
    * @param owner - Container Owners
-   * @param type - Replication Type.
-   * @param factor - Replication Factors
+   * @param pipelineID - ID of the pipeline
    */
-  public ContainerState(String owner, HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor factor) {
-    this.type = type;
+  public ContainerState(String owner, PipelineID pipelineID) {
+    this.pipelineID = pipelineID;
     this.owner = owner;
-    this.replicationFactor = factor;
-  }
-
-
-  public HddsProtos.ReplicationType getType() {
-    return type;
   }
 
   public String getOwner() {
     return owner;
-  }
-
-  public HddsProtos.ReplicationFactor getFactor() {
-    return replicationFactor;
   }
 
   @Override
@@ -70,27 +57,24 @@ public class ContainerState {
     ContainerState that = (ContainerState) o;
 
     return new EqualsBuilder()
-        .append(type, that.type)
         .append(owner, that.owner)
-        .append(replicationFactor, that.replicationFactor)
+        .append(pipelineID, that.pipelineID)
         .isEquals();
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder(137, 757)
-        .append(type)
         .append(owner)
-        .append(replicationFactor)
+        .append(pipelineID)
         .toHashCode();
   }
 
   @Override
   public String toString() {
     return "ContainerKey{" +
-        ", type=" + type +
         ", owner=" + owner +
-        ", replicationFactor=" + replicationFactor +
+        ", pipelineID=" + pipelineID +
         '}';
   }
 }

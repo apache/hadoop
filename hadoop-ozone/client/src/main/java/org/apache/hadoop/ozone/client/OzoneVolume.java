@@ -18,22 +18,27 @@
 
 package org.apache.hadoop.ozone.client;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * A class that encapsulates OzoneVolume.
  */
-public class OzoneVolume {
+public class OzoneVolume extends WithMetadata {
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -79,10 +84,13 @@ public class OzoneVolume {
    * @param quotaInBytes Volume quota in bytes.
    * @param creationTime creation time of the volume
    * @param acls ACLs associated with the volume.
+   * @param metadata custom key value metadata.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
                      String admin, String owner, long quotaInBytes,
-                     long creationTime, List<OzoneAcl> acls) {
+                     long creationTime, List<OzoneAcl> acls,
+                     Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.name = name;
@@ -92,6 +100,29 @@ public class OzoneVolume {
     this.creationTime = creationTime;
     this.acls = acls;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
+    this.metadata = metadata;
+  }
+
+  @SuppressWarnings("parameternumber")
+  public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
+                     String admin, String owner, long quotaInBytes,
+                     long creationTime, List<OzoneAcl> acls) {
+    this(conf, proxy, name, admin, owner, quotaInBytes, creationTime, acls,
+        new HashMap<>());
+  }
+
+  @VisibleForTesting
+  protected OzoneVolume(String name, String admin, String owner,
+      long quotaInBytes,
+      long creationTime, List<OzoneAcl> acls) {
+    this.proxy = null;
+    this.name = name;
+    this.admin = admin;
+    this.owner = owner;
+    this.quotaInBytes = quotaInBytes;
+    this.creationTime = creationTime;
+    this.acls = acls;
+    this.metadata = new HashMap<>();
   }
 
   /**
@@ -208,12 +239,13 @@ public class OzoneVolume {
    * @param bucketPrefix Bucket prefix to match
    * @return {@code Iterator<OzoneBucket>}
    */
-  public Iterator<OzoneBucket> listBuckets(String bucketPrefix) {
+  public Iterator<? extends OzoneBucket> listBuckets(String bucketPrefix) {
     return listBuckets(bucketPrefix, null);
   }
 
   /**
-   * Returns Iterator to iterate over all buckets after prevBucket in the volume.
+   * Returns Iterator to iterate over all buckets after prevBucket in the
+   * volume.
    * If prevBucket is null it iterates from the first bucket in the volume.
    * The result can be restricted using bucket prefix, will return all
    * buckets if bucket prefix is null.
@@ -222,7 +254,7 @@ public class OzoneVolume {
    * @param prevBucket Buckets are listed after this bucket
    * @return {@code Iterator<OzoneBucket>}
    */
-  public Iterator<OzoneBucket> listBuckets(String bucketPrefix,
+  public Iterator<? extends OzoneBucket> listBuckets(String bucketPrefix,
       String prevBucket) {
     return new BucketIterator(bucketPrefix, prevBucket);
   }
@@ -249,12 +281,13 @@ public class OzoneVolume {
 
 
     /**
-     * Creates an Iterator to iterate over all buckets after prevBucket in the volume.
+     * Creates an Iterator to iterate over all buckets after prevBucket in
+     * the volume.
      * If prevBucket is null it iterates from the first bucket in the volume.
      * The returned buckets match bucket prefix.
      * @param bucketPrefix
      */
-    public BucketIterator(String bucketPrefix, String prevBucket) {
+    BucketIterator(String bucketPrefix, String prevBucket) {
       this.bucketPrefix = bucketPrefix;
       this.currentValue = null;
       this.currentIterator = getNextListOfBuckets(prevBucket).iterator();

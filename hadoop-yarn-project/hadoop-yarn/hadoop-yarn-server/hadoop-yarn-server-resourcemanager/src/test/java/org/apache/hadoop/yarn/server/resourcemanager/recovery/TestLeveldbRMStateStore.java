@@ -125,6 +125,12 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
   }
 
   @Test(timeout = 60000)
+  public void testProxyCA() throws Exception {
+    LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
+    testProxyCA(tester);
+  }
+
+  @Test(timeout = 60000)
   public void testCompactionCycle() throws Exception {
     final DB mockdb = mock(DB.class);
     conf.setLong(YarnConfiguration.RM_LEVELDB_COMPACTION_INTERVAL_SECS, 1);

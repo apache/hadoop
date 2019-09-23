@@ -85,7 +85,7 @@ class BlockManagerSafeMode {
   private volatile BMSafeModeStatus status = BMSafeModeStatus.OFF;
 
   /** Safe mode threshold condition %.*/
-  private final double threshold;
+  private final float threshold;
   /** Number of blocks needed to satisfy safe mode threshold condition. */
   private long blockThreshold;
   /** Total number of blocks. */
@@ -97,7 +97,7 @@ class BlockManagerSafeMode {
   /** Min replication required by safe mode. */
   private final int safeReplication;
   /** Threshold for populating needed replication queues. */
-  private final double replQueueThreshold;
+  private final float replQueueThreshold;
   /** Number of blocks needed before populating replication queues. */
   private long blockReplQueueThreshold;
 
@@ -150,8 +150,7 @@ class BlockManagerSafeMode {
     // default to safe mode threshold (i.e., don't populate queues before
     // leaving safe mode)
     this.replQueueThreshold =
-        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
-            (float) threshold);
+        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY, threshold);
     this.extension = conf.getTimeDuration(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
         DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT,
         MILLISECONDS);
@@ -309,16 +308,20 @@ class BlockManagerSafeMode {
       }
     }
 
-    int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
-    if (numLive < datanodeThreshold) {
-      msg += String.format(
-          "The number of live datanodes %d needs an additional %d live "
-              + "datanodes to reach the minimum number %d.%n",
-          numLive, (datanodeThreshold - numLive), datanodeThreshold);
+    if (datanodeThreshold > 0) {
+      int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
+      if (numLive < datanodeThreshold) {
+        msg += String.format(
+            "The number of live datanodes %d needs an additional %d live "
+                + "datanodes to reach the minimum number %d.%n",
+            numLive, (datanodeThreshold - numLive), datanodeThreshold);
+      } else {
+        msg += String.format("The number of live datanodes %d has reached "
+                + "the minimum number %d. ",
+            numLive, datanodeThreshold);
+      }
     } else {
-      msg += String.format("The number of live datanodes %d has reached "
-              + "the minimum number %d. ",
-          numLive, datanodeThreshold);
+      msg += "The minimum number of live datanodes is not required. ";
     }
 
     if (getBytesInFuture() > 0) {
@@ -418,8 +421,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Increment number of safe blocks if current block has reached minimal
-   * replication.
+   * Increment number of safe blocks if the current block is contiguous
+   * and it has reached minimal replication or
+   * if the current block is striped and the number of its actual data blocks
+   * reaches the number of data units specified by the erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    * @param storageNum  current number of replicas or number of internal blocks
    *                    of a striped block group
@@ -433,9 +438,9 @@ class BlockManagerSafeMode {
       return;
     }
 
-    final int safe = storedBlock.isStriped() ?
+    final int safeNumberOfNodes = storedBlock.isStriped() ?
         ((BlockInfoStriped)storedBlock).getRealDataBlockNum() : safeReplication;
-    if (storageNum == safe) {
+    if (storageNum == safeNumberOfNodes) {
       this.blockSafe++;
 
       // Report startup progress only if we haven't completed startup yet.
@@ -453,8 +458,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Decrement number of safe blocks if current block has fallen below minimal
-   * replication.
+   * Decrement number of safe blocks if the current block is contiguous
+   * and it has just fallen below minimal replication or
+   * if the current block is striped and its actual data blocks has just fallen
+   * below the number of data units specified by erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    */
   synchronized void decrementSafeBlockCount(BlockInfo b) {
@@ -463,9 +470,11 @@ class BlockManagerSafeMode {
       return;
     }
 
+    final int safeNumberOfNodes = b.isStriped() ?
+        ((BlockInfoStriped)b).getRealDataBlockNum() : safeReplication;
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     if (storedBlock.isComplete() &&
-        blockManager.countNodes(b).liveReplicas() == safeReplication - 1) {
+        blockManager.countNodes(b).liveReplicas() == safeNumberOfNodes - 1) {
       this.blockSafe--;
       assert blockSafe >= 0;
       checkSafeMode();
@@ -561,7 +570,12 @@ class BlockManagerSafeMode {
    */
   private boolean areThresholdsMet() {
     assert namesystem.hasWriteLock();
-    int datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
+    // Calculating the number of live datanodes is time-consuming
+    // in large clusters. Skip it when datanodeThreshold is zero.
+    int datanodeNum = 0;
+    if (datanodeThreshold > 0) {
+      datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
+    }
     synchronized (this) {
       return blockSafe >= blockThreshold && datanodeNum >= datanodeThreshold;
     }

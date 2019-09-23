@@ -44,6 +44,9 @@ char** split_delimiter(char *value, const char *delim) {
     memset(return_values, 0, sizeof(char *) * return_values_size);
 
     temp_tok = strtok_r(value, delim, &tempstr);
+    if (NULL == temp_tok) {
+      return_values[size++] = strdup(value);
+    }
     while (temp_tok != NULL) {
       temp_tok = strdup(temp_tok);
       if (NULL == temp_tok) {
@@ -138,8 +141,7 @@ int execute_regex_match(const char *regex_str, const char *input) {
   regex_t regex;
   int regex_match;
   if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
-    fprintf(LOGFILE, "Unable to compile regex.");
-    fflush(LOGFILE);
+    fprintf(LOGFILE, "Unable to compile regex.\n");
     exit(ERROR_COMPILING_REGEX);
   }
   regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);

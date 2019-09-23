@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,10 +238,12 @@ public abstract class BaseContainerManagerTest {
       metrics, dirsHandler) {
 
       @Override
-        protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-            Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
-          // do nothing
-        }
+      protected void authorizeGetAndStopContainerRequest(
+          ContainerId containerId, Container container, boolean stopRequest,
+          NMTokenIdentifier identifier, String remoteUser)
+          throws YarnException {
+        // do nothing
+      }
       @Override
       protected void authorizeUser(UserGroupInformation remoteUgi,
           NMTokenIdentifier nmTokenIdentifier) {

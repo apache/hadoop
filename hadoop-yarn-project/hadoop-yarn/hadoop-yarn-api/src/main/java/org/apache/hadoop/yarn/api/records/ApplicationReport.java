@@ -62,6 +62,22 @@ public abstract class ApplicationReport {
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String applicationType, Token amRmToken) {
+    return newInstance(applicationId, applicationAttemptId, user, queue, name,
+        host, rpcPort, clientToAMToken, state, diagnostics, url,
+        startTime, startTime, launchTime, finishTime, finalStatus, appResources,
+        origTrackingUrl, progress, applicationType, amRmToken);
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationReport newInstance(ApplicationId applicationId,
+      ApplicationAttemptId applicationAttemptId, String user, String queue,
+      String name, String host, int rpcPort, Token clientToAMToken,
+      YarnApplicationState state, String diagnostics, String url,
+      long startTime, long submitTime, long launchTime, long finishTime,
+      FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String applicationType, Token amRmToken) {
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
     report.setApplicationId(applicationId);
     report.setCurrentApplicationAttemptId(applicationAttemptId);
@@ -75,6 +91,7 @@ public abstract class ApplicationReport {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
+    report.setSubmitTime(submitTime);
     report.setLaunchTime(launchTime);
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
@@ -102,7 +119,7 @@ public abstract class ApplicationReport {
     ApplicationReport report =
             newInstance(applicationId, applicationAttemptId, user, queue, name,
                     host, rpcPort, clientToAMToken, state, diagnostics, url,
-                    startTime, 0, finishTime, finalStatus, appResources,
+                    startTime, 0, 0, finishTime, finalStatus, appResources,
                     origTrackingUrl, progress, applicationType, amRmToken);
     report.setApplicationTags(tags);
     report.setUnmanagedApp(unmanagedApplication);
@@ -124,10 +141,30 @@ public abstract class ApplicationReport {
       float progress, String applicationType, Token amRmToken, Set<String> tags,
       boolean unmanagedApplication, Priority priority,
       String appNodeLabelExpression, String amNodeLabelExpression) {
+    return newInstance(applicationId, applicationAttemptId, user, queue, name,
+        host, rpcPort, clientToAMToken, state, diagnostics, url,
+        startTime, startTime, launchTime, finishTime, finalStatus, appResources,
+        origTrackingUrl, progress, applicationType, amRmToken, tags,
+        unmanagedApplication, priority, appNodeLabelExpression,
+        amNodeLabelExpression);
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationReport newInstance(ApplicationId applicationId,
+      ApplicationAttemptId applicationAttemptId, String user, String queue,
+      String name, String host, int rpcPort, Token clientToAMToken,
+      YarnApplicationState state, String diagnostics, String url,
+      long startTime, long submitTime, long launchTime, long finishTime,
+      FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String applicationType, Token amRmToken, Set<String> tags,
+      boolean unmanagedApplication, Priority priority,
+      String appNodeLabelExpression, String amNodeLabelExpression) {
     ApplicationReport report =
         newInstance(applicationId, applicationAttemptId, user, queue, name,
           host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
-          launchTime, finishTime, finalStatus, appResources,
+          submitTime, launchTime, finishTime, finalStatus, appResources,
           origTrackingUrl, progress, applicationType, amRmToken);
     report.setApplicationTags(tags);
     report.setUnmanagedApp(unmanagedApplication);
@@ -310,6 +347,14 @@ public abstract class ApplicationReport {
   @Private
   @Unstable
   public abstract void setStartTime(long startTime);
+
+  @Public
+  @Stable
+  public abstract long getSubmitTime();
+
+  @Private
+  @Unstable
+  public abstract void setSubmitTime(long submitTime);
 
   @Private
   @Unstable

@@ -17,7 +17,7 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,8 +26,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
@@ -56,8 +56,8 @@ import org.junit.Test;
 
 public class TestReservationInputValidator {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestReservationInputValidator.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestReservationInputValidator.class);
 
   private static final String PLAN_NAME = "test-reservation";
 

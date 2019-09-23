@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -68,7 +69,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-class JsonUtilClient {
+/**
+ * Utility methods used in WebHDFS/HttpFS JSON conversion.
+ */
+public class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
   static final String UNSUPPPORTED_EXCEPTION_STR =
       UnsupportedOperationException.class.getName();
@@ -133,6 +137,7 @@ class JsonUtilClient {
     Boolean aclBit = (Boolean) m.get("aclBit");
     Boolean encBit = (Boolean) m.get("encBit");
     Boolean erasureBit  = (Boolean) m.get("ecBit");
+    Boolean snapshotEnabledBit  = (Boolean) m.get("snapshotEnabled");
     EnumSet<HdfsFileStatus.Flags> f =
         EnumSet.noneOf(HdfsFileStatus.Flags.class);
     if (aclBit != null && aclBit) {
@@ -143,6 +148,9 @@ class JsonUtilClient {
     }
     if (erasureBit != null && erasureBit) {
       f.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+    if (snapshotEnabledBit != null && snapshotEnabledBit) {
+      f.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
     }
 
     Map<String, Object> ecPolicyObj = (Map) m.get("ecPolicyObj");
@@ -419,30 +427,68 @@ class JsonUtilClient {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(
-        ContentSummary.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)
+        json.get(ContentSummary.class.getSimpleName());
     final long length = ((Number) m.get("length")).longValue();
     final long fileCount = ((Number) m.get("fileCount")).longValue();
     final long directoryCount = ((Number) m.get("directoryCount")).longValue();
+    final String ecPolicy = ((String) m.get("ecPolicy"));
+    ContentSummary.Builder builder = new ContentSummary.Builder()
+        .length(length)
+        .fileCount(fileCount)
+        .directoryCount(directoryCount)
+        .erasureCodingPolicy(ecPolicy);
+    builder = buildQuotaUsage(builder, m, ContentSummary.Builder.class);
+    return builder.build();
+  }
+
+  /** Convert a JSON map to a QuotaUsage. */
+  static QuotaUsage toQuotaUsage(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+
+    final Map<?, ?> m = (Map<?, ?>) json.get(QuotaUsage.class.getSimpleName());
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder = buildQuotaUsage(builder, m, QuotaUsage.Builder.class);
+    return builder.build();
+  }
+
+  /**
+   * Given a builder for QuotaUsage, parse the provided map and
+   * construct the relevant fields. Return the updated builder.
+   */
+  private static <T extends QuotaUsage.Builder> T buildQuotaUsage(
+      T builder, Map<?, ?> m, Class<T> type) {
     final long quota = ((Number) m.get("quota")).longValue();
     final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
     final Map<?, ?> typem = (Map<?, ?>) m.get("typeQuota");
 
-    ContentSummary.Builder contentSummaryBuilder =new ContentSummary.Builder()
-        .length(length).fileCount(fileCount).directoryCount(directoryCount)
-        .quota(quota).spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
+    T result = type.cast(builder
+        .quota(quota)
+        .spaceConsumed(spaceConsumed)
+        .spaceQuota(spaceQuota));
+
+    // ContentSummary doesn't set this so check before using it
+    if (m.get("fileAndDirectoryCount") != null) {
+      final long fileAndDirectoryCount =
+          ((Number) m.get("fileAndDirectoryCount")).longValue();
+      result = type.cast(result.fileAndDirectoryCount(fileAndDirectoryCount));
+    }
+
     if (typem != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
-        Map<?, ?> type = (Map<?, ?>) typem.get(t.toString());
-        if (type != null) {
-          contentSummaryBuilder = contentSummaryBuilder.typeQuota(t,
-              ((Number) type.get("quota")).longValue()).typeConsumed(t,
-              ((Number) type.get("consumed")).longValue());
+        Map<?, ?> typeQuota = (Map<?, ?>) typem.get(t.toString());
+        if (typeQuota != null) {
+          result = type.cast(result.typeQuota(t,
+              ((Number) typeQuota.get("quota")).longValue()).typeConsumed(t,
+              ((Number) typeQuota.get("consumed")).longValue()));
         }
       }
     }
-    return contentSummaryBuilder.build();
+
+    return result;
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */
@@ -666,6 +712,17 @@ class JsonUtilClient {
     Boolean copyOnCreateFile = (Boolean) m.get("copyOnCreateFile");
     return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
         replicationFallbacks, copyOnCreateFile.booleanValue());
+  }
+
+  public static ErasureCodingPolicy toECPolicy(Map<?, ?> m) {
+    byte id = ((Number) m.get("id")).byteValue();
+    String name = (String) m.get("name");
+    String codec = (String) m.get("codecName");
+    int cellsize = ((Number) m.get("cellSize")).intValue();
+    int dataunits = ((Number) m.get("numDataUnits")).intValue();
+    int parityunits = ((Number) m.get("numParityUnits")).intValue();
+    ECSchema ecs = new ECSchema(codec, dataunits, parityunits);
+    return new ErasureCodingPolicy(name, ecs, cellsize, id);
   }
 
   private static StorageType[] toStorageTypes(List<?> list) {

@@ -44,8 +44,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>
  * Does the Mount table entry for this path have multiple destinations?
  * <ul>
- * <li>No -> Return the location
- * <li>Yes -> Return all locations, prioritizing the best guess from the
+ * <li>No: Return the location
+ * <li>Yes: Return all locations, prioritizing the best guess from the
  * consistent hashing algorithm.
  * </ul>
  * <p>

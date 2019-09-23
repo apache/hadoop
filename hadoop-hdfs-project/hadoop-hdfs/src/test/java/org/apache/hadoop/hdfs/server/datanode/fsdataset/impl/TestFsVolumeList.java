@@ -18,11 +18,16 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Supplier;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -30,6 +35,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,12 +46,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -314,5 +324,57 @@ public class TestFsVolumeList {
         .setUsage(usage)
         .build();
     assertEquals(600, volume4.getReserved());
+  }
+
+  @Test(timeout = 60000)
+  public void testAddRplicaProcessorForAddingReplicaInMap() throws Exception {
+    Configuration cnf = new Configuration();
+    int poolSize = 5;
+    cnf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    cnf.setInt(
+        DFSConfigKeys.DFS_DATANODE_VOLUMES_REPLICA_ADD_THREADPOOL_SIZE_KEY,
+        poolSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(cnf).numDataNodes(1)
+        .storagesPerDatanode(1).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    // Generate data blocks.
+    ExecutorService pool = Executors.newFixedThreadPool(10);
+    List<Future<?>> futureList = new ArrayList<>();
+    for (int i = 0; i < 100; i++) {
+      Thread thread = new Thread() {
+        @Override
+        public void run() {
+          for (int j = 0; j < 10; j++) {
+            try {
+              DFSTestUtil.createFile(fs, new Path("File_" + getName() + j), 10,
+                  (short) 1, 0);
+            } catch (IllegalArgumentException | IOException e) {
+              e.printStackTrace();
+            }
+          }
+        }
+      };
+      thread.setName("FileWriter" + i);
+      futureList.add(pool.submit(thread));
+    }
+    // Wait for data generation
+    for (Future<?> f : futureList) {
+      f.get();
+    }
+    fs.close();
+    FsDatasetImpl fsDataset = (FsDatasetImpl) cluster.getDataNodes().get(0)
+        .getFSDataset();
+    ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+    RamDiskReplicaTracker ramDiskReplicaMap = RamDiskReplicaTracker
+        .getInstance(conf, fsDataset);
+    FsVolumeImpl vol = (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    // It will create BlockPoolSlice.AddReplicaProcessor task's and lunch in
+    // ForkJoinPool recursively
+    vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
+    assertTrue("Failed to add all the replica to map", volumeMap.replicas(bpid)
+        .size() == 1000);
+    assertTrue("Fork pool size should be " + poolSize,
+        BlockPoolSlice.getAddReplicaForkPoolSize() == poolSize);
   }
 }

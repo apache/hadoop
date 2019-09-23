@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -54,7 +54,7 @@ public class TestSnapshotManager {
     INodesInPath iip = mock(INodesInPath.class);
 
     SnapshotManager sm = spy(new SnapshotManager(new Configuration(), fsdir));
-    doReturn(ids).when(sm).getSnapshottableRoot((INodesInPath) anyObject());
+    doReturn(ids).when(sm).getSnapshottableRoot(any());
     doReturn(testMaxSnapshotLimit).when(sm).getMaxSnapshotID();
 
     // Create testMaxSnapshotLimit snapshots. These should all succeed.

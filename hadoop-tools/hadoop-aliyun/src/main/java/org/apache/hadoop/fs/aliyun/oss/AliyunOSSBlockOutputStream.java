@@ -120,16 +120,17 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
         if (null == partETags) {
           throw new IOException("Failed to multipart upload to oss, abort it.");
         }
-        store.completeMultipartUpload(key, uploadId, partETags);
+        store.completeMultipartUpload(key, uploadId,
+            new ArrayList<>(partETags));
       }
     } finally {
-      removePartFiles();
+      removeTemporaryFiles();
       closed = true;
     }
   }
 
   @Override
-  public void write(int b) throws IOException {
+  public synchronized void write(int b) throws IOException {
     singleByte[0] = (byte)b;
     write(singleByte, 0, 1);
   }
@@ -145,6 +146,14 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
     if (blockWritten >= blockSize) {
       uploadCurrentPart();
       blockWritten = 0L;
+    }
+  }
+
+  private void removeTemporaryFiles() {
+    for (File file : blockFiles.values()) {
+      if (file != null && file.exists() && !file.delete()) {
+        LOG.warn("Failed to delete temporary file {}", file);
+      }
     }
   }
 

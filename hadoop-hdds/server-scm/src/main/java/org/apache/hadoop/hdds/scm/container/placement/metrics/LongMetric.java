@@ -136,7 +136,6 @@ public class LongMetric implements DatanodeMetric<Long, Long> {
    * @throws ClassCastException   if the specified object's type prevents it
    *                              from being compared to this object.
    */
-  @Override
   public int compareTo(Long o) {
     return Long.compare(this.value, o);
   }

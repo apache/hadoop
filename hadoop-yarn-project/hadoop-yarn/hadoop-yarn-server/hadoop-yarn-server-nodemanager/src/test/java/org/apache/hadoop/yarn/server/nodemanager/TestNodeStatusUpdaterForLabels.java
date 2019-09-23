@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.lang.Thread.State;
 import java.nio.ByteBuffer;
 import java.util.Set;
+import java.util.TimerTask;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.ServerSocketUtil;
@@ -179,17 +180,30 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     }
   }
 
-  public static class DummyNodeLabelsProvider implements NodeLabelsProvider {
+  /**
+   * A dummy NodeLabelsProvider class for tests.
+   */
+  public static class DummyNodeLabelsProvider extends NodeLabelsProvider {
 
-    private Set<NodeLabel> nodeLabels = CommonNodeLabelsManager.EMPTY_NODELABEL_SET;
-
-    @Override
-    public synchronized Set<NodeLabel> getNodeLabels() {
-      return nodeLabels;
+    public DummyNodeLabelsProvider() {
+      super("DummyNodeLabelsProvider");
+      // disable the fetch timer.
+      setIntervalTime(-1);
     }
 
-    synchronized void setNodeLabels(Set<NodeLabel> nodeLabels) {
-      this.nodeLabels = nodeLabels;
+    @Override
+    protected void cleanUp() throws Exception {
+      // fake implementation, nothing to cleanup
+    }
+
+    @Override
+    public TimerTask createTimerTask() {
+      return new TimerTask() {
+        @Override
+        public void run() {
+          setDescriptors(CommonNodeLabelsManager.EMPTY_NODELABEL_SET);
+        }
+      };
     }
   }
 
@@ -214,11 +228,10 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
 
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          NodeLabelsProvider labelsProvider) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
 
         return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-            metrics, labelsProvider) {
+            metrics) {
           @Override
           protected ResourceTracker getRMClient() {
             return resourceTracker;
@@ -241,18 +254,18 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
     resourceTracker.waitTillRegister();
-    assertNLCollectionEquals(dummyLabelsProviderRef.getNodeLabels(),
+    assertNLCollectionEquals(dummyLabelsProviderRef.getDescriptors(),
         resourceTracker.labels);
 
     resourceTracker.waitTillHeartbeat();// wait till the first heartbeat
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
     // heartbeat with updated labels
-    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P"));
+    dummyLabelsProviderRef.setDescriptors(toNodeLabelSet("P"));
 
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
-    assertNLCollectionEquals(dummyLabelsProviderRef.getNodeLabels(),
+    assertNLCollectionEquals(dummyLabelsProviderRef.getDescriptors(),
         resourceTracker.labels);
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
@@ -265,7 +278,7 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
         resourceTracker.labels);
 
     // provider return with null labels
-    dummyLabelsProviderRef.setNodeLabels(null);
+    dummyLabelsProviderRef.setDescriptors(null);
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
     assertNotNull(
@@ -279,7 +292,7 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     // so that every sec 1 heartbeat is send.
     int nullLabels = 0;
     int nonNullLabels = 0;
-    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P1"));
+    dummyLabelsProviderRef.setDescriptors(toNodeLabelSet("P1"));
     for (int i = 0; i < 5; i++) {
       sendOutofBandHeartBeat();
       resourceTracker.waitTillHeartbeat();
@@ -314,11 +327,10 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
 
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          NodeLabelsProvider labelsProvider) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
 
         return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-            metrics, labelsProvider) {
+            metrics) {
           @Override
           protected ResourceTracker getRMClient() {
             return resourceTracker;
@@ -331,19 +343,19 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
         };
       }
     };
-    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P"));
+
     YarnConfiguration conf = createNMConfigForDistributeNodeLabels();
     conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:"
         + ServerSocketUtil.getPort(8040, 10));
-
     nm.init(conf);
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
+    dummyLabelsProviderRef.setDescriptors(toNodeLabelSet("P"));
     resourceTracker.waitTillHeartbeat();// wait till the first heartbeat
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
     // heartbeat with invalid labels
-    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("_.P"));
+    dummyLabelsProviderRef.setDescriptors(toNodeLabelSet("_.P"));
 
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();

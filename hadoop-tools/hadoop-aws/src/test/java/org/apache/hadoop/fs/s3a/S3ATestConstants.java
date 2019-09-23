@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.time.Duration;
+
 /**
  * Constants for S3A Testing.
  */
@@ -67,6 +69,11 @@ public interface S3ATestConstants {
    * The number of directory operations to perform: {@value}.
    */
   String KEY_DIRECTORY_COUNT = SCALE_TEST + "directory.count";
+
+  /**
+   * The file count to use in rename/delete tests: {@value}.
+   */
+  String KEY_FILE_COUNT = SCALE_TEST + "file.count";
 
   /**
    * The readahead buffer: {@value}.
@@ -128,6 +135,12 @@ public interface S3ATestConstants {
   int DEFAULT_DIRECTORY_COUNT = 2;
 
   /**
+   * Default number of files to create when performing
+   * delete/rename tests.
+   */
+  int DEFAULT_FILE_COUNT = 50;
+
+  /**
    * Default policy on scale tests: {@value}.
    */
   boolean DEFAULT_SCALE_TESTS_ENABLED = false;
@@ -137,6 +150,12 @@ public interface S3ATestConstants {
    */
   String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
   String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
+
+  /**
+   * Endpoint for STS testing.
+   * @deprecated : Use {@link Constants#ASSUMED_ROLE_STS_ENDPOIN}
+   */
+  @Deprecated
   String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
 
   /**
@@ -149,6 +168,10 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_IMPLEMENTATION_LOCAL = "local";
   String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
   String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
+
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX =
+      "fs.s3a.s3guard.test.dynamo.table.prefix";
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT = "s3guard.test.";
 
   /**
    * Timeout in Milliseconds for standard tests: {@value}.
@@ -173,4 +196,26 @@ public interface S3ATestConstants {
    */
   String FS_S3A_IMPL_DISABLE_CACHE
       = "fs.s3a.impl.disable.cache";
+
+  /**
+   * Duration in seconds for role/session token requests: {@value}.
+   */
+  int TEST_SESSION_TOKEN_DURATION_SECONDS = 900;
+
+  /**
+   * Test session duration as a java 8 Duration.
+   */
+  Duration TEST_SESSION_TOKEN_DURATION = Duration.ofSeconds(
+      TEST_SESSION_TOKEN_DURATION_SECONDS);
+
+  /**
+   * Test table name to use during DynamoDB integration tests in
+   * {@code ITestDynamoDBMetadataStore}.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
 }

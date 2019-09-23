@@ -17,17 +17,18 @@
 
 package org.apache.hadoop.hdds.server;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 /**
  * Generic utilities for all HDDS/Ozone servers.
@@ -46,23 +47,34 @@ public final class ServerUtils {
    * For example, sanitizeUserArgs(17, 3, 5, 10)
    * ensures that 17 is greater/equal than 3 * 5 and less/equal to 3 * 10.
    *
+   * @param key           - config key of the value
    * @param valueTocheck  - value to check
+   * @param baseKey       - config key of the baseValue
    * @param baseValue     - the base value that is being used.
    * @param minFactor     - range min - a 2 here makes us ensure that value
    *                        valueTocheck is at least twice the baseValue.
    * @param maxFactor     - range max
    * @return long
    */
-  public static long sanitizeUserArgs(long valueTocheck, long baseValue,
-      long minFactor, long maxFactor)
-      throws IllegalArgumentException {
-    if ((valueTocheck >= (baseValue * minFactor)) &&
-        (valueTocheck <= (baseValue * maxFactor))) {
-      return valueTocheck;
+  public static long sanitizeUserArgs(String key, long valueTocheck,
+      String baseKey, long baseValue, long minFactor, long maxFactor) {
+    long minLimit = baseValue * minFactor;
+    long maxLimit = baseValue * maxFactor;
+    if (valueTocheck < minLimit) {
+      LOG.warn(
+          "{} value = {} is smaller than min = {} based on"
+          + " the key value of {}, reset to the min value {}.",
+          key, valueTocheck, minLimit, baseKey, minLimit);
+      valueTocheck = minLimit;
+    } else if (valueTocheck > maxLimit) {
+      LOG.warn(
+          "{} value = {} is larger than max = {} based on"
+          + " the key value of {}, reset to the max value {}.",
+          key, valueTocheck, maxLimit, baseKey, maxLimit);
+      valueTocheck = maxLimit;
     }
-    String errMsg = String.format("%d is not within min = %d or max = " +
-        "%d", valueTocheck, baseValue * minFactor, baseValue * maxFactor);
-    throw new IllegalArgumentException(errMsg);
+
+    return valueTocheck;
   }
 
 
@@ -116,29 +128,100 @@ public final class ServerUtils {
     }
   }
 
+  /**
+   * Get the location where SCM should store its metadata directories.
+   * Fall back to OZONE_METADATA_DIRS if not defined.
+   *
+   * @param conf
+   * @return
+   */
+  public static File getScmDbDir(Configuration conf) {
+    File metadataDir = getDirectoryFromConfig(conf,
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, "SCM");
+    if (metadataDir != null) {
+      return metadataDir;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. " +
+        "Falling back to {} instead.",
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
+    return getOzoneMetaDirPath(conf);
+  }
+
+  /**
+   * Utility method to get value of a given key that corresponds to a DB
+   * directory.
+   * @param conf configuration bag
+   * @param key Key to test
+   * @param componentName Which component's key is this
+   * @return File created from the value of the key in conf.
+   */
+  public static File getDirectoryFromConfig(Configuration conf,
+                                            String key,
+                                            String componentName) {
+    final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
+
+    if (metadirs.size() > 1) {
+      throw new IllegalArgumentException(
+          "Bad config setting " + key +
+              ". " + componentName +
+              " does not support multiple metadata dirs currently");
+    }
+
+    if (metadirs.size() == 1) {
+      final File dbDirPath = new File(metadirs.iterator().next());
+      if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
+        throw new IllegalArgumentException("Unable to create directory " +
+            dbDirPath + " specified in configuration setting " +
+            key);
+      }
+      return dbDirPath;
+    }
+
+    return null;
+  }
 
   /**
    * Checks and creates Ozone Metadir Path if it does not exist.
    *
    * @param conf - Configuration
-   *
    * @return File MetaDir
+   * @throws IllegalArgumentException if the configuration setting is not set
    */
   public static File getOzoneMetaDirPath(Configuration conf) {
-    String metaDirPath = conf.getTrimmed(OzoneConfigKeys
-        .OZONE_METADATA_DIRS);
-    Preconditions.checkNotNull(metaDirPath);
-    File dirPath = new File(metaDirPath);
-    if (!dirPath.exists() && !dirPath.mkdirs()) {
-      throw new IllegalArgumentException("Unable to create paths. Path: " +
-          dirPath);
+    File dirPath = getDirectoryFromConfig(conf,
+        HddsConfigKeys.OZONE_METADATA_DIRS, "Ozone");
+    if (dirPath == null) {
+      throw new IllegalArgumentException(
+          HddsConfigKeys.OZONE_METADATA_DIRS + " must be defined.");
     }
     return dirPath;
   }
 
   public static void setOzoneMetaDirPath(OzoneConfiguration conf,
       String path) {
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, path);
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, path);
   }
 
+  /**
+   * Returns with the service specific metadata directory.
+   * <p>
+   * If the directory is missing the method tries to create it.
+   *
+   * @param conf The ozone configuration object
+   * @param key The configuration key which specify the directory.
+   * @return The path of the directory.
+   */
+  public static File getDBPath(Configuration conf, String key) {
+    final File dbDirPath =
+        getDirectoryFromConfig(conf, key, "OM");
+    if (dbDirPath != null) {
+      return dbDirPath;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. "
+            + "Falling back to {} instead.", key,
+        HddsConfigKeys.OZONE_METADATA_DIRS);
+    return ServerUtils.getOzoneMetaDirPath(conf);
+  }
 }

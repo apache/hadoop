@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_RATIO_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
@@ -41,7 +42,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 
@@ -169,6 +169,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -455,6 +456,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         .setNumHandlers(handlerCount)
         .setVerbose(false)
         .setSecretManager(namesystem.getDelegationTokenSecretManager())
+        .setAlignmentContext(new GlobalStateIdContext(namesystem))
         .build();
 
     // Add all the RPC protocols that the namenode implements
@@ -502,7 +504,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
 
-    defaultECPolicyName = conf.get(
+    defaultECPolicyName = conf.getTrimmed(
         DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
         DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
 
@@ -536,6 +538,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
+    }
+    int[] auxiliaryPorts =
+        conf.getInts(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY);
+    if (auxiliaryPorts != null && auxiliaryPorts.length != 0) {
+      for (int auxiliaryPort : auxiliaryPorts) {
+        this.clientRpcServer.addAuxiliaryListener(auxiliaryPort);
+      }
     }
   }
 
@@ -606,8 +615,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return serviceRPCAddress;
   }
 
-  InetSocketAddress getRpcAddress() {
+  @VisibleForTesting
+  public InetSocketAddress getRpcAddress() {
     return clientRpcAddress;
+  }
+
+  @VisibleForTesting
+  public Set<InetSocketAddress> getAuxiliaryRpcAddresses() {
+    return clientRpcServer.getAuxiliaryListenerAddresses();
   }
 
   private static UserGroupInformation getRemoteUser() throws IOException {
@@ -736,8 +751,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     metrics.incrGetBlockLocations();
-    return namesystem.getBlockLocations(getClientMachine(), 
-                                        src, offset, length);
+    LocatedBlocks locatedBlocks =
+        namesystem.getBlockLocations(getClientMachine(), src, offset, length);
+    return locatedBlocks;
   }
   
   @Override // ClientProtocol
@@ -750,7 +766,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
@@ -774,7 +791,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           .getShortUserName(), null, masked);
       status = namesystem.startFile(src, perm, clientName, clientMachine,
           flag.get(), createParent, replication, blockSize, supportedVersions,
-          ecPolicyName, cacheEntry != null);
+          ecPolicyName, storagePolicy, cacheEntry != null);
     } finally {
       RetryCache.setState(cacheEntry, status != null, status);
     }
@@ -908,8 +925,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         excludeSet.add(node);
       }
     }
-    return namesystem.getAdditionalDatanode(src, fileId, blk, existings,
-        existingStorageIDs, excludeSet, numAdditionalNodes, clientName);
+    LocatedBlock locatedBlock = namesystem.getAdditionalDatanode(src, fileId,
+        blk, existings, existingStorageIDs, excludeSet, numAdditionalNodes,
+        clientName);
+    return locatedBlock;
   }
   /**
    * The client needs to give up on the block.
@@ -1289,7 +1308,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege();
     return namesystem.rollEditLog();
   }
   
@@ -1363,6 +1381,18 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     checkNNStartup();
     return namesystem.listOpenFiles(prevId, openFilesTypes, path);
+  }
+
+  @Override // ClientProtocol
+  public void msync() throws IOException {
+    // Check for write access to ensure that msync only happens on active
+    namesystem.checkOperation(OperationCategory.WRITE);
+  }
+
+  @Override // ClientProtocol
+  public HAServiceState getHAServiceState() throws IOException {
+    checkNNStartup();
+    return nn.getServiceStatus().getState();
   }
 
   @Override // ClientProtocol
@@ -1538,21 +1568,25 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
-    for (int r = 0; r < reports.length; r++) {
-      final BlockListAsLongs blocks = reports[r].getBlocks();
-      //
-      // BlockManager.processReport accumulates information of prior calls
-      // for the same node and storage, so the value returned by the last
-      // call of this loop is the final updated value for noStaleStorage.
-      //
-      final int index = r;
-      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
-        @Override
-        public Boolean call() throws IOException {
-          return bm.processReport(nodeReg, reports[index].getStorage(),
-              blocks, context);
+    try {
+      if (bm.checkBlockReportLease(context, nodeReg)) {
+        for (int r = 0; r < reports.length; r++) {
+          final BlockListAsLongs blocks = reports[r].getBlocks();
+          //
+          // BlockManager.processReport accumulates information of prior calls
+          // for the same node and storage, so the value returned by the last
+          // call of this loop is the final updated value for noStaleStorage.
+          //
+          final int index = r;
+          noStaleStorages = bm.runBlockOp(() ->
+            bm.processReport(nodeReg, reports[index].getStorage(),
+                blocks, context));
         }
-      });
+      }
+    } catch (UnregisteredNodeException une) {
+      LOG.debug("Datanode {} is attempting to report but not register yet.",
+          nodeReg);
+      return RegisterCommand.REGISTER;
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
@@ -1561,7 +1595,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
     if (nn.getFSImage().isUpgradeFinalized() &&
         !namesystem.isRollingUpgrade() &&
-        !nn.isStandbyState() &&
+        nn.isActiveState() &&
         noStaleStorages) {
       return new FinalizeCommand(poolId);
     }
@@ -1751,6 +1785,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // HAServiceProtocol
+  public synchronized void transitionToObserver(StateChangeRequestInfo req)
+      throws ServiceFailedException, AccessControlException, IOException {
+    checkNNStartup();
+    nn.checkHaStateChange(req);
+    nn.transitionToObserver();
+  }
+
+  @Override // HAServiceProtocol
   public synchronized HAServiceStatus getServiceStatus() 
       throws AccessControlException, ServiceFailedException, IOException {
     checkNNStartup();
@@ -1803,6 +1845,17 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       clientMachine = "";
     }
     return clientMachine;
+  }
+
+  /**
+   * Return the QOP of the client that the current handler thread
+   * is handling. Assuming the negotiation is done at this point,
+   * otherwise returns null.
+   *
+   * @return the established QOP of this client.
+   */
+  public static String getEstablishedClientQOP() {
+    return Server.getEstablishedQOP();
   }
 
   @Override

@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -29,11 +28,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -61,8 +59,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Iterators;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -77,7 +75,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
-import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -101,13 +98,11 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.SleepAnswer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -124,7 +119,8 @@ import com.google.common.base.Supplier;
  * This tests if sync all replicas in block recovery works correctly.
  */
 public class TestBlockRecovery {
-  private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR =
     MiniDFSCluster.getBaseDirectory() + "data";
   private DataNode dn;
@@ -173,8 +169,8 @@ public class TestBlockRecovery {
         11 * cellSize}, {36 * cellSize}}, };
 
   static {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   private final long
@@ -222,17 +218,17 @@ public class TestBlockRecovery {
         (1, CLUSTER_ID, POOL_ID, 1L));
 
     when(namenode.sendHeartbeat(
-            Mockito.any(DatanodeRegistration.class),
-            Mockito.any(StorageReport[].class),
+            Mockito.any(),
+            Mockito.any(),
             Mockito.anyLong(),
             Mockito.anyLong(),
             Mockito.anyInt(),
             Mockito.anyInt(),
             Mockito.anyInt(),
-            Mockito.any(VolumeFailureSummary.class),
+            Mockito.any(),
             Mockito.anyBoolean(),
-            Mockito.any(SlowPeerReports.class),
-            Mockito.any(SlowDiskReports.class)))
+            Mockito.any(),
+            Mockito.any()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
@@ -316,9 +312,9 @@ public class TestBlockRecovery {
     syncList.add(record1);
     syncList.add(record2);
     
-    when(dn1.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+    when(dn1.updateReplicaUnderRecovery(any(ExtendedBlock.class), anyLong(),
         anyLong(), anyLong())).thenReturn("storage1");
-    when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+    when(dn2.updateReplicaUnderRecovery(any(ExtendedBlock.class), anyLong(),
         anyLong(), anyLong())).thenReturn("storage2");
 
     BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
@@ -554,7 +550,7 @@ public class TestBlockRecovery {
       BlockRecoveryWorker.RecoveryTaskContiguous spyTask
           = spy(RecoveryTaskContiguous);
       spyTask.recover();
-      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+      verify(spyTask, never()).syncBlock(anyList());
     }
   }
 
@@ -582,7 +578,7 @@ public class TestBlockRecovery {
       } catch(IOException e){
         GenericTestUtils.assertExceptionContains("All datanodes failed", e);
       }
-      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+      verify(spyTask, never()).syncBlock(anyList());
     }
   }
 

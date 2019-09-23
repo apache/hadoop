@@ -31,11 +31,11 @@ import java.util.Map;
 /**
  * Initializes hadoop-auth AuthenticationFilter which provides support for
  * Kerberos HTTP SPNEGO authentication.
- * <p/>
- * It enables anonymous access, simple/speudo and Kerberos HTTP SPNEGO
+ * <p>
+ * It enables anonymous access, simple/pseudo and Kerberos HTTP SPNEGO
  * authentication  for Hadoop JobTracker, NameNode, DataNodes and
  * TaskTrackers.
- * <p/>
+ * <p>
  * Refer to the <code>core-default.xml</code> file, after the comment
  * 'HTTP Authentication' for details on the configuration options.
  * All related configuration properties have 'hadoop.http.authentication.'
@@ -47,7 +47,7 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
 
   /**
    * Initializes hadoop-auth AuthenticationFilter.
-   * <p/>
+   * <p>
    * Propagates to hadoop-auth AuthenticationFilter configuration all Hadoop
    * configuration properties prefixed with "hadoop.http.authentication."
    *

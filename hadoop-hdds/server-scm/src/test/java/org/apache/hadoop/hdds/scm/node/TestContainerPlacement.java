@@ -21,11 +21,12 @@ package org.apache.hadoop.hdds.scm.node;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
@@ -33,8 +34,10 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Ignore;
@@ -46,7 +49,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -56,8 +58,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for different container placement policy.
@@ -65,8 +65,6 @@ import static org.junit.Assert.assertTrue;
 public class TestContainerPlacement {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
-  private static XceiverClientManager xceiverClientManager =
-      new XceiverClientManager(new OzoneConfiguration());
 
   /**
    * Returns a new copy of Configuration.
@@ -94,19 +92,24 @@ public class TestContainerPlacement {
         Mockito.mock(StaleNodeHandler.class));
     eventQueue.addHandler(SCMEvents.DEAD_NODE,
         Mockito.mock(DeadNodeHandler.class));
+
+    SCMStorageConfig storageConfig = Mockito.mock(SCMStorageConfig.class);
+    Mockito.when(storageConfig.getClusterID()).thenReturn("cluster1");
+
     SCMNodeManager nodeManager = new SCMNodeManager(config,
-        UUID.randomUUID().toString(), null, eventQueue);
-    assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfChillMode());
+        storageConfig, eventQueue, null);
     return nodeManager;
   }
 
-  ContainerMapping createContainerManager(Configuration config,
+  SCMContainerManager createContainerManager(Configuration config,
       NodeManager scmNodeManager) throws IOException {
     EventQueue eventQueue = new EventQueue();
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    return new ContainerMapping(config, scmNodeManager, cacheSize, eventQueue);
+    PipelineManager pipelineManager =
+        new SCMPipelineManager(config, scmNodeManager, eventQueue, null);
+    return new SCMContainerManager(config, scmNodeManager, pipelineManager,
+        eventQueue);
 
   }
 
@@ -129,16 +132,17 @@ public class TestContainerPlacement {
 
     final File testDir = PathUtils.getTestDir(
         TestContainerPlacement.class);
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
 
     SCMNodeManager nodeManager = createNodeManager(conf);
-    ContainerMapping containerManager =
+    SCMContainerManager containerManager =
         createContainerManager(conf, nodeManager);
     List<DatanodeDetails> datanodes =
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
+    XceiverClientManager xceiverClientManager = null;
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
         nodeManager.processHeartbeat(datanodeDetails);
@@ -154,17 +158,21 @@ public class TestContainerPlacement {
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
 
-      assertTrue(nodeManager.isOutOfChillMode());
+      xceiverClientManager= new XceiverClientManager(new OzoneConfiguration());
 
-      ContainerWithPipeline containerWithPipeline = containerManager
+      ContainerInfo container = containerManager
           .allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), "OZONE");
       assertEquals(xceiverClientManager.getFactor().getNumber(),
-          containerWithPipeline.getPipeline().getMachines().size());
+          containerManager.getContainerReplicas(
+              container.containerID()).size());
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);
+      if (xceiverClientManager != null) {
+        xceiverClientManager.close();
+      }
       FileUtil.fullyDelete(testDir);
     }
   }

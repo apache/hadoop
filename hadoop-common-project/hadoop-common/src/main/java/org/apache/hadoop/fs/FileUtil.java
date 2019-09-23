@@ -22,9 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -367,8 +365,8 @@ public class FileUtil {
           returnVal = false;
       } catch (IOException e) {
         gotException = true;
-        exceptions.append(e.getMessage());
-        exceptions.append("\n");
+        exceptions.append(e.getMessage())
+            .append("\n");
       }
     }
     if (gotException) {
@@ -447,7 +445,7 @@ public class FileUtil {
       InputStream in = null;
       OutputStream out =null;
       try {
-        in = new FileInputStream(src);
+        in = Files.newInputStream(src.toPath());
         out = dstFS.create(dst);
         IOUtils.copyBytes(in, out, conf);
       } catch (IOException e) {
@@ -495,7 +493,7 @@ public class FileUtil {
       }
     } else {
       InputStream in = srcFS.open(src);
-      IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
+      IOUtils.copyBytes(in, Files.newOutputStream(dst.toPath()), conf);
     }
     if (deleteSource) {
       return srcFS.delete(src, true);
@@ -639,7 +637,7 @@ public class FileUtil {
             throw new IOException("Mkdirs failed to create " +
                 parent.getAbsolutePath());
           }
-          try (OutputStream out = new FileOutputStream(file)) {
+          try (OutputStream out = Files.newOutputStream(file.toPath())) {
             IOUtils.copyBytes(zip, out, BUFFER_SIZE);
           }
           if (!file.setLastModified(entry.getTime())) {
@@ -684,7 +682,7 @@ public class FileUtil {
                                       file.getParentFile().toString());
               }
             }
-            OutputStream out = new FileOutputStream(file);
+            OutputStream out = Files.newOutputStream(file.toPath());
             try {
               byte[] buffer = new byte[8192];
               int i;
@@ -873,10 +871,10 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append("gzip -dc | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -x ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -x ");
 
     if (gzipped) {
       untarCommand.append(")");
@@ -888,14 +886,14 @@ public class FileUtil {
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append(" gzip -dc '")
+          .append(FileUtil.makeSecureShellPath(inFile))
+          .append("' | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -xf ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -xf ");
 
     if (gzipped) {
       untarCommand.append(" -)");
@@ -918,11 +916,13 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            new FileInputStream(inFile)));
+        inputStream =
+            new GZIPInputStream(Files.newInputStream(inFile.toPath()));
       } else {
-        inputStream = new BufferedInputStream(new FileInputStream(inFile));
+        inputStream = Files.newInputStream(inFile.toPath());
       }
+
+      inputStream = new BufferedInputStream(inputStream);
 
       tis = new TarArchiveInputStream(inputStream);
 
@@ -940,13 +940,9 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            inputStream));
-      } else {
-        inputStream =
-            new BufferedInputStream(inputStream);
+        inputStream = new GZIPInputStream(inputStream);
       }
-
+      inputStream = new BufferedInputStream(inputStream);
       tis = new TarArchiveInputStream(inputStream);
 
       for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
@@ -1002,17 +998,7 @@ public class FileUtil {
       return;
     }
 
-    int count;
-    byte data[] = new byte[2048];
-    try (BufferedOutputStream outputStream = new BufferedOutputStream(
-        new FileOutputStream(outputFile));) {
-
-      while ((count = tis.read(data)) != -1) {
-        outputStream.write(data, 0, count);
-      }
-
-      outputStream.flush();
-    }
+    org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
   }
 
   /**
@@ -1474,8 +1460,8 @@ public class FileUtil {
    * @param inputClassPath String input classpath to bundle into the jar manifest
    * @param pwd Path to working directory to save jar
    * @param targetDir path to where the jar execution will have its working dir
-   * @param callerEnv Map<String, String> caller's environment variables to use
-   *   for expansion
+   * @param callerEnv Map {@literal <}String, String{@literal >} caller's
+   * environment variables to use for expansion
    * @return String[] with absolute path to new jar in position 0 and
    *   unexpanded wild card entry path in position 1
    * @throws IOException if there is an I/O error while writing the jar file
@@ -1517,8 +1503,8 @@ public class FileUtil {
             classPathEntryList.add(jar.toUri().toURL().toExternalForm());
           }
         } else {
-          unexpandedWildcardClasspath.append(File.pathSeparator);
-          unexpandedWildcardClasspath.append(classPathEntry);
+          unexpandedWildcardClasspath.append(File.pathSeparator)
+              .append(classPathEntry);
         }
       } else {
         // Append just this entry
@@ -1557,7 +1543,7 @@ public class FileUtil {
 
     // Write the manifest to output JAR file
     File classPathJar = File.createTempFile("classpath-", ".jar", workingDir);
-    try (FileOutputStream fos = new FileOutputStream(classPathJar);
+    try (OutputStream fos = Files.newOutputStream(classPathJar.toPath());
          BufferedOutputStream bos = new BufferedOutputStream(fos)) {
       JarOutputStream jos = new JarOutputStream(bos, jarManifest);
       jos.close();

@@ -95,9 +95,9 @@ public class TestStorageContainerManagerHttpServer {
 
   @Test public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+    conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
 
-    InetSocketAddress.createUnresolved("localhost", 0);
     StorageContainerManagerHttpServer server = null;
     try {
       server = new StorageContainerManagerHttpServer(conf);
@@ -105,13 +105,15 @@ public class TestStorageContainerManagerHttpServer {
 
       Assert.assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpEnabled(), server.getHttpAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpEnabled() &&
+              !policy.isHttpsEnabled(),
+          !canAccess("https", server.getHttpsAddress())));
 
       Assert.assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpsEnabled(), server.getHttpsAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpsEnabled() &&
+              !policy.isHttpEnabled(),
+          !canAccess("http", server.getHttpAddress())));
 
     } finally {
       if (server != null) {

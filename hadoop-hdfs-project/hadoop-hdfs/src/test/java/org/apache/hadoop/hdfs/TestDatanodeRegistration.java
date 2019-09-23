@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -56,7 +56,8 @@ import static org.mockito.Mockito.mock;
  */
 public class TestDatanodeRegistration {
   
-  public static final Log LOG = LogFactory.getLog(TestDatanodeRegistration.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDatanodeRegistration.class);
 
   private static class MonitorDNS extends SecurityManager {
     int lookups = 0;

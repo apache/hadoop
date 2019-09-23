@@ -52,6 +52,8 @@ public final class AMRMClientUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(AMRMClientUtils.class);
 
+  public static final int PRE_REGISTER_RESPONSE_ID = -1;
+
   public static final String APP_ALREADY_REGISTERED_MESSAGE =
       "Application Master is already registered : ";
 
@@ -152,6 +154,11 @@ public final class AMRMClientUtils {
     }
   }
 
+  public static int getNextResponseId(int responseId) {
+    // Loop between 0 to Integer.MAX_VALUE
+    return (responseId + 1) & Integer.MAX_VALUE;
+  }
+
   public static void addToOutstandingSchedulingRequests(
       Collection<SchedulingRequest> requests,
       Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests) {
@@ -190,8 +197,7 @@ public final class AMRMClientUtils {
       return;
     }
     for (Container container : containers) {
-      if (container.getAllocationTags() != null
-          && !container.getAllocationTags().isEmpty()) {
+      if (container.getAllocationTags() != null) {
         List<SchedulingRequest> schedReqs =
             outstandingSchedRequests.get(container.getAllocationTags());
         if (schedReqs != null && !schedReqs.isEmpty()) {

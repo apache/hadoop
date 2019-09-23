@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -110,8 +109,8 @@ public class TestQueueState {
       Assert.fail("Should throw an Exception.");
     } catch (Exception ex) {
       Assert.assertTrue(ex.getCause().getMessage().contains(
-          "The parent queue:q1 state is STOPPED, "
-          + "child queue:q2 state cannot be RUNNING."));
+          "The parent queue:q1 cannot be STOPPED as the child" +
+          " queue:q2 is in RUNNING state."));
     }
   }
 

@@ -16,10 +16,15 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
 import org.apache.hadoop.hdds.protocol.proto
@@ -30,10 +35,11 @@ import org.apache.hadoop.ozone.container.common.states.datanode
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
-import org.apache.hadoop.ozone.protocol.commands.CommandStatus
-    .CommandStatusBuilder;
+import org.apache.hadoop.ozone.protocol.commands
+    .DeleteBlockCommandStatus.DeleteBlockCommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
+import static java.lang.Math.min;
 import static org.apache.hadoop.hdds.scm.HddsServerUtil.getScmHeartbeatInterval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,9 +55,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
-
-import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
+import java.util.function.Consumer;
 
 /**
  * Current Context of State Machine.
@@ -64,9 +69,11 @@ public class StateContext {
   private final DatanodeStateMachine parent;
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
-  private final Queue<GeneratedMessage> reports;
+  private final List<GeneratedMessage> reports;
   private final Queue<ContainerAction> containerActions;
+  private final Queue<PipelineAction> pipelineActions;
   private DatanodeStateMachine.DatanodeStates state;
+  private boolean shutdownOnError = false;
 
   /**
    * Starting with a 2 sec heartbeat frequency which will be updated to the
@@ -91,6 +98,7 @@ public class StateContext {
     cmdStatusMap = new ConcurrentHashMap<>();
     reports = new LinkedList<>();
     containerActions = new LinkedList<>();
+    pipelineActions = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
   }
@@ -102,24 +110,6 @@ public class StateContext {
    */
   public DatanodeStateMachine getParent() {
     return parent;
-  }
-
-  /**
-   * Get the container server port.
-   * @return The container server port if available, return -1 if otherwise
-   */
-  public int getContainerPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getContainerServerPort();
-  }
-
-  /**
-   * Gets the Ratis Port.
-   * @return int , return -1 if not valid.
-   */
-  public int getRatisPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getRatisContainerServerPort();
   }
 
   /**
@@ -164,24 +154,44 @@ public class StateContext {
   }
 
   /**
+   * Sets the shutdownOnError. This method needs to be called when we
+   * set DatanodeState to SHUTDOWN when executing a task of a DatanodeState.
+   * @param value
+   */
+  private void setShutdownOnError(boolean value) {
+    this.shutdownOnError = value;
+  }
+
+  /**
+   * Get shutdownStateMachine.
+   * @return boolean
+   */
+  public boolean getShutdownOnError() {
+    return shutdownOnError;
+  }
+  /**
    * Adds the report to report queue.
    *
    * @param report report to be added
    */
   public void addReport(GeneratedMessage report) {
-    synchronized (reports) {
-      reports.add(report);
+    if (report != null) {
+      synchronized (reports) {
+        reports.add(report);
+      }
     }
   }
 
   /**
-   * Returns the next report, or null if the report queue is empty.
+   * Adds the reports which could not be sent by heartbeat back to the
+   * reports list.
    *
-   * @return report
+   * @param reportsToPutBack list of reports which failed to be sent by
+   *                         heartbeat.
    */
-  public GeneratedMessage getNextReport() {
+  public void putBackReports(List<GeneratedMessage> reportsToPutBack) {
     synchronized (reports) {
-      return reports.poll();
+      reports.addAll(0, reportsToPutBack);
     }
   }
 
@@ -189,7 +199,7 @@ public class StateContext {
    * Returns all the available reports from the report queue, or empty list if
    * the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getAllAvailableReports() {
     return getReports(Integer.MAX_VALUE);
@@ -199,13 +209,17 @@ public class StateContext {
    * Returns available reports from the report queue with a max limit on
    * list size, or empty list if the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getReports(int maxLimit) {
+    List<GeneratedMessage> reportsToReturn = new LinkedList<>();
     synchronized (reports) {
-      return reports.parallelStream().limit(maxLimit)
-          .collect(Collectors.toList());
+      List<GeneratedMessage> tempList = reports.subList(
+          0, min(reports.size(), maxLimit));
+      reportsToReturn.addAll(tempList);
+      tempList.clear();
     }
+    return reportsToReturn;
   }
 
 
@@ -237,7 +251,7 @@ public class StateContext {
    * Returns all the pending ContainerActions from the ContainerAction queue,
    * or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getAllPendingContainerActions() {
     return getPendingContainerAction(Integer.MAX_VALUE);
@@ -247,12 +261,71 @@ public class StateContext {
    * Returns pending ContainerActions from the ContainerAction queue with a
    * max limit on list size, or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getPendingContainerAction(int maxLimit) {
+    List<ContainerAction> containerActionList = new ArrayList<>();
     synchronized (containerActions) {
-      return containerActions.parallelStream().limit(maxLimit)
-          .collect(Collectors.toList());
+      if (!containerActions.isEmpty()) {
+        int size = containerActions.size();
+        int limit = size > maxLimit ? maxLimit : size;
+        for (int count = 0; count < limit; count++) {
+          // we need to remove the action from the containerAction queue
+          // as well
+          ContainerAction action = containerActions.poll();
+          Preconditions.checkNotNull(action);
+          containerActionList.add(action);
+        }
+      }
+      return containerActionList;
+    }
+  }
+
+  /**
+   * Add PipelineAction to PipelineAction queue if it's not present.
+   *
+   * @param pipelineAction PipelineAction to be added
+   */
+  public void addPipelineActionIfAbsent(PipelineAction pipelineAction) {
+    synchronized (pipelineActions) {
+      /**
+       * If pipelineAction queue already contains entry for the pipeline id
+       * with same action, we should just return.
+       * Note: We should not use pipelineActions.contains(pipelineAction) here
+       * as, pipelineAction has a msg string. So even if two msgs differ though
+       * action remains same on the given pipeline, it will end up adding it
+       * multiple times here.
+       */
+      for (PipelineAction pipelineActionIter : pipelineActions) {
+        if (pipelineActionIter.getAction() == pipelineAction.getAction()
+            && pipelineActionIter.hasClosePipeline() && pipelineAction
+            .hasClosePipeline()
+            && pipelineActionIter.getClosePipeline().getPipelineID()
+            .equals(pipelineAction.getClosePipeline().getPipelineID())) {
+          return;
+        }
+      }
+      pipelineActions.add(pipelineAction);
+    }
+  }
+
+  /**
+   * Returns pending PipelineActions from the PipelineAction queue with a
+   * max limit on list size, or empty list if the queue is empty.
+   *
+   * @return {@literal List<ContainerAction>}
+   */
+  public List<PipelineAction> getPendingPipelineAction(int maxLimit) {
+    List<PipelineAction> pipelineActionList = new ArrayList<>();
+    synchronized (pipelineActions) {
+      if (!pipelineActions.isEmpty()) {
+        int size = pipelineActions.size();
+        int limit = size > maxLimit ? maxLimit : size;
+        for (int count = 0; count < limit; count++) {
+          pipelineActionList.add(pipelineActions.poll());
+        }
+      }
+      return pipelineActionList;
     }
   }
 
@@ -291,20 +364,34 @@ public class StateContext {
       throws InterruptedException, ExecutionException, TimeoutException {
     stateExecutionCount.incrementAndGet();
     DatanodeState<DatanodeStateMachine.DatanodeStates> task = getTask();
-    if (this.isEntering()) {
-      task.onEnter();
-    }
-    task.execute(service);
-    DatanodeStateMachine.DatanodeStates newState = task.await(time, unit);
-    if (this.state != newState) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Task {} executed, state transited from {} to {}",
-            task.getClass().getSimpleName(), this.state, newState);
+
+    // Adding not null check, in a case where datanode is still starting up, but
+    // we called stop DatanodeStateMachine, this sets state to SHUTDOWN, and
+    // there is a chance of getting task as null.
+    if (task != null) {
+      if (this.isEntering()) {
+        task.onEnter();
       }
-      if (isExiting(newState)) {
-        task.onExit();
+      task.execute(service);
+      DatanodeStateMachine.DatanodeStates newState = task.await(time, unit);
+      if (this.state != newState) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Task {} executed, state transited from {} to {}",
+              task.getClass().getSimpleName(), this.state, newState);
+        }
+        if (isExiting(newState)) {
+          task.onExit();
+        }
+        this.setState(newState);
       }
-      this.setState(newState);
+
+      if (this.state == DatanodeStateMachine.DatanodeStates.SHUTDOWN) {
+        LOG.error("Critical error occurred in StateMachine, setting " +
+            "shutDownMachine");
+        // When some exception occurred, set shutdownStateMachine to true, so
+        // that we can terminate the datanode.
+        setShutdownOnError(true);
+      }
     }
   }
 
@@ -369,12 +456,14 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    this.addCmdStatus(cmd.getId(),
-        CommandStatusBuilder.newBuilder()
-            .setCmdId(cmd.getId())
-            .setStatus(Status.PENDING)
-            .setType(cmd.getType())
-            .build());
+    if (cmd.getType() == SCMCommandProto.Type.deleteBlocksCommand) {
+      addCmdStatus(cmd.getId(),
+          DeleteBlockCommandStatusBuilder.newBuilder()
+              .setCmdId(cmd.getId())
+              .setStatus(Status.PENDING)
+              .setType(cmd.getType())
+              .build());
+    }
   }
 
   /**
@@ -386,23 +475,15 @@ public class StateContext {
   }
 
   /**
-   * Remove object from cache in StateContext#cmdStatusMap.
-   *
-   */
-  public void removeCommandStatus(Long cmdId) {
-    cmdStatusMap.remove(cmdId);
-  }
-
-  /**
    * Updates status of a pending status command.
    * @param cmdId       command id
-   * @param cmdExecuted SCMCommand
+   * @param cmdStatusUpdater Consumer to update command status.
    * @return true if command status updated successfully else false.
    */
-  public boolean updateCommandStatus(Long cmdId, boolean cmdExecuted) {
+  public boolean updateCommandStatus(Long cmdId,
+      Consumer<CommandStatus> cmdStatusUpdater) {
     if(cmdStatusMap.containsKey(cmdId)) {
-      cmdStatusMap.get(cmdId)
-          .setStatus(cmdExecuted ? Status.EXECUTED : Status.FAILED);
+      cmdStatusUpdater.accept(cmdStatusMap.get(cmdId));
       return true;
     }
     return false;

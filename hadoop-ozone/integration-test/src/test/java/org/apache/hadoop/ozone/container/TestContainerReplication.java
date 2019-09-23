@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,20 +35,24 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .DatanodeBlockID;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer
     .writeChunkForContainer;
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -64,19 +67,28 @@ public class TestContainerReplication {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
+  private OzoneConfiguration conf;
+  private MiniOzoneCluster cluster;
+
+  @Before
+  public void setup() throws Exception {
+    conf = newOzoneConfiguration();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
+        .setRandomContainerPort(true).build();
+  }
+
+  @After
+  public void teardown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testContainerReplication() throws Exception {
     //GIVEN
-    OzoneConfiguration conf = newOzoneConfiguration();
-
     long containerId = 1L;
 
-    conf.setSocketAddr("hdls.datanode.http-address",
-        new InetSocketAddress("0.0.0.0", 0));
-
-    MiniOzoneCluster cluster =
-        MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
-            .setRandomContainerPort(true).build();
     cluster.waitForClusterToBeReady();
 
     HddsDatanodeService firstDatanode = cluster.getHddsDatanodes().get(0);
@@ -100,34 +112,43 @@ public class TestContainerReplication {
 
     DatanodeBlockID blockID = requestProto.getWriteChunk().getBlockID();
 
-    // Put Key to the test container
-    ContainerCommandRequestProto putKeyRequest = ContainerTestHelper
-        .getPutKeyRequest(sourcePipelines, requestProto.getWriteChunk());
+    // Put Block to the test container
+    ContainerCommandRequestProto putBlockRequest = ContainerTestHelper
+        .getPutBlockRequest(sourcePipelines, requestProto.getWriteChunk());
 
-    ContainerProtos.KeyData keyData = putKeyRequest.getPutKey().getKeyData();
-
-    ContainerCommandResponseProto response = client.sendCommand(putKeyRequest);
+    ContainerCommandResponseProto response =
+        client.sendCommand(putBlockRequest);
 
     Assert.assertNotNull(response);
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(putKeyRequest.getTraceID().equals(response.getTraceID()));
 
     HddsDatanodeService destinationDatanode =
         chooseDatanodeWithoutContainer(sourcePipelines,
             cluster.getHddsDatanodes());
 
+    // Close the container
+    ContainerCommandRequestProto closeContainerRequest = ContainerTestHelper
+        .getCloseContainer(sourcePipelines, containerId);
+    response = client.sendCommand(closeContainerRequest);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+
     //WHEN: send the order to replicate the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(destinationDatanode.getDatanodeDetails().getUuid(),
             new ReplicateContainerCommand(containerId,
-                sourcePipelines.getMachines()));
+                sourcePipelines.getNodes()));
 
-    Thread.sleep(3000);
+    DatanodeStateMachine destinationDatanodeDatanodeStateMachine =
+        destinationDatanode.getDatanodeStateMachine();
+
+    //wait for the replication
+    GenericTestUtils.waitFor(()
+        -> destinationDatanodeDatanodeStateMachine.getSupervisor()
+        .getReplicationCounter() > 0, 1000, 20_000);
 
     OzoneContainer ozoneContainer =
-        destinationDatanode.getDatanodeStateMachine().getContainer();
-
-
+        destinationDatanodeDatanodeStateMachine.getContainer();
 
     Container container =
         ozoneContainer
@@ -141,35 +162,31 @@ public class TestContainerReplication {
         "ContainerData of the replicated container is null",
         container.getContainerData());
 
-    long keyCount = ((KeyValueContainerData) container.getContainerData())
-        .getKeyCount();
-
     KeyValueHandler handler = (KeyValueHandler) ozoneContainer.getDispatcher()
         .getHandler(ContainerType.KeyValueContainer);
 
-    KeyData key = handler.getKeyManager()
-        .getKey(container, BlockID.getFromProtobuf(blockID));
+    BlockData key = handler.getBlockManager()
+        .getBlock(container, BlockID.getFromProtobuf(blockID));
 
     Assert.assertNotNull(key);
     Assert.assertEquals(1, key.getChunks().size());
     Assert.assertEquals(requestProto.getWriteChunk().getChunkData(),
         key.getChunks().get(0));
-
   }
 
   private HddsDatanodeService chooseDatanodeWithoutContainer(Pipeline pipeline,
       List<HddsDatanodeService> dataNodes) {
     for (HddsDatanodeService datanode : dataNodes) {
-      if (!pipeline.getMachines().contains(datanode.getDatanodeDetails())) {
+      if (!pipeline.getNodes().contains(datanode.getDatanodeDetails())) {
         return datanode;
       }
     }
-    throw new AssertionError("No datanode outside of the pipeline");
+    throw new AssertionError(
+        "No datanode outside of the pipeline");
   }
 
-  static OzoneConfiguration newOzoneConfiguration() {
-    final OzoneConfiguration conf = new OzoneConfiguration();
-    return conf;
+  private static OzoneConfiguration newOzoneConfiguration() {
+    return new OzoneConfiguration();
   }
 
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
@@ -29,6 +30,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
  * {@code MetadataStore} defines the set of operations that any metadata store
@@ -46,32 +51,43 @@ public interface MetadataStore extends Closeable {
    * Performs one-time initialization of the metadata store.
    *
    * @param fs {@code FileSystem} associated with the MetadataStore
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(FileSystem fs) throws IOException;
+  void initialize(FileSystem fs, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Performs one-time initialization of the metadata store via configuration.
-   * @see #initialize(FileSystem)
+   * @see #initialize(FileSystem, ITtlTimeProvider)
    * @param conf Configuration.
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(Configuration conf) throws IOException;
+  void initialize(Configuration conf,
+      ITtlTimeProvider ttlTimeProvider) throws IOException;
 
   /**
    * Deletes exactly one path, leaving a tombstone to prevent lingering,
    * inconsistent copies of it from being listed.
    *
+   * Deleting an entry with a tombstone needs a
+   * {@link org.apache.hadoop.fs.s3a.s3guard.S3Guard.TtlTimeProvider} because
+   * the lastUpdated field of the record has to be updated to <pre>now</pre>.
+   *
    * @param path the path to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void delete(Path path) throws IOException;
+  void delete(Path path,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path)}. It is currently intended for testing
-   * only, and a need to use it as part of normal FileSystem usage is not
-   * anticipated.
+   * {@link MetadataStore#delete(Path, BulkOperationState)}. It is currently
+   * intended for testing only, and a need to use it as part of normal
+   * FileSystem usage is not anticipated.
    *
    * @param path the path to delete
    * @throws IOException if there is an error
@@ -87,10 +103,32 @@ public interface MetadataStore extends Closeable {
    * implementations must also update any stored {@code DirListingMetadata}
    * objects which track the parent of this file.
    *
+   * Deleting a subtree with a tombstone needs a
+   * {@link org.apache.hadoop.fs.s3a.s3guard.S3Guard.TtlTimeProvider} because
+   * the lastUpdated field of all records have to be updated to <pre>now</pre>.
+   *
    * @param path the root of the sub-tree to delete
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path) throws IOException;
+  @Retries.RetryTranslated
+  void deleteSubtree(Path path,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
+
+  /**
+   * Delete the paths.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param paths paths to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+
+  @RetryTranslated
+  void deletePaths(Collection<Path> paths,
+      @Nullable BulkOperationState operationState)
+      throws IOException;
 
   /**
    * Gets metadata for a path.
@@ -125,7 +163,22 @@ public interface MetadataStore extends Closeable {
    *     in the MetadataStore.
    * @throws IOException if there is an error
    */
+  @Retries.RetryTranslated
   DirListingMetadata listChildren(Path path) throws IOException;
+
+  /**
+   * This adds all new ancestors of a path as directories.
+   * <p>
+   * Important: to propagate TTL information, any new ancestors added
+   * must have their last updated timestamps set through
+   * {@link S3Guard#patchLastUpdated(Collection, ITtlTimeProvider)}.
+   * @param qualifiedPath path to update
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws IOException failure
+   */
+  @RetryTranslated
+  void addAncestors(Path qualifiedPath,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Record the effects of a {@link FileSystem#rename(Path, Path)} in the
@@ -148,12 +201,14 @@ public interface MetadataStore extends Closeable {
    * @param pathsToDelete Collection of all paths that were removed from the
    *                      source directory tree of the move.
    * @param pathsToCreate Collection of all PathMetadata for the new paths
-   *                      that were created at the destination of the rename
-   *                      ().
+   *                      that were created at the destination of the rename().
+   * @param operationState     Any ongoing state supplied to the rename tracker
+   *                      which is to be passed in with each move operation.
    * @throws IOException if there is an error
    */
-  void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException;
+  void move(@Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Saves metadata for exactly one path.
@@ -165,7 +220,24 @@ public interface MetadataStore extends Closeable {
    * @param meta the metadata to save
    * @throws IOException if there is an error
    */
+  @RetryTranslated
   void put(PathMetadata meta) throws IOException;
+
+  /**
+   * Saves metadata for exactly one path, potentially
+   * using any bulk operation state to eliminate duplicate work.
+   *
+   * Implementations may pre-create all the path's ancestors automatically.
+   * Implementations must update any {@code DirListingMetadata} objects which
+   * track the immediate parent of this file.
+   *
+   * @param meta the metadata to save
+   * @param operationState operational state for a bulk update
+   * @throws IOException if there is an error
+   */
+  @RetryTranslated
+  void put(PathMetadata meta,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Saves metadata for any number of paths.
@@ -173,9 +245,11 @@ public interface MetadataStore extends Closeable {
    * Semantics are otherwise the same as single-path puts.
    *
    * @param metas the metadata to save
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void put(Collection<PathMetadata> metas) throws IOException;
+  void put(Collection<? extends PathMetadata> metas,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Save directory listing metadata. Callers may save a partial directory
@@ -192,9 +266,11 @@ public interface MetadataStore extends Closeable {
    * another process.
    *
    * @param meta Directory listing metadata.
+   * @param operationState operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void put(DirListingMetadata meta) throws IOException;
+  void put(DirListingMetadata meta,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Destroy all resources associated with the metadata store.
@@ -210,29 +286,54 @@ public interface MetadataStore extends Closeable {
   void destroy() throws IOException;
 
   /**
-   * Clear any metadata older than a specified time from the repository.
-   * Implementations MUST clear file metadata, and MAY clear directory metadata
-   * (s3a itself does not track modification time for directories).
-   * Implementations may also choose to throw UnsupportedOperationException
-   * istead. Note that modification times should be in UTC, as returned by
-   * System.currentTimeMillis at the time of modification.
+   * Prune method with two modes of operation:
+   * <ul>
+   *   <li>
+   *    {@link PruneMode#ALL_BY_MODTIME}
+   *    Clear any metadata older than a specified mod_time from the store.
+   *    Note that this modification time is the S3 modification time from the
+   *    object's metadata - from the object store.
+   *    Implementations MUST clear file metadata, and MAY clear directory
+   *    metadata (s3a itself does not track modification time for directories).
+   *    Implementations may also choose to throw UnsupportedOperationException
+   *    instead. Note that modification times must be in UTC, as returned by
+   *    System.currentTimeMillis at the time of modification.
+   *   </li>
+   * </ul>
    *
-   * @param modTime Oldest modification time to allow
+   * <ul>
+   *   <li>
+   *    {@link PruneMode#TOMBSTONES_BY_LASTUPDATED}
+   *    Clear any tombstone updated earlier than a specified time from the
+   *    store. Note that this last_updated is the time when the metadata
+   *    entry was last updated and maintained by the metadata store.
+   *    Implementations MUST clear file metadata, and MAY clear directory
+   *    metadata (s3a itself does not track modification time for directories).
+   *    Implementations may also choose to throw UnsupportedOperationException
+   *    instead. Note that last_updated must be in UTC, as returned by
+   *    System.currentTimeMillis at the time of modification.
+   *   </li>
+   * </ul>
+   *
+   * @param pruneMode Prune Mode
+   * @param cutoff Oldest time to allow (UTC)
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
    */
-  void prune(long modTime) throws IOException, UnsupportedOperationException;
+  void prune(PruneMode pruneMode, long cutoff) throws IOException,
+      UnsupportedOperationException;
 
   /**
-   * Same as {@link MetadataStore#prune(long)}, but with an additional
-   * keyPrefix parameter to filter the pruned keys with a prefix.
+   * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an
+   * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
-   * @param modTime Oldest modification time to allow
+   * @param pruneMode Prune Mode
+   * @param cutoff Oldest time to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
    */
-  void prune(long modTime, String keyPrefix)
+  void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException, UnsupportedOperationException;
 
   /**
@@ -250,4 +351,54 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Modes of operation for prune.
+   * For details see {@link MetadataStore#prune(PruneMode, long)}
+   */
+  enum PruneMode {
+    ALL_BY_MODTIME,
+    TOMBSTONES_BY_LASTUPDATED
+  }
+
+  /**
+   * Start a rename operation.
+   *
+   * @param storeContext store context.
+   * @param source source path
+   * @param sourceStatus status of the source file/dir
+   * @param dest destination path.
+   * @return the rename tracker
+   * @throws IOException Failure.
+   */
+  RenameTracker initiateRenameOperation(
+      StoreContext storeContext,
+      Path source,
+      S3AFileStatus sourceStatus,
+      Path dest)
+      throws IOException;
+
+  /**
+   * Initiate a bulk update and create an operation state for it.
+   * This may then be passed into put operations.
+   * @param operation the type of the operation.
+   * @param dest path under which updates will be explicitly put.
+   * @return null or a store-specific state to pass into the put operations.
+   * @throws IOException failure
+   */
+  default BulkOperationState initiateBulkWrite(
+      BulkOperationState.OperationType operation,
+      Path dest) throws IOException {
+    return null;
+  }
+
+  /**
+   * The TtlTimeProvider has to be set during the initialization for the
+   * metadatastore, but this method can be used for testing, and change the
+   * instance during runtime.
+   *
+   * @param ttlTimeProvider
+   */
+  void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
+
 }

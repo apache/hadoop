@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisterRequestProto;
@@ -30,11 +32,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -76,8 +73,9 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       ContainerReportsProto containerRequestProto = request
           .getContainerReport();
       NodeReportProto dnNodeReport = request.getNodeReport();
+      PipelineReportsProto pipelineReport = request.getPipelineReports();
       return impl.register(request.getDatanodeDetails(), dnNodeReport,
-          containerRequestProto);
+          containerRequestProto, pipelineReport);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -93,15 +91,4 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
     }
   }
 
-
-  @Override
-  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      RpcController controller, ContainerBlocksDeletionACKProto request)
-      throws ServiceException {
-    try {
-      return impl.sendContainerBlocksDeletionACK(request);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
 }

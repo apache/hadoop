@@ -31,6 +31,8 @@ See also:
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
 * [Working with IAM Assumed Roles](./assumed_roles.html)
+* [S3A Delegation Token Support](./delegation_tokens.html)
+* [S3A Delegation Token Architecture](delegation_token_architecture.html).
 * [Testing](./testing.html)
 
 ## <a name="overview"></a> Overview
@@ -197,7 +199,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have differerent authorization models
+### Warning #3: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -222,13 +224,12 @@ Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
 —they can delete them.
 
-Do not inadvertently share these credentials through means such as
+Do not inadvertently share these credentials through means such as:
 
 1. Checking in to SCM any configuration files containing the secrets.
 1. Logging them to a console, as they invariably end up being seen.
-1. Defining filesystem URIs with the credentials in the URL, such as
-`s3a://AK0010:secret@landsat-pds/`. They will end up in logs and error messages.
 1. Including the secrets in bug reports.
+1. Logging the `AWS_` environment variables.
 
 If you do any of these: change your credentials immediately!
 
@@ -241,6 +242,11 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+
+*Important*: The S3A connector no longer supports username and secrets
+in URLs of the form `s3a://key:secret@bucket/`.
+It is near-impossible to stop those secrets being logged —which is why
+a warning has been printed since Hadoop 2.8 whenever such a URL was used.
 
 ### Authentication properties
 
@@ -281,9 +287,8 @@ of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports
-        static configuration of AWS access key ID and secret access key.
-        See also fs.s3a.access.key and fs.s3a.secret.key.
+    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
@@ -335,17 +340,20 @@ on the hosts/processes where the work is executed.
 
 ### <a name="auth_providers"></a> Changing Authentication Providers
 
-The standard way to authenticate is with an access key and secret key using the
-properties in the configuration file.
+The standard way to authenticate is with an access key and secret key set in
+the Hadoop configuration files.
 
-The S3A client follows the following authentication chain:
+By default, the S3A client follows the following authentication chain:
 
-1. If login details were provided in the filesystem URI, a warning is printed
-and then the username and password extracted for the AWS key and secret respectively.
+1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key
+are looked for in the Hadoop XML configuration/Hadoop credential providers,
+returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
-XML configuration.
+XML configuration//Hadoop credential providers, returning a set of long-lived
+credentials if they are defined.
 1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
-are then looked for.
+are then looked for: these will return session or full credentials depending
+on which values are set.
 1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
  retrieve credentials published to EC2 VMs.
 
@@ -361,13 +369,19 @@ AWS Credential Providers are classes which can be used by the Amazon AWS SDK to
 obtain an AWS login from a different source in the system, including environment
 variables, JVM properties and configuration files.
 
-There are three AWS Credential Providers inside the `hadoop-aws` JAR:
+All Hadoop `fs.s3a.` options used to store login details can all be secured
+in [Hadoop credential providers](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html);
+this is advised as a more secure way to store valuable secrets.
+
+There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
 
 | classname | description |
 |-----------|-------------|
 | `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
 | `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
 | `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
+| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider<`| [Assumed Role credentials](assumed_roles.html) |
+
 
 There are also many in the Amazon SDKs, in particular two which are automatically
 set up in the authentication chain:
@@ -461,12 +475,11 @@ security and therefore is unsuitable for most use cases.
 then the Anonymous Credential provider *must* come last. If not, credential
 providers listed after it will be ignored.
 
-*Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
+### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which
-supports the secret key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
-values. It does not support authentication with logins credentials declared
-in the URLs.
+This is is the standard credential provider, which supports the secret
+key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
+values.
 
 ```xml
 <property>
@@ -475,9 +488,7 @@ in the URLs.
 </property>
 ```
 
-Apart from its lack of support of user:password details being included in filesystem
-URLs (a dangerous practise that is strongly discouraged), this provider acts
-exactly at the basic authenticator used in the default authentication chain.
+This is the basic authenticator used in the default authentication chain.
 
 This means that the default S3A authentication chain can be defined as
 
@@ -485,10 +496,52 @@ This means that the default S3A authentication chain can be defined as
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
   <value>
-  org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-  com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
-  com.amazonaws.auth.InstanceProfileCredentialsProvider
+    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
+    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
+  <description>
+    Comma-separated class names of credential provider classes which implement
+    com.amazonaws.auth.AWSCredentialsProvider.
+
+    When S3A delegation tokens are not enabled, this list will be used
+    to directly authenticate with S3 and DynamoDB services.
+    When S3A Delegation tokens are enabled, depending upon the delegation
+    token binding it may be used
+    to communicate wih the STS endpoint to request session/role
+    credentials.
+
+    These are loaded and queried in sequence for a valid set of credentials.
+    Each listed class must implement one of the following means of
+    construction, which are attempted in order:
+    * a public constructor accepting java.net.URI and
+        org.apache.hadoop.conf.Configuration,
+    * a public constructor accepting org.apache.hadoop.conf.Configuration,
+    * a public static method named getInstance that accepts no
+       arguments and returns an instance of
+       com.amazonaws.auth.AWSCredentialsProvider, or
+    * a public default constructor.
+
+    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
+    anonymous access to a publicly accessible S3 bucket without any credentials.
+    Please note that allowing anonymous access to an S3 bucket compromises
+    security and therefore is unsuitable for most use cases. It can be useful
+    for accessing public data sets without requiring AWS credentials.
+
+    If unspecified, then the default list of credential provider classes,
+    queried in sequence, is:
+    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
+       for session login secrets in the Hadoop configuration.
+    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
+    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+        configuration of AWS access key ID and secret access key in
+        environment variables named AWS_ACCESS_KEY_ID and
+        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
+    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
+       IAM credentials of any EC2 VM or AWS container in which the process is running.
+  </description>
 </property>
 ```
 
@@ -502,9 +555,6 @@ and significantly damage your organisation.
 
 1. Never commit your secrets into an SCM repository.
 The [git secrets](https://github.com/awslabs/git-secrets) can help here.
-
-1. Avoid using s3a URLs which have key and secret in the URL. This
-is dangerous as the secrets leak into the logs.
 
 1. Never include AWS credentials in bug reports, files attached to them,
 or similar.
@@ -526,20 +576,23 @@ The command line of any launched program is visible to all users on a Unix syste
 management: a specific S3A connection can be made with a different assumed role
 and permissions from the primary user account.
 
-1. Consider a workflow in which usera and applications are issued with short-lived
+1. Consider a workflow in which users and applications are issued with short-lived
 session credentials, configuring S3A to use these through
 the `TemporaryAWSCredentialsProvider`.
 
 1. Have a secure process in place for cancelling and re-issuing credentials for
 users and applications. Test it regularly by using it to refresh credentials.
 
+1. In installations where Kerberos is enabled, [S3A Delegation Tokens](delegation_tokens.html)
+can be used to acquire short-lived session/role credentials and then pass them
+into the shared application. This can ensure that the long-lived secrets stay
+on the local system.
+
 When running in EC2, the IAM EC2 instance credential provider will automatically
 obtain the credentials needed to access AWS services in the role the EC2 VM
 was deployed as.
-This credential provider is enabled in S3A by default.
+This AWS credential provider is enabled in S3A by default.
 
-The safest way to keep the AWS login keys a secret within Hadoop is to use
-Hadoop Credentials.
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
@@ -807,7 +860,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -815,7 +868,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128MB</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -965,7 +1018,7 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
@@ -980,7 +1033,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
@@ -1090,6 +1143,131 @@ the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
 1. KMS: "consult AWS about increasing your capacity".
 
 
+
+## Handling Read-During-Overwrite
+
+Read-during-overwrite is the condition where a writer overwrites a file while
+a reader has an open input stream on the file.  Depending on configuration,
+the S3AFileSystem may detect this and throw a `RemoteFileChangedException` in
+conditions where the reader's input stream might otherwise silently switch over
+from reading bytes from the original version of the file to reading bytes from
+the new version.
+
+The configurations items controlling this behavior are:
+
+```xml
+<property>
+  <name>fs.s3a.change.detection.source</name>
+  <value>etag</value>
+  <description>
+    Select which S3 object attribute to use for change detection.
+    Currently support 'etag' for S3 object eTags and 'versionid' for
+    S3 object version IDs.  Use of version IDs requires object versioning to be
+    enabled for each S3 bucket utilized.  Object versioning is disabled on
+    buckets by default. When version ID is used, the buckets utilized should
+    have versioning enabled before any data is written.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>server</value>
+  <description>
+    Determines how change detection is applied to alert to S3 objects
+    rewritten while being read. Value 'server' indicates to apply the attribute
+    constraint directly on GetObject requests to S3. Value 'client' means to do a
+    client-side comparison of the attribute value returned in the response.  Value
+    'server' would not work with third-party S3 implementations that do not
+    support these constraints on GetObject. Values 'server' and 'client' generate
+    RemoteObjectChangedException when a mismatch is detected.  Value 'warn' works
+    like 'client' but generates only a warning.  Value 'none' will ignore change
+    detection completely.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.change.detection.version.required</name>
+  <value>true</value>
+  <description>
+    Determines if S3 object version attribute defined by
+    fs.s3.change.detection.source should be treated as required.  If true and the
+    referred attribute is unavailable in an S3 GetObject response,
+    NoVersionAttributeException is thrown.  Setting to 'true' is encouraged to
+    avoid potential for inconsistent reads with third-party S3 implementations or
+    against S3 buckets that have object versioning disabled.
+  </description>
+</property>
+```
+
+In the default configuration, S3 object eTags are used to detect changes.  When
+the filesystem retrieves a file from S3 using
+[Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
+it captures the eTag and uses that eTag in an `If-Match` condition on each
+subsequent request.  If a concurrent writer has overwritten the file, the
+'If-Match' condition will fail and a `RemoteFileChangedException` will be thrown.
+
+Even in this default configuration, a new write may not trigger this exception
+on an open reader.  For example, if the reader only reads forward in the file
+then only a single S3 'Get Object' request is made and the full contents of the
+file are streamed from a single response.  An overwrite of the file after the
+'Get Object' request would not be seen at all by a reader with an input stream
+that had already read the first byte.  Seeks backward on the other hand can
+result in new 'Get Object' requests that can trigger the
+`RemoteFileChangedException`.
+
+Additionally, due to the eventual consistency of S3 in a read-after-overwrite
+scenario, visibility of a new write may be delayed, avoiding the
+`RemoteFileChangedException` for some readers.  That said, if a reader does not
+see `RemoteFileChangedException`, they will have at least read a consistent view
+of a single version of the file (the version available when they started
+reading).
+
+### Change detection with S3 Versions.
+
+It is possible to switch to using the
+[S3 object version id](https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectVersioning.html)
+instead of eTag as the change detection mechanism.  Use of this option requires
+object versioning to be enabled on any S3 buckets used by the filesystem.  The
+benefit of using version id instead of eTag is potentially reduced frequency
+of `RemoteFileChangedException`. With object versioning enabled, old versions
+of objects remain available after they have been overwritten.
+This means an open input stream will still be able to seek backwards after a
+concurrent writer has overwritten the file.
+The reader will retain their consistent view of the version of the file from
+which they read the first byte.
+Because the version ID is null for objects written prior to enablement of
+object versioning, **this option should only be used when the S3 buckets
+have object versioning enabled from the beginning.**
+
+Note: when you rename files the copied files may have a different version number.
+
+### Change Detection Modes.
+
+Configurable change detection mode is the next option.  Different modes are
+available primarily for compatibility with third-party S3 implementations which
+may not support all change detection mechanisms.
+
+* `server`: the version/etag check is performed on the server by adding
+extra headers to the `GET` request. This is the default.
+* `client` : check on the client by comparing the eTag/version ID of a
+reopened file with the previous version.
+This is useful when the implementation doesn't support the `If-Match` header.
+* `warn`: check on the client, but only warn on a mismatch, rather than fail.
+* `none` do not check. Useful if the implementation doesn't provide eTag
+or version ID support at all or you would like to retain previous behavior
+where the reader's input stream silently switches over to the new object version
+(not recommended).
+
+The final option (`fs.s3a.change.detection.version.required`) is present
+primarily to ensure the filesystem doesn't silently ignore the condition
+where it is configured to use version ID on a bucket that doesn't have
+object versioning enabled or alternatively it is configured to use eTag on
+an S3 implementation that doesn't return eTags.
+
+When `true` (default) and 'Get Object' doesn't return eTag or
+version ID (depending on configured 'source'), a `NoVersionAttributeException`
+will be thrown.  When `false` and and eTag or version ID is not returned,
+the stream can be read, but without any version checking.
 
 
 ## <a name="per_bucket_configuration"></a>Configuring different S3 buckets with Per-Bucket Configuration

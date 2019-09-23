@@ -27,8 +27,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Assert;
@@ -36,8 +36,8 @@ import org.junit.Test;
 
 public class TestTimelineRecords {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestTimelineRecords.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTimelineRecords.class);
 
   @Test
   public void testEntities() throws Exception {

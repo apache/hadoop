@@ -23,6 +23,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
@@ -70,30 +71,35 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSche
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSchedulingAllocateResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterDistributedSchedulingAMResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo
-    .FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -111,6 +117,9 @@ public class TestOpportunisticContainerAllocatorAMService {
 
   private MockRM rm;
   private DrainDispatcher dispatcher;
+
+  private OpportunisticContainersStatus oppContainersStatus =
+      getOpportunisticStatus();
 
   @Before
   public void createAndStartRM() {
@@ -174,40 +183,27 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm3.registerNode();
     nm4.registerNode();
 
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+    nm3.nodeHeartbeat(oppContainersStatus, true);
+    nm4.nodeHeartbeat(oppContainersStatus, true);
+
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-    ApplicationAttemptId attemptId =
-        app1.getCurrentAppAttempt().getAppAttemptId();
+
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
-    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
-    RMNode rmNode3 = rm.getRMContext().getRMNodes().get(nm3.getNodeId());
-    RMNode rmNode4 = rm.getRMContext().getRMNodes().get(nm4.getNodeId());
 
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-    nm3.nodeHeartbeat(true);
-    nm4.nodeHeartbeat(true);
-
-    // Send add and update node events to AM Service.
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode2));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode3));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode4));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode2));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode3));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode4));
     // All nodes 1 - 4 will be applicable for scheduling.
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-    nm3.nodeHeartbeat(true);
-    nm4.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+    nm3.nodeHeartbeat(oppContainersStatus, true);
+    nm4.nodeHeartbeat(oppContainersStatus, true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 4, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -242,7 +238,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             container.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
             null, ExecutionType.GUARANTEED)));
     // Node on same host should not result in allocation
-    sameHostDiffNode.nodeHeartbeat(true);
+    sameHostDiffNode.nodeHeartbeat(oppContainersStatus, true);
     rm.drainEvents();
     allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
     Assert.assertEquals(0, allocateResponse.getUpdatedContainers().size());
@@ -285,7 +281,7 @@ public class TestOpportunisticContainerAllocatorAMService {
             .getUpdateContainerRequest().getContainerId());
 
     // Ensure after correct node heartbeats, we should get the allocation
-    allocNode.nodeHeartbeat(true);
+    allocNode.nodeHeartbeat(oppContainersStatus, true);
     rm.drainEvents();
     allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
     Assert.assertEquals(1, allocateResponse.getUpdatedContainers().size());
@@ -299,10 +295,10 @@ public class TestOpportunisticContainerAllocatorAMService {
     // Allocated cores+mem should have increased, available should decrease
     verifyMetrics(metrics, 14336, 14, 2048, 2, 2);
 
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-    nm3.nodeHeartbeat(true);
-    nm4.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+    nm3.nodeHeartbeat(oppContainersStatus, true);
+    nm4.nodeHeartbeat(oppContainersStatus, true);
     rm.drainEvents();
 
     // Verify that the container is still in ACQUIRED state wrt the RM.
@@ -341,38 +337,23 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm1.registerNode();
     nm2.registerNode();
 
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-    ApplicationAttemptId attemptId =
-        app1.getCurrentAppAttempt().getAppAttemptId();
+
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
-    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
-
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-
-    ((RMNodeImpl) rmNode1)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-    ((RMNodeImpl) rmNode2)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-
-    OpportunisticContainerContext ctxt = ((CapacityScheduler) scheduler)
-        .getApplicationAttempt(attemptId).getOpportunisticContainerContext();
-    // Send add and update node events to AM Service.
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode2));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // All nodes 1 to 2 will be applicable for scheduling.
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -466,38 +447,24 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm1.registerNode();
     nm2.registerNode();
 
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-    ApplicationAttemptId attemptId =
-        app1.getCurrentAppAttempt().getAppAttemptId();
+
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
-    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
 
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-
-    ((RMNodeImpl) rmNode1)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-    ((RMNodeImpl) rmNode2)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-
-    OpportunisticContainerContext ctxt = ((CapacityScheduler) scheduler)
-        .getApplicationAttempt(attemptId).getOpportunisticContainerContext();
-    // Send add and update node events to AM Service.
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode2));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // All nodes 1 to 2 will be applicable for scheduling.
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -578,31 +545,20 @@ public class TestOpportunisticContainerAllocatorAMService {
     createAndStartRMWithAutoUpdateContainer();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
     nm1.registerNode();
+    nm1.nodeHeartbeat(oppContainersStatus, true);
 
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-    ApplicationAttemptId attemptId =
-        app1.getCurrentAppAttempt().getAppAttemptId();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     ResourceScheduler scheduler = rm.getResourceScheduler();
     RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
 
-    nm1.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
 
-    ((RMNodeImpl) rmNode1)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-
-    OpportunisticContainerContext ctxt =
-        ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
-            .getOpportunisticContainerContext();
-    // Send add and update node events to AM Service.
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-
-    nm1.nodeHeartbeat(true);
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 1, 10, 10 * 100);
 
     AllocateResponse allocateResponse = am1.allocate(Arrays.asList(
         ResourceRequest.newInstance(Priority.newInstance(1), "*",
@@ -698,7 +654,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     Assert.assertEquals(Resource.newInstance(1 * GB, 1),
         response.getContainersToUpdate().get(0).getResource());
 
-    nm1.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(oppContainersStatus, true);
     // DEMOTE the container
     allocateResponse = am1.sendContainerUpdateRequest(Arrays.asList(
         UpdateContainerRequest.newInstance(3, container.getId(),
@@ -720,7 +676,7 @@ public class TestOpportunisticContainerAllocatorAMService {
         uc.getContainer().getExecutionType());
     // Check that the container is updated in NM through NM heartbeat response
     if (response.getContainersToUpdate().size() == 0) {
-      response = nm1.nodeHeartbeat(true);
+      response = nm1.nodeHeartbeat(oppContainersStatus, true);
     }
     Assert.assertEquals(1, response.getContainersToUpdate().size());
     Assert.assertEquals(ExecutionType.OPPORTUNISTIC,
@@ -738,11 +694,133 @@ public class TestOpportunisticContainerAllocatorAMService {
   }
 
   @Test(timeout = 60000)
+  public void testOpportunisticSchedulerMetrics() throws Exception {
+    HashMap<NodeId, MockNM> nodes = new HashMap<>();
+    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm1.getNodeId(), nm1);
+    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm2.getNodeId(), nm2);
+    nm1.registerNode();
+    nm2.registerNode();
+
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
+    OpportunisticSchedulerMetrics metrics =
+        OpportunisticSchedulerMetrics.getMetrics();
+
+    int allocContainers = metrics.getAllocatedContainers();
+    long aggrAllocatedContainers = metrics.getAggregatedAllocatedContainers();
+    long aggrOffSwitchContainers = metrics.getAggregatedOffSwitchContainers();
+    long aggrReleasedContainers = metrics.getAggregatedReleasedContainers();
+
+    OpportunisticContainerAllocatorAMService amservice =
+        (OpportunisticContainerAllocatorAMService) rm
+            .getApplicationMasterService();
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    ApplicationAttemptId attemptId =
+        app1.getCurrentAppAttempt().getAppAttemptId();
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+
+    // All nodes 1 to 2 will be applicable for scheduling.
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
+
+    AllocateResponse allocateResponse = am1.allocate(Arrays.asList(
+        ResourceRequest.newInstance(Priority.newInstance(1), "*",
+            Resources.createResource(1 * GB), 2, true, null,
+            ExecutionTypeRequest
+                .newInstance(ExecutionType.OPPORTUNISTIC, true))), null);
+
+    List<Container> allocatedContainers = allocateResponse
+        .getAllocatedContainers();
+    Assert.assertEquals(2, allocatedContainers.size());
+
+    Assert.assertEquals(allocContainers + 2, metrics.getAllocatedContainers());
+    Assert.assertEquals(aggrAllocatedContainers + 2,
+        metrics.getAggregatedAllocatedContainers());
+    Assert.assertEquals(aggrOffSwitchContainers + 2,
+        metrics.getAggregatedOffSwitchContainers());
+
+    Container container = allocatedContainers.get(0);
+    MockNM allocNode = nodes.get(container.getNodeId());
+
+    // Start Container in NM
+    allocNode.nodeHeartbeat(Arrays.asList(
+        ContainerStatus.newInstance(container.getId(),
+            ExecutionType.OPPORTUNISTIC, ContainerState.RUNNING, "", 0)),
+        true);
+    rm.drainEvents();
+
+    // Verify that container is actually running wrt the RM..
+    RMContainer rmContainer = ((CapacityScheduler) scheduler)
+        .getApplicationAttempt(
+            container.getId().getApplicationAttemptId()).getRMContainer(
+            container.getId());
+    Assert.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+
+    // Container Completed in the NM
+    allocNode.nodeHeartbeat(Arrays.asList(
+        ContainerStatus.newInstance(container.getId(),
+            ExecutionType.OPPORTUNISTIC, ContainerState.COMPLETE, "", 0)),
+        true);
+    rm.drainEvents();
+
+    // Verify that container has been removed..
+    rmContainer = ((CapacityScheduler) scheduler)
+        .getApplicationAttempt(
+            container.getId().getApplicationAttemptId()).getRMContainer(
+            container.getId());
+    Assert.assertNull(rmContainer);
+
+    Assert.assertEquals(allocContainers + 1, metrics.getAllocatedContainers());
+    Assert.assertEquals(aggrReleasedContainers + 1,
+        metrics.getAggregatedReleasedContainers());
+  }
+
+  @Test(timeout = 60000)
+  public void testAMCrashDuringAllocate() throws Exception {
+    MockNM nm = new MockNM("h:1234", 4096, rm.getResourceTrackerService());
+    nm.registerNode();
+
+    RMApp app = rm.submitApp(1 * GB, "app", "user", null, "default");
+    ApplicationAttemptId attemptId0 =
+        app.getCurrentAppAttempt().getAppAttemptId();
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
+
+    //simulate AM crash by replacing the current attempt
+    //Do not use rm.failApplicationAttempt, the bug will skip due to
+    //ApplicationDoesNotExistInCacheException
+    CapacityScheduler scheduler= ((CapacityScheduler) rm.getRMContext().
+        getScheduler());
+    SchedulerApplication<FiCaSchedulerApp> schApp =
+        (SchedulerApplication<FiCaSchedulerApp>)scheduler.
+        getSchedulerApplications().get(attemptId0.getApplicationId());
+    final ApplicationAttemptId appAttemptId1 = TestUtils.
+        getMockApplicationAttemptId(1, 1);
+    schApp.setCurrentAppAttempt(new FiCaSchedulerApp(appAttemptId1,
+        null, scheduler.getQueue("default"), null, rm.getRMContext()));
+
+    //start to allocate
+    am.allocate(
+        Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1),
+        "*", Resources.createResource(1 * GB), 2)), null);
+  }
+
+  @Test(timeout = 60000)
   public void testNodeRemovalDuringAllocate() throws Exception {
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
     MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
     nm1.registerNode();
     nm2.registerNode();
+
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
@@ -753,20 +831,14 @@ public class TestOpportunisticContainerAllocatorAMService {
     ResourceScheduler scheduler = rm.getResourceScheduler();
     RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
-    nm1.nodeHeartbeat(true);
-    nm2.nodeHeartbeat(true);
-    ((RMNodeImpl) rmNode1)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
-    ((RMNodeImpl) rmNode2)
-        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
+
     OpportunisticContainerContext ctxt = ((CapacityScheduler) scheduler)
         .getApplicationAttempt(attemptId).getOpportunisticContainerContext();
-    // Send add and update node events to AM Service.
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
-    amservice.handle(new NodeAddedSchedulerEvent(rmNode2));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    amservice.handle(new NodeUpdateSchedulerEvent(rmNode2));
+
     // Both node 1 and node 2 will be applicable for scheduling.
+    nm1.nodeHeartbeat(oppContainersStatus, true);
+    nm2.nodeHeartbeat(oppContainersStatus, true);
+
     for (int i = 0; i < 10; i++) {
       am1.allocate(
           Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1),
@@ -798,13 +870,69 @@ public class TestOpportunisticContainerAllocatorAMService {
     Assert.assertEquals(1, ctxt.getNodeMap().size());
   }
 
+  @Test(timeout = 60000)
+  public void testAppAttemptRemovalAfterNodeRemoval() throws Exception {
+    MockNM nm = new MockNM("h:1234", 4096, rm.getResourceTrackerService());
+
+    nm.registerNode();
+    nm.nodeHeartbeat(oppContainersStatus, true);
+
+    RMApp app = rm.submitApp(1 * GB, "app", "user", null, "default");
+    ApplicationAttemptId attemptId =
+        app.getCurrentAppAttempt().getAppAttemptId();
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    SchedulerApplicationAttempt schedulerAttempt =
+        ((CapacityScheduler)scheduler).getApplicationAttempt(attemptId);
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm.getNodeId());
+
+    nm.nodeHeartbeat(oppContainersStatus, true);
+
+    GenericTestUtils.waitFor(() ->
+        scheduler.getNumClusterNodes() == 1, 10, 200 * 100);
+
+    AllocateResponse allocateResponse = am.allocate(
+            Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1),
+                "*", Resources.createResource(1 * GB), 2, true, null,
+                ExecutionTypeRequest.newInstance(
+                    ExecutionType.OPPORTUNISTIC, true))),
+                null);
+    List<Container> allocatedContainers = allocateResponse
+        .getAllocatedContainers();
+    Container container = allocatedContainers.get(0);
+    scheduler.handle(new NodeRemovedSchedulerEvent(rmNode1));
+
+    GenericTestUtils.waitFor(() ->
+        scheduler.getNumClusterNodes() == 0, 10, 200 * 100);
+
+    //test YARN-9165
+    RMContainer rmContainer = null;
+    rmContainer = SchedulerUtils.createOpportunisticRmContainer(
+                    rm.getRMContext(), container, true);
+    if (rmContainer == null) {
+      rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container),
+        schedulerAttempt.getApplicationAttemptId(), container.getNodeId(),
+        schedulerAttempt.getUser(), rm.getRMContext(), true);
+    }
+    //test YARN-9164
+    schedulerAttempt.addRMContainer(container.getId(), rmContainer);
+    scheduler.handle(new AppAttemptRemovedSchedulerEvent(attemptId,
+        RMAppAttemptState.FAILED, false));
+  }
+
+  private OpportunisticContainersStatus getOpportunisticStatus() {
+    return getOppurtunisticStatus(-1, 100, 1000);
+  }
+
   private OpportunisticContainersStatus getOppurtunisticStatus(int waitTime,
-      int queueLength) {
-    OpportunisticContainersStatus status1 =
-        Mockito.mock(OpportunisticContainersStatus.class);
-    Mockito.when(status1.getEstimatedQueueWaitTime()).thenReturn(waitTime);
-    Mockito.when(status1.getWaitQueueLength()).thenReturn(queueLength);
-    return status1;
+      int queueLength, int queueCapacity) {
+    OpportunisticContainersStatus status =
+        OpportunisticContainersStatus.newInstance();
+    status.setEstimatedQueueWaitTime(waitTime);
+    status.setOpportQueueCapacity(queueCapacity);
+    status.setWaitQueueLength(queueLength);
+    return status;
   }
 
   // Test if the OpportunisticContainerAllocatorAMService can handle both

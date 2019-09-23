@@ -22,17 +22,18 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.fs.Path;
 
+import com.google.common.annotations.VisibleForTesting;
 import picocli.CommandLine;
 import picocli.CommandLine.ExecutionException;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.RunLast;
 
 /**
  * This is a generic parent class for all the ozone related cli tools.
  */
-public class GenericCli implements Callable<Void> {
+public class GenericCli implements Callable<Void>, GenericParentCommand {
 
   @Option(names = {"--verbose"},
       description = "More verbose output. Show the stack trace of the errors.")
@@ -40,6 +41,9 @@ public class GenericCli implements Callable<Void> {
 
   @Option(names = {"-D", "--set"})
   private Map<String, String> configurationOverrides = new HashMap<>();
+
+  @Option(names = {"-conf"})
+  private String configurationPath;
 
   private final CommandLine cmd;
 
@@ -49,15 +53,23 @@ public class GenericCli implements Callable<Void> {
 
   public void run(String[] argv) {
     try {
-      cmd.parseWithHandler(new RunLast(), argv);
+      execute(argv);
     } catch (ExecutionException ex) {
-      printError(ex.getCause());
+      printError(ex.getCause() == null ? ex : ex.getCause());
       System.exit(-1);
     }
   }
 
-  private void printError(Throwable error) {
-    if (verbose) {
+  @VisibleForTesting
+  public void execute(String[] argv) {
+    cmd.parseWithHandler(new RunLast(), argv);
+  }
+
+  protected void printError(Throwable error) {
+    //message could be null in case of NPE. This is unexpected so we can
+    //print out the stack trace.
+    if (verbose || error.getMessage() == null
+        || error.getMessage().length() == 0) {
       error.printStackTrace(System.err);
     } else {
       System.err.println(error.getMessage().split("\n")[0]);
@@ -66,17 +78,30 @@ public class GenericCli implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    throw new ParameterException(cmd, "Please choose a subcommand");
+    throw new MissingSubcommandException(cmd);
   }
 
+  @Override
   public OzoneConfiguration createOzoneConfiguration() {
     OzoneConfiguration ozoneConf = new OzoneConfiguration();
+    if (configurationPath != null) {
+      ozoneConf.addResource(new Path(configurationPath));
+    }
     if (configurationOverrides != null) {
       for (Entry<String, String> entry : configurationOverrides.entrySet()) {
-        ozoneConf
-            .set(entry.getKey(), configurationOverrides.get(entry.getValue()));
+        ozoneConf.set(entry.getKey(), entry.getValue());
       }
     }
     return ozoneConf;
+  }
+
+  @VisibleForTesting
+  public picocli.CommandLine getCmd() {
+    return cmd;
+  }
+
+  @Override
+  public boolean isVerbose() {
+    return verbose;
   }
 }

@@ -27,8 +27,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 @Private
 @Unstable
 public class FSParentQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       FSParentQueue.class.getName());
 
   private final List<FSQueue> childQueues = new ArrayList<>();
@@ -59,7 +59,20 @@ public class FSParentQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
   }
-  
+
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (getName().equals("root")) {
+      return maxContainerAllocation;
+    }
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
+  }
+
   void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
@@ -183,7 +196,8 @@ public class FSParentQueue extends FSQueue {
     // If this queue is over its limit, reject
     if (!assignContainerPreCheck(node)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Assign container precheck on node " + node + " failed");
+        LOG.debug("Assign container precheck for queue " + getName() +
+            " on node " + node.getNodeName() + " failed");
       }
       return assigned;
     }
@@ -199,6 +213,10 @@ public class FSParentQueue extends FSQueue {
     TreeSet<FSQueue> sortedChildQueues = new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Node " + node.getNodeName() + " offered to parent queue: " +
+            getName() + " visiting " + childQueues.size() + " children");
+      }
       sortedChildQueues.addAll(childQueues);
       for (FSQueue child : sortedChildQueues) {
         assigned = child.assignContainer(node);
@@ -248,6 +266,21 @@ public class FSParentQueue extends FSQueue {
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      for (FSQueue queue: childQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
   }
 
   @Override

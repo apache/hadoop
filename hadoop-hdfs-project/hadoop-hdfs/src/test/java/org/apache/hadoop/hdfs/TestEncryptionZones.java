@@ -52,7 +52,6 @@ import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
@@ -89,7 +88,6 @@ import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
-import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
@@ -97,6 +95,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
@@ -112,13 +111,13 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyShort;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.Mockito.withSettings;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
@@ -964,10 +963,8 @@ public class TestEncryptionZones {
               "fakeKey", "fakeVersion"))
           .build())
         .when(mcp)
-        .create(anyString(), (FsPermission) anyObject(), anyString(),
-          (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-          anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
-          anyObject());
+        .create(anyString(), any(), anyString(), any(), anyBoolean(),
+            anyShort(), anyLong(), any(), any(), any());
   }
 
   // This test only uses mocks. Called from the end of an existing test to
@@ -1339,11 +1336,13 @@ public class TestEncryptionZones {
     byte[] testIdentifier = "Test identifier for delegation token".getBytes();
 
     @SuppressWarnings("rawtypes")
-    Token<?> testToken = new Token(testIdentifier, new byte[0],
+    Token testToken = new Token(testIdentifier, new byte[0],
         new Text(), new Text());
-    Mockito.when(((DelegationTokenExtension)keyProvider).
-        addDelegationTokens(anyString(), (Credentials)any())).
-        thenReturn(new Token<?>[] { testToken });
+    Mockito.when(((DelegationTokenIssuer)keyProvider).
+        getCanonicalServiceName()).thenReturn("service");
+    Mockito.when(((DelegationTokenIssuer)keyProvider).
+        getDelegationToken(anyString())).
+        thenReturn(testToken);
 
     dfs.getClient().setKeyProvider(keyProvider);
 
@@ -1353,7 +1352,7 @@ public class TestEncryptionZones {
         Arrays.asList(tokens));
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(tokens[1], testToken);
-    Assert.assertEquals(1, creds.numberOfTokens());
+    Assert.assertEquals(2, creds.numberOfTokens());
   }
 
   /**
@@ -1952,6 +1951,16 @@ public class TestEncryptionZones {
     Assert.assertEquals("Key Provider for client and namenode are different",
         namenodeKeyProviderUri, cluster.getFileSystem().getClient()
         .getKeyProviderUri());
+
+    // Ignore the key provider from NN.
+    clusterConf.setBoolean(
+        DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI, true);
+    Assert.assertEquals("Expecting Key Provider for client config",
+        "dummy://foo:bar@test_provider1", cluster.getFileSystem().getClient()
+            .getKeyProviderUri().toString());
+    Assert.assertNotEquals("Key Provider for client and namenode is different",
+        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
+            .getKeyProviderUri().toString());
   }
 
   /**
@@ -2106,22 +2115,22 @@ public class TestEncryptionZones {
     Mockito.when(keyProvider.getConf()).thenReturn(conf);
     byte[] testIdentifier = "Test identifier for delegation token".getBytes();
 
-    Token<?> testToken = new Token(testIdentifier, new byte[0],
+    Token testToken = new Token(testIdentifier, new byte[0],
         new Text("kms-dt"), new Text());
-    Mockito.when(((DelegationTokenExtension) keyProvider)
-        .addDelegationTokens(anyString(), (Credentials) any()))
-        .thenReturn(new Token<?>[] {testToken});
+    Mockito.when(((DelegationTokenIssuer)keyProvider).
+        getCanonicalServiceName()).thenReturn("service");
+    Mockito.when(((DelegationTokenIssuer)keyProvider).
+        getDelegationToken(anyString())).
+        thenReturn(testToken);
 
-    WebHdfsFileSystem webfsSpy = Mockito.spy(webfs);
-    Mockito.doReturn(keyProvider).when(webfsSpy).getKeyProvider();
-
+    webfs.setTestProvider(keyProvider);
     Credentials creds = new Credentials();
     final Token<?>[] tokens =
-        webfsSpy.addDelegationTokens("JobTracker", creds);
+        webfs.addDelegationTokens("JobTracker", creds);
 
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(tokens[1], testToken);
-    Assert.assertEquals(1, creds.numberOfTokens());
+    Assert.assertEquals(2, creds.numberOfTokens());
   }
 
   /**

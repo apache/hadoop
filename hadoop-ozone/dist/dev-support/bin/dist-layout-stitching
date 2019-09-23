@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# project.build.directory
+BASEDIR=$1
+
+#hdds.version
+HDDS_VERSION=$2
+
+## @audience     private
+## @stability    evolving
+function run()
+{
+  declare res
+
+  echo "\$ ${*}"
+  "${@}"
+  res=$?
+  if [[ ${res} != 0 ]]; then
+    echo
+    echo "Failed!"
+    echo
+    exit "${res}"
+  fi
+}
+
+## @audience     private
+## @stability    evolving
+function findfileindir()
+{
+  declare file="$1"
+  declare dir="${2:-./share}"
+  declare count
+
+  count=$(find "${dir}" -iname "${file}" | wc -l)
+
+  #shellcheck disable=SC2086
+  echo ${count}
+}
+
+
+# shellcheck disable=SC2164
+ROOT=$(cd "${BASEDIR}"/../../..;pwd)
+echo
+echo "Current directory $(pwd)"
+echo
+
+run rm -rf "ozone-${HDDS_VERSION}"
+run mkdir "ozone-${HDDS_VERSION}"
+run cd "ozone-${HDDS_VERSION}"
+
+run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/NOTICE.txt" "NOTICE.txt"
+run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/LICENSE.txt" "LICENSE.txt"
+run cp -pr "${ROOT}/hadoop-ozone/dist/src/main/license/bin/licenses" "licenses"
+run cp -p "${ROOT}/hadoop-ozone/recon/src/main/resources/webapps/recon/ozone-recon-web/LICENSE" "licenses/LICENSE-ozone-recon.txt"
+run cp -p "${ROOT}/README.txt" .
+
+run mkdir -p ./share/hadoop/mapreduce
+run mkdir -p ./share/hadoop/ozone
+run mkdir -p ./share/hadoop/hdds
+run mkdir -p ./share/hadoop/yarn
+run mkdir -p ./share/hadoop/hdfs
+run mkdir -p ./share/hadoop/common
+
+touch ./share/hadoop/mapreduce/.keep
+touch ./share/hadoop/yarn/.keep
+touch ./share/hadoop/hdfs/.keep
+touch ./share/hadoop/common/.keep
+
+
+run mkdir -p ./share/ozone/web
+run mkdir -p ./bin
+run mkdir -p ./sbin
+run mkdir -p ./etc
+run mkdir -p ./libexec
+run mkdir -p ./tests
+
+run cp -r "${ROOT}/hadoop-hdds/common/src/main/conf/" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/dn-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/scm-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/ozone-shell-log4j.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/ozone-site.xml" "etc/hadoop"
+run cp -f "${ROOT}/hadoop-ozone/dist/src/main/conf/log4j.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-default.xml" "etc/hadoop"
+run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-nodegroup.xml" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
+run cp -r "${ROOT}/hadoop-ozone/dist/src/main/dockerbin" "bin/docker"
+
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-config.sh" "libexec/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-config.cmd" "libexec/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-functions.sh" "libexec/"
+run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone-config.sh" "libexec/"
+run cp -r "${ROOT}/hadoop-ozone/common/src/main/shellprofile.d" "libexec/"
+
+
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/hadoop-daemons.sh" "sbin/"
+run cp "${ROOT}/hadoop-hdds/common/src/main/bin/workers.sh" "sbin/"
+run cp "${ROOT}/hadoop-ozone/common/src/main/bin/start-ozone.sh" "sbin/"
+run cp "${ROOT}/hadoop-ozone/common/src/main/bin/stop-ozone.sh" "sbin/"
+
+# fault injection tests
+run cp  -r "${ROOT}/hadoop-ozone/fault-injection-test/network-tests/src/test/blockade" tests
+
+# Optional documentation, could be missing
+cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
+
+#Copy docker compose files
+#compose files are preprocessed: properties (eg. project.version) are replaced first by maven.
+run cp -p -R "${ROOT}/hadoop-ozone/dist/target/compose" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
+run cp -p -r "${ROOT}/hadoop-ozone/dist/target/Dockerfile" .
+
+#workaround for https://issues.apache.org/jira/browse/MRESOURCES-236
+find ./compose -name "*.sh" -exec chmod 755 {} \;

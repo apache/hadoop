@@ -19,7 +19,6 @@
 package org.apache.hadoop.util;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,6 +27,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -129,7 +129,7 @@ public class RunJar {
                 + " would create file outside of " + toDir);
           }
           ensureDirectory(file.getParentFile());
-          try (OutputStream out = new FileOutputStream(file)) {
+          try (OutputStream out = Files.newOutputStream(file.toPath())) {
             IOUtils.copyBytes(jar, out, BUFFER_SIZE);
           }
           if (!file.setLastModified(entry.getTime())) {
@@ -166,7 +166,7 @@ public class RunJar {
       throws IOException{
     File file = new File(toDir, name);
     ensureDirectory(toDir);
-    try (OutputStream jar = new FileOutputStream(file);
+    try (OutputStream jar = Files.newOutputStream(file.toPath());
          TeeInputStream teeInputStream = new TeeInputStream(inputStream, jar)) {
       unJar(teeInputStream, toDir, unpackRegex);
     }
@@ -200,7 +200,7 @@ public class RunJar {
                   + " would create file outside of " + toDir);
             }
             ensureDirectory(file.getParentFile());
-            try (OutputStream out = new FileOutputStream(file)) {
+            try (OutputStream out = Files.newOutputStream(file.toPath())) {
               IOUtils.copyBytes(in, out, BUFFER_SIZE);
             }
             if (!file.setLastModified(entry.getTime())) {

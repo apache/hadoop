@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -63,6 +64,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.GenericDiagnosticsCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -231,6 +234,15 @@ public class TestPlacementConstraintsUtil {
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
     Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
+
+    // Test diagnostics collector
+    DiagnosticsCollector collector =
+        new GenericDiagnosticsCollector();
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+        createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm,
+        Optional.of(collector)));
+    Assert.assertNotNull(collector.getDiagnostics());
+    Assert.assertTrue(collector.getDiagnostics().contains("ALLOCATION_TAG"));
   }
 
   @Test
@@ -874,6 +886,8 @@ public class TestPlacementConstraintsUtil {
 
     long ts = System.currentTimeMillis();
     ApplicationId application1 = BuilderUtils.newApplicationId(ts, 123);
+    ApplicationId application2 = BuilderUtils.newApplicationId(ts, 124);
+    ApplicationId application3 = BuilderUtils.newApplicationId(ts, 125);
 
     // Register App1 with anti-affinity constraint map.
     RMNode n0r1 = rmNodes.get(0);
@@ -917,8 +931,6 @@ public class TestPlacementConstraintsUtil {
     srcTags2.add("app2");
     constraintMap.put(srcTags2, constraint2);
 
-    ts = System.currentTimeMillis();
-    ApplicationId application2 = BuilderUtils.newApplicationId(ts, 124);
     pcm.registerApplication(application2, constraintMap);
 
     // Anti-affinity with app1/hbase-m so it should not be able to be placed
@@ -947,10 +959,7 @@ public class TestPlacementConstraintsUtil {
     srcTags3.add("app3");
     constraintMap.put(srcTags3, constraint3);
 
-    ts = System.currentTimeMillis();
-    ApplicationId application3 = BuilderUtils.newApplicationId(ts, 124);
     pcm.registerApplication(application3, constraintMap);
-
     /**
      * Place container:
      *  n0: app1/hbase-m(1), app3/hbase-m

@@ -75,7 +75,7 @@ public class ServiceClientTest extends ServiceClient {
 
   public void forceStop() {
     expectedInstances.clear();
-    super.stop();
+    stop();
   }
 
   @Override

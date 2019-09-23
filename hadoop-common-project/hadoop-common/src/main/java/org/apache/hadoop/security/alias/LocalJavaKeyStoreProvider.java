@@ -25,8 +25,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,7 +42,8 @@ import java.util.EnumSet;
 /**
  * CredentialProvider based on Java's KeyStore file format. The file may be
  * stored only on the local filesystem using the following name mangling:
- * localjceks://file/home/larry/creds.jceks -> file:///home/larry/creds.jceks
+ * localjceks://file/home/larry/creds.jceks {@literal ->}
+ * file:///home/larry/creds.jceks
  */
 @InterfaceAudience.Private
 public final class LocalJavaKeyStoreProvider extends
@@ -68,7 +67,7 @@ public final class LocalJavaKeyStoreProvider extends
     if (LOG.isDebugEnabled()) {
       LOG.debug("using '" + file + "' for output stream.");
     }
-    FileOutputStream out = new FileOutputStream(file);
+    OutputStream out = Files.newOutputStream(file.toPath());
     return out;
   }
 
@@ -80,7 +79,7 @@ public final class LocalJavaKeyStoreProvider extends
 
   @Override
   protected InputStream getInputStreamForFile() throws IOException {
-    FileInputStream is = new FileInputStream(file);
+    InputStream is = Files.newInputStream(file.toPath());
     return is;
   }
 

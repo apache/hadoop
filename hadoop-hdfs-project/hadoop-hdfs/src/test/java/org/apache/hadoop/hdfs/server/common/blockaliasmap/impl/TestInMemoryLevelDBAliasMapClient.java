@@ -358,15 +358,6 @@ public class TestInMemoryLevelDBAliasMapClient {
   }
 
   @Test
-  public void testNonExistentFile() throws Exception {
-    // delete alias map location
-    FileUtils.deleteDirectory(tempDir);
-    // expect a RuntimeException when the aliasmap is started.
-    exception.expect(RuntimeException.class);
-    levelDBAliasMapServer.setConf(conf);
-  }
-
-  @Test
   public void testNonExistentBlock() throws Exception {
     inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.setConf(conf);

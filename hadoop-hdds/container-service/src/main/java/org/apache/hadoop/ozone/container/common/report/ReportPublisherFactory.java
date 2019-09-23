@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.container.common.report;
 import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto.
+        StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
@@ -53,6 +55,8 @@ public class ReportPublisherFactory {
         ContainerReportPublisher.class);
     report2publisher.put(CommandStatusReportsProto.class,
         CommandStatusReportPublisher.class);
+    report2publisher.put(PipelineReportsProto.class,
+            PipelineReportPublisher.class);
   }
 
   /**

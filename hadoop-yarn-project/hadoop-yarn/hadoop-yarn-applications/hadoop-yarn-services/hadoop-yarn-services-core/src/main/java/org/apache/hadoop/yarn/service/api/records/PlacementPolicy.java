@@ -37,9 +37,6 @@ import io.swagger.annotations.ApiModelProperty;
 @InterfaceStability.Unstable
 @ApiModel(description = "Advanced placement policy of the components of a "
     + "service.")
-@javax.annotation.Generated(
-    value = "class io.swagger.codegen.languages.JavaClientCodegen",
-    date = "2018-02-16T10:20:12.927-07:00")
 public class PlacementPolicy implements Serializable {
   private static final long serialVersionUID = 4341110649551172231L;
 
@@ -83,11 +80,11 @@ public class PlacementPolicy implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class PlacementPolicy {\n");
+    sb.append("class PlacementPolicy {\n")
 
-    sb.append("    constraints: ").append(toIndentedString(constraints))
-        .append("\n");
-    sb.append("}");
+        .append("    constraints: ").append(toIndentedString(constraints))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -28,7 +28,8 @@ public class SchedulerPageUtil {
       html.
           script().$type("text/javascript").
           __("function reopenQueryNodes() {",
-            "  var currentParam = window.location.href.split('?');",
+            "  var currentParam = decodeURIComponent(window.location.href)"
+                + ".split('?');",
             "  var tmpCurrentParam = currentParam;",
             "  var queryQueuesString = '';",
             "  if (tmpCurrentParam.length > 1) {",
@@ -136,6 +137,7 @@ public class SchedulerPageUtil {
             "};",
             "",
             "function removeQueueName(queryString, queueName) {",
+            "  queryString = decodeURIComponent(queryString);",
             "  var index = queryString.indexOf(queueName);",
             "  // Finding if queue is present in query param then only remove it",
             "  if (index != -1) {",

@@ -135,6 +135,7 @@ add_library(container
     main/native/container-executor/impl/modules/common/module-configs.c
     main/native/container-executor/impl/modules/gpu/gpu-module.c
     main/native/container-executor/impl/modules/fpga/fpga-module.c
+    main/native/container-executor/impl/modules/devices/devices-module.c
     main/native/container-executor/impl/utils/docker-util.c
 )
 
@@ -169,6 +170,7 @@ add_executable(cetest
         main/native/container-executor/test/modules/cgroups/test-cgroups-module.cc
         main/native/container-executor/test/modules/gpu/test-gpu-module.cc
         main/native/container-executor/test/modules/fpga/test-fpga-module.cc
+        main/native/container-executor/test/modules/devices/test-devices-module.cc
         main/native/container-executor/test/test_util.cc
         main/native/container-executor/test/utils/test_docker_util.cc)
 target_link_libraries(cetest gtest container)
@@ -188,5 +190,10 @@ add_executable(test-oom-listener
         main/native/oom-listener/impl/oom_listener.h
         main/native/oom-listener/test/oom_listener_test_main.cc
 )
-target_link_libraries(test-oom-listener gtest rt)
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS doesn't have librt
+    target_link_libraries(test-oom-listener gtest)
+else()
+    target_link_libraries(test-oom-listener gtest rt)
+endif()
 output_directory(test-oom-listener test)

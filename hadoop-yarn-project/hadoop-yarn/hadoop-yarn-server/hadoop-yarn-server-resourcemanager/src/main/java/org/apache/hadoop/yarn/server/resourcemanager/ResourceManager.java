@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -62,15 +64,17 @@ import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
-import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeAttributesManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -104,13 +108,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeSortingManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManagerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.processor.VolumeAMSProcessor;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.service.SystemServiceManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
@@ -132,6 +141,7 @@ import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,7 +166,9 @@ public class ResourceManager extends CompositeService
    */
   public static final int EPOCH_BIT_SHIFT = 40;
 
-  private static final Log LOG = LogFactory.getLog(ResourceManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceManager.class);
+  private static final Marker FATAL = MarkerFactory.getMarker("FATAL");
   private static long clusterTimeStamp = System.currentTimeMillis();
 
   /*
@@ -195,6 +207,7 @@ public class ResourceManager extends CompositeService
   protected ApplicationACLsManager applicationACLsManager;
   protected QueueACLsManager queueACLsManager;
   private FederationStateStoreService federationStateStoreService;
+  private ProxyCAManager proxyCAManager;
   private WebApp webApp;
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
@@ -250,8 +263,25 @@ public class ResourceManager extends CompositeService
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
+    UserGroupInformation.setConfiguration(conf);
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+
+    // Set HA configuration should be done before login
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(this.conf);
+    }
+
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
 
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
@@ -271,22 +301,6 @@ public class ResourceManager extends CompositeService
     loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
-    
-    // Set HA configuration should be done before login
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
-    if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(this.conf);
-    }
-
-    // Set UGI and do login
-    // If security is enabled, use login user
-    // If security is not enabled, use current user
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -517,6 +531,12 @@ public class ResourceManager extends CompositeService
     return new RMNodeLabelsManager();
   }
 
+  protected NodeAttributesManager createNodeAttributesManager() {
+    NodeAttributesManagerImpl namImpl = new NodeAttributesManagerImpl();
+    namImpl.setRMContext(rmContext);
+    return namImpl;
+  }
+
   protected AllocationTagsManager createAllocationTagsManager() {
     return new AllocationTagsManager(this.rmContext);
   }
@@ -555,11 +575,13 @@ public class ResourceManager extends CompositeService
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
     List<SystemMetricsPublisher> publishers =
         new ArrayList<SystemMetricsPublisher>();
-    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV1Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
       publishers.add(publisherV1);
     }
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       // we're dealing with the v.2.x publisher
       LOG.info("system metrics publisher with the timeline service V2 is "
           + "configured");
@@ -622,6 +644,7 @@ public class ResourceManager extends CompositeService
     private ResourceManager rm;
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
+    private RMNMInfo rmnmInfo;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -655,6 +678,10 @@ public class ResourceManager extends CompositeService
       nlm.setRMContext(rmContext);
       addService(nlm);
       rmContext.setNodeLabelManager(nlm);
+
+      NodeAttributesManager nam = createNodeAttributesManager();
+      addService(nam);
+      rmContext.setNodeAttributesManager(nam);
 
       AllocationTagsManager allocationTagsManager =
           createAllocationTagsManager();
@@ -818,12 +845,26 @@ public class ResourceManager extends CompositeService
         LOG.info("Initialized Federation membership.");
       }
 
-      new RMNMInfo(rmContext, scheduler);
+      proxyCAManager = new ProxyCAManager(new ProxyCA(), rmContext);
+      addService(proxyCAManager);
+      rmContext.setProxyCAManager(proxyCAManager);
+
+      rmnmInfo = new RMNMInfo(rmContext, scheduler);
 
       if (conf.getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
           false)) {
         SystemServiceManager systemServiceManager = createServiceManager();
         addIfService(systemServiceManager);
+      }
+
+      // Add volume manager to RM context when it is necessary
+      String[] amsProcessorList = conf.getStrings(
+          YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS);
+      if (amsProcessorList != null&& Arrays.stream(amsProcessorList)
+          .anyMatch(s -> VolumeAMSProcessor.class.getName().equals(s))) {
+        VolumeManager volumeManager = new VolumeManagerImpl();
+        rmContext.setVolumeManager(volumeManager);
+        addIfService(volumeManager);
       }
 
       super.serviceInit(conf);
@@ -887,6 +928,10 @@ public class ResourceManager extends CompositeService
       super.serviceStop();
 
       DefaultMetricsSystem.shutdown();
+      // unregister rmnmInfo bean
+      if (rmnmInfo != null) {
+        rmnmInfo.unregister();
+      }
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
         try {
@@ -917,15 +962,16 @@ public class ResourceManager extends CompositeService
         // how depends on the event.
         switch(event.getType()) {
         case STATE_STORE_FENCED:
-          LOG.fatal("State store fenced even though the resource manager " +
-              "is not configured for high availability. Shutting down this " +
-              "resource manager to protect the integrity of the state store.");
+          LOG.error(FATAL, "State store fenced even though the resource " +
+              "manager is not configured for high availability. Shutting " +
+              "down this resource manager to protect the integrity of the " +
+              "state store.");
           ExitUtil.terminate(1, event.getExplanation());
           break;
         case STATE_STORE_OP_FAILED:
           if (YarnConfiguration.shouldRMFailFast(getConfig())) {
-            LOG.fatal("Shutting down the resource manager because a state " +
-                "store operation failed, and the resource manager is " +
+            LOG.error(FATAL, "Shutting down the resource manager because a " +
+                "state store operation failed, and the resource manager is " +
                 "configured to fail fast. See the yarn.fail-fast and " +
                 "yarn.resourcemanager.fail-fast properties.");
             ExitUtil.terminate(1, event.getExplanation());
@@ -937,7 +983,7 @@ public class ResourceManager extends CompositeService
           }
           break;
         default:
-          LOG.fatal("Shutting down the resource manager.");
+          LOG.error(FATAL, "Shutting down the resource manager.");
           ExitUtil.terminate(1, event.getExplanation());
         }
       }
@@ -986,7 +1032,7 @@ public class ResourceManager extends CompositeService
             elector.rejoinElection();
           }
         } catch (Exception e) {
-          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          LOG.error(FATAL, "Failed to transition RM to Standby mode.", e);
           ExitUtil.terminate(1, e);
         }
       }
@@ -1057,8 +1103,8 @@ public class ResourceManager extends CompositeService
               rmApp.getAppAttempts().values().iterator().next();
           if (previousFailedAttempt != null) {
             try {
-              LOG.debug("Event " + event.getType() + " handled by "
-                  + previousFailedAttempt);
+              LOG.debug("Event {} handled by {}", event.getType(),
+                  previousFailedAttempt);
               previousFailedAttempt.handle(event);
             } catch (Throwable t) {
               LOG.error("Error in handling event type " + event.getType()
@@ -1144,9 +1190,9 @@ public class ResourceManager extends CompositeService
       params.put("com.sun.jersey.config.property.packages", apiPackages);
     }
 
-    Builder<ApplicationMasterService> builder = 
+    Builder<ResourceManager> builder =
         WebApps
-            .$for("cluster", ApplicationMasterService.class, masterService,
+            .$for("cluster", ResourceManager.class, this,
                 "ws")
             .with(conf)
             .withServlet("API-Service", "/app/*",
@@ -1168,6 +1214,8 @@ public class ResourceManager extends CompositeService
       }
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
+      builder.withAttribute(WebAppProxy.PROXY_CA,
+          rmContext.getProxyCAManager().getProxyCA());
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
@@ -1184,8 +1232,7 @@ public class ResourceManager extends CompositeService
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
-        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-        URL url = cl.findResource(war);
+        URL url = getClass().getClassLoader().getResource(war);
 
         if (null == url) {
           onDiskPath = getWebAppsPath("ui2");
@@ -1205,6 +1252,11 @@ public class ResourceManager extends CompositeService
         }
       }
     }
+
+    builder.withAttribute(IsResourceManagerActiveServlet.RM_ATTRIBUTE, this);
+    builder.withServlet(IsResourceManagerActiveServlet.SERVLET_NAME,
+        IsResourceManagerActiveServlet.PATH_SPEC,
+        IsResourceManagerActiveServlet.class);
 
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
@@ -1484,6 +1536,9 @@ public class ResourceManager extends CompositeService
     // recover applications
     rmAppManager.recover(state);
 
+    // recover ProxyCA
+    rmContext.getProxyCAManager().recover(state);
+
     setSchedulerRecoveryStartAndWaitTime(state, conf);
   }
 
@@ -1513,7 +1568,7 @@ public class ResourceManager extends CompositeService
         resourceManager.start();
       }
     } catch (Throwable t) {
-      LOG.fatal("Error starting ResourceManager", t);
+      LOG.error(FATAL, "Error starting ResourceManager", t);
       System.exit(-1);
     }
   }

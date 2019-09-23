@@ -57,7 +57,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Manages decommissioning and maintenance state for DataNodes. A background
  * monitor thread periodically checks the status of DataNodes that are
  * decommissioning or entering maintenance state.
- * <p/>
+ * <p>
  * A DataNode can be decommissioned in a few situations:
  * <ul>
  * <li>If a DN is dead, it is decommissioned immediately.</li>
@@ -72,11 +72,11 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * determine if they can be DECOMMISSIONED. The monitor also prunes this list
  * as blocks become replicated, so monitor scans will become more efficient
  * over time.
- * <p/>
+ * <p>
  * DECOMMISSION_INPROGRESS nodes that become dead do not progress to
  * DECOMMISSIONED until they become live again. This prevents potential
  * durability loss for singly-replicated blocks (see HDFS-6791).
- * <p/>
+ * <p>
  * DataNodes can also be put under maintenance state for any short duration
  * maintenance operations. Unlike decommissioning, blocks are not always
  * re-replicated for the DataNodes to enter maintenance state. When the
@@ -88,7 +88,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * of maintenance expiry time. When DataNodes don't transition or join the
  * cluster back by expiry time, blocks are re-replicated just as in
  * decommissioning case as to avoid read or write performance degradation.
- * <p/>
+ * <p>
  * This class depends on the FSNamesystem lock for synchronization.
  */
 @InterfaceAudience.Private
@@ -345,7 +345,9 @@ public class DatanodeAdminManager {
    * @return true if sufficient, else false.
    */
   private boolean isSufficient(BlockInfo block, BlockCollection bc,
-      NumberReplicas numberReplicas, boolean isDecommission) {
+                               NumberReplicas numberReplicas,
+                               boolean isDecommission,
+                               boolean isMaintenance) {
     if (blockManager.hasEnoughEffectiveReplicas(block, numberReplicas, 0)) {
       // Block has enough replica, skip
       LOG.trace("Block {} does not need replication.", block);
@@ -379,6 +381,10 @@ public class DatanodeAdminManager {
         }
       }
     }
+    if (isMaintenance
+      && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
+      return true;
+    }
     return false;
   }
 
@@ -395,8 +401,7 @@ public class DatanodeAdminManager {
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      nodeList.append(node);
-      nodeList.append(' ');
+      nodeList.append(node).append(' ');
     }
     NameNode.blockStateChangeLog.info(
         "Block: " + block + ", Expected Replicas: "
@@ -479,6 +484,7 @@ public class DatanodeAdminManager {
 
     @Override
     public void run() {
+      LOG.debug("DatanodeAdminMonitor is running.");
       if (!namesystem.isRunning()) {
         LOG.info("Namesystem is not running, skipping " +
             "decommissioning/maintenance checks.");
@@ -493,12 +499,17 @@ public class DatanodeAdminManager {
       try {
         processPendingNodes();
         check();
+      } catch (Exception e) {
+        LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
+            e);
       } finally {
         namesystem.writeUnlock();
       }
       if (numBlocksChecked + numNodesChecked > 0) {
-        LOG.info("Checked {} blocks and {} nodes this tick", numBlocksChecked,
-            numNodesChecked);
+        LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
+            "in maintenance or transitioning state. {} nodes pending.",
+            numBlocksChecked, numNodesChecked, outOfServiceNodeBlocks.size(),
+            pendingNodes.size());
       }
     }
 
@@ -526,83 +537,96 @@ public class DatanodeAdminManager {
         final Map.Entry<DatanodeDescriptor, AbstractList<BlockInfo>>
             entry = it.next();
         final DatanodeDescriptor dn = entry.getKey();
-        AbstractList<BlockInfo> blocks = entry.getValue();
-        boolean fullScan = false;
-        if (dn.isMaintenance() && dn.maintenanceExpired()) {
-          // If maintenance expires, stop tracking it.
-          stopMaintenance(dn);
-          toRemove.add(dn);
-          continue;
-        }
-        if (dn.isInMaintenance()) {
-          // The dn is IN_MAINTENANCE and the maintenance hasn't expired yet.
-          continue;
-        }
-        if (blocks == null) {
-          // This is a newly added datanode, run through its list to schedule
-          // under-replicated blocks for replication and collect the blocks
-          // that are insufficiently replicated for further tracking
-          LOG.debug("Newly-added node {}, doing full scan to find " +
-              "insufficiently-replicated blocks.", dn);
-          blocks = handleInsufficientlyStored(dn);
-          outOfServiceNodeBlocks.put(dn, blocks);
-          fullScan = true;
-        } else {
-          // This is a known datanode, check if its # of insufficiently
-          // replicated blocks has dropped to zero and if it can move
-          // to the next state.
-          LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
-          pruneReliableBlocks(dn, blocks);
-        }
-        if (blocks.size() == 0) {
-          if (!fullScan) {
-            // If we didn't just do a full scan, need to re-check with the
-            // full block map.
-            //
-            // We've replicated all the known insufficiently replicated
-            // blocks. Re-check with the full block map before finally
-            // marking the datanode as DECOMMISSIONED or IN_MAINTENANCE.
-            LOG.debug("Node {} has finished replicating current set of "
-                + "blocks, checking with the full block map.", dn);
+        try {
+          AbstractList<BlockInfo> blocks = entry.getValue();
+          boolean fullScan = false;
+          if (dn.isMaintenance() && dn.maintenanceExpired()) {
+            // If maintenance expires, stop tracking it.
+            stopMaintenance(dn);
+            toRemove.add(dn);
+            continue;
+          }
+          if (dn.isInMaintenance()) {
+            // The dn is IN_MAINTENANCE and the maintenance hasn't expired yet.
+            continue;
+          }
+          if (blocks == null) {
+            // This is a newly added datanode, run through its list to schedule
+            // under-replicated blocks for replication and collect the blocks
+            // that are insufficiently replicated for further tracking
+            LOG.debug("Newly-added node {}, doing full scan to find " +
+                "insufficiently-replicated blocks.", dn);
             blocks = handleInsufficientlyStored(dn);
             outOfServiceNodeBlocks.put(dn, blocks);
-          }
-          // If the full scan is clean AND the node liveness is okay,
-          // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-          final boolean isHealthy =
-              blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
-          if (blocks.size() == 0 && isHealthy) {
-            if (dn.isDecommissionInProgress()) {
-              setDecommissioned(dn);
-              toRemove.add(dn);
-            } else if (dn.isEnteringMaintenance()) {
-              // IN_MAINTENANCE node remains in the outOfServiceNodeBlocks to
-              // to track maintenance expiration.
-              setInMaintenance(dn);
-            } else {
-              Preconditions.checkState(false,
-                  "A node is in an invalid state!");
-            }
-            LOG.debug("Node {} is sufficiently replicated and healthy, "
-                + "marked as {}.", dn, dn.getAdminState());
+            fullScan = true;
           } else {
-            LOG.debug("Node {} {} healthy."
-                + " It needs to replicate {} more blocks."
-                + " {} is still in progress.", dn,
-                isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
+            // This is a known datanode, check if its # of insufficiently
+            // replicated blocks has dropped to zero and if it can move
+            // to the next state.
+            LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
+            pruneReliableBlocks(dn, blocks);
           }
-        } else {
-          LOG.debug("Node {} still has {} blocks to replicate "
-              + "before it is a candidate to finish {}.",
-              dn, blocks.size(), dn.getAdminState());
+          if (blocks.size() == 0) {
+            if (!fullScan) {
+              // If we didn't just do a full scan, need to re-check with the
+              // full block map.
+              //
+              // We've replicated all the known insufficiently replicated
+              // blocks. Re-check with the full block map before finally
+              // marking the datanode as DECOMMISSIONED or IN_MAINTENANCE.
+              LOG.debug("Node {} has finished replicating current set of "
+                  + "blocks, checking with the full block map.", dn);
+              blocks = handleInsufficientlyStored(dn);
+              outOfServiceNodeBlocks.put(dn, blocks);
+            }
+            // If the full scan is clean AND the node liveness is okay,
+            // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
+            final boolean isHealthy =
+                blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+            if (blocks.size() == 0 && isHealthy) {
+              if (dn.isDecommissionInProgress()) {
+                setDecommissioned(dn);
+                toRemove.add(dn);
+              } else if (dn.isEnteringMaintenance()) {
+                // IN_MAINTENANCE node remains in the outOfServiceNodeBlocks to
+                // to track maintenance expiration.
+                setInMaintenance(dn);
+              } else {
+                Preconditions.checkState(false,
+                    "Node %s is in an invalid state! "
+                      + "Invalid state: %s %s blocks are on this dn.",
+                        dn, dn.getAdminState(), blocks.size());
+              }
+              LOG.debug("Node {} is sufficiently replicated and healthy, "
+                  + "marked as {}.", dn, dn.getAdminState());
+            } else {
+              LOG.info("Node {} {} healthy."
+                  + " It needs to replicate {} more blocks."
+                  + " {} is still in progress.", dn,
+                  isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
+            }
+          } else {
+            LOG.info("Node {} still has {} blocks to replicate "
+                    + "before it is a candidate to finish {}.",
+                dn, blocks.size(), dn.getAdminState());
+          }
+        } catch (Exception e) {
+          // Log and postpone to process node when meet exception since it is in
+          // an invalid state.
+          LOG.warn("DatanodeAdminMonitor caught exception when processing node "
+              + "{}.", dn, e);
+          pendingNodes.add(dn);
+          toRemove.add(dn);
+        } finally {
+          iterkey = dn;
         }
-        iterkey = dn;
       }
       // Remove the datanodes that are DECOMMISSIONED or in service after
       // maintenance expiration.
       for (DatanodeDescriptor dn : toRemove) {
         Preconditions.checkState(dn.isDecommissioned() || dn.isInService(),
-            "Removing a node that is not yet decommissioned or in service!");
+            "Removing node %s that is not yet decommissioned or in service!",
+                dn);
         outOfServiceNodeBlocks.remove(dn);
       }
     }
@@ -706,6 +730,7 @@ public class DatanodeAdminManager {
         // Schedule low redundancy blocks for reconstruction
         // if not already pending.
         boolean isDecommission = datanode.isDecommissionInProgress();
+        boolean isMaintenance = datanode.isEnteringMaintenance();
         boolean neededReconstruction = isDecommission ?
             blockManager.isNeededReconstruction(block, num) :
             blockManager.isNeededReconstructionForMaintenance(block, num);
@@ -724,7 +749,7 @@ public class DatanodeAdminManager {
         // Even if the block is without sufficient redundancy,
         // it might not block decommission/maintenance if it
         // has sufficient redundancy.
-        if (isSufficient(block, bc, num, isDecommission)) {
+        if (isSufficient(block, bc, num, isDecommission, isMaintenance)) {
           if (pruneReliableBlocks) {
             it.remove();
           }

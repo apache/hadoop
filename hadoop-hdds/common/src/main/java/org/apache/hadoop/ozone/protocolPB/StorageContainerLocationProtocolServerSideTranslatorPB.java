@@ -20,21 +20,54 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ActivatePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ActivatePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeactivatePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.DeactivatePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ClosePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -55,6 +88,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 
 import java.io.IOException;
 import java.util.List;
@@ -83,7 +117,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   @Override
   public ContainerResponseProto allocateContainer(RpcController unused,
       ContainerRequestProto request) throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("allocateContainer", request.getTraceID())) {
       ContainerWithPipeline containerWithPipeline = impl
           .allocateContainer(request.getReplicationType(),
               request.getReplicationFactor(), request.getOwner());
@@ -101,7 +136,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public GetContainerResponseProto getContainer(
       RpcController controller, GetContainerRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("getContainer", request.getTraceID())) {
       ContainerInfo container = impl.getContainer(request.getContainerID());
       return GetContainerResponseProto.newBuilder()
           .setContainerInfo(container.getProtobuf())
@@ -115,7 +151,9 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public GetContainerWithPipelineResponseProto getContainerWithPipeline(
       RpcController controller, GetContainerWithPipelineRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("getContainerWithPipeline",
+            request.getTraceID())) {
       ContainerWithPipeline container = impl
           .getContainerWithPipeline(request.getContainerID());
       return GetContainerWithPipelineResponseProto.newBuilder()
@@ -129,7 +167,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   @Override
   public SCMListContainerResponseProto listContainer(RpcController controller,
       SCMListContainerRequestProto request) throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("listContainer", request.getTraceID())) {
       long startContainerID = 0;
       int count = -1;
 
@@ -156,7 +195,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public SCMDeleteContainerResponseProto deleteContainer(
       RpcController controller, SCMDeleteContainerRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("deleteContainer", request.getTraceID())) {
       impl.deleteContainer(request.getContainerID());
       return SCMDeleteContainerResponseProto.newBuilder().build();
     } catch (IOException e) {
@@ -169,7 +209,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       queryNode(RpcController controller,
       StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("queryNode", request.getTraceID())) {
       HddsProtos.NodeState nodeState = request.getState();
       List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
           request.getScope(), request.getPoolName());
@@ -186,7 +227,9 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ObjectStageChangeResponseProto notifyObjectStageChange(
       RpcController controller, ObjectStageChangeRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("notifyObjectStageChange",
+            request.getTraceID())) {
       impl.notifyObjectStageChange(request.getType(), request.getId(),
           request.getOp(), request.getStage());
       return ObjectStageChangeResponseProto.newBuilder().build();
@@ -204,12 +247,71 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
+  public ListPipelineResponseProto listPipelines(
+      RpcController controller, ListPipelineRequestProto request)
+      throws ServiceException {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("listPipelines", request.getTraceID())) {
+      ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
+          .newBuilder();
+      List<Pipeline> pipelines = impl.listPipelines();
+      for (Pipeline pipeline : pipelines) {
+        HddsProtos.Pipeline protobufMessage = pipeline.getProtobufMessage();
+        builder.addPipelines(protobufMessage);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ActivatePipelineResponseProto activatePipeline(
+      RpcController controller, ActivatePipelineRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil
+        .importAndCreateScope("activatePipeline", request.getTraceID())) {
+      impl.activatePipeline(request.getPipelineID());
+      return ActivatePipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DeactivatePipelineResponseProto deactivatePipeline(
+      RpcController controller, DeactivatePipelineRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil
+        .importAndCreateScope("deactivatePipeline", request.getTraceID())) {
+      impl.deactivatePipeline(request.getPipelineID());
+      return DeactivatePipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ClosePipelineResponseProto closePipeline(
+      RpcController controller, ClosePipelineRequestProto request)
+      throws ServiceException {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("closePipeline", request.getTraceID())) {
+      impl.closePipeline(request.getPipelineID());
+      return ClosePipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("getScmInfo", req.getTraceID())) {
       ScmInfo scmInfo = impl.getScmInfo();
-      return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
+      return HddsProtos.GetScmInfoResponseProto.newBuilder()
           .setClusterId(scmInfo.getClusterId())
           .setScmId(scmInfo.getScmId())
           .build();
@@ -218,4 +320,70 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
     }
 
   }
+
+  @Override
+  public InSafeModeResponseProto inSafeMode(
+      RpcController controller,
+      InSafeModeRequestProto request) throws ServiceException {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("inSafeMode", request.getTraceID())) {
+      return InSafeModeResponseProto.newBuilder()
+          .setInSafeMode(impl.inSafeMode()).build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public ForceExitSafeModeResponseProto forceExitSafeMode(
+      RpcController controller, ForceExitSafeModeRequestProto request)
+      throws ServiceException {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("forceExitSafeMode", request.getTraceID())) {
+      return ForceExitSafeModeResponseProto.newBuilder()
+          .setExitedSafeMode(impl.forceExitSafeMode()).build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public StartReplicationManagerResponseProto startReplicationManager(
+      RpcController controller, StartReplicationManagerRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "startReplicationManager", request.getTraceID())) {
+      impl.startReplicationManager();
+      return StartReplicationManagerResponseProto.newBuilder().build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public StopReplicationManagerResponseProto stopReplicationManager(
+      RpcController controller, StopReplicationManagerRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "stopReplicationManager", request.getTraceID())) {
+      impl.stopReplicationManager();
+      return StopReplicationManagerResponseProto.newBuilder().build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public ReplicationManagerStatusResponseProto getReplicationManagerStatus(
+      RpcController controller, ReplicationManagerStatusRequestProto request)
+      throws ServiceException {
+    try (Scope ignored = TracingUtil.importAndCreateScope(
+        "getReplicationManagerStatus", request.getTraceID())) {
+      return ReplicationManagerStatusResponseProto.newBuilder()
+          .setIsRunning(impl.getReplicationManagerStatus()).build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
 }

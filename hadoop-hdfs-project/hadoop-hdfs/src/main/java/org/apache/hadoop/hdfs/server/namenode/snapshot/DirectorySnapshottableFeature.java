@@ -277,7 +277,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     Snapshot fromSnapshot = getSnapshotByName(snapshotRootDir, from);
     Snapshot toSnapshot = getSnapshotByName(snapshotRootDir, to);
     // if the start point is equal to the end point, return null
-    if (from.equals(to)) {
+    if (from != null && from.equals(to)) {
       return null;
     }
     SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRootDir,
@@ -389,9 +389,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         if (change) {
           diffReport.addDirDiff(dir, relativePath, diff);
         }
+      } else {
+        diffReport.incrementDirsProcessed();
       }
+      long startTime = Time.monotonicNow();
       ReadOnlyList<INode> children = dir.getChildrenList(earlierSnapshot
           .getId());
+      diffReport.addChildrenListingTime(Time.monotonicNow() - startTime);
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
         boolean toProcess = !diff.containsDeleted(name);
@@ -418,6 +422,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       if (change) {
         diffReport.addFileDiff(file, relativePath);
       }
+      diffReport.incrementFilesProcessed();
     }
   }
 

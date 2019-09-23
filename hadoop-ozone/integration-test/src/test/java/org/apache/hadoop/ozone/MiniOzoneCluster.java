@@ -18,12 +18,16 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.IOException;
@@ -49,6 +53,17 @@ public interface MiniOzoneCluster {
   }
 
   /**
+   * Returns the Builder to construct MiniOzoneHACluster.
+   *
+   * @param conf OzoneConfiguration
+   *
+   * @return MiniOzoneCluster builder
+   */
+  static Builder newHABuilder(OzoneConfiguration conf) {
+    return new MiniOzoneHAClusterImpl.Builder(conf);
+  }
+
+  /**
    * Returns the configuration object associated with the MiniOzoneCluster.
    *
    * @return Configuration
@@ -66,12 +81,27 @@ public interface MiniOzoneCluster {
   void waitForClusterToBeReady() throws TimeoutException, InterruptedException;
 
   /**
-   * Waits/blocks till the cluster is out of chill mode.
+   * Sets the timeout value after which
+   * {@link MiniOzoneCluster#waitForClusterToBeReady} times out.
+   *
+   * @param timeoutInMs timeout value in milliseconds
+   */
+  void setWaitForClusterToBeReadyTimeout(int timeoutInMs);
+
+  /**
+   * Waits/blocks till the cluster is out of safe mode.
    *
    * @throws TimeoutException TimeoutException In case of timeout
    * @throws InterruptedException In case of interrupt while waiting
    */
-  void waitTobeOutOfChillMode() throws TimeoutException, InterruptedException;
+  void waitTobeOutOfSafeMode() throws TimeoutException, InterruptedException;
+
+  /**
+   * Returns OzoneManager Service ID.
+   *
+   * @return Service ID String
+   */
+  String getServiceId();
 
   /**
    * Returns {@link StorageContainerManager} associated with this
@@ -115,15 +145,6 @@ public interface MiniOzoneCluster {
   OzoneClient getRpcClient() throws IOException;
 
   /**
-   * Returns an REST based {@link OzoneClient} to access the
-   * {@link MiniOzoneCluster}.
-   *
-   * @return {@link OzoneClient}
-   * @throws IOException
-   */
-  OzoneClient getRestClient() throws IOException;
-
-  /**
    * Returns StorageContainerLocationClient to communicate with
    * {@link StorageContainerManager} associated with the MiniOzoneCluster.
    *
@@ -136,9 +157,14 @@ public interface MiniOzoneCluster {
   /**
    * Restarts StorageContainerManager instance.
    *
+   * @param waitForDatanode
    * @throws IOException
+   * @throws TimeoutException
+   * @throws InterruptedException
    */
-  void restartStorageContainerManager() throws IOException;
+  void restartStorageContainerManager(boolean waitForDatanode)
+      throws InterruptedException, TimeoutException, IOException,
+      AuthenticationException;
 
   /**
    * Restarts OzoneManager instance.
@@ -152,9 +178,18 @@ public interface MiniOzoneCluster {
    *
    * @param i index of HddsDatanode in the MiniOzoneCluster
    */
-  void restartHddsDatanode(int i) throws InterruptedException,
-      TimeoutException;
+  void restartHddsDatanode(int i, boolean waitForDatanode)
+      throws InterruptedException, TimeoutException;
 
+  int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException;
+
+  /**
+   * Restart a particular HddsDatanode.
+   *
+   * @param dn HddsDatanode in the MiniOzoneCluster
+   */
+  void restartHddsDatanode(DatanodeDetails dn, boolean waitForDatanode)
+      throws InterruptedException, TimeoutException, IOException;
   /**
    * Shutdown a particular HddsDatanode.
    *
@@ -163,23 +198,54 @@ public interface MiniOzoneCluster {
   void shutdownHddsDatanode(int i);
 
   /**
-   * Shutdown the MiniOzoneCluster.
+   * Shutdown a particular HddsDatanode.
+   *
+   * @param dn HddsDatanode in the MiniOzoneCluster
+   */
+  void shutdownHddsDatanode(DatanodeDetails dn) throws IOException;
+
+  /**
+   * Shutdown the MiniOzoneCluster and delete the storage dirs.
    */
   void shutdown();
 
   /**
+   * Stop the MiniOzoneCluster without any cleanup.
+   */
+  void stop();
+
+  /**
+   * Start Scm.
+   */
+  void startScm() throws IOException;
+
+  /**
+   * Start DataNodes.
+   */
+  void startHddsDatanodes();
+
+  /**
+   * Shuts down all the DataNodes.
+   */
+  void shutdownHddsDatanodes();
+
+  /**
    * Builder class for MiniOzoneCluster.
    */
-  @SuppressWarnings("CheckStyle")
+  @SuppressWarnings("visibilitymodifier")
   abstract class Builder {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
     protected static final int DEFAULT_HB_PROCESSOR_INTERVAL_MS = 100;
+    protected static final int ACTIVE_OMS_NOT_SET = -1;
 
     protected final OzoneConfiguration conf;
-    protected final String path;
+    protected String path;
 
     protected String clusterId;
+    protected String omServiceId;
+    protected int numOfOMs;
+    protected int numOfActiveOMs = ACTIVE_OMS_NOT_SET;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
@@ -189,17 +255,21 @@ public interface MiniOzoneCluster {
 
     protected Boolean ozoneEnabled = true;
     protected Boolean randomContainerPort = true;
-
+    protected Optional<Integer> chunkSize = Optional.empty();
+    protected Optional<Long> streamBufferFlushSize = Optional.empty();
+    protected Optional<Long> streamBufferMaxSize = Optional.empty();
+    protected Optional<Long> blockSize = Optional.empty();
+    protected Optional<StorageUnit> streamBufferSizeUnit = Optional.empty();
     // Use relative smaller number of handlers for testing
     protected int numOfOmHandlers = 20;
     protected int numOfScmHandlers = 20;
     protected int numOfDatanodes = 1;
+    protected boolean  startDataNodes = true;
+    protected CertificateClient certClient;
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
-      this.clusterId = UUID.randomUUID().toString();
-      this.path = GenericTestUtils.getTempPath(
-          MiniOzoneClusterImpl.class.getSimpleName() + "-" + clusterId);
+      setClusterId(UUID.randomUUID().toString());
     }
 
     /**
@@ -211,6 +281,25 @@ public interface MiniOzoneCluster {
      */
     public Builder setClusterId(String id) {
       clusterId = id;
+      path = GenericTestUtils.getTempPath(
+          MiniOzoneClusterImpl.class.getSimpleName() + "-" + clusterId);
+      return this;
+    }
+
+    public Builder setStartDataNodes(boolean nodes) {
+      this.startDataNodes = nodes;
+      return this;
+    }
+
+    /**
+     * Sets the certificate client.
+     *
+     * @param client
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setCertificateClient(CertificateClient client) {
+      this.certClient = client;
       return this;
     }
 
@@ -308,6 +397,66 @@ public interface MiniOzoneCluster {
      */
     public Builder disableOzone() {
       ozoneEnabled = false;
+      return this;
+    }
+
+    /**
+     * Sets the chunk size.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setChunkSize(int size) {
+      chunkSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the flush size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setStreamBufferFlushSize(long size) {
+      streamBufferFlushSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the max size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setStreamBufferMaxSize(long size) {
+      streamBufferMaxSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the block size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setBlockSize(long size) {
+      blockSize = Optional.of(size);
+      return this;
+    }
+
+    public Builder setNumOfOzoneManagers(int numOMs) {
+      this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setNumOfActiveOMs(int numActiveOMs) {
+      this.numOfActiveOMs = numActiveOMs;
+      return this;
+    }
+
+    public Builder setStreamBufferSizeUnit(StorageUnit unit) {
+      this.streamBufferSizeUnit = Optional.of(unit);
+      return this;
+    }
+
+    public Builder setOMServiceId(String serviceId) {
+      this.omServiceId = serviceId;
       return this;
     }
 

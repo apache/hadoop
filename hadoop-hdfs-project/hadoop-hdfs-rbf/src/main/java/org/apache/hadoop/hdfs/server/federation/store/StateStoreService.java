@@ -33,6 +33,7 @@ import javax.management.StandardMBean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.NullStateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMBean;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -60,12 +61,12 @@ import com.google.common.annotations.VisibleForTesting;
  * StateStoreDriver} and maintain the connection to the data store. There are
  * multiple state store driver connections supported:
  * <ul>
- * <li>File
- * {@link org.apache.hadoop.hdfs.server.federation.store.driver.impl.
- * StateStoreFileImpl StateStoreFileImpl}
- * <li>ZooKeeper
- * {@link org.apache.hadoop.hdfs.server.federation.store.driver.impl.
- * StateStoreZooKeeperImpl StateStoreZooKeeperImpl}
+ * <li>File {@link
+ * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl
+ * StateStoreFileImpl}
+ * <li>ZooKeeper {@link
+ * org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl
+ * StateStoreZooKeeperImpl}
  * </ul>
  * <p>
  * The service also supports the dynamic registration of record stores like:
@@ -74,10 +75,8 @@ import com.google.common.annotations.VisibleForTesting;
  * federation.
  * <li>{@link MountTableStore}: Mount table between to subclusters.
  * See {@link org.apache.hadoop.fs.viewfs.ViewFs ViewFs}.
- * <li>{@link RebalancerStore}: Log of the rebalancing operations.
  * <li>{@link RouterStore}: Router state in the federation.
  * <li>{@link DisabledNameserviceStore}: Disabled name services.
- * <li>{@link TokenStore}: Tokens in the federation.
  * </ul>
  */
 @InterfaceAudience.Private
@@ -130,10 +129,10 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
-   * Initialize the State Store and the connection to the backend.
+   * Initialize the State Store and the connection to the back-end.
    *
    * @param config Configuration for the State Store.
-   * @throws IOException
+   * @throws IOException Cannot create driver for the State Store.
    */
   @Override
   protected void serviceInit(Configuration config) throws Exception {
@@ -161,32 +160,50 @@ public class StateStoreService extends CompositeService {
     this.addService(monitorService);
 
     // Set expirations intervals for each record
-    MembershipState.setExpirationMs(conf.getLong(
+    MembershipState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT));
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
+    MembershipState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS,
+        RBFConfigKeys
+            .FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
 
     RouterState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS,
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT,
         TimeUnit.MILLISECONDS));
 
+    RouterState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS,
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
     // Cache update service
     this.cacheUpdater = new StateStoreCacheUpdateService(this);
     addService(this.cacheUpdater);
 
-    // Create metrics for the State Store
-    this.metrics = StateStoreMetrics.create(conf);
+    if (conf.getBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE_DEFAULT)) {
+      // Create metrics for the State Store
+      this.metrics = StateStoreMetrics.create(conf);
 
-    // Adding JMX interface
-    try {
-      StandardMBean bean = new StandardMBean(metrics, StateStoreMBean.class);
-      ObjectName registeredObject =
-          MBeans.register("Router", "StateStore", bean);
-      LOG.info("Registered StateStoreMBean: {}", registeredObject);
-    } catch (NotCompliantMBeanException e) {
-      throw new RuntimeException("Bad StateStoreMBean setup", e);
-    } catch (MetricsException e) {
-      LOG.error("Failed to register State Store bean {}", e.getMessage());
+      // Adding JMX interface
+      try {
+        StandardMBean bean = new StandardMBean(metrics, StateStoreMBean.class);
+        ObjectName registeredObject =
+            MBeans.register("Router", "StateStore", bean);
+        LOG.info("Registered StateStoreMBean: {}", registeredObject);
+      } catch (NotCompliantMBeanException e) {
+        throw new RuntimeException("Bad StateStoreMBean setup", e);
+      } catch (MetricsException e) {
+        LOG.error("Failed to register State Store bean {}", e.getMessage());
+      }
+    } else {
+      LOG.info("State Store metrics not enabled");
+      this.metrics = new NullStateStoreMetrics();
     }
 
     super.serviceInit(this.conf);
@@ -214,6 +231,7 @@ public class StateStoreService extends CompositeService {
    * Add a record store to the State Store. It includes adding the store, the
    * supported record and the cache management.
    *
+   * @param <T> Type of the records stored.
    * @param clazz Class of the record store to track.
    * @return New record store.
    * @throws ReflectiveOperationException

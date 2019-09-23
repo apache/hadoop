@@ -112,17 +112,11 @@ class InvalidateBlocks {
   }
 
   private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn) {
-    if (nodeToBlocks.containsKey(dn)) {
-      return nodeToBlocks.get(dn);
-    }
-    return null;
+    return nodeToBlocks.get(dn);
   }
 
   private LightWeightHashSet<Block> getECBlocksSet(final DatanodeInfo dn) {
-    if (nodeToECBlocks.containsKey(dn)) {
-      return nodeToECBlocks.get(dn);
-    }
-    return null;
+    return nodeToECBlocks.get(dn);
   }
 
   private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn,

@@ -99,7 +99,7 @@ class ClientThrottlingAnalyzer {
     this.blobMetrics = new AtomicReference<BlobOperationMetrics>(
         new BlobOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(
-        String.format("wasb-timer-client-throttling-analyzer-%s", name));
+        String.format("wasb-timer-client-throttling-analyzer-%s", name), true);
     this.timer.schedule(new TimerTaskImpl(),
         analysisPeriodMs,
         analysisPeriodMs);

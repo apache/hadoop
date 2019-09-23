@@ -18,25 +18,53 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Set;
 
 /**
  * Handles Stale node event.
  */
 public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StaleNodeHandler.class);
 
-  private final Node2ContainerMap node2ContainerMap;
+  private final NodeManager nodeManager;
+  private final PipelineManager pipelineManager;
+  private final Configuration conf;
 
-  public StaleNodeHandler(Node2ContainerMap node2ContainerMap) {
-    this.node2ContainerMap = node2ContainerMap;
+  public StaleNodeHandler(NodeManager nodeManager,
+      PipelineManager pipelineManager, OzoneConfiguration conf) {
+    this.nodeManager = nodeManager;
+    this.pipelineManager = pipelineManager;
+    this.conf = conf;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
-                        EventPublisher publisher) {
-    //TODO: logic to handle stale node.
+      EventPublisher publisher) {
+    Set<PipelineID> pipelineIds =
+        nodeManager.getPipelines(datanodeDetails);
+    LOG.info("Datanode {} moved to stale state. Finalizing its pipelines {}",
+        datanodeDetails, pipelineIds);
+    for (PipelineID pipelineID : pipelineIds) {
+      try {
+        Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
+        pipelineManager.finalizeAndDestroyPipeline(pipeline, true);
+      } catch (IOException e) {
+        LOG.info("Could not finalize pipeline={} for dn={}", pipelineID,
+            datanodeDetails);
+      }
+    }
   }
 }

@@ -65,7 +65,7 @@ public class LocalResolver extends RouterResolver<String, String> {
    * too many calls. The cache might be updated asynchronously to reduce
    * latency.
    *
-   * @return Node IP -> Subcluster.
+   * @return Node IP to Subcluster.
    */
   @Override
   protected Map<String, String> getSubclusterInfo(
@@ -196,7 +196,7 @@ public class LocalResolver extends RouterResolver<String, String> {
         try {
           String nsId = nn.getNameserviceId();
           String rpcAddress = nn.getRpcAddress();
-          String hostname = HostAndPort.fromString(rpcAddress).getHostText();
+          String hostname = HostAndPort.fromString(rpcAddress).getHost();
           ret.put(hostname, nsId);
           if (hostname.equals(localHostname)) {
             ret.put(localIp, nsId);

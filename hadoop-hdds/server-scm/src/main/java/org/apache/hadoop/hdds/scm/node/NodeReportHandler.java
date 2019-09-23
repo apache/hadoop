@@ -48,8 +48,7 @@ public class NodeReportHandler implements EventHandler<NodeReportFromDatanode> {
     DatanodeDetails dn = nodeReportFromDatanode.getDatanodeDetails();
     Preconditions.checkNotNull(dn, "NodeReport is "
         + "missing DatanodeDetails.");
-    LOGGER.trace("Processing node report for dn: {}", dn);
     nodeManager
-        .processNodeReport(dn.getUuid(), nodeReportFromDatanode.getReport());
+        .processNodeReport(dn, nodeReportFromDatanode.getReport());
   }
 }

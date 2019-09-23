@@ -29,8 +29,7 @@ import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.zip.CRC32;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -65,8 +64,8 @@ import static org.junit.Assert.*;
  */
 public class TestDFSUpgradeFromImage {
   
-  private static final Log LOG = LogFactory
-      .getLog(TestDFSUpgradeFromImage.class);
+  private static final org.slf4j.Logger LOG = LoggerFactory
+      .getLogger(TestDFSUpgradeFromImage.class);
   private static final File TEST_ROOT_DIR =
                       new File(MiniDFSCluster.getBaseDirectory());
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";

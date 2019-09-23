@@ -18,83 +18,65 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.io.OzoneInputStream;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CHUNK_SIZE_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CHUNK_SIZE_KEY;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 /**
  * Gets an existing key.
  */
+@Command(name = "get",
+    description = "Gets a specific key from ozone server")
 public class GetKeyHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
-  private String keyName;
 
+  @Parameters(index = "0", arity = "1..1", description =
+      Shell.OZONE_KEY_URI_DESCRIPTION)
+  private String uri;
+
+  @Parameters(index = "1", arity = "1..1",
+      description = "File path to download the key to")
+  private String fileName;
 
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   *
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.GET_KEY)) {
-      throw new OzoneClientException("Incorrect call : getKey is missing");
-    }
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.FILE)) {
-      throw new OzoneClientException(
-          "get key needs a file path to download to");
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureKeyAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    String ozoneURIString = cmd.getOptionValue(Shell.GET_KEY);
-    URI ozoneURI = verifyURI(ozoneURIString);
-    Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
-          "volume/bucket/key name required in putKey");
-    }
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
+    String keyName = address.getKeyName();
 
-    volumeName = path.getName(0).toString();
-    bucketName = path.getName(1).toString();
-    keyName = path.getName(2).toString();
-
-
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
       System.out.printf("Key Name : %s%n", keyName);
     }
 
-
-    String fileName = cmd.getOptionValue(Shell.FILE);
     Path dataFilePath = Paths.get(fileName);
     File dataFile = new File(fileName);
 
@@ -113,19 +95,21 @@ public class GetKeyHandler extends Handler {
     OzoneInputStream keyInputStream = bucket.readKey(keyName);
     if (dataFilePath != null) {
       FileOutputStream outputStream = new FileOutputStream(dataFile);
-      IOUtils.copyBytes(keyInputStream, outputStream, new OzoneConfiguration()
-          .getInt(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT));
+      IOUtils.copyBytes(keyInputStream, outputStream,
+          (int) new OzoneConfiguration()
+              .getStorageSize(OZONE_SCM_CHUNK_SIZE_KEY,
+                  OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES));
       outputStream.close();
     } else {
       throw new OzoneClientException(
           "Can not access the file \"" + fileName + "\"");
     }
-    if(cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       FileInputStream stream = new FileInputStream(dataFile);
       String hash = DigestUtils.md5Hex(stream);
       System.out.printf("Downloaded file hash : %s%n", hash);
       stream.close();
     }
-
+    return null;
   }
 }

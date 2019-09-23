@@ -223,4 +223,22 @@ public abstract class ContainerStatus {
     throw new UnsupportedOperationException(
         "subclass must implement this method");
   }
+
+  /**
+   * Get exposed ports of the container.
+   * @return List of exposed ports
+   */
+  @Public
+  @Unstable
+  public String getExposedPorts() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
+
+  @Private
+  @Unstable
+  public void setExposedPorts(String ports) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 }

@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop"  2.8.2 Release Notes
+# Apache Hadoop  2.8.2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
@@ -26,6 +26,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 * [HDFS-8312](https://issues.apache.org/jira/browse/HDFS-8312) | *Critical* | **Trash does not descent into child directories to check for permissions**
 
 Permissions are now checked when moving a file to Trash.
+
+
+---
+
+* [HADOOP-13119](https://issues.apache.org/jira/browse/HADOOP-13119) | *Major* | **Add ability to secure log servlet using proxy users**
+
+**WARNING: No release note provided for this change.**
 
 
 ---

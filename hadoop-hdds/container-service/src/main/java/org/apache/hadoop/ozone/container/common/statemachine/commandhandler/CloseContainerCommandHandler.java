@@ -16,32 +16,40 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto
+    .ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
+import org.apache.ratis.protocol.NotLeaderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import java.io.IOException;
 
 /**
  * Handler for close container command received from SCM.
  */
 public class CloseContainerCommandHandler implements CommandHandler {
-  static final Logger LOG =
+
+  private static final Logger LOG =
       LoggerFactory.getLogger(CloseContainerCommandHandler.class);
+
   private int invocationCount;
   private long totalTime;
-  private boolean cmdExecuted;
 
   /**
    * Constructs a ContainerReport handler.
@@ -53,50 +61,85 @@ public class CloseContainerCommandHandler implements CommandHandler {
    * Handles a given SCM command.
    *
    * @param command           - SCM Command
-   * @param container         - Ozone Container.
+   * @param ozoneContainer         - Ozone Container.
    * @param context           - Current Context.
    * @param connectionManager - The SCMs that we are talking to.
    */
   @Override
-  public void handle(SCMCommand command, OzoneContainer container,
+  public void handle(SCMCommand command, OzoneContainer ozoneContainer,
       StateContext context, SCMConnectionManager connectionManager) {
     LOG.debug("Processing Close Container command.");
     invocationCount++;
-    cmdExecuted = false;
-    long startTime = Time.monotonicNow();
-    // TODO: define this as INVALID_CONTAINER_ID in HddsConsts.java (TBA)
-    long containerID = -1;
+    final long startTime = Time.monotonicNow();
+    final DatanodeDetails datanodeDetails = context.getParent()
+        .getDatanodeDetails();
+    final CloseContainerCommandProto closeCommand =
+        ((CloseContainerCommand)command).getProto();
+    final ContainerController controller = ozoneContainer.getController();
+    final long containerId = closeCommand.getContainerID();
     try {
+      final Container container = controller.getContainer(containerId);
 
-      CloseContainerCommandProto
-          closeContainerProto =
-          CloseContainerCommandProto
-              .parseFrom(command.getProtoBufMessage());
-      containerID = closeContainerProto.getContainerID();
-      HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
-      HddsProtos.ReplicationType replicationType =
-          closeContainerProto.getReplicationType();
+      if (container == null) {
+        LOG.error("Container #{} does not exist in datanode. "
+            + "Container close failed.", containerId);
+        return;
+      }
 
-      ContainerProtos.ContainerCommandRequestProto.Builder request =
-          ContainerProtos.ContainerCommandRequestProto.newBuilder();
-      request.setCmdType(ContainerProtos.Type.CloseContainer);
-      request.setContainerID(containerID);
-      request.setCloseContainer(
-          ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-      request.setTraceID(UUID.randomUUID().toString());
-      request.setDatanodeUuid(
-          context.getParent().getDatanodeDetails().getUuidString());
-      // submit the close container request for the XceiverServer to handle
-      container.submitContainerRequest(
-          request.build(), replicationType, pipelineID);
-      cmdExecuted = true;
-    } catch (Exception e) {
-      LOG.error("Can't close container " + containerID, e);
+      // move the container to CLOSING if in OPEN state
+      controller.markContainerForClose(containerId);
+
+      switch (container.getContainerState()) {
+      case OPEN:
+      case CLOSING:
+        // If the container is part of open pipeline, close it via write channel
+        if (ozoneContainer.getWriteChannel()
+            .isExist(closeCommand.getPipelineID())) {
+          ContainerCommandRequestProto request =
+              getContainerCommandRequestProto(datanodeDetails,
+                  closeCommand.getContainerID());
+          ozoneContainer.getWriteChannel()
+              .submitRequest(request, closeCommand.getPipelineID());
+        } else {
+          // Container should not exist in CLOSING state without a pipeline
+          controller.markContainerUnhealthy(containerId);
+        }
+        break;
+      case QUASI_CLOSED:
+        if (closeCommand.getForce()) {
+          controller.closeContainer(containerId);
+          break;
+        }
+      case CLOSED:
+        break;
+      case UNHEALTHY:
+      case INVALID:
+        LOG.debug("Cannot close the container #{}, the container is"
+            + " in {} state.", containerId, container.getContainerState());
+      default:
+        break;
+      }
+    } catch (NotLeaderException e) {
+      LOG.debug("Follower cannot close container #{}.", containerId);
+    } catch (IOException e) {
+      LOG.error("Can't close container #{}", containerId, e);
     } finally {
-      updateCommandStatus(context, command, cmdExecuted, LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }
+  }
+
+  private ContainerCommandRequestProto getContainerCommandRequestProto(
+      final DatanodeDetails datanodeDetails, final long containerId) {
+    final ContainerCommandRequestProto.Builder command =
+        ContainerCommandRequestProto.newBuilder();
+    command.setCmdType(ContainerProtos.Type.CloseContainer);
+    command.setTraceID(TracingUtil.exportCurrentSpan());
+    command.setContainerID(containerId);
+    command.setCloseContainer(
+        ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
+    command.setDatanodeUuid(datanodeDetails.getUuidString());
+    return command.build();
   }
 
   /**

@@ -139,7 +139,7 @@ public class KeyShell extends CommandShell {
         }
         if (attributes.containsKey(attr)) {
           getOut().println("\nEach attribute must correspond to only one " +
-              "value:\natttribute \"" + attr + "\" was repeated\n");
+              "value:\nattribute \"" + attr + "\" was repeated\n");
           return 1;
         }
         attributes.put(attr, val);

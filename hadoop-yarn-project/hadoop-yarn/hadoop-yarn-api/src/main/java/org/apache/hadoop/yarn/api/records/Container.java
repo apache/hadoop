@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -125,7 +127,20 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public abstract void setNodeHttpAddress(String nodeHttpAddress);
-  
+
+  /**
+   * Get the exposed ports of the node on which the container is allocated.
+   * @return exposed ports of the node on which the container is allocated
+   */
+  @Public
+  @Stable
+  public abstract Map<String, List<Map<String, String>>> getExposedPorts();
+
+  @Private
+  @Unstable
+  public abstract void setExposedPorts(
+      Map<String, List<Map<String, String>>> ports);
+
   /**
    * Get the <code>Resource</code> allocated to the container.
    * @return <code>Resource</code> allocated to the container

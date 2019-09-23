@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * Stores information about a disk/volume.
  */
-public class VolumeInfo {
+public final class VolumeInfo {
 
   private static final Logger LOG = LoggerFactory.getLogger(VolumeInfo.class);
 
@@ -39,7 +39,8 @@ public class VolumeInfo {
   private final StorageType storageType;
 
   // Space usage calculator
-  private VolumeUsage usage;
+  private final VolumeUsage usage;
+
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
   // query from the filesystem.
@@ -95,8 +96,11 @@ public class VolumeInfo {
     this.usage = new VolumeUsage(root, b.conf);
   }
 
-  public long getCapacity() {
-    return configuredCapacity < 0 ? usage.getCapacity() : configuredCapacity;
+  public long getCapacity() throws IOException {
+    if (configuredCapacity < 0) {
+      return usage.getCapacity();
+    }
+    return configuredCapacity;
   }
 
   public long getAvailable() throws IOException {
@@ -108,10 +112,7 @@ public class VolumeInfo {
   }
 
   protected void shutdownUsageThread() {
-    if (usage != null) {
-      usage.shutdown();
-    }
-    usage = null;
+    usage.shutdown();
   }
 
   public String getRootDir() {

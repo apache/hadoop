@@ -80,6 +80,7 @@ public class ContainerReportPublisher extends
 
   @Override
   protected ContainerReportsProto getReport() throws IOException {
-    return getContext().getParent().getContainer().getContainerReport();
+    return getContext().getParent().getContainer()
+        .getController().getContainerReport();
   }
 }

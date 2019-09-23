@@ -21,23 +21,26 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Properties;
 
 /**
- * Subclass of hadoop-auth <code>AuthenticationFilter</code> that obtains its configuration
- * from HttpFSServer's server configuration.
+ * Subclass of hadoop-auth <code>AuthenticationFilter</code> that obtains its
+ * configuration from HttpFSServer's server configuration.
  */
 @InterfaceAudience.Private
 public class HttpFSAuthenticationFilter
@@ -45,7 +48,8 @@ public class HttpFSAuthenticationFilter
 
   static final String CONF_PREFIX = "httpfs.authentication.";
 
-  private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
+  private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET
+      + ".file";
 
   /**
    * Returns the hadoop-auth configuration from HttpFSServer's configuration.
@@ -77,22 +81,25 @@ public class HttpFSAuthenticationFilter
 
     String signatureSecretFile = props.getProperty(SIGNATURE_SECRET_FILE, null);
     if (signatureSecretFile == null) {
-      throw new RuntimeException("Undefined property: " + SIGNATURE_SECRET_FILE);
+      throw new RuntimeException("Undefined property: "
+          + SIGNATURE_SECRET_FILE);
     }
 
-    try {
-      StringBuilder secret = new StringBuilder();
-      Reader reader = new InputStreamReader(new FileInputStream(
-          signatureSecretFile), StandardCharsets.UTF_8);
-      int c = reader.read();
-      while (c > -1) {
-        secret.append((char)c);
-        c = reader.read();
+    if (!isRandomSecret(filterConfig)) {
+      try (Reader reader = new InputStreamReader(Files.newInputStream(
+          Paths.get(signatureSecretFile)), StandardCharsets.UTF_8)) {
+        StringBuilder secret = new StringBuilder();
+        int c = reader.read();
+        while (c > -1) {
+          secret.append((char) c);
+          c = reader.read();
+        }
+        props.setProperty(AuthenticationFilter.SIGNATURE_SECRET,
+            secret.toString());
+      } catch (IOException ex) {
+        throw new RuntimeException("Could not read HttpFS signature "
+            + "secret file: " + signatureSecretFile);
       }
-      reader.close();
-      props.setProperty(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
-    } catch (IOException ex) {
-      throw new RuntimeException("Could not read HttpFS signature secret file: " + signatureSecretFile);
     }
     setAuthHandlerClass(props);
     String dtkind = WebHdfsConstants.WEBHDFS_TOKEN_KIND.toString();
@@ -114,4 +121,12 @@ public class HttpFSAuthenticationFilter
     return conf;
   }
 
+  private boolean isRandomSecret(FilterConfig filterConfig) {
+    SignerSecretProvider secretProvider = (SignerSecretProvider) filterConfig
+        .getServletContext().getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
+    if (secretProvider == null) {
+      return false;
+    }
+    return secretProvider.getClass() == RandomSignerSecretProvider.class;
+  }
 }

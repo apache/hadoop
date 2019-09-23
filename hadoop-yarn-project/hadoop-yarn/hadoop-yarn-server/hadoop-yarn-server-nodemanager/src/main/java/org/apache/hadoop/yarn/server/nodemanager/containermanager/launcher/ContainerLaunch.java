@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.TOKEN_FILE_NAME_FMT;
 
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 
@@ -70,7 +71,6 @@ import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -85,7 +85,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
@@ -93,6 +92,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
@@ -113,9 +113,13 @@ public class ContainerLaunch implements Callable<Integer> {
     Shell.appendScriptExtension("launch_container");
 
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
+  public static final String SYSFS_DIR = "sysfs";
+
+  public static final String KEYSTORE_FILE = "yarn_provided.keystore";
+  public static final String TRUSTSTORE_FILE = "yarn_provided.truststore";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
-  private static final String EXIT_CODE_FILE_SUFFIX = ".exitcode";
+  static final String EXIT_CODE_FILE_SUFFIX = ".exitcode";
 
   protected final Dispatcher dispatcher;
   protected final ContainerExecutor exec;
@@ -131,14 +135,13 @@ public class ContainerLaunch implements Callable<Integer> {
   protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private volatile boolean killedBeforeStart = false;
-  private long sleepDelayBeforeSigKill = 250;
   private long maxKillWaitTime = 2000;
 
   protected Path pidFilePath = null;
 
   protected final LocalDirsHandlerService dirsHandler;
 
-  private final Lock containerExecLock = new ReentrantLock();
+  private final Lock launchLock = new ReentrantLock();
 
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
@@ -152,9 +155,6 @@ public class ContainerLaunch implements Callable<Integer> {
     this.dispatcher = dispatcher;
     this.dirsHandler = dirsHandler;
     this.containerManager = containerManager;
-    this.sleepDelayBeforeSigKill =
-        conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
-            YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS);
     this.maxKillWaitTime =
         conf.getLong(YarnConfiguration.NM_PROCESS_KILL_WAIT_MS,
             YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS);
@@ -236,8 +236,13 @@ public class ContainerLaunch implements Callable<Integer> {
               + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-              containerIdStr));
+              + String.format(TOKEN_FILE_NAME_FMT, containerIdStr));
+      Path nmPrivateKeystorePath = dirsHandler.getLocalPathForWrite(
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + KEYSTORE_FILE);
+      Path nmPrivateTruststorePath = dirsHandler.getLocalPathForWrite(
+          getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+              + TRUSTSTORE_FILE);
       Path nmPrivateClasspathJarDir = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr));
 
@@ -245,17 +250,22 @@ public class ContainerLaunch implements Callable<Integer> {
       Path containerWorkDir = deriveContainerWorkDir();
       recordContainerWorkDir(containerID, containerWorkDir.toString());
 
+      // Select a root dir for all csi volumes for the container
+      Path csiVolumesRoot = deriveCsiVolumesRootDir();
+      recordContainerCsiVolumesRootDir(containerID, csiVolumesRoot.toString());
+
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
       // pid file should be in nm private dir so that it is not
       // accessible by users
       pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
+      List<String> localDirsForRead = dirsHandler.getLocalDirsForRead();
       List<String> logDirs = dirsHandler.getLogDirs();
-      List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> filecacheDirs = getNMFilecacheDirs(localDirsForRead);
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
-      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirsForRead);
       List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
           appIdStr);
 
@@ -270,6 +280,44 @@ public class ContainerLaunch implements Callable<Integer> {
         Path userdir = new Path(usersdir, user);
         Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
         appDirs.add(new Path(appsdir, appIdStr));
+      }
+
+      byte[] keystore = container.getCredentials().getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE);
+      if (keystore != null) {
+        try (DataOutputStream keystoreOutStream =
+                 lfs.create(nmPrivateKeystorePath,
+                     EnumSet.of(CREATE, OVERWRITE))) {
+          keystoreOutStream.write(keystore);
+          environment.put(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME,
+              new Path(containerWorkDir,
+                  ContainerLaunch.KEYSTORE_FILE).toUri().getPath());
+          environment.put(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME,
+              new String(container.getCredentials().getSecretKey(
+                  AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD),
+                  StandardCharsets.UTF_8));
+        }
+      } else {
+        nmPrivateKeystorePath = null;
+      }
+      byte[] truststore = container.getCredentials().getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE);
+      if (truststore != null) {
+        try (DataOutputStream truststoreOutStream =
+                 lfs.create(nmPrivateTruststorePath,
+                     EnumSet.of(CREATE, OVERWRITE))) {
+          truststoreOutStream.write(truststore);
+          environment.put(
+              ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME,
+              new Path(containerWorkDir,
+                  ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath());
+          environment.put(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME,
+              new String(container.getCredentials().getSecretKey(
+                  AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD),
+                  StandardCharsets.UTF_8));
+        }
+      } else {
+        nmPrivateTruststorePath = null;
       }
 
       // Set the token location too.
@@ -309,9 +357,12 @@ public class ContainerLaunch implements Callable<Integer> {
           .setLocalizedResources(localResources)
           .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
           .setNmPrivateTokensPath(nmPrivateTokensPath)
+          .setNmPrivateKeystorePath(nmPrivateKeystorePath)
+          .setNmPrivateTruststorePath(nmPrivateTruststorePath)
           .setUser(user)
           .setAppId(appIdStr)
           .setContainerWorkDir(containerWorkDir)
+          .setContainerCsiVolumesRootDir(csiVolumesRoot)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
           .setFilecacheDirs(filecacheDirs)
@@ -340,6 +391,27 @@ public class ContainerLaunch implements Callable<Integer> {
 
     handleContainerExitCode(ret, containerLogDir);
     return ret;
+  }
+
+  /**
+   * Volumes mount point root:
+   *   ${YARN_LOCAL_DIR}/usercache/${user}/filecache/csiVolumes/app/container
+   * CSI volumes may creates the mount point with different permission bits.
+   * If we create the volume mount under container work dir, it may
+   * mess up the existing permission structure, which is restricted by
+   * linux container executor. So we put all volume mounts under a same
+   * root dir so it is easier cleanup.
+   **/
+  private Path deriveCsiVolumesRootDir() throws IOException {
+    final String containerVolumePath =
+        ContainerLocalizer.USERCACHE + Path.SEPARATOR
+            + container.getUser() + Path.SEPARATOR
+            + ContainerLocalizer.FILECACHE + Path.SEPARATOR
+            + ContainerLocalizer.CSI_VOLIUME_MOUNTS_ROOT + Path.SEPARATOR
+            + app.getAppId().toString() + Path.SEPARATOR
+            + container.getContainerId().toString();
+    return dirsHandler.getLocalPathForWrite(containerVolumePath,
+        LocalDirAllocator.SIZE_UNKNOWN, false);
   }
 
   private Path deriveContainerWorkDir() throws IOException {
@@ -490,11 +562,11 @@ public class ContainerLaunch implements Callable<Integer> {
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
     if (launchPrep == 0) {
-      containerExecLock.lock();
+      launchLock.lock();
       try {
         return exec.launchContainer(ctx);
       } finally {
-        containerExecLock.unlock();
+        launchLock.unlock();
       }
     }
     return launchPrep;
@@ -504,14 +576,33 @@ public class ContainerLaunch implements Callable<Integer> {
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
     if (launchPrep == 0) {
-      containerExecLock.lock();
+      launchLock.lock();
       try {
         return exec.relaunchContainer(ctx);
       } finally {
-        containerExecLock.unlock();
+        launchLock.unlock();
       }
     }
     return launchPrep;
+  }
+
+  void reapContainer() throws IOException {
+    launchLock.lock();
+    try {
+      // Reap the container
+      boolean result = exec.reapContainer(
+          new ContainerReapContext.Builder()
+              .setContainer(container)
+              .setUser(container.getUser())
+              .build());
+      if (!result) {
+        throw new IOException("Reap container failed for container " +
+            container.getContainerId());
+      }
+      cleanupContainerFiles(getContainerWorkDir());
+    } finally {
+      launchLock.unlock();
+    }
   }
 
   protected int prepareForLaunch(ContainerStartContext ctx) throws IOException {
@@ -556,11 +647,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   protected void handleContainerExitCode(int exitCode, Path containerLogDir) {
     ContainerId containerId = container.getContainerId();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Container " + containerId + " completed with exit code "
-          + exitCode);
-    }
+    LOG.debug("Container {} completed with exit code {}", containerId,
+        exitCode);
 
     StringBuilder diagnosticInfo =
         new StringBuilder("Container exited with a non-zero exit code ");
@@ -697,7 +785,8 @@ public class ContainerLaunch implements Callable<Integer> {
     StringBuilder analysis = new StringBuilder();
     if (errorMsg.indexOf("Error: Could not find or load main class"
         + " org.apache.hadoop.mapreduce") != -1) {
-      analysis.append("Please check whether your etc/hadoop/mapred-site.xml "
+      analysis.append(
+          "Please check whether your <HADOOP_HOME>/etc/hadoop/mapred-site.xml "
           + "contains the below configuration:\n");
       analysis.append("<property>\n")
           .append("  <name>yarn.app.mapreduce.am.env</name>\n")
@@ -719,120 +808,6 @@ public class ContainerLaunch implements Callable<Integer> {
   protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
     return getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
         + String.format(ContainerLaunch.PID_FILE_NAME_FMT, containerIdStr);
-  }
-  
-  /**
-   * Cleanup the container.
-   * Cancels the launch if launch has not started yet or signals
-   * the executor to not execute the process if not already done so.
-   * Also, sends a SIGTERM followed by a SIGKILL to the process if
-   * the process id is available.
-   * @throws IOException
-   */
-  public void cleanupContainer() throws IOException {
-    ContainerId containerId = container.getContainerId();
-    String containerIdStr = containerId.toString();
-    LOG.info("Cleaning up container " + containerIdStr);
-
-    try {
-      context.getNMStateStore().storeContainerKilled(containerId);
-    } catch (IOException e) {
-      LOG.error("Unable to mark container " + containerId
-          + " killed in store", e);
-    }
-
-    // launch flag will be set to true if process already launched
-    boolean alreadyLaunched =
-        !containerAlreadyLaunched.compareAndSet(false, true);
-    if (!alreadyLaunched) {
-      LOG.info("Container " + containerIdStr + " not launched."
-          + " No cleanup needed to be done");
-      return;
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Marking container " + containerIdStr + " as inactive");
-    }
-    // this should ensure that if the container process has not launched 
-    // by this time, it will never be launched
-    exec.deactivateContainer(containerId);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting pid for container " + containerIdStr + " to kill"
-          + " from pid file " 
-          + (pidFilePath != null ? pidFilePath.toString() : "null"));
-    }
-    
-    // however the container process may have already started
-    try {
-
-      // get process id from pid file if available
-      // else if shell is still active, get it from the shell
-      String processId = null;
-      if (pidFilePath != null) {
-        processId = getContainerPid(pidFilePath);
-      }
-
-      // kill process
-      String user = container.getUser();
-      if (processId != null) {
-        signalProcess(processId, user, containerIdStr);
-      } else {
-        // Normally this means that the process was notified about
-        // deactivateContainer above and did not start.
-        // Since we already set the state to RUNNING or REINITIALIZING
-        // we have to send a killed event to continue.
-        if (!completed.get()) {
-          LOG.warn("Container clean up before pid file created "
-              + containerIdStr);
-          dispatcher.getEventHandler().handle(
-              new ContainerExitEvent(container.getContainerId(),
-                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-                  Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
-                      ExitCode.TERMINATED.getExitCode(),
-                  "Container terminated before pid file created."));
-          // There is a possibility that the launch grabbed the file name before
-          // the deactivateContainer above but it was slow enough to avoid
-          // getContainerPid.
-          // Increasing YarnConfiguration.NM_PROCESS_KILL_WAIT_MS
-          // reduces the likelihood of this race condition and process leak.
-        }
-        // The Docker container may not have fully started, reap the container.
-        if (DockerLinuxContainerRuntime.isDockerContainerRequested(
-            container.getLaunchContext().getEnvironment())) {
-          reapDockerContainerNoPid(user);
-        }
-      }
-    } catch (Exception e) {
-      String message =
-          "Exception when trying to cleanup container " + containerIdStr
-              + ": " + StringUtils.stringifyException(e);
-      LOG.warn(message);
-      dispatcher.getEventHandler().handle(
-        new ContainerDiagnosticsUpdateEvent(containerId, message));
-    } finally {
-      // cleanup pid file if present
-      if (pidFilePath != null) {
-        FileContext lfs = FileContext.getLocalFSFileContext();
-        lfs.delete(pidFilePath, false);
-        lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
-      }
-    }
-    containerExecLock.lock();
-    try {
-      // Reap the container
-      boolean result = exec.reapContainer(
-          new ContainerReapContext.Builder()
-              .setContainer(container)
-              .setUser(container.getUser())
-              .build());
-      if (!result) {
-        throw new IOException("Reap container failed for container "
-            + containerIdStr);
-      }
-      cleanupContainerFiles(getContainerWorkDir());
-    } finally {
-      containerExecLock.unlock();
-    }
   }
 
   /**
@@ -863,26 +838,17 @@ public class ContainerLaunch implements Callable<Integer> {
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting pid for container " + containerIdStr
-          + " to send signal to from pid file "
-          + (pidFilePath != null ? pidFilePath.toString() : "null"));
-    }
+    LOG.debug("Getting pid for container {} to send signal to from pid"
+        + " file {}", containerIdStr,
+        (pidFilePath != null ? pidFilePath.toString() : "null"));
 
     try {
       // get process id from pid file if available
       // else if shell is still active, get it from the shell
-      String processId = null;
-      if (pidFilePath != null) {
-        processId = getContainerPid(pidFilePath);
-      }
-
+      String processId = getContainerPid();
       if (processId != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sending signal to pid " + processId
-              + " as user " + user
-              + " for container " + containerIdStr);
-        }
+        LOG.debug("Sending signal to pid {} as user {} for container {}",
+            processId, user, containerIdStr);
 
         boolean result = exec.signalContainer(
             new ContainerSignalContext.Builder()
@@ -907,50 +873,6 @@ public class ContainerLaunch implements Callable<Integer> {
           "Exception when sending signal to container " + containerIdStr
               + ": " + StringUtils.stringifyException(e);
       LOG.warn(message);
-    }
-  }
-
-  private boolean sendSignal(String user, String processId, Signal signal)
-      throws IOException {
-    return exec.signalContainer(
-        new ContainerSignalContext.Builder().setContainer(container)
-            .setUser(user).setPid(processId).setSignal(signal).build());
-  }
-
-  private void signalProcess(String processId, String user,
-      String containerIdStr) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending signal to pid " + processId + " as user " + user
-          + " for container " + containerIdStr);
-    }
-    final Signal signal =
-        sleepDelayBeforeSigKill > 0 ? Signal.TERM : Signal.KILL;
-
-    boolean result = sendSignal(user, processId, signal);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sent signal " + signal + " to pid " + processId + " as user "
-          + user + " for container " + containerIdStr + ", result="
-          + (result ? "success" : "failed"));
-    }
-    if (sleepDelayBeforeSigKill > 0) {
-      new DelayedProcessKiller(container, user, processId,
-          sleepDelayBeforeSigKill, Signal.KILL, exec).start();
-    }
-  }
-
-  private void reapDockerContainerNoPid(String user) throws IOException {
-    String containerIdStr =
-        container.getContainerTokenIdentifier().getContainerID().toString();
-    LOG.info("Unable to obtain pid, but docker container request detected. "
-            + "Attempting to reap container " + containerIdStr);
-    boolean result = exec.reapContainer(
-        new ContainerReapContext.Builder()
-            .setContainer(container)
-            .setUser(container.getUser())
-            .build());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sent signal to docker container " + containerIdStr
-          + " as user " + user + ", result=" + (result ? "success" : "failed"));
     }
   }
 
@@ -1074,18 +996,18 @@ public class ContainerLaunch implements Callable<Integer> {
   /**
    * Loop through for a time-bounded interval waiting to
    * read the process id from a file generated by a running process.
-   * @param pidFilePath File from which to read the process id
-   * @return Process ID
+   * @return Process ID; null when pidFilePath is null
    * @throws Exception
    */
-  private String getContainerPid(Path pidFilePath) throws Exception {
+  String getContainerPid() throws Exception {
+    if (pidFilePath == null) {
+      return null;
+    }
     String containerIdStr = 
         container.getContainerId().toString();
-    String processId = null;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Accessing pid for container " + containerIdStr
-          + " from pid file " + pidFilePath);
-    }
+    String processId;
+    LOG.debug("Accessing pid for container {} from pid file {}",
+        containerIdStr, pidFilePath);
     int sleepCounter = 0;
     final int sleepInterval = 100;
 
@@ -1094,10 +1016,7 @@ public class ContainerLaunch implements Callable<Integer> {
     while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Got pid " + processId + " for container " + containerIdStr);
-        }
+        LOG.debug("Got pid {} for container {}", processId, containerIdStr);
         break;
       }
       else if ((sleepCounter*sleepInterval) > maxKillWaitTime) {
@@ -1392,7 +1311,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     protected void link(Path src, Path dst) throws IOException {
-      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
+      line("ln -sf -- \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
     }
 
     @Override
@@ -1847,6 +1766,12 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
+  private void recordContainerCsiVolumesRootDir(ContainerId containerId,
+      String volumesRoot) throws IOException {
+    container.setCsiVolumesRootDir(volumesRoot);
+    // TODO persistent to the NM store...
+  }
+
   protected Path getContainerWorkDir() throws IOException {
     String containerWorkDir = container.getWorkDir();
     if (containerWorkDir == null
@@ -1868,6 +1793,8 @@ public class ContainerLaunch implements Callable<Integer> {
     deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
     // delete TokensPath
     deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+    // delete sysfs dir
+    deleteAsUser(new Path(containerWorkDir, SYSFS_DIR));
 
     // delete symlinks because launch script will create symlinks again
     try {
@@ -1887,4 +1814,28 @@ public class ContainerLaunch implements Callable<Integer> {
       LOG.warn("Failed to delete " + path, e);
     }
   }
+
+  /**
+   * Returns the PID File Path.
+   */
+  Path getPidFilePath() {
+    return pidFilePath;
+  }
+
+  /**
+   * Marks the container to be launched only if it was not launched.
+   *
+   * @return true if successful; false otherwise.
+   */
+  boolean markLaunched() {
+    return containerAlreadyLaunched.compareAndSet(false, true);
+  }
+
+  /**
+   * Returns if the launch is completed or not.
+   */
+  boolean isLaunchCompleted() {
+    return completed.get();
+  }
+
 }

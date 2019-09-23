@@ -21,8 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetworkTopology;
@@ -75,8 +76,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -116,7 +116,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -140,7 +140,8 @@ public class TestBlockManager {
    */
   private static final int NUM_TEST_ITERS = 30;
   private static final int BLOCK_SIZE = 64*1024;
-  private static final Log LOG = LogFactory.getLog(TestBlockManager.class);
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestBlockManager.class);
 
   private FSNamesystem fsn;
   private BlockManager bm;
@@ -687,6 +688,67 @@ public class TestBlockManager {
   }
 
   @Test
+  public void testChooseSrcDatanodesWithDupEC() throws Exception {
+    bm.maxReplicationStreams = 4;
+
+    long blockId = -9223372036854775776L; // real ec block id
+    Block aBlock = new Block(blockId, 0, 0);
+    // ec policy
+    ECSchema rsSchema = new ECSchema("rs", 3, 2);
+    String policyName = "RS-3-2-128k";
+    int cellSize = 128 * 1024;
+    ErasureCodingPolicy ecPolicy =
+        new ErasureCodingPolicy(policyName, rsSchema, cellSize, (byte) -1);
+    // striped blockInfo
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    // ec storageInfo
+    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage1", "1.1.1.1", "rack1", "host1");
+    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage2", "2.2.2.2", "rack2", "host2");
+    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage3", "3.3.3.3", "rack3", "host3");
+    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage4", "4.4.4.4", "rack4", "host4");
+    DatanodeStorageInfo ds5 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage5", "5.5.5.5", "rack5", "host5");
+    // link block with storage
+    aBlockInfoStriped.addStorage(ds1, aBlock);
+    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
+    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
+    // dup internal block
+    aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
+    aBlockInfoStriped.addStorage(ds5, new Block(blockId + 3, 0, 0));
+    // simulate the node 2 arrive maxReplicationStreams
+    for(int i = 0; i < 4; i++){
+      ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+
+    addEcBlockToBM(blockId, ecPolicy);
+    List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
+    List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
+    NumberReplicas numReplicas = new NumberReplicas();
+    List<Byte> liveBlockIndices = new ArrayList<>();
+
+    bm.chooseSourceDatanodes(
+            aBlockInfoStriped,
+            cntNodes,
+            liveNodes,
+            numReplicas, liveBlockIndices,
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
+
+    assertEquals("Choose the source node for reconstruction with one node reach"
+            + " the MAX maxReplicationStreams, the numReplicas still return the"
+            + " correct live replicas.", 4,
+            numReplicas.liveReplicas());
+
+    assertEquals("Choose the source node for reconstruction with one node reach"
+            + " the MAX maxReplicationStreams, the numReplicas should return"
+            + " the correct redundant Internal Blocks.", 1,
+            numReplicas.redundantInternalBlocks());
+  }
+
+  @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
     bm.maxReplicationStreams = 0;
     bm.replicationStreamsHardLimit = 1;
@@ -980,6 +1042,17 @@ public class TestBlockManager {
     bm.setInitializedReplQueues(false);
   }
 
+  private BlockInfo addEcBlockToBM(long blkId, ErasureCodingPolicy ecPolicy) {
+    Block block = new Block(blkId);
+    BlockInfo blockInfo = new BlockInfoStriped(block, ecPolicy);
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    blockInfo.setBlockCollectionId(inodeId);
+    doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    return blockInfo;
+  }
+
   private BlockInfo addBlockToBM(long blkId) {
     Block block = new Block(blkId);
     BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 3);
@@ -1156,7 +1229,8 @@ public class TestBlockManager {
   // spam the block manager with IBRs to verify queuing is occurring.
   @Test
   public void testAsyncIBR() throws Exception {
-    Logger.getRootLogger().setLevel(Level.WARN);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME), Level.WARN);
 
     // will create files with many small blocks.
     final int blkSize = 4*1024;
@@ -1475,6 +1549,41 @@ public class TestBlockManager {
       assertFalse("Block group of " + file + " should be placement" +
               " policy unsatisfied, currently!",
           blockManager.isPlacementPolicySatisfied(blockInfo));
+    }
+  }
+
+  /**
+   * Unit test to check the race condition for adding a Block to
+   * postponedMisreplicatedBlocks set which may not present in BlockManager
+   * thus avoiding NullPointerException.
+   **/
+  @Test
+  public void testMetaSavePostponedMisreplicatedBlocks() throws IOException {
+    bm.postponeBlock(new Block());
+
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+
+    bm.metaSave(out);
+    out.flush();
+
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have null block ",
+          output.contains("Block blk_0_0 is Null"));
+
+    } finally {
+      reader.close();
+      file.delete();
     }
   }
 

@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * to renew the leases.
  * </li>
  * </ul>
- * </p>
+ * <p>
  */
 @InterfaceAudience.Private
 public class LeaseRenewer {

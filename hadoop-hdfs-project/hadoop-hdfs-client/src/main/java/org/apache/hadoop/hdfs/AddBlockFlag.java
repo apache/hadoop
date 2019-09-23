@@ -20,11 +20,17 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+
+import java.util.EnumSet;
 
 /**
  * AddBlockFlag provides hints for new block allocation and placement.
  * Users can use this flag to control <em>per DFSOutputStream</em>
- * {@see ClientProtocol#addBlock()} behavior.
+ * @see ClientProtocol#addBlock(String, String, ExtendedBlock, DatanodeInfo[],
+ *      long, String[], EnumSet)
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

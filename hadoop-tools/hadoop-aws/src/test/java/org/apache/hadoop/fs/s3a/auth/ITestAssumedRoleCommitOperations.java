@@ -74,7 +74,7 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS),
         new RoleModel.Statement(RoleModel.Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(restrictedDir))

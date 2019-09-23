@@ -80,6 +80,7 @@ public final class ContainerDataYaml {
   public static void createContainerFile(ContainerType containerType,
       ContainerData containerData, File containerFile) throws IOException {
     Writer writer = null;
+    FileOutputStream out = null;
     try {
       // Create Yaml for given container type
       Yaml yaml = getYamlForContainerType(containerType);
@@ -87,13 +88,17 @@ public final class ContainerDataYaml {
       containerData.computeAndSetChecksum(yaml);
 
       // Write the ContainerData with checksum to Yaml file.
-      writer = new OutputStreamWriter(new FileOutputStream(
-          containerFile), "UTF-8");
+      out = new FileOutputStream(
+          containerFile);
+      writer = new OutputStreamWriter(out, "UTF-8");
       yaml.dump(containerData, writer);
 
     } finally {
       try {
         if (writer != null) {
+          writer.flush();
+          // make sure the container metadata is synced to disk.
+          out.getFD().sync();
           writer.close();
         }
       } catch (IOException ex) {
@@ -238,9 +243,14 @@ public final class ContainerDataYaml {
 
         long size = (long) nodes.get(OzoneConsts.MAX_SIZE);
 
+        String originPipelineId = (String) nodes.get(
+            OzoneConsts.ORIGIN_PIPELINE_ID);
+        String originNodeId = (String) nodes.get(OzoneConsts.ORIGIN_NODE_ID);
+
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData(
-            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size);
+            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size,
+            originPipelineId, originNodeId);
 
         kvData.setContainerDBType((String)nodes.get(
             OzoneConsts.CONTAINER_DB_TYPE));
@@ -251,21 +261,8 @@ public final class ContainerDataYaml {
         kvData.setMetadata(meta);
         kvData.setChecksum((String) nodes.get(OzoneConsts.CHECKSUM));
         String state = (String) nodes.get(OzoneConsts.STATE);
-        switch (state) {
-        case "OPEN":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
-          break;
-        case "CLOSING":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
-          break;
-        case "CLOSED":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
-          break;
-        default:
-          throw new IllegalStateException("Unexpected " +
-              "ContainerLifeCycleState " + state + " for the containerId " +
-              nodes.get(OzoneConsts.CONTAINER_ID));
-        }
+        kvData
+            .setState(ContainerProtos.ContainerDataProto.State.valueOf(state));
         return kvData;
       }
     }

@@ -370,7 +370,7 @@ public class IOUtils {
   }
 
   /**
-   * Return the complete list of files in a directory as strings.<p/>
+   * Return the complete list of files in a directory as strings.<p>
    *
    * This is better than File#listDir because it does not ignore IOExceptions.
    *
@@ -508,8 +508,6 @@ public class IOUtils {
       Throwable t = ctor.newInstance(msg);
       return (T) (t.initCause(exception));
     } catch (Throwable e) {
-      LOG.warn("Unable to wrap exception of type " +
-          clazz + ": it has no (String) constructor", e);
       throw exception;
     }
   }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -30,30 +30,27 @@ public class DDBPathMetadata extends PathMetadata {
 
   private boolean isAuthoritativeDir;
 
-  public DDBPathMetadata(PathMetadata pmd, boolean isAuthoritativeDir) {
-    super(pmd.getFileStatus(), pmd.isEmptyDirectory(), pmd.isDeleted());
-    this.isAuthoritativeDir = isAuthoritativeDir;
-  }
-
   public DDBPathMetadata(PathMetadata pmd) {
-    super(pmd.getFileStatus(), pmd.isEmptyDirectory(), pmd.isDeleted());
+    super(pmd.getFileStatus(), pmd.isEmptyDirectory(), pmd.isDeleted(),
+        pmd.getLastUpdated());
     this.isAuthoritativeDir = false;
+    this.setLastUpdated(pmd.getLastUpdated());
   }
 
-  public DDBPathMetadata(FileStatus fileStatus) {
+  public DDBPathMetadata(S3AFileStatus fileStatus) {
     super(fileStatus);
     this.isAuthoritativeDir = false;
   }
 
-  public DDBPathMetadata(FileStatus fileStatus, Tristate isEmptyDir,
-      boolean isDeleted) {
-    super(fileStatus, isEmptyDir, isDeleted);
+  public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
+      boolean isDeleted, long lastUpdated) {
+    super(fileStatus, isEmptyDir, isDeleted, lastUpdated);
     this.isAuthoritativeDir = false;
   }
 
-  public DDBPathMetadata(FileStatus fileStatus, Tristate isEmptyDir,
-      boolean isDeleted, boolean isAuthoritativeDir) {
-    super(fileStatus, isEmptyDir, isDeleted);
+  public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
+      boolean isDeleted, boolean isAuthoritativeDir, long lastUpdated) {
+    super(fileStatus, isEmptyDir, isDeleted, lastUpdated);
     this.isAuthoritativeDir = isAuthoritativeDir;
   }
 
@@ -74,4 +71,10 @@ public class DDBPathMetadata extends PathMetadata {
     return super.hashCode();
   }
 
+  @Override public String toString() {
+    return "DDBPathMetadata{" +
+        "isAuthoritativeDir=" + isAuthoritativeDir +
+        ", PathMetadata=" + super.toString() +
+        '}';
+  }
 }

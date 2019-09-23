@@ -17,27 +17,29 @@
  */
 package org.apache.hadoop.yarn.api.records;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The class to test {@link Resource}.
  */
-public class TestResource {
+class TestResource {
 
   @Test
-  public void testCastToIntSafely() {
+  void testCastToIntSafely() {
     assertEquals(0, Resource.castToIntSafely(0));
     assertEquals(1, Resource.castToIntSafely(1));
     assertEquals(Integer.MAX_VALUE,
         Resource.castToIntSafely(Integer.MAX_VALUE));
 
-    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
-            + "Integer.MAX_VALUE", Integer.MAX_VALUE,
-        Resource.castToIntSafely(Integer.MAX_VALUE + 1L));
-    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
-            + "Integer.MAX_VALUE", Integer.MAX_VALUE,
-        Resource.castToIntSafely(Long.MAX_VALUE));
+    assertEquals(Integer.MAX_VALUE,
+        Resource.castToIntSafely(Integer.MAX_VALUE + 1L),
+        "Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE");
+    assertEquals(Integer.MAX_VALUE,
+        Resource.castToIntSafely(Long.MAX_VALUE),
+        "Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE");
   }
 }

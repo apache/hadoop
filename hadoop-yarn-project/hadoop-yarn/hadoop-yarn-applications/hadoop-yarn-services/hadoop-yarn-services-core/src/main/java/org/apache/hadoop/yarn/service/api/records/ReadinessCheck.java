@@ -47,7 +47,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -174,12 +173,14 @@ public class ReadinessCheck implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ReadinessCheck {\n");
+    sb.append("class ReadinessCheck {\n")
 
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("}");
+        .append("    type: ").append(toIndentedString(type)).append("\n")
+        .append("    properties: ").append(toIndentedString(properties))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -113,15 +113,36 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int found = 0;
   int i = 0;
   int ret = 0;
+  int no_registry_prefix_in_image_name = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
-  char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char *privileged = NULL;
+  char **privileged_registry = NULL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
+  if (privileged_registry == NULL) {
+    privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
   char *registry_ptr = NULL;
   if (image_name == NULL) {
     ret = INVALID_DOCKER_IMAGE_NAME;
     goto free_and_exit;
   }
+  if (strchr(image_name, '/') == NULL) {
+    no_registry_prefix_in_image_name = 1;
+  }
   if (privileged_registry != NULL) {
     for (i = 0; privileged_registry[i] != NULL; i++) {
+      // "library" means we trust public top
+      if (strncmp(privileged_registry[i], "library", strlen("library")) == 0) {
+        if (no_registry_prefix_in_image_name) {
+          // if image doesn't exists, docker pull will automatically happen
+          found = 1;
+          fprintf(LOGFILE, "image: %s is a trusted top-level image.\n", image_name);
+          break;
+        }
+      }
       int len = strlen(privileged_registry[i]);
       if (privileged_registry[i][len - 1] != '/') {
         registry_ptr = (char *) alloc_and_clear_memory(len + 2, sizeof(char));
@@ -145,6 +166,7 @@ int check_trusted_image(const struct configuration *command_config, const struct
   }
 
 free_and_exit:
+  free(privileged);
   free(image_name);
   free_values(privileged_registry);
   return ret;
@@ -165,6 +187,13 @@ static int is_volume_name(const char *volume_name) {
   const char *regex_str = "^[a-zA-Z0-9]([a-zA-Z0-9_.-]*)$";
   // execute_regex_match return 0 is matched success
   return execute_regex_match(regex_str, volume_name) == 0;
+}
+
+static int is_valid_ports_mapping(const char *ports_mapping) {
+  const char *regex_str = "^:[0-9]+|^[0-9]+:[0-9]+|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)"
+                          "{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+:[0-9]+$";
+  // execute_regex_match return 0 is matched success
+  return execute_regex_match(regex_str, ports_mapping) == 0;
 }
 
 static int is_volume_name_matched_by_regex(const char* requested, const char* pattern) {
@@ -289,7 +318,6 @@ static int validate_container_name(const char *container_name) {
     }
   }
   fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", container_name);
-  fflush(ERRORFILE);
   return INVALID_DOCKER_CONTAINER_NAME;
 }
 
@@ -314,6 +342,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Unknown docker command";
     case INVALID_DOCKER_NETWORK:
       return "Invalid docker network";
+    case INVALID_DOCKER_PORTS_MAPPING:
+      return "Invalid docker ports mapping";
     case INVALID_DOCKER_CAPABILITY:
       return "Invalid docker capability";
     case PRIVILEGED_CONTAINERS_DISABLED:
@@ -342,6 +372,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Docker image is not trusted";
     case INVALID_DOCKER_TMPFS_MOUNT:
       return "Invalid docker tmpfs mount";
+    case INVALID_DOCKER_RUNTIME:
+      return "Invalid docker runtime";
     default:
       return "Unknown error";
   }
@@ -392,12 +424,6 @@ int get_docker_command(const char *command_file, const struct configuration *con
     return INVALID_COMMAND_FILE;
   }
 
-  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (value != NULL && strcasecmp(value, "true") == 0) {
-    entry_point = 1;
-  }
-  free(value);
-
   char *docker = get_docker_binary(conf);
   ret = add_to_args(args, docker);
   free(docker);
@@ -432,6 +458,10 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_volume_command(command_file, conf, args);
   } else if (strcmp(DOCKER_START_COMMAND, command) == 0) {
     ret = get_docker_start_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
+    ret = get_docker_exec_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_IMAGES_COMMAND, command) == 0) {
+      ret = get_docker_images_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -557,8 +587,10 @@ cleanup:
 }
 
 int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
-  const char *valid_format_strings[] = { "{{.State.Status}}",
-                                "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}" };
+  const char *valid_format_strings[] = {"{{.State.Status}}",
+                                "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}",
+                                "{{json .NetworkSettings.Ports}}",
+                                "{{.State.Status}},{{.Config.StopSignal}}"};
   int ret = 0, i = 0, valid_format = 0;
   char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
@@ -578,7 +610,8 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     ret = INVALID_DOCKER_INSPECT_FORMAT;
     goto free_and_exit;
   }
-  for (i = 0; i < 2; ++i) {
+
+  for (i = 0; i < 4; ++i) {
     if (strcmp(format, valid_format_strings[i]) == 0) {
       valid_format = 1;
       break;
@@ -688,11 +721,19 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
   }
 
   ret = add_to_args(args, DOCKER_RM_COMMAND);
-  if (ret == 0) {
-    ret = add_to_args(args, container_name);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-    }
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, "-f");
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
   }
 free_and_exit:
   free(container_name);
@@ -819,6 +860,57 @@ free_and_exit:
   return ret;
 }
 
+int get_docker_exec_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0, i = 0;
+  char *container_name = NULL;
+  char **launch_command = NULL;
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_EXEC_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (container_name == NULL || validate_container_name(container_name) != 0) {
+    ret = INVALID_DOCKER_CONTAINER_NAME;
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_EXEC_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, "-it");
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
+                                                      ",");
+  if (launch_command != NULL) {
+    for (i = 0; launch_command[i] != NULL; ++i) {
+      ret = add_to_args(args, launch_command[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
+    }
+  } else {
+    ret = INVALID_COMMAND_FILE;
+  }
+free_and_exit:
+  free(container_name);
+  free_configuration(&command_config);
+  free_values(launch_command);
+  return ret;
+}
+
 static int detach_container(const struct configuration *command_config, args *args) {
   return add_param_to_command(command_config, "detach", "-d", 0, args);
 }
@@ -879,6 +971,77 @@ static int set_network(const struct configuration *command_config,
     ret = INVALID_DOCKER_NETWORK;
   }
 
+  return ret;
+}
+
+static int set_runtime(const struct configuration *command_config,
+                       const struct configuration *conf, args *args) {
+  int ret = 0;
+  ret = add_param_to_command_if_allowed(command_config, conf, "runtime",
+                                        "docker.allowed.runtimes", "--runtime=",
+                                        0, 0, args);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Could not find requested runtime in allowed runtimes\n");
+    ret = INVALID_DOCKER_RUNTIME;
+  }
+  return ret;
+}
+
+static int add_ports_mapping_to_command(const struct configuration *command_config, args *args) {
+  int i = 0, ret = 0;
+  char *network_type = (char*) malloc(128);
+  char *docker_network_command = NULL;
+  char *docker_binary = get_docker_binary(command_config);
+  char *network_name = get_configuration_value("net", DOCKER_COMMAND_FILE_SECTION, command_config);
+  char **ports_mapping_values = get_configuration_values_delimiter("ports-mapping", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  if (network_name != NULL) {
+    docker_network_command = make_string("%s network inspect %s --format='{{.Driver}}'", docker_binary, network_name);
+    FILE* docker_network = popen(docker_network_command, "r");
+    ret = fscanf(docker_network, "%s", network_type);
+    if (pclose (docker_network) != 0 || ret <= 0) {
+      fprintf (ERRORFILE, "Could not inspect docker network to get type %s.\n", docker_network_command);
+      goto cleanup;
+    }
+    // other network type exit successfully without ports mapping
+    if (strcasecmp(network_type, "bridge") != 0) {
+      ret = 0;
+      goto cleanup;
+    }
+    // add -P when not configure ports mapping
+    if (ports_mapping_values == NULL) {
+      ret = add_to_args(args, "-P");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+      }
+    }
+  }
+  // add -p when configure ports mapping
+  if (ports_mapping_values != NULL) {
+    for (i = 0; ports_mapping_values[i] != NULL; i++) {
+      if (!is_valid_ports_mapping(ports_mapping_values[i])) {
+         fprintf (ERRORFILE, "Invalid port mappings:  %s.\n", ports_mapping_values[i]);
+         ret = INVALID_DOCKER_PORTS_MAPPING;
+         break;
+      }
+      ret = add_to_args(args, "-p");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+      ret = add_to_args(args, ports_mapping_values[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+    }
+  }
+
+cleanup:
+  free(network_type);
+  free(docker_binary);
+  free(network_name);
+  free(docker_network_command);
+  free_values(ports_mapping_values);
   return ret;
 }
 
@@ -1224,7 +1387,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
     if (strncmp("rw", mount_type, 2) == 0) {
       // rw mount
       if (permitted_rw == 0) {
-        fprintf(ERRORFILE, "Invalid docker rw mount '%s', realpath=%s\n", values[i], mount_src);
+        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
         ret = INVALID_DOCKER_RW_MOUNT;
         goto free_and_exit;
       } else {
@@ -1244,7 +1407,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
     } else {
       // ro mount
       if (permitted_ro == 0 && permitted_rw == 0) {
-        fprintf(ERRORFILE, "Invalid docker ro mount '%s', realpath=%s\n", values[i], mount_src);
+        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
         ret = INVALID_DOCKER_RO_MOUNT;
         goto free_and_exit;
       }
@@ -1298,14 +1461,22 @@ static int check_privileges(const char *user) {
     exit(INITIALIZE_USER_FAILED);
   }
 
+#ifdef __linux__
   int rc = getgrouplist(user, pw->pw_gid, groups, &ngroups);
+#else
+  int rc = getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups);
+#endif
   if (rc < 0) {
     groups = (gid_t *) alloc_and_clear_memory(ngroups, sizeof(gid_t));
     if (groups == NULL) {
       fprintf(ERRORFILE, "Failed to allocate buffer for group lookup for user %s.\n", user);
       exit(OUT_OF_MEMORY);
     }
+#ifdef __linux__
     if (getgrouplist(user, pw->pw_gid, groups, &ngroups) == -1) {
+#else
+    if (getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups) == -1) {
+#endif
       fprintf(ERRORFILE, "Fail to lookup groups for user %s.\n", user);
       ret = 2;
     }
@@ -1374,6 +1545,12 @@ static int set_privileged(const struct configuration *command_config, const stru
     if (privileged_container_enabled != NULL) {
       if (strcmp(privileged_container_enabled, "1") == 0 ||
           strcasecmp(privileged_container_enabled, "True") == 0) {
+        // Disable set privileged if entry point mode is disabled
+        if (get_use_entry_point_flag() != 1) {
+          fprintf(ERRORFILE, "Privileged containers are disabled for non-entry-point mode\n");
+          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          goto free_and_exit;
+        }
         // Disable set privileged if image is not trusted.
         if (check_trusted_image(command_config, conf) != 0) {
           fprintf(ERRORFILE, "Privileged containers are disabled from untrusted source\n");
@@ -1417,11 +1594,18 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   char **launch_command = NULL;
   char *privileged = NULL;
   char *no_new_privileges_enabled = NULL;
+  char *use_entry_point = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
     goto free_and_exit;
   }
+
+  use_entry_point = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (use_entry_point != NULL && strcasecmp(use_entry_point, "true") == 0) {
+    entry_point = 1;
+  }
+  free(use_entry_point);
 
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
@@ -1496,6 +1680,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
+  ret = add_ports_mapping_to_command(&command_config, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
   ret = set_pid_namespace(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
@@ -1522,6 +1711,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_capabilities(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = set_runtime(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }
@@ -1573,5 +1767,41 @@ free_and_exit:
   free(container_name);
   free_values(launch_command);
   free_configuration(&command_config);
+  return ret;
+}
+
+int get_docker_images_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0;
+  char *image_name = NULL;
+
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_IMAGES_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_IMAGES_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (image_name) {
+    if (validate_docker_image_name(image_name) != 0) {
+      ret = INVALID_DOCKER_IMAGE_NAME;
+       goto free_and_exit;
+    }
+    ret = add_to_args(args, image_name);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
+  }
+
+  ret = add_to_args(args, "--format={{json .}}");
+  ret = add_to_args(args, "--filter=dangling=false");
+
+  free_and_exit:
+    free(image_name);
+    free_configuration(&command_config);
   return ret;
 }

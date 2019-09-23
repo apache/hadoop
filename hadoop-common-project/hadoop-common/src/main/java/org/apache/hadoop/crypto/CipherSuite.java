@@ -65,8 +65,8 @@ public enum CipherSuite {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("{");
-    builder.append("name: " + name);
-    builder.append(", algorithmBlockSize: " + algoBlockSize);
+    builder.append("name: " + name)
+        .append(", algorithmBlockSize: " + algoBlockSize);
     if (unknownValue != null) {
       builder.append(", unknownValue: " + unknownValue);
     }

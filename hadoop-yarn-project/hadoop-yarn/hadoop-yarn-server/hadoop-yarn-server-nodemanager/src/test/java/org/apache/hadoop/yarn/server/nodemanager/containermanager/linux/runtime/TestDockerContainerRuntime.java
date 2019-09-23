@@ -57,6 +57,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -75,6 +77,8 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -87,7 +91,6 @@ import java.util.concurrent.ConcurrentMap;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPLICATION_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
@@ -98,7 +101,9 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.LOG_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.NM_PRIVATE_CONTAINER_SCRIPT_PATH;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.NM_PRIVATE_KEYSTORE_PATH;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.NM_PRIVATE_TOKENS_PATH;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.NM_PRIVATE_TRUSTSTORE_PATH;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PID_FILE_PATH;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PROCFS;
@@ -107,10 +112,12 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_FILECACHE_DIRS;
-import static org.mockito.Matchers.anyString;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.CONTAINER_PID_NAMESPACE_SUFFIX;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.RUN_PRIVILEGED_CONTAINER_SUFFIX;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.formatOciEnvKey;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
-import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -118,6 +125,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@RunWith(Parameterized.class)
 public class TestDockerContainerRuntime {
   private static final Logger LOG =
        LoggerFactory.getLogger(TestDockerContainerRuntime.class);
@@ -141,6 +149,8 @@ public class TestDockerContainerRuntime {
   private Path containerWorkDir;
   private Path nmPrivateContainerScriptPath;
   private Path nmPrivateTokensPath;
+  private Path nmPrivateKeystorePath;
+  private Path nmPrivateTruststorePath;
   private Path pidFilePath;
   private List<String> localDirs;
   private List<String> logDirs;
@@ -155,10 +165,26 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
-  private int dockerStopGracePeriod;
+  private String runtimeTypeUpper = "DOCKER";
+
+  private static final String RUNTIME_TYPE = "DOCKER";
+  private final static String ENV_OCI_CONTAINER_PID_NAMESPACE =
+      formatOciEnvKey(RUNTIME_TYPE, CONTAINER_PID_NAMESPACE_SUFFIX);
+  private final static String ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER =
+      formatOciEnvKey(RUNTIME_TYPE, RUN_PRIVILEGED_CONTAINER_SUFFIX);
 
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
+
+  @Parameterized.Parameters(name = "https={0}")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+        {true}, {false}
+    });
+  }
+
+  @Parameterized.Parameter
+  public boolean https;
 
   @Before
   public void setup() {
@@ -180,10 +206,6 @@ public class TestDockerContainerRuntime {
     env.put("FROM_CLIENT", "1");
     image = "busybox:latest";
     nmContext = createMockNMContext();
-
-    dockerStopGracePeriod = conf.getInt(
-      YarnConfiguration.NM_DOCKER_STOP_GRACE_PERIOD,
-      YarnConfiguration.DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD);
 
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
     when(container.getContainerId()).thenReturn(cId);
@@ -232,6 +254,13 @@ public class TestDockerContainerRuntime {
     containerWorkDir = new Path("/test_container_work_dir");
     nmPrivateContainerScriptPath = new Path("/test_script_path");
     nmPrivateTokensPath = new Path("/test_private_tokens_path");
+    if (https) {
+      nmPrivateKeystorePath = new Path("/test_private_keystore_path");
+      nmPrivateTruststorePath = new Path("/test_private_truststore_path");
+    } else {
+      nmPrivateKeystorePath = null;
+      nmPrivateTruststorePath = null;
+    }
     pidFilePath = new Path("/test_pid_file_path");
     localDirs = new ArrayList<>();
     logDirs = new ArrayList<>();
@@ -266,6 +295,9 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH,
             nmPrivateContainerScriptPath)
         .setExecutionAttribute(NM_PRIVATE_TOKENS_PATH, nmPrivateTokensPath)
+        .setExecutionAttribute(NM_PRIVATE_KEYSTORE_PATH, nmPrivateKeystorePath)
+        .setExecutionAttribute(NM_PRIVATE_TRUSTSTORE_PATH,
+            nmPrivateTruststorePath)
         .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
         .setExecutionAttribute(LOCAL_DIRS, localDirs)
         .setExecutionAttribute(LOG_DIRS, logDirs)
@@ -310,15 +342,53 @@ public class TestDockerContainerRuntime {
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
-    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
     Assert.assertEquals(false, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(null));
+        .isDockerContainerRequested(conf, null));
     Assert.assertEquals(true, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(envDockerType));
+        .isDockerContainerRequested(conf, envDockerType));
     Assert.assertEquals(false, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(envOtherType));
+        .isDockerContainerRequested(conf, envOtherType));
+  }
+
+  @Test
+  public void testSelectDockerContainerTypeWithDockerAsDefault() {
+    Map<String, String> envDockerType = new HashMap<>();
+    Map<String, String> envOtherType = new HashMap<>();
+
+    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
+    envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
+
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, null));
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envDockerType));
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envOtherType));
+  }
+
+  @Test
+  public void testSelectDockerContainerTypeWithDefaultSet() {
+    Map<String, String> envDockerType = new HashMap<>();
+    Map<String, String> envOtherType = new HashMap<>();
+
+    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE, "default");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
+    envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
+
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, null));
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envDockerType));
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envOtherType));
   }
 
   private PrivilegedOperation capturePrivilegedOperation()
@@ -326,17 +396,14 @@ public class TestDockerContainerRuntime {
     return capturePrivilegedOperation(1);
   }
 
-  @SuppressWarnings("unchecked")
   private PrivilegedOperation capturePrivilegedOperation(int invocations)
       throws PrivilegedOperationException {
     ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
         PrivilegedOperation.class);
 
-    //due to type erasure + mocking, this verification requires a suppress
-    // warning annotation on the entire method
     verify(mockExecutor, times(invocations))
-        .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), anyMap(), anyBoolean(), anyBoolean());
+        .executePrivilegedOperation(any(), opCaptor.capture(), any(),
+            any(), anyBoolean(), anyBoolean());
 
     //verification completed. we need to isolate specific invocations.
     // hence, reset mock here
@@ -356,9 +423,9 @@ public class TestDockerContainerRuntime {
 
     List<String> args = op.getArguments();
 
-    //This invocation of container-executor should use 12 arguments in a
+    //This invocation of container-executor should use 15 or 13 arguments in a
     // specific order
-    int expected = 12;
+    int expected = (https) ? 15 : 13;
     int counter = 1;
     Assert.assertEquals(expected, args.size());
     Assert.assertEquals(user, args.get(counter++));
@@ -367,10 +434,19 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(appId, args.get(counter++));
     Assert.assertEquals(containerId, args.get(counter++));
     Assert.assertEquals(containerWorkDir.toString(), args.get(counter++));
-    Assert.assertEquals(nmPrivateContainerScriptPath.toUri()
-        .toString(), args.get(counter++));
+    Assert.assertEquals(nmPrivateContainerScriptPath.toUri().toString(),
+        args.get(counter++));
     Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
         args.get(counter++));
+    if (https) {
+      Assert.assertEquals("--https", args.get(counter++));
+      Assert.assertEquals(nmPrivateKeystorePath.toUri().toString(),
+          args.get(counter++));
+      Assert.assertEquals(nmPrivateTruststorePath.toUri().toString(),
+          args.get(counter++));
+    } else {
+      Assert.assertEquals("--http", args.get(counter++));
+    }
     Assert.assertEquals(pidFilePath.toString(), args.get(counter++));
     Assert.assertEquals(localDirs.get(0), args.get(counter++));
     Assert.assertEquals(logDirs.get(0), args.get(counter++));
@@ -386,13 +462,168 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
     runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
 
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
+    int expected = 13;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert
+        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  mounts="
+            + "/test_container_log_dir:/test_container_log_dir:rw,"
+            + "/test_application_local_dir:/test_application_local_dir:rw,"
+            + "/test_filecache_dir:/test_filecache_dir:ro,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
 
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-            (dockerCommandFile), Charset.forName("UTF-8"));
+  @Test
+  public void testDockerContainerLaunchWithDefaultImage()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.set(YarnConfiguration.NM_DOCKER_IMAGE_NAME, "busybox:1.2.3");
+    env.remove(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+    runtime.launchContainer(builder.build());
+
+    List<String> dockerCommands = readDockerCommands();
+
+    int expected = 13;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert
+        .assertEquals("  image=busybox:1.2.3", dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  mounts="
+            + "/test_container_log_dir:/test_container_log_dir:rw,"
+            + "/test_application_local_dir:/test_application_local_dir:rw,"
+            + "/test_filecache_dir:/test_filecache_dir:ro,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testDockerContainerLaunchWithoutDefaultImageUpdate()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    conf.setBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, false);
+
+    runtime.initialize(conf, nmContext);
+    runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
+    Assert.assertEquals(false,
+        conf.getBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, false));
+
+    int expected = 13;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert
+        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  mounts="
+            + "/test_container_log_dir:/test_container_log_dir:rw,"
+            + "/test_application_local_dir:/test_application_local_dir:rw,"
+            + "/test_filecache_dir:/test_filecache_dir:ro,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testDockerContainerLaunchWithDefaultImageUpdate()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    conf.setBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, true);
+
+    runtime.initialize(conf, nmContext);
+    runtime.launchContainer(builder.build());
+
+    ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
+        PrivilegedOperation.class);
+
+    //Two invocations expected.
+    verify(mockExecutor, times(2))
+        .executePrivilegedOperation(any(), opCaptor.capture(), any(),
+            any(), anyBoolean(), anyBoolean());
+
+    List<PrivilegedOperation> allCaptures = opCaptor.getAllValues();
+
+    // pull image from remote hub firstly
+    PrivilegedOperation op = allCaptures.get(0);
+    Assert.assertEquals(PrivilegedOperation.OperationType
+        .RUN_DOCKER_CMD, op.getOperationType());
+
+    File commandFile = new File(StringUtils.join(",", op.getArguments()));
+    FileInputStream fileInputStream = new FileInputStream(commandFile);
+    String fileContent = new String(IOUtils.toByteArray(fileInputStream));
+    Assert.assertEquals("[docker-command-execution]\n"
+        + "  docker-command=pull\n"
+        + "  image=busybox:latest\n", fileContent);
+    fileInputStream.close();
+
+    // launch docker container
+    List<String> dockerCommands = readDockerCommands(2);
 
     int expected = 13;
     int counter = 0;
@@ -436,13 +667,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
     runtime.launchContainer(builder.build());
-
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     Assert.assertEquals(13, dockerCommands.size());
     int counter = 0;
@@ -551,13 +776,9 @@ public class TestDockerContainerRuntime {
     //this should cause no failures.
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
+    List<String> dockerCommands = readDockerCommands();
 
     //This is the expected docker invocation for this case
-    List<String> dockerCommands = Files
-        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
     int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
@@ -610,13 +831,9 @@ public class TestDockerContainerRuntime {
         expectedHostname);
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
+    List<String> dockerCommands = readDockerCommands();
 
     //This is the expected docker invocation for this case
-    List<String> dockerCommands = Files
-        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
     int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
@@ -677,15 +894,10 @@ public class TestDockerContainerRuntime {
     //this should cause no failures.
     runtime.initialize(conf, nmContext);
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
+    List<String> dockerCommands = readDockerCommands();
 
     //This is the expected docker invocation for this case. customNetwork1
     // ("sdn1") is the expected network to be used in this case
-    List<String> dockerCommands = Files
-        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
-
     int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
@@ -727,15 +939,10 @@ public class TestDockerContainerRuntime {
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
         customNetwork2);
     runtime.launchContainer(builder.build());
-
-    op = capturePrivilegedOperationAndVerifyArgs();
-    args = op.getArguments();
-    dockerCommandFile = args.get(11);
+    dockerCommands = readDockerCommands();
 
     //This is the expected docker invocation for this case. customNetwork2
     // ("sdn2") is the expected network to be used in this case
-    dockerCommands = Files
-        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
     counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -791,16 +998,9 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "invalid-value");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "invalid-value");
     runtime.launchContainer(builder.build());
-
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     Assert.assertEquals(expected, dockerCommands.size());
@@ -819,8 +1019,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "host");
 
     try {
       runtime.launchContainer(builder.build());
@@ -842,16 +1041,10 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+    env.put(ENV_OCI_CONTAINER_PID_NAMESPACE, "host");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 14;
     int counter = 0;
@@ -894,16 +1087,9 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "invalid-value");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "invalid-value");
     runtime.launchContainer(builder.build());
-
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     Assert.assertEquals(expected, dockerCommands.size());
@@ -924,8 +1110,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -947,8 +1132,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     //By default
     // yarn.nodemanager.runtime.linux.docker.privileged-containers.acl
     // is empty. So we expect this launch to fail.
@@ -976,8 +1160,7 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     try {
       runtime.launchContainer(builder.build());
@@ -1003,16 +1186,10 @@ public class TestDockerContainerRuntime {
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
 
-    env.put(DockerLinuxContainerRuntime
-            .ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1123,12 +1300,7 @@ public class TestDockerContainerRuntime {
         "test_dir/test_resource_file:test_mount:ro");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1177,12 +1349,7 @@ public class TestDockerContainerRuntime {
             "test_dir/test_resource_file:test_mount2:ro");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1232,12 +1399,7 @@ public class TestDockerContainerRuntime {
             "/a:/a:shared,/b:/b:ro+shared,/c:/c:rw+rshared,/d:/d:private");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1341,12 +1503,7 @@ public class TestDockerContainerRuntime {
         "/run");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     Assert.assertTrue(dockerCommands.contains("  tmpfs=/run"));
   }
@@ -1364,12 +1521,7 @@ public class TestDockerContainerRuntime {
         "/run,/tmp");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     Assert.assertTrue(dockerCommands.contains("  tmpfs=/run,/tmp"));
   }
@@ -1388,12 +1540,7 @@ public class TestDockerContainerRuntime {
         "/tmpfs");
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     Assert.assertTrue(dockerCommands.contains("  tmpfs=/tmpfs,/run,/var/run"));
   }
@@ -1487,12 +1634,7 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1554,12 +1696,7 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
 
     runtime.launchContainer(builder.build());
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
     int counter = 0;
@@ -1650,18 +1787,28 @@ public class TestDockerContainerRuntime {
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+        any(), any(), anyBoolean(), anyBoolean())).thenReturn(
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.TERM);
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
-    Assert.assertEquals(
-        "  name=container_e11_1518975676334_14532816_01_000001",
-        dockerCommands.get(2));
-    Assert.assertEquals("  time=10", dockerCommands.get(3));
+    verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testDockerStopWithQuitSignalWhenRunning()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    when(mockExecutor
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName() +
+            ",SIGQUIT");
+
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.TERM);
+    verifyStopCommand(dockerCommands, "SIGQUIT");
   }
 
   @Test
@@ -1707,20 +1854,14 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+        any(), any(), anyBoolean(), anyBoolean())).thenReturn(
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.TERM);
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
-    Assert.assertEquals(
-        "  name=container_e11_1518975676334_14532816_01_000001",
-        dockerCommands.get(2));
-    Assert.assertEquals("  time=10", dockerCommands.get(3));
+    verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
   }
 
   @Test
@@ -1730,10 +1871,10 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+        any(), any(), anyBoolean(), anyBoolean())).thenReturn(
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.KILL);
@@ -1752,10 +1893,10 @@ public class TestDockerContainerRuntime {
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
-    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    env.put(ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+        any(), any(), anyBoolean(), anyBoolean())).thenReturn(
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.QUIT);
@@ -1781,8 +1922,8 @@ public class TestDockerContainerRuntime {
     runtime.initialize(enableMockContainerExecutor(conf), null);
     runtime.reapContainer(builder.build());
     verify(mockExecutor, times(1))
-        .executePrivilegedOperation(anyList(), any(), any(
-            File.class), anyMap(), anyBoolean(), anyBoolean());
+        .executePrivilegedOperation(any(), any(), any(),
+            any(), anyBoolean(), anyBoolean());
   }
 
   @Test
@@ -1798,8 +1939,8 @@ public class TestDockerContainerRuntime {
     runtime.initialize(enableMockContainerExecutor(conf), null);
     runtime.reapContainer(builder.build());
     verify(mockExecutor, never())
-        .executePrivilegedOperation(anyList(), any(), any(
-            File.class), anyMap(), anyBoolean(), anyBoolean());
+        .executePrivilegedOperation(any(), any(), any(),
+            anyMap(), anyBoolean(), anyBoolean());
   }
 
   private List<String> getDockerCommandsForDockerStop(
@@ -1929,16 +2070,16 @@ public class TestDockerContainerRuntime {
     ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
         PrivilegedOperation.class);
 
-    //single invocation expected
+    //Three invocations expected (volume creation, volume check, run container)
     //due to type erasure + mocking, this verification requires a suppress
     // warning annotation on the entire method
-    verify(mockExecutor, times(2))
-        .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), anyMap(), anyBoolean(), anyBoolean());
+    verify(mockExecutor, times(3))
+        .executePrivilegedOperation(any(), opCaptor.capture(), any(),
+            any(), anyBoolean(), anyBoolean());
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here
-    Mockito.reset(mockExecutor);
+    //Mockito.reset(mockExecutor);
 
     List<PrivilegedOperation> allCaptures = opCaptor.getAllValues();
 
@@ -2008,13 +2149,9 @@ public class TestDockerContainerRuntime {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
-        null);
-    when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
-        dockerVolumeListOutput);
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean())).thenReturn(
+        null, dockerVolumeListOutput);
 
     Context mockNMContext = createMockNMContext();
     ResourcePluginManager rpm = mock(ResourcePluginManager.class);
@@ -2041,10 +2178,8 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.prepareContainer(containerRuntimeContext);
-
-      checkVolumeCreateCommand();
-
       runtime.launchContainer(containerRuntimeContext);
+      checkVolumeCreateCommand();
     } catch (ContainerExecutionException e) {
       if (expectFail) {
         // Expected
@@ -2105,13 +2240,9 @@ public class TestDockerContainerRuntime {
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
-        null);
-    when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
-        "volume1,local");
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean())).thenReturn(
+        null, "volume1,local");
 
     Context mockNMContext = createMockNMContext();
     ResourcePluginManager rpm = mock(ResourcePluginManager.class);
@@ -2137,15 +2268,11 @@ public class TestDockerContainerRuntime {
     ContainerRuntimeContext containerRuntimeContext = builder.build();
 
     runtime.prepareContainer(containerRuntimeContext);
-    checkVolumeCreateCommand();
 
     runtime.launchContainer(containerRuntimeContext);
-    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
+    checkVolumeCreateCommand();
 
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands(3);
 
     int expected = 14;
     int counter = 0;
@@ -2264,7 +2391,7 @@ public class TestDockerContainerRuntime {
 
     List<String> args = op.getArguments();
 
-    int expectedArgs = 12;
+    int expectedArgs = (https) ? 15 : 13;
     int argsCounter = 0;
     Assert.assertEquals(expectedArgs, args.size());
     Assert.assertEquals(runAsUser, args.get(argsCounter++));
@@ -2278,6 +2405,15 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(outDir.toUri().getPath(), args.get(argsCounter++));
     Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
         args.get(argsCounter++));
+    if (https) {
+      Assert.assertEquals("--https", args.get(argsCounter++));
+      Assert.assertEquals(nmPrivateKeystorePath.toUri().toString(),
+          args.get(argsCounter++));
+      Assert.assertEquals(nmPrivateTruststorePath.toUri().toString(),
+          args.get(argsCounter++));
+    } else {
+      Assert.assertEquals("--http", args.get(argsCounter++));
+    }
     Assert.assertEquals(pidFilePath.toString(), args.get(argsCounter++));
     Assert.assertEquals(localDirs.get(0), args.get(argsCounter++));
     Assert.assertEquals(logDirs.get(0), args.get(argsCounter++));
@@ -2327,18 +2463,12 @@ public class TestDockerContainerRuntime {
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     when(mockExecutor
-        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
-        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
+        any(), any(), anyBoolean(), anyBoolean())).thenReturn(
         DockerCommandExecutor.DockerContainerStatus.STOPPED.getName());
     runtime.initialize(conf, nmContext);
     runtime.relaunchContainer(builder.build());
-
-    PrivilegedOperation op = capturePrivilegedOperation(2);
-    List<String> args = op.getArguments();
-    String dockerCommandFile = args.get(11);
-
-    List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = readDockerCommands(2);
 
     int expected = 3;
     int counter = 0;
@@ -2350,5 +2480,83 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testLaunchContainersWithSpecificDockerRuntime()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    env.put(DockerLinuxContainerRuntime
+            .ENV_DOCKER_CONTAINER_DOCKER_RUNTIME, "runc");
+    runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
+    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testContainerLaunchWithAllowedRuntimes()
+      throws ContainerExecutionException, IOException,
+      PrivilegedOperationException {
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    String disallowedRuntime = "runc2";
+
+    try {
+      env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DOCKER_RUNTIME,
+          disallowedRuntime);
+      runtime.launchContainer(builder.build());
+      Assert.fail("Runtime was expected to be disallowed: " +
+          disallowedRuntime);
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception: " + e);
+    }
+
+    String allowedRuntime = "runc";
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DOCKER_RUNTIME,
+        allowedRuntime);
+    //this should cause no failures.
+
+    runtime.launchContainer(builder.build());
+    List<String> dockerCommands = readDockerCommands();
+
+    //This is the expected docker invocation for this case
+    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
+  }
+
+  private static void verifyStopCommand(List<String> dockerCommands,
+      String signal) {
+    Assert.assertEquals(4, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
+    Assert.assertEquals("  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(2));
+    Assert.assertEquals("  signal=" + signal, dockerCommands.get(3));
+  }
+
+  private List<String> readDockerCommands() throws IOException,
+      PrivilegedOperationException {
+    return readDockerCommands(1);
+  }
+
+  private List<String> readDockerCommands(int invocations) throws IOException,
+      PrivilegedOperationException {
+    PrivilegedOperation op = (invocations == 1)
+        ? capturePrivilegedOperationAndVerifyArgs()
+        : capturePrivilegedOperation(invocations);
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get((https) ? 14 : 12);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+    return dockerCommands;
   }
 }

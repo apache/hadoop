@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -102,6 +103,17 @@ public abstract class BlockPlacementPolicy {
   }
 
   /**
+   * @param storageTypes storage types that should be used as targets.
+   */
+  public DatanodeStorageInfo[] chooseTarget(String srcPath, int numOfReplicas,
+      Node writer, List<DatanodeStorageInfo> chosen, boolean returnChosenNodes,
+      Set<Node> excludedNodes, long blocksize, BlockStoragePolicy storagePolicy,
+      EnumSet<AddBlockFlag> flags, EnumMap<StorageType, Integer> storageTypes) {
+    return chooseTarget(srcPath, numOfReplicas, writer, chosen,
+        returnChosenNodes, excludedNodes, blocksize, storagePolicy, flags);
+  }
+
+  /**
    * Verify if the block's placement meets requirement of placement policy,
    * i.e. replicas are placed on no less than minRacks racks in the system.
    * 
@@ -152,7 +164,6 @@ public abstract class BlockPlacementPolicy {
 
   /**
    * Check if the move is allowed. Used by balancer and other tools.
-   * @
    *
    * @param candidates all replicas including source and target
    * @param source source replica of the move

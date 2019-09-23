@@ -27,17 +27,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -59,10 +58,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
-import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
@@ -85,13 +85,16 @@ public class TestBPOfferService {
 
   private static final String FAKE_BPID = "fake bpid";
   private static final String FAKE_CLUSTERID = "fake cluster";
-  protected static final Log LOG = LogFactory.getLog(
+  protected static final Logger LOG = LoggerFactory.getLogger(
       TestBPOfferService.class);
   private static final ExtendedBlock FAKE_BLOCK =
     new ExtendedBlock(FAKE_BPID, 12345L);
   private static final File TEST_BUILD_DATA = PathUtils.getTestDir(TestBPOfferService.class);
   private long firstCallTime = 0; 
   private long secondCallTime = 0;
+  private long firstLeaseId = 0;
+  private long secondLeaseId = 0;
+  private long nextFullBlockReportLeaseId = 1L;
 
   static {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
@@ -143,7 +146,7 @@ public class TestBPOfferService {
         .when(mock).versionRequest();
     
     Mockito.doReturn(DFSTestUtil.getLocalDatanodeRegistration())
-      .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
+      .when(mock).registerDatanode(Mockito.any());
     
     Mockito.doAnswer(new HeartbeatAnswer(nnIdx))
       .when(mock).sendHeartbeat(
@@ -171,22 +174,48 @@ public class TestBPOfferService {
   private class HeartbeatAnswer implements Answer<HeartbeatResponse> {
     private final int nnIdx;
 
-    public HeartbeatAnswer(int nnIdx) {
+    HeartbeatAnswer(int nnIdx) {
       this.nnIdx = nnIdx;
     }
 
     @Override
-    public HeartbeatResponse answer(InvocationOnMock invocation) throws Throwable {
+    public HeartbeatResponse answer(InvocationOnMock invocation)
+        throws Throwable {
       heartbeatCounts[nnIdx]++;
+      Boolean requestFullBlockReportLease =
+          (Boolean) invocation.getArguments()[8];
+      long fullBlockReportLeaseId = 0;
+      if (requestFullBlockReportLease) {
+        fullBlockReportLeaseId = nextFullBlockReportLeaseId++;
+      }
+      LOG.info("fullBlockReportLeaseId=" + fullBlockReportLeaseId);
       HeartbeatResponse heartbeatResponse = new HeartbeatResponse(
           datanodeCommands[nnIdx], mockHaStatuses[nnIdx], null,
-          ThreadLocalRandom.current().nextLong() | 1L);
+          fullBlockReportLeaseId);
       //reset the command
       datanodeCommands[nnIdx] = new DatanodeCommand[0];
       return heartbeatResponse;
     }
   }
 
+
+  private class HeartbeatRegisterAnswer implements Answer<HeartbeatResponse> {
+    private final int nnIdx;
+
+    HeartbeatRegisterAnswer(int nnIdx) {
+      this.nnIdx = nnIdx;
+    }
+
+    @Override
+    public HeartbeatResponse answer(InvocationOnMock invocation)
+        throws Throwable {
+      heartbeatCounts[nnIdx]++;
+      DatanodeCommand[] cmds = new DatanodeCommand[1];
+      cmds[0] = new RegisterCommand();
+      return new HeartbeatResponse(cmds, mockHaStatuses[nnIdx],
+          null, 0L);
+    }
+  }
 
   /**
    * Test that the BPOS can register to talk to two different NNs,
@@ -200,11 +229,9 @@ public class TestBPOfferService {
       waitForBothActors(bpos);
       
       // The DN should have register to both NNs.
-      Mockito.verify(mockNN1).registerDatanode(
-          Mockito.any(DatanodeRegistration.class));
-      Mockito.verify(mockNN2).registerDatanode(
-          Mockito.any(DatanodeRegistration.class));
-      
+      Mockito.verify(mockNN1).registerDatanode(Mockito.any());
+      Mockito.verify(mockNN2).registerDatanode(Mockito.any());
+
       // Should get block reports from both NNs
       waitForBlockReport(mockNN1);
       waitForBlockReport(mockNN2);
@@ -267,10 +294,10 @@ public class TestBPOfferService {
     Mockito.doReturn(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
         FAKE_BPID, new Block[] { FAKE_BLOCK.getLocalBlock() }))
         .when(mockNN2).blockReport(
-            Mockito.<DatanodeRegistration>anyObject(),  
+            Mockito.any(),
             Mockito.eq(FAKE_BPID),
-            Mockito.<StorageBlockReport[]>anyObject(),
-            Mockito.<BlockReportContext>anyObject());
+            Mockito.any(),
+            Mockito.any());
 
     bpos.start();
     try {
@@ -287,8 +314,7 @@ public class TestBPOfferService {
     
     // Should ignore the delete command from the standby
     Mockito.verify(mockFSDataset, Mockito.never())
-      .invalidate(Mockito.eq(FAKE_BPID),
-          (Block[]) Mockito.anyObject());
+      .invalidate(Mockito.eq(FAKE_BPID), Mockito.any());
   }
 
   /**
@@ -436,13 +462,16 @@ public class TestBPOfferService {
     // function to return the corresponding proxies.
 
     final Map<InetSocketAddress, DatanodeProtocolClientSideTranslatorPB> nnMap = Maps.newLinkedHashMap();
+    List<String> nnIds = Lists.newArrayListWithCapacity(nns.length);
     for (int port = 0; port < nns.length; port++) {
       nnMap.put(new InetSocketAddress(port), nns[port]);
       Mockito.doReturn(nns[port]).when(mockDn).connectToNN(
           Mockito.eq(new InetSocketAddress(port)));
+      nnIds.add("nn" + port);
     }
 
-    return new BPOfferService("test_ns", Lists.newArrayList(nnMap.keySet()),
+    return new BPOfferService("test_ns", nnIds,
+        Lists.newArrayList(nnMap.keySet()),
         Collections.<InetSocketAddress>nCopies(nnMap.size(), null), mockDn);
   }
 
@@ -484,10 +513,10 @@ public class TestBPOfferService {
       public Boolean get() {
         try {
           Mockito.verify(mockNN).blockReport(
-              Mockito.<DatanodeRegistration>anyObject(),  
+              Mockito.any(),
               Mockito.eq(FAKE_BPID),
-              Mockito.<StorageBlockReport[]>anyObject(),
-              Mockito.<BlockReportContext>anyObject());
+              Mockito.any(),
+              Mockito.any());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
@@ -510,13 +539,33 @@ public class TestBPOfferService {
       private Boolean get(DatanodeProtocolClientSideTranslatorPB mockNN) {
         try {
           Mockito.verify(mockNN).blockReport(
-                  Mockito.<DatanodeRegistration>anyObject(),
+                  Mockito.any(),
                   Mockito.eq(FAKE_BPID),
-                  Mockito.<StorageBlockReport[]>anyObject(),
-                  Mockito.<BlockReportContext>anyObject());
+                  Mockito.any(),
+                  Mockito.any());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
+          return false;
+        }
+      }
+    }, 500, 10000);
+  }
+
+  private void waitForRegistration(
+      final DatanodeProtocolClientSideTranslatorPB mockNN, int times)
+      throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          // The DN should have register to both NNs.
+          // first called by connectToNNAndHandshake, then called by reRegister.
+          Mockito.verify(mockNN, Mockito.times(2))
+              .registerDatanode(Mockito.any());
+          return true;
+        } catch (Throwable t) {
+          LOG.info("waiting on block registerDatanode: " + t.getMessage());
           return false;
         }
       }
@@ -535,9 +584,9 @@ public class TestBPOfferService {
       public Boolean get() {
         try {
           Mockito.verify(mockNN).blockReceivedAndDeleted(
-            Mockito.<DatanodeRegistration>anyObject(),
-            Mockito.eq(fakeBlockPoolId),
-            captor.capture());
+              Mockito.any(),
+              Mockito.eq(fakeBlockPoolId),
+              captor.capture());
           return true;
         } catch (Throwable t) {
           return false;
@@ -597,9 +646,9 @@ public class TestBPOfferService {
       // Now mockNN1 is acting like active namenode and mockNN2 as Standby
       assertSame(mockNN1, bpos.getActiveNN());
       Mockito.doAnswer(new BPOfferServiceSynchronousCallAnswer(0))
-         .when(mockNN1).reportBadBlocks(Mockito.any(LocatedBlock[].class));
+         .when(mockNN1).reportBadBlocks(Mockito.any());
       Mockito.doAnswer(new BPOfferServiceSynchronousCallAnswer(1))
-         .when(mockNN2).reportBadBlocks(Mockito.any(LocatedBlock[].class));
+         .when(mockNN2).reportBadBlocks(Mockito.any());
       bpos.reportBadBlocks(FAKE_BLOCK, mockFSDataset.getVolume(FAKE_BLOCK)
           .getStorageID(), mockFSDataset.getVolume(FAKE_BLOCK)
           .getStorageType());
@@ -638,10 +687,10 @@ public class TestBPOfferService {
       // Now mockNN1 is acting like active namenode and mockNN2 as Standby
       assertSame(mockNN1, bpos.getActiveNN());
       Mockito.doAnswer(new BPOfferServiceSynchronousCallAnswer(0))
-          .when(mockNN1).errorReport(Mockito.any(DatanodeRegistration.class),
+          .when(mockNN1).errorReport(Mockito.any(),
           Mockito.anyInt(), Mockito.anyString());
       Mockito.doAnswer(new BPOfferServiceSynchronousCallAnswer(1))
-          .when(mockNN2).errorReport(Mockito.any(DatanodeRegistration.class),
+          .when(mockNN2).errorReport(Mockito.any(),
           Mockito.anyInt(), Mockito.anyString());
       String errorString = "Can't send invalid block " + FAKE_BLOCK;
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errorString);
@@ -676,25 +725,18 @@ public class TestBPOfferService {
       bpos.triggerHeartbeatForTests();
       // Now mockNN1 is acting like active namenode and mockNN2 as Standby
       assertSame(mockNN1, bpos.getActiveNN());
-      Mockito.doAnswer(new Answer<Void>() {
-        // Throw an IOException when this function is first called which will
-        // in turn add that errorReport back to the bpThreadQueue and let it 
-        // process the next time. 
-        @Override
-        public Void answer(InvocationOnMock invocation) throws Throwable {
-          if (firstCallTime == 0) {
-            firstCallTime = Time.now();
-            throw new IOException();
-          } else {
+      // Throw an IOException when this function is first called which will
+      // in turn add that errorReport back to the bpThreadQueue and let it
+      // process the next time.
+      Mockito.doThrow(new IOException("Throw IOException in the first call."))
+          .doAnswer((Answer<Void>) invocation -> {
             secondCallTime = Time.now();
             return null;
-          }
-        }
-      }).when(mockNN1).errorReport(Mockito.any(DatanodeRegistration.class),
+          }).when(mockNN1).errorReport(Mockito.any(DatanodeRegistration.class),
           Mockito.anyInt(), Mockito.anyString());
       String errorString = "Can't send invalid block " + FAKE_BLOCK;
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errorString);
-      Thread.sleep(10000);
+      GenericTestUtils.waitFor(() -> secondCallTime != 0, 100, 20000);
       assertTrue("Active namenode didn't add the report back to the queue "
           + "when errorReport threw IOException", secondCallTime != 0);
     } finally {
@@ -866,7 +908,7 @@ public class TestBPOfferService {
 
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testRefreshNameNodes() throws Exception {
 
     BPOfferService bpos = setupBPOSForNNs(mockDn, mockNN1, mockNN2);
@@ -877,9 +919,9 @@ public class TestBPOfferService {
 
       // The DN should have register to both NNs.
       Mockito.verify(mockNN1)
-          .registerDatanode(Mockito.any(DatanodeRegistration.class));
+          .registerDatanode(Mockito.any());
       Mockito.verify(mockNN2)
-          .registerDatanode(Mockito.any(DatanodeRegistration.class));
+          .registerDatanode(Mockito.any());
 
       // Should get block reports from both NNs
       waitForBlockReport(mockNN1);
@@ -912,15 +954,19 @@ public class TestBPOfferService {
       addrs.add(new InetSocketAddress(2));
       lifelineAddrs.add(null);
 
-      bpos.refreshNNList(addrs, lifelineAddrs);
+      ArrayList<String> nnIds = new ArrayList<>(addrs.size());
+      for (int i = 0; i < addrs.size(); i++) {
+        nnIds.add("nn" + i);
+      }
+
+      bpos.refreshNNList("serviceId", nnIds, addrs, lifelineAddrs);
 
       assertEquals(2, bpos.getBPServiceActors().size());
       // wait for handshake to run
       Thread.sleep(1000);
 
       // verify new NN registered
-      Mockito.verify(mockNN3)
-          .registerDatanode(Mockito.any(DatanodeRegistration.class));
+      Mockito.verify(mockNN3).registerDatanode(Mockito.any());
 
       // When we receive a block, it should report it to both NNs
       bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
@@ -933,6 +979,70 @@ public class TestBPOfferService {
     } finally {
       bpos.stop();
       bpos.join();
+    }
+  }
+
+  @Test(timeout = 15000)
+  public void testRefreshLeaseId() throws Exception {
+    Mockito.when(mockNN1.sendHeartbeat(
+        Mockito.any(DatanodeRegistration.class),
+        Mockito.any(StorageReport[].class),
+        Mockito.anyLong(),
+        Mockito.anyLong(),
+        Mockito.anyInt(),
+        Mockito.anyInt(),
+        Mockito.anyInt(),
+        Mockito.any(VolumeFailureSummary.class),
+        Mockito.anyBoolean(),
+        Mockito.any(SlowPeerReports.class),
+        Mockito.any(SlowDiskReports.class)))
+        //heartbeat to old NN instance
+        .thenAnswer(new HeartbeatAnswer(0))
+        //heartbeat to new NN instance with Register Command
+        .thenAnswer(new HeartbeatRegisterAnswer(0))
+        .thenAnswer(new HeartbeatAnswer(0));
+
+    Mockito.when(mockNN1.blockReport(
+        Mockito.any(DatanodeRegistration.class),
+        Mockito.anyString(),
+        Mockito.any(StorageBlockReport[].class),
+        Mockito.any(BlockReportContext.class)))
+        .thenAnswer(
+          new Answer() {
+            @Override
+              public Object answer(InvocationOnMock invocation)
+                  throws Throwable {
+                BlockReportContext context =
+                    (BlockReportContext) invocation.getArguments()[3];
+                long leaseId = context.getLeaseId();
+                LOG.info("leaseId = "+leaseId);
+
+                // leaseId == 1 means DN make block report with old leaseId
+                // just reject and wait until DN request for a new leaseId
+                if(leaseId == 1) {
+                  firstLeaseId = leaseId;
+                  throw new ConnectException(
+                          "network is not reachable for test. ");
+                } else {
+                  secondLeaseId = leaseId;
+                  return null;
+                }
+              }
+          });
+
+    BPOfferService bpos = setupBPOSForNNs(mockNN1);
+    bpos.start();
+
+    try {
+      waitForInitialization(bpos);
+      // Should call registration 2 times
+      waitForRegistration(mockNN1, 2);
+      assertEquals(1L, firstLeaseId);
+      while(secondLeaseId != 2L) {
+        Thread.sleep(1000);
+      }
+    } finally {
+      bpos.stop();
     }
   }
 }

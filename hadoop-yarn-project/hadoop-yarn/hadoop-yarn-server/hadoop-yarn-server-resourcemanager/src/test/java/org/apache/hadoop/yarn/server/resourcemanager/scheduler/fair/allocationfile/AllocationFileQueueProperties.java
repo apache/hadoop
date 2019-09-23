@@ -33,6 +33,7 @@ public class AllocationFileQueueProperties {
   private final String maxChildResources;
   private final Integer fairSharePreemptionTimeout;
   private final Double fairSharePreemptionThreshold;
+  private final String maxContainerAllocation;
 
   AllocationFileQueueProperties(Builder builder) {
     this.queueName = builder.queueName;
@@ -48,6 +49,7 @@ public class AllocationFileQueueProperties {
     this.maxChildResources = builder.maxChildResources;
     this.fairSharePreemptionTimeout = builder.fairSharePreemptionTimeout;
     this.fairSharePreemptionThreshold = builder.fairSharePreemptionThreshold;
+    this.maxContainerAllocation = builder.maxContainerAllocation;
   }
 
   public String getQueueName() {
@@ -102,6 +104,10 @@ public class AllocationFileQueueProperties {
     return fairSharePreemptionThreshold;
   }
 
+  public String getMaxContainerAllocation() {
+    return maxContainerAllocation;
+  }
+
   /**
    * Builder class for {@link AllocationFileQueueProperties}.
    */
@@ -119,6 +125,7 @@ public class AllocationFileQueueProperties {
     private String maxChildResources;
     private Integer fairSharePreemptionTimeout;
     private Double fairSharePreemptionThreshold;
+    private String maxContainerAllocation;
 
     Builder() {
     }
@@ -164,6 +171,11 @@ public class AllocationFileQueueProperties {
 
     public Builder maxAMShare(Double maxAMShare) {
       this.maxAMShare = maxAMShare;
+      return this;
+    }
+
+    public Builder maxContainerAllocation(String maxContainerAllocation) {
+      this.maxContainerAllocation = maxContainerAllocation;
       return this;
     }
 

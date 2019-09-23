@@ -88,7 +88,7 @@ public class ResourceRequestSetKey extends SchedulerRequestKey {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof SchedulerRequestKey)) {
+    if (!(obj instanceof SchedulerRequestKey)) {
       return false;
     }
     if (!(obj instanceof ResourceRequestSetKey)) {

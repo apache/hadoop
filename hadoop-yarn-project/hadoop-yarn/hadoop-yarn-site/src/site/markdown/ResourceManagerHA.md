@@ -144,3 +144,8 @@ Assuming a standby RM is up and running, the Standby automatically redirects all
 ### Web Services
 
 Assuming a standby RM is up and running, RM web-services described at [ResourceManager REST APIs](./ResourceManagerRest.html) when invoked on a standby RM are automatically redirected to the Active RM.
+
+### Load Balancer Setup
+
+If you are running a set of ResourceManagers behind a Load Balancer (e.g. [Azure](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-custom-probe-overview) or [AWS](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html) ) and would like the Load Balancer to point to the active RM, you can use the /isActive HTTP endpoint as a health probe.
+http://RM_HOSTNAME/isActive will return a 200 status code response if the RM is in Active HA State, 405 otherwise.

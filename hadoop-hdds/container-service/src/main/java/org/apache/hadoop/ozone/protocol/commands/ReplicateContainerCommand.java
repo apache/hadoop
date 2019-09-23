@@ -63,10 +63,6 @@ public class ReplicateContainerCommand
   }
 
   @Override
-  public byte[] getProtoBufMessage() {
-    return getProto().toByteArray();
-  }
-
   public ReplicateContainerCommandProto getProto() {
     Builder builder = ReplicateContainerCommandProto.newBuilder()
         .setCmdId(getId())

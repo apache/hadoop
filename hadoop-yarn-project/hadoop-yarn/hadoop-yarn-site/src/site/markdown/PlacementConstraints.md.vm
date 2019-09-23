@@ -65,35 +65,39 @@ $ yarn org.apache.hadoop.yarn.applications.distributedshell.Client -jar share/ha
 where **PlacementSpec** is of the form:
 
 ```
-PlacementSpec         => "" | KeyVal;PlacementSpec
-KeyVal                => SourceTag=ConstraintExpr
-SourceTag             => String
-ConstraintExpr        => NumContainers | NumContainers, Constraint
-Constraint            => SingleConstraint | CompositeConstraint
-SingleConstraint      => "IN",Scope,TargetTag | "NOTIN",Scope,TargetTag | "CARDINALITY",Scope,TargetTag,MinCard,MaxCard
-CompositeConstraint   => AND(ConstraintList) | OR(ConstraintList)
-ConstraintList        => Constraint | Constraint:ConstraintList
-NumContainers         => int
-Scope                 => "NODE" | "RACK"
-TargetTag             => String
-MinCard               => int
-MaxCard               => int
+PlacementSpec               => "" | PlacementExpr;PlacementSpec
+PlacementExpr               => SourceTag,ConstraintExpr
+SourceTag                   => String(NumContainers)
+ConstraintExpr              => SingleConstraint | CompositeConstraint
+SingleConstraint            => "IN",Scope,TargetTag | "NOTIN",Scope,TargetTag | "CARDINALITY",Scope,TargetTag,MinCard,MaxCard | NodeAttributeConstraintExpr
+NodeAttributeConstraintExpr => NodeAttributeName=Value, NodeAttributeName!=Value
+CompositeConstraint         => AND(ConstraintList) | OR(ConstraintList)
+ConstraintList              => Constraint | Constraint:ConstraintList
+NumContainers               => int
+Scope                       => "NODE" | "RACK"
+TargetTag                   => String
+MinCard                     => int
+MaxCard                     => int
 ```
 
-Note that when the `-placement_spec` argument is specified in the distributed shell command, the `-num-containers` argument should not be used. In case `-num-containers` argument is used in conjunction with `-placement-spec`, the former is ignored. This is because in PlacementSpec, we determine the number of containers per tag, making the `-num-containers` redundant and possibly conflicting. Moreover, if `-placement_spec` is used, all containers will be requested with GUARANTEED execution type.
+Note:
+
+* When the `-placement_spec` argument is specified (except NodeAttributeConstraintExpr) in the distributed shell command, the `-num-containers` argument should not be used. In case `-num-containers` argument is used in conjunction with `-placement-spec`, the former is ignored. This is because in PlacementSpec, we determine the number of containers per tag, making the `-num-containers` redundant and possibly conflicting. Moreover, if `-placement_spec` is used, all containers will be requested with GUARANTEED execution type.
+* When the `NodeAttributeConstraintExpr` is specified, `SourceTag(NumContainers)` is optional and the value of `-num-containers` will be considered for the number of containers to request.
 
 An example of PlacementSpec is the following:
 ```
-zk=3,NOTIN,NODE,zk:hbase=5,IN,RACK,zk:spark=7,CARDINALITY,NODE,hbase,1,3
+zk(3),NOTIN,NODE,zk:hbase(5),IN,RACK,zk:spark(7),CARDINALITY,NODE,hbase,1,3
 ```
 The above encodes three constraints:
+
 * place 3 containers with tag "zk" (standing for ZooKeeper) with node anti-affinity to each other, i.e., do not place more than one container per node (notice that in this first constraint, the SourceTag and the TargetTag of the constraint coincide);
 * place 5 containers with tag "hbase" with affinity to a rack on which containers with tag "zk" are running (i.e., an "hbase" container should not be placed at a rack where an "zk" container is running, given that "zk" is the TargetTag of the second constraint);
 * place 7 containers with tag "spark" in nodes that have at least one, but no more than three, containers with tag "hbase".
 
 Another example below demonstrates a composite form of constraint:
 ```
-zk=5,AND(IN,RACK,hbase:NOTIN,NODE,zk)
+zk(5),AND(IN,RACK,hbase:NOTIN,NODE,zk)
 ```
 The above constraint uses the conjunction operator `AND` to combine two constraints. The AND constraint is satisfied when both its children constraints are satisfied. The specific PlacementSpec requests to place 5 "zk" containers in a rack where at least one "hbase" container is running, and on a node that no "zk" container is running.
 Similarly, an `OR` operator can be used to define a constraint that is satisfied when at least one of its children constraints is satisfied.
@@ -129,16 +133,17 @@ To attach an allocation tag namespace `ns` to a target tag `targetTag`, we use t
 
 The example constraints used above could be extended with namespaces as follows:
 ```
-zk=3,NOTIN,NODE,not-self/zk:hbase=5,IN,RACK,all/zk:spark=7,CARDINALITY,NODE,app-id/appID_0023/hbase,1,3
+zk(3),NOTIN,NODE,not-self/zk:hbase(5),IN,RACK,all/zk:spark(7),CARDINALITY,NODE,app-id/appID_0023/hbase,1,3
 ```
 The semantics of these constraints are the following:
+
 * place 3 containers with tag "zk" (standing for ZooKeeper) to nodes that do not have "zk" containers from other applications running;
 * place 5 containers with tag "hbase" with affinity to a rack on which containers with tag "zk" (from any application, be it the same or a different one) are running;
 * place 7 containers with tag "spark" in nodes that have at least one, but no more than three, containers with tag "hbase" belonging to application with ID `appID_0023`.
 
 $H4 Differences between node labels, node attributes and allocation tags
 
-The difference between allocation tags and node labels or node attributes (YARN-3409), is that allocation tags are attached to allocations and not to nodes. When an allocation gets allocated to a node by the scheduler, the set of tags of that allocation are automatically added to the node for the duration of the allocation. Hence, a node inherits the tags of the allocations that are currently allocated to the node. Likewise, a rack inherits the tags of its nodes. Moreover, similar to node labels and unlike node attributes, allocation tags have no value attached to them. As we show below, our constraints can refer to allocation tags, as well as node labels and node attributes.
+The difference between allocation tags and node labels or [node attributes](NodeAttributes.html), is that allocation tags are attached to allocations and not to nodes. When an allocation gets allocated to a node by the scheduler, the set of tags of that allocation are automatically added to the node for the duration of the allocation. Hence, a node inherits the tags of the allocations that are currently allocated to the node. Likewise, a rack inherits the tags of its nodes. Moreover, similar to node labels and unlike node attributes, allocation tags have no value attached to them. As we show below, our constraints can refer to allocation tags, as well as node labels and node attributes.
 
 $H3 Placement constraints API
 

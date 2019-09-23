@@ -585,3 +585,99 @@ Response Body:
   <containerLogFiles>syslog</containerLogFiles>
 </container>
 ```
+
+Auxiliary Services API
+----------------------
+
+With the auxiliary services API, you can obtain a collection of resources, each of which represents an auxiliary service. When you run a GET operation on this resource, you obtain a collection of auxiliary service information objects.
+
+A YARN admin can use a PUT operation to update the auxiliary services running on the NodeManager. The body of the request should be of the same format as an auxiliary services manifest file.
+
+### URI
+
+      * http://nm-http-address:port/ws/v1/node/auxiliaryservices
+
+### HTTP Operations Supported
+
+ * GET
+ * PUT
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *auxiliaryservices* object
+
+When you make a request for the list of auxiliary services, the information will be returned as collection of service information objects.
+
+| Properties | Data Type | Description |
+|:---- |:---- |:---- |
+| services | array of service information objects(JSON)/zero or more service information objects (XML) | A collection of service information objects |
+
+### GET Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      GET http://nm-http-address:port/ws/v1/node/auxiliaryservices
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+    "services": {
+        "service": [
+            {
+                "name": "timeline_collector",
+                "startTime": "2018-12-18 21:24:27",
+                "version": "1"
+            },
+            {
+                "name": "mapreduce_shuffle",
+                "startTime": "2018-12-18 21:24:27",
+                "version": "2"
+            }
+        ]
+    }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://nm-http-address:port/ws/v1/node/auxiliaryservices
+      Accept: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 299
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<services>
+  <service>
+    <name>timeline_collector</name>
+    <version>1</version>
+    <startTime>2018-12-18 21:00:00</startTime>
+  </service>
+  <service>
+    <name>mapreduce_shuffle</name>
+    <version>2</version>
+    <startTime>2018-12-18 21:00:00</startTime>
+  </service>
+</services>
+```

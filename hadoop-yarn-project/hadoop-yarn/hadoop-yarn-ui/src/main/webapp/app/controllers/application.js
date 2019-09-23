@@ -61,10 +61,23 @@ export default Ember.Controller.extend({
   }.property('currentPath'),
 
   clusterInfo: function() {
-    return this.model.clusterInfo.get('firstObject');
+    if (this.model && this.model.clusterInfo) {
+      return this.model.clusterInfo.get('firstObject');
+    }
+    return null;
   }.property('model.clusterInfo'),
 
   userInfo: function() {
-    return this.model.userInfo.get('firstObject');
+    if (this.model && this.model.userInfo) {
+      return this.model.userInfo.get('firstObject');
+    }
+    return null;
   }.property('model.userInfo'),
+
+  isTimelineUnHealthy: function() {
+    if (this.model && this.model.timelineHealth) {
+      return this.model.timelineHealth.get('isTimelineUnHealthy');
+    }
+    return true;
+  }.property('model.timelineHealth')
 });

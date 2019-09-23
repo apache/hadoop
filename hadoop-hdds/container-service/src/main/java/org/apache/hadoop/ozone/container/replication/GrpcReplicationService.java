@@ -30,8 +30,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto
     .IntraDatanodeProtocolServiceGrpc;
 
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
-import org.apache.ratis.shaded.io.grpc.stub.StreamObserver;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,11 +57,10 @@ public class GrpcReplicationService extends
     LOG.info("Streaming container data ({}) to other datanode",
         request.getContainerID());
     try {
-        GrpcOutputStream outputStream =
-            new GrpcOutputStream(responseObserver, request.getContainerID());
-        containerReplicationSource
-            .copyData(request.getContainerID(), outputStream);
-
+      GrpcOutputStream outputStream =
+          new GrpcOutputStream(responseObserver, request.getContainerID());
+      containerReplicationSource
+          .copyData(request.getContainerID(), outputStream);
     } catch (IOException e) {
       LOG.error("Can't stream the container data", e);
       responseObserver.onError(e);

@@ -16,11 +16,22 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
+import org.apache.hadoop.hdds.utils.BackgroundService;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,12 +39,15 @@ import java.util.List;
 /**
  * Handles key level commands.
  */
-public interface KeyManager {
+public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
 
   /**
    * Start key manager.
+   *
+   * @param configuration
+   * @throws IOException
    */
-  void start();
+  void start(OzoneConfiguration configuration);
 
   /**
    * Stop key manager.
@@ -57,11 +71,14 @@ public interface KeyManager {
    *
    * @param args the key to append
    * @param clientID the client requesting block.
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return the reference to the new block.
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
-      throws IOException;
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException;
+
   /**
    * Given the args of a key to put, write an open key entry to meta data.
    *
@@ -71,7 +88,7 @@ public interface KeyManager {
    *
    * @param args the args of the key provided by client.
    * @return a OpenKeySession instance client uses to talk to container.
-   * @throws Exception
+   * @throws IOException
    */
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
 
@@ -80,10 +97,12 @@ public interface KeyManager {
    * DistributedStorageHandler will use to access the data on datanode.
    *
    * @param args the args of the key provided by client.
+   * @param clientAddress a hint to key manager, order the datanode in returned
+   *                      pipeline by distance between client and datanode.
    * @return a OmKeyInfo instance client uses to talk to container.
    * @throws IOException
    */
-  OmKeyInfo lookupKey(OmKeyArgs args) throws IOException;
+  OmKeyInfo lookupKey(OmKeyArgs args, String clientAddress) throws IOException;
 
   /**
    * Renames an existing key within a bucket.
@@ -144,16 +163,6 @@ public interface KeyManager {
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 
   /**
-   * Deletes a pending deletion key by its name. This is often called when
-   * key can be safely deleted from this layer. Once called, all footprints
-   * of the key will be purged from OM DB.
-   *
-   * @param objectKeyName object key name with #deleting# prefix.
-   * @throws IOException if specified key doesn't exist or other I/O errors.
-   */
-  void deletePendingDeletionKey(String objectKeyName) throws IOException;
-
-  /**
    * Returns a list of all still open key info. Which contains the info about
    * the key name and all its associated block IDs. A pending open key has
    * prefix #open# in OM DB.
@@ -172,4 +181,70 @@ public interface KeyManager {
    * @throws IOException if specified key doesn't exist or other I/O errors.
    */
   void deleteExpiredOpenKey(String objectKeyName) throws IOException;
+
+  /**
+   * Returns the metadataManager.
+   * @return OMMetadataManager.
+   */
+  OMMetadataManager getMetadataManager();
+
+  /**
+   * Returns the instance of Deleting Service.
+   * @return Background service.
+   */
+  BackgroundService getDeletingService();
+
+
+  /**
+   * Initiate multipart upload for the specified key.
+   * @param keyArgs
+   * @return MultipartInfo
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Commit Multipart upload part file.
+   * @param omKeyArgs
+   * @param clientID
+   * @return OmMultipartCommitUploadPartInfo
+   * @throws IOException
+   */
+
+  OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
+      OmKeyArgs omKeyArgs, long clientID) throws IOException;
+
+  /**
+   * Complete Multipart upload Request.
+   * @param omKeyArgs
+   * @param multipartUploadList
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(OmKeyArgs omKeyArgs,
+      OmMultipartUploadCompleteList multipartUploadList) throws IOException;
+
+  /**
+   * Abort multipart upload request.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
+
+  OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws OMException;
+
+  /**
+   * Returns list of parts of a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return OmMultipartUploadListParts
+   */
+  OmMultipartUploadListParts listParts(String volumeName, String bucketName,
+      String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException;
 }

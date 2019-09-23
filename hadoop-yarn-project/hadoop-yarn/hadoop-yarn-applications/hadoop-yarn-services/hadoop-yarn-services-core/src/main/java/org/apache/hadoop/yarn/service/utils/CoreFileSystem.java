@@ -97,8 +97,8 @@ public class CoreFileSystem {
   public String toString() {
     final StringBuilder sb =
       new StringBuilder("CoreFileSystem{");
-    sb.append("fileSystem=").append(fileSystem.getUri());
-    sb.append('}');
+    sb.append("fileSystem=").append(fileSystem.getUri())
+        .append('}');
     return sb.toString();
   }
 

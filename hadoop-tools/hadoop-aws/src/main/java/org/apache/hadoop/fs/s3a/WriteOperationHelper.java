@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -34,28 +36,34 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.s3a.select.SelectBinding;
+import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 
 /**
- * Helper for low-level operations against an S3 Bucket for writing data
- * and creating and committing pending writes.
+ * Helper for low-level operations against an S3 Bucket for writing data,
+ * creating and committing pending writes, and other S3-layer operations.
  * <p>
  * It hides direct access to the S3 API
- * and is a location where the object upload process can be evolved/enhanced.
+ * and is a location where the object operations can be evolved/enhanced.
  * <p>
  * Features
  * <ul>
@@ -65,8 +73,10 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
  *   errors.</li>
  *   <li>Callbacks to let the FS know of events in the output stream
  *   upload process.</li>
+ *   <li>Other low-level access to S3 functions, for private use.</li>
  *   <li>Failure handling, including converting exceptions to IOEs.</li>
  *   <li>Integration with instrumentation and S3Guard.</li>
+ *   <li>Evolution to add more low-level operations, such as S3 select.</li>
  * </ul>
  *
  * This API is for internal use only.
@@ -76,8 +86,23 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
 public class WriteOperationHelper {
   private static final Logger LOG =
       LoggerFactory.getLogger(WriteOperationHelper.class);
+
+  /**
+   * Owning filesystem.
+   */
   private final S3AFileSystem owner;
+
+  /**
+   * Invoker for operations; uses the S3A retry policy and calls int
+   * {@link #operationRetried(String, Exception, int, boolean)} on retries.
+   */
   private final Invoker invoker;
+
+  /** Configuration of the owner. This is a reference, not a copy. */
+  private final Configuration conf;
+
+  /** Bucket of the owner FS. */
+  private final String bucket;
 
   /**
    * Constructor.
@@ -89,6 +114,8 @@ public class WriteOperationHelper {
     this.owner = owner;
     this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
+    this.conf = conf;
+    bucket = owner.getBucket();
   }
 
   /**
@@ -189,7 +216,7 @@ public class WriteOperationHelper {
   public String initiateMultiPartUpload(String destKey) throws IOException {
     LOG.debug("Initiating Multipart upload to {}", destKey);
     final InitiateMultipartUploadRequest initiateMPURequest =
-        new InitiateMultipartUploadRequest(owner.getBucket(),
+        new InitiateMultipartUploadRequest(bucket,
             destKey,
             newObjectMetadata(-1));
     initiateMPURequest.setCannedACL(owner.getCannedACL());
@@ -202,13 +229,15 @@ public class WriteOperationHelper {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long)} to update the filesystem.
+   * {@link S3AFileSystem#finishedWrite(String, long, String, String, BulkOperationState)}
+   * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
    * @param retrying retrying callback
+   * @param operationState (nullable) operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException on problems.
    */
@@ -218,27 +247,29 @@ public class WriteOperationHelper {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      Retried retrying) throws IOException {
+      Retried retrying,
+      @Nullable BulkOperationState operationState) throws IOException {
     if (partETags.isEmpty()) {
       throw new IOException(
           "No upload parts in multipart upload to " + destKey);
     }
-    return invoker.retry("Completing multipart commit", destKey,
-        true,
-        retrying,
-        () -> {
-          // a copy of the list is required, so that the AWS SDK doesn't
-          // attempt to sort an unmodifiable list.
-          CompleteMultipartUploadResult result =
-              owner.getAmazonS3Client().completeMultipartUpload(
-                  new CompleteMultipartUploadRequest(owner.getBucket(),
+    CompleteMultipartUploadResult uploadResult =
+        invoker.retry("Completing multipart commit", destKey,
+            true,
+            retrying,
+            () -> {
+              // a copy of the list is required, so that the AWS SDK doesn't
+              // attempt to sort an unmodifiable list.
+              return owner.getAmazonS3Client().completeMultipartUpload(
+                  new CompleteMultipartUploadRequest(bucket,
                       destKey,
                       uploadId,
                       new ArrayList<>(partETags)));
-          owner.finishedWrite(destKey, length);
-          return result;
-        }
+            }
     );
+    owner.finishedWrite(destKey, length, uploadResult.getETag(),
+        uploadResult.getVersionId(), operationState);
+    return uploadResult;
   }
 
   /**
@@ -272,7 +303,8 @@ public class WriteOperationHelper {
         uploadId,
         partETags,
         length,
-        (text, e, r, i) -> errorCount.incrementAndGet());
+        (text, e, r, i) -> errorCount.incrementAndGet(),
+        null);
   }
 
   /**
@@ -381,7 +413,7 @@ public class WriteOperationHelper {
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
     UploadPartRequest request = new UploadPartRequest()
-        .withBucketName(owner.getBucket())
+        .withBucketName(bucket)
         .withKey(destKey)
         .withUploadId(uploadId)
         .withPartNumber(partNumber)
@@ -409,7 +441,7 @@ public class WriteOperationHelper {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "WriteOperationHelper {bucket=").append(owner.getBucket());
+        "WriteOperationHelper {bucket=").append(bucket);
     sb.append('}');
     return sb.toString();
   }
@@ -436,7 +468,7 @@ public class WriteOperationHelper {
    * @return the result of the operation
    * @throws IOException on problems
    */
-  @Retries.OnceTranslated
+  @Retries.RetryTranslated
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
@@ -450,17 +482,65 @@ public class WriteOperationHelper {
    * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
+   * @param operationState operational state for a bulk update
    */
-  @Retries.RetryTranslated
-  public void revertCommit(String destKey) throws IOException {
+  @Retries.OnceTranslated
+  public void revertCommit(String destKey,
+      @Nullable BulkOperationState operationState) throws IOException {
     once("revert commit", destKey,
         () -> {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,
-              destKey, true);
+              destKey, true, operationState);
           owner.maybeCreateFakeParentDirectory(destPath);
         }
     );
+  }
+
+  /**
+   * This completes a multipart upload to the destination key via
+   * {@code finalizeMultipartUpload()}.
+   * Retry policy: retrying, translated.
+   * Retries increment the {@code errorCount} counter.
+   * @param destKey destination
+   * @param uploadId multipart operation Id
+   * @param partETags list of partial uploads
+   * @param length length of the upload
+   * @param operationState operational state for a bulk update
+   * @return the result of the operation.
+   * @throws IOException if problems arose which could not be retried, or
+   * the retry count was exceeded
+   */
+  @Retries.RetryTranslated
+  public CompleteMultipartUploadResult commitUpload(
+      String destKey,
+      String uploadId,
+      List<PartETag> partETags,
+      long length,
+      @Nullable BulkOperationState operationState)
+      throws IOException {
+    checkNotNull(uploadId);
+    checkNotNull(partETags);
+    LOG.debug("Completing multipart upload {} with {} parts",
+        uploadId, partETags.size());
+    return finalizeMultipartUpload(destKey,
+        uploadId,
+        partETags,
+        length,
+        Invoker.NO_OP,
+        operationState);
+  }
+
+  /**
+   * Initiate a commit operation through any metastore.
+   * @param path path under which the writes will all take place.
+   * @return an possibly null operation state from the metastore.
+   * @throws IOException failure to instantiate.
+   */
+  public BulkOperationState initiateCommitOperation(
+      Path path) throws IOException {
+    return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
+        BulkOperationState.OperationType.Commit, path);
   }
 
   /**
@@ -478,4 +558,71 @@ public class WriteOperationHelper {
         () -> owner.uploadPart(request));
   }
 
+  /**
+   * Get the configuration of this instance; essentially the owning
+   * filesystem configuration.
+   * @return the configuration.
+   */
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * Create a S3 Select request for the destination path.
+   * This does not build the query.
+   * @param path pre-qualified path for query
+   * @return the request
+   */
+  public SelectObjectContentRequest newSelectRequest(Path path) {
+    SelectObjectContentRequest request = new SelectObjectContentRequest();
+    request.setBucketName(bucket);
+    request.setKey(owner.pathToKey(path));
+    return request;
+  }
+
+  /**
+   * Execute an S3 Select operation.
+   * On a failure, the request is only logged at debug to avoid the
+   * select exception being printed.
+   * @param source source for selection
+   * @param request Select request to issue.
+   * @param action the action for use in exception creation
+   * @return response
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  public SelectObjectContentResult select(
+      final Path source,
+      final SelectObjectContentRequest request,
+      final String action)
+      throws IOException {
+    String bucketName = request.getBucketName();
+    Preconditions.checkArgument(bucket.equals(bucketName),
+        "wrong bucket: %s", bucketName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Initiating select call {} {}",
+          source, request.getExpression());
+      LOG.debug(SelectBinding.toString(request));
+    }
+    return invoker.retry(
+        action,
+        source.toString(),
+        true,
+        () -> {
+          try (DurationInfo ignored =
+                   new DurationInfo(LOG, "S3 Select operation")) {
+            try {
+              return owner.getAmazonS3Client().selectObjectContent(request);
+            } catch (AmazonS3Exception e) {
+              LOG.error("Failure of S3 Select request against {}",
+                  source);
+              LOG.debug("S3 Select request against {}:\n{}",
+                  source,
+                  SelectBinding.toString(request),
+                  e);
+              throw e;
+            }
+          }
+        });
+  }
 }

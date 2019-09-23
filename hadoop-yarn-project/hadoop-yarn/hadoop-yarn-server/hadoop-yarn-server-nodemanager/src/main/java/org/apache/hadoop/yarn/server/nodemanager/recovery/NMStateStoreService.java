@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -220,27 +219,31 @@ public abstract class NMStateStoreService extends AbstractService {
   }
 
   public static class LocalResourceTrackerState {
-    List<LocalizedResourceProto> localizedResources =
-        new ArrayList<LocalizedResourceProto>();
-    Map<LocalResourceProto, Path> inProgressResources =
-        new HashMap<LocalResourceProto, Path>();
+    final private RecoveryIterator<LocalizedResourceProto>
+        completedResourcesIterator;
+    final private RecoveryIterator<Entry<LocalResourceProto, Path>>
+        startedResourcesIterator;
 
-    public List<LocalizedResourceProto> getLocalizedResources() {
-      return localizedResources;
+    LocalResourceTrackerState(RecoveryIterator<LocalizedResourceProto> crIt,
+        RecoveryIterator<Entry<LocalResourceProto, Path>> srIt) {
+      this.completedResourcesIterator = crIt;
+      this.startedResourcesIterator = srIt;
     }
 
-    public Map<LocalResourceProto, Path> getInProgressResources() {
-      return inProgressResources;
+    public RecoveryIterator<LocalizedResourceProto>
+        getCompletedResourcesIterator() {
+      return completedResourcesIterator;
     }
 
-    public boolean isEmpty() {
-      return localizedResources.isEmpty() && inProgressResources.isEmpty();
+    public RecoveryIterator<Entry<LocalResourceProto, Path>>
+        getStartedResourcesIterator() {
+      return startedResourcesIterator;
     }
   }
 
   public static class RecoveredUserResources {
     LocalResourceTrackerState privateTrackerState =
-        new LocalResourceTrackerState();
+        new LocalResourceTrackerState(null, null);
     Map<ApplicationId, LocalResourceTrackerState> appTrackerStates =
         new HashMap<ApplicationId, LocalResourceTrackerState>();
 
@@ -256,7 +259,7 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public static class RecoveredLocalizationState {
     LocalResourceTrackerState publicTrackerState =
-        new LocalResourceTrackerState();
+        new LocalResourceTrackerState(null, null);
     RecoveryIterator<Entry<String, RecoveredUserResources>> it = null;
 
     public LocalResourceTrackerState getPublicTrackerState() {

@@ -29,8 +29,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -50,7 +50,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
 
   private MultiNodeLookupPolicy<N> multiNodePolicy;
-  private static final Log LOG = LogFactory.getLog(MultiNodeSorter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MultiNodeSorter.class);
 
   // ScheduledExecutorService which schedules the PreemptionChecker to run
   // periodically.

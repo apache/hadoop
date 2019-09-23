@@ -37,10 +37,14 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -94,10 +98,45 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   }
 
   @Test
+  public void testImportCommandRepairsETagAndVersionId() throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    MetadataStore ms = getMetadataStore();
+    Path path = path("test-version-metadata");
+    try (FSDataOutputStream out = fs.create(path)) {
+      out.write(1);
+    }
+    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(path);
+
+    // put in bogus ETag and versionId
+    S3AFileStatus bogusStatus = S3AFileStatus.fromFileStatus(originalStatus,
+        Tristate.FALSE, "bogusETag", "bogusVersionId");
+    ms.put(new PathMetadata(bogusStatus));
+
+    // sanity check that bogus status is actually persisted
+    S3AFileStatus retrievedBogusStatus = (S3AFileStatus) fs.getFileStatus(path);
+    assertEquals("bogus ETag was not persisted",
+        "bogusETag", retrievedBogusStatus.getETag());
+    assertEquals("bogus versionId was not persisted",
+        "bogusVersionId", retrievedBogusStatus.getVersionId());
+
+    // execute the import
+    S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
+    cmd.setStore(ms);
+    exec(cmd, "import", path.toString());
+
+    // make sure ETag and versionId were corrected
+    S3AFileStatus updatedStatus = (S3AFileStatus) fs.getFileStatus(path);
+    assertEquals("ETag was not corrected",
+        originalStatus.getETag(), updatedStatus.getETag());
+    assertEquals("VersionId was not corrected",
+        originalStatus.getVersionId(), updatedStatus.getVersionId());
+  }
+
+  @Test
   public void testDestroyBucketExistsButNoTable() throws Throwable {
     run(Destroy.NAME,
         "-meta", LOCAL_METADATA,
-        getLandsatCSVFile());
+        getLandsatCSVFile(getConfiguration()));
   }
 
   @Test
@@ -161,7 +200,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   public void testLandsatBucketUnguarded() throws Throwable {
     run(BucketInfo.NAME,
         "-" + BucketInfo.UNGUARDED_FLAG,
-        getLandsatCSVFile());
+        getLandsatCSVFile(getConfiguration()));
   }
 
   @Test
@@ -169,14 +208,15 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     runToFailure(E_BAD_STATE,
         BucketInfo.NAME,
         "-" + BucketInfo.GUARDED_FLAG,
-        ITestS3GuardToolLocal.this.getLandsatCSVFile());
+        getLandsatCSVFile(
+            ITestS3GuardToolLocal.this.getConfiguration()));
   }
 
   @Test
   public void testLandsatBucketRequireUnencrypted() throws Throwable {
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
-        getLandsatCSVFile());
+        getLandsatCSVFile(getConfiguration()));
   }
 
   @Test
@@ -184,7 +224,8 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     runToFailure(E_BAD_STATE,
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
-        "AES256", ITestS3GuardToolLocal.this.getLandsatCSVFile());
+        "AES256", getLandsatCSVFile(
+            ITestS3GuardToolLocal.this.getConfiguration()));
   }
 
   @Test
@@ -367,7 +408,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       allOptions.add(String.valueOf(ageSeconds));
     }
     allOptions.add(path.toString());
-    exec(cmd, buf, allOptions.toArray(new String[0]));
+    exec(0, "", cmd, buf, allOptions.toArray(new String[0]));
 
     try (BufferedReader reader = new BufferedReader(
         new InputStreamReader(new ByteArrayInputStream(buf.toByteArray())))) {
@@ -376,7 +417,8 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         String[] fields = line.split("\\s");
         if (fields.length == 4 && fields[0].equals(Uploads.TOTAL)) {
           int parsedUploads = Integer.valueOf(fields[1]);
-          LOG.debug("Matched CLI output: {} {} {} {}", fields);
+          LOG.debug("Matched CLI output: {} {} {} {}",
+              fields[0], fields[1], fields[2], fields[3]);
           assertEquals("Unexpected number of uploads", numUploads,
               parsedUploads);
           return;

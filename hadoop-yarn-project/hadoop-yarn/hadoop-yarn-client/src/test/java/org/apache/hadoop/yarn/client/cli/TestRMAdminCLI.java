@@ -22,10 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -325,7 +325,7 @@ public class TestRMAdminCLI {
   public void testUpdateNodeResourceTypes() throws Exception {
     String nodeIdStr = "0.0.0.0:0";
     String resourceTypes =
-        "memory-mb=1024Mi,vcores=1,resource1=3Gi,resource2=2m";
+        "memory-mb=1Gi,vcores=1,resource1=3Gi,resource2=2m";
     String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
     assertEquals(0, rmAdminCLI.run(args));
     ArgumentCaptor<UpdateNodeResourceRequest> argument =
@@ -342,6 +342,11 @@ public class TestRMAdminCLI {
         ResourceInformation.newInstance("resource2", "m", 2));
 
     ResourceOption resource = resourceMap.get(nodeId);
+    // Ensure memory-mb has been converted to "Mi"
+    assertEquals(1024,
+        resource.getResource().getResourceInformation("memory-mb").getValue());
+    assertEquals("Mi",
+        resource.getResource().getResourceInformation("memory-mb").getUnits());
     assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
         resource);
     assertEquals("resource value for " + nodeIdStr + " is not as expected.",
@@ -575,12 +580,9 @@ public class TestRMAdminCLI {
       String[] args = { "-getGroups", "admin" };
       assertEquals(0, rmAdminCLI.run(args));
       verify(admin).getGroupsForUser(eq("admin"));
-      verify(out).println(argThat(new ArgumentMatcher<StringBuilder>() {
-        @Override
-        public boolean matches(Object argument) {
-          return ("" + argument).equals("admin : group1 group2");
-        }
-      }));
+      verify(out).println(argThat(
+          (ArgumentMatcher<StringBuilder>) arg ->
+              ("" + arg).equals("admin : group1 group2")));
     } finally {
       System.setOut(origOut);
     }

@@ -18,58 +18,42 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes Delete Key.
  */
+@Command(name = "delete",
+    description = "deletes an existing key")
 public class DeleteKeyHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
-  private String keyName;
+
+  @Parameters(arity = "1..1", description = Shell.OZONE_KEY_URI_DESCRIPTION)
+  private String uri;
 
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.DELETE_KEY)) {
-      throw new OzoneClientException(
-          "Incorrect call : deleteKey is missing");
-    }
+  public Void call() throws Exception {
 
-    String ozoneURIString = cmd.getOptionValue(Shell.DELETE_KEY);
-    URI ozoneURI = verifyURI(ozoneURIString);
-    Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
-          "volume/bucket/key name required in deleteKey");
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureKeyAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    volumeName = path.getName(0).toString();
-    bucketName = path.getName(1).toString();
-    keyName = path.getName(2).toString();
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
+    String keyName = address.getKeyName();
 
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
       System.out.printf("Key Name : %s%n", keyName);
@@ -78,5 +62,6 @@ public class DeleteKeyHandler extends Handler {
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
     bucket.deleteKey(keyName);
+    return null;
   }
 }

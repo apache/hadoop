@@ -40,16 +40,6 @@ public class ReregisterCommand extends
   }
 
   /**
-   * Gets the protobuf message of this object.
-   *
-   * @return A protobuf message.
-   */
-  @Override
-  public byte[] getProtoBufMessage() {
-    return getProto().toByteArray();
-  }
-
-  /**
    * Not implemented for ReregisterCommand.
    *
    * @return cmdId.
@@ -59,6 +49,7 @@ public class ReregisterCommand extends
     return 0;
   }
 
+  @Override
   public ReregisterCommandProto getProto() {
     return ReregisterCommandProto
         .newBuilder()

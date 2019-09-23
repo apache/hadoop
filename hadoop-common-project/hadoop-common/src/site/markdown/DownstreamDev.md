@@ -426,7 +426,8 @@ Questions
 For question about developing applications and projects against Apache Hadoop,
 please contact the developer mailing list for the relevant component(s):
 
-* [dev-common](mailto:dev-common@apache.org)
-* [dev-hdfs](mailto:dev-hdfs@apache.org)
-* [dev-mapreduce](mailto:dev-mapreduce@apache.org)
-* [dev-yarn](mailto:dev-yarn@apache.org)
+* [common-dev](mailto:common-dev@hadoop.apache.org)
+* [hdfs-dev](mailto:hdfs-dev@hadoop.apache.org)
+* [mapreduce-dev](mailto:mapreduce-dev@hadoop.apache.org)
+* [yarn-dev](mailto:yarn-dev@hadoop.apache.org)
+* [submarine-dev](mailto:submarine-dev@hadoop.apache.org)

@@ -118,7 +118,7 @@ public class TestQueueManagementDynamicEditPolicy extends
       nodeLabel, int timesec) throws InterruptedException {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timesec * 1000) {
-      if (Float.compare(expectedVal, queueManagementPolicy
+      if (Math.abs(expectedVal - queueManagementPolicy
           .getAbsoluteActivatedChildQueueCapacity(nodeLabel)) > EPSILON) {
         Thread.sleep(100);
       } else {

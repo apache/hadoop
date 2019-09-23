@@ -21,9 +21,11 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -35,18 +37,26 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
+import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -54,10 +64,16 @@ import java.util.UUID;
  */
 public class TestContainerMetrics {
 
+  private GrpcReplicationService createReplicationService(
+      ContainerController controller) {
+    return new GrpcReplicationService(
+        new OnDemandContainerReplicationSource(controller));
+  }
+
   @Test
   public void testContainerMetrics() throws Exception {
-    XceiverServer server = null;
-    XceiverClient client = null;
+    XceiverServerGrpc server = null;
+    XceiverClientGrpc client = null;
     long containerID = ContainerTestHelper.getTestContainerID();
     String path = GenericTestUtils.getRandomizedTempPath();
 
@@ -67,7 +83,7 @@ public class TestContainerMetrics {
           .createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader()
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
       conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
           interval);
@@ -77,12 +93,28 @@ public class TestContainerMetrics {
       VolumeSet volumeSet = new VolumeSet(
           datanodeDetails.getUuidString(), conf);
       ContainerSet containerSet = new ContainerSet();
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
+      StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails())
+          .thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+      for (ContainerProtos.ContainerType containerType :
+          ContainerProtos.ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
+      }
       HddsDispatcher dispatcher = new HddsDispatcher(conf, containerSet,
-          volumeSet, null);
+          volumeSet, handlers, context, metrics);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
-      server = new XceiverServer(datanodeDetails, conf, dispatcher);
-      client = new XceiverClient(pipeline, conf);
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher, null,
+          createReplicationService(new ContainerController(
+              containerSet, handlers)));
+      client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();
       client.connect();
@@ -91,7 +123,6 @@ public class TestContainerMetrics {
       ContainerCommandRequestProto request = ContainerTestHelper
           .getCreateContainerRequest(containerID, pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 

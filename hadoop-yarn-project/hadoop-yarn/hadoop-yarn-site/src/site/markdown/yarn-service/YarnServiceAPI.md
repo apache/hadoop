@@ -12,8 +12,11 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# YARN Service API 
+# YARN Service API
 
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+## Introduction
 Bringing a new service on YARN today is not a simple experience. The APIs of existing
 frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
 or writing a complex spec (for declarative frameworks).
@@ -228,6 +231,7 @@ One or more components of the service. If the service is HBase say, then the com
 |launch_command|The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any). If docker image supports ENTRYPOINT, launch_command is delimited by comma(,) instead of space.|false|string||
 |resource|Resource of this component (optional). If not specified, the service level global resource takes effect.|false|Resource||
 |number_of_containers|Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.|false|integer (int64)||
+|decommissioned_instances|List of decommissioned component instances.|false|string array||
 |containers|Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.|false|Container array||
 |run_privileged_container|Run all containers of this component in privileged mode (YARN-4262).|false|boolean||
 |placement_policy|Advanced scheduling and placement policies for all containers of this component.|false|PlacementPolicy||
@@ -252,7 +256,7 @@ A config file that needs to be created and made available as a volume in a servi
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|type|Config file in the standard format like xml, properties, json, yaml, template or static/archive resource files. When static/archive types are specified, file must be uploaded to remote file system before launching the job, and YARN service framework will localize files prior to launching containers. Archive files are unwrapped during localization |false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, ENV, HADOOP_XML, STATIC, ARCHIVE)||
+|type|Config file in the standard format like xml, properties, json, yaml, template or static/archive resource files. When static/archive types are specified, file must be uploaded to remote file system before launching the job, and YARN service framework will localize files prior to launching containers. Archive files are unwrapped during localization |false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, HADOOP_XML, STATIC, ARCHIVE)||
 |dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf for all types other than static/archive. For static/archive resource types, the files are available under resources directory.|false|string||
 |src_file|This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.|false|string||
 |properties|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
@@ -371,7 +375,7 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
 |cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
 |memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
-|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
+|additional|A map of resource type name to resource type information. Including value (integer), unit (string) and optional attributes (map). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
 
 
 ### ResourceInformation
@@ -406,7 +410,7 @@ a service resource has the following attributes.
 |queue|The YARN queue that this service should be submitted to.|false|string||
 |kerberos_principal|The principal info of the user who launches the service|false|KerberosPrincipal||
 |docker_client_config|URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json)|false|string||
-
+|dependencies|A list of service names that this service depends on.| false | string array ||
 
 ### ServiceState
 
@@ -432,9 +436,11 @@ The current status of a submitted service, returned as a response to the GET API
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -459,8 +465,10 @@ POST URL - http://localhost:8088/app/v1/services
 }
 ```
 
-##### GET Response JSON
+#### GET Response JSON
+```
 GET URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 Note, lifetime value of -1 means unlimited lifetime.
 
@@ -521,9 +529,11 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 
 Note, irrespective of what the current lifetime value is, this update request will set the lifetime of the service to be 3600 seconds (1 hour) from the time the request is submitted. Hence, if a a service has remaining lifetime of 5 mins (say) and would like to extend it to an hour OR if an application has remaining lifetime of 5 hours (say) and would like to reduce it down to an hour, then for both scenarios you need to submit the same request below.
 
@@ -533,9 +543,11 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "state": "STOPPED"
@@ -543,9 +555,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Start a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "state": "STARTED"
@@ -553,9 +567,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Update to flex up/down the number of containers (instances) of a component of a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "number_of_containers": 3
@@ -563,9 +579,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 ```
 
 Alternatively, you can specify the entire "components" section instead.
-
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
-##### PUT Request JSON
+```
+
+#### PUT Request JSON
 ```json
 {
   "state": "FLEX",
@@ -580,14 +598,18 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Destroy a service
+```
 DELETE URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 ***
 
 ### Create a complicated service  - HBase
+```
 POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
+```
 
-##### POST Request JSON
+#### POST Request JSON
 
 ```json
 {
@@ -684,9 +706,11 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 ```
 
 ### Create a service requesting GPUs in addition to CPUs and RAM
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -718,9 +742,11 @@ POST URL - http://localhost:8088/app/v1/services
 ```
 
 ### Create a service with a component requesting anti-affinity placement policy
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -764,8 +790,10 @@ POST URL - http://localhost:8088/app/v1/services
 }
 ```
 
-##### GET Response JSON
+#### GET Response JSON
+```
 GET URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 Note, for an anti-affinity component no more than 1 container will be allocated
 in a specific node. In this example, 3 containers have been requested by
@@ -860,9 +888,11 @@ non-STABLE state.
 ```
 
 ### Create a service with health threshold monitor enabled for a component
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",

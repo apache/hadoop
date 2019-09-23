@@ -26,8 +26,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,10 +52,11 @@ import com.google.common.io.Files;
  */
 public class TestDFSHAAdminMiniCluster {
   static {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(HAAdmin.class),
-        Level.ALL);
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(HAAdmin.class),
+        Level.TRACE);
   }
-  private static final Log LOG = LogFactory.getLog(TestDFSHAAdminMiniCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSHAAdminMiniCluster.class);
   
   private MiniDFSCluster cluster;
   private Configuration conf; 
@@ -115,6 +116,50 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse(nnode2.isStandbyState());
     assertEquals(0, runTool("-transitionToStandby", "nn2"));
     assertTrue(nnode2.isStandbyState());
+    assertEquals(0, runTool("-transitionToObserver", "nn2"));
+    assertFalse(nnode2.isStandbyState());
+    assertTrue(nnode2.isObserverState());
+  }
+
+  @Test
+  public void testObserverTransition() throws Exception {
+    NameNode nnode1 = cluster.getNameNode(0);
+    assertTrue(nnode1.isStandbyState());
+
+    // Should be able to transition from STANDBY to OBSERVER
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertFalse(nnode1.isStandbyState());
+    assertTrue(nnode1.isObserverState());
+
+    // Transition from Observer to Observer should be no-op
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isObserverState());
+
+    // Should also be able to transition back from OBSERVER to STANDBY
+    assertEquals(0, runTool("-transitionToStandby", "nn1"));
+    assertTrue(nnode1.isStandbyState());
+    assertFalse(nnode1.isObserverState());
+  }
+
+  @Test
+  public void testObserverIllegalTransition() throws Exception {
+    NameNode nnode1 = cluster.getNameNode(0);
+    assertTrue(nnode1.isStandbyState());
+    assertEquals(0, runTool("-transitionToActive", "nn1"));
+    assertFalse(nnode1.isStandbyState());
+    assertTrue(nnode1.isActiveState());
+
+    // Should NOT be able to transition from ACTIVE to OBSERVER
+    assertEquals(-1, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isActiveState());
+
+    // Should NOT be able to transition from OBSERVER to ACTIVE
+    assertEquals(0, runTool("-transitionToStandby", "nn1"));
+    assertTrue(nnode1.isStandbyState());
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isObserverState());
+    assertEquals(-1, runTool("-transitionToActive", "nn1"));
+    assertFalse(nnode1.isActiveState());
   }
   
   @Test
@@ -163,7 +208,7 @@ public class TestDFSHAAdminMiniCluster {
     assertEquals(0, runTool("-ns", "minidfs-ns", "-failover", "nn2", "nn1"));
 
     // Fencer has not run yet, since none of the above required fencing 
-    assertEquals("", Files.toString(tmpFile, Charsets.UTF_8));
+    assertEquals("", Files.asCharSource(tmpFile, Charsets.UTF_8).read());
 
     // Test failover with fencer and forcefence option
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
@@ -171,8 +216,8 @@ public class TestDFSHAAdminMiniCluster {
     // The fence script should run with the configuration from the target
     // node, rather than the configuration from the fencing node. Strip
     // out any trailing spaces and CR/LFs which may be present on Windows.
-    String fenceCommandOutput =Files.toString(tmpFile, Charsets.UTF_8).
-            replaceAll(" *[\r\n]+", "");
+    String fenceCommandOutput = Files.asCharSource(tmpFile, Charsets.UTF_8)
+        .read().replaceAll(" *[\r\n]+", "");
     assertEquals("minidfs-ns.nn1 " + nn1Port + " nn1", fenceCommandOutput);
     tmpFile.delete();
     

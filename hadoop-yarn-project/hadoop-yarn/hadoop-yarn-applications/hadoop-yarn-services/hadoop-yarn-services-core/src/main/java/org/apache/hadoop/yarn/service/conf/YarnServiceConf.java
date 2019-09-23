@@ -34,12 +34,13 @@ public class YarnServiceConf {
 
   // Retry settings for container failures
   public static final String CONTAINER_RETRY_MAX = "yarn.service.container-failure.retry.max";
-  public static final int DEFAULT_CONTAINER_RETRY_MAX = -1;
+  public static final int DEFAULT_CONTAINER_RETRY_MAX = 10;
   public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval-ms";
   public static final int DEFAULT_CONTAINER_RETRY_INTERVAL = 30000;
   public static final String CONTAINER_FAILURES_VALIDITY_INTERVAL =
       "yarn.service.container-failure.validity-interval-ms";
-  public static final long DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL = -1;
+  public static final long DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL =
+      600000;
 
   public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
   public static final int DEFAULT_AM_RESTART_MAX = 20;
@@ -58,6 +59,8 @@ public class YarnServiceConf {
 
   public static final String ROLLING_LOG_INCLUSION_PATTERN = "yarn.service.rolling-log.include-pattern";
   public static final String ROLLING_LOG_EXCLUSION_PATTERN = "yarn.service.rolling-log.exclude-pattern";
+
+  public static final String YARN_SERVICE_CLASSPATH = "yarn.service.classpath";
 
   public static final String YARN_SERVICES_SYSTEM_SERVICE_DIRECTORY =
       YARN_SERVICE_PREFIX + "system-service.dir";

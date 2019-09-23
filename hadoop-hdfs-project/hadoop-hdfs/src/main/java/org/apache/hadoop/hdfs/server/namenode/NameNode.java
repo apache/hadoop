@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -46,14 +47,17 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.MetricsLoggerTask;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -68,6 +72,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
@@ -106,6 +111,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.TreeSet;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -114,6 +120,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -162,6 +170,13 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT;
+
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
@@ -175,8 +190,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  * is a second backup/failover NameNode, or when using federated NameNodes.)
  *
  * The NameNode controls two critical tables:
- *   1)  filename->blocksequence (namespace)
- *   2)  block->machinelist ("inodes")
+ *   1)  filename{@literal ->}blocksequence (namespace)
+ *   2)  block{@literal ->}machinelist ("inodes")
  *
  * The first table is stored on disk and is very precious.
  * The second table is rebuilt every time the NameNode comes up.
@@ -207,7 +222,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  **********************************************************/
 @InterfaceAudience.Private
 public class NameNode extends ReconfigurableBase implements
-    NameNodeStatusMXBean {
+    NameNodeStatusMXBean, TokenVerifier<DelegationTokenIdentifier> {
   static{
     HdfsConfiguration.init();
   }
@@ -296,7 +311,10 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
           FS_PROTECTED_DIRECTORIES,
           HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-          DFS_STORAGE_POLICY_SATISFIER_MODE_KEY));
+          DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY,
+          DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
+          DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -362,6 +380,7 @@ public class NameNode extends ReconfigurableBase implements
       LoggerFactory.getLogger("BlockStateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
+  public static final HAState OBSERVER_STATE = new StandbyState(true);
 
   private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
 
@@ -375,6 +394,7 @@ public class NameNode extends ReconfigurableBase implements
   private final HAContext haContext;
   protected final boolean allowStaleStandbyReads;
   private AtomicBoolean started = new AtomicBoolean(false);
+  private final boolean notBecomeActiveInSafemode;
 
   private final static int HEALTH_MONITOR_WARN_THRESHOLD_MS = 5000;
   
@@ -420,6 +440,11 @@ public class NameNode extends ReconfigurableBase implements
 
   public NamenodeProtocols getRpcServer() {
     return rpcServer;
+  }
+
+  @VisibleForTesting
+  public HttpServer2 getHttpServer() {
+    return httpServer.getHttpServer();
   }
 
   public void queueExternalCall(ExternalCall<?> extCall)
@@ -655,6 +680,15 @@ public class NameNode extends ReconfigurableBase implements
     return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
   }
 
+  @Override
+  public void verifyToken(DelegationTokenIdentifier id, byte[] password)
+      throws IOException {
+    // during startup namesystem is null, let client retry
+    if (namesystem == null) {
+      throw new RetriableException("Namenode is in startup mode");
+    }
+    namesystem.verifyToken(id, password);
+  }
 
   /**
    * Login as the configured user for the NameNode.
@@ -712,10 +746,18 @@ public class NameNode extends ReconfigurableBase implements
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
+      if (levelDBAliasMapServer != null) {
+        httpServer.setAliasMap(levelDBAliasMapServer.getAliasMap());
+      }
     }
 
     startCommonServices(conf);
     startMetricsLogger(conf);
+  }
+
+  @VisibleForTesting
+  public InMemoryLevelDBAliasMapServer getAliasMapServer() {
+    return levelDBAliasMapServer;
   }
 
   private void startAliasMapServerIfNecessary(Configuration conf)
@@ -794,6 +836,9 @@ public class NameNode extends ReconfigurableBase implements
       startHttpServer(conf);
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
+      if (levelDBAliasMapServer != null) {
+        httpServer.setAliasMap(levelDBAliasMapServer.getAliasMap());
+      }
     }
     rpcServer.start();
     try {
@@ -938,9 +983,9 @@ public class NameNode extends ReconfigurableBase implements
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(getConf());
+      state.prepareToEnterState(haContext);
       try {
         haContext.writeLock();
-        state.prepareToEnterState(haContext);
         state.enterState(haContext);
       } finally {
         haContext.writeUnlock();
@@ -952,6 +997,9 @@ public class NameNode extends ReconfigurableBase implements
       this.stopAtException(e);
       throw e;
     }
+    notBecomeActiveInSafemode = conf.getBoolean(
+        DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE,
+        DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT);
     this.started.set(true);
   }
 
@@ -965,9 +1013,11 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   protected HAState createHAState(StartupOption startOpt) {
-    if (!haEnabled || startOpt == StartupOption.UPGRADE 
+    if (!haEnabled || startOpt == StartupOption.UPGRADE
         || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
+    } else if (startOpt == StartupOption.OBSERVER) {
+      return OBSERVER_STATE;
     } else {
       return STANDBY_STATE;
     }
@@ -985,7 +1035,7 @@ public class NameNode extends ReconfigurableBase implements
     try {
       rpcServer.join();
     } catch (InterruptedException ie) {
-      LOG.info("Caught interrupted exception ", ie);
+      LOG.info("Caught interrupted exception", ie);
     }
   }
 
@@ -1003,7 +1053,7 @@ public class NameNode extends ReconfigurableBase implements
         state.exitState(haContext);
       }
     } catch (ServiceFailedException e) {
-      LOG.warn("Encountered exception while exiting state ", e);
+      LOG.warn("Encountered exception while exiting state", e);
     } finally {
       stopMetricsLogger();
       stopCommonServices();
@@ -1049,10 +1099,39 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
+   * @return The auxiliary nameNode RPC addresses, or empty set if there
+   * is none.
+   */
+  public Set<InetSocketAddress> getAuxiliaryNameNodeAddresses() {
+    return rpcServer.getAuxiliaryRpcAddresses();
+  }
+
+  /**
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
     return NetUtils.getHostPortString(getNameNodeAddress());
+  }
+
+  /**
+   * Return a host:port format string corresponds to an auxiliary
+   * port configured on NameNode. If there are multiple auxiliary ports,
+   * an arbitrary one is returned. If there is no auxiliary listener, returns
+   * null.
+   *
+   * @return a string of format host:port that points to an auxiliary NameNode
+   *         address, or null if there is no such address.
+   */
+  @VisibleForTesting
+  public String getNNAuxiliaryRpcAddress() {
+    Set<InetSocketAddress> auxiliaryAddrs = getAuxiliaryNameNodeAddresses();
+    if (auxiliaryAddrs.isEmpty()) {
+      return null;
+    }
+    // since set has no particular order, returning the first element of
+    // from the iterator is effectively arbitrary.
+    InetSocketAddress addr = auxiliaryAddrs.iterator().next();
+    return NetUtils.getHostPortString(addr);
   }
 
   /**
@@ -1081,7 +1160,7 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
-   * @return NameNodeHttpServer, used by unit tests to ensure a full shutdown,
+   * NameNodeHttpServer, used by unit tests to ensure a full shutdown,
    * so that no bind exception is thrown during restart.
    */
   @VisibleForTesting
@@ -1133,7 +1212,8 @@ public class NameNode extends ReconfigurableBase implements
       //Generate a new cluster id
       clusterId = NNStorage.newClusterID();
     }
-    System.out.println("Formatting using clusterid: " + clusterId);
+
+    LOG.info("Formatting using clusterid: {}", clusterId);
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
     try {
@@ -1161,7 +1241,7 @@ public class NameNode extends ReconfigurableBase implements
 
       fsImage.format(fsn, clusterId, force);
     } catch (IOException ioe) {
-      LOG.warn("Encountered exception during format: ", ioe);
+      LOG.warn("Encountered exception during format", ioe);
       fsImage.close();
       throw ioe;
     }
@@ -1322,13 +1402,11 @@ public class NameNode extends ReconfigurableBase implements
 
       // Copy all edits after last CheckpointTxId to shared edits dir
       for (EditLogInputStream stream : streams) {
-        LOG.debug("Beginning to copy stream " + stream + " to shared edits");
+        LOG.debug("Beginning to copy stream {} to shared edits", stream);
         FSEditLogOp op;
         boolean segmentOpen = false;
         while ((op = stream.readOp()) != null) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("copying op: " + op);
-          }
+          LOG.trace("copying op: {}", op);
           if (!segmentOpen) {
             newSharedEditLog.startLogSegment(op.txid, false,
                 fsns.getEffectiveLayoutVersion());
@@ -1339,14 +1417,15 @@ public class NameNode extends ReconfigurableBase implements
 
           if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
             newSharedEditLog.endCurrentLogSegment(false);
-            LOG.debug("ending log segment because of END_LOG_SEGMENT op in "
-                + stream);
+            LOG.debug("ending log segment because of END_LOG_SEGMENT op in {}",
+                stream);
             segmentOpen = false;
           }
         }
 
         if (segmentOpen) {
-          LOG.debug("ending log segment because of end of stream in " + stream);
+          LOG.debug("ending log segment because of end of stream in {}",
+              stream);
           newSharedEditLog.logSync();
           newSharedEditLog.endCurrentLogSegment(false);
           segmentOpen = false;
@@ -1433,6 +1512,8 @@ public class NameNode extends ReconfigurableBase implements
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
+      } else if (StartupOption.OBSERVER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.OBSERVER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)
           || StartupOption.UPGRADEONLY.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd) ? 
@@ -1461,7 +1542,7 @@ public class NameNode extends ReconfigurableBase implements
               i += 1;
             }
           } else {
-            LOG.error("Unknown upgrade flag " + flag);
+            LOG.error("Unknown upgrade flag: {}", flag);
             return null;
           }
         }
@@ -1605,8 +1686,8 @@ public class NameNode extends ReconfigurableBase implements
       terminate(aborted ? 1 : 0);
       return null; // avoid javac warning
     case GENCLUSTERID:
-      System.err.println("Generating new cluster id:");
-      System.out.println(NNStorage.newClusterID());
+      String clusterID = NNStorage.newClusterID();
+      LOG.info("Generated new cluster id: {}", clusterID);
       terminate(0);
       return null;
     case ROLLBACK:
@@ -1687,9 +1768,7 @@ public class NameNode extends ReconfigurableBase implements
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting " + FS_DEFAULT_NAME_KEY + " to " + defaultUri.toString());
-      }
+      LOG.debug("Setting {} to {}", FS_DEFAULT_NAME_KEY, defaultUri);
     }
   }
     
@@ -1738,6 +1817,10 @@ public class NameNode extends ReconfigurableBase implements
       throw new HealthCheckFailedException(
           "The NameNode has no resources available");
     }
+    if (notBecomeActiveInSafemode && isInSafeMode()) {
+      throw new HealthCheckFailedException("The NameNode is configured to " +
+          "report UNHEALTHY to ZKFC in Safemode.");
+    }
   }
   
   synchronized void transitionToActive() 
@@ -1746,16 +1829,39 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
+    if (state == OBSERVER_STATE) {
+      throw new ServiceFailedException(
+          "Cannot transition from '" + OBSERVER_STATE + "' to '" +
+              ACTIVE_STATE + "'");
+    }
+    if (notBecomeActiveInSafemode && isInSafeMode()) {
+      throw new ServiceFailedException(getRole() + " still not leave safemode");
+    }
     state.setState(haContext, ACTIVE_STATE);
   }
-  
-  synchronized void transitionToStandby() 
+
+  synchronized void transitionToStandby()
       throws ServiceFailedException, AccessControlException {
     namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, STANDBY_STATE);
+  }
+
+  synchronized void transitionToObserver()
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
+    if (!haEnabled) {
+      throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    // Transition from ACTIVE to OBSERVER is forbidden.
+    if (state == ACTIVE_STATE) {
+      throw new ServiceFailedException(
+          "Cannot transition from '" + ACTIVE_STATE + "' to '" +
+              OBSERVER_STATE + "'");
+    }
+    state.setState(haContext, OBSERVER_STATE);
   }
 
   synchronized HAServiceStatus getServiceStatus()
@@ -1799,22 +1905,14 @@ public class NameNode extends ReconfigurableBase implements
 
   @Override // NameNodeStatusMXBean
   public String getNNRole() {
-    String roleStr = "";
     NamenodeRole role = getRole();
-    if (null != role) {
-      roleStr = role.toString();
-    }
-    return roleStr;
+    return Objects.toString(role, "");
   }
 
   @Override // NameNodeStatusMXBean
   public String getState() {
-    String servStateStr = "";
     HAServiceState servState = getServiceState();
-    if (null != servState) {
-      servStateStr = servState.toString();
-    }
-    return servStateStr;
+    return Objects.toString(servState, "");
   }
 
   @Override // NameNodeStatusMXBean
@@ -1860,10 +1958,9 @@ public class NameNode extends ReconfigurableBase implements
    */
   protected synchronized void doImmediateShutdown(Throwable t)
       throws ExitException {
-    String message = "Error encountered requiring NN shutdown. " +
-        "Shutting down immediately.";
     try {
-      LOG.error(message, t);
+      LOG.error("Error encountered requiring NN shutdown. " +
+          "Shutting down immediately.", t);
     } catch (Throwable ignored) {
       // This is unlikely to happen, but there's nothing we can do if it does.
     }
@@ -1909,7 +2006,8 @@ public class NameNode extends ReconfigurableBase implements
     @Override
     public void startStandbyServices() throws IOException {
       try {
-        namesystem.startStandbyServices(getConf());
+        namesystem.startStandbyServices(getConf(),
+            state == NameNode.OBSERVER_STATE);
       } catch (Throwable t) {
         doImmediateShutdown(t);
       }
@@ -1956,6 +2054,9 @@ public class NameNode extends ReconfigurableBase implements
     
     @Override
     public boolean allowStaleReads() {
+      if (state == OBSERVER_STATE) {
+        return true;
+      }
       return allowStaleStandbyReads;
     }
 
@@ -1967,6 +2068,10 @@ public class NameNode extends ReconfigurableBase implements
   
   public boolean isActiveState() {
     return (state.equals(ACTIVE_STATE));
+  }
+
+  public boolean isObserverState() {
+    return state.equals(OBSERVER_STATE);
   }
 
   /**
@@ -2044,9 +2149,60 @@ public class NameNode extends ReconfigurableBase implements
       return reconfigureIPCBackoffEnabled(newVal);
     } else if (property.equals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY)) {
       return reconfigureSPSModeEvent(newVal, property);
+    } else if (property.equals(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY)
+        || property.equals(DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY)
+        || property.equals(
+            DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION)) {
+      return reconfReplicationParameters(newVal, property);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
+    }
+  }
+
+  private String reconfReplicationParameters(final String newVal,
+      final String property) throws ReconfigurationException {
+    BlockManager bm = namesystem.getBlockManager();
+    int newSetting;
+    namesystem.writeLock();
+    try {
+      if (property.equals(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY)) {
+        bm.setMaxReplicationStreams(
+            adjustNewVal(DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT, newVal));
+        newSetting = bm.getMaxReplicationStreams();
+      } else if (property.equals(
+          DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY)) {
+        bm.setReplicationStreamsHardLimit(
+            adjustNewVal(DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT,
+                newVal));
+        newSetting = bm.getReplicationStreamsHardLimit();
+      } else if (
+          property.equals(
+              DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION)) {
+        bm.setBlocksReplWorkMultiplier(
+            adjustNewVal(
+                DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT,
+                newVal));
+        newSetting = bm.getBlocksReplWorkMultiplier();
+      } else {
+        throw new IllegalArgumentException("Unexpected property " +
+            property + "in reconfReplicationParameters");
+      }
+      LOG.info("RECONFIGURE* changed {} to {}", property, newSetting);
+      return String.valueOf(newSetting);
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(
+          property), e);
+    } finally {
+      namesystem.writeUnlock();
+    }
+  }
+
+  private int adjustNewVal(int defaultVal, String newVal) {
+    if (newVal == null) {
+      return defaultVal;
+    } else {
+      return Integer.parseInt(newVal);
     }
   }
 

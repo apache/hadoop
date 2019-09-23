@@ -20,7 +20,6 @@ import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
@@ -71,10 +70,6 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   }
 
   public void start() throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      throw new UnsupportedOperationException("Unable to start "
-          + "InMemoryLevelDBAliasMapServer as security is enabled");
-    }
     RPC.setProtocolEngine(getConf(), AliasMapProtocolPB.class,
         ProtobufRpcEngine.class);
     AliasMapProtocolServerSideTranslatorPB aliasMapProtocolXlator =
@@ -144,6 +139,14 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   @Override
   public Configuration getConf() {
     return conf;
+  }
+
+  /**
+   * Get the {@link InMemoryAliasMap} used by this server.
+   * @return the inmemoryaliasmap used.
+   */
+  public InMemoryAliasMap getAliasMap() {
+    return aliasMap;
   }
 
   @Override

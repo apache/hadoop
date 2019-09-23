@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 
 import java.util.concurrent.TimeUnit;
 
@@ -82,6 +84,8 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =
       FEDERATION_ROUTER_PREFIX + "heartbeat.enable";
   public static final boolean DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.enable";
   public static final String DFS_ROUTER_HEARTBEAT_INTERVAL_MS =
       FEDERATION_ROUTER_PREFIX + "heartbeat.interval";
   public static final long DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT =
@@ -102,6 +106,11 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "connection.creator.queue-size";
   public static final int
       DFS_ROUTER_NAMENODE_CONNECTION_CREATOR_QUEUE_SIZE_DEFAULT = 100;
+  public static final String
+      DFS_ROUTER_NAMENODE_CONNECTION_MIN_ACTIVE_RATIO =
+      FEDERATION_ROUTER_PREFIX + "connection.min-active-ratio";
+  public static final float
+      DFS_ROUTER_NAMENODE_CONNECTION_MIN_ACTIVE_RATIO_DEFAULT = 0.5f;
   public static final String DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE =
       FEDERATION_ROUTER_PREFIX + "connection.pool-size";
   public static final int DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE_DEFAULT =
@@ -125,6 +134,20 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_CLIENT_REJECT_OVERLOAD =
       FEDERATION_ROUTER_PREFIX + "client.reject.overload";
   public static final boolean DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT = false;
+  public static final String DFS_ROUTER_ALLOW_PARTIAL_LIST =
+      FEDERATION_ROUTER_PREFIX + "client.allow-partial-listing";
+  public static final boolean DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT = true;
+  public static final String DFS_ROUTER_CLIENT_MOUNT_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "client.mount-status.time-out";
+  public static final long DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(1);
+  public static final String DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "connect.max.retries.on.timeouts";
+  public static final int DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT_DEFAULT = 0;
+  public static final String DFS_ROUTER_CLIENT_CONNECT_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "connect.timeout";
+  public static final long DFS_ROUTER_CLIENT_CONNECT_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(2);
 
   // HDFS Router State Store connection
   public static final String FEDERATION_FILE_RESOLVER_CLIENT_CLASS =
@@ -171,10 +194,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS
+      = FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT = -1;
   public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
       FEDERATION_STORE_PREFIX + "router.expiration";
   public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS =
+      FEDERATION_STORE_ROUTER_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT = -1;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =
@@ -195,6 +226,31 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "mount-table.max-cache-size";
   /** Remove cache entries if we have more than 10k. */
   public static final int FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT = 10000;
+  /**
+   * If true then cache updated immediately after mount table entry change
+   * otherwise it is updated periodically based configuration.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update";
+  public static final boolean MOUNT_TABLE_CACHE_UPDATE_DEFAULT =
+      false;
+  /**
+   * Timeout to update mount table cache on all the routers.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update.timeout";
+  public static final long MOUNT_TABLE_CACHE_UPDATE_TIMEOUT_DEFAULT =
+      TimeUnit.MINUTES.toMillis(1);
+  /**
+   * Remote router mount table cache is updated through RouterClient(RPC call).
+   * To improve performance, RouterClient connections are cached but it should
+   * not be kept in cache forever. This property defines the max time a
+   * connection can be cached.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE_CLIENT_MAX_TIME =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update.client.max.time";
+  public static final long MOUNT_TABLE_CACHE_UPDATE_CLIENT_MAX_TIME_DEFAULT =
+      TimeUnit.MINUTES.toMillis(5);
   public static final String FEDERATION_MOUNT_TABLE_CACHE_ENABLE =
       FEDERATION_ROUTER_PREFIX + "mount-table.cache.enable";
   public static final boolean FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT =
@@ -233,6 +289,13 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "https-bind-host";
   public static final String DFS_ROUTER_HTTPS_ADDRESS_DEFAULT =
       "0.0.0.0:" + DFS_ROUTER_HTTPS_PORT_DEFAULT;
+  public static final String DN_REPORT_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "dn-report.time-out";
+  public static final long  DN_REPORT_TIME_OUT_MS_DEFAULT = 1000;
+  public static final String DN_REPORT_CACHE_EXPIRE =
+      FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
+  public static final long DN_REPORT_CACHE_EXPIRE_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(10);
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =
@@ -242,4 +305,22 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "quota-cache.update.interval";
   public static final long DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT =
       60000;
+
+  // HDFS Router security
+  public static final String DFS_ROUTER_KEYTAB_FILE_KEY =
+      FEDERATION_ROUTER_PREFIX + "keytab.file";
+  public static final String DFS_ROUTER_KERBEROS_PRINCIPAL_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.principal";
+  public static final String DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.principal.hostname";
+
+  public static final String DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.internal.spnego.principal";
+
+  // HDFS Router secret manager for delegation token
+  public static final String DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS =
+      FEDERATION_ROUTER_PREFIX + "secret.manager.class";
+  public static final Class<? extends AbstractDelegationTokenSecretManager>
+      DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT =
+      ZKDelegationTokenSecretManagerImpl.class;
 }

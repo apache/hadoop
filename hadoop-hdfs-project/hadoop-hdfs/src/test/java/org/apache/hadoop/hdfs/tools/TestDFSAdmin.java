@@ -28,8 +28,8 @@ import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.fs.ChecksumException;
@@ -91,7 +91,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -99,7 +99,7 @@ import static org.mockito.Mockito.when;
  * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
  */
 public class TestDFSAdmin {
-  private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;
@@ -243,6 +243,31 @@ public class TestDFSAdmin {
               containsString("Software version"),
               containsString("Config version"))));
     }
+  }
+
+  @Test(timeout = 30000)
+  public void testTriggerBlockReport() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final DataNode dn = cluster.getDataNodes().get(0);
+    final NameNode nn = cluster.getNameNode();
+
+    final String dnAddr = String.format(
+        "%s:%d",
+        dn.getXferAddress().getHostString(),
+        dn.getIpcPort());
+    final String nnAddr = nn.getHostAndPort();
+    resetStream();
+    final List<String> outs = Lists.newArrayList();
+    final int ret = ToolRunner.run(dfsAdmin,
+        new String[]{"-triggerBlockReport", dnAddr, "-incremental", "-namenode", nnAddr});
+    assertEquals(0, ret);
+
+    scanIntoList(out, outs);
+    assertEquals(1, outs.size());
+    assertThat(outs.get(0),
+        is(allOf(containsString("Triggering an incremental block report on "),
+            containsString(" to namenode "))));
   }
 
   @Test(timeout = 30000)
@@ -394,7 +419,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(7, outs.size());
+    assertEquals(10, outs.size());
     assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(1));
     assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(2));
     assertEquals(errs.size(), 0);

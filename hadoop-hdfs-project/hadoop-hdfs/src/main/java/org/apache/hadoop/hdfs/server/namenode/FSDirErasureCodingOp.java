@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -206,6 +207,9 @@ final class FSDirErasureCodingOp {
     }
     if (xAttrs != null) {
       fsn.getEditLog().logRemoveXAttrs(src, xAttrs, logRetryCache);
+    } else {
+      throw new NoECPolicySetException(
+          "No erasure coding policy explicitly set on " + src);
     }
     return fsd.getAuditFileInfo(iip);
   }

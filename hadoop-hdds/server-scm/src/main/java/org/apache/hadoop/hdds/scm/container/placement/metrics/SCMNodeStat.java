@@ -52,6 +52,7 @@ public class SCMNodeStat implements NodeStat {
   /**
    * @return the total configured capacity of the node.
    */
+  @Override
   public LongMetric getCapacity() {
     return capacity;
   }
@@ -59,6 +60,7 @@ public class SCMNodeStat implements NodeStat {
   /**
    * @return the total SCM used space on the node.
    */
+  @Override
   public LongMetric getScmUsed() {
     return scmUsed;
   }
@@ -66,6 +68,7 @@ public class SCMNodeStat implements NodeStat {
   /**
    * @return the total remaining space available on the node.
    */
+  @Override
   public LongMetric getRemaining() {
     return remaining;
   }
@@ -77,12 +80,9 @@ public class SCMNodeStat implements NodeStat {
    * @param newUsed in bytes
    * @param newRemaining in bytes
    */
+  @Override
   @VisibleForTesting
   public void set(long newCapacity, long newUsed, long newRemaining) {
-    Preconditions.checkNotNull(newCapacity, "Capacity cannot be null");
-    Preconditions.checkNotNull(newUsed, "used cannot be null");
-    Preconditions.checkNotNull(newRemaining, "remaining cannot be null");
-
     Preconditions.checkArgument(newCapacity >= 0, "Capacity cannot be " +
         "negative.");
     Preconditions.checkArgument(newUsed >= 0, "used space cannot be " +
@@ -101,6 +101,7 @@ public class SCMNodeStat implements NodeStat {
    * @param stat Nodestat.
    * @return SCMNodeStat
    */
+  @Override
   public SCMNodeStat add(NodeStat stat) {
     this.capacity.set(this.getCapacity().get() + stat.getCapacity().get());
     this.scmUsed.set(this.getScmUsed().get() + stat.getScmUsed().get());
@@ -114,6 +115,7 @@ public class SCMNodeStat implements NodeStat {
    * @param stat SCMNodeStat.
    * @return Modified SCMNodeStat
    */
+  @Override
   public SCMNodeStat subtract(NodeStat stat) {
     this.capacity.set(this.getCapacity().get() - stat.getCapacity().get());
     this.scmUsed.set(this.getScmUsed().get() - stat.getScmUsed().get());

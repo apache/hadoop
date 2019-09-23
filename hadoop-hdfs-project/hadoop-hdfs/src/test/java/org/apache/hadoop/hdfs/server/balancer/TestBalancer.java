@@ -74,8 +74,8 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -126,7 +126,7 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -136,10 +136,10 @@ import org.mockito.stubbing.Answer;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestBalancer {
-  private static final Log LOG = LogFactory.getLog(TestBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBalancer.class);
 
   static {
-    GenericTestUtils.setLogLevel(Balancer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(Balancer.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(Dispatcher.LOG, Level.DEBUG);
   }
 
@@ -1022,7 +1022,7 @@ public class TestBalancer {
       }
     } finally {
       for(NameNodeConnector nnc : connectors) {
-        IOUtils.cleanup(LOG, nnc);
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
     return ExitStatus.SUCCESS.getExitCode();

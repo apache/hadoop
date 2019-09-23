@@ -38,8 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -61,8 +61,8 @@ import org.junit.Test;
  */
 public class TestProcfsBasedProcessTree {
 
-  private static final Log LOG = LogFactory
-    .getLog(TestProcfsBasedProcessTree.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestProcfsBasedProcessTree.class);
   protected static File TEST_ROOT_DIR = new File("target",
     TestProcfsBasedProcessTree.class.getName() + "-localDir");
 
@@ -271,7 +271,7 @@ public class TestProcfsBasedProcessTree {
       fReader = new FileReader(pidFileName);
       pidFile = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
-      LOG.debug("PidFile doesn't exist : " + pidFileName);
+      LOG.debug("PidFile doesn't exist : {}", pidFileName);
       return pid;
     }
 

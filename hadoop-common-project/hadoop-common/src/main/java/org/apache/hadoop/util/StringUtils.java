@@ -428,7 +428,7 @@ public class StringUtils {
    * Splits a comma separated value <code>String</code>, trimming leading and
    * trailing whitespace on each value. Duplicate and empty values are removed.
    *
-   * @param str a comma separated <String> with values, may be null
+   * @param str a comma separated <code>String</code> with values, may be null
    * @return a <code>Collection</code> of <code>String</code> values, empty
    *         Collection if null String input
    */
@@ -743,7 +743,7 @@ public class StringUtils {
     return toStartupShutdownString("STARTUP_MSG: ", new String[] {
         "Starting " + classname,
         "  host = " + hostname,
-        "  args = " + Arrays.asList(args),
+        "  args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
         "  version = " + VersionInfo.getVersion(),
         "  classpath = " + System.getProperty("java.class.path"),
         "  build = " + VersionInfo.getUrl() + " -r "
@@ -1006,8 +1006,8 @@ public class StringUtils {
    * @param template String template to receive replacements
    * @param pattern Pattern to match for identifying tokens, must use a capturing
    *   group
-   * @param replacements Map<String, String> mapping tokens identified by the
-   *   capturing group to their replacement values
+   * @param replacements Map&lt;String, String&gt; mapping tokens identified by
+   * the capturing group to their replacement values
    * @return String template with replacements
    */
   public static String replaceTokens(String template, Pattern pattern,

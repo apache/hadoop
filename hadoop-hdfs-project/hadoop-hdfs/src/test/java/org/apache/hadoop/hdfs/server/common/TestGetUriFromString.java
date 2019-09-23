@@ -23,8 +23,8 @@ import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Test;
 
 /**
@@ -32,7 +32,8 @@ import org.junit.Test;
  * for Windows and Unix style file paths.
  */
 public class TestGetUriFromString {
-  private static final Log LOG = LogFactory.getLog(TestGetUriFromString.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestGetUriFromString.class);
 
   private static final String RELATIVE_FILE_PATH = "relativeFilePath";
   private static final String ABSOLUTE_PATH_UNIX = "/tmp/file1";

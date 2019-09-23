@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Stack;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.permission.AclEntryScope;
@@ -47,7 +47,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * Some of the helper methods are guarded by {@link FSNamesystem#readLock()}.
  */
 public class FSPermissionChecker implements AccessControlEnforcer {
-  static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
+  static final Logger LOG = LoggerFactory.getLogger(UserGroupInformation.class);
 
   private static String getPath(byte[][] components, int start, int end) {
     return DFSUtil.byteArray2PathString(components, start, end - start + 1);

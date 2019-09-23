@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -98,7 +98,7 @@ import static org.mockito.Mockito.when;
 public class TestCapacitySchedulerAutoQueueCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
@@ -132,6 +132,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
       validateUserAndAppLimits(autoCreatedLeafQueue, 1000, 1000);
+      validateContainerLimits(autoCreatedLeafQueue);
 
       assertTrue(autoCreatedLeafQueue
           .getOrderingPolicy() instanceof FairOrderingPolicy);
@@ -256,8 +257,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
 
       newConf.setAutoCreateChildQueueEnabled(C, false);
@@ -285,8 +285,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
       newConf.setAutoCreatedLeafQueueConfigCapacity(A1, A1_CAPACITY / 10);
       newConf.setAutoCreateChildQueueEnabled(A1, true);
@@ -315,8 +314,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
       newConf.setAutoCreatedLeafQueueConfigCapacity(A, A_CAPACITY / 10);
       newConf.setAutoCreateChildQueueEnabled(A, true);
@@ -773,6 +771,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
       validateUserAndAppLimits(user3Queue, 900, 900);
+      validateContainerLimits(user3Queue);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)

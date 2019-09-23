@@ -311,7 +311,7 @@ public class KMSACLs implements Runnable, KeyACLs {
       return false;
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking user [{}] for: {}: {}" + ugi.getShortUserName(),
+        LOG.debug("Checking user [{}] for: {}: {}", ugi.getShortUserName(),
             opType.toString(), acl.getAclString());
       }
       return acl.isUserAllowed(ugi);

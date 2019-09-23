@@ -30,7 +30,6 @@ import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -41,9 +40,9 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -70,6 +69,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLInputFactory;
@@ -115,7 +115,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 /**
  * Provides access to configuration parameters.
  *
- * <h4 id="Resources">Resources</h4>
+ * <h3 id="Resources">Resources</h3>
  *
  * <p>Configurations are specified by resources. A resource contains a set of
  * name/value pairs as XML data. Each resource is named by either a 
@@ -141,12 +141,12 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * Once a resource declares a value final, no subsequently-loaded 
  * resource can alter that value.  
  * For example, one might define a final parameter with:
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;dfs.hosts.include&lt;/name&gt;
  *    &lt;value&gt;/etc/hadoop/conf/hosts.include&lt;/value&gt;
  *    <b>&lt;final&gt;true&lt;/final&gt;</b>
- *  &lt;/property&gt;</pre></tt>
+ *  &lt;/property&gt;</code></pre>
  *
  * Administrators typically define parameters as final in 
  * <tt>core-site.xml</tt> for values that user applications may not alter.
@@ -164,7 +164,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *
  * <p>For example, if a configuration resource contains the following property
  * definitions: 
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;basedir&lt;/name&gt;
  *    &lt;value&gt;/user/${<i>user.name</i>}&lt;/value&gt;
@@ -179,7 +179,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;name&gt;otherdir&lt;/name&gt;
  *    &lt;value&gt;${<i>env.BASE_DIR</i>}/other&lt;/value&gt;
  *  &lt;/property&gt;
- *  </pre></tt>
+ *  </code></pre>
  *
  * <p>When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
  * will be resolved to another property in this Configuration, while
@@ -203,7 +203,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * can define there own custom tags in  hadoop.tags.custom property.
  *
  * <p>For example, we can tag existing property as:
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;dfs.replication&lt;/name&gt;
  *    &lt;value&gt;3&lt;/value&gt;
@@ -215,7 +215,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;value&gt;3&lt;/value&gt;
  *    &lt;tag&gt;HDFS,SECURITY&lt;/tag&gt;
  *  &lt;/property&gt;
- * </pre></tt>
+ * </code></pre>
  * <p> Properties marked with tags can be retrieved with <tt>conf
  * .getAllPropertiesByTag("HDFS")</tt> or <tt>conf.getAllPropertiesByTags
  * (Arrays.asList("YARN","SECURITY"))</tt>.</p>
@@ -581,9 +581,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
    * 
-   * @param key
-   * @param newKeys
-   * @param customMessage
+   * @param key to be deprecated
+   * @param newKeys list of keys that take up the values of deprecated key
+   * @param customMessage depcrication message
    * @deprecated use {@link #addDeprecation(String key, String newKey,
       String customMessage)} instead
    */
@@ -605,9 +605,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
    *
-   * @param key
-   * @param newKey
-   * @param customMessage
+   * @param key to be deprecated
+   * @param newKey key that take up the values of deprecated key
+   * @param customMessage deprecation message
    */
   public static void addDeprecation(String key, String newKey,
 	      String customMessage) {
@@ -709,6 +709,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * deprecated key, the value of the deprecated key is set as the value for
    * the provided property name.
    *
+   * Also updates properties and overlays with deprecated keys, if the new
+   * key does not already exist.
+   *
    * @param deprecations deprecation context
    * @param name the property name
    * @return the first property in the list of properties mapping
@@ -730,6 +733,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       // Override return value for deprecated keys
       names = keyInfo.newKeys;
     }
+
+    // Update properties with deprecated key if already loaded and new
+    // deprecation has been added
+    updatePropertiesWithDeprecatedKeys(deprecations, names);
+
     // If there are no overlay values we can return early
     Properties overlayProperties = getOverlay();
     if (overlayProperties.isEmpty()) {
@@ -747,6 +755,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return names;
+  }
+
+  private void updatePropertiesWithDeprecatedKeys(
+      DeprecationContext deprecations, String[] newNames) {
+    for (String newName : newNames) {
+      String deprecatedKey = deprecations.getReverseDeprecatedKeyMap().get(newName);
+      if (deprecatedKey != null && !getProps().containsKey(newName)) {
+        String deprecatedValue = getProps().getProperty(deprecatedKey);
+        if (deprecatedValue != null) {
+          getProps().setProperty(newName, deprecatedValue);
+        }
+      }
+    }
   }
  
   private void handleDeprecation() {
@@ -1187,7 +1208,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the first key which replaces the deprecated key and is not null.
    * 
    * Values are processed for <a href="#VariableExpansion">variable expansion</a> 
-   * before being returned. 
+   * before being returned.
+   *
+   * As a side effect get loads the properties from the sources if called for
+   * the first time as a lazy init.
    * 
    * @param name the property name, will be trimmed before get value.
    * @return the value of the <code>name</code> or its replacing property, 
@@ -1404,6 +1428,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Unset a previously set property.
+   * @param name the property name
    */
   public synchronized void unset(String name) {
     String[] names = null;
@@ -1693,6 +1718,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * is equivalent to <code>set(&lt;name&gt;, value.toString())</code>.
    * @param name property name
    * @param value new value
+   * @param <T> enumeration type
    */
   public <T extends Enum<T>> void setEnum(String name, T value) {
     set(name, value.toString());
@@ -1703,8 +1729,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Note that the returned value is trimmed by this method.
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists
+   * @param <T> enumeration type
    * @throws IllegalArgumentException If mapping is illegal for the type
    * provided
+   * @return enumeration type
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     final String val = getTrimmed(name);
@@ -1778,27 +1806,53 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Return time duration in the given time unit. Valid units are encoded in
    * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
    * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists.
    * @param unit Unit to convert the stored property, if it exists.
    * @throws NumberFormatException If the property stripped of its unit is not
    *         a number
+   * @return time duration in given time unit
    */
   public long getTimeDuration(String name, long defaultValue, TimeUnit unit) {
-    String vStr = get(name);
-    if (null == vStr) {
-      return defaultValue;
-    } else {
-      return getTimeDurationHelper(name, vStr, unit);
-    }
+    return getTimeDuration(name, defaultValue, unit, unit);
   }
 
   public long getTimeDuration(String name, String defaultValue, TimeUnit unit) {
+    return getTimeDuration(name, defaultValue, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d). If no unit is
+   * provided, the default unit is applied.
+   *
+   * @param name Property name
+   * @param defaultValue Value returned if no mapping exists.
+   * @param defaultUnit Default time unit if no valid suffix is provided.
+   * @param returnUnit The unit used for the returned value.
+   * @throws NumberFormatException If the property stripped of its unit is not
+   *         a number
+   * @return time duration in given time unit
+   */
+  public long getTimeDuration(String name, long defaultValue,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
-      return getTimeDurationHelper(name, defaultValue, unit);
+      return returnUnit.convert(defaultValue, defaultUnit);
     } else {
-      return getTimeDurationHelper(name, vStr, unit);
+      return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
+    }
+  }
+
+  public long getTimeDuration(String name, String defaultValue,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
+    String vStr = get(name);
+    if (null == vStr) {
+      return getTimeDurationHelper(name, defaultValue, defaultUnit, returnUnit);
+    } else {
+      return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
     }
   }
 
@@ -1806,26 +1860,41 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Return time duration in the given time unit. Valid units are encoded in
    * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
    * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
    * @param name Property name
    * @param vStr The string value with time unit suffix to be converted.
    * @param unit Unit to convert the stored property, if it exists.
    */
   public long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
+    return getTimeDurationHelper(name, vStr, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
+   * @param name Property name
+   * @param vStr The string value with time unit suffix to be converted.
+   * @param defaultUnit Unit to convert the stored property, if it exists.
+   * @param returnUnit Unit for the returned value.
+   */
+  private long getTimeDurationHelper(String name, String vStr,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     vStr = vStr.trim();
     vStr = StringUtils.toLowerCase(vStr);
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
-      logDeprecation("No unit for " + name + "(" + vStr + ") assuming " + unit);
-      vUnit = ParsedTimeDuration.unitFor(unit);
+      vUnit = ParsedTimeDuration.unitFor(defaultUnit);
     } else {
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));
     }
 
     long raw = Long.parseLong(vStr);
-    long converted = unit.convert(raw, vUnit.unit());
-    if (vUnit.unit().convert(converted, unit) < raw) {
+    long converted = returnUnit.convert(raw, vUnit.unit());
+    if (vUnit.unit().convert(converted, returnUnit) < raw) {
       logDeprecation("Possible loss of precision converting " + vStr
-          + vUnit.suffix() + " to " + unit + " for " + name);
+          + vUnit.suffix() + " to " + returnUnit + " for " + name);
     }
     return converted;
   }
@@ -2275,6 +2344,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the CredentialProvider API and conditionally fallsback to config.
    * @param name property name
    * @return password
+   * @throws IOException when error in fetching password
    */
   public char[] getPassword(String name) throws IOException {
     char[] pass = null;
@@ -2334,7 +2404,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * alias.
    * @param name alias of the provisioned credential
    * @return password or null if not found
-   * @throws IOException
+   * @throws IOException when error in fetching password
    */
   public char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
@@ -2581,7 +2651,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If no such property is specified, then <code>defaultValue</code> is 
    * returned.
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @return property value as a <code>Class</code>, 
    *         or <code>defaultValue</code>. 
@@ -2607,7 +2677,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * An exception is thrown if the returned class does not implement the named
    * interface. 
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @param xface the interface implemented by the named class.
    * @return property value as a <code>Class</code>, 
@@ -2942,36 +3012,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     try {
       Object resource = wrapper.getResource();
       name = wrapper.getName();
-      XMLStreamReader2 reader = null;
       boolean returnCachedProperties = false;
-      boolean isRestricted = wrapper.isParserRestricted();
 
-      if (resource instanceof URL) {                  // an URL resource
-        reader = (XMLStreamReader2)parse((URL)resource, isRestricted);
-      } else if (resource instanceof String) {        // a CLASSPATH resource
-        URL url = getResource((String)resource);
-        reader = (XMLStreamReader2)parse(url, isRestricted);
-      } else if (resource instanceof Path) {          // a file resource
-        // Can't use FileSystem API or we get an infinite loop
-        // since FileSystem uses Configuration API.  Use java.io.File instead.
-        File file = new File(((Path)resource).toUri().getPath())
-          .getAbsoluteFile();
-        if (file.exists()) {
-          if (!quiet) {
-            LOG.debug("parsing File " + file);
-          }
-          reader = (XMLStreamReader2)parse(new BufferedInputStream(
-              new FileInputStream(file)), ((Path)resource).toString(),
-              isRestricted);
-        }
-      } else if (resource instanceof InputStream) {
-        reader = (XMLStreamReader2)parse((InputStream)resource, null,
-            isRestricted);
+      if (resource instanceof InputStream) {
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
       }
 
+      XMLStreamReader2 reader = getStreamReader(wrapper, quiet);
       if (reader == null) {
         if (quiet) {
           return null;
@@ -3002,6 +3051,36 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
     }
+  }
+
+  private XMLStreamReader2 getStreamReader(Resource wrapper, boolean quiet)
+      throws XMLStreamException, IOException {
+    Object resource = wrapper.getResource();
+    boolean isRestricted = wrapper.isParserRestricted();
+    XMLStreamReader2 reader = null;
+    if (resource instanceof URL) {                  // an URL resource
+      reader  = (XMLStreamReader2)parse((URL)resource, isRestricted);
+    } else if (resource instanceof String) {        // a CLASSPATH resource
+      URL url = getResource((String)resource);
+      reader = (XMLStreamReader2)parse(url, isRestricted);
+    } else if (resource instanceof Path) {          // a file resource
+      // Can't use FileSystem API or we get an infinite loop
+      // since FileSystem uses Configuration API.  Use java.io.File instead.
+      File file = new File(((Path)resource).toUri().getPath())
+        .getAbsoluteFile();
+      if (file.exists()) {
+        if (!quiet) {
+          LOG.debug("parsing File " + file);
+        }
+        reader = (XMLStreamReader2)parse(new BufferedInputStream(
+            Files.newInputStream(file.toPath())), ((Path) resource).toString(),
+            isRestricted);
+      }
+    } else if (resource instanceof InputStream) {
+      reader = (XMLStreamReader2)parse((InputStream)resource, null,
+          isRestricted);
+    }
+    return reader;
   }
 
   private static class ParsedItem {
@@ -3065,7 +3144,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return results;
     }
 
-    private void handleStartElement() throws MalformedURLException {
+    private void handleStartElement() throws XMLStreamException, IOException {
       switch (reader.getLocalName()) {
       case "property":
         handleStartProperty();
@@ -3121,10 +3200,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
 
-    private void handleInclude() throws MalformedURLException {
+    private void handleInclude() throws XMLStreamException, IOException {
       // Determine href for xi:include
       confInclude = null;
       int attrCount = reader.getAttributeCount();
+      List<ParsedItem> items;
       for (int i = 0; i < attrCount; i++) {
         String attrName = reader.getAttributeLocalName(i);
         if ("href".equals(attrName)) {
@@ -3148,7 +3228,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, classpathResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(classpathResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(classpathResource + " not found");
+          }
+          items = new Parser(includeReader, classpathResource, quiet).parse();
         }
       } else {
         URL url;
@@ -3174,9 +3259,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, uriResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(uriResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(uriResource + " not found");
+          }
+          items = new Parser(includeReader, uriResource, quiet).parse();
         }
       }
+      results.addAll(items);
     }
 
     void handleEndElement() throws IOException {
@@ -3343,8 +3434,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   private void overlay(Properties to, Properties from) {
-    for (Entry<Object, Object> entry: from.entrySet()) {
-      to.put(entry.getKey(), entry.getValue());
+    synchronized (from) {
+      for (Entry<Object, Object> entry : from.entrySet()) {
+        to.put(entry.getKey(), entry.getValue());
+      }
     }
   }
 
@@ -3401,28 +3494,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Write out the non-default properties in this configuration to the
    * given {@link Writer}.
-   *
+   * <ul>
    * <li>
    * When property name is not empty and the property exists in the
    * configuration, this method writes the property and its attributes
    * to the {@link Writer}.
    * </li>
-   * <p>
    *
    * <li>
    * When property name is null or empty, this method writes all the
    * configuration properties and their attributes to the {@link Writer}.
    * </li>
-   * <p>
    *
    * <li>
    * When property name is not empty but the property doesn't exist in
    * the configuration, this method throws an {@link IllegalArgumentException}.
    * </li>
-   * <p>
+   * </ul>
    * @param out the writer to write to.
    */
-  public void writeXml(String propertyName, Writer out)
+  public void writeXml(@Nullable String propertyName, Writer out)
       throws IOException, IllegalArgumentException {
     Document doc = asXmlDocument(propertyName);
 
@@ -3444,7 +3535,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(String propertyName)
+  private synchronized Document asXmlDocument(@Nullable String propertyName)
       throws IOException, IllegalArgumentException {
     Document doc;
     try {
@@ -3529,7 +3620,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    *  Writes properties and their attributes (final and resource)
    *  to the given {@link Writer}.
-   *
+   *  <ul>
    *  <li>
    *  When propertyName is not empty, and the property exists
    *  in the configuration, the format of the output would be,
@@ -3569,6 +3660,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *  found in the configuration, this method will throw an
    *  {@link IllegalArgumentException}.
    *  </li>
+   *  </ul>
    *  <p>
    * @param config the configuration
    * @param propertyName property name
@@ -3767,7 +3859,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * get keys matching the the regex 
    * @param regex
-   * @return Map<String,String> with matching keys
+   * @return {@literal Map<String,String>} with matching keys
    */
   public Map<String,String> getValByRegex(String regex) {
     Pattern p = Pattern.compile(regex);

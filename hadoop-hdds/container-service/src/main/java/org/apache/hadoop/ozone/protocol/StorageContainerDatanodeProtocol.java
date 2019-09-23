@@ -19,12 +19,9 @@ package org.apache.hadoop.ozone.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -39,13 +36,24 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 
 import java.io.IOException;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * The protocol spoken between datanodes and SCM. For specifics please the
  * Protoc file that defines this protocol.
  */
+@KerberosInfo(
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface StorageContainerDatanodeProtocol {
+
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Returns SCM version.
    * @return Version info.
@@ -69,16 +77,10 @@ public interface StorageContainerDatanodeProtocol {
    * @param containerReportsRequestProto - Container Reports.
    * @return SCM Command.
    */
-  SCMRegisteredResponseProto register(DatanodeDetailsProto datanodeDetails,
-      NodeReportProto nodeReport, ContainerReportsProto
-      containerReportsRequestProto) throws IOException;
+  SCMRegisteredResponseProto register(
+          DatanodeDetailsProto datanodeDetails,
+          NodeReportProto nodeReport,
+          ContainerReportsProto containerReportsRequestProto,
+          PipelineReportsProto pipelineReports) throws IOException;
 
-  /**
-   * Used by datanode to send block deletion ACK to SCM.
-   * @param request block deletion transactions.
-   * @return block deletion transaction response.
-   * @throws IOException
-   */
-  ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      ContainerBlocksDeletionACKProto request) throws IOException;
 }

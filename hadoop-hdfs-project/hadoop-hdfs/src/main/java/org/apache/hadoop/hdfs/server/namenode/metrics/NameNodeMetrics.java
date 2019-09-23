@@ -151,6 +151,8 @@ public class NameNodeMetrics {
   MutableRate getEdit;
   @Metric("GetImageServlet getImage")
   MutableRate getImage;
+  @Metric("GetImageServlet getAliasMap")
+  MutableRate getAliasMap;
   @Metric("GetImageServlet putImage")
   MutableRate putImage;
 
@@ -392,6 +394,10 @@ public class NameNodeMetrics {
 
   public void addGetImage(long latency) {
     getImage.add(latency);
+  }
+
+  public void addGetAliasMap(long latency) {
+    getAliasMap.add(latency);
   }
 
   public void addPutImage(long latency) {

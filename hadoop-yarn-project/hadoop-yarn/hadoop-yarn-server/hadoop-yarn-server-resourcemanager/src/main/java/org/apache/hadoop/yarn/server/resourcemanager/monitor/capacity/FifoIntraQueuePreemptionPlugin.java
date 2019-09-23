@@ -30,8 +30,8 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAFairOrderingComparator;
@@ -58,8 +58,8 @@ public class FifoIntraQueuePreemptionPlugin
   protected final CapacitySchedulerPreemptionContext context;
   protected final ResourceCalculator rc;
 
-  private static final Log LOG =
-      LogFactory.getLog(FifoIntraQueuePreemptionPlugin.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoIntraQueuePreemptionPlugin.class);
 
   public FifoIntraQueuePreemptionPlugin(ResourceCalculator rc,
       CapacitySchedulerPreemptionContext preemptionContext) {
@@ -108,10 +108,8 @@ public class FifoIntraQueuePreemptionPlugin
       Resources.addTo(actualPreemptNeeded, a1.getActuallyToBePreempted());
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Selected to preempt " + actualPreemptNeeded
-          + " resource from partition:" + partition);
-    }
+    LOG.debug("Selected to preempt {} resource from partition:{}",
+        actualPreemptNeeded, partition);
     return resToObtainByPartition;
   }
 
@@ -185,7 +183,7 @@ public class FifoIntraQueuePreemptionPlugin
     if (LOG.isDebugEnabled()) {
       LOG.debug("Queue Name:" + tq.queueName + ", partition:" + tq.partition);
       for (TempAppPerPartition tmpApp : tq.getApps()) {
-        LOG.debug(tmpApp);
+        LOG.debug(tmpApp.toString());
       }
     }
   }
@@ -445,9 +443,7 @@ public class FifoIntraQueuePreemptionPlugin
             tmpUser.amUsed);
         tmpUser.setUserLimit(userLimitResource);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("TempUser:" + tmpUser);
-        }
+        LOG.debug("TempUser:{}", tmpUser);
 
         tmpUser.idealAssigned = Resources.createResource(0, 0);
         tq.addUserPerPartition(userName, tmpUser);

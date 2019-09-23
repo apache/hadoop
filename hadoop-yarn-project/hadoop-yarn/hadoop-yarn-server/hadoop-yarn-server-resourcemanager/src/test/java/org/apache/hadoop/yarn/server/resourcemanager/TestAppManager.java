@@ -22,8 +22,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
@@ -82,12 +81,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,12 +96,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import static java.util.stream.Collectors.toSet;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.matches;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -117,8 +114,9 @@ import static org.mockito.Mockito.when;
  *
  */
 
-public class TestAppManager{
-  private Log LOG = LogFactory.getLog(TestAppManager.class);
+public class TestAppManager extends AppManagerTestBase{
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAppManager.class);
   private static RMAppEventType appEventType = RMAppEventType.KILL;
 
   private static String USER = "user_";
@@ -206,6 +204,7 @@ public class TestAppManager{
     metricsPublisher = mock(SystemMetricsPublisher.class);
     context.setSystemMetricsPublisher(metricsPublisher);
     context.setRMApplicationHistoryWriter(writer);
+    ((RMContextImpl)context).setYarnConfiguration(new YarnConfiguration());
     return context;
   }
 
@@ -234,70 +233,6 @@ public class TestAppManager{
       setAppEventType(event.getType());
       System.out.println("in handle routine " + getAppEventType().toString());
     }   
-  }   
-  
-
-  // Extend and make the functions we want to test public
-  public class TestRMAppManager extends RMAppManager {
-    private final RMStateStore stateStore;
-
-    public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, new ApplicationACLsManager(conf), conf);
-      this.stateStore = context.getStateStore();
-    }
-
-    public TestRMAppManager(RMContext context,
-        ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
-        YarnScheduler scheduler, ApplicationMasterService masterService,
-        ApplicationACLsManager applicationACLsManager, Configuration conf) {
-      super(context, scheduler, masterService, applicationACLsManager, conf);
-      this.stateStore = context.getStateStore();
-    }
-
-    public void checkAppNumCompletedLimit() {
-      super.checkAppNumCompletedLimit();
-    }
-
-    public void finishApplication(ApplicationId appId) {
-      super.finishApplication(appId);
-    }
-
-    public int getCompletedAppsListSize() {
-      return super.getCompletedAppsListSize();
-    }
-
-    public int getNumberOfCompletedAppsInStateStore() {
-      return this.completedAppsInStateStore;
-    }
-
-    List<ApplicationId> getCompletedApps() {
-      return completedApps;
-    }
-
-    Set<ApplicationId> getFirstNCompletedApps(int n) {
-      return getCompletedApps().stream().limit(n).collect(toSet());
-    }
-
-    Set<ApplicationId> getCompletedAppsWithEvenIdsInRange(int n) {
-      return getCompletedApps().stream().limit(n)
-          .filter(app -> app.getId() % 2 == 0).collect(toSet());
-    }
-
-    Set<ApplicationId> getRemovedAppsFromStateStore(int numRemoves) {
-      ArgumentCaptor<RMApp> argumentCaptor =
-          ArgumentCaptor.forClass(RMApp.class);
-      verify(stateStore, times(numRemoves))
-          .removeApplication(argumentCaptor.capture());
-      return argumentCaptor.getAllValues().stream().map(RMApp::getApplicationId)
-          .collect(toSet());
-    }
-
-    public void submitApplication(
-        ApplicationSubmissionContext submissionContext, String user)
-            throws YarnException, IOException {
-      super.submitApplication(submissionContext, System.currentTimeMillis(),
-        user);
-    }
   }
 
   private void addToCompletedApps(TestRMAppManager appMonitor,
@@ -1128,6 +1063,9 @@ public class TestAppManager{
   @Test (timeout = 30000)
   public void testEscapeApplicationSummary() {
     RMApp app = mock(RMAppImpl.class);
+    ApplicationSubmissionContext asc = mock(ApplicationSubmissionContext.class);
+    when(asc.getNodeLabelExpression()).thenReturn("test");
+    when(app.getApplicationSubmissionContext()).thenReturn(asc);
     when(app.getApplicationId()).thenReturn(
         ApplicationId.newInstance(100L, 1));
     when(app.getName()).thenReturn("Multiline\n\n\r\rAppName");
@@ -1136,6 +1074,8 @@ public class TestAppManager{
     when(app.getState()).thenReturn(RMAppState.RUNNING);
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
+    when(app.getLaunchTime()).thenReturn(2000L);
+    when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -1156,13 +1096,16 @@ public class TestAppManager{
     assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
     assertTrue(msg.contains("submitTime=1000"));
+    assertTrue(msg.contains("launchTime=2000"));
     assertTrue(msg.contains("memorySeconds=16384"));
     assertTrue(msg.contains("vcoreSeconds=64"));
     assertTrue(msg.contains("preemptedAMContainers=1"));
     assertTrue(msg.contains("preemptedNonAMContainers=10"));
     assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
     assertTrue(msg.contains("applicationType=MAPREDUCE"));
- }
+    assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
+    assertTrue(msg.contains("applicationNodeLabel=test"));
+  }
 
   @Test
   public void testRMAppSubmitWithQueueChanged() throws Exception {
@@ -1209,18 +1152,25 @@ public class TestAppManager{
     when(scheduler.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+    when(scheduler.getMaximumResourceCapability(any(String.class))).thenReturn(
+        Resources.createResource(
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+
+    when(scheduler.getMaximumResourceCapability(anyString())).thenReturn(
+        Resources.createResource(
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
 
     ResourceCalculator rs = mock(ResourceCalculator.class);
     when(scheduler.getResourceCalculator()).thenReturn(rs);
 
-    when(scheduler.getNormalizedResource(any()))
+    when(scheduler.getNormalizedResource(any(), any()))
         .thenAnswer(new Answer<Resource>() {
-      @Override
-      public Resource answer(InvocationOnMock invocationOnMock)
-          throws Throwable {
-        return (Resource) invocationOnMock.getArguments()[0];
-      }
-    });
+          @Override
+          public Resource answer(InvocationOnMock invocationOnMock)
+              throws Throwable {
+            return (Resource) invocationOnMock.getArguments()[0];
+          }
+        });
 
     return scheduler;
   }

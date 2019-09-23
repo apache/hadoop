@@ -361,7 +361,8 @@ class FSDirWriteFileOp {
       EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize,
       FileEncryptionInfo feInfo, INode.BlocksMapUpdateInfo toRemoveBlocks,
-      boolean shouldReplicate, String ecPolicyName, boolean logRetryEntry)
+      boolean shouldReplicate, String ecPolicyName, String storagePolicy,
+      boolean logRetryEntry)
       throws IOException {
     assert fsn.hasWriteLock();
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
@@ -396,7 +397,7 @@ class FSDirWriteFileOp {
     if (parent != null) {
       iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
           replication, blockSize, holder, clientMachine, shouldReplicate,
-          ecPolicyName);
+          ecPolicyName, storagePolicy);
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
     if (newNode == null) {
@@ -540,7 +541,7 @@ class FSDirWriteFileOp {
       FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
       String clientName, String clientMachine, boolean shouldReplicate,
-      String ecPolicyName) throws IOException {
+      String ecPolicyName, String storagePolicy) throws IOException {
 
     Preconditions.checkNotNull(existing);
     long modTime = now();
@@ -549,6 +550,16 @@ class FSDirWriteFileOp {
     try {
       boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = null;
+      byte storagepolicyid = 0;
+      if (storagePolicy != null && !storagePolicy.isEmpty()) {
+        BlockStoragePolicy policy =
+            fsd.getBlockManager().getStoragePolicy(storagePolicy);
+        if (policy == null) {
+          throw new HadoopIllegalArgumentException(
+              "Cannot find a block policy with the name " + storagePolicy);
+        }
+        storagepolicyid = policy.getId();
+      }
       if (!shouldReplicate) {
         ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
             fsd.getFSNamesystem(), ecPolicyName, existing);
@@ -562,7 +573,7 @@ class FSDirWriteFileOp {
       final Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
           modTime, modTime, replicationFactor, ecPolicyID, preferredBlockSize,
-          blockType);
+          storagepolicyid, blockType);
       newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode, permissions.getPermission());
@@ -738,13 +749,6 @@ class FSDirWriteFileOp {
     return new INodeFile(id, null, permissions, mtime, atime,
         BlockInfo.EMPTY_ARRAY, replication, ecPolicyID, preferredBlockSize,
         storagePolicyId, blockType);
-  }
-
-  private static INodeFile newINodeFile(long id, PermissionStatus permissions,
-      long mtime, long atime, Short replication, Byte ecPolicyID,
-      long preferredBlockSize, BlockType blockType) {
-    return newINodeFile(id, permissions, mtime, atime, replication, ecPolicyID,
-        preferredBlockSize, (byte)0, blockType);
   }
 
   /**
