@@ -77,6 +77,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.ratis.OMRatisSnapshotInfo;
@@ -111,11 +112,12 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
@@ -146,11 +148,11 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.utils.RetriableTask;
-import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
-import org.apache.hadoop.utils.db.DBCheckpoint;
-import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.RetriableTask;
+import org.apache.hadoop.hdds.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.FileUtils;
@@ -239,6 +241,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private OzoneDelegationTokenSecretManager delegationTokenMgr;
   private OzoneBlockTokenSecretManager blockTokenMgr;
   private CertificateClient certClient;
+  private String caCertPem = null;
   private static boolean testSecureOmFlag = false;
   private final Text omRpcAddressTxt;
   private final OzoneConfiguration configuration;
@@ -1253,6 +1256,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     metadataManager.start(configuration);
     startSecretManagerIfNecessary();
 
+    if (certClient != null) {
+      caCertPem = CertificateCodec.getPEMEncodedString(
+          certClient.getCACertificate());
+    }
     // Set metrics and start metrics back ground thread
     metrics.setNumVolumes(metadataManager.countRowsInTable(metadataManager
         .getVolumeTable()));
@@ -2591,6 +2598,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
+  public ServiceInfoEx getServiceInfo() throws IOException {
+    return new ServiceInfoEx(getServiceList(), caCertPem);
+  }
+
+  @Override
   /**
    * {@inheritDoc}
    */
@@ -2771,7 +2783,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
-      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      OmKeyArgs omKeyArgs, OmMultipartUploadCompleteList multipartUploadList)
       throws IOException {
     OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo;
     metrics.incNumCompleteMultipartUploads();
@@ -2834,11 +2846,38 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap));
       return omMultipartUploadListParts;
     } catch (IOException ex) {
-      metrics.incNumAbortMultipartUploadFails();
+      metrics.incNumListMultipartUploadPartFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap, ex));
       throw ex;
     }
+  }
+
+  @Override
+  public OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws IOException {
+
+    Map<String, String> auditMap = new HashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+
+    metrics.incNumListMultipartUploads();
+    try {
+      OmMultipartUploadList omMultipartUploadList =
+          keyManager.listMultipartUploads(volumeName, bucketName, prefix);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .LIST_MULTIPART_UPLOADS, auditMap));
+      return omMultipartUploadList;
+
+    } catch (IOException ex) {
+      metrics.incNumListMultipartUploadFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .LIST_MULTIPART_UPLOADS, auditMap, ex));
+      throw ex;
+    }
+
+
   }
 
   @Override

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -54,6 +55,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -71,6 +73,7 @@ import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.junit.Assert.*;
@@ -90,6 +93,10 @@ public final class S3ATestUtils {
    */
   public static final String UNSET_PROPERTY = "unset";
   public static final int PURGE_DELAY_SECONDS = 60 * 60;
+
+  public static final int TIMESTAMP_SLEEP = 2000;
+  public static final int STABILIZATION_TIME = 20_000;
+  public static final int PROBE_INTERVAL_MILLIS = 500;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -483,6 +490,7 @@ public final class S3ATestUtils {
       LOG.debug("Enabling S3Guard, authoritative={}, implementation={}",
           authoritative, implClass);
       conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+      conf.set(AUTHORITATIVE_PATH, "");
       conf.set(S3_METADATA_STORE_IMPL, implClass);
       conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
     }
@@ -672,7 +680,7 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket),
+          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
@@ -855,7 +863,7 @@ public final class S3ATestUtils {
   public static S3AFileStatus getStatusWithEmptyDirFlag(
       final S3AFileSystem fs,
       final Path dir) throws IOException {
-    return fs.innerGetFileStatus(dir, true);
+    return fs.innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
   }
 
   /**
@@ -1307,4 +1315,32 @@ public final class S3ATestUtils {
           listStatusHasIt);
   }
 
+  /**
+   * Wait for a deleted file to no longer be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @throws Exception failure
+   */
+  public static void awaitDeletedFileDisappearance(final S3AFileSystem fs,
+      final Path testFilePath) throws Exception {
+    eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> intercept(FileNotFoundException.class,
+            () -> fs.getFileStatus(testFilePath)));
+  }
+
+  /**
+   * Wait for a file to be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @return the file status.
+   * @throws Exception failure
+   */
+  public static S3AFileStatus awaitFileStatus(S3AFileSystem fs,
+      final Path testFilePath)
+      throws Exception {
+    return (S3AFileStatus) eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> fs.getFileStatus(testFilePath));
+  }
 }

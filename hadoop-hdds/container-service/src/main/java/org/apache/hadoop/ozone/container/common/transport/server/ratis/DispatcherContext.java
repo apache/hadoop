@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
  * DispatcherContext class holds transport protocol specific context info
@@ -45,15 +45,15 @@ public final class DispatcherContext {
   // the log index in Ratis log to which the request belongs to
   private final long logIndex;
 
-  private final Set<Long> createContainerSet;
+  private final Map<Long, Long> container2BCSIDMap;
 
   private DispatcherContext(long term, long index, WriteChunkStage stage,
-      boolean readFromTmpFile, Set<Long> containerSet) {
+      boolean readFromTmpFile, Map<Long, Long> container2BCSIDMap) {
     this.term = term;
     this.logIndex = index;
     this.stage = stage;
     this.readFromTmpFile = readFromTmpFile;
-    this.createContainerSet = containerSet;
+    this.container2BCSIDMap = container2BCSIDMap;
   }
 
   public long getLogIndex() {
@@ -72,8 +72,8 @@ public final class DispatcherContext {
     return stage;
   }
 
-  public Set<Long> getCreateContainerSet() {
-    return createContainerSet;
+  public Map<Long, Long> getContainer2BCSIDMap() {
+    return container2BCSIDMap;
   }
 
   /**
@@ -84,7 +84,7 @@ public final class DispatcherContext {
     private boolean readFromTmpFile = false;
     private long term;
     private long logIndex;
-    private Set<Long> createContainerSet;
+    private Map<Long, Long> container2BCSIDMap;
 
     /**
      * Sets the WriteChunkStage.
@@ -131,13 +131,13 @@ public final class DispatcherContext {
     }
 
     /**
-     * Sets the createContainerSet to contain all the containerIds per
+     * Sets the container2BCSIDMap to contain all the containerIds per
      * RaftGroup.
-     * @param set createContainerSet
+     * @param map container2BCSIDMap
      * @return Builder
      */
-    public Builder setCreateContainerSet(Set<Long> set) {
-      this.createContainerSet = set;
+    public Builder setContainer2BCSIDMap(Map<Long, Long> map) {
+      this.container2BCSIDMap = map;
       return this;
     }
     /**
@@ -147,7 +147,7 @@ public final class DispatcherContext {
      */
     public DispatcherContext build() {
       return new DispatcherContext(term, logIndex, stage, readFromTmpFile,
-          createContainerSet);
+          container2BCSIDMap);
     }
 
   }

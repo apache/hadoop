@@ -215,7 +215,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
                   metrics.getPreemptedResourceSecondsMap()))
           .add("applicationTags", StringHelper.CSV_JOINER.join(
               app.getApplicationTags() != null ? new TreeSet<>(
-                  app.getApplicationTags()) : Collections.<String>emptySet()));
+                  app.getApplicationTags()) : Collections.<String>emptySet()))
+          .add("applicationNodeLabel",
+              app.getApplicationSubmissionContext().getNodeLabelExpression()
+                  == null
+                  ? ""
+                  : app.getApplicationSubmissionContext()
+                      .getNodeLabelExpression());
+
       return summary;
     }
 

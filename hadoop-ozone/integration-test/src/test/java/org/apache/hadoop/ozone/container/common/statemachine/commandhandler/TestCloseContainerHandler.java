@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
-import java.io.IOException;
 import java.util.HashMap;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -41,23 +39,38 @@ import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Test to behaviour of the datanode when recieve close container command.
+ * Test to behaviour of the datanode when receive close container command.
  */
 public class TestCloseContainerHandler {
 
-  @Test
-  public void test()
-      throws IOException, TimeoutException, InterruptedException {
+  private MiniOzoneCluster cluster;
+  private OzoneConfiguration conf;
 
+  @Before
+  public void setup() throws Exception {
     //setup a cluster (1G free space is enough for a unit test)
-    OzoneConfiguration conf = new OzoneConfiguration();
+    conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_CONTAINER_SIZE, "1GB");
-    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+    cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(1).build();
+  }
+
+  @After
+  public void teardown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void test() throws Exception {
     cluster.waitForClusterToBeReady();
 
     //the easiest way to create an open container is creating a key
@@ -109,7 +122,7 @@ public class TestCloseContainerHandler {
     Assert.assertTrue(isContainerClosed(cluster, containerId.getId()));
   }
 
-  private Boolean isContainerClosed(MiniOzoneCluster cluster,
+  private static Boolean isContainerClosed(MiniOzoneCluster cluster,
       long containerID) {
     ContainerData containerData;
     containerData = cluster.getHddsDatanodes().get(0)

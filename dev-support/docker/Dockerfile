@@ -106,12 +106,12 @@ ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
     && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
       -o /opt/protobuf.tar.gz \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
@@ -200,7 +200,6 @@ RUN curl -L -s -S \
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
-
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
@@ -211,6 +210,7 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb
+
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

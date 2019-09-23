@@ -97,7 +97,8 @@ public class PipelineReportHandler implements
     try {
       pipeline = pipelineManager.getPipeline(pipelineID);
     } catch (PipelineNotFoundException e) {
-      RatisPipelineUtils.destroyPipeline(dn, pipelineID, conf);
+      RatisPipelineUtils.destroyPipeline(dn, pipelineID, conf,
+          pipelineManager.getGrpcTlsConfig());
       return;
     }
 

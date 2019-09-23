@@ -37,7 +37,7 @@ public class SCMContainerPlacementMetrics implements MetricsSource {
   public static final String SOURCE_NAME =
       SCMContainerPlacementMetrics.class.getSimpleName();
   private static final MetricsInfo RECORD_INFO = Interns.info(SOURCE_NAME,
-      "SCM Placement Metrics");
+      "SCM Container Placement Metrics");
   private static MetricsRegistry registry;
 
   // total datanode allocation request count
@@ -55,27 +55,23 @@ public class SCMContainerPlacementMetrics implements MetricsSource {
   public static SCMContainerPlacementMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     registry = new MetricsRegistry(RECORD_INFO);
-    return ms.register(SOURCE_NAME, "SCM Placement Metrics",
+    return ms.register(SOURCE_NAME, "SCM Container Placement Metrics",
         new SCMContainerPlacementMetrics());
   }
 
   public void incrDatanodeRequestCount(long count) {
-    System.out.println("request + 1");
     this.datanodeRequestCount.incr(count);
   }
 
   public void incrDatanodeChooseSuccessCount() {
-    System.out.println("success + 1");
     this.datanodeChooseSuccessCount.incr(1);
   }
 
   public void incrDatanodeChooseFallbackCount() {
-    System.out.println("fallback + 1");
     this.datanodeChooseFallbackCount.incr(1);
   }
 
   public void incrDatanodeChooseAttemptCount() {
-    System.out.println("attempt + 1");
     this.datanodeChooseAttemptCount.incr(1);
   }
 

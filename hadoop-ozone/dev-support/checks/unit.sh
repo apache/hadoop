@@ -13,12 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
+
 export MAVEN_OPTS="-Xmx4096m"
-mvn -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem,\!:hadoop-ozone-tools
-module_failed_tests=$(find "." -name 'TEST*.xml' -print0 \
-    | xargs -n1 -0 "grep" -l -E "<failure|<error"\
-    | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}')
-if [[ -n "${module_failed_tests}" ]] ; then
+mvn -B -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem,\!:hadoop-ozone-tools
+
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/unit"}
+mkdir -p "$REPORT_DIR"
+
+# shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
+source "$DIR/_mvn_unit_report.sh"
+
+if [[ -s "$REPORT_DIR/summary.txt" ]] ; then
     exit 1
 fi
 exit 0

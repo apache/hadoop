@@ -54,12 +54,18 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.PROBE_INTERVAL_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.STABILIZATION_TIME;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.TIMESTAMP_SLEEP;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitDeletedFileDisappearance;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitFileStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
@@ -113,12 +119,6 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(Parameterized.class)
 public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
-
-  public static final int TIMESTAMP_SLEEP = 2000;
-
-  public static final int STABILIZATION_TIME = 20_000;
-
-  public static final int PROBE_INTERVAL_MILLIS = 2500;
 
   private S3AFileSystem guardedFs;
   private S3AFileSystem rawFS;
@@ -224,7 +224,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
         METADATASTORE_AUTHORITATIVE,
-        METADATASTORE_METADATA_TTL);
+        METADATASTORE_METADATA_TTL,
+        AUTHORITATIVE_PATH);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
     config.setLong(METADATASTORE_METADATA_TTL,
         DEFAULT_METADATASTORE_METADATA_TTL);
@@ -247,7 +248,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(uri.getHost(), config,
         S3_METADATA_STORE_IMPL);
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     return createFS(uri, config);
   }
 

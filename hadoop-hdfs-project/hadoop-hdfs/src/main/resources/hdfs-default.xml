@@ -1393,7 +1393,7 @@
 
 <property>
   <name>dfs.image.parallel.load</name>
-  <value>true</value>
+  <value>false</value>
   <description>
         If true, write sub-section entries to the fsimage index so it can
         be loaded in parallel. Also controls whether parallel loading
@@ -1403,6 +1403,11 @@
         Parallel loading is not compatible with image compression,
         so if dfs.image.compress is set to true this setting will be
         ignored and no parallel loading will occur.
+        Enabling this feature may impact rolling upgrades and downgrades if
+        the previous version does not support this feature. If the feature was
+        enabled and a downgrade is required, first set this parameter to
+        false and then save the namespace to create a fsimage with no
+        sub-sections and then perform the downgrade.
   </description>
 </property>
 
@@ -4093,6 +4098,18 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.client.block.reader.remote.buffer.size</name>
+    <value>8192</value>
+    <description>
+      The output stream buffer size of a DFSClient remote read. The buffer default value is 8KB. The buffer includes
+      only some request parameters that are: block, blockToken, clientName, startOffset, len, verifyChecksum,
+      cachingStrategy.
+      It is recommended to adjust the value according to the workload, which can reduce unnecessary memory
+      usage and the frequency of the garbage collection. A value of 512 might be reasonable.
+    </description>
+  </property>
+
 <property>
   <name>dfs.content-summary.limit</name>
   <value>5000</value>
@@ -4140,9 +4157,21 @@
     <name>dfs.datanode.data.transfer.bandwidthPerSec</name>
     <value>0</value>
     <description>
-      Specifies the maximum amount of bandwidth that each datanode can utilize for the data transfering purpose in term
-      of the number of bytes per second.
-      when the bandwidth value is zero, there is no limit.
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for transfering block when
+      BlockConstructionStage is
+      PIPELINE_SETUP_CREATE and clientName is empty.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.data.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for writing block or pipeline
+      recovery when
+      BlockConstructionStage is PIPELINE_SETUP_APPEND_RECOVERY or PIPELINE_SETUP_STREAMING_RECOVERY.
+      When the bandwidth value is zero, there is no limit.
     </description>
   </property>
 

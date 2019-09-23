@@ -594,7 +594,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public String getHostAndPort() {
-    InetSocketAddress address = this.router.getHttpServerAddress();
+    InetSocketAddress address = this.router.getRpcServerAddress();
     if (address != null) {
       try {
         String hostname = InetAddress.getLocalHost().getHostName();

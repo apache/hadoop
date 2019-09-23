@@ -1,7 +1,7 @@
 ---
 title: Bucket Commands
 summary: Bucket commands help you to manage the life cycle of a volume.
-weight: 2
+weight: 3
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -35,7 +35,9 @@ The `bucket create` command allows users to create a bucket.
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
+| -g, \-\-enforcegdpr            | Optional, if set to true it creates a GDPR compliant bucket, if not specified or set to false, it creates an ordinary bucket.
 |  Uri                           | The name of the bucket in **/volume/bucket** format.
+
 
 {{< highlight bash >}}
 ozone sh bucket create /hive/jan

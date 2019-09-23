@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -152,6 +153,12 @@ public final class Constants {
   public static final String SECURE_CONNECTIONS =
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
+
+  // use OpenSSL or JSEE for secure connections
+  public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
+  public static final DelegatingSSLSocketFactory.SSLChannelMode
+      DEFAULT_SSL_CHANNEL_MODE =
+          DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
 
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
@@ -343,8 +350,42 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  //override signature algorithm used for signing requests
+  /**
+   * List of custom Signers. The signer class will be loaded, and the signer
+   * name will be associated with this signer class in the S3 SDK. e.g. Single
+   * CustomSigner -> 'CustomSigner:org.apache...CustomSignerClass Multiple
+   * CustomSigners -> 'CSigner1:CustomSignerClass1,CSigner2:CustomerSignerClass2
+   */
+  public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
+
+  /**
+   * There's 3 parameters that can be used to specify a non-default signing
+   * algorithm. fs.s3a.signing-algorithm - This property has existed for the
+   * longest time. If specified, without either of the other 2 properties being
+   * specified, this signing algorithm will be used for S3 and DDB (S3Guard).
+   * The other 2 properties override this value for S3 or DDB.
+   * fs.s3a.s3.signing-algorithm - Allows overriding the S3 Signing algorithm.
+   * This does not affect DDB. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for S3
+   * requests, and the default will be used for DDB fs.s3a.ddb.signing-algorithm
+   * - Allows overriding the DDB Signing algorithm. This does not affect S3.
+   * Specifying this property without specifying fs.s3a.signing-algorithm will
+   * only update the signing algorithm for DDB requests, and the default will be
+   * used for S3
+   */
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_S3 =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
+          + ".signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_DDB =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_DDB.toLowerCase()
+          + "signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_STS =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
+          + "signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -761,4 +802,35 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
+      "fs.s3a.s3guard.consistency.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
+
+  /**
+   * Initial retry interval: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
+      "fs.s3a.s3guard.consistency.retry.interval";
+
+  /**
+   * Default initial retry interval: {@value}.
+   * The consistency retry probe uses exponential backoff, because
+   * each probe can cause the S3 load balancers to retain any 404 in
+   * its cache for longer. See HADOOP-16490.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
+      "2s";
+
+  public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
+  public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
+  public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
 }

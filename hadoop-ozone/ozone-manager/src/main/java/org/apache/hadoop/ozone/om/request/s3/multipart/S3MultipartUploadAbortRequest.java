@@ -45,8 +45,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
@@ -85,6 +85,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();
 
+    ozoneManager.getMetrics().incNumAbortMultipartUploads();
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     boolean acquiredLock = false;
     IOException exception = null;
@@ -156,7 +157,6 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
     auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(
         OMAction.ABORT_MULTIPART_UPLOAD, buildKeyArgsAuditMap(keyArgs),
         exception, getOmRequest().getUserInfo()));
-
 
     if (exception == null) {
       LOG.debug("Abort Multipart request is successfully completed for " +

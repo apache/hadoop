@@ -1479,6 +1479,12 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
       true;
 
+  /**
+   * Specifies the group of the aggregated log directory.
+   */
+  public static final String NM_REMOTE_APP_LOG_DIR_GROUPNAME =
+      NM_PREFIX + "remote-app-log-dir.groupname";
+
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
 
@@ -3959,6 +3965,10 @@ public class YarnConfiguration extends Configuration {
       "yarn.webapp.filter-entity-list-by-user";
   public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER =
       false;
+
+  public static final String FILTER_INVALID_XML_CHARS =
+      "yarn.webapp.filter-invalid-xml-chars";
+  public static final boolean DEFAULT_FILTER_INVALID_XML_CHARS = false;
 
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";

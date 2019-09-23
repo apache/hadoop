@@ -155,6 +155,13 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   void updateBlockCommitSequenceId(long blockCommitSequenceId);
 
   /**
+   * Returns the blockCommitSequenceId.
+   */
+  long getBlockCommitSequenceId();
+
+  /**
+   * check and report the structural integrity of the container.
+   * @return true if the integrity checks pass
    * Scan the container metadata to detect corruption.
    */
   boolean scanMetaData();

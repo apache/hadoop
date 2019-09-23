@@ -242,6 +242,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
   private boolean filterAppsByUser = false;
+  private boolean filterInvalidXMLChars = false;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -257,6 +258,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.filterAppsByUser  = conf.getBoolean(
         YarnConfiguration.FILTER_ENTITY_LIST_BY_USER,
         YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+    this.filterInvalidXMLChars = conf.getBoolean(
+        YarnConfiguration.FILTER_INVALID_XML_CHARS,
+        YarnConfiguration.DEFAULT_FILTER_INVALID_XML_CHARS);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -551,6 +555,38 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return ni;
   }
 
+  /**
+   * This method ensures that the output String has only
+   * valid XML unicode characters as specified by the
+   * XML 1.0 standard. For reference, please see
+   * <a href="http://www.w3.org/TR/2000/REC-xml-20001006#NT-Char">
+   * the standard</a>.
+   *
+   * @param str The String whose invalid xml characters we want to escape.
+   * @return The str String after escaping invalid xml characters.
+   */
+  public static String escapeInvalidXMLCharacters(String str) {
+    StringBuffer out = new StringBuffer();
+    final int strlen = str.length();
+    final String substitute = "\uFFFD";
+    int idx = 0;
+    while (idx < strlen) {
+      final int cpt = str.codePointAt(idx);
+      idx += Character.isSupplementaryCodePoint(cpt) ? 2 : 1;
+      if ((cpt == 0x9) ||
+          (cpt == 0xA) ||
+          (cpt == 0xD) ||
+          ((cpt >= 0x20) && (cpt <= 0xD7FF)) ||
+          ((cpt >= 0xE000) && (cpt <= 0xFFFD)) ||
+          ((cpt >= 0x10000) && (cpt <= 0x10FFFF))) {
+        out.append(Character.toChars(cpt));
+      } else {
+        out.append(substitute);
+      }
+    }
+    return out.toString();
+  }
+
   @GET
   @Path(RMWSConsts.APPS)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -629,6 +665,17 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           WebAppUtils.getHttpSchemePrefix(conf), deSelectFields);
       allApps.add(app);
     }
+
+    if (filterInvalidXMLChars) {
+      final String format = hsr.getHeader(HttpHeaders.ACCEPT);
+      if (format != null &&
+          format.toLowerCase().contains(MediaType.APPLICATION_XML)) {
+        for (AppInfo appInfo : allApps.getApps()) {
+          appInfo.setNote(escapeInvalidXMLCharacters(appInfo.getNote()));
+        }
+      }
+    }
+
     return allApps;
   }
 
@@ -985,8 +1032,18 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     DeSelectFields deSelectFields = new DeSelectFields();
     deSelectFields.initFields(unselectedFields);
 
-    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://",
-        deSelectFields);
+    AppInfo appInfo =  new AppInfo(rm, app, hasAccess(app, hsr),
+        hsr.getScheme() + "://", deSelectFields);
+
+    if (filterInvalidXMLChars) {
+      final String format = hsr.getHeader(HttpHeaders.ACCEPT);
+      if (format != null &&
+          format.toLowerCase().contains(MediaType.APPLICATION_XML)) {
+        appInfo.setNote(escapeInvalidXMLCharacters(appInfo.getNote()));
+      }
+    }
+
+    return appInfo;
   }
 
   @GET

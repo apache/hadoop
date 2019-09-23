@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.server;
 
-import org.apache.hadoop.utils.VersionInfo;
+import org.apache.hadoop.hdds.utils.VersionInfo;
 
 /**
  * Helper base class to report the standard version and runtime information.

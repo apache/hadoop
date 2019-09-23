@@ -267,8 +267,8 @@ public class FsDatasetCache {
     Value prevValue = mappableBlockMap.get(key);
     boolean deferred = false;
 
-    if (!dataset.datanode.getShortCircuitRegistry().
-            processBlockMunlockRequest(key)) {
+    if (cacheLoader.isTransientCache() && !dataset.datanode.
+        getShortCircuitRegistry().processBlockMunlockRequest(key)) {
       deferred = true;
     }
     if (prevValue == null) {
@@ -438,7 +438,11 @@ public class FsDatasetCache {
         }
         LOG.debug("Successfully cached {}.  We are now caching {} bytes in"
             + " total.", key, newUsedBytes);
-        dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
+        // Only applicable to DRAM cache.
+        if (cacheLoader.isTransientCache()) {
+          dataset.datanode.
+              getShortCircuitRegistry().processBlockMlockEvent(key);
+        }
         numBlocksCached.addAndGet(1);
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
@@ -476,6 +480,11 @@ public class FsDatasetCache {
     }
 
     private boolean shouldDefer() {
+      // Currently, defer condition is just checked for DRAM cache case.
+      if (!cacheLoader.isTransientCache()) {
+        return false;
+      }
+
       /* If revocationTimeMs == 0, this is an immediate uncache request.
        * No clients were anchored at the time we made the request. */
       if (revocationTimeMs == 0) {

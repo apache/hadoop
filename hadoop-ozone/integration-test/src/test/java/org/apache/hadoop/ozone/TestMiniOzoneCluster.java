@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -53,6 +54,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachin
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -64,7 +66,7 @@ import org.yaml.snakeyaml.Yaml;
  */
 public class TestMiniOzoneCluster {
 
-  private static MiniOzoneCluster cluster;
+  private MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
 
   private final static File TEST_ROOT = TestGenericTestUtils.getTestDir();
@@ -78,15 +80,19 @@ public class TestMiniOzoneCluster {
     conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     WRITE_TMP.mkdirs();
     READ_TMP.mkdirs();
-    WRITE_TMP.deleteOnExit();
-    READ_TMP.deleteOnExit();
   }
 
-  @AfterClass
-  public static void cleanup() {
+  @After
+  public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    FileUtils.deleteQuietly(WRITE_TMP);
+    FileUtils.deleteQuietly(READ_TMP);
   }
 
   @Test(timeout = 30000)

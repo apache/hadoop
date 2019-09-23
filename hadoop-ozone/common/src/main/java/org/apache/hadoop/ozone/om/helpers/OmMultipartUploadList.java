@@ -18,46 +18,27 @@
 
 package org.apache.hadoop.ozone.om.helpers;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Part;
-
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
- * This class represents multipart list, which is required for
- * CompleteMultipart upload request.
+ * List of in-flight MPU uploads.
  */
 public class OmMultipartUploadList {
 
-  private final TreeMap<Integer, String> multipartMap;
+  private List<OmMultipartUpload> uploads;
 
-  /**
-   * Construct OmMultipartUploadList which holds multipart map which contains
-   * part number and part name.
-   * @param partMap
-   */
-  public OmMultipartUploadList(Map<Integer, String> partMap) {
-    this.multipartMap = new TreeMap<>(partMap);
+  public OmMultipartUploadList(
+      List<OmMultipartUpload> uploads) {
+    this.uploads = uploads;
   }
 
-  /**
-   * Return multipartMap which is a map of part number and part name.
-   * @return multipartMap
-   */
-  public TreeMap<Integer, String> getMultipartMap() {
-    return multipartMap;
+  public List<OmMultipartUpload> getUploads() {
+    return uploads;
   }
 
-  /**
-   * Construct Part list from the multipartMap.
-   * @return List<Part>
-   */
-  public List<Part> getPartsList() {
-    List<Part> partList = new ArrayList<>();
-    multipartMap.forEach((partNumber, partName) -> partList.add(Part
-        .newBuilder().setPartName(partName).setPartNumber(partNumber).build()));
-    return partList;
+  public void setUploads(
+      List<OmMultipartUpload> uploads) {
+    this.uploads = uploads;
   }
+
 }

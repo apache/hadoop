@@ -31,8 +31,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.BatchOperation;
-import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

@@ -24,8 +24,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY;
@@ -65,12 +63,17 @@ public final class SecurityConfUtil {
   // State string for mini dfs
   private static final String SPNEGO_USER_NAME = "HTTP";
   private static final String ROUTER_USER_NAME = "router";
+  private static final String PREFIX = "hadoop.http.authentication.";
 
   private static String spnegoPrincipal;
   private static String routerPrincipal;
 
   private SecurityConfUtil() {
     // Utility Class
+  }
+
+  public static String getRouterUserName() {
+    return ROUTER_USER_NAME;
   }
 
   public static Configuration initSecurity() throws Exception {
@@ -114,8 +117,9 @@ public final class SecurityConfUtil {
     conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
     conf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, routerPrincipal);
     conf.set(DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
-    conf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoPrincipal);
-    conf.set(DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY, keytab);
+    conf.set(PREFIX + "type", "kerberos");
+    conf.set(PREFIX + "kerberos.principal", spnegoPrincipal);
+    conf.set(PREFIX + "kerberos.keytab", keytab);
 
     conf.set(DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
     conf.set(DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
@@ -138,7 +142,8 @@ public final class SecurityConfUtil {
     // Setup principals and keytabs for router
     conf.set(DFS_ROUTER_KEYTAB_FILE_KEY, keytab);
     conf.set(DFS_ROUTER_KERBEROS_PRINCIPAL_KEY, routerPrincipal);
-    conf.set(DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY, "*");
+    conf.set(DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
+        spnegoPrincipal);
 
     // Setup basic state store
     conf.setClass(RBFConfigKeys.FEDERATION_STORE_DRIVER_CLASS,

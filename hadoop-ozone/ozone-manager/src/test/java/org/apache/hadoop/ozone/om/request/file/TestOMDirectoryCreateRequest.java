@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

@@ -36,21 +36,6 @@ public final class ScmConfigKeys {
   // performance.
   public static final String OZONE_SCM_DB_DIRS = "ozone.scm.db.dirs";
 
-  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
-      "scm.container.client.idle.threshold";
-  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
-      "10s";
-
-  public static final String SCM_CONTAINER_CLIENT_MAX_SIZE_KEY =
-      "scm.container.client.max.size";
-  public static final int SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT =
-      256;
-
-  public static final String SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS =
-      "scm.container.client.max.outstanding.requests";
-  public static final int SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS_DEFAULT
-      = 100;
-
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = "dfs.container.ratis.enabled";
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT

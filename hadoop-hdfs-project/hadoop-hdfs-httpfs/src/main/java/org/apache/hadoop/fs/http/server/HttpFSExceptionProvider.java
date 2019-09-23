@@ -92,7 +92,7 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
     String path = MDC.get("path");
     String message = getOneLineMessage(throwable);
     AUDIT_LOG.warn("FAILED [{}:{}] response [{}] {}", new Object[]{method, path, status, message});
-    LOG.warn("[{}:{}] response [{}] {}", new Object[]{method, path, status, message}, throwable);
+    LOG.warn("[{}:{}] response [{}] {}", method, path, status, message, throwable);
   }
 
 }

@@ -616,7 +616,7 @@ public class CommitOperations {
     }
 
     /**
-     * See {@link CommitOperations#revertCommit(SinglePendingCommit)}.
+     * See {@link CommitOperations#revertCommit(SinglePendingCommit, BulkOperationState)}.
      * @param commit pending commit
      * @throws IOException failure
      */

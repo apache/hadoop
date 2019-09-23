@@ -119,7 +119,7 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
    * transactions or not.
    * @throws Exception
    */
-  @Test(timeout = 300_000)
+  @Test(timeout = 500_000)
   public void testDoubleBuffer() throws Exception {
     // This test checks whether count in tables are correct or not.
     testDoubleBuffer(1, 10);
@@ -397,7 +397,7 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
         }
         return count == iterations;
 
-      }, 300, 40000);
+      }, 300, 300000);
 
 
       GenericTestUtils.waitFor(() -> {
@@ -409,7 +409,7 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
           fail("testDoubleBuffer failed");
         }
         return count == bucketCount * iterations;
-      }, 300, 40000);
+      }, 300, 300000);
 
       Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
     } finally {

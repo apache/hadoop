@@ -16,21 +16,19 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-FINDBUGS_ALL_FILE=./target/findbugs-all.txt
-
-mkdir -p ./target
-rm "$FINDBUGS_ALL_FILE" || true
-touch "$FINDBUGS_ALL_FILE"
-
 mvn -B compile -fn findbugs:check -Dfindbugs.failOnError=false  -f pom.ozone.xml
 
-find hadoop-ozone -name findbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
-find hadoop-hdds -name findbugsXml.xml -print0  | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
 
-bugs=$(wc -l < "$FINDBUGS_ALL_FILE")
+touch "$REPORT_FILE"
 
-if [[ ${bugs} -gt 0 ]]; then
+find hadoop-ozone -name findbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${REPORT_FILE}"
+find hadoop-hdds -name findbugsXml.xml -print0  | xargs -0 -n1 convertXmlToText | tee -a "${REPORT_FILE}"
+
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
    exit 1
-else
-   exit 0
 fi

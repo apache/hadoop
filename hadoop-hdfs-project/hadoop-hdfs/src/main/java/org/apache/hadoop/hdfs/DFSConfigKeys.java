@@ -119,6 +119,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.data.transfer.bandwidthPerSec";
   public static final long DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT =
       0; // A value of zero indicates no limit
+  public static final String DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.data.write.bandwidthPerSec";
+  // A value of zero indicates no limit
+  public static final long DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT = 0;
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
@@ -899,7 +903,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_IMAGE_PARALLEL_LOAD_KEY =
       "dfs.image.parallel.load";
-  public static final boolean DFS_IMAGE_PARALLEL_LOAD_DEFAULT = true;
+  public static final boolean DFS_IMAGE_PARALLEL_LOAD_DEFAULT = false;
 
   public static final String DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY =
       "dfs.image.parallel.target.sections";

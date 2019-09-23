@@ -39,8 +39,8 @@ import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 /**
  * Handle RenewDelegationToken Request.
@@ -123,8 +123,8 @@ public class OMRenewDelegationTokenRequest extends OMClientRequest {
             .setSuccess(true);
     try {
 
-      OzoneTokenIdentifier ozoneTokenIdentifier =
-          ozoneTokenIdentifierToken.decodeIdentifier();
+      OzoneTokenIdentifier ozoneTokenIdentifier = OzoneTokenIdentifier.
+          readProtoBuf(ozoneTokenIdentifierToken.getIdentifier());
 
       // Update in memory map of token.
       ozoneManager.getDelegationTokenMgr()
