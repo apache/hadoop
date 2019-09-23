@@ -44,6 +44,50 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
   private long creationTime;
   private long quotaInBytes;
   private final OmOzoneAclMap aclMap;
+  private long objectID;
+  private long updateID;
+
+  /**
+   * Set the Object ID. If this value is already set then this function throws.
+   * There is a reason why we cannot use the final here. The OmVolumeArgs is
+   * deserialized from the protobuf in many places in code. We need to set
+   * this object ID, after it is deserialized.
+   *
+   * @param obId - long
+   */
+  public void setObjectID(long obId) {
+    if(this.objectID != 0) {
+      throw new UnsupportedOperationException("Attempt to modify object ID " +
+          "which is not zero. Current Object ID is " + this.objectID);
+    }
+    this.objectID = obId;
+  }
+
+  /**
+   * Returns a monotonically increasing ID, that denotes the last update.
+   * Each time an update happens, this ID is incremented.
+   * @return long
+   */
+  public long getUpdateID() {
+    return updateID;
+  }
+
+  /**
+   * Sets the update ID. For each modification of this object, we will set
+   * this to a value greater than the current value.
+   * @param updateID  long
+   */
+  public void setUpdateID(long updateID) {
+    this.updateID = updateID;
+  }
+
+  /**
+   * A immutable identity field for this object.
+   * @return  long.
+   */
+  public long getObjectID() {
+    return objectID;
+  }
 
   /**
    * Private constructor, constructed via builder.
@@ -54,10 +98,16 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
    * @param metadata - metadata map for custom key/value data.
    * @param aclMap - User to access rights map.
    * @param creationTime - Volume creation time.
+   * @param  objectID - ID of this object.
+   * @param updateID - A sequence number that denotes the last update on this
+   * object. This is a monotonically increasing number.
    */
+  @SuppressWarnings({"checkstyle:ParameterNumber", "This is invoked from a " +
+      "builder."})
   private OmVolumeArgs(String adminName, String ownerName, String volume,
                        long quotaInBytes, Map<String, String> metadata,
-                       OmOzoneAclMap aclMap, long creationTime) {
+                       OmOzoneAclMap aclMap, long creationTime, long objectID,
+                      long updateID) {
     this.adminName = adminName;
     this.ownerName = ownerName;
     this.volume = volume;
@@ -65,6 +115,8 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
     this.metadata = metadata;
     this.aclMap = aclMap;
     this.creationTime = creationTime;
+    this.objectID = objectID;
+    this.updateID = updateID;
   }
 
 
@@ -152,6 +204,8 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
     auditMap.put(OzoneConsts.VOLUME, this.volume);
     auditMap.put(OzoneConsts.CREATION_TIME, String.valueOf(this.creationTime));
     auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
+    auditMap.put(OzoneConsts.OBJECT_ID, String.valueOf(this.getObjectID()));
+    auditMap.put(OzoneConsts.UPDATE_ID, String.valueOf(this.getUpdateID()));
     return auditMap;
   }
 
@@ -164,17 +218,12 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
       return false;
     }
     OmVolumeArgs that = (OmVolumeArgs) o;
-    return creationTime == that.creationTime &&
-        quotaInBytes == that.quotaInBytes &&
-        Objects.equals(adminName, that.adminName) &&
-        Objects.equals(ownerName, that.ownerName) &&
-        Objects.equals(volume, that.volume);
+    return Objects.equals(this.objectID, that.objectID);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(adminName, ownerName, volume, creationTime,
-        quotaInBytes);
+    return Objects.hash(this.objectID);
   }
 
   /**
@@ -188,6 +237,29 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
     private long quotaInBytes;
     private Map<String, String> metadata;
     private OmOzoneAclMap aclMap;
+    private long objectID;
+    private long updateID;
+
+    /**
+     * Sets the Object ID for this Object.
+     * Object ID are unique and immutable identifier for each object in the
+     * System.
+     * @param objectID - long
+     */
+    public void setObjectID(long objectID) {
+      this.objectID = objectID;
+    }
+
+    /**
+     * Sets the update ID for this Object. Update IDs are monotonically
+     * increasing values which are updated each time there is an update.
+     * @param updateID - long
+     */
+    public void setUpdateID(long updateID) {
+      this.updateID = updateID;
+    }
+
+
 
     /**
      * Constructs a builder.
@@ -248,15 +320,13 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(volume);
       return new OmVolumeArgs(adminName, ownerName, volume, quotaInBytes,
-          metadata, aclMap, creationTime);
+          metadata, aclMap, creationTime, objectID, updateID);
     }
 
   }
 
   public VolumeInfo getProtobuf() {
-
     List<OzoneAclInfo> aclList = aclMap.ozoneAclGetProtobuf();
-
     return VolumeInfo.newBuilder()
         .setAdminName(adminName)
         .setOwnerName(ownerName)
@@ -266,15 +336,15 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
         .addAllVolumeAcls(aclList)
         .setCreationTime(
             creationTime == 0 ? System.currentTimeMillis() : creationTime)
+        .setObjectID(objectID)
+        .setUpdateID(updateID)
         .build();
   }
 
   public static OmVolumeArgs getFromProtobuf(VolumeInfo volInfo)
       throws OMException {
-
     OmOzoneAclMap aclMap =
         OmOzoneAclMap.ozoneAclGetFromProtobuf(volInfo.getVolumeAclsList());
-
     return new OmVolumeArgs(
         volInfo.getAdminName(),
         volInfo.getOwnerName(),
@@ -282,6 +352,8 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
         volInfo.getQuotaInBytes(),
         KeyValueUtil.getFromProtobuf(volInfo.getMetadataList()),
         aclMap,
-        volInfo.getCreationTime());
+        volInfo.getCreationTime(),
+        volInfo.getObjectID(),
+        volInfo.getUpdateID());
   }
 }
