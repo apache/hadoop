@@ -389,7 +389,7 @@
             <configuration><skip>false</skip></configuration>
           </execution>
           <execution>
-            <id>test-compile-protoc</id>
+            <id>src-test-compile-protoc</id>
             <configuration><skip>false</skip></configuration>
           </execution>
         </executions>

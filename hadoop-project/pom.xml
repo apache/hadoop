@@ -1742,7 +1742,7 @@
               </configuration>
             </execution>
             <execution>
-              <id>test-compile-protoc</id>
+              <id>src-test-compile-protoc</id>
               <phase>generate-test-sources</phase>
               <goals>
                 <goal>test-compile</goal>
