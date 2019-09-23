@@ -34,6 +34,9 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Status.OK;
 
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
+
 /**
  * Response for S3MultipartUploadCommitPart request.
  */
@@ -49,9 +52,9 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
 
   public S3MultipartUploadCommitPartResponse(String multipartKey,
       String openKey, long deleteTimeStamp,
-      OmKeyInfo deletePartKeyInfo, OmMultipartKeyInfo omMultipartKeyInfo,
-      OzoneManagerProtocolProtos.PartKeyInfo oldPartKeyInfo,
-      OMResponse omResponse) {
+      @Nullable OmKeyInfo deletePartKeyInfo, @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
+      @Nullable OzoneManagerProtocolProtos.PartKeyInfo oldPartKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.openKey = openKey;

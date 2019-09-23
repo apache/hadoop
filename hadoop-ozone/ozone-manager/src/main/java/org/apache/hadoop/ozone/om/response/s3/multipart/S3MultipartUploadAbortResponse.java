@@ -33,6 +33,8 @@ import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for Multipart Abort Request.
@@ -45,8 +47,8 @@ public class S3MultipartUploadAbortResponse extends OMClientResponse {
 
   public S3MultipartUploadAbortResponse(String multipartKey,
       long timeStamp,
-      OmMultipartKeyInfo omMultipartKeyInfo,
-      OMResponse omResponse) {
+      @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.timeStamp = timeStamp;
