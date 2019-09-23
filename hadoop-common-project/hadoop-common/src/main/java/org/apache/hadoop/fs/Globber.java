@@ -32,6 +32,8 @@ import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * Implementation of {@link FileSystem#globStatus(Path, PathFilter)}.
  * This has historically been package-private; it has been opened
@@ -157,7 +159,7 @@ public class Globber {
    */
   private static List<String> getPathComponents(String path)
       throws IOException {
-    ArrayList<String> ret = new ArrayList<String>();
+    ArrayList<String> ret = new ArrayList<>();
     for (String component : path.split(Path.SEPARATOR)) {
       if (!component.isEmpty()) {
         ret.add(component);
@@ -219,7 +221,7 @@ public class Globber {
     // Now loop over all flattened patterns.  In every case, we'll be trying to
     // match them to entries in the filesystem.
     ArrayList<FileStatus> results = 
-        new ArrayList<FileStatus>(flattenedPatterns.size());
+        new ArrayList<>(flattenedPatterns.size());
     boolean sawWildcard = false;
     for (String flatPattern : flattenedPatterns) {
       // Get the absolute path for this flattened pattern.  We couldn't do 
@@ -234,7 +236,7 @@ public class Globber {
           getPathComponents(absPattern.toUri().getPath());
       // Starting out at the root of the filesystem, we try to match
       // filesystem entries against pattern components.
-      ArrayList<FileStatus> candidates = new ArrayList<FileStatus>(1);
+      ArrayList<FileStatus> candidates = new ArrayList<>(1);
       // To get the "real" FileStatus of root, we'd have to do an expensive
       // RPC to the NameNode.  So we create a placeholder FileStatus which has
       // the correct path, but defaults for the rest of the information.
@@ -259,7 +261,7 @@ public class Globber {
       for (int componentIdx = 0; componentIdx < components.size();
           componentIdx++) {
         ArrayList<FileStatus> newCandidates =
-            new ArrayList<FileStatus>(candidates.size());
+            new ArrayList<>(candidates.size());
         GlobFilter globFilter = new GlobFilter(components.get(componentIdx));
         String component = unescapePathComponent(components.get(componentIdx));
         if (globFilter.hasPattern()) {
@@ -434,7 +436,7 @@ public class Globber {
      */
     public GlobBuilder(final FileContext fc) {
       this.fs = null;
-      this.fc = fc;
+      this.fc = checkNotNull(fc);
     }
 
     /**
@@ -442,7 +444,7 @@ public class Globber {
      * @param fs file system.
      */
     public GlobBuilder(final FileSystem fs) {
-      this.fs = fs;
+      this.fs = checkNotNull(fs);
       this.fc = null;
     }
 
