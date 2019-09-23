@@ -52,13 +52,17 @@ public class OzoneKey {
 
   private ReplicationType replicationType;
 
+  private int replicationFactor;
+
   /**
    * Constructs OzoneKey from OmKeyInfo.
    *
    */
+  @SuppressWarnings("parameternumber")
   public OzoneKey(String volumeName, String bucketName,
                   String keyName, long size, long creationTime,
-                  long modificationTime, ReplicationType type) {
+                  long modificationTime, ReplicationType type,
+                  int replicationFactor) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.name = keyName;
@@ -66,6 +70,7 @@ public class OzoneKey {
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
     this.replicationType = type;
+    this.replicationFactor = replicationFactor;
   }
 
   /**
@@ -130,4 +135,14 @@ public class OzoneKey {
   public ReplicationType getReplicationType() {
     return replicationType;
   }
+
+  /**
+   * Returns the replication factor of the key.
+   *
+   * @return replicationFactor
+   */
+  public int getReplicationFactor() {
+    return replicationFactor;
+  }
+
 }

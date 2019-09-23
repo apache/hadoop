@@ -680,7 +680,7 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket),
+          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,

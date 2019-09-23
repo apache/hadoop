@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -474,6 +475,14 @@ public class TestRouterQuota {
     assertEquals(ssQuota, quota.getSpaceQuota());
     assertEquals(3, quota.getFileAndDirectoryCount());
     assertEquals(BLOCK_SIZE, quota.getSpaceConsumed());
+
+    // verify quota sync on adding new destination to mount entry.
+    updatedMountTable = getMountTable(path);
+    nnFs1.mkdirs(new Path("/newPath"));
+    updatedMountTable.setDestinations(
+        Collections.singletonList(new RemoteLocation("ns0", "/newPath", path)));
+    updateMountTable(updatedMountTable);
+    assertEquals(nsQuota, nnFs1.getQuotaUsage(new Path("/newPath")).getQuota());
   }
 
   /**
