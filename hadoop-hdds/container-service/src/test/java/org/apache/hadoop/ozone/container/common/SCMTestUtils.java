@@ -29,12 +29,14 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import com.google.protobuf.BlockingService;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import org.mockito.Mockito;
 
 /**
  * Test Endpoint class.
@@ -91,7 +93,7 @@ public final class SCMTestUtils {
         StorageContainerDatanodeProtocolService.
             newReflectiveBlockingService(
                 new StorageContainerDatanodeProtocolServerSideTranslatorPB(
-                    server));
+                    server, Mockito.mock(ProtocolMessageMetrics.class)));
 
     RPC.Server scmServer = startRpcServer(configuration, rpcServerAddresss,
         StorageContainerDatanodeProtocolPB.class, scmDatanodeService,
