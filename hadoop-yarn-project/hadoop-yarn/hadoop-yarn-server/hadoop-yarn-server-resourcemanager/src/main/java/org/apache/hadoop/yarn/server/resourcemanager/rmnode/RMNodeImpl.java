@@ -1496,7 +1496,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         launchedContainers.size() - numRemoteRunning);
     for (ContainerStatus remoteContainer : containerStatuses) {
       if (remoteContainer.getState() == ContainerState.RUNNING
-          && remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+          && (remoteContainer.getExecutionType() == null
+              || remoteContainer.getExecutionType() == ExecutionType.GUARANTEED)) {
         nodeContainers.add(remoteContainer.getContainerId());
       }
     }
