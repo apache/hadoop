@@ -32,6 +32,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 
 public class TestValueQueue {
@@ -62,15 +63,19 @@ public class TestValueQueue {
     }
   }
 
-  private void waitForRefill(ValueQueue<?> valueQueue, String queueName, int queueSize)
+  private void waitForRefill(final ValueQueue<?> valueQueue,
+      final String queueName, final int queueSize)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> {
-      int size = valueQueue.getSize(queueName);
-      if (size != queueSize) {
-        LOG.info("Current ValueQueue size is " + size);
-        return false;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        int size = valueQueue.getSize(queueName);
+	if (size != queueSize) {
+	  LOG.info("Current ValueQueue size is " + size);
+	  return false;
+	}
+	return true;
       }
-      return true;
     }, 100, 3000);
   }
 
