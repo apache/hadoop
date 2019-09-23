@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
