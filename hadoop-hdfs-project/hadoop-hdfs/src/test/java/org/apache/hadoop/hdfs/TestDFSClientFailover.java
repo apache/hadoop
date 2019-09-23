@@ -68,9 +68,6 @@ import org.mockito.Mockito;
 
 import sun.net.spi.nameservice.NameService;
 
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
-
 public class TestDFSClientFailover {
   
   private static final Logger LOG = LoggerFactory.getLogger(TestDFSClientFailover.class);
