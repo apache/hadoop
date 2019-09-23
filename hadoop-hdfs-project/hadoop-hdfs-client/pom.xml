@@ -131,36 +131,18 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>ClientDatanodeProtocol.proto</include>
-                  <include>ClientNamenodeProtocol.proto</include>
-                  <include>acl.proto</include>
-                  <include>xattr.proto</include>
-                  <include>datatransfer.proto</include>
-                  <include>hdfs.proto</include>
-                  <include>encryption.proto</include>
-                  <include>inotify.proto</include>
-                  <include>erasurecoding.proto</include>
-                  <include>ReconfigurationProtocol.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
             </configuration>
           </execution>
         </executions>
