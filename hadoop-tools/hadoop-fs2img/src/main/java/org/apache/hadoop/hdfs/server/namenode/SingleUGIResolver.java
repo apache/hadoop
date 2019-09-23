@@ -73,12 +73,12 @@ public class SingleUGIResolver extends UGIResolver implements Configurable {
   }
 
   @Override
-  public String user(FileStatus s) {
+  public String user(String s) {
     return user;
   }
 
   @Override
-  public String group(FileStatus s) {
+  public String group(String s) {
     return group;
   }
 
