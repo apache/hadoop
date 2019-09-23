@@ -123,14 +123,16 @@ public abstract class UGIResolver {
     String resolvedGroup = group(s.getGroup());
     String resolvedOwner = user(s.getOwner());
     FsPermission resolvedPermission = permission(s.getPermission());
-    return buildPermissionStatus(resolvedOwner, resolvedGroup, resolvedPermission.toShort());
+    return buildPermissionStatus(
+        resolvedOwner, resolvedGroup, resolvedPermission.toShort());
   }
 
   private long resolve(AclStatus aclStatus) {
     String resolvedOwner = user(aclStatus.getOwner());
     String resolvedGroup = group(aclStatus.getGroup());
     FsPermission resolvedPermision = permission(aclStatus.getPermission());
-    return buildPermissionStatus(resolvedOwner, resolvedGroup, resolvedPermision.toShort());
+    return buildPermissionStatus(
+        resolvedOwner, resolvedGroup, resolvedPermision.toShort());
   }
 
   protected String user(String s) {
@@ -154,7 +156,8 @@ public abstract class UGIResolver {
    * @param remoteAcl AclStatus on external store.
    * @return serialized, local permissions the FileStatus or AclStatus map to.
    */
-  public long getPermissionsProto(FileStatus remoteStatus, AclStatus remoteAcl) {
+  public long getPermissionsProto(FileStatus remoteStatus,
+      AclStatus remoteAcl) {
     addUGI(remoteStatus, remoteAcl);
     if (remoteAcl == null) {
       return resolve(remoteStatus);
