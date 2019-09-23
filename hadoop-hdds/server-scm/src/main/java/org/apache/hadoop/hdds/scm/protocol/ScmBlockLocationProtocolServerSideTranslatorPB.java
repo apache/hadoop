@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.protocolPB;
+package org.apache.hadoop.hdds.scm.protocol;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,17 +40,15 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.hdds.server.OzoneProtocolMessageDispatcher;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import io.opentracing.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,8 +66,9 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   private static final Logger LOG = LoggerFactory
       .getLogger(ScmBlockLocationProtocolServerSideTranslatorPB.class);
 
-  private final ProtocolMessageMetrics
-      protocolMessageMetrics;
+  private final OzoneProtocolMessageDispatcher<SCMBlockLocationRequest,
+      SCMBlockLocationResponse>
+      dispatcher;
 
   /**
    * Creates a new ScmBlockLocationProtocolServerSideTranslatorPB.
@@ -80,7 +79,9 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       ScmBlockLocationProtocol impl,
       ProtocolMessageMetrics metrics) throws IOException {
     this.impl = impl;
-    this.protocolMessageMetrics = metrics;
+    dispatcher = new OzoneProtocolMessageDispatcher<>(
+        "BlockLocationProtocol", metrics, LOG);
+
   }
 
   private SCMBlockLocationResponse.Builder createSCMBlockResponse(
@@ -94,43 +95,18 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   @Override
   public SCMBlockLocationResponse send(RpcController controller,
       SCMBlockLocationRequest request) throws ServiceException {
-    String traceId = request.getTraceID();
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("BlockLocationProtocol {} request is received: <json>{}</json>",
-          request.getCmdType().toString(),
-          request.toString().replaceAll("\n", "\\\\n"));
-
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("BlockLocationProtocol {} request is received",
-          request.getCmdType().toString());
-    }
-
-    protocolMessageMetrics.increment(request.getCmdType());
-
-    try (Scope scope = TracingUtil
-        .importAndCreateScope(
-            "ScmBlockLocationProtocol." + request.getCmdType(),
-            request.getTraceID())) {
-      SCMBlockLocationResponse response =
-          processMessage(request, traceId);
-
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(
-            "BlockLocationProtocol {} request is processed. Response: "
-                + "<json>{}</json>",
-            request.getCmdType().toString(),
-            response.toString().replaceAll("\n", "\\\\n"));
-      }
-      return response;
-    }
+    return dispatcher.processRequest(
+        request,
+        this::processMessage,
+        request.getCmdType(),
+        request.getTraceID());
   }
 
   private SCMBlockLocationResponse processMessage(
-      SCMBlockLocationRequest request, String traceId) throws ServiceException {
+      SCMBlockLocationRequest request) throws ServiceException {
     SCMBlockLocationResponse.Builder response = createSCMBlockResponse(
         request.getCmdType(),
-        traceId);
+        request.getTraceID());
     response.setSuccess(true);
     response.setStatus(Status.OK);
 
