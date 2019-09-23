@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.insight.scm.EventQueueInsight;
 import org.apache.hadoop.ozone.insight.scm.NodeManagerInsight;
 import org.apache.hadoop.ozone.insight.scm.ReplicaManagerInsight;
 import org.apache.hadoop.ozone.insight.scm.ScmProtocolBlockLocationInsight;
+import org.apache.hadoop.ozone.insight.scm.ScmProtocolDatanodeInsight;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 
 import picocli.CommandLine;
@@ -88,7 +89,8 @@ public class BaseInsightSubCommand {
     insights.put("scm.event-queue", new EventQueueInsight());
     insights.put("scm.protocol.block-location",
         new ScmProtocolBlockLocationInsight());
-
+    insights.put("scm.protocol.datanode",
+        new ScmProtocolDatanodeInsight());
     insights.put("om.key-manager", new KeyManagerInsight());
     insights.put("om.protocol.client", new OmProtocolInsight());
 
