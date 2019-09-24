@@ -143,8 +143,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           offset, context, fileAttributes, sourceChecksum);
 
       if (!source.isSplit()) {
-        DistCpUtils.compareFileLengthsAndChecksums(sourceFS, sourcePath,
-            sourceChecksum, targetFS, targetPath, skipCrc);
+        DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
+                sourcePath, sourceChecksum, targetFS,
+                targetPath, skipCrc, source.getLen());
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.
@@ -247,24 +248,27 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     boolean finished = false;
     try {
       inStream = getInputStream(source, context.getConfiguration());
+      long fileLength = source2.getLen();
+      int numBytesToRead  = (int) getNumBytesToRead(fileLength, sourceOffset,
+              bufferSize);
       seekIfRequired(inStream, sourceOffset);
-      int bytesRead = readBytes(inStream, buf);
-      while (bytesRead >= 0) {
+      int bytesRead = readBytes(inStream, buf, numBytesToRead);
+      while (bytesRead > 0) {
         if (chunkLength > 0 &&
             (totalBytesRead + bytesRead) >= chunkLength) {
           bytesRead = (int)(chunkLength - totalBytesRead);
           finished = true;
         }
         totalBytesRead += bytesRead;
-        if (action == FileAction.APPEND) {
-          sourceOffset += bytesRead;
-        }
+        sourceOffset += bytesRead;
         outStream.write(buf, 0, bytesRead);
         updateContextStatus(totalBytesRead, context, source2);
         if (finished) {
           break;
         }
-        bytesRead = readBytes(inStream, buf);
+        numBytesToRead  = (int) getNumBytesToRead(fileLength, sourceOffset,
+                bufferSize);
+        bytesRead = readBytes(inStream, buf, numBytesToRead);
       }
       outStream.close();
       outStream = null;
@@ -272,6 +276,15 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       IOUtils.cleanupWithLogger(LOG, outStream, inStream);
     }
     return totalBytesRead;
+  }
+
+  @VisibleForTesting
+  long getNumBytesToRead(long fileLength, long position, long bufLength) {
+    if (position + bufLength < fileLength) {
+      return  bufLength;
+    } else {
+      return fileLength - position;
+    }
   }
 
   private void updateContextStatus(long totalBytesRead, Mapper.Context context,
@@ -287,10 +300,11 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     context.setStatus(message.toString());
   }
 
-  private static int readBytes(ThrottledInputStream inStream, byte buf[])
+  private static int readBytes(ThrottledInputStream inStream, byte[] buf,
+                               int numBytes)
       throws IOException {
     try {
-      return inStream.read(buf);
+      return inStream.read(buf, 0, numBytes);
     } catch (IOException e) {
       throw new CopyReadException(e);
     }

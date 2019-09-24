@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -42,16 +42,12 @@ import javax.annotation.Nonnull;
 public class S3MultipartUploadAbortResponse extends OMClientResponse {
 
   private String multipartKey;
-  private long timeStamp;
   private OmMultipartKeyInfo omMultipartKeyInfo;
 
   public S3MultipartUploadAbortResponse(String multipartKey,
-      long timeStamp,
-      @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
-      @Nonnull OMResponse omResponse) {
+      @Nullable OmMultipartKeyInfo omMultipartKeyInfo, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
-    this.timeStamp = timeStamp;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
   }
 
@@ -75,9 +71,18 @@ public class S3MultipartUploadAbortResponse extends OMClientResponse {
         PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
         OmKeyInfo currentKeyPartInfo =
             OmKeyInfo.getFromProtobuf(partKeyInfo.getPartKeyInfo());
+
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            omMetadataManager.getDeletedTable().get(partKeyInfo.getPartName());
+        if(repeatedOmKeyInfo == null) {
+          repeatedOmKeyInfo = new RepeatedOmKeyInfo(currentKeyPartInfo);
+        } else {
+          repeatedOmKeyInfo.addOmKeyInfo(currentKeyPartInfo);
+        }
+
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            OmUtils.getDeletedKeyName(partKeyInfo.getPartName(), timeStamp),
-            currentKeyPartInfo);
+            partKeyInfo.getPartName(),
+            repeatedOmKeyInfo);
       }
 
     }
