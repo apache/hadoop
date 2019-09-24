@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 /**
  * Dispatch message after tracing and message logging for insight.
  * <p>
- * This is a generic utility to dispatch message in ServierSide translators.
+ * This is a generic utility to dispatch message in ServerSide translators.
  * <p>
  * It logs the message type/content on DEBUG/TRACING log for insight and create
  * a new span based on the tracing information.
