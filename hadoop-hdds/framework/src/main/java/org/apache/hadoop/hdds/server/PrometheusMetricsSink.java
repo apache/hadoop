@@ -92,11 +92,12 @@ public class PrometheusMetricsSink implements MetricsSink {
         }
         prometheusMetricKey.append("}");
 
-        builder.append(prometheusMetricKey.toString());
+        String prometheusMetricKeyAsString = prometheusMetricKey.toString();
+        builder.append(prometheusMetricKeyAsString);
         builder.append(" ");
         builder.append(metrics.value());
         builder.append("\n");
-        metricLines.put(prometheusMetricKey.toString(), builder.toString());
+        metricLines.put(prometheusMetricKeyAsString, builder.toString());
 
       }
     }
