@@ -109,7 +109,7 @@ public class TestDistCpUtilsWithCombineMode {
     DFSTestUtil.createFile(fs, dst, 256, 1024, 1024,
         rf, seed);
     // then compare
-    DistCpUtils.compareFileLengthsAndChecksums(fs, src,
-        null, fs, dst, false);
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, src,
+        null, fs, dst, false, 1024);
   }
 }
