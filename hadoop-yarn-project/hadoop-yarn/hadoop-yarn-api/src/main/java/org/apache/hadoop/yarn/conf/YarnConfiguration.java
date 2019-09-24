@@ -3789,6 +3789,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
       CENTRALIZED_NODELABEL_CONFIGURATION_TYPE;
 
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX
+      = "exclusive-enforced-partitions";
+
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS = NODE_LABELS_PREFIX
+      + EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX;
+
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";
 

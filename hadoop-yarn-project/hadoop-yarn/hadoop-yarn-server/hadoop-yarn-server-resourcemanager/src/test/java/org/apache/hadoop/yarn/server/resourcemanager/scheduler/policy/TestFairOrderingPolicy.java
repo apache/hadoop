@@ -126,19 +126,25 @@ public class TestFairOrderingPolicy {
 
 
     //Assignment, least to greatest consumption
-    checkIds(schedOrder.getAssignmentIterator(), new String[]{"3", "2", "1"});
+    checkIds(schedOrder.getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR),
+        new String[]{"3", "2", "1"});
 
     //Preemption, greatest to least
     checkIds(schedOrder.getPreemptionIterator(), new String[]{"1", "2", "3"});
 
     //Change value without inform, should see no change
     msp2.setUsed(Resources.createResource(6));
-    checkIds(schedOrder.getAssignmentIterator(), new String[]{"3", "2", "1"});
+    checkIds(schedOrder.getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR),
+        new String[]{"3", "2", "1"});
     checkIds(schedOrder.getPreemptionIterator(), new String[]{"1", "2", "3"});
 
     //Do inform, will reorder
     schedOrder.containerAllocated(msp2, null);
-    checkIds(schedOrder.getAssignmentIterator(), new String[]{"3", "1", "2"});
+    checkIds(schedOrder.getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR),
+        new String[]{"3", "1", "2"});
     checkIds(schedOrder.getPreemptionIterator(), new String[]{"2", "1", "3"});
   }
 
