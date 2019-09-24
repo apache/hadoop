@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
