@@ -3162,23 +3162,26 @@ public class BlockManager implements BlockStatsMXBean {
               + storedBlock.getGenerationStamp(), Reason.GENSTAMP_MISMATCH);
         }
         boolean wrongSize;
+        long blockMapSize;
         if (storedBlock.isStriped()) {
           assert BlockIdManager.isStripedBlockID(reported.getBlockId());
           assert storedBlock.getBlockId() ==
               BlockIdManager.convertToStripedID(reported.getBlockId());
           BlockInfoStriped stripedBlock = (BlockInfoStriped) storedBlock;
           int reportedBlkIdx = BlockIdManager.getBlockIndex(reported);
-          wrongSize = reported.getNumBytes() != getInternalBlockLength(
-              stripedBlock.getNumBytes(), stripedBlock.getCellSize(),
-              stripedBlock.getDataBlockNum(), reportedBlkIdx);
+          blockMapSize = getInternalBlockLength(stripedBlock.getNumBytes(),
+              stripedBlock.getCellSize(), stripedBlock.getDataBlockNum(),
+              reportedBlkIdx);
+          wrongSize = reported.getNumBytes() != blockMapSize;
         } else {
-          wrongSize = storedBlock.getNumBytes() != reported.getNumBytes();
+          blockMapSize = storedBlock.getNumBytes();
+          wrongSize = blockMapSize != reported.getNumBytes();
         }
         if (wrongSize) {
           return new BlockToMarkCorrupt(new Block(reported), storedBlock,
               "block is " + ucState + " and reported length " +
               reported.getNumBytes() + " does not match " +
-              "length in block map " + storedBlock.getNumBytes(),
+              "length in block map " + blockMapSize,
               Reason.SIZE_MISMATCH);
         } else {
           return null; // not corrupt
