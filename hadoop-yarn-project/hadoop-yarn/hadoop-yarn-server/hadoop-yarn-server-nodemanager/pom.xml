@@ -355,32 +355,22 @@
           </excludes>
         </configuration>
       </plugin>
-
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-		  <include>yarn_server_nodemanager_recovery.proto</include>
-                  <include>yarn_server_nodemanager_service_protos.proto</include>
-                  <include>LocalizationProtocol.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
             </configuration>
           </execution>
         </executions>
