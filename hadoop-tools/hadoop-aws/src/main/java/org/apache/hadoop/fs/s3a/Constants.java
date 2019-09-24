@@ -352,9 +352,12 @@ public final class Constants {
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
-   * name will be associated with this signer class in the S3 SDK. e.g. Single
-   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass Multiple
-   * CustomSigners {@literal ->} 'CSigner1:CustomSignerClass1,CSigner2:CustomerSignerClass2
+   * name will be associated with this signer class in the S3 SDK.
+   * Examples
+   * CustomSigner -> {@literal ->} 'CustomSigner:org.apache...CustomSignerClass'
+   * CustomSigners -> {@literal ->} 'CSigner1:CSigner1Class,CSigner2:CSigner2Class'
+   * Initializer -> {@literal ->} 'CSigner1:CSigner1Class:CSigner1InitializerClass'
+   * With Existing -> {@literal ->} 'AWS4Signer,CSigner1,CSigner2:CSigner2Class'
    */
   public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
 

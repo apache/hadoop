@@ -17,14 +17,19 @@
  */
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.auth.Signer;
-import com.amazonaws.auth.SignerFactory;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
+import com.amazonaws.auth.Signer;
+import com.amazonaws.auth.SignerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 
@@ -36,8 +41,20 @@ public class SignerManager implements Closeable {
   private static final Logger LOG = LoggerFactory
       .getLogger(SignerManager.class);
 
+  private final List<AwsSignerInitializer> initializers = new LinkedList<>();
 
-  public SignerManager() {
+  private final String bucketName;
+  private final DelegationTokenProvider delegationTokenProvider;
+  private final Configuration ownerConf;
+  private final UserGroupInformation ownerUgi;
+
+  public SignerManager(String bucketName,
+      DelegationTokenProvider delegationTokenProvider, Configuration ownerConf,
+      UserGroupInformation ownerUgi) {
+    this.bucketName = bucketName;
+    this.delegationTokenProvider = delegationTokenProvider;
+    this.ownerConf = ownerConf;
+    this.ownerUgi = ownerUgi;
   }
 
   /**
@@ -55,15 +72,41 @@ public class SignerManager implements Closeable {
 
     for (String customSigner : customSigners) {
       String[] parts = customSigner.split(":");
-      if (parts.length != 2) {
-        String message =
-            "Invalid format (Expected name:SignerClass) for CustomSigner: ["
-                + customSigner
-                + "]";
+      if (!(parts.length == 1 || parts.length == 2 || parts.length == 3)) {
+        String message = "Invalid format (Expected name, name:SignerClass,"
+            + " name:SignerClass:SignerInitializerClass)"
+            + " for CustomSigner: [" + customSigner + "]";
         LOG.error(message);
         throw new IllegalArgumentException(message);
       }
-      maybeRegisterSigner(parts[0], parts[1], conf);
+      if (parts.length == 1) {
+        // Nothing to do. Trying to use a pre-defined Signer
+      } else {
+        // Register any custom Signer
+        maybeRegisterSigner(parts[0], parts[1], conf);
+
+        // If an initializer is specified, take care of instantiating it and
+        // setting it up
+        if (parts.length == 3) {
+          Class<? extends AwsSignerInitializer> clazz = null;
+          try {
+            clazz = (Class<? extends AwsSignerInitializer>) conf
+                .getClassByName(parts[2]);
+          } catch (ClassNotFoundException e) {
+            throw new RuntimeException(String.format(
+                "SignerInitializer class" + " [%s] not found for signer [%s]",
+                parts[2], parts[0]), e);
+          }
+          LOG.debug("Creating signer initializer: [{}] for signer: [{}]",
+              parts[2], parts[0]);
+          AwsSignerInitializer signerInitializer = ReflectionUtils
+              .newInstance(clazz, null);
+          initializers.add(signerInitializer);
+          signerInitializer
+              .registerStore(bucketName, ownerConf, delegationTokenProvider,
+                  ownerUgi);
+        }
+      }
     }
   }
 
@@ -93,7 +136,12 @@ public class SignerManager implements Closeable {
     }
   }
 
-  @Override
-  public void close() throws IOException {
+  @Override public void close() throws IOException {
+    LOG.debug("Unregistering fs from {} initializers", initializers.size());
+    for (AwsSignerInitializer initializer : initializers) {
+      initializer
+          .unregisterStore(bucketName, ownerConf, delegationTokenProvider,
+              ownerUgi);
+    }
   }
 }

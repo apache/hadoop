@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.SignableRequest;
@@ -31,6 +32,7 @@ import org.junit.rules.Timeout;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
@@ -45,8 +47,26 @@ public class TestSignerManager {
       10_000L, TimeUnit.MILLISECONDS
   );
 
-  @Test
-  public void testCustomSignerFailureIfNotRegistered() throws Exception {
+  @Test public void testPredefinedSignerInitialization() throws IOException {
+    // Try initializing a pre-defined Signer type.
+    // Should run through without an exception.
+    Configuration config = new Configuration();
+    // Pre-defined signer types as of AWS-SDK 1.11.563
+    // AWS4SignerType, QueryStringSignerType, AWSS3V4SignerType
+    config.set(CUSTOM_SIGNERS, "AWS4SignerType");
+    SignerManager signerManager = new SignerManager("dontcare", null, config,
+        UserGroupInformation.getCurrentUser());
+    signerManager.initCustomSigners(config);
+  }
+
+  @Test public void testCustomSignerFailureIfNotRegistered() throws Exception {
+    Configuration config = new Configuration();
+    config.set(CUSTOM_SIGNERS, "testsignerUnregistered");
+    SignerManager signerManager = new SignerManager("dontcare", null, config,
+        UserGroupInformation.getCurrentUser());
+    // Make sure the config is respected.
+    signerManager.initCustomSigners(config);
+    // Simulate a call from the AWS SDK to create the signer.
     LambdaTestUtils.intercept(Exception.class,
         () -> SignerFactory.createSigner("testsignerUnregistered", null));
     // Expecting generic Exception.class to handle future implementation
@@ -55,12 +75,13 @@ public class TestSignerManager {
   }
 
   @Test
-  public void testCustomSignerInitialization() {
+  public void testCustomSignerInitialization() throws IOException {
     Configuration config = new Configuration();
     SignerForTest1.reset();
     SignerForTest2.reset();
     config.set(CUSTOM_SIGNERS, "testsigner1:" + SignerForTest1.class.getName());
-    SignerManager signerManager = new SignerManager();
+    SignerManager signerManager = new SignerManager("dontcare", null, config,
+        UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners(config);
     Signer s1 = SignerFactory.createSigner("testsigner1", null);
     s1.sign(null, null);
@@ -70,14 +91,15 @@ public class TestSignerManager {
   }
 
   @Test
-  public void testMultipleCustomSignerInitialization() {
+  public void testMultipleCustomSignerInitialization() throws IOException {
     Configuration config = new Configuration();
     SignerForTest1.reset();
     SignerForTest2.reset();
     config.set(CUSTOM_SIGNERS,
         "testsigner1:" + SignerForTest1.class.getName() + "," + "testsigner2:"
             + SignerForTest2.class.getName());
-    SignerManager signerManager = new SignerManager();
+    SignerManager signerManager = new SignerManager("dontcare", null, config,
+        UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners(config);
     Signer s1 = SignerFactory.createSigner("testsigner1", null);
     s1.sign(null, null);
