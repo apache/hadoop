@@ -456,6 +456,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     context.getConfiguration().set(
         InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, uuid);
     wrappedCommitter.setupJob(context);
+    super.setupJob(context);
   }
 
   /**
@@ -550,7 +551,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
     }
   }
 
-/*
   @Override
   protected void abortJobInternal(JobContext context,
       boolean suppressExceptions) throws IOException {
@@ -558,8 +558,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
     boolean failed = false;
     try (DurationInfo d = new DurationInfo(LOG,
         "%s: aborting job in state %s ", r, jobIdString(context))) {
-      List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
-      abortPendingUploads(context, pending, suppressExceptions);
+      ActiveCommit pending = listPendingUploadsToAbort(context);
+      abortPendingUploads(context, pending, suppressExceptions, true);
     } catch (FileNotFoundException e) {
       // nothing to list
       LOG.debug("No job directory to read uploads from");
@@ -570,7 +570,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       super.abortJobInternal(context, failed || suppressExceptions);
     }
   }
-*/
+
 
   /**
    * Delete the working paths of a job.

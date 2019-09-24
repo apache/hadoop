@@ -648,8 +648,16 @@ public class StagingTestBase {
             }
             CompleteMultipartUploadRequest req = getArgumentAt(invocation,
                 0, CompleteMultipartUploadRequest.class);
+            String uploadId = req.getUploadId();
+            String removed = results.activeUploads.remove(uploadId);
+            if (removed == null) {
+              // upload doesn't exist
+              AmazonS3Exception ex = new AmazonS3Exception(
+                  "not found " + uploadId);
+              ex.setStatusCode(404);
+              throw ex;
+            }
             results.commits.add(req);
-            results.activeUploads.remove(req.getUploadId());
 
             return newResult(req);
           }

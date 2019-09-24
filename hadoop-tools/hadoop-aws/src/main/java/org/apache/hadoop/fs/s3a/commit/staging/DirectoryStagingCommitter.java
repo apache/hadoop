@@ -64,7 +64,6 @@ public class DirectoryStagingCommitter extends StagingCommitter {
 
   @Override
   public void setupJob(JobContext context) throws IOException {
-    super.setupJob(context);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     ConflictResolution conflictResolution = getConflictResolutionMode(
@@ -93,6 +92,7 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       // creation operation
       fs.mkdirs(outputPath);
     }
+    super.setupJob(context);
   }
 
   /**

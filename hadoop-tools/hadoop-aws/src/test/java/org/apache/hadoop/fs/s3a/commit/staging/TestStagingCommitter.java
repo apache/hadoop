@@ -35,6 +35,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.google.common.collect.Sets;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
 import org.junit.Before;
@@ -535,11 +536,12 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return jobCommitter.toString();
         });
 
-    assertEquals("Should have succeeded to commit some uploads",
-        5, results.getCommits().size());
-
-    assertEquals("Should have deleted the files that succeeded",
-        5, results.getDeletes().size());
+    Assertions.assertThat(results.getCommits())
+        .describedAs("Files committed in %s", results )
+        .hasSize(5);
+    Assertions.assertThat(results.getDeletes())
+        .describedAs("Files deleted in %s", results)
+        .hasSize(5);
 
     Set<String> commits = results.getCommits()
         .stream()

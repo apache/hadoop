@@ -19,11 +19,10 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,11 +31,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
+import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.COMMITTER_NAME_PARTITIONED;
 
 /**
  * Partitioned committer.
@@ -136,21 +137,61 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     case APPEND:
       // no check is needed because the output may exist for appending
       break;
-    case REPLACE:  // TODO: will have to list all files and deal with resolution
-/*      Set<Path> partitions = pending.stream()
-          .map(SinglePendingCommit::destinationPath)
-          .map(Path::getParent)
-          .collect(Collectors.toCollection(Sets::newLinkedHashSet));
-      for (Path partitionPath : partitions) {
-        LOG.debug("{}: removing partition path to be replaced: " +
-            getRole(), partitionPath);
-        fs.delete(partitionPath, true);
-      }*/
+    case REPLACE:
+      // identify and replace the destination partitions
+      replacePartitions(pending);
       break;
     default:
       throw new PathCommitException("",
           getRole() + ": unknown conflict resolution mode: "
           + getConflictResolutionMode(context, fsConf));
+    }
+  }
+
+  /**
+   * Identify all partitions which need to be replaced and then delete them.
+   * The original implementation relied on all the pending commits to be
+   * loaded so could simply enumerate them.
+   * This iteration does not do that; it has to reload all the files
+   * to build the list, after which it initiates the delete process.
+   * <pre>
+   *   Set<Path> partitions = pending.stream()
+   *     .map(Path::getParent)
+   *     .collect(Collectors.toCollection(Sets::newLinkedHashSet));
+   *   for (Path partitionPath : partitions) {
+   *     LOG.debug("{}: removing partition path to be replaced: " +
+   *     getRole(), partitionPath);
+   *     fs.delete(partitionPath, true);
+   *   }
+   * </pre>
+   *
+   * @param pending the pending operations
+   * @throws IOException any failure
+   */
+  private void replacePartitions(ActiveCommit pending) throws IOException {
+
+    List<Path> sourceFiles = pending.getSourceFiles();
+    Set<Path> partitions = new LinkedHashSet<>(sourceFiles.size());
+    FileSystem fs = getDestFS();
+    FileSystem sourceFS = pending.getSourceFS();
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, "Replacing partitions")) {
+
+      for (Path path: sourceFiles) {
+        PendingSet pendingSet = PendingSet.load(sourceFS, path);
+        for (SinglePendingCommit commit : pendingSet.getCommits()) {
+          Path parent = commit.destinationPath().getParent();
+          if (parent != null) {
+            partitions.add(parent);
+          }
+        }
+      }
+    }
+    // now do the deletes
+    for (Path partitionPath : partitions) {
+      LOG.debug("{}: removing partition path to be replaced: " +
+          getRole(), partitionPath);
+      fs.delete(partitionPath, true);
     }
   }
 

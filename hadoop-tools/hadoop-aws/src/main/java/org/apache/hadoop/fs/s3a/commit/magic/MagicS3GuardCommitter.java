@@ -182,7 +182,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   /**
    * Inner routine for committing a task.
    * The list of pending commits is loaded and then saved to the job attempt
-   * dir.
+   * dir in a single pendingset file.
    * Failure to load any file or save the final file triggers an abort of
    * all known pending commits.
    * @param context context
