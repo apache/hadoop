@@ -177,7 +177,7 @@ public class TestRouterQuota {
   }
 
   @Test
-  public void testStorageSpaceQuotaaExceed() throws Exception {
+  public void testStorageSpaceQuotaExceed() throws Exception {
     long ssQuota = 3071;
     final FileSystem nnFs1 = nnContext1.getFileSystem();
     final FileSystem nnFs2 = nnContext2.getFileSystem();
