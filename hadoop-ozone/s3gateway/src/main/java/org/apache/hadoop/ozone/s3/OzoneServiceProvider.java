@@ -39,7 +39,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 @ApplicationScoped
 public class OzoneServiceProvider {
 
-  private Text omServiceAdd;
+  private Text omServiceAddr;
 
   private String omserviceID;
 
@@ -52,30 +52,27 @@ public class OzoneServiceProvider {
         conf.getTrimmedStringCollection(OZONE_OM_SERVICE_IDS_KEY);
     if (serviceIdList.size() == 0) {
       // Non-HA cluster
-      omServiceAdd = SecurityUtil.buildTokenService(OmUtils.
+      omServiceAddr = SecurityUtil.buildTokenService(OmUtils.
           getOmAddressForClients(conf));
     } else {
-      // HA cluster
-      Collection<String> serviceIds =
-          conf.getTrimmedStringCollection(OZONE_OM_SERVICE_IDS_KEY);
-
+      // HA cluster.
       //For now if multiple service id's are configured we throw exception.
       // As if multiple service id's are configured, S3Gateway will not be
       // knowing which one to talk to. In future, if OM federation is supported
       // we can resolve this by having another property like
       // ozone.om.internal.service.id.
       // TODO: Revisit this later.
-      if (serviceIds.size() > 1) {
+      if (serviceIdList.size() > 1) {
         throw new IllegalArgumentException("Multiple serviceIds are " +
-            "configured. " + serviceIds.toArray().toString());
+            "configured. " + serviceIdList.toArray().toString());
       } else {
-        String serviceId = serviceIds.iterator().next();
+        String serviceId = serviceIdList.iterator().next();
         Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, serviceId);
         if (omNodeIds.size() == 0) {
           throw new IllegalArgumentException(OZONE_OM_NODES_KEY
               + "." + serviceId + " is not defined");
         }
-        omServiceAdd = new Text(OzoneS3Util.buildServiceNameForToken(conf,
+        omServiceAddr = new Text(OzoneS3Util.buildServiceNameForToken(conf,
             serviceId, omNodeIds));
         omserviceID = serviceId;
       }
@@ -85,7 +82,7 @@ public class OzoneServiceProvider {
 
   @Produces
   public Text getService() {
-    return omServiceAdd;
+    return omServiceAddr;
   }
 
   @Produces
