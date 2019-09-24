@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.nio.ByteBuffer;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -188,4 +189,7 @@ public interface RMContext extends ApplicationMasterServiceContext {
 
   void setMultiNodeSortingManager(
       MultiNodeSortingManager<SchedulerNode> multiNodeSortingManager);
+
+  Set<String> getExclusiveEnforcedPartitions();
+
 }
