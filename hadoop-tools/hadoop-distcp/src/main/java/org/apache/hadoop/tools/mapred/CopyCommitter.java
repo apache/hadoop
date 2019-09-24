@@ -252,7 +252,7 @@ public class CopyCommitter extends FileOutputCommitter {
           // This is the last chunk of the splits, consolidate allChunkPaths
           try {
             concatFileChunks(conf, srcFileStatus.getPath(), targetFile,
-                allChunkPaths);
+                allChunkPaths, srcFileStatus);
           } catch (IOException e) {
             // If the concat failed because a chunk file doesn't exist,
             // then we assume that the CopyMapper has skipped copying this
@@ -609,7 +609,8 @@ public class CopyCommitter extends FileOutputCommitter {
    * Concat the passed chunk files into one and rename it the targetFile.
    */
   private void concatFileChunks(Configuration conf, Path sourceFile,
-                                Path targetFile, LinkedList<Path> allChunkPaths)
+                                Path targetFile, LinkedList<Path> allChunkPaths,
+                                CopyListingFileStatus srcFileStatus)
       throws IOException {
     if (allChunkPaths.size() == 1) {
       return;
@@ -637,8 +638,9 @@ public class CopyCommitter extends FileOutputCommitter {
       LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
     }
     rename(dstfs, firstChunkFile, targetFile);
-    DistCpUtils.compareFileLengthsAndChecksums(
-        srcfs, sourceFile, null, dstfs, targetFile, skipCrc);
+    DistCpUtils.compareFileLengthsAndChecksums(srcFileStatus.getLen(),
+        srcfs, sourceFile, null, dstfs,
+            targetFile, skipCrc, srcFileStatus.getLen());
   }
 
   /**
