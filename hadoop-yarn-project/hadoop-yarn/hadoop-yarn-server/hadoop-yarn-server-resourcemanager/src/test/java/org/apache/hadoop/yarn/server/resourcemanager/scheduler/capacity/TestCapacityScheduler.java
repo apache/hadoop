@@ -162,6 +162,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -1301,8 +1302,9 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     //This happens because app2 has no demand/a magnitude of NaN, which
     //results in app1 and app2 being equal in the fairness comparison and
     //failling back to fifo (start) ordering
-    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
-      appId1.toString());
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR).next().getId(),
+        appId1.toString());
 
     //Now, allocate for app2 (this would be the first/AM allocation)
     ResourceRequest r2 = TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true, priority, recordFactory);
@@ -1314,8 +1316,9 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     //verify re-ordering based on the allocation alone
 
     //Now, the first app for assignment is app2
-    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
-      appId2.toString());
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR).next().getId(),
+        appId2.toString());
 
     rm.stop();
   }
