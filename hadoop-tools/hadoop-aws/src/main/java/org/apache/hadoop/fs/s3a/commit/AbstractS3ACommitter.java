@@ -71,13 +71,18 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
  *
  * The original implementation loaded all .pendingset files
  * before attempting any commit/abort operations.
- * While simple and guaranteeing that no changes were made to the destination
+ * While straightforward and guaranteeing that no changes were made to the destination
  * until all files had successfully been loaded -it didn't scale; the
  * list grew until it exceeded heap size.
  *
  * The second iteration builds up an {@link ActiveCommit} class with the
  * list of .pendingset files to load and then commit; that can be done
  * incrementally and in parallel.
+ * As a side effect of this change, unless/until changed,
+ * the commit/abort/revert of all files uploaded by a single task will be
+ * serialized. This may slow down these operations if there are many files
+ * created by a few tasks, <i>and</i> the HTTP connection pool in the S3A
+ * committer was large enough for more all the parallel POST requests.
  */
 public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   private static final Logger LOG =
@@ -397,8 +402,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Base job setup deletes the success marker and creates the destination
-   * directory.
+   * Base job setup (optionally) deletes the success marker and
+   * always creates the destination directory.
    * When objects are committed that dest dir marker will inevitably
    * be deleted; creating it now ensures there is something at the end
    * while the job is in progress -and if nothing is created, that
@@ -440,12 +445,19 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Commit a list of pending uploads.
+   * Commit all the pending uploads.
+   * Each file listed in the ActiveCommit instance is queued for processing
+   * in a separate thread; its contents are loaded and then (sequentially)
+   * committed.
+   * On a failure or abort of a single file's commit, all its uploads are
+   * aborted.
+   * The revert operation lists the files already committed and deletes them.
    * @param context job context
-   * @param pending list of pending uploads
+   * @param pending  pending uploads
    * @throws IOException on any failure
    */
-  protected void commitPendingUploads(JobContext context,
+  protected void commitPendingUploads(
+      final JobContext context,
       final ActiveCommit pending) throws IOException {
     if (pending.isEmpty()) {
       LOG.warn("{}: No pending uploads to commit", getRole());
@@ -458,11 +470,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
           .executeWith(buildThreadPool(context))
-//          .onFailure((commit, exception) ->
-//              commitContext.abortSingleCommit(commit))
-//          .abortWith(commitContext::abortSingleCommit)
-//     .revertWith(commitContext::revertCommit)
-          .run(path -> loadAndCommit(commitContext, pending, path));
+          .onFailure((path, exception) ->
+              loadAndAbort(commitContext, pending, path, true, false))
+          .abortWith(path ->
+              loadAndAbort(commitContext, pending, path, true, false))
+          .revertWith(path ->
+              loadAndRevert(commitContext, pending, path))
+          .run(path ->
+              loadAndCommit(commitContext, pending, path));
     }
   }
 
@@ -481,12 +496,76 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Committing %s", path)) {
       PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(), path);
-      for (SinglePendingCommit commit : pendingSet.getCommits()) {
-        commitContext.commitOrFail(commit);
-        activeCommit.uploadCommitted(
-            commit.getDestinationKey(),
-            commit.getLength());
-      }
+      Tasks.foreach(pendingSet.getCommits())
+          .stopOnFailure()
+          .executeWith(singleCommitThreadPool())
+          .onFailure((commit, exception) ->
+              commitContext.abortSingleCommit(commit))
+          .abortWith(commitContext::abortSingleCommit)
+          .revertWith(commitContext::revertCommit)
+          .run(commit -> {
+            commitContext.commitOrFail(commit);
+            activeCommit.uploadCommitted(
+                commit.getDestinationKey(), commit.getLength());
+          });
+    }
+  }
+
+  /**
+   * Load a pendingset file and revert all of its contents.
+   * @param commitContext context to commit through
+   * @param activeCommit commit state
+   * @param path path to load
+   * @throws IOException failure
+   */
+  private void loadAndRevert(
+      final CommitOperations.CommitContext commitContext,
+      final ActiveCommit activeCommit,
+      final Path path) throws IOException {
+
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, false, "Committing %s", path)) {
+      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(), path);
+      Tasks.foreach(pendingSet.getCommits())
+          .suppressExceptions(true)
+          .run(commitContext::revertCommit);
+    }
+  }
+
+  /**
+   * Load a pendingset file and abort all of its contents.
+   * @param commitContext context to commit through
+   * @param activeCommit commit state
+   * @param path path to load
+   * @param deleteRemoteFiles should remote files be deleted?
+   * @throws IOException failure
+   */
+  private void loadAndAbort(
+      final CommitOperations.CommitContext commitContext,
+      final ActiveCommit activeCommit,
+      final Path path,
+      final boolean suppressExceptions,
+      final boolean deleteRemoteFiles) throws IOException {
+
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, false, "Aborting %s", path)) {
+      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(),
+          path);
+      FileSystem fs = getDestFS();
+      Tasks.foreach(pendingSet.getCommits())
+          .executeWith(singleCommitThreadPool())
+          .suppressExceptions(suppressExceptions)
+          .run(commit -> {
+            try {
+              commitContext.abortSingleCommit(commit);
+            } catch (FileNotFoundException e) {
+              // Commit ID was not known; file may exist.
+              // delete it if instructed to do so.
+              if (deleteRemoteFiles) {
+                fs.delete(commit.destinationPath(), false);
+              }
+            }
+          });
     }
   }
 
@@ -546,7 +625,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Abort all pending uploads to the destination directory during
    * job cleanup operations.
    * Note: this instantiates the thread pool if required -so
-   * {@link #destroyThreadPool()} must be called after this.
+   * {@link #destroyThreadPools()} must be called after this.
    * @param suppressExceptions should exceptions be suppressed
    * @throws IOException IO problem
    */
@@ -576,12 +655,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Subclass-specific pre commit actions.
+   * Subclass-specific pre-Job-commit actions.
    * @param context job context
    * @param pending the pending operations
    * @throws IOException any failure
    */
-  protected void preCommitJob(JobContext context,
+  @VisibleForTesting
+  public void preCommitJob(JobContext context,
       ActiveCommit pending) throws IOException {
   }
 
@@ -657,7 +737,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         "Cleanup job %s", jobIdString(context))) {
       abortPendingUploadsInCleanup(suppressExceptions);
     } finally {
-      destroyThreadPool();
+      destroyThreadPools();
       cleanupStagingDirs();
     }
   }
@@ -756,16 +836,28 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Destroy any thread pool; wait for it to finish,
+   * Destroy any thread pools; wait for that to finish,
    * but don't overreact if it doesn't finish in time.
    */
-  protected final synchronized void destroyThreadPool() {
+  protected final synchronized void destroyThreadPools() {
     if (threadPool != null) {
       LOG.debug("Destroying thread pool");
       HadoopExecutors.shutdown(threadPool, LOG,
           THREAD_POOL_SHUTDOWN_DELAY, TimeUnit.SECONDS);
       threadPool = null;
     }
+  }
+
+  /**
+   * Get the thread pool for executing the single file commit/revert
+   * within the commit of all uploads of a single task.
+   * This is currently null; it is here to allow the Tasks class to
+   * provide the logic for execute/revert.
+   * Why not use the existing thread pool? Too much fear of deadlocking.
+   * @return null. always.
+   */
+  protected final synchronized ExecutorService singleCommitThreadPool() {
+    return null;
   }
 
   /**
@@ -829,7 +921,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       final boolean suppressExceptions,
       final boolean deleteRemoteFiles) throws IOException {
 
-    if (pending == null || pending.isEmpty()) {
+    if (pending.isEmpty()) {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       try (DurationInfo d = new DurationInfo(LOG,
@@ -839,40 +931,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         Tasks.foreach(pending.getSourceFiles())
             .executeWith(buildThreadPool(context))
             .suppressExceptions(suppressExceptions)
-            .run(f-> loadAndAbort(commitContext, pending, f, deleteRemoteFiles));
-      }
-    }
-  }
-
-  /**
-   * Load a pendingset file and abort all of its contents.
-   * @param commitContext context to commit through
-   * @param activeCommit commit state
-   * @param path path to load
-   * @param deleteRemoteFiles should remote files be deleted?
-   * @throws IOException failure
-   */
-  private void loadAndAbort(
-      final CommitOperations.CommitContext commitContext,
-      final ActiveCommit activeCommit,
-      final Path path,
-      final boolean deleteRemoteFiles) throws IOException {
-
-    try (DurationInfo ignored =
-             new DurationInfo(LOG, false, "Aborting %s", path)) {
-      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(),
-          path);
-      FileSystem fs = getDestFS();
-      for (SinglePendingCommit commit: pendingSet.getCommits()) {
-        try {
-          commitContext.abortSingleCommit(commit);
-        } catch (FileNotFoundException e) {
-          // Commit ID was not known; file may exist.
-          // delete it if instructed to do so.
-          if (deleteRemoteFiles) {
-            fs.delete(commit.destinationPath(), false);
-          }
-        }
+            .run(f ->
+                loadAndAbort(commitContext,
+                    pending,
+                    f,
+                    suppressExceptions,
+                    deleteRemoteFiles));
       }
     }
   }
@@ -897,7 +961,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    *     for testing only.
    *   </li>
    */
-  protected static class ActiveCommit {
+  public static class ActiveCommit {
 
     private static final AbstractS3ACommitter.ActiveCommit EMPTY
         = new ActiveCommit(null, new ArrayList<>());
@@ -1004,6 +1068,10 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
     public boolean isEmpty() {
       return sourceFiles.isEmpty();
+    }
+
+    public void add(Path path) {
+      sourceFiles.add(path);
     }
   }
 }

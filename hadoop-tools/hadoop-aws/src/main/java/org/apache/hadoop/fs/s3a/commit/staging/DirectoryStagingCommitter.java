@@ -88,10 +88,9 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       }
     } catch (FileNotFoundException ignored) {
       // there is no destination path, hence, no conflict.
-      // make the parent directory, which also triggers a recursive directory
-      // creation operation
-      fs.mkdirs(outputPath);
     }
+    // make the parent directory, which also triggers a recursive directory
+    // creation operation
     super.setupJob(context);
   }
 
@@ -104,8 +103,9 @@ public class DirectoryStagingCommitter extends StagingCommitter {
    * @throws IOException any failure
    */
   @Override
-  protected void preCommitJob(JobContext context,
-      ActiveCommit pending) throws IOException {
+  public void preCommitJob(
+      final JobContext context,
+      final ActiveCommit pending) throws IOException {
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     Configuration fsConf = fs.getConf();

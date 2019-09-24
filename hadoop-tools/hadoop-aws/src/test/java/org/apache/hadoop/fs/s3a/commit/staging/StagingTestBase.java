@@ -251,6 +251,12 @@ public class StagingTestBase {
     verify(mockS3).getFileStatus(path);
   }
 
+  /**
+   * Verify that mkdirs was invoked once.
+   * @param mockS3 mock
+   * @param path path to check
+   * @throws IOException from the mkdirs signature.
+   */
   public static void verifyMkdirsInvoked(FileSystem mockS3, Path path)
       throws IOException {
     verify(mockS3).mkdirs(path);
@@ -461,6 +467,11 @@ public class StagingTestBase {
       return deletes;
     }
 
+    public List<String> getDeletePaths() {
+      return deletes.stream().map(DeleteObjectRequest::getKey).collect(
+          Collectors.toList());
+    }
+
     public void resetDeletes() {
       deletes.clear();
     }
@@ -476,6 +487,10 @@ public class StagingTestBase {
 
     public void resetRequests() {
       requests.clear();
+    }
+
+    public void addUpload(String id, String key) {
+      activeUploads.put(id, key);
     }
 
     @Override

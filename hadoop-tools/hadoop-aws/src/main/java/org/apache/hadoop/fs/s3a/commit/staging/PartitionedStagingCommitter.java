@@ -123,8 +123,9 @@ public class PartitionedStagingCommitter extends StagingCommitter {
    * @throws IOException any failure
    */
   @Override
-  protected void preCommitJob(JobContext context,
-      ActiveCommit pending) throws IOException {
+  public void preCommitJob(
+      final JobContext context,
+      final ActiveCommit pending) throws IOException {
 
     FileSystem fs = getDestFS();
 

@@ -648,7 +648,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       getCommitOperations().taskCompleted(false);
       throw e;
     } finally {
-      destroyThreadPool();
+      destroyThreadPools();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -783,7 +783,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
           getRole(), context.getTaskAttemptID(), e);
       throw e;
     } finally {
-      destroyThreadPool();
+      destroyThreadPools();
     }
   }
 
