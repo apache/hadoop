@@ -17,9 +17,6 @@
  */
 
 /**
- * This package contains HDDS protocol related classes.
- */
-package org.apache.hadoop.hdds.function;
-/**
  * Functional interfaces for ozone, similar to java.util.function.
  */
+package org.apache.hadoop.hdds.function;
