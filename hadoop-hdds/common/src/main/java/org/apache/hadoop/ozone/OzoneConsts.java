@@ -239,6 +239,8 @@ public final class OzoneConsts {
   public static final String KEY = "key";
   public static final String QUOTA = "quota";
   public static final String QUOTA_IN_BYTES = "quotaInBytes";
+  public static final String OBJECT_ID = "objectID";
+  public static final String UPDATE_ID = "updateID";
   public static final String CLIENT_ID = "clientID";
   public static final String OWNER = "owner";
   public static final String ADMIN = "admin";
