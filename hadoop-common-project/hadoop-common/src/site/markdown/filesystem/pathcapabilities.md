@@ -47,7 +47,7 @@ Consult the javadocs for `org.apache.hadoop.fs.CommonPathCapabilities` for these
 
 
 Individual filesystems MAY offer their own set of capabilities which
-can be probed for. These MUST begin with `fs.` + the filesystem schema +
+can be probed for. These MUST begin with `fs.` + the filesystem scheme +
  `.capability`. For example `fs.s3a.capability.select.sql`;
 
 ### `boolean hasPathCapability(path, capability)`
@@ -154,5 +154,5 @@ capabilities. Instead they *MUST* do one of the following:
 
 * Define and stabilize new cross-filesystem capability flags (preferred),
 and so formally add a new `fs.capability` value.
-* Use the schema of the filesystem to as a prefix for their own options,
+* Use the scheme of the filesystem to as a prefix for their own options,
 e.g `fs.hdfs.`
