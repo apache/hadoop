@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -97,6 +98,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private Configuration conf;
   private YarnAuthorizationProvider authorizer;
   private boolean timelineServiceV2Enabled;
+  private Set<String> exclusiveEnforcedPartitions;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -119,6 +121,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(conf);
+    this.exclusiveEnforcedPartitions = context.getExclusiveEnforcedPartitions();
   }
 
   /**
@@ -521,6 +524,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           throw new InvalidResourceRequestException("Invalid resource request, "
               + "no resource request specified with " + ResourceRequest.ANY);
         }
+        SchedulerUtils.enforcePartitionExclusivity(anyReq,
+            exclusiveEnforcedPartitions,
+            submissionContext.getNodeLabelExpression());
 
         // Make sure that all of the requests agree with the ANY request
         // and have correct values
