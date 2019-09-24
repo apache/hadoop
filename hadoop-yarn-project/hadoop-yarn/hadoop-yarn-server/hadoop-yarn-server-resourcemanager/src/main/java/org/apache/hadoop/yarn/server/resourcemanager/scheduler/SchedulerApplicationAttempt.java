@@ -199,6 +199,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private AtomicLong unconfirmedAllocatedMem = new AtomicLong();
   private AtomicInteger unconfirmedAllocatedVcores = new AtomicInteger();
 
+  private String nodeLabelExpression;
+
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
@@ -223,6 +225,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         unmanagedAM = appSubmissionContext.getUnmanagedAM();
         this.logAggregationContext =
             appSubmissionContext.getLogAggregationContext();
+        this.nodeLabelExpression =
+            appSubmissionContext.getNodeLabelExpression();
       }
     }
 
@@ -1387,5 +1391,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     public String getDiagnosticMessage() {
       return diagnosticMessage;
     }
+  }
+
+  @Override
+  public String getPartition() {
+    return nodeLabelExpression == null ? "" : nodeLabelExpression;
   }
 }

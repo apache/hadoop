@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -90,6 +91,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
   private YarnAuthorizationProvider authorizer;
+  private Set<String> exclusiveEnforcedPartitions;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -110,6 +112,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
     }
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
+    this.exclusiveEnforcedPartitions = context.getExclusiveEnforcedPartitions();
   }
 
   /**
@@ -490,6 +493,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           throw new InvalidResourceRequestException("Invalid resource request, "
               + "no resource request specified with " + ResourceRequest.ANY);
         }
+        SchedulerUtils.enforcePartitionExclusivity(anyReq,
+            exclusiveEnforcedPartitions,
+            submissionContext.getNodeLabelExpression());
 
         // Make sure that all of the requests agree with the ANY request
         // and have correct values
