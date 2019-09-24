@@ -66,7 +66,7 @@ public class OzoneProtocolMessageDispatcher<REQUEST, RESPONSE> {
             type.toString(),
             request.toString().replaceAll("\n", "\\\\n"));
       } else if (logger.isDebugEnabled()) {
-        logger.debug("{}} {} request is received",
+        logger.debug("{} {} request is received",
             serviceName, type.toString());
       }
       protocolMessageMetrics.increment(type);
