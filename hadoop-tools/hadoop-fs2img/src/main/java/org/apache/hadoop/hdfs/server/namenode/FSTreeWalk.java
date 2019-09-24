@@ -57,7 +57,7 @@ public class FSTreeWalk extends TreeWalk {
     fs = root.getFileSystem(conf);
 
     boolean mountACLsEnabled = conf.getBoolean(DFS_PROVIDED_ACLS_IMPORT_ENABLED,
-                                               DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT);
+        DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT);
     boolean localACLsEnabled = conf.getBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY,
         DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
     if (!localACLsEnabled && mountACLsEnabled) {
@@ -121,14 +121,7 @@ public class FSTreeWalk extends TreeWalk {
   }
 
   private AclStatus getAclStatus(FileSystem fs, Path path) throws IOException {
-    if (enableACLs) {
-      try {
-        return fs.getAclStatus(path);
-      } catch (UnsupportedOperationException e) {
-        LOG.warn("Remote filesystem {} doesn't support ACLs", fs);
-      }
-    }
-    return null;
+    return enableACLs ? fs.getAclStatus(path) : null;
   }
 
   @Override

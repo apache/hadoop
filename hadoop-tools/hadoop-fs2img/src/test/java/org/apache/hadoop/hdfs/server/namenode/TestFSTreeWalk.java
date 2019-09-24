@@ -76,4 +76,22 @@ public class TestFSTreeWalk {
 
     assertEquals(0, expectedChildren.size());
   }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testACLNotSupported() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ACLS_IMPORT_ENABLED, true);
+
+    FileSystem fs = mock(FileSystem.class);
+    when(fs.getAclStatus(any())).thenThrow(new UnsupportedOperationException());
+    Path root = mock(Path.class);
+    when(root.getFileSystem(conf)).thenReturn(fs);
+    FileStatus rootFileStatus = new FileStatus(0, true, 0, 0, 1, root);
+    when(fs.getFileStatus(root)).thenReturn(rootFileStatus);
+
+    FSTreeWalk fsTreeWalk = new FSTreeWalk(root, conf);
+    for (TreePath treePath : fsTreeWalk) {
+      System.out.println(treePath.getAclStatus());
+    }
+  }
 }
