@@ -51,7 +51,6 @@ public class OzoneProtocolMessageDispatcher<REQUEST, RESPONSE> {
   }
 
   public RESPONSE processRequest(
-      RpcController controller,
       REQUEST request,
       FunctionWithServiceException<REQUEST, RESPONSE> methodCall,
       ProtocolMessageEnum type,

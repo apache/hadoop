@@ -97,7 +97,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
 
-    return dispatcher.processRequest(controller, request, this::processRequest,
+    return dispatcher.processRequest(request, this::processRequest,
         request.getCmdType(), request.getTraceID());
   }
 

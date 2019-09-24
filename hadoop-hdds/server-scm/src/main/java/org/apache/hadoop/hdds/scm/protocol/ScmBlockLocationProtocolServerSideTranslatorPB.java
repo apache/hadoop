@@ -96,7 +96,6 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   public SCMBlockLocationResponse send(RpcController controller,
       SCMBlockLocationRequest request) throws ServiceException {
     return dispatcher.processRequest(
-        controller,
         request,
         this::processMessage,
         request.getCmdType(),
