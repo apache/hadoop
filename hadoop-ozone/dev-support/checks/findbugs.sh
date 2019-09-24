@@ -16,7 +16,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-mvn -B compile -fn findbugs:check -Dfindbugs.failOnError=false  -f pom.ozone.xml
+mvn -B compile -fn spotbugs:check -Dspotbugs.failOnError=false -f pom.ozone.xml
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
 mkdir -p "$REPORT_DIR"
@@ -24,8 +24,7 @@ REPORT_FILE="$REPORT_DIR/summary.txt"
 
 touch "$REPORT_FILE"
 
-find hadoop-ozone -name findbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${REPORT_FILE}"
-find hadoop-hdds -name findbugsXml.xml -print0  | xargs -0 -n1 convertXmlToText | tee -a "${REPORT_FILE}"
+find hadoop-hdds hadoop-ozone -name spotbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${REPORT_FILE}"
 
 wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
 

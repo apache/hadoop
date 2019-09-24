@@ -195,13 +195,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <version>${junit.jupiter.version}</version>
         <scope>test</scope>
       </dependency>
-
-      <dependency>
-        <groupId>com.google.code.findbugs</groupId>
-        <artifactId>findbugs</artifactId>
-        <version>3.0.1</version>
-        <scope>provided</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -305,14 +298,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/test.db.ini</exclude>
           </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>3.0.4</version>
-        <configuration>
-          <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
       </plugin>
       <plugin>
