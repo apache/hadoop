@@ -35,8 +35,7 @@ public abstract class Shell extends GenericCli {
   private static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
   public static final String OZONE_URI_DESCRIPTION = "Ozone URI could start "
-      + "with o3:// or http(s):// or without prefix. REST protocol will "
-      + "be used for http(s), RPC otherwise. URI may contain the host and port "
+      + "with o3:// or without prefix. URI may contain the host and port "
       + "of the OM server. Both are optional. "
       + "If they are not specified it will be identified from "
       + "the config files.";
