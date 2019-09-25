@@ -60,6 +60,7 @@ import org.apache.hadoop.hdds.utils.db.RDBStore;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -782,15 +783,10 @@ public class KeyManagerImpl implements KeyManager {
           return;
         }
       }
-      //Check if key with same keyName exists in deletedTable and then
-      // insert/update accordingly.
       RepeatedOmKeyInfo repeatedOmKeyInfo =
           metadataManager.getDeletedTable().get(objectKey);
-      if(repeatedOmKeyInfo == null) {
-        repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
-      } else {
-        repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
-      }
+      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(keyInfo,
+          repeatedOmKeyInfo);
       metadataManager.getKeyTable().delete(objectKey);
       metadataManager.getDeletedTable().put(objectKey, repeatedOmKeyInfo);
     } catch (OMException ex) {
@@ -1014,11 +1010,8 @@ public class KeyManagerImpl implements KeyManager {
         // Move this part to delete table.
         RepeatedOmKeyInfo repeatedOmKeyInfo =
             metadataManager.getDeletedTable().get(partName);
-        if(repeatedOmKeyInfo == null) {
-          repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
-        } else {
-          repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
-        }
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            keyInfo, repeatedOmKeyInfo);
         metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
         throw new OMException("No such Multipart upload is with specified " +
             "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
@@ -1047,15 +1040,16 @@ public class KeyManagerImpl implements KeyManager {
           // Add the new entry in to the list of part keys.
           DBStore store = metadataManager.getStore();
           try (BatchOperation batch = store.initBatchOperation()) {
-            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
-                getDeletedTable().get(oldPartKeyInfo.getPartName());
-            if(repeatedOmKeyInfo == null) {
-              repeatedOmKeyInfo = new RepeatedOmKeyInfo(
-                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
-            } else {
-              repeatedOmKeyInfo.addOmKeyInfo(
-                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
-            }
+            OmKeyInfo partKey = OmKeyInfo.getFromProtobuf(
+                oldPartKeyInfo.getPartKeyInfo());
+
+            RepeatedOmKeyInfo repeatedOmKeyInfo =
+                metadataManager.getDeletedTable()
+                    .get(oldPartKeyInfo.getPartName());
+
+            repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                partKey, repeatedOmKeyInfo);
+
             metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
             metadataManager.getDeletedTable().putWithBatch(batch,
                 oldPartKeyInfo.getPartName(),
@@ -1279,13 +1273,12 @@ public class KeyManagerImpl implements KeyManager {
             OmKeyInfo currentKeyPartInfo = OmKeyInfo.getFromProtobuf(
                 partKeyInfo.getPartKeyInfo());
 
-            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
-                getDeletedTable().get(partKeyInfo.getPartName());
-            if(repeatedOmKeyInfo == null) {
-              repeatedOmKeyInfo = new RepeatedOmKeyInfo(currentKeyPartInfo);
-            } else {
-              repeatedOmKeyInfo.addOmKeyInfo(currentKeyPartInfo);
-            }
+            RepeatedOmKeyInfo repeatedOmKeyInfo =
+                metadataManager.getDeletedTable()
+                    .get(partKeyInfo.getPartName());
+
+            repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                currentKeyPartInfo, repeatedOmKeyInfo);
 
             metadataManager.getDeletedTable().putWithBatch(batch,
                 partKeyInfo.getPartName(), repeatedOmKeyInfo);

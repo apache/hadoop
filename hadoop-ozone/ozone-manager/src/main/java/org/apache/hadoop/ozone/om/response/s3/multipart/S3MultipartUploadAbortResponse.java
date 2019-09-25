@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
@@ -75,11 +76,9 @@ public class S3MultipartUploadAbortResponse extends OMClientResponse {
 
         RepeatedOmKeyInfo repeatedOmKeyInfo =
             omMetadataManager.getDeletedTable().get(partKeyInfo.getPartName());
-        if(repeatedOmKeyInfo == null) {
-          repeatedOmKeyInfo = new RepeatedOmKeyInfo(currentKeyPartInfo);
-        } else {
-          repeatedOmKeyInfo.addOmKeyInfo(currentKeyPartInfo);
-        }
+
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            currentKeyPartInfo, repeatedOmKeyInfo);
 
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             partKeyInfo.getPartName(),
