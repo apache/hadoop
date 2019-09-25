@@ -474,4 +474,9 @@ class ChRootedFileSystem extends FilterFileSystem {
     super.unsetStoragePolicy(fullPath(src));
   }
 
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return super.hasPathCapability(fullPath(path), capability);
+  }
 }
