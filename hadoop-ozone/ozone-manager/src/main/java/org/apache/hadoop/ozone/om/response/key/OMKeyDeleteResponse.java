@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.response.key;
 
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -69,11 +70,8 @@ public class OMKeyDeleteResponse extends OMClientResponse {
         // instance in deletedTable.
         RepeatedOmKeyInfo repeatedOmKeyInfo =
             omMetadataManager.getDeletedTable().get(ozoneKey);
-        if (repeatedOmKeyInfo == null) {
-          repeatedOmKeyInfo = new RepeatedOmKeyInfo(omKeyInfo);
-        } else {
-          repeatedOmKeyInfo.addOmKeyInfo(omKeyInfo);
-        }
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            omKeyInfo, repeatedOmKeyInfo);
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             ozoneKey, repeatedOmKeyInfo);
       }
