@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRespo
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import io.opentracing.Scope;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.util.ExitUtils;
 import org.slf4j.Logger;
@@ -177,7 +178,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         .setCmdType(cmdType)
         .setSuccess(false);
     if (exception.getMessage() != null) {
-      omResponse.setMessage(exception.getMessage());
+      omResponse.setMessage(StringUtils.stringifyException(exception));
     }
     return omResponse.build();
   }

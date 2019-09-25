@@ -45,7 +45,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
-
 import javax.annotation.Nonnull;
 
 /**
@@ -181,7 +180,8 @@ public abstract class OMClientRequest implements RequestAuditor {
 
     omResponse.setSuccess(false);
     if (ex.getMessage() != null) {
-      omResponse.setMessage(ex.getMessage());
+      omResponse.setMessage(org.apache.hadoop.util.StringUtils
+          .stringifyException(ex));
     }
     omResponse.setStatus(OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
     return omResponse.build();

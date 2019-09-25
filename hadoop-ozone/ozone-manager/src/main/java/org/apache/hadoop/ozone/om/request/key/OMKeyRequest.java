@@ -134,7 +134,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
         throw new OMException(ex.getMessage(),
             OMException.ResultCodes.SCM_IN_SAFE_MODE);
       }
-      throw ex;
+      throw new IOException(ex.getMessage(), ex);
     }
     for (AllocatedBlock allocatedBlock : allocatedBlocks) {
       OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
