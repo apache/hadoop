@@ -60,6 +60,7 @@ import org.apache.hadoop.hdds.utils.db.RDBStore;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -782,15 +783,8 @@ public class KeyManagerImpl implements KeyManager {
           return;
         }
       }
-      //Check if key with same keyName exists in deletedTable and then
-      // insert/update accordingly.
-      RepeatedOmKeyInfo repeatedOmKeyInfo =
-          metadataManager.getDeletedTable().get(objectKey);
-      if(repeatedOmKeyInfo == null) {
-        repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
-      } else {
-        repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
-      }
+      RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(keyInfo,
+          objectKey, metadataManager);
       metadataManager.getKeyTable().delete(objectKey);
       metadataManager.getDeletedTable().put(objectKey, repeatedOmKeyInfo);
     } catch (OMException ex) {
@@ -1012,13 +1006,8 @@ public class KeyManagerImpl implements KeyManager {
         // will not be garbage collected, so move this part to delete table
         // and throw error
         // Move this part to delete table.
-        RepeatedOmKeyInfo repeatedOmKeyInfo =
-            metadataManager.getDeletedTable().get(partName);
-        if(repeatedOmKeyInfo == null) {
-          repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
-        } else {
-          repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
-        }
+        RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            keyInfo, partName, metadataManager);
         metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
         throw new OMException("No such Multipart upload is with specified " +
             "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
@@ -1047,15 +1036,12 @@ public class KeyManagerImpl implements KeyManager {
           // Add the new entry in to the list of part keys.
           DBStore store = metadataManager.getStore();
           try (BatchOperation batch = store.initBatchOperation()) {
-            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
-                getDeletedTable().get(oldPartKeyInfo.getPartName());
-            if(repeatedOmKeyInfo == null) {
-              repeatedOmKeyInfo = new RepeatedOmKeyInfo(
-                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
-            } else {
-              repeatedOmKeyInfo.addOmKeyInfo(
-                  OmKeyInfo.getFromProtobuf(oldPartKeyInfo.getPartKeyInfo()));
-            }
+            OmKeyInfo partKey = OmKeyInfo.getFromProtobuf(
+                oldPartKeyInfo.getPartKeyInfo());
+
+            RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                partKey, oldPartKeyInfo.getPartName(), metadataManager);
+
             metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
             metadataManager.getDeletedTable().putWithBatch(batch,
                 oldPartKeyInfo.getPartName(),
@@ -1279,13 +1265,8 @@ public class KeyManagerImpl implements KeyManager {
             OmKeyInfo currentKeyPartInfo = OmKeyInfo.getFromProtobuf(
                 partKeyInfo.getPartKeyInfo());
 
-            RepeatedOmKeyInfo repeatedOmKeyInfo = metadataManager.
-                getDeletedTable().get(partKeyInfo.getPartName());
-            if(repeatedOmKeyInfo == null) {
-              repeatedOmKeyInfo = new RepeatedOmKeyInfo(currentKeyPartInfo);
-            } else {
-              repeatedOmKeyInfo.addOmKeyInfo(currentKeyPartInfo);
-            }
+            RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                currentKeyPartInfo, partKeyInfo.getPartName(), metadataManager);
 
             metadataManager.getDeletedTable().putWithBatch(batch,
                 partKeyInfo.getPartName(), repeatedOmKeyInfo);

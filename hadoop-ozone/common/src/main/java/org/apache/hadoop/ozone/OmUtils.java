@@ -46,6 +46,9 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
@@ -498,13 +501,38 @@ public final class OmUtils {
   }
 
   /**
-   * Returns the DB key name of a deleted key in OM metadata store. The
-   * deleted key name is the <keyName>_<deletionTimestamp>.
-   * @param key Original key name
-   * @param timestamp timestamp of deletion
-   * @return Deleted key name
+   * Prepares key info to be moved to deletedTable.
+   * 1. It strips GDPR metadata from key info
+   * 2. Check if an entry exists in deletedTable for given objectKey, if yes,
+   * then updated the instance to add keyInfo to existing list, else create a
+   * new instance of RepeatedOmKeyInfo to be saved to deletedTable.
+   * @param keyInfo args supplied by client
+   * @param objectKey object name
+   * @param metadataManager
+   * @return {@link RepeatedOmKeyInfo}
+   * @throws IOException if I/O Errors when checking for key
    */
-  public static String getDeletedKeyName(String key, long timestamp) {
-    return key + "_" + timestamp;
+  public static RepeatedOmKeyInfo prepareKeyForDelete(
+      OmKeyInfo keyInfo, String objectKey,
+      OMMetadataManager metadataManager) throws IOException{
+    // If this key is in a GDPR enforced bucket, then before moving
+    // KeyInfo to deletedTable, remove the GDPR related metadata from
+    // KeyInfo.
+    if(Boolean.valueOf(keyInfo.getMetadata().get(OzoneConsts.GDPR_FLAG))) {
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_FLAG);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_SECRET);
+    }
+    //Check if key with same keyName exists in deletedTable and then
+    // insert/update accordingly.
+    RepeatedOmKeyInfo repeatedOmKeyInfo =
+        metadataManager.getDeletedTable().get(objectKey);
+    if(repeatedOmKeyInfo == null) {
+      repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
+    } else {
+      repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
+    }
+
+    return repeatedOmKeyInfo;
   }
 }
