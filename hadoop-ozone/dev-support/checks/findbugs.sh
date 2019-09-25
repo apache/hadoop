@@ -16,7 +16,12 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-mvn -B compile spotbugs:spotbugs -f pom.ozone.xml
+if ! type unionBugs >/dev/null 2>&1 || ! type convertXmlToText >/dev/null 2>&1; then
+  mvn -B -fae compile spotbugs:check -f pom.ozone.xml
+  exit $?
+fi
+
+mvn -B -fae compile spotbugs:spotbugs -f pom.ozone.xml
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
 mkdir -p "$REPORT_DIR"
