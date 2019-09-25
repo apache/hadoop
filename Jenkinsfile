@@ -139,7 +139,7 @@ pipeline {
 
                         # don't let these tests cause -1s because we aren't really paying that
                         # much attention to them
-                        YETUS_ARGS+=("--tests-filter=checkstyle")
+                        YETUS_ARGS+=("--tests-filter=checkstyle,test4tests")
 
                         # run in docker mode and specifically point to our
                         # Dockerfile since we don't want to use the auto-pulled version.
