@@ -100,7 +100,7 @@ public abstract class OMVolumeRequest extends OMClientRequest {
     }
 
     List<String> prevVolList = new ArrayList<>();
-    long objectID = 100;
+    long objectID = txID;
     if (volumeList != null) {
       prevVolList.addAll(volumeList.getVolumeNamesList());
       objectID = volumeList.getObjectID();
