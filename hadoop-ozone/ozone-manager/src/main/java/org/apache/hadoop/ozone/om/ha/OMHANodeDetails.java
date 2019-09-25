@@ -44,6 +44,19 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
  */
 public class OMHANodeDetails {
 
+  private static String[] genericConfigKeys = new String[] {
+      OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
+      OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY,
+      OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KEY,
+      OMConfigKeys.OZONE_OM_HTTPS_BIND_HOST_KEY,
+      OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE,
+      OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY,
+      OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
+      OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
+      OMConfigKeys.OZONE_OM_DB_DIRS,
+      OMConfigKeys.OZONE_OM_ADDRESS_KEY,
+  };
+
   public static final Logger LOG =
       LoggerFactory.getLogger(OMHANodeDetails.class);
   private final OMNodeDetails localNodeDetails;
@@ -110,7 +123,7 @@ public class OMHANodeDetails {
         String rpcAddrKey = OmUtils.addKeySuffixes(OZONE_OM_ADDRESS_KEY,
             serviceId, nodeId);
         String rpcAddrStr = OmUtils.getOmRpcAddress(conf, rpcAddrKey);
-        if (rpcAddrStr == null) {
+        if (rpcAddrStr == null || rpcAddrStr.isEmpty()) {
           String msg = "Configuration does not have any value set for " +
               rpcAddrKey + "." + "OM Rpc Address should be set for all node " +
               "IDs for a service ID.";
@@ -281,20 +294,8 @@ public class OMHANodeDetails {
   private static void setOMNodeSpecificConfigs(
       OzoneConfiguration ozoneConfiguration, String omServiceId,
       String omNodeId) {
-    String[] confKeys = new String[] {
-        OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
-        OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY,
-        OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KEY,
-        OMConfigKeys.OZONE_OM_HTTPS_BIND_HOST_KEY,
-        OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE,
-        OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY,
-        OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
-        OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
-        OMConfigKeys.OZONE_OM_DB_DIRS,
-        OMConfigKeys.OZONE_OM_ADDRESS_KEY,
-    };
 
-    for (String confKey : confKeys) {
+    for (String confKey : genericConfigKeys) {
       String confValue = OmUtils.getConfSuffixedWithOMNodeId(
           ozoneConfiguration, confKey, omServiceId, omNodeId);
       if (confValue != null) {
