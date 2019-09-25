@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
+import javax.annotation.Nonnull;
+
 /**
  * Response for CreateBucket request.
  */
@@ -41,7 +43,7 @@ public class OMVolumeCreateResponse extends OMClientResponse {
   private OmVolumeArgs omVolumeArgs;
 
   public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
-      VolumeList volumeList, OMResponse omResponse) {
+      VolumeList volumeList, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
     this.volumeList = volumeList;

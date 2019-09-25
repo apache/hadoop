@@ -27,14 +27,17 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
+
 /**
  * Response for SetBucketProperty request.
  */
 public class OMBucketSetPropertyResponse extends OMClientResponse {
   private OmBucketInfo omBucketInfo;
 
-  public OMBucketSetPropertyResponse(OmBucketInfo omBucketInfo,
-      OMResponse omResponse) {
+  public OMBucketSetPropertyResponse(@Nullable OmBucketInfo omBucketInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omBucketInfo = omBucketInfo;
   }
