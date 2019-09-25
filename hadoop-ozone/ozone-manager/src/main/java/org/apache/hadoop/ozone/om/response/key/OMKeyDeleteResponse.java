@@ -70,7 +70,8 @@ public class OMKeyDeleteResponse extends OMClientResponse {
         // instance in deletedTable.
         RepeatedOmKeyInfo repeatedOmKeyInfo =
             omMetadataManager.getDeletedTable().get(ozoneKey);
-        OmUtils.prepareKeyForDelete(omKeyInfo, ozoneKey, omMetadataManager);
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            omKeyInfo, repeatedOmKeyInfo);
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             ozoneKey, repeatedOmKeyInfo);
       }

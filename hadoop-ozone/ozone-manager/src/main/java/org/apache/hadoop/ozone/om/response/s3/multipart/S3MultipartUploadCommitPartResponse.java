@@ -71,8 +71,11 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       // Means by the time we try to commit part, some one has aborted this
       // multipart upload. So, delete this part information.
       RepeatedOmKeyInfo repeatedOmKeyInfo =
-          OmUtils.prepareKeyForDelete(deletePartKeyInfo,
-              openKey, omMetadataManager);
+          omMetadataManager.getDeletedTable().get(openKey);
+
+      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+          deletePartKeyInfo, repeatedOmKeyInfo);
+
 
       omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
           openKey,
@@ -95,8 +98,11 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
             OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo());
 
         RepeatedOmKeyInfo repeatedOmKeyInfo =
-            OmUtils.prepareKeyForDelete(partKey,
-                oldMultipartKeyInfo.getPartName(), omMetadataManager);
+            omMetadataManager.getDeletedTable()
+                .get(oldMultipartKeyInfo.getPartName());
+
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(partKey,
+            repeatedOmKeyInfo);
 
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             oldMultipartKeyInfo.getPartName(),

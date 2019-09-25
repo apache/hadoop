@@ -507,14 +507,12 @@ public final class OmUtils {
    * then updated the instance to add keyInfo to existing list, else create a
    * new instance of RepeatedOmKeyInfo to be saved to deletedTable.
    * @param keyInfo args supplied by client
-   * @param objectKey object name
-   * @param metadataManager
+   * @param repeatedOmKeyInfo key details from deletedTable
    * @return {@link RepeatedOmKeyInfo}
    * @throws IOException if I/O Errors when checking for key
    */
-  public static RepeatedOmKeyInfo prepareKeyForDelete(
-      OmKeyInfo keyInfo, String objectKey,
-      OMMetadataManager metadataManager) throws IOException{
+  public static RepeatedOmKeyInfo prepareKeyForDelete(OmKeyInfo keyInfo,
+      RepeatedOmKeyInfo repeatedOmKeyInfo) throws IOException{
     // If this key is in a GDPR enforced bucket, then before moving
     // KeyInfo to deletedTable, remove the GDPR related metadata from
     // KeyInfo.
@@ -523,13 +521,12 @@ public final class OmUtils {
       keyInfo.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
       keyInfo.getMetadata().remove(OzoneConsts.GDPR_SECRET);
     }
-    //Check if key with same keyName exists in deletedTable and then
-    // insert/update accordingly.
-    RepeatedOmKeyInfo repeatedOmKeyInfo =
-        metadataManager.getDeletedTable().get(objectKey);
+
     if(repeatedOmKeyInfo == null) {
+      //The key doesn't exist in deletedTable, so create a new instance.
       repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
     } else {
+      //The key exists in deletedTable, so update existing instance.
       repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
     }
 

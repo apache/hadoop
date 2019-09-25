@@ -783,8 +783,10 @@ public class KeyManagerImpl implements KeyManager {
           return;
         }
       }
-      RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(keyInfo,
-          objectKey, metadataManager);
+      RepeatedOmKeyInfo repeatedOmKeyInfo =
+          metadataManager.getDeletedTable().get(objectKey);
+      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(keyInfo,
+          repeatedOmKeyInfo);
       metadataManager.getKeyTable().delete(objectKey);
       metadataManager.getDeletedTable().put(objectKey, repeatedOmKeyInfo);
     } catch (OMException ex) {
@@ -1006,8 +1008,10 @@ public class KeyManagerImpl implements KeyManager {
         // will not be garbage collected, so move this part to delete table
         // and throw error
         // Move this part to delete table.
-        RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
-            keyInfo, partName, metadataManager);
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            metadataManager.getDeletedTable().get(partName);
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            keyInfo, repeatedOmKeyInfo);
         metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
         throw new OMException("No such Multipart upload is with specified " +
             "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
@@ -1039,8 +1043,12 @@ public class KeyManagerImpl implements KeyManager {
             OmKeyInfo partKey = OmKeyInfo.getFromProtobuf(
                 oldPartKeyInfo.getPartKeyInfo());
 
-            RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
-                partKey, oldPartKeyInfo.getPartName(), metadataManager);
+            RepeatedOmKeyInfo repeatedOmKeyInfo =
+                metadataManager.getDeletedTable()
+                    .get(oldPartKeyInfo.getPartName());
+
+            repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                partKey, repeatedOmKeyInfo);
 
             metadataManager.getDeletedTable().put(partName, repeatedOmKeyInfo);
             metadataManager.getDeletedTable().putWithBatch(batch,
@@ -1265,8 +1273,12 @@ public class KeyManagerImpl implements KeyManager {
             OmKeyInfo currentKeyPartInfo = OmKeyInfo.getFromProtobuf(
                 partKeyInfo.getPartKeyInfo());
 
-            RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
-                currentKeyPartInfo, partKeyInfo.getPartName(), metadataManager);
+            RepeatedOmKeyInfo repeatedOmKeyInfo =
+                metadataManager.getDeletedTable()
+                    .get(partKeyInfo.getPartName());
+
+            repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+                currentKeyPartInfo, repeatedOmKeyInfo);
 
             metadataManager.getDeletedTable().putWithBatch(batch,
                 partKeyInfo.getPartName(), repeatedOmKeyInfo);
