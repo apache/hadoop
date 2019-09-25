@@ -29,6 +29,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for DeleteKey request.
@@ -36,7 +38,8 @@ import java.io.IOException;
 public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
 
-  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, OMResponse omResponse) {
+
+  public OMKeyDeleteResponse(@Nullable OmKeyInfo omKeyInfo, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
   }
@@ -83,7 +86,7 @@ public class OMKeyDeleteResponse extends OMClientResponse {
    * @param keyInfo
    * @return if empty true, else false.
    */
-  private boolean isKeyEmpty(OmKeyInfo keyInfo) {
+  private boolean isKeyEmpty(@Nullable OmKeyInfo keyInfo) {
     for (OmKeyLocationInfoGroup keyLocationList : keyInfo
         .getKeyLocationVersions()) {
       if (keyLocationList.getLocationList().size() != 0) {

@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 
 /**
@@ -41,7 +42,7 @@ public class OMDirectoryCreateResponse extends OMClientResponse {
   private OmKeyInfo dirKeyInfo;
 
   public OMDirectoryCreateResponse(@Nullable OmKeyInfo dirKeyInfo,
-      OMResponse omResponse) {
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.dirKeyInfo = dirKeyInfo;
   }
