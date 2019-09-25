@@ -16,6 +16,16 @@
 
 REPORT_DIR=${REPORT_DIR:-$PWD}
 
+_realpath() {
+  if realpath "$@" > /dev/null; then
+    realpath "$@"
+  else
+    local relative_to
+    relative_to=$(realpath "${1/--relative-to=/}") || return 1
+    realpath "$2" | sed -e "s@${relative_to}/@@"
+  fi
+}
+
 ## generate summary txt file
 find "." -name 'TEST*.xml' -print0 \
     | xargs -n1 -0 "grep" -l -E "<failure|<error" \
@@ -41,7 +51,7 @@ while IFS= read -r -d '' dir; do
       DIR_OF_TESTFILE=$(dirname "$file")
       NAME_OF_TESTFILE=$(basename "$file")
       NAME_OF_TEST="${NAME_OF_TESTFILE%.*}"
-      DESTDIRNAME=$(realpath --relative-to="$PWD" "$DIR_OF_TESTFILE/../..")
+      DESTDIRNAME=$(_realpath --relative-to="$PWD" "$DIR_OF_TESTFILE/../..") || continue
       mkdir -p "$REPORT_DIR/$DESTDIRNAME"
       #shellcheck disable=SC2086
       cp -r "$DIR_OF_TESTFILE"/*$NAME_OF_TEST* "$REPORT_DIR/$DESTDIRNAME/"
@@ -55,8 +65,8 @@ for TEST_RESULT_FILE in $(find "$REPORT_DIR" -name "*.txt" | grep -v output); do
     FAILURES=$(grep FAILURE "$TEST_RESULT_FILE" | grep "Tests run" | awk '{print $18}' | sort | uniq)
 
     for FAILURE in $FAILURES; do
-        TEST_RESULT_LOCATION="$(realpath --relative-to="$REPORT_DIR" "$TEST_RESULT_FILE")"
-        TEST_OUTPUT_LOCATION="${TEST_RESULT_LOCATION//.txt/-output.txt/}"
+        TEST_RESULT_LOCATION="$(_realpath --relative-to="$REPORT_DIR" "$TEST_RESULT_FILE")"
+        TEST_OUTPUT_LOCATION="${TEST_RESULT_LOCATION//.txt/-output.txt}"
         printf " * [%s](%s) ([output](%s))\n" "$FAILURE" "$TEST_RESULT_LOCATION" "$TEST_OUTPUT_LOCATION" >> "$SUMMARY_FILE"
     done
 done
