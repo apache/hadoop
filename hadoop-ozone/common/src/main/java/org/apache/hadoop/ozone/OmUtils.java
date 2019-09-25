@@ -46,6 +46,9 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
@@ -498,13 +501,36 @@ public final class OmUtils {
   }
 
   /**
-   * Returns the DB key name of a deleted key in OM metadata store. The
-   * deleted key name is the <keyName>_<deletionTimestamp>.
-   * @param key Original key name
-   * @param timestamp timestamp of deletion
-   * @return Deleted key name
+   * Prepares key info to be moved to deletedTable.
+   * 1. It strips GDPR metadata from key info
+   * 2. For given object key, if the repeatedOmKeyInfo instance is null, it
+   * implies that no entry for the object key exists in deletedTable so we
+   * create a new instance to include this key, else we update the existing
+   * repeatedOmKeyInfo instance.
+   * @param keyInfo args supplied by client
+   * @param repeatedOmKeyInfo key details from deletedTable
+   * @return {@link RepeatedOmKeyInfo}
+   * @throws IOException if I/O Errors when checking for key
    */
-  public static String getDeletedKeyName(String key, long timestamp) {
-    return key + "_" + timestamp;
+  public static RepeatedOmKeyInfo prepareKeyForDelete(OmKeyInfo keyInfo,
+      RepeatedOmKeyInfo repeatedOmKeyInfo) throws IOException{
+    // If this key is in a GDPR enforced bucket, then before moving
+    // KeyInfo to deletedTable, remove the GDPR related metadata from
+    // KeyInfo.
+    if(Boolean.valueOf(keyInfo.getMetadata().get(OzoneConsts.GDPR_FLAG))) {
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_FLAG);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_SECRET);
+    }
+
+    if(repeatedOmKeyInfo == null) {
+      //The key doesn't exist in deletedTable, so create a new instance.
+      repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
+    } else {
+      //The key exists in deletedTable, so update existing instance.
+      repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
+    }
+
+    return repeatedOmKeyInfo;
   }
 }
