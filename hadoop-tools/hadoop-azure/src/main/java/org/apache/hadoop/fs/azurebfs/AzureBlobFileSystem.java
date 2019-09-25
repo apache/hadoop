@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -75,6 +76,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -1127,6 +1130,22 @@ public class AzureBlobFileSystem extends FileSystem {
             "User is not authorized for action " + action.toString()
             + " on paths: " + Arrays.toString(paths));
       }
+    }
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_APPEND:
+      return true;
+    case CommonPathCapabilities.FS_ACLS:
+      return getIsNamespaceEnabled();
+    default:
+      return super.hasPathCapability(p, capability);
     }
   }
 }

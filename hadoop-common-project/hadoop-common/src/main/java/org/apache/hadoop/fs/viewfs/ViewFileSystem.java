@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
@@ -43,6 +44,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -1024,6 +1026,36 @@ public class ViewFileSystem extends FileSystem {
       throw new NotInMountpointException(path, "getLinkTarget");
     }
     return res.targetFileSystem.getLinkTarget(res.remainingPath);
+  }
+
+  /**
+   * Reject the concat operation; forward the rest to the viewed FS.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return the capability
+   * @throws IOException if there is no resolved FS, or it raises an IOE.
+   */
+  @Override
+  public boolean hasPathCapability(Path path, String capability)
+      throws IOException {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
+    case CommonPathCapabilities.FS_CONCAT:
+      // concat is not supported, as it may be invoked across filesystems.
+      return false;
+    default:
+      // no break
+    }
+    // otherwise, check capabilities of mounted FS.
+    try {
+      InodeTree.ResolveResult<FileSystem> res
+          = fsState.resolve(getUriPath(p), true);
+      return res.targetFileSystem.hasPathCapability(res.remainingPath,
+          capability);
+    } catch (FileNotFoundException e) {
+      // no mount point, nothing will work.
+      throw new NotInMountpointException(p, "hasPathCapability");
+    }
   }
 
   /**
