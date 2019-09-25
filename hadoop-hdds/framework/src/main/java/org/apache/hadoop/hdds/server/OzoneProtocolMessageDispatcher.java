@@ -22,7 +22,6 @@ import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 
 import com.google.protobuf.ProtocolMessageEnum;
-import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import io.opentracing.Scope;
 import org.slf4j.Logger;
