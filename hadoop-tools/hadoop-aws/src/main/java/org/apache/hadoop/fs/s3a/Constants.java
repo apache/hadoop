@@ -353,8 +353,8 @@ public final class Constants {
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
    * name will be associated with this signer class in the S3 SDK. e.g. Single
-   * CustomSigner -> 'CustomSigner:org.apache...CustomSignerClass Multiple
-   * CustomSigners -> 'CSigner1:CustomSignerClass1,CSigner2:CustomerSignerClass2
+   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass Multiple
+   * CustomSigners {@literal ->} 'CSigner1:CustomSignerClass1,CSigner2:CustomerSignerClass2
    */
   public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
 
