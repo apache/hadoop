@@ -57,7 +57,7 @@ public class PipelineActionHandler
           pipelineID = PipelineID.
               getFromProtobuf(action.getClosePipeline().getPipelineID());
           Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
-          LOG.error("Received pipeline action {} for {} from datanode {}. " +
+          LOG.info("Received pipeline action {} for {} from datanode {}. " +
                   "Reason : {}", action.getAction(), pipeline,
               report.getDatanodeDetails(),
               action.getClosePipeline().getDetailedReason());

@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -52,8 +53,8 @@ class PipelineStateMap {
   PipelineStateMap() {
 
     // TODO: Use TreeMap for range operations?
-    pipelineMap = new HashMap<>();
-    pipeline2container = new HashMap<>();
+    pipelineMap = new ConcurrentHashMap<>();
+    pipeline2container = new ConcurrentHashMap<>();
     query2OpenPipelines = new HashMap<>();
     initializeQueryMap();
 

@@ -36,6 +36,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT;
+
 /**
  * Interface used for MiniOzoneClusters.
  */
@@ -269,6 +271,8 @@ public interface MiniOzoneCluster {
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
+      // MiniOzoneCluster doesn't have pipeline engagement limit.
+      conf.setInt(OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT, 0);
       setClusterId(UUID.randomUUID().toString());
     }
 

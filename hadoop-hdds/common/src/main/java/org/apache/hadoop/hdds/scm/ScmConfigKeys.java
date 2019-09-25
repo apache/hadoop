@@ -317,7 +317,8 @@ public final class ScmConfigKeys {
   // the max number of pipelines can a single datanode be engaged in.
   public static final String OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT =
           "ozone.scm.datanode.max.pipeline.engagement";
-  public static final int OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT_DEFAULT = 5;
+  // Setting to zero by default means this limit doesn't take effect.
+  public static final int OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT_DEFAULT = 0;
 
   public static final String
       OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY =

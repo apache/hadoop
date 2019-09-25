@@ -71,6 +71,10 @@ public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
       UUID dnId = details.getUuid();
       dn2ObjectMap.computeIfAbsent(dnId, k -> ConcurrentHashMap.newKeySet())
           .add(pipeline.getId());
+      dn2ObjectMap.computeIfPresent(dnId, (k, v) -> {
+        v.add(pipeline.getId());
+        return v;
+      });
     }
   }
 

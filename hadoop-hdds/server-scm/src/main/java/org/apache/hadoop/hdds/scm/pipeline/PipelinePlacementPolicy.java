@@ -79,8 +79,20 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
    * @return true if we have enough space.
    */
   @VisibleForTesting
-  boolean meetCriteria(DatanodeDetails datanodeDetails, long heavyNodeLimit) {
-    return (nodeManager.getPipelinesCount(datanodeDetails) <= heavyNodeLimit);
+  boolean meetCriteria(DatanodeDetails datanodeDetails) {
+    if (heavyNodeCriteria == 0) {
+      // no limit applied.
+      return true;
+    }
+    boolean meet = (nodeManager.getPipelinesCount(datanodeDetails)
+        < heavyNodeCriteria);
+    if (!meet) {
+      LOG.info("Pipeline Placement: can't place more pipeline on heavy " +
+          "datanode： " + datanodeDetails.getUuid().toString() + " Heaviness: " +
+          nodeManager.getPipelinesCount(datanodeDetails) + " limit: " +
+          heavyNodeCriteria);
+    }
+    return meet;
   }
 
   /**
@@ -102,18 +114,19 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     if (excludedNodes != null) {
       healthyNodes.removeAll(excludedNodes);
     }
+    int initialHealthyNodesCount = healthyNodes.size();
     String msg;
-    if (healthyNodes.size() == 0) {
+    if (initialHealthyNodesCount == 0) {
       msg = "No healthy node found to allocate pipeline.";
       LOG.error(msg);
       throw new SCMException(msg, SCMException.ResultCodes
           .FAILED_TO_FIND_HEALTHY_NODES);
     }
 
-    if (healthyNodes.size() < nodesRequired) {
+    if (initialHealthyNodesCount < nodesRequired) {
       msg = String.format("Not enough healthy nodes to allocate pipeline. %d "
               + " datanodes required. Found %d",
-          nodesRequired, healthyNodes.size());
+          nodesRequired, initialHealthyNodesCount);
       LOG.error(msg);
       throw new SCMException(msg,
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
@@ -122,13 +135,15 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     // filter nodes that meet the size and pipeline engagement criteria.
     // Pipeline placement doesn't take node space left into account.
     List<DatanodeDetails> healthyList = healthyNodes.stream().filter(d ->
-        meetCriteria(d, heavyNodeCriteria)).collect(Collectors.toList());
+        meetCriteria(d)).collect(Collectors.toList());
 
     if (healthyList.size() < nodesRequired) {
       msg = String.format("Unable to find enough nodes that meet " +
               "the criteria that cannot engage in more than %d pipelines." +
-              " Nodes required: %d Found: %d",
-          heavyNodeCriteria, nodesRequired, healthyList.size());
+              " Nodes required: %d Found: %d, healthy nodes count in" +
+              "NodeManager: %d.",
+          heavyNodeCriteria, nodesRequired, healthyList.size(),
+          initialHealthyNodesCount);
       LOG.error(msg);
       throw new SCMException(msg,
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
@@ -155,12 +170,11 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     List<DatanodeDetails> healthyNodes =
         filterViableNodes(excludedNodes, nodesRequired);
     
-    // Randomly picks nodes when all nodes are equal.
+    // Randomly picks nodes when all nodes are equal or factor is ONE.
     // This happens when network topology is absent or
     // all nodes are on the same rack.
-    if (checkAllNodesAreEqual(nodeManager.getClusterNetworkTopologyMap())) {
-      LOG.info("All nodes are considered equal. Now randomly pick nodes. " +
-          "Required nodes: {}", nodesRequired);
+    if (checkAllNodesAreEqual(nodeManager.getClusterNetworkTopologyMap())
+        || nodesRequired == HddsProtos.ReplicationFactor.ONE.getNumber()) {
       return super.getResultSet(nodesRequired, healthyNodes);
     } else {
       // Since topology and rack awareness are available, picks nodes
@@ -188,8 +202,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     // First choose an anchor nodes randomly
     DatanodeDetails anchor = chooseNode(healthyNodes);
     if (anchor == null) {
-      LOG.error("Unable to find the first healthy nodes that " +
-              "meet the criteria. Required nodes: {}, Found nodes: {}",
+      LOG.error("Pipeline Placement: Unable to find the first healthy nodes " +
+              "that meet the criteria. Required nodes: {}, Found nodes: {}",
           nodesRequired, results.size());
       throw new SCMException("Unable to find required number of nodes.",
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
@@ -204,8 +218,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
         healthyNodes, exclude,
         nodeManager.getClusterNetworkTopologyMap(), anchor);
     if (nodeOnDifferentRack == null) {
-      LOG.error("Unable to find nodes on different racks that " +
-              "meet the criteria. Required nodes: {}, Found nodes: {}",
+      LOG.error("Pipeline Placement: Unable to find nodes on different racks " +
+              " that meet the criteria. Required nodes: {}, Found nodes: {}",
           nodesRequired, results.size());
       throw new SCMException("Unable to find required number of nodes.",
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
@@ -228,9 +242,9 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     }
 
     if (results.size() < nodesRequired) {
-      LOG.error("Unable to find the required number of healthy nodes that " +
-              "meet the criteria. Required nodes: {}, Found nodes: {}",
-          nodesRequired, results.size());
+      LOG.error("Pipeline Placement: Unable to find the required number of " +
+              "healthy nodes that  meet the criteria. Required nodes: {}, " +
+              "Found nodes: {}", nodesRequired, results.size());
       throw new SCMException("Unable to find required number of nodes.",
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
     }
