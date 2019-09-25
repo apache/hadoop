@@ -44,7 +44,13 @@ The following configuration parameters can be used to modify the disk checks:
 
 ###External Health Script
 
-Users may specify their own health checker script that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script exits with a non-zero exit code, times out or results in an exception being thrown, the node is marked as unhealthy. Please note that if the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy. Please note that speifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
+Users may specify their own health checker script that will be invoked by the health checker service. Users may specify a timeout as well as options to be passed to the script. If the script times out, results in an exception being thrown or outputs a line which begins with the string ERROR, the node is marked as unhealthy. Please note that:
+
+  * Exit code other than 0 is **not** considered to be a failure because it might have been caused by a syntax error. Therefore the node will **not** be marked as unhealthy.
+
+  * If the script cannot be executed due to permissions or an incorrect path, etc, then it counts as a failure and the node will be reported as unhealthy.
+
+  * Specifying a health check script is not mandatory. If no script is specified, only the disk checker status will be used to determine the health of the node.
 
 The following configuration parameters can be used to set the health script:
 
