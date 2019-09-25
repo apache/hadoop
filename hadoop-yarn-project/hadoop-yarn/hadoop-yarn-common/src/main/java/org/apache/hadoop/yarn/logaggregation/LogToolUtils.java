@@ -44,6 +44,26 @@ public final class LogToolUtils {
       "Container: %s on %s";
 
   /**
+   * Formats the header of an aggregated log file.
+   */
+  private static byte[] formatContainerLogHeader(String containerId,
+      String nodeId, ContainerLogAggregationType logType, String fileName,
+      String lastModifiedTime, long fileLength) {
+    StringBuilder sb = new StringBuilder();
+    String containerStr = String.format(
+        LogToolUtils.CONTAINER_ON_NODE_PATTERN,
+        containerId, nodeId);
+    sb.append(containerStr + "\n")
+        .append("LogAggregationType: " + logType + "\n")
+        .append(StringUtils.repeat("=", containerStr.length()) + "\n")
+        .append("LogType:" + fileName + "\n")
+        .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
+        .append("LogLength:" + fileLength + "\n")
+        .append("LogContents:\n");
+    return sb.toString().getBytes(Charset.forName("UTF-8"));
+  }
+
+  /**
    * Output container log.
    * @param containerId the containerId
    * @param nodeId the nodeId
@@ -84,22 +104,10 @@ public final class LogToolUtils {
         : (int) pendingRead;
     int len = fis.read(buf, 0, toRead);
     boolean keepGoing = (len != -1 && curRead < totalBytesToRead);
-    if (keepGoing) {
-      StringBuilder sb = new StringBuilder();
-      String containerStr = String.format(
-          LogToolUtils.CONTAINER_ON_NODE_PATTERN,
-          containerId, nodeId);
-      sb.append(containerStr + "\n")
-          .append("LogAggregationType: " + logType + "\n")
-          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
-          .append("LogType:" + fileName + "\n")
-          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
-          .append("LogLength:" + Long.toString(fileLength) + "\n")
-          .append("LogContents:\n");
-      byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
-      os.write(b, 0, b.length);
-    }
+
+    byte[] b = formatContainerLogHeader(containerId, nodeId, logType, fileName,
+        lastModifiedTime, fileLength);
+    os.write(b, 0, b.length);
     while (keepGoing) {
       os.write(buf, 0, len);
       curRead += len;
@@ -132,22 +140,12 @@ public final class LogToolUtils {
       }
     }
 
+    // output log summary
+    byte[] b = formatContainerLogHeader(containerId, nodeId, logType, fileName,
+        lastModifiedTime, fileLength);
+    os.write(b, 0, b.length);
+
     if (totalBytesToRead > 0) {
-      // output log summary
-      StringBuilder sb = new StringBuilder();
-      String containerStr = String.format(
-          LogToolUtils.CONTAINER_ON_NODE_PATTERN,
-          containerId, nodeId);
-      sb.append(containerStr + "\n")
-          .append("LogAggregationType: " + logType + "\n")
-          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
-          .append("LogType:" + fileName + "\n")
-          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
-          .append("LogLength:" + Long.toString(fileLength) + "\n")
-          .append("LogContents:\n");
-      byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
-      os.write(b, 0, b.length);
       // output log content
       FileChannel inputChannel = fis.getChannel();
       WritableByteChannel outputChannel = Channels.newChannel(os);
