@@ -29,9 +29,9 @@ REPORT_FILE="$REPORT_DIR/summary.txt"
 
 touch "$REPORT_FILE"
 
-find hadoop-hdds hadoop-ozone -name spotbugsXml.xml -print0 | xargs -0 unionBugs -output ${REPORT_DIR}/summary.xml
-convertXmlToText ${REPORT_DIR}/summary.xml | tee -a "${REPORT_FILE}"
-convertXmlToText -html:fancy-hist.xsl ${REPORT_DIR}/summary.xml ${REPORT_DIR}/summary.html
+find hadoop-hdds hadoop-ozone -name spotbugsXml.xml -print0 | xargs -0 unionBugs -output "${REPORT_DIR}"/summary.xml
+convertXmlToText "${REPORT_DIR}"/summary.xml | tee -a "${REPORT_FILE}"
+convertXmlToText -html:fancy-hist.xsl "${REPORT_DIR}"/summary.xml "${REPORT_DIR}"/summary.html
 
 wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
 
