@@ -503,9 +503,10 @@ public final class OmUtils {
   /**
    * Prepares key info to be moved to deletedTable.
    * 1. It strips GDPR metadata from key info
-   * 2. Check if an entry exists in deletedTable for given objectKey, if yes,
-   * then updated the instance to add keyInfo to existing list, else create a
-   * new instance of RepeatedOmKeyInfo to be saved to deletedTable.
+   * 2. For given object key, if the repeatedOmKeyInfo instance is null, it
+   * implies that no entry for the object key exists in deletedTable so we
+   * create a new instance to include this key, else we update the existing
+   * repeatedOmKeyInfo instance.
    * @param keyInfo args supplied by client
    * @param repeatedOmKeyInfo key details from deletedTable
    * @return {@link RepeatedOmKeyInfo}
