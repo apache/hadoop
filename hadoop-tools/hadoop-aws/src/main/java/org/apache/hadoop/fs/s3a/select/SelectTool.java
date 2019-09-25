@@ -234,7 +234,7 @@ public class SelectTool extends S3GuardTool {
     }
     setFilesystem((S3AFileSystem) fs);
 
-    if (!getFilesystem().hasCapability(S3_SELECT_CAPABILITY)) {
+    if (!getFilesystem().hasPathCapability(path, S3_SELECT_CAPABILITY)) {
       // capability disabled
       throw new ExitUtil.ExitException(EXIT_SERVICE_UNAVAILABLE,
           SELECT_IS_DISABLED + " for " + file);

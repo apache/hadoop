@@ -729,4 +729,11 @@ public class FilterFileSystem extends FileSystem {
     return fs.openFileWithOptions(pathHandle, mandatoryKeys, options,
         bufferSize);
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return fs.hasPathCapability(path, capability);
+  }
+
 }

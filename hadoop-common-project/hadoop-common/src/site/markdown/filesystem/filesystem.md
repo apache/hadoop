@@ -526,7 +526,7 @@ on the filesystem.
    `getFileStatus(P).getBlockSize()`.
 1. By inference, it MUST be > 0 for any file of length > 0.
 
-## State Changing Operations
+## <a name="state_changing_operations"></a> State Changing Operations
 
 ### `boolean mkdirs(Path p, FsPermission permission)`
 
@@ -1479,7 +1479,7 @@ public interface StreamCapabilities {
 
 ### `boolean hasCapability(capability)`
 
-Return true if the `OutputStream`, `InputStream`, or other FileSystem class
+Return true iff the `OutputStream`, `InputStream`, or other FileSystem class
 has the desired capability.
 
 The caller can query the capabilities of a stream using a string value.
@@ -1492,3 +1492,4 @@ hsync        | HSYNC      | Syncable         | Flush out the data in client's us
 in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
 dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
 in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
+
