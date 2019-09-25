@@ -20,7 +20,8 @@ _realpath() {
   if realpath "$@" > /dev/null; then
     realpath "$@"
   else
-    local relative_to=$(realpath "${1/--relative-to=/}")
+    local relative_to
+    relative_to=$(realpath "${1/--relative-to=/}") || return 1
     realpath "$2" | sed -e "s@${relative_to}/@@"
   fi
 }
@@ -50,7 +51,7 @@ while IFS= read -r -d '' dir; do
       DIR_OF_TESTFILE=$(dirname "$file")
       NAME_OF_TESTFILE=$(basename "$file")
       NAME_OF_TEST="${NAME_OF_TESTFILE%.*}"
-      DESTDIRNAME=$(_realpath --relative-to="$PWD" "$DIR_OF_TESTFILE/../..")
+      DESTDIRNAME=$(_realpath --relative-to="$PWD" "$DIR_OF_TESTFILE/../..") || continue
       mkdir -p "$REPORT_DIR/$DESTDIRNAME"
       #shellcheck disable=SC2086
       cp -r "$DIR_OF_TESTFILE"/*$NAME_OF_TEST* "$REPORT_DIR/$DESTDIRNAME/"
