@@ -29,6 +29,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
+import javax.annotation.Nonnull;
+
 /**
  * Response for CreateVolume request.
  */
@@ -38,7 +40,7 @@ public class OMVolumeDeleteResponse extends OMClientResponse {
   private VolumeList updatedVolumeList;
 
   public OMVolumeDeleteResponse(String volume, String owner,
-      VolumeList updatedVolumeList, OMResponse omResponse) {
+      VolumeList updatedVolumeList, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.volume = volume;
     this.owner = owner;

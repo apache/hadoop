@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
 import java.util.List;
+import javax.annotation.Nonnull;
 
 /**
  * Response for {@link OMKeyPurgeRequest} request.
@@ -35,7 +36,7 @@ public class OMKeyPurgeResponse extends OMClientResponse {
 
   private List<String> purgeKeyList;
 
-  public OMKeyPurgeResponse(List<String> keyList, OMResponse omResponse) {
+  public OMKeyPurgeResponse(List<String> keyList, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.purgeKeyList = keyList;
   }
