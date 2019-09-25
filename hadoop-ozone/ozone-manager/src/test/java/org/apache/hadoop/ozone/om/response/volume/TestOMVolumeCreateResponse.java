@@ -69,6 +69,7 @@ public class TestOMVolumeCreateResponse {
     String volumeName = UUID.randomUUID().toString();
     String userName = "user1";
     VolumeList volumeList = VolumeList.newBuilder()
+        .setObjectID(1).setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
