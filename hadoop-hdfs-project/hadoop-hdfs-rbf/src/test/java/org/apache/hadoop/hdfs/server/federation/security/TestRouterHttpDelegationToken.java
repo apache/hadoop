@@ -144,6 +144,7 @@ public class TestRouterHttpDelegationToken {
       router.stop();
       router.close();
     }
+    SecurityConfUtil.destroy();
   }
 
   @Test
