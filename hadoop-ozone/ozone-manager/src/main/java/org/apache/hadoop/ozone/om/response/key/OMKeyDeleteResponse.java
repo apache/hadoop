@@ -39,7 +39,8 @@ public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
 
 
-  public OMKeyDeleteResponse(@Nullable OmKeyInfo omKeyInfo, @Nonnull OMResponse omResponse) {
+  public OMKeyDeleteResponse(@Nullable OmKeyInfo omKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
   }
