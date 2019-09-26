@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,8 +48,6 @@ import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
-import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -64,11 +61,6 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.BUCKET;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.outputPath;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.outputPathUri;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.pathIsDirectory;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyShort;
-import static org.mockito.Mockito.when;
 
 /**
  * Scale test of the directory committer: if there are many, many files
@@ -86,7 +78,7 @@ public class TestDirectoryCommitterScale
 
   public static final int TASKS = 500;
 
-  public static final int FILES_PER_TASK = 15;
+  public static final int FILES_PER_TASK = 10;
 
   public static final int TOTAL_COMMIT_COUNT = FILES_PER_TASK * TASKS;
 
@@ -217,11 +209,14 @@ public class TestDirectoryCommitterScale
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     FileSystem mockS3 = getMockS3A();
     pathIsDirectory(mockS3, outputPath);
-    AbstractS3ACommitter.ActiveCommit activeCommit
-        = committer.listPendingUploadsToCommit(getJob());
-    Assertions.assertThat(activeCommit.getSourceFiles())
-        .describedAs("Source files of %s", activeCommit)
-        .hasSize(TASKS);
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, "listing pending uploads")) {
+      AbstractS3ACommitter.ActiveCommit activeCommit
+          = committer.listPendingUploadsToCommit(getJob());
+      Assertions.assertThat(activeCommit.getSourceFiles())
+          .describedAs("Source files of %s", activeCommit)
+          .hasSize(TASKS);
+    }
   }
 
   @Test
@@ -235,12 +230,14 @@ public class TestDirectoryCommitterScale
     S3AFileSystem mockS3 = getMockS3A();
     pathIsDirectory(mockS3, outputPath);
 
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, "listing pending uploads")) {
+      committer.commitJob(getJob());
 
-    committer.commitJob(getJob());
-
-    Assertions.assertThat(results.getCommits())
-        .describedAs("commit count")
-        .hasSize(TOTAL_COMMIT_COUNT);
+      Assertions.assertThat(results.getCommits())
+          .describedAs("commit count")
+          .hasSize(TOTAL_COMMIT_COUNT);
+    }
 
   }
 
