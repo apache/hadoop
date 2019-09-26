@@ -539,27 +539,22 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     Set<String> commits = results.getCommits()
         .stream()
-        .map(commit -> "s3a://" + commit.getBucketName() + "/" + commit.getKey())
+        .map(commit ->
+            "s3a://" + commit.getBucketName() + "/" + commit.getKey())
         .collect(Collectors.toSet());
 
     Set<String> deletes = results.getDeletes()
         .stream()
-        .map(delete -> "s3a://" + delete.getBucketName() + "/" + delete.getKey())
+        .map(delete ->
+            "s3a://" + delete.getBucketName() + "/" + delete.getKey())
         .collect(Collectors.toSet());
 
-//    Assertions.assertThat(commits)
-//        .describedAs("Files committed in %s", results)
-//        .hasSize(5);
-//    Assertions.assertThat(deletes)
-//        .describedAs("Files deleted in %s", results)
-//        .hasSize(5);
-
     Assertions.assertThat(commits)
-        .describedAs("Committed objects compared to deleted paths", results)
+        .describedAs("Committed objects compared to deleted paths %s", results)
         .containsExactlyInAnyOrderElementsOf(deletes);
 
     Assertions.assertThat(results.getAborts())
-        .describedAs("abortedsupload count in ", results)
+        .describedAs("aborted count in %s", results)
         .hasSize(7);
     Set<String> uploadIds = getCommittedIds(results.getCommits());
     uploadIds.addAll(getAbortedIds(results.getAborts()));

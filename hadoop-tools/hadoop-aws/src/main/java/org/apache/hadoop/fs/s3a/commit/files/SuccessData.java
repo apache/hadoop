@@ -54,7 +54,8 @@ import org.apache.hadoop.util.JsonSerialization;
  * changes in the output format.
  *
  * Note: to deal with scale issues, the S3A committers do not include any
- * more than the number of objects listed in {@link #COMMIT_LIMIT}.
+ * more than the number of objects listed in
+ * {@link org.apache.hadoop.fs.s3a.commit.CommitConstants#SUCCESS_MARKER_FILE_LIMIT}.
  * This is intended to suffice for basic integration tests.
  * Larger tests should examine the generated files themselves.
  */
@@ -75,11 +76,6 @@ public class SuccessData extends PersistentCommitData {
    */
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
-
-  /**
-   * The limit to the number of committed objects tracked.
-   */
-  public static final int COMMIT_LIMIT = 100;
 
   /**
    * Name of file; includes version marker.

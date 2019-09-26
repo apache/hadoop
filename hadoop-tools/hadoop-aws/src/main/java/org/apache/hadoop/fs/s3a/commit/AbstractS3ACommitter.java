@@ -71,9 +71,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
  *
  * The original implementation loaded all .pendingset files
  * before attempting any commit/abort operations.
- * While straightforward and guaranteeing that no changes were made to the destination
- * until all files had successfully been loaded -it didn't scale; the
- * list grew until it exceeded heap size.
+ * While straightforward and guaranteeing that no changes were made to the
+ * destination until all files had successfully been loaded -it didn't scale;
+ * the list grew until it exceeded heap size.
  *
  * The second iteration builds up an {@link ActiveCommit} class with the
  * list of .pendingset files to load and then commit; that can be done
@@ -625,7 +625,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Abort all pending uploads to the destination directory during
    * job cleanup operations.
    * Note: this instantiates the thread pool if required -so
-   * {@link #destroyThreadPools()} must be called after this.
+   * {@link #destroyThreadPool()} must be called after this.
    * @param suppressExceptions should exceptions be suppressed
    * @throws IOException IO problem
    */
@@ -737,7 +737,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         "Cleanup job %s", jobIdString(context))) {
       abortPendingUploadsInCleanup(suppressExceptions);
     } finally {
-      destroyThreadPools();
+      destroyThreadPool();
       cleanupStagingDirs();
     }
   }
@@ -839,7 +839,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Destroy any thread pools; wait for that to finish,
    * but don't overreact if it doesn't finish in time.
    */
-  protected final synchronized void destroyThreadPools() {
+  protected synchronized void destroyThreadPool() {
     if (threadPool != null) {
       LOG.debug("Destroying thread pool");
       HadoopExecutors.shutdown(threadPool, LOG,
@@ -853,7 +853,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * within the commit of all uploads of a single task.
    * This is currently null; it is here to allow the Tasks class to
    * provide the logic for execute/revert.
-   * Why not use the existing thread pool? Too much fear of deadlocking.
+   * Why not use the existing thread pool? Too much fear of deadlocking,
+   * and tasks are being committed in parallel anyway.
    * @return null. always.
    */
   protected final synchronized ExecutorService singleCommitThreadPool() {
@@ -960,6 +961,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    *     the _SUCCESS file are limited to a small amount -enough
    *     for testing only.
    *   </li>
+   * </ol>
    */
   public static class ActiveCommit {
 
@@ -967,28 +969,28 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         = new ActiveCommit(null, new ArrayList<>());
 
     /** All pendingset files to iterate through. */
-    final List<Path> sourceFiles;
+    private final List<Path> sourceFiles;
 
     /**
      * Filesystem for the source files.
      */
-    final FileSystem sourceFS;
+    private final FileSystem sourceFS;
 
     /**
      * List of committed objects; only built up until the commit limit is
      * reached.
      */
-    final List<String> committedObjects = new ArrayList<>();
+    private final List<String> committedObjects = new ArrayList<>();
 
     /**
      * The total number of committed objects.
      */
-    int committedObjectCount;
+    private int committedObjectCount;
 
     /**
      * Total number of bytes committed.
      */
-    long committedBytes;
+    private long committedBytes;
 
     /**
      * Construct from a source FS and list of files.
@@ -1042,7 +1044,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
      * @param size size in bytes.
      */
     public synchronized void uploadCommitted(String key, long size) {
-      if (committedObjects.size() < SuccessData.COMMIT_LIMIT) {
+      if (committedObjects.size() < SUCCESS_MARKER_FILE_LIMIT) {
         committedObjects.add(
             key.startsWith("/") ? key : ("/" + key));
       }

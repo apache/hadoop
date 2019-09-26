@@ -496,7 +496,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
   protected ActiveCommit listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
     try {
-      Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
+      Path wrappedJobAttemptPath = getJobAttemptPath(context);
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
           context.getConfiguration());
       return ActiveCommit.fromStatusList(attemptFS,
@@ -648,7 +648,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       getCommitOperations().taskCompleted(false);
       throw e;
     } finally {
-      destroyThreadPools();
+      destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -783,7 +783,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
           getRole(), context.getTaskAttemptID(), e);
       throw e;
     } finally {
-      destroyThreadPools();
+      destroyThreadPool();
     }
   }
 

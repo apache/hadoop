@@ -326,12 +326,7 @@ public class StagingTestBase {
 
     @Before
     public void setupJob() throws Exception {
-      this.jobConf = new JobConf();
-      jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
-          UUID.randomUUID().toString());
-      jobConf.setBoolean(
-          CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
-          false);
+      this.jobConf = createJobConf();
 
       this.job = new JobContextImpl(jobConf, JOB_ID);
       this.results = new StagingTestBase.ClientResults();
@@ -342,6 +337,16 @@ public class StagingTestBase {
       this.wrapperFS = lookupWrapperFS(jobConf);
       // and bind the FS
       wrapperFS.setAmazonS3Client(mockClient);
+    }
+
+    protected JobConf createJobConf() {
+      JobConf conf = new JobConf();
+      conf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
+          UUID.randomUUID().toString());
+      conf.setBoolean(
+          CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
+          false);
+      return conf;
     }
 
     public S3AFileSystem getMockS3A() {
@@ -491,6 +496,10 @@ public class StagingTestBase {
 
     public void addUpload(String id, String key) {
       activeUploads.put(id, key);
+    }
+
+    public void addUploads(Map<String, String> uploads) {
+      activeUploads.putAll(uploads);
     }
 
     @Override

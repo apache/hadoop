@@ -139,7 +139,12 @@ public class TestStagingPartitionedTaskCommit
     verifyFilesCreated(committer);
   }
 
-  protected void verifyFilesCreated(final PartitionedStagingCommitter committer) {
+  /**
+   * Verify that the files created matches that expected.
+   * @param committer committer
+   */
+  protected void verifyFilesCreated(
+      final PartitionedStagingCommitter committer) {
     Set<String> files = Sets.newHashSet();
     for (InitiateMultipartUploadRequest request :
         getMockResults().getRequests().values()) {

@@ -94,7 +94,7 @@ public class TestStagingDirectoryOutputCommitter
     committer.setupJob(getJob());
     verifyExistenceChecked(getMockS3A(), outputPath);
     verifyMkdirsInvoked(getMockS3A(), outputPath);
-    verifyNoMoreInteractions((FileSystem) getMockS3A());
+    verifyNoMoreInteractions(getMockS3A());
 
     reset(getMockS3A());
     pathDoesNotExist(getMockS3A(), outputPath);

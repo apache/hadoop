@@ -51,14 +51,14 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
     // no op, as the FS is closed
   }
 
-  private static final Set<String> threadSet
+  private static final Set<String> THREAD_SET
       = listInitialThreadsForLifecycleChecks();;
 
   @AfterClass
   public static void checkForThreadLeakage() {
     Assertions.assertThat(getCurrentThreadNames())
         .describedAs("The threads at the end of the test run")
-        .isSubsetOf(threadSet);
+        .isSubsetOf(THREAD_SET);
   }
 
   @Test
