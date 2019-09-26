@@ -36,7 +36,8 @@ public class OMKeyPurgeResponse extends OMClientResponse {
 
   private List<String> purgeKeyList;
 
-  public OMKeyPurgeResponse(List<String> keyList, @Nonnull OMResponse omResponse) {
+  public OMKeyPurgeResponse(List<String> keyList,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.purgeKeyList = keyList;
   }

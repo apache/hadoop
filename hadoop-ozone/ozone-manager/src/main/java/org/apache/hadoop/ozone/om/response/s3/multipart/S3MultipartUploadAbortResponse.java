@@ -45,7 +45,8 @@ public class S3MultipartUploadAbortResponse extends OMClientResponse {
   private OmMultipartKeyInfo omMultipartKeyInfo;
 
   public S3MultipartUploadAbortResponse(String multipartKey,
-      @Nullable OmMultipartKeyInfo omMultipartKeyInfo, @Nonnull OMResponse omResponse) {
+      @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
