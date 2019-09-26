@@ -39,6 +39,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+
+import java.io.IOException;
+import java.io.FileWriter;
+import java.io.File;
+import java.io.BufferedWriter;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -746,5 +753,85 @@ public class TestDistCpSync {
           "Snapshot s2 should be newer than s1", e);
     }
     Assert.assertTrue(threwException);
+  }
+
+  private void initData10(Path dir) throws Exception {
+    final Path staging = new Path(dir, ".staging");
+    final Path staging_f1 = new Path(staging, "f1");
+    final Path data = new Path(dir, "data");
+    final Path data_f1 = new Path(data, "f1");
+
+    DFSTestUtil.createFile(dfs, staging_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, data_f1, BLOCK_SIZE, DATA_NUM, 0L);
+  }
+
+  private void changeData10(Path dir) throws Exception {
+    final Path staging = new Path(dir, ".staging");
+    final Path prod = new Path(dir, "prod");
+    dfs.rename(staging, prod);
+  }
+
+  private void generateFilterFile(String directory, String fileName){
+    File theDir = new File(directory);
+    boolean threwException = false;
+    if (!theDir.exists()) {
+      theDir.mkdir();
+    }
+    String str = ".*\\.staging.*";
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(directory + "/" + fileName));
+      writer.write(str);
+      writer.close();
+    } catch (IOException e) {
+      threwException = true;
+    }
+    Assert.assertFalse(threwException);
+  }
+
+  private void deleteFilterFile(String directory, String fileName) {
+    File theDir = new File(directory);
+    if (!theDir.exists()) {
+      return;
+    }
+    File file = new File(directory + "/" + fileName);
+    if (file.exists()) {
+      file.delete();
+    }
+    theDir.delete();
+  }
+
+  @Test
+  public void testSync10() throws Exception {
+    try {
+      Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
+      initData10(sourcePath);
+      dfs.allowSnapshot(sourcePath);
+      dfs.createSnapshot(sourcePath, "s1");
+      generateFilterFile("/tmp", "filters.txt");
+      final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+              new ArrayList<>(Arrays.asList(sourcePath)),
+              target)
+              .withFiltersFile("/tmp/filters.txt")
+              .withSyncFolder(true);
+      new DistCp(conf, builder.build()).execute();
+
+      dfs.allowSnapshot(target);
+      dfs.createSnapshot(target, "s1");
+      changeData10(sourcePath);
+      dfs.createSnapshot(sourcePath, "s2");
+
+      final DistCpOptions.Builder diffBuilder = new DistCpOptions.Builder(
+              new ArrayList<>(Arrays.asList(sourcePath)),
+              target)
+              .withUseDiff("s1", "s2")
+              .withFiltersFile("/tmp/filters.txt")
+              .withSyncFolder(true);
+      new DistCp(conf, diffBuilder.build()).execute();
+      verifyCopy(dfs.getFileStatus(sourcePath),
+              dfs.getFileStatus(target), false);
+    } finally {
+      deleteFilterFile("/tmp", "filters.txt");
+    }
   }
 }
