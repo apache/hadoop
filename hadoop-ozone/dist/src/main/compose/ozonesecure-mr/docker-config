@@ -62,7 +62,6 @@ HADOOP-POLICY.XML_org.apache.hadoop.yarn.server.api.ResourceTracker.acl=*
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 
-CORE-SITE.xml_fs.o3fs.impl=org.apache.hadoop.fs.ozone.OzoneFileSystem
 CORE-SITE.xml_fs.AbstractFileSystem.o3fs.impl=org.apache.hadoop.fs.ozone.OzFs
 CORE-SITE.xml_fs.defaultFS=o3fs://bucket1.vol1/
 
