@@ -131,6 +131,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numBucketS3Deletes;
   private @Metric MutableCounterLong numBucketS3DeleteFails;
 
+  private @Metric MutableCounterLong numListMultipartUploadFails;
+  private @Metric MutableCounterLong numListMultipartUploads;
 
   public OMMetrics() {
   }
@@ -324,10 +326,18 @@ public class OMMetrics {
     numAbortMultipartUploads.incr();
   }
 
+  public void incNumListMultipartUploadFails() {
+    numListMultipartUploadFails.incr();
+  }
+
+  public void incNumListMultipartUploads() {
+    numKeyOps.incr();
+    numListMultipartUploads.incr();
+  }
+
   public void incNumAbortMultipartUploadFails() {
     numAbortMultipartUploadFails.incr();
   }
-
   public void incNumListMultipartUploadParts() {
     numKeyOps.incr();
     numListMultipartUploadParts.incr();

@@ -20,7 +20,9 @@
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -81,6 +83,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private static final String CERT_FILE_NAME_FORMAT = "%s.crt";
   private static final String CA_CERT_PREFIX = "CA-";
+  private static final int CA_CERT_PREFIX_LEN = 3;
   private final Logger logger;
   private final SecurityConfig securityConfig;
   private final KeyCodec keyCodec;
@@ -89,8 +92,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private X509Certificate x509Certificate;
   private Map<String, X509Certificate> certificateMap;
   private String certSerialId;
+  private String caCertId;
   private String component;
-
 
   DefaultCertificateClient(SecurityConfig securityConfig, Logger log,
       String certSerialId, String component) {
@@ -119,6 +122,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       if (certFiles != null) {
         CertificateCodec certificateCodec =
             new CertificateCodec(securityConfig, component);
+        long latestCaCertSerailId = -1L;
         for (File file : certFiles) {
           if (file.isFile()) {
             try {
@@ -132,6 +136,15 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                 }
                 certificateMap.putIfAbsent(cert.getSerialNumber().toString(),
                     cert);
+                if (file.getName().startsWith(CA_CERT_PREFIX)) {
+                  String certFileName = FilenameUtils.getBaseName(
+                      file.getName());
+                  long tmpCaCertSerailId = NumberUtils.toLong(
+                      certFileName.substring(CA_CERT_PREFIX_LEN));
+                  if (tmpCaCertSerailId > latestCaCertSerailId) {
+                    latestCaCertSerailId = tmpCaCertSerailId;
+                  }
+                }
                 getLogger().info("Added certificate from file:{}.",
                     file.getAbsolutePath());
               } else {
@@ -143,6 +156,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                   file.getAbsolutePath(), e);
             }
           }
+        }
+        if (latestCaCertSerailId != -1) {
+          caCertId = Long.toString(latestCaCertSerailId);
         }
       }
     }
@@ -219,6 +235,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       x509Certificate = certificateMap.get(certSerialId);
     }
     return x509Certificate;
+  }
+
+  /**
+   * Return the latest CA certificate known to the client.
+   * @return latest ca certificate known to the client.
+   */
+  @Override
+  public X509Certificate getCACertificate() {
+    if (caCertId != null) {
+      return certificateMap.get(caCertId);
+    }
+    return null;
   }
 
   /**
@@ -491,6 +519,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
       if(caCert) {
         certName = CA_CERT_PREFIX + certName;
+        caCertId = cert.getSerialNumber().toString();
       }
 
       certificateCodec.writeCertificate(basePath, certName,

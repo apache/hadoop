@@ -19,12 +19,14 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -220,7 +222,7 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
    * @throws IOException
    */
   OmMultipartUploadCompleteInfo completeMultipartUpload(OmKeyArgs omKeyArgs,
-      OmMultipartUploadList multipartUploadList) throws IOException;
+      OmMultipartUploadCompleteList multipartUploadList) throws IOException;
 
   /**
    * Abort multipart upload request.
@@ -229,6 +231,8 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
    */
   void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
 
+  OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws OMException;
 
   /**
    * Returns list of parts of a multipart upload key.

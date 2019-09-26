@@ -224,6 +224,7 @@ public final class OmUtils {
     case ListStatus:
     case GetAcl:
     case DBUpdates:
+    case ListMultipartUploads:
       return true;
     case CreateVolume:
     case SetVolumeProperty:

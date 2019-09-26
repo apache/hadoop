@@ -17,28 +17,12 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.tools.TableListing;
-import org.apache.hadoop.tracing.TraceUtils;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Provide command line access to a Ozone FileSystem. */
 @InterfaceAudience.Private
@@ -51,14 +35,19 @@ public class OzoneFsShell extends FsShell {
    * {@link #setConf(Configuration)} with a valid configuration prior
    * to running commands.
    */
-  public OzoneFsShell() { this(null); }
+  public OzoneFsShell() {
+    this(null);
+  }
 
   /**
-   * Construct a OzoneFsShell with the given configuration.  Commands can be
-   * executed via {@link #run(String[])}
+   * Construct a OzoneFsShell with the given configuration.
+   *
+   * Commands can be executed via {@link #run(String[])}
    * @param conf the hadoop configuration
    */
-  public OzoneFsShell(Configuration conf) { super(conf); }
+  public OzoneFsShell(Configuration conf) {
+    super(conf);
+  }
 
   protected void registerCommands(CommandFactory factory) {
     // TODO: DFSAdmin subclasses FsShell so need to protect the command
@@ -75,11 +64,12 @@ public class OzoneFsShell extends FsShell {
   }
 
   /**
-   * main() has some simple utility methods
+   * Main entry point to execute fs commands.
+   *
    * @param argv the command and its arguments
    * @throws Exception upon error
    */
-  public static void main(String argv[]) throws Exception {
+  public static void main(String[] argv) throws Exception {
     OzoneFsShell shell = newShellInstance();
     Configuration conf = new Configuration();
     conf.setQuietMode(false);

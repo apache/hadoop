@@ -25,7 +25,8 @@ import java.util.NoSuchElementException;
 /**
  * LevelDB store iterator.
  */
-public class LevelDBStoreIterator implements MetaStoreIterator< MetadataStore.KeyValue > {
+public class LevelDBStoreIterator
+    implements MetaStoreIterator<MetadataStore.KeyValue> {
 
 
   private DBIterator levelDBIterator;

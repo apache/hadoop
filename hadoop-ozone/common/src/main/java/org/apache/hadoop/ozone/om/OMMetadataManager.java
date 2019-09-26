@@ -327,4 +327,11 @@ public interface OMMetadataManager {
    */
   <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
       throws IOException;
+
+  /**
+   * Return the existing upload keys which includes volumeName, bucketName,
+   * keyName.
+   */
+  List<String> getMultipartUploadKeys(String volumeName,
+      String bucketName, String prefix) throws IOException;
 }

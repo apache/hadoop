@@ -926,7 +926,7 @@ public class RegistrySecurity extends AbstractService {
       UserGroupInformation realUser = currentUser.getRealUser();
       LOG.info("Real User = {}" , realUser);
     } catch (IOException e) {
-      LOG.warn("Failed to get current user {}, {}", e);
+      LOG.warn("Failed to get current user, {}", e);
     }
   }
 

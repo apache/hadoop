@@ -36,8 +36,6 @@ public class OmMultipartKeyInfo {
   /**
    * Construct OmMultipartKeyInfo object which holds multipart upload
    * information for a key.
-   * @param id
-   * @param list upload parts of a key.
    */
   public OmMultipartKeyInfo(String id, Map<Integer, PartKeyInfo> list) {
     this.uploadID = id;

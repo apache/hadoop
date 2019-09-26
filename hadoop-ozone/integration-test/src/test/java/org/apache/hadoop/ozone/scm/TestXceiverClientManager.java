@@ -115,7 +115,7 @@ public class TestXceiverClientManager {
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig);
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -173,7 +173,7 @@ public class TestXceiverClientManager {
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig);
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -222,7 +222,7 @@ public class TestXceiverClientManager {
     ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
     clientConfig.setMaxSize(1);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig);
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
