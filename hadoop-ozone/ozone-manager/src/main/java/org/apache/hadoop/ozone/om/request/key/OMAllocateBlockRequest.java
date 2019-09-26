@@ -26,6 +26,7 @@ import java.util.Map;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -169,7 +170,8 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
     OmKeyInfo omKeyInfo = null;
     try {
       // check Acl
-      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
+      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
+          IAccessAuthorizer.ACLType.WRITE);
 
       OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
       validateBucketAndVolume(omMetadataManager, volumeName,

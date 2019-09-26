@@ -24,6 +24,7 @@ import java.util.Map;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +119,8 @@ public class OMKeyRenameRequest extends OMKeyRequest {
             OMException.ResultCodes.INVALID_KEY_NAME);
       }
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, fromKeyName);
+      checkKeyAcls(ozoneManager, volumeName, bucketName, toKeyName,
+          IAccessAuthorizer.ACLType.CREATE);
 
       acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);
