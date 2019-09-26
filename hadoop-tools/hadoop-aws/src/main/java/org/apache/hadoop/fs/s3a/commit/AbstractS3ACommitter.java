@@ -462,9 +462,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     if (pending.isEmpty()) {
       LOG.warn("{}: No pending uploads to commit", getRole());
     }
-    LOG.debug("{}: committing the output of {} task(s)",
-        getRole(), pending.size());
-    try (CommitOperations.CommitContext commitContext
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "committing the output of %s task(s)", pending.size());
+        CommitOperations.CommitContext commitContext
             = initiateCommitOperation()) {
 
       Tasks.foreach(pending.getSourceFiles())
@@ -583,7 +583,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Internal Job commit operation: where the S3 requests are made
    * (potentially in parallel).
    * @param context job context
-   * @param pending pending request
+   * @param pending pending commits
    * @throws IOException any failure
    */
   protected void commitJobInternal(JobContext context,
@@ -632,7 +632,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   protected void abortPendingUploadsInCleanup(
       boolean suppressExceptions) throws IOException {
     Path dest = getOutputPath();
-    try (DurationInfo d =
+    try (DurationInfo ignored =
              new DurationInfo(LOG, "Aborting all pending commits under %s",
                  dest);
          CommitOperations.CommitContext commitContext

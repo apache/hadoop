@@ -495,7 +495,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected ActiveCommit listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Listing pending uploads")) {
       Path wrappedJobAttemptPath = getJobAttemptPath(context);
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
           context.getConfiguration());

@@ -4071,7 +4071,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
-    LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
+    LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
     getAmazonS3Client().abortMultipartUpload(
         new AbortMultipartUploadRequest(getBucket(),
             destKey,
@@ -4091,7 +4091,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     uploadId = upload.getUploadId();
     if (LOG.isInfoEnabled()) {
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      LOG.info("Aborting multipart upload {} to {} initiated by {} on {}",
+      LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
           uploadId, destKey, upload.getInitiator(),
           df.format(upload.getInitiated()));
     }

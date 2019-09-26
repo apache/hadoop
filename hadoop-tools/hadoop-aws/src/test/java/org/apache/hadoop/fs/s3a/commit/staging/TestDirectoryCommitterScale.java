@@ -82,7 +82,7 @@ public class TestDirectoryCommitterScale
 
   public static final int TOTAL_COMMIT_COUNT = FILES_PER_TASK * TASKS;
 
-  public static final int BLOCKS_PER_TASK = 100;
+  public static final int BLOCKS_PER_TASK = 1000;
 
   private static File stagingDir;
 
@@ -94,7 +94,7 @@ public class TestDirectoryCommitterScale
       Maps.newHashMap();
 
   @Override
-  DirectoryStagingCommitter newJobCommitter() throws Exception {
+  DirectoryCommitterForTesting newJobCommitter() throws Exception {
     return new DirectoryCommitterForTesting(outputPath,
         createTaskAttemptForJob());
   }
@@ -181,7 +181,11 @@ public class TestDirectoryCommitterScale
       for (int i = 0; i < FILES_PER_TASK; i++) {
         String uploadId = String.format("%05d-task-%04d-file-%02d",
             uploadCount, task, i);
-        Path p = new Path(outputPath, uploadId);
+        // longer paths to take up more space.
+        Path p = new Path(outputPath,
+            "datasets/examples/testdirectoryscale/"
+                + "year=2019/month=09/day=26/hour=20/second=53"
+                + uploadId);
         URI dest = p.toUri();
         SinglePendingCommit commit = singles[i];
         String key = dest.getPath();
@@ -221,7 +225,7 @@ public class TestDirectoryCommitterScale
 
   @Test
   public void test_030_commitFiles() throws Exception {
-    DirectoryStagingCommitter committer = newJobCommitter();
+    DirectoryCommitterForTesting committer = newJobCommitter();
     StagingTestBase.ClientResults results = getMockResults();
     results.addUploads(activeUploads);
     Configuration jobConf = getJobConf();
@@ -231,13 +235,21 @@ public class TestDirectoryCommitterScale
     pathIsDirectory(mockS3, outputPath);
 
     try (DurationInfo ignored =
-             new DurationInfo(LOG, "listing pending uploads")) {
+             new DurationInfo(LOG, "Committing Job")) {
       committer.commitJob(getJob());
-
-      Assertions.assertThat(results.getCommits())
-          .describedAs("commit count")
-          .hasSize(TOTAL_COMMIT_COUNT);
     }
+
+    Assertions.assertThat(results.getCommits())
+        .describedAs("commit count")
+        .hasSize(TOTAL_COMMIT_COUNT);
+    AbstractS3ACommitter.ActiveCommit activeCommit = committer.activeCommit;
+    Assertions.assertThat(activeCommit.getCommittedObjects())
+        .describedAs("committed objects in active commit")
+        .hasSize(Math.min(TOTAL_COMMIT_COUNT,
+            CommitConstants.SUCCESS_MARKER_FILE_LIMIT));
+    Assertions.assertThat(activeCommit.getCommittedFileCount())
+        .describedAs("committed objects in active commit")
+        .isEqualTo(TOTAL_COMMIT_COUNT);
 
   }
 
@@ -260,6 +272,7 @@ public class TestDirectoryCommitterScale
    */
   private static final class DirectoryCommitterForTesting extends
       DirectoryStagingCommitter {
+    private ActiveCommit activeCommit;
 
     private DirectoryCommitterForTesting(Path outputPath,
         TaskAttemptContext context) throws IOException {
@@ -288,6 +301,14 @@ public class TestDirectoryCommitterScale
     @Override
     public Path getJobAttemptPath(JobContext context) {
       return stagingPath;
+    }
+
+    @Override
+    protected void commitJobInternal(final JobContext context,
+        final ActiveCommit pending)
+        throws IOException {
+      activeCommit = pending;
+      super.commitJobInternal(context, pending);
     }
   }
 }
