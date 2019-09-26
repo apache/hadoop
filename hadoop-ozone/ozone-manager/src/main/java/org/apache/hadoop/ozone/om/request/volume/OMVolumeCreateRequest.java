@@ -151,7 +151,7 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
         String dbUserKey = omMetadataManager.getUserKey(owner);
         volumeList = omMetadataManager.getUserTable().get(dbUserKey);
         volumeList = addVolumeToOwnerList(volumeList, volume, owner,
-            ozoneManager.getMaxUserVolumeCount());
+            ozoneManager.getMaxUserVolumeCount(), transactionLogIndex);
         createVolume(omMetadataManager, omVolumeArgs, volumeList, dbVolumeKey,
             dbUserKey, transactionLogIndex);
 

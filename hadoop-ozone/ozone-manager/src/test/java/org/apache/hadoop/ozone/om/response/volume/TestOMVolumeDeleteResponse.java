@@ -69,6 +69,8 @@ public class TestOMVolumeDeleteResponse {
     String volumeName = UUID.randomUUID().toString();
     String userName = "user1";
     VolumeList volumeList = VolumeList.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
@@ -85,7 +87,8 @@ public class TestOMVolumeDeleteResponse {
         new OMVolumeCreateResponse(omVolumeArgs, volumeList, omResponse);
 
     // As we are deleting updated volume list should be empty.
-    VolumeList updatedVolumeList = VolumeList.newBuilder().build();
+    VolumeList updatedVolumeList = VolumeList.newBuilder()
+        .setObjectID(1).setUpdateID(1).build();
     OMVolumeDeleteResponse omVolumeDeleteResponse =
         new OMVolumeDeleteResponse(volumeName, userName, updatedVolumeList,
             omResponse);

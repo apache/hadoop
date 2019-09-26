@@ -144,14 +144,16 @@ public class OMVolumeSetOwnerRequest extends OMVolumeRequest {
           omMetadataManager.getUserTable().get(oldOwner);
 
       oldOwnerVolumeList = delVolumeFromOwnerList(
-          oldOwnerVolumeList, volume, oldOwner);
+          oldOwnerVolumeList, volume, oldOwner, transactionLogIndex);
 
       newOwnerVolumeList = omMetadataManager.getUserTable().get(newOwner);
       newOwnerVolumeList = addVolumeToOwnerList(
-          newOwnerVolumeList, volume, newOwner, maxUserVolumeCount);
+          newOwnerVolumeList, volume, newOwner,
+          maxUserVolumeCount, transactionLogIndex);
 
       // Set owner with new owner name.
       omVolumeArgs.setOwnerName(newOwner);
+      omVolumeArgs.setUpdateID(transactionLogIndex);
 
       // Update cache.
       omMetadataManager.getUserTable().addCacheEntry(

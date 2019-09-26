@@ -48,12 +48,13 @@ public abstract class OMVolumeRequest extends OMClientRequest {
    * acquiring user lock.
    * @param volumeList - current volume list owned by user.
    * @param volume - volume which needs to deleted from the volume list.
-   * @param owner
+   * @param owner - Name of the Owner.
+   * @param txID - The transaction ID that is updating this value.
    * @return VolumeList - updated volume list for the user.
    * @throws IOException
    */
   protected VolumeList delVolumeFromOwnerList(VolumeList volumeList,
-      String volume, String owner) throws IOException {
+      String volume, String owner, long txID) throws IOException {
 
     List<String> prevVolList = new ArrayList<>();
 
@@ -68,7 +69,10 @@ public abstract class OMVolumeRequest extends OMClientRequest {
     // Remove the volume from the list
     prevVolList.remove(volume);
     VolumeList newVolList = VolumeList.newBuilder()
-        .addAllVolumeNames(prevVolList).build();
+        .addAllVolumeNames(prevVolList)
+            .setObjectID(volumeList.getObjectID())
+            .setUpdateID(txID)
+         .build();
     return newVolList;
   }
 
@@ -85,7 +89,8 @@ public abstract class OMVolumeRequest extends OMClientRequest {
    * maxUserVolumeCount, an exception is thrown.
    */
   protected VolumeList addVolumeToOwnerList(VolumeList volumeList,
-      String volume, String owner, long maxUserVolumeCount) throws IOException {
+      String volume, String owner, long maxUserVolumeCount, long txID)
+      throws IOException {
 
     // Check the volume count
     if (volumeList != null &&
@@ -95,13 +100,18 @@ public abstract class OMVolumeRequest extends OMClientRequest {
     }
 
     List<String> prevVolList = new ArrayList<>();
+    long objectID = txID;
     if (volumeList != null) {
       prevVolList.addAll(volumeList.getVolumeNamesList());
+      objectID = volumeList.getObjectID();
     }
+
 
     // Add the new volume to the list
     prevVolList.add(volume);
     VolumeList newVolList = VolumeList.newBuilder()
+        .setObjectID(objectID)
+        .setUpdateID(txID)
         .addAllVolumeNames(prevVolList).build();
 
     return newVolList;
