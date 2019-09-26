@@ -179,7 +179,8 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
           VolumeList volumeList = omMetadataManager.getUserTable().get(
               omMetadataManager.getUserKey(userName));
           volumeList = addVolumeToOwnerList(volumeList,
-              volumeName, userName, ozoneManager.getMaxUserVolumeCount());
+              volumeName, userName, ozoneManager.getMaxUserVolumeCount(),
+              transactionLogIndex);
           createVolume(omMetadataManager, omVolumeArgs, volumeList, volumeKey,
               omMetadataManager.getUserKey(userName), transactionLogIndex);
           volumeCreated = true;
