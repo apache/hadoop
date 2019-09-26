@@ -625,9 +625,13 @@ public class RMContextImpl implements RMContext {
   // Note: Read java doc before adding any services over here.
 
   public Set<String> getExclusiveEnforcedPartitions() {
-    String[] configuredPartitions = getYarnConfiguration().getStrings(
-        YarnConfiguration.EXCLUSIVE_ENFORCED_PARTITIONS);
     Set<String> exclusiveEnforcedPartitions = new HashSet<>();
+    Configuration conf = getYarnConfiguration();
+    if (conf == null) {
+      return new HashSet<>();
+    }
+    String[] configuredPartitions = conf.getStrings(
+        YarnConfiguration.EXCLUSIVE_ENFORCED_PARTITIONS);
     if (configuredPartitions != null) {
       for (String partition : configuredPartitions) {
         exclusiveEnforcedPartitions.add(partition);
