@@ -118,7 +118,10 @@ public class OMKeyRenameRequest extends OMKeyRequest {
         throw new OMException("Key name is empty",
             OMException.ResultCodes.INVALID_KEY_NAME);
       }
-      // check Acl
+      // check Acls to see if user has access to perform delete operation on
+      // old key and create operation on new key
+      checkKeyAcls(ozoneManager, volumeName, bucketName, fromKeyName,
+          IAccessAuthorizer.ACLType.DELETE);
       checkKeyAcls(ozoneManager, volumeName, bucketName, toKeyName,
           IAccessAuthorizer.ACLType.CREATE);
 
