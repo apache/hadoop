@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
@@ -48,7 +47,7 @@ public class ListSubcommand implements Callable<Void> {
       LoggerFactory.getLogger(ListSubcommand.class);
 
   @ParentCommand
-  private SCMCLI parent;
+  private ContainerCommands parent;
 
   @Option(names = {"-s", "--start"},
       description = "Container id to start the iteration", required = true)
@@ -68,7 +67,7 @@ public class ListSubcommand implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
 
       List<ContainerInfo> containerList =
           scmClient.listContainer(startId, count);
