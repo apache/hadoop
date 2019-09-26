@@ -117,7 +117,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
     try {
       // check Acl
       checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
-          IAccessAuthorizer.ACLType.CREATE);
+          IAccessAuthorizer.ACLType.WRITE);
 
       List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
           .getKeyLocationsList().stream()
