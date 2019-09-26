@@ -93,8 +93,8 @@ public class TreePath {
     return id;
   }
 
-  public void accept(long id) {
-    this.id = id;
+  public void accept(long pathId) {
+    this.id = pathId;
     i.onAccept(this, id);
   }
 

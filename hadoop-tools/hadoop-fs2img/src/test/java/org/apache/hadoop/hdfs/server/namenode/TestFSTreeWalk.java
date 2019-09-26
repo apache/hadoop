@@ -30,16 +30,17 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Validate FSTreeWalk specific behavior
+ * Validate FSTreeWalk specific behavior.
  */
 public class TestFSTreeWalk {
   /**
-   * Verify that the ACLs are fetched when configured
+   * Verify that the ACLs are fetched when configured.
    */
   @Test
   public void testImportAcl() throws Exception {
@@ -55,7 +56,8 @@ public class TestFSTreeWalk {
     FileStatus child2 = new FileStatus(0, true, 0, 0, 1, new Path("/b"));
     expectedChildren.put(child1.getPath(), child1);
     expectedChildren.put(child2.getPath(), child2);
-    when(fs.listStatus(root)).thenReturn(expectedChildren.values().toArray(new FileStatus[1]));
+    when(fs.listStatus(root))
+        .thenReturn(expectedChildren.values().toArray(new FileStatus[1]));
 
     AclStatus expectedAcls = mock(AclStatus.class);
     when(fs.getAclStatus(any(Path.class))).thenReturn(expectedAcls);
@@ -67,7 +69,8 @@ public class TestFSTreeWalk {
 
     Iterable<TreePath> result = fsTreeWalk.getChildren(treePath, 1, null);
     for (TreePath path : result) {
-      FileStatus expectedChildStatus = expectedChildren.remove(path.getFileStatus().getPath());
+      FileStatus expectedChildStatus
+          = expectedChildren.remove(path.getFileStatus().getPath());
       assertNotNull(expectedChildStatus);
 
       AclStatus childAcl = path.getAclStatus();
@@ -91,7 +94,7 @@ public class TestFSTreeWalk {
 
     FSTreeWalk fsTreeWalk = new FSTreeWalk(root, conf);
     for (TreePath treePath : fsTreeWalk) {
-      System.out.println(treePath.getAclStatus());
+      fail("Unexpected successful traversal of remote FS: " + treePath);
     }
   }
 }

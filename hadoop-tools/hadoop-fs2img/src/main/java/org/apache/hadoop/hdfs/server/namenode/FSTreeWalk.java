@@ -107,7 +107,8 @@ public class FSTreeWalk extends TreeWalk {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-      getPendingQueue().addFirst(new TreePath(fileStatus, parentId, this, fs, acls));
+      TreePath treePath = new TreePath(fileStatus, parentId, this, fs, acls);
+      getPendingQueue().addFirst(treePath);
     }
 
     @Override
@@ -120,8 +121,9 @@ public class FSTreeWalk extends TreeWalk {
 
   }
 
-  private AclStatus getAclStatus(FileSystem fs, Path path) throws IOException {
-    return enableACLs ? fs.getAclStatus(path) : null;
+  private AclStatus getAclStatus(FileSystem fileSystem, Path path)
+      throws IOException {
+    return enableACLs ? fileSystem.getAclStatus(path) : null;
   }
 
   @Override
