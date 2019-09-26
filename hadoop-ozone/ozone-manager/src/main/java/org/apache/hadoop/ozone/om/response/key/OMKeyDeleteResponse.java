@@ -38,8 +38,8 @@ import javax.annotation.Nonnull;
 public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
 
-
-  public OMKeyDeleteResponse(@Nullable OmKeyInfo omKeyInfo, @Nonnull OMResponse omResponse) {
+  public OMKeyDeleteResponse(@Nullable OmKeyInfo omKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
   }
@@ -69,7 +69,7 @@ public class OMKeyDeleteResponse extends OMClientResponse {
         // instance in deletedTable.
         RepeatedOmKeyInfo repeatedOmKeyInfo =
             omMetadataManager.getDeletedTable().get(ozoneKey);
-        if(repeatedOmKeyInfo == null) {
+        if (repeatedOmKeyInfo == null) {
           repeatedOmKeyInfo = new RepeatedOmKeyInfo(omKeyInfo);
         } else {
           repeatedOmKeyInfo.addOmKeyInfo(omKeyInfo);
@@ -83,10 +83,14 @@ public class OMKeyDeleteResponse extends OMClientResponse {
   /**
    * Check if the key is empty or not. Key will be empty if it does not have
    * blocks.
+   *
    * @param keyInfo
    * @return if empty true, else false.
    */
   private boolean isKeyEmpty(@Nullable OmKeyInfo keyInfo) {
+    if (keyInfo == null) {
+      return true;
+    }
     for (OmKeyLocationInfoGroup keyLocationList : keyInfo
         .getKeyLocationVersions()) {
       if (keyLocationList.getLocationList().size() != 0) {

@@ -39,8 +39,8 @@ public class OMKeyRenameResponse extends OMClientResponse {
   private final String toKeyName;
   private final String fromKeyName;
 
-  public OMKeyRenameResponse(@Nullable OmKeyInfo renameKeyInfo, String toKeyName,
-      String fromKeyName, @Nonnull OMResponse omResponse) {
+  public OMKeyRenameResponse(@Nullable OmKeyInfo renameKeyInfo,
+      String toKeyName, String fromKeyName, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.renameKeyInfo = renameKeyInfo;
     this.toKeyName = toKeyName;

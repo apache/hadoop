@@ -36,7 +36,8 @@ public class OMKeyCommitResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
   private long openKeySessionID;
 
-  public OMKeyCommitResponse(@Nullable OmKeyInfo omKeyInfo, long openKeySessionID,
+  public OMKeyCommitResponse(@Nullable OmKeyInfo omKeyInfo,
+      long openKeySessionID,
       @Nonnull OzoneManagerProtocolProtos.OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
