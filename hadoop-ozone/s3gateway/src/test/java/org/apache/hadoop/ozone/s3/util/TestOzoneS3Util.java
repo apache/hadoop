@@ -113,8 +113,8 @@ public class TestOzoneS3Util {
     for (String nodeID : nodeIDList) {
       counter++;
       String addr = nodeID + ":" + port++;
-      configuration.set(OmUtils.addKeySuffixes(OMConfigKeys.OZONE_OM_ADDRESS_KEY,
-          serviceID, nodeID), addr);
+      configuration.set(OmUtils.addKeySuffixes(
+          OMConfigKeys.OZONE_OM_ADDRESS_KEY, serviceID, nodeID), addr);
 
       if (counter != nodesLength) {
         omServiceAddrBuilder.append(addr + ",");

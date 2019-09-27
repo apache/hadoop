@@ -28,6 +28,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
@@ -64,7 +65,7 @@ public class OzoneServiceProvider {
       // TODO: Revisit this later.
       if (serviceIdList.size() > 1) {
         throw new IllegalArgumentException("Multiple serviceIds are " +
-            "configured. " + serviceIdList.toArray().toString());
+            "configured. " + Arrays.toString(serviceIdList.toArray()));
       } else {
         String serviceId = serviceIdList.iterator().next();
         Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, serviceId);
