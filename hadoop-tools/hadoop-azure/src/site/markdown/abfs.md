@@ -643,8 +643,17 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
 of configuration options and their default values.
 
-### <a href="outputstreamflushconfigoptions"></a> Data Flush Options
-Config fs.azure.disable.outputstream.flush provides an option to render
+### <a name="flushconfigoptions"></a> Flush Options
+
+#### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
+Config `fs.azure.enable.flush` provides an option to render ABFS flush APIs -
+ HFlush() and HSync() to be no-op. By default, this
+config will be set to true.
+
+Both the APIs will ensure that data is persisted.
+
+#### <a name="outputstreamflushconfigoptions"></a> 2. OutputStream Flush Options
+Config `fs.azure.disable.outputstream.flush` provides an option to render
 OutputStream Flush() API to be a no-op in AbfsOutputStream. By default, this
 config will be set to true.
 
