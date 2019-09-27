@@ -38,6 +38,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +110,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
 
-      if (this.tryGetFileStatus(new Path("/")) == null) {
+      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH)) == null) {
         try {
           this.createFileSystem();
         } catch (AzureBlobFileSystemException ex) {
