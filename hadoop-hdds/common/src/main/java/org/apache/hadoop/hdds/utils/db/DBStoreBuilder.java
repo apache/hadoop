@@ -22,11 +22,13 @@ package org.apache.hadoop.hdds.utils.db;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.eclipse.jetty.util.StringUtil;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
+import org.rocksdb.InfoLogLevel;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
@@ -63,8 +65,9 @@ public final class DBStoreBuilder {
   private Configuration configuration;
   private CodecRegistry registry;
   private String rocksDbStat;
+  private RocksDBConfiguration rocksDBConfiguration;
 
-  private DBStoreBuilder(Configuration configuration) {
+  private DBStoreBuilder(OzoneConfiguration configuration) {
     tables = new HashSet<>();
     tableNames = new LinkedList<>();
     this.configuration = configuration;
@@ -72,9 +75,11 @@ public final class DBStoreBuilder {
     this.rocksDbStat = configuration.getTrimmed(
         OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
         OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT);
+    this.rocksDBConfiguration =
+        configuration.getObject(RocksDBConfiguration.class);
   }
 
-  public static DBStoreBuilder newBuilder(Configuration configuration) {
+  public static DBStoreBuilder newBuilder(OzoneConfiguration configuration) {
     return new DBStoreBuilder(configuration);
   }
 
@@ -197,6 +202,21 @@ public final class DBStoreBuilder {
     if (option == null) {
       LOG.info("Using default options. {}", dbProfile.toString());
       option = dbProfile.getDBOptions();
+    }
+
+    if (rocksDBConfiguration.isRocksdbLoggingEnabled()) {
+      Logger rocksdbLogger =
+          LoggerFactory.getLogger(RocksDB.class);
+      org.rocksdb.Logger logger = new org.rocksdb.Logger(option) {
+        @Override
+        protected void log(InfoLogLevel infoLogLevel, String s) {
+          rocksdbLogger.info(s);
+        }
+      };
+      InfoLogLevel level = InfoLogLevel.valueOf(rocksDBConfiguration
+          .getRocksdbLogLevel() + "_LEVEL");
+      logger.setInfoLogLevel(level);
+      option.setLogger(logger);
     }
 
     if (!rocksDbStat.equals(OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF)) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.utils.db;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,14 +51,14 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithoutAnyParams() throws IOException {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     thrown.expect(IOException.class);
     DBStoreBuilder.newBuilder(conf).build();
   }
 
   @Test
   public void builderWithOneParamV1() throws IOException {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     thrown.expect(IOException.class);
     DBStoreBuilder.newBuilder(conf)
         .setName("Test.db")
@@ -66,7 +67,7 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithOneParamV2() throws IOException {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     File newFolder = folder.newFolder();
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
@@ -79,7 +80,7 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithOpenClose() throws Exception {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     File newFolder = folder.newFolder();
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
@@ -94,7 +95,7 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithDoubleTableName() throws Exception {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     File newFolder = folder.newFolder();
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
@@ -112,7 +113,7 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithDataWrites() throws Exception {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     File newFolder = folder.newFolder();
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
@@ -141,7 +142,7 @@ public class TestDBStoreBuilder {
 
   @Test
   public void builderWithDiskProfileWrites() throws Exception {
-    Configuration conf = new Configuration();
+    OzoneConfiguration conf = new OzoneConfiguration();
     File newFolder = folder.newFolder();
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
