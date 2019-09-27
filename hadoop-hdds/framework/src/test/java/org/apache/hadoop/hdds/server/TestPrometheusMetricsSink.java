@@ -62,7 +62,6 @@ public class TestPrometheusMetricsSink {
 
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
     Assert.assertTrue(
         "The expected metric line is missing from prometheus metrics output",
         writtenMetrics.contains(
@@ -101,7 +100,6 @@ public class TestPrometheusMetricsSink {
 
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
     Assert.assertTrue(
         "The expected metric line is missing from prometheus metrics output",
         writtenMetrics.contains(
