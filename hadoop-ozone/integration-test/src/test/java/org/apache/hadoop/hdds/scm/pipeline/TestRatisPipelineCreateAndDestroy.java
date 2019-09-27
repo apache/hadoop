@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.pipeline;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 
 /**
@@ -48,9 +50,12 @@ public class TestRatisPipelineCreateAndDestroy {
   public void init(int numDatanodes) throws Exception {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         GenericTestUtils.getRandomizedTempPath());
+    conf.setInt(OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT, 2);
+
     cluster = MiniOzoneCluster.newBuilder(conf)
             .setNumDatanodes(numDatanodes)
-            .setHbInterval(1000)
+            .setPipelineNumber(numDatanodes + numDatanodes/3)
+            .setHbInterval(2000)
             .setHbProcessorInterval(1000)
             .build();
     cluster.waitForClusterToBeReady();
@@ -103,7 +108,7 @@ public class TestRatisPipelineCreateAndDestroy {
     } catch (IOException ioe) {
       // As now all datanodes are shutdown, they move to stale state, there
       // will be no sufficient datanodes to create the pipeline.
-      Assert.assertTrue(ioe instanceof InsufficientDatanodesException);
+      Assert.assertTrue(ioe instanceof SCMException);
     }
 
     // make sure pipelines is destroyed
@@ -116,9 +121,13 @@ public class TestRatisPipelineCreateAndDestroy {
     for (Pipeline pipeline : pipelines) {
       pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
-    // make sure pipelines is created after node start
-    pipelineManager.triggerPipelineCreation();
-    waitForPipelines(1);
+
+    if (cluster.getStorageContainerManager()
+        .getScmNodeManager().getNodeCount(HddsProtos.NodeState.HEALTHY) > 0) {
+      // make sure pipelines is created after node start
+      pipelineManager.triggerPipelineCreation();
+      waitForPipelines(1);
+    }
   }
 
   private void waitForPipelines(int numPipelines)

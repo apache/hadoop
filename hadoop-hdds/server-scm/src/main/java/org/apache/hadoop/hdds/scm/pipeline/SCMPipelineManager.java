@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -54,10 +55,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.hadoop.hdds.scm
-    .ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.hdds.scm
-    .ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_PIPELINE_DB;
 
 /**
@@ -84,6 +81,8 @@ public class SCMPipelineManager implements PipelineManager {
   // Pipeline Manager MXBean
   private ObjectName pmInfoBean;
   private GrpcTlsConfig grpcTlsConfig;
+  private int pipelineNumberLimit;
+  private int heavyNodeCriteria;
 
   public SCMPipelineManager(Configuration conf, NodeManager nodeManager,
       EventPublisher eventPublisher, GrpcTlsConfig grpcTlsConfig)
@@ -97,8 +96,8 @@ public class SCMPipelineManager implements PipelineManager {
     scheduler = new Scheduler("RatisPipelineUtilsThread", false, 1);
     this.backgroundPipelineCreator =
         new BackgroundPipelineCreator(this, scheduler, conf);
-    int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
-        OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
+    int cacheSize = conf.getInt(ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB,
+        ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
     final File metaDir = ServerUtils.getScmDbDir(conf);
     final File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
     this.pipelineStore =
@@ -115,6 +114,12 @@ public class SCMPipelineManager implements PipelineManager {
         "SCMPipelineManagerInfo", this);
     initializePipelineState();
     this.grpcTlsConfig = grpcTlsConfig;
+    this.pipelineNumberLimit = conf.getInt(
+        ScmConfigKeys.OZONE_SCM_PIPELINE_NUMBER_LIMIT,
+        ScmConfigKeys.OZONE_SCM_PIPELINE_NUMBER_LIMIT_DEFAULT);
+    this.heavyNodeCriteria = conf.getInt(
+        ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT,
+        ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT_DEFAULT);
   }
 
   public PipelineStateManager getStateManager() {
@@ -147,10 +152,33 @@ public class SCMPipelineManager implements PipelineManager {
     }
   }
 
+  private boolean exceedPipelineNumberLimit(ReplicationFactor factor) {
+    if (heavyNodeCriteria > 0 && factor == ReplicationFactor.THREE) {
+      return (stateManager.getPipelines(ReplicationType.RATIS, factor).size() -
+          stateManager.getPipelines(ReplicationType.RATIS, factor,
+              Pipeline.PipelineState.CLOSED).size()) >= heavyNodeCriteria *
+          nodeManager.getNodeCount(HddsProtos.NodeState.HEALTHY);
+    }
+
+    if (pipelineNumberLimit > 0) {
+      return (stateManager.getPipelines(ReplicationType.RATIS).size() -
+          stateManager.getPipelines(ReplicationType.RATIS,
+              Pipeline.PipelineState.CLOSED).size()) >= pipelineNumberLimit;
+    }
+
+    return false;
+  }
+
   @Override
   public synchronized Pipeline createPipeline(
       ReplicationType type, ReplicationFactor factor) throws IOException {
     lock.writeLock().lock();
+    if (type == ReplicationType.RATIS && exceedPipelineNumberLimit(factor)) {
+      lock.writeLock().unlock();
+      throw new SCMException("Pipeline number meets the limit: " +
+          pipelineNumberLimit,
+          SCMException.ResultCodes.FAILED_TO_FIND_HEALTHY_NODES);
+    }
     try {
       Pipeline pipeline = pipelineFactory.create(type, factor);
       pipelineStore.put(pipeline.getId().getProtobuf().toByteArray(),
@@ -160,8 +188,6 @@ public class SCMPipelineManager implements PipelineManager {
       metrics.incNumPipelineCreated();
       metrics.createPerPipelineMetrics(pipeline);
       return pipeline;
-    } catch (InsufficientDatanodesException idEx) {
-      throw idEx;
     } catch (IOException ex) {
       metrics.incNumPipelineCreationFailed();
       LOG.error("Pipeline creation failed.", ex);
@@ -173,7 +199,7 @@ public class SCMPipelineManager implements PipelineManager {
 
   @Override
   public Pipeline createPipeline(ReplicationType type, ReplicationFactor factor,
-                                 List<DatanodeDetails> nodes) {
+      List<DatanodeDetails> nodes) {
     // This will mostly be used to create dummy pipeline for SimplePipelines.
     // We don't update the metrics for SimplePipelines.
     lock.writeLock().lock();

@@ -53,6 +53,7 @@ public class TestFreonWithPipelineDestroy {
       .setHbProcessorInterval(1000)
       .setHbInterval(1000)
       .setNumDatanodes(3)
+      .setPipelineNumber(8)
       .build();
     cluster.waitForClusterToBeReady();
   }

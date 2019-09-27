@@ -38,6 +38,7 @@ import org.junit.rules.TemporaryFolder;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT;
 import static org.junit.Assert.fail;
 
 /**
@@ -62,8 +63,11 @@ public class TestSCMSafeModeWithPipelineRules {
         true);
     conf.set(HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT, "10s");
     conf.set(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL, "10s");
+    conf.setInt(OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT, 1000);
+
     clusterBuilder = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(numDatanodes)
+        .setPipelineNumber(numDatanodes + numDatanodes/3)
         .setHbInterval(1000)
         .setHbProcessorInterval(1000);
 

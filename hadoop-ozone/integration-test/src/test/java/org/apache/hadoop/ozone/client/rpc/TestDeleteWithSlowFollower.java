@@ -80,6 +80,7 @@ public class TestDeleteWithSlowFollower {
   private static String bucketName;
   private static String path;
   private static XceiverClientManager xceiverClientManager;
+  private static final int FACTOR_THREE_PIPELINE_COUNT = 1;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -111,10 +112,12 @@ public class TestDeleteWithSlowFollower {
         1000, TimeUnit.SECONDS);
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         1, TimeUnit.SECONDS);
-
     conf.setQuietMode(false);
-    cluster =
-        MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).setHbInterval(100)
+    int numOfDatanodes = 3;
+    cluster = MiniOzoneCluster.newBuilder(conf)
+            .setNumDatanodes(numOfDatanodes)
+            .setPipelineNumber(numOfDatanodes + FACTOR_THREE_PIPELINE_COUNT)
+            .setHbInterval(100)
             .build();
     cluster.waitForClusterToBeReady();
     //the easiest way to create an open container is creating a key
@@ -176,7 +179,7 @@ public class TestDeleteWithSlowFollower {
         cluster.getStorageContainerManager().getPipelineManager()
             .getPipelines(HddsProtos.ReplicationType.RATIS,
                 HddsProtos.ReplicationFactor.THREE);
-    Assert.assertTrue(pipelineList.size() == 1);
+    Assert.assertEquals(FACTOR_THREE_PIPELINE_COUNT, pipelineList.size());
     Pipeline pipeline = pipelineList.get(0);
     for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
       if (ContainerTestHelper.isRatisFollower(dn, pipeline)) {

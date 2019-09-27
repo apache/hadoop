@@ -124,6 +124,14 @@ public final class SCMPipelineMetrics implements MetricsSource {
   }
 
   /**
+   * Get the number of pipeline created.
+   * @return number of pipeline
+   */
+  long getNumPipelineCreated() {
+    return numPipelineCreated.value();
+  }
+
+  /**
    * Increments number of failed pipeline creation count.
    */
   void incNumPipelineCreationFailed() {

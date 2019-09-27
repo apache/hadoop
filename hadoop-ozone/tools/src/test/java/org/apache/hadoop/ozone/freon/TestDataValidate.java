@@ -42,7 +42,7 @@ public abstract class TestDataValidate {
   static void startCluster(OzoneConfiguration conf) throws Exception {
     conf.set(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, "5000ms");
     cluster = MiniOzoneCluster.newBuilder(conf)
-        .setNumDatanodes(5).build();
+        .setNumDatanodes(5).setPipelineNumber(8).build();
     cluster.waitForClusterToBeReady();
   }
 

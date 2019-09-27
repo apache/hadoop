@@ -164,6 +164,7 @@ public abstract class TestOzoneRpcClientAbstract {
   static void startCluster(OzoneConfiguration conf) throws Exception {
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
+        .setPipelineNumber(10)
         .setScmId(scmId)
         .build();
     cluster.waitForClusterToBeReady();

@@ -838,10 +838,17 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.datanode.max.pipeline.engagement</name>
-    <value>5</value>
+  <name>ozone.scm.datanode.max.pipeline.engagement</name>
+  <value>0</value>
+  <tag>OZONE, SCM, PIPELINE</tag>
+  <description>Max number of pipelines per datanode can be engaged in.
+  </description>
+  </property>
+  <property>
+    <name>ozone.scm.datanode.pipeline.number.limit</name>
+    <value>0</value>
     <tag>OZONE, SCM, PIPELINE</tag>
-    <description>Max number of pipelines per datanode can be engaged in.
+    <description>Upper limit for how many pipelines can be created in SCM.
     </description>
   </property>
   <property>

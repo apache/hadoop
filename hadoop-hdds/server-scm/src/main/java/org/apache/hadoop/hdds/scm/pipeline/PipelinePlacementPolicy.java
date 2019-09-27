@@ -52,6 +52,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
   static final Logger LOG =
       LoggerFactory.getLogger(PipelinePlacementPolicy.class);
   private final NodeManager nodeManager;
+  private final PipelineStateManager stateManager;
   private final Configuration conf;
   private final int heavyNodeCriteria;
 
@@ -59,15 +60,17 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
    * Constructs a pipeline placement with considering network topology,
    * load balancing and rack awareness.
    *
-   * @param nodeManager Node Manager
+   * @param nodeManager NodeManager
+   * @param stateManager PipelineStateManager
    * @param conf        Configuration
    */
-  public PipelinePlacementPolicy(
-      final NodeManager nodeManager, final Configuration conf) {
+  public PipelinePlacementPolicy(final NodeManager nodeManager,
+      final PipelineStateManager stateManager, final Configuration conf) {
     super(nodeManager, conf);
     this.nodeManager = nodeManager;
     this.conf = conf;
-    heavyNodeCriteria = conf.getInt(
+    this.stateManager = stateManager;
+    this.heavyNodeCriteria = conf.getInt(
         ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT,
         ScmConfigKeys.OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT_DEFAULT);
   }
@@ -76,16 +79,27 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
    * Returns true if this node meets the criteria.
    *
    * @param datanodeDetails DatanodeDetails
+   * @param nodesRequired nodes required count
    * @return true if we have enough space.
    */
   @VisibleForTesting
-  boolean meetCriteria(DatanodeDetails datanodeDetails) {
+  boolean meetCriteria(DatanodeDetails datanodeDetails, int nodesRequired) {
     if (heavyNodeCriteria == 0) {
       // no limit applied.
       return true;
     }
+    // Datanodes from pipeline in some states can also be considered available
+    // for pipeline allocation. Thus the number of these pipeline shall be
+    // deducted from total heaviness calculation.
+    int pipelineNumDeductable = (int)stateManager.getPipelines(
+        HddsProtos.ReplicationType.RATIS,
+        HddsProtos.ReplicationFactor.valueOf(nodesRequired),
+        Pipeline.PipelineState.CLOSED)
+        .stream().filter(
+            p -> nodeManager.getPipelines(datanodeDetails).contains(p.getId()))
+        .count();
     boolean meet = (nodeManager.getPipelinesCount(datanodeDetails)
-        < heavyNodeCriteria);
+        - pipelineNumDeductable) < heavyNodeCriteria;
     if (!meet) {
       LOG.info("Pipeline Placement: can't place more pipeline on heavy " +
           "datanode： " + datanodeDetails.getUuid().toString() + " Heaviness: " +
@@ -134,13 +148,14 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
 
     // filter nodes that meet the size and pipeline engagement criteria.
     // Pipeline placement doesn't take node space left into account.
-    List<DatanodeDetails> healthyList = healthyNodes.stream().filter(d ->
-        meetCriteria(d)).collect(Collectors.toList());
+    List<DatanodeDetails> healthyList = healthyNodes.stream()
+        .filter(d -> meetCriteria(d, nodesRequired)).limit(nodesRequired)
+        .collect(Collectors.toList());
 
     if (healthyList.size() < nodesRequired) {
       msg = String.format("Unable to find enough nodes that meet " +
               "the criteria that cannot engage in more than %d pipelines." +
-              " Nodes required: %d Found: %d, healthy nodes count in" +
+              " Nodes required: %d Found: %d, healthy nodes count in " +
               "NodeManager: %d.",
           heavyNodeCriteria, nodesRequired, healthyList.size(),
           initialHealthyNodesCount);
@@ -173,8 +188,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     // Randomly picks nodes when all nodes are equal or factor is ONE.
     // This happens when network topology is absent or
     // all nodes are on the same rack.
-    if (checkAllNodesAreEqual(nodeManager.getClusterNetworkTopologyMap())
-        || nodesRequired == HddsProtos.ReplicationFactor.ONE.getNumber()) {
+    if (checkAllNodesAreEqual(nodeManager.getClusterNetworkTopologyMap())) {
       return super.getResultSet(nodesRequired, healthyNodes);
     } else {
       // Since topology and rack awareness are available, picks nodes

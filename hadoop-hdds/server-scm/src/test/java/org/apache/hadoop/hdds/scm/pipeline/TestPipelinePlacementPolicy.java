@@ -51,8 +51,8 @@ public class TestPipelinePlacementPolicy {
         PIPELINE_PLACEMENT_MAX_NODES_COUNT);
     conf = new OzoneConfiguration();
     conf.setInt(OZONE_DATANODE_MAX_PIPELINE_ENGAGEMENT, 5);
-    placementPolicy =
-        new PipelinePlacementPolicy(nodeManager, conf);
+    placementPolicy = new PipelinePlacementPolicy(
+        nodeManager, new PipelineStateManager(conf), conf);
   }
 
   @Test
@@ -128,7 +128,7 @@ public class TestPipelinePlacementPolicy {
   public void testHeavyNodeShouldBeExcluded() throws SCMException{
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
-    int nodesRequired = healthyNodes.size()/2;
+    int nodesRequired = HddsProtos.ReplicationFactor.THREE.getNumber();
     // only minority of healthy NODES are heavily engaged in pipelines.
     int minorityHeavy = healthyNodes.size()/2 - 1;
     List<DatanodeDetails> pickedNodes1 = placementPolicy.chooseDatanodes(

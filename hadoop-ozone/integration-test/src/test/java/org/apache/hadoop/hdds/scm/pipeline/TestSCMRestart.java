@@ -57,8 +57,11 @@ public class TestSCMRestart {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
+    int numOfNodes = 4;
     cluster = MiniOzoneCluster.newBuilder(conf)
-        .setNumDatanodes(4)
+        .setNumDatanodes(numOfNodes)
+        // allow only one FACTOR THREE pipeline.
+        .setPipelineNumber(numOfNodes + 1)
         .setHbInterval(1000)
         .setHbProcessorInterval(1000)
         .build();
