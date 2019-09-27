@@ -286,8 +286,10 @@ public class ObserverReadProxyProvider<T>
     } catch (IOException e) {
       ioe = e;
     }
-    LOG.warn("Failed to connect to {} while fetching HAServiceState",
-        proxyInfo.getAddress(), ioe);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Failed to connect to {} while fetching HAServiceState",
+          proxyInfo.getAddress(), ioe);
+    }
     return null;
   }
 
@@ -435,11 +437,21 @@ public class ObserverReadProxyProvider<T>
           }
         }
 
-        // If we get here, it means all observers have failed.
-        LOG.warn("{} observers have failed for read request {}; also found {} "
-            + "standby, {} active, and {} unreachable. Falling back to active.",
-            failedObserverCount, method.getName(), standbyCount, activeCount,
-            unreachableCount);
+        // Only log message if there are actual observer failures.
+        // Getting here with failedObserverCount = 0 could
+        // be that there is simply no Observer node running at all.
+        if (failedObserverCount > 0) {
+          // If we get here, it means all observers have failed.
+          LOG.warn("{} observers have failed for read request {}; "
+                  + "also found {} standby, {} active, and {} unreachable. "
+                  + "Falling back to active.", failedObserverCount,
+              method.getName(), standbyCount, activeCount, unreachableCount);
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Read falling back to active without observer read "
+                + "fail, is there no observer node running?");
+          }
+        }
       }
 
       // Either all observers have failed, observer reads are disabled,

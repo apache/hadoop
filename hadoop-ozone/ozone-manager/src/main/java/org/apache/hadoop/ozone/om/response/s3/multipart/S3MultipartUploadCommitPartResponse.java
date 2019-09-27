@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
@@ -66,17 +67,16 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
 
-
     if (getOMResponse().getStatus() == NO_SUCH_MULTIPART_UPLOAD_ERROR) {
       // Means by the time we try to commit part, some one has aborted this
       // multipart upload. So, delete this part information.
       RepeatedOmKeyInfo repeatedOmKeyInfo =
           omMetadataManager.getDeletedTable().get(openKey);
-      if(repeatedOmKeyInfo == null) {
-        repeatedOmKeyInfo = new RepeatedOmKeyInfo(deletePartKeyInfo);
-      } else {
-        repeatedOmKeyInfo.addOmKeyInfo(deletePartKeyInfo);
-      }
+
+      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+          deletePartKeyInfo, repeatedOmKeyInfo);
+
+
       omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
           openKey,
           repeatedOmKeyInfo);
@@ -86,6 +86,7 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
 
       // If we have old part info:
       // Need to do 3 steps:
+      //   0. Strip GDPR related metadata from multipart info
       //   1. add old part to delete table
       //   2. Commit multipart info which has information about this new part.
       //   3. delete this new part entry from open key table.
@@ -93,21 +94,20 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       // This means for this multipart upload part upload, we have an old
       // part information, so delete it.
       if (oldMultipartKeyInfo != null) {
-        RepeatedOmKeyInfo repeatedOmKeyInfo = omMetadataManager.
-            getDeletedTable().get(oldMultipartKeyInfo.getPartName());
-        if(repeatedOmKeyInfo == null) {
-          repeatedOmKeyInfo = new RepeatedOmKeyInfo(
-              OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
-        } else {
-          repeatedOmKeyInfo.addOmKeyInfo(
-              OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
-        }
+        OmKeyInfo partKey =
+            OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo());
+
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            omMetadataManager.getDeletedTable()
+                .get(oldMultipartKeyInfo.getPartName());
+
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(partKey,
+            repeatedOmKeyInfo);
 
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             oldMultipartKeyInfo.getPartName(),
             repeatedOmKeyInfo);
       }
-
 
       omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
           multipartKey, omMultipartKeyInfo);
@@ -116,8 +116,6 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       //  safely delete part key info from open key table.
       omMetadataManager.getOpenKeyTable().deleteWithBatch(batchOperation,
           openKey);
-
-
     }
   }
 

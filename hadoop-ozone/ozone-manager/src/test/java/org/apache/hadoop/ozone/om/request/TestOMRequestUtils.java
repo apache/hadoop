@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -374,13 +375,13 @@ public final class TestOMRequestUtils {
 
     // Delete key from KeyTable and put in DeletedKeyTable
     omMetadataManager.getKeyTable().delete(ozoneKey);
+
     RepeatedOmKeyInfo repeatedOmKeyInfo =
         omMetadataManager.getDeletedTable().get(ozoneKey);
-    if(repeatedOmKeyInfo == null) {
-      repeatedOmKeyInfo = new RepeatedOmKeyInfo(omKeyInfo);
-    } else {
-      repeatedOmKeyInfo.addOmKeyInfo(omKeyInfo);
-    }
+
+    repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(omKeyInfo,
+        repeatedOmKeyInfo);
+
     omMetadataManager.getDeletedTable().put(ozoneKey, repeatedOmKeyInfo);
 
     return ozoneKey;
