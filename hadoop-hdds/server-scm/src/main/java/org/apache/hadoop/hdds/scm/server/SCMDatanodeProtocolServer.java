@@ -349,7 +349,7 @@ public class SCMDatanodeProtocolServer implements
       LOG.error(" datanodeRpcServer stop failed.", ex);
     }
     IOUtils.cleanupWithLogger(LOG, scm.getScmNodeManager());
-    protocolMessageMetrics.register();
+    protocolMessageMetrics.unregister();
   }
 
   @Override
