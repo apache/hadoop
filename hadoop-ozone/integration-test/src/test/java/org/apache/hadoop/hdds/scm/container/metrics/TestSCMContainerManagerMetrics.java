@@ -147,14 +147,14 @@ public class TestSCMContainerManagerMetrics {
         .createVolume(volumeName);
     cluster.getRpcClient().getObjectStore().getClientProxy()
         .createBucket(volumeName, bucketName);
-   OzoneOutputStream ozoneOutputStream = cluster.getRpcClient()
-       .getObjectStore().getClientProxy().createKey(volumeName, bucketName,
-           key, 0, ReplicationType.RATIS, ReplicationFactor.ONE,
-           new HashMap<>());
+    OzoneOutputStream ozoneOutputStream = cluster.getRpcClient()
+        .getObjectStore().getClientProxy().createKey(volumeName, bucketName,
+            key, 0, ReplicationType.RATIS, ReplicationFactor.ONE,
+            new HashMap<>());
 
-   String data = "file data";
-   ozoneOutputStream.write(data.getBytes(), 0, data.length());
-   ozoneOutputStream.close();
+    String data = "file data";
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
 
 
     GenericTestUtils.waitFor(() -> {
