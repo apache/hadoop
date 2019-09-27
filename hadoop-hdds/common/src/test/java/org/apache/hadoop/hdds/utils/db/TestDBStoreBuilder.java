@@ -20,7 +20,6 @@
 package org.apache.hadoop.hdds.utils.db;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.junit.Assert;
 import org.junit.Before;

@@ -23,6 +23,9 @@ import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigTag;
 import org.apache.hadoop.hdds.conf.ConfigType;
 
+/**
+ * Holds configuration items for OM RocksDB.
+ */
 @ConfigGroup(prefix = "hadoop.hdds.db")
 public class RocksDBConfiguration {
 
@@ -33,8 +36,8 @@ public class RocksDBConfiguration {
       defaultValue = "false",
       tags = {ConfigTag.OM},
       description = "Enable/Disable RocksDB logging for OM.")
-  public void setRocksdbLoggingEnabled(boolean rocksdbLogEnabled) {
-    this.rocksdbLogEnabled = rocksdbLogEnabled;
+  public void setRocksdbLoggingEnabled(boolean enabled) {
+    this.rocksdbLogEnabled = enabled;
   }
 
   public boolean isRocksdbLoggingEnabled() {
@@ -48,8 +51,8 @@ public class RocksDBConfiguration {
       defaultValue = "INFO",
       tags = {ConfigTag.OM},
       description = "OM RocksDB logging level (INFO/DEBUG/WARN/ERROR/FATAL)")
-  public void setRocksdbLogLevel(String rocksdbLogLevel) {
-    this.rocksdbLogLevel = rocksdbLogLevel;
+  public void setRocksdbLogLevel(String level) {
+    this.rocksdbLogLevel = level;
   }
 
   public String getRocksdbLogLevel() {
