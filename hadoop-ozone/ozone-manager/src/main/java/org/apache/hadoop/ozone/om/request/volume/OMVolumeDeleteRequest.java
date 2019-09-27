@@ -115,7 +115,8 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
 
       // delete the volume from the owner list
       // as well as delete the volume entry
-      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner);
+      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner,
+          transactionLogIndex);
 
       omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
           new CacheValue<>(Optional.of(newVolumeList), transactionLogIndex));

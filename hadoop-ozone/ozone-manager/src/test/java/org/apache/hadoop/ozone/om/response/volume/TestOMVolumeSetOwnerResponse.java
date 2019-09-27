@@ -70,6 +70,8 @@ public class TestOMVolumeSetOwnerResponse {
     String volumeName = UUID.randomUUID().toString();
     String oldOwner = "user1";
     VolumeList volumeList = VolumeList.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
@@ -89,8 +91,13 @@ public class TestOMVolumeSetOwnerResponse {
 
     String newOwner = "user2";
     VolumeList newOwnerVolumeList = VolumeList.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
-    VolumeList oldOwnerVolumeList = VolumeList.newBuilder().build();
+    VolumeList oldOwnerVolumeList = VolumeList.newBuilder()
+        .setObjectID(2)
+        .setUpdateID(2)
+        .build();
     OmVolumeArgs newOwnerVolumeArgs = OmVolumeArgs.newBuilder()
         .setOwnerName(newOwner).setAdminName(newOwner)
         .setVolume(volumeName).setCreationTime(omVolumeArgs.getCreationTime())
