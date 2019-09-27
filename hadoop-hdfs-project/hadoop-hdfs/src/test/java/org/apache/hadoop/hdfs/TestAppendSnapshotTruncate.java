@@ -374,7 +374,7 @@ public class TestAppendSnapshotTruncate {
 
     static int checkLength(Path file, File localFile) throws IOException {
       final long length = dfs.getFileStatus(file).getLen();
-      Assert.assertEquals(localFile.length(), length);
+      Assert.assertEquals(length, localFile.length());
       Assert.assertTrue(length <= Integer.MAX_VALUE);
       return (int)length;
     }

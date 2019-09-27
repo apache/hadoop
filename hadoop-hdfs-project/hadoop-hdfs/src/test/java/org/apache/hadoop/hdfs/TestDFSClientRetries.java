@@ -1047,7 +1047,7 @@ public class TestDFSClientRetries {
             int count = 0;
             for(; in.read() != -1; count++);
             in.close();
-            assertEquals(s1.getLen(), count);
+            assertEquals(count, s1.getLen());
           } catch (Exception e) {
             exceptions.add(e);
           }

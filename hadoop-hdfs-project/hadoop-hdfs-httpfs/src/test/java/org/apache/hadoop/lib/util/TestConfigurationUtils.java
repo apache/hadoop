@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.lib.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNull;
 
 import java.io.ByteArrayInputStream;
@@ -33,14 +33,14 @@ public class TestConfigurationUtils {
   @Test
   public void constructors() throws Exception {
     Configuration conf = new Configuration(false);
-    assertEquals(conf.size(), 0);
+    assertThat(conf.size()).isEqualTo(0);
 
     byte[] bytes = "<configuration><property><name>a</name><value>A</value></property></configuration>".getBytes();
     InputStream is = new ByteArrayInputStream(bytes);
     conf = new Configuration(false);
     ConfigurationUtils.load(conf, is);
-    assertEquals(conf.size(), 1);
-    assertEquals(conf.get("a"), "A");
+    assertThat(conf.size()).isEqualTo(1);
+    assertThat(conf.get("a")).isEqualTo("A");
   }
 
 
@@ -64,9 +64,9 @@ public class TestConfigurationUtils {
 
     ConfigurationUtils.copy(srcConf, targetConf);
 
-    assertEquals("valueFromSource", targetConf.get("testParameter1"));
-    assertEquals("valueFromSource", targetConf.get("testParameter2"));
-    assertEquals("valueFromTarget", targetConf.get("testParameter3"));
+    assertThat(targetConf.get("testParameter1")).isEqualTo("valueFromSource");
+    assertThat(targetConf.get("testParameter2")).isEqualTo("valueFromSource");
+    assertThat(targetConf.get("testParameter3")).isEqualTo("valueFromTarget");
   }
 
   @Test
@@ -82,12 +82,12 @@ public class TestConfigurationUtils {
 
     ConfigurationUtils.injectDefaults(srcConf, targetConf);
 
-    assertEquals("valueFromSource", targetConf.get("testParameter1"));
-    assertEquals("originalValueFromTarget", targetConf.get("testParameter2"));
-    assertEquals("originalValueFromTarget", targetConf.get("testParameter3"));
+    assertThat(targetConf.get("testParameter1")).isEqualTo("valueFromSource");
+    assertThat(targetConf.get("testParameter2")).isEqualTo("originalValueFromTarget");
+    assertThat(targetConf.get("testParameter3")).isEqualTo("originalValueFromTarget");
 
-    assertEquals("valueFromSource", srcConf.get("testParameter1"));
-    assertEquals("valueFromSource", srcConf.get("testParameter2"));
+    assertThat(srcConf.get("testParameter1")).isEqualTo("valueFromSource");
+    assertThat(srcConf.get("testParameter2")).isEqualTo("valueFromSource");
     assertNull(srcConf.get("testParameter3"));
   }
 
@@ -97,11 +97,12 @@ public class TestConfigurationUtils {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
     conf.set("b", "${a}");
-    assertEquals(conf.getRaw("a"), "A");
-    assertEquals(conf.getRaw("b"), "${a}");
+
+    assertThat(conf.getRaw("a")).isEqualTo("A");
+    assertThat(conf.getRaw("b")).isEqualTo("${a}");
     conf = ConfigurationUtils.resolve(conf);
-    assertEquals(conf.getRaw("a"), "A");
-    assertEquals(conf.getRaw("b"), "A");
+    assertThat(conf.getRaw("a")).isEqualTo("A");
+    assertThat(conf.getRaw("b")).isEqualTo("A");
   }
 
   @Test
@@ -112,16 +113,16 @@ public class TestConfigurationUtils {
     conf.set("b", "${a}");
     conf.set("c", "${user.name}");
     conf.set("d", "${aaa}");
-    assertEquals(conf.getRaw("a"), "A");
-    assertEquals(conf.getRaw("b"), "${a}");
-    assertEquals(conf.getRaw("c"), "${user.name}");
-    assertEquals(conf.get("a"), "A");
-    assertEquals(conf.get("b"), "A");
-    assertEquals(conf.get("c"), userName);
-    assertEquals(conf.get("d"), "${aaa}");
+    assertThat(conf.getRaw("a")).isEqualTo("A");
+    assertThat(conf.getRaw("b")).isEqualTo("${a}");
+    assertThat(conf.getRaw("c")).isEqualTo("${user.name}");
+    assertThat(conf.get("a")).isEqualTo("A");
+    assertThat(conf.get("b")).isEqualTo("A");
+    assertThat(conf.get("c")).isEqualTo(userName);
+    assertThat(conf.get("d")).isEqualTo("${aaa}");
 
     conf.set("user.name", "foo");
-    assertEquals(conf.get("user.name"), "foo");
+    assertThat(conf.get("user.name")).isEqualTo("foo");
   }
 
 }

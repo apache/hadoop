@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -106,11 +106,11 @@ public class TestDFSClientFailover {
     
     DFSTestUtil.createFile(fs, TEST_FILE,
         FILE_LENGTH_TO_VERIFY, (short)1, 1L);
-    
-    assertEquals(fs.getFileStatus(TEST_FILE).getLen(), FILE_LENGTH_TO_VERIFY);
+
+    assertThat(fs.getFileStatus(TEST_FILE).getLen()).isEqualTo(FILE_LENGTH_TO_VERIFY);
     cluster.shutdownNameNode(0);
     cluster.transitionToActive(1);
-    assertEquals(fs.getFileStatus(TEST_FILE).getLen(), FILE_LENGTH_TO_VERIFY);
+    assertThat(fs.getFileStatus(TEST_FILE).getLen()).isEqualTo(FILE_LENGTH_TO_VERIFY);
     
     // Check that it functions even if the URL becomes canonicalized
     // to include a port number.

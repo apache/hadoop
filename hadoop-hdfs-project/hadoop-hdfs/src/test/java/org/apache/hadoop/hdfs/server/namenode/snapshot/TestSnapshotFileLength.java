@@ -203,7 +203,7 @@ public class TestSnapshotFileLength {
         SnapshotTestHelper.getSnapshotPath(sub, snapshot1, file1Name);
     fis = hdfs.open(file1snap1);
     fileStatus = hdfs.getFileStatus(file1snap1);
-    assertEquals(fileStatus.getLen(), BLOCKSIZE);
+    assertEquals(BLOCKSIZE, fileStatus.getLen());
     // Make sure we can only read up to the snapshot length.
     bytesRead = fis.read(buffer, 0, buffer.length);
     assertEquals("Unexpected # bytes read", BLOCKSIZE, bytesRead);

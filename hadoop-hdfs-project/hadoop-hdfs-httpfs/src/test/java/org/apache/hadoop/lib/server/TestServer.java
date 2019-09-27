@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.lib.server;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -54,44 +54,44 @@ public class TestServer extends HTestCase {
     Server server = new Server("server", getAbsolutePath("/a"),
       getAbsolutePath("/b"), getAbsolutePath("/c"), getAbsolutePath("/d"),
       new Configuration(false));
-    assertEquals(server.getHomeDir(), getAbsolutePath("/a"));
-    assertEquals(server.getConfigDir(), getAbsolutePath("/b"));
-    assertEquals(server.getLogDir(), getAbsolutePath("/c"));
-    assertEquals(server.getTempDir(), getAbsolutePath("/d"));
-    assertEquals(server.getName(), "server");
-    assertEquals(server.getPrefix(), "server");
-    assertEquals(server.getPrefixedName("name"), "server.name");
+    assertThat(server.getHomeDir()).isEqualTo(getAbsolutePath("/a"));
+    assertThat(server.getConfigDir()).isEqualTo(getAbsolutePath("/b"));
+    assertThat(server.getLogDir()).isEqualTo(getAbsolutePath("/c"));
+    assertThat(server.getTempDir()).isEqualTo(getAbsolutePath("/d"));
+    assertThat(server.getName()).isEqualTo("server");
+    assertThat(server.getPrefix()).isEqualTo("server");
+    assertThat(server.getPrefixedName("name")).isEqualTo("server.name");
     assertNotNull(server.getConfig());
 
     server = new Server("server", getAbsolutePath("/a"), getAbsolutePath("/b"),
       getAbsolutePath("/c"), getAbsolutePath("/d"));
-    assertEquals(server.getHomeDir(), getAbsolutePath("/a"));
-    assertEquals(server.getConfigDir(), getAbsolutePath("/b"));
-    assertEquals(server.getLogDir(), getAbsolutePath("/c"));
-    assertEquals(server.getTempDir(), getAbsolutePath("/d"));
-    assertEquals(server.getName(), "server");
-    assertEquals(server.getPrefix(), "server");
-    assertEquals(server.getPrefixedName("name"), "server.name");
+    assertThat(server.getHomeDir()).isEqualTo(getAbsolutePath("/a"));
+    assertThat(server.getConfigDir()).isEqualTo(getAbsolutePath("/b"));
+    assertThat(server.getLogDir()).isEqualTo(getAbsolutePath("/c"));
+    assertThat(server.getTempDir()).isEqualTo(getAbsolutePath("/d"));
+    assertThat(server.getName()).isEqualTo("server");
+    assertThat(server.getPrefix()).isEqualTo("server");
+    assertThat(server.getPrefixedName("name")).isEqualTo("server.name");
     assertNull(server.getConfig());
 
     server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
-    assertEquals(server.getHomeDir(), TestDirHelper.getTestDir().getAbsolutePath());
-    assertEquals(server.getConfigDir(), TestDirHelper.getTestDir() + "/conf");
-    assertEquals(server.getLogDir(), TestDirHelper.getTestDir() + "/log");
-    assertEquals(server.getTempDir(), TestDirHelper.getTestDir() + "/temp");
-    assertEquals(server.getName(), "server");
-    assertEquals(server.getPrefix(), "server");
-    assertEquals(server.getPrefixedName("name"), "server.name");
+    assertThat(server.getHomeDir()).isEqualTo(TestDirHelper.getTestDir().getAbsolutePath());
+    assertThat(server.getConfigDir()).isEqualTo(TestDirHelper.getTestDir() + "/conf");
+    assertThat(server.getLogDir()).isEqualTo(TestDirHelper.getTestDir() + "/log");
+    assertThat(server.getTempDir()).isEqualTo(TestDirHelper.getTestDir() + "/temp");
+    assertThat(server.getName()).isEqualTo("server");
+    assertThat(server.getPrefix()).isEqualTo("server");
+    assertThat(server.getPrefixedName("name")).isEqualTo("server.name");
     assertNotNull(server.getConfig());
 
     server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath());
-    assertEquals(server.getHomeDir(), TestDirHelper.getTestDir().getAbsolutePath());
-    assertEquals(server.getConfigDir(), TestDirHelper.getTestDir() + "/conf");
-    assertEquals(server.getLogDir(), TestDirHelper.getTestDir() + "/log");
-    assertEquals(server.getTempDir(), TestDirHelper.getTestDir() + "/temp");
-    assertEquals(server.getName(), "server");
-    assertEquals(server.getPrefix(), "server");
-    assertEquals(server.getPrefixedName("name"), "server.name");
+    assertThat(server.getHomeDir()).isEqualTo(TestDirHelper.getTestDir().getAbsolutePath());
+    assertThat(server.getConfigDir()).isEqualTo(TestDirHelper.getTestDir() + "/conf");
+    assertThat(server.getLogDir()).isEqualTo(TestDirHelper.getTestDir() + "/log");
+    assertThat(server.getTempDir()).isEqualTo(TestDirHelper.getTestDir() + "/temp");
+    assertThat(server.getName()).isEqualTo("server");
+    assertThat(server.getPrefix()).isEqualTo("server");
+    assertThat(server.getPrefixedName("name")).isEqualTo("server.name");
     assertNull(server.getConfig());
   }
 
@@ -244,12 +244,12 @@ public class TestServer extends HTestCase {
 
     @Override
     protected void init() throws ServiceException {
-      assertEquals(getServer().getStatus(), Server.Status.BOOTING);
+      assertThat(getServer().getStatus()).isEqualTo(Server.Status.BOOTING);
     }
 
     @Override
     public void destroy() {
-      assertEquals(getServer().getStatus(), Server.Status.SHUTTING_DOWN);
+      assertThat(getServer().getStatus()).isEqualTo(Server.Status.SHUTTING_DOWN);
       super.destroy();
     }
 
@@ -265,12 +265,12 @@ public class TestServer extends HTestCase {
     Configuration conf = new Configuration(false);
     conf.set("server.services", LifeCycleService.class.getName());
     Server server = createServer(conf);
-    assertEquals(server.getStatus(), Server.Status.UNDEF);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.UNDEF);
     server.init();
     assertNotNull(server.get(LifeCycleService.class));
-    assertEquals(server.getStatus(), Server.Status.NORMAL);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.NORMAL);
     server.destroy();
-    assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.SHUTDOWN);
   }
 
   @Test
@@ -280,7 +280,7 @@ public class TestServer extends HTestCase {
     conf.set("server.startup.status", "ADMIN");
     Server server = createServer(conf);
     server.init();
-    assertEquals(server.getStatus(), Server.Status.ADMIN);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.ADMIN);
     server.destroy();
   }
 
@@ -380,7 +380,8 @@ public class TestServer extends HTestCase {
     server.init();
     assertNotNull(server.get(TestService.class));
     server.destroy();
-    assertEquals(TestService.LIFECYCLE, Arrays.asList("init", "postInit", "serverStatusChange", "destroy"));
+    assertThat(TestService.LIFECYCLE).isEqualTo(
+            Arrays.asList("init", "postInit", "serverStatusChange", "destroy"));
   }
 
   @Test
@@ -389,7 +390,7 @@ public class TestServer extends HTestCase {
     String dir = TestDirHelper.getTestDir().getAbsolutePath();
     Server server = new Server("testserver", dir, dir, dir, dir);
     server.init();
-    assertEquals(server.getConfig().get("testserver.a"), "default");
+    assertThat(server.getConfig().get("testserver.a")).isEqualTo("default");
   }
 
   @Test
@@ -402,7 +403,7 @@ public class TestServer extends HTestCase {
     w.close();
     Server server = new Server("testserver", dir, dir, dir, dir);
     server.init();
-    assertEquals(server.getConfig().get("testserver.a"), "site");
+    assertThat(server.getConfig().get("testserver.a")).isEqualTo("site");
   }
 
   @Test
@@ -417,7 +418,7 @@ public class TestServer extends HTestCase {
       w.close();
       Server server = new Server("testserver", dir, dir, dir, dir);
       server.init();
-      assertEquals(server.getConfig().get("testserver.a"), "sysprop");
+      assertThat(server.getConfig().get("testserver.a")).isEqualTo("sysprop");
     } finally {
       System.getProperties().remove("testserver.a");
     }
@@ -643,7 +644,7 @@ public class TestServer extends HTestCase {
     conf = new Configuration(false);
     server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    assertEquals(ORDER.size(), 0);
+    assertThat(ORDER.size()).isEqualTo(0);
 
     // 2 services init/destroy
     ORDER.clear();
@@ -653,17 +654,18 @@ public class TestServer extends HTestCase {
     conf.set("server.services", services);
     server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    assertEquals(server.get(MyService1.class).getInterface(), MyService1.class);
-    assertEquals(server.get(MyService3.class).getInterface(), MyService3.class);
-    assertEquals(ORDER.size(), 4);
-    assertEquals(ORDER.get(0), "s1.init");
-    assertEquals(ORDER.get(1), "s3.init");
-    assertEquals(ORDER.get(2), "s1.postInit");
-    assertEquals(ORDER.get(3), "s3.postInit");
+
+    assertThat(server.get(MyService1.class).getInterface()).isEqualTo(MyService1.class);
+    assertThat(server.get(MyService3.class).getInterface()).isEqualTo(MyService3.class);
+    assertThat(ORDER.size()).isEqualTo(4);
+    assertThat(ORDER.get(0)).isEqualTo("s1.init");
+    assertThat(ORDER.get(1)).isEqualTo("s3.init");
+    assertThat(ORDER.get(2)).isEqualTo("s1.postInit");
+    assertThat(ORDER.get(3)).isEqualTo("s3.postInit");
     server.destroy();
-    assertEquals(ORDER.size(), 6);
-    assertEquals(ORDER.get(4), "s3.destroy");
-    assertEquals(ORDER.get(5), "s1.destroy");
+    assertThat(ORDER.size()).isEqualTo(6);
+    assertThat(ORDER.get(4)).isEqualTo("s3.destroy");
+    assertThat(ORDER.get(5)).isEqualTo("s1.destroy");
 
     // 3 services, 2nd one fails on init
     ORDER.clear();
@@ -677,14 +679,14 @@ public class TestServer extends HTestCase {
       server.init();
       fail();
     } catch (ServerException ex) {
-      assertEquals(MyService2.class, ex.getError().getClass());
+      assertThat(ex.getError().getClass()).isEqualTo(MyService2.class);
     } catch (Exception ex) {
       fail();
     }
-    assertEquals(ORDER.size(), 3);
-    assertEquals(ORDER.get(0), "s1.init");
-    assertEquals(ORDER.get(1), "s2.init");
-    assertEquals(ORDER.get(2), "s1.destroy");
+    assertThat(ORDER.size()).isEqualTo(3);
+    assertThat(ORDER.get(0)).isEqualTo("s1.init");
+    assertThat(ORDER.get(1)).isEqualTo("s2.init");
+    assertThat(ORDER.get(2)).isEqualTo("s1.destroy");
 
     // 2 services one fails on destroy
     ORDER.clear();
@@ -693,16 +695,15 @@ public class TestServer extends HTestCase {
     conf.set("server.services", services);
     server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    assertEquals(ORDER.size(), 4);
-    assertEquals(ORDER.get(0), "s1.init");
-    assertEquals(ORDER.get(1), "s5.init");
-    assertEquals(ORDER.get(2), "s1.postInit");
-    assertEquals(ORDER.get(3), "s5.postInit");
+    assertThat(ORDER.size()).isEqualTo(4);
+    assertThat(ORDER.get(0)).isEqualTo("s1.init");
+    assertThat(ORDER.get(1)).isEqualTo("s5.init");
+    assertThat(ORDER.get(2)).isEqualTo("s1.postInit");
+    assertThat(ORDER.get(3)).isEqualTo("s5.postInit");
     server.destroy();
-    assertEquals(ORDER.size(), 6);
-    assertEquals(ORDER.get(4), "s5.destroy");
-    assertEquals(ORDER.get(5), "s1.destroy");
-
+    assertThat(ORDER.size()).isEqualTo(6);
+    assertThat(ORDER.get(4)).isEqualTo("s5.destroy");
+    assertThat(ORDER.get(5)).isEqualTo("s1.destroy");
 
     // service override via ext
     ORDER.clear();
@@ -715,17 +716,16 @@ public class TestServer extends HTestCase {
     server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
 
-    assertEquals(server.get(MyService1.class).getClass(), MyService1a.class);
-    assertEquals(ORDER.size(), 4);
-    assertEquals(ORDER.get(0), "s1a.init");
-    assertEquals(ORDER.get(1), "s3.init");
-    assertEquals(ORDER.get(2), "s1a.postInit");
-    assertEquals(ORDER.get(3), "s3.postInit");
+    assertThat(server.get(MyService1.class).getClass()).isEqualTo(MyService1a.class);
+    assertThat(ORDER.size()).isEqualTo(4);
+    assertThat(ORDER.get(0)).isEqualTo("s1a.init");
+    assertThat(ORDER.get(1)).isEqualTo("s3.init");
+    assertThat(ORDER.get(2)).isEqualTo("s1a.postInit");
+    assertThat(ORDER.get(3)).isEqualTo("s3.postInit");
     server.destroy();
-    assertEquals(ORDER.size(), 6);
-    assertEquals(ORDER.get(4), "s3.destroy");
-    assertEquals(ORDER.get(5), "s1a.destroy");
-
+    assertThat(ORDER.size()).isEqualTo(6);
+    assertThat(ORDER.get(4)).isEqualTo("s3.destroy");
+    assertThat(ORDER.get(5)).isEqualTo("s1a.destroy");
     // service override via setService
     ORDER.clear();
     services = StringUtils.join(",", Arrays.asList(MyService1.class.getName(), MyService3.class.getName()));
@@ -735,16 +735,16 @@ public class TestServer extends HTestCase {
     server.init();
 
     server.setService(MyService1a.class);
-    assertEquals(ORDER.size(), 6);
-    assertEquals(ORDER.get(4), "s1.destroy");
-    assertEquals(ORDER.get(5), "s1a.init");
+    assertThat(ORDER.size()).isEqualTo(6);
+    assertThat(ORDER.get(4)).isEqualTo("s1.destroy");
+    assertThat(ORDER.get(5)).isEqualTo("s1a.init");
 
-    assertEquals(server.get(MyService1.class).getClass(), MyService1a.class);
+    assertThat(server.get(MyService1.class).getClass()).isEqualTo(MyService1a.class);
 
     server.destroy();
-    assertEquals(ORDER.size(), 8);
-    assertEquals(ORDER.get(6), "s3.destroy");
-    assertEquals(ORDER.get(7), "s1a.destroy");
+    assertThat(ORDER.size()).isEqualTo(8);
+    assertThat(ORDER.get(6)).isEqualTo("s3.destroy");
+    assertThat(ORDER.get(7)).isEqualTo("s1a.destroy");
 
     // service add via setService
     ORDER.clear();
@@ -755,16 +755,16 @@ public class TestServer extends HTestCase {
     server.init();
 
     server.setService(MyService5.class);
-    assertEquals(ORDER.size(), 5);
-    assertEquals(ORDER.get(4), "s5.init");
+    assertThat(ORDER.size()).isEqualTo(5);
+    assertThat(ORDER.get(4)).isEqualTo("s5.init");
 
-    assertEquals(server.get(MyService5.class).getClass(), MyService5.class);
+    assertThat(server.get(MyService5.class).getClass()).isEqualTo(MyService5.class);
 
     server.destroy();
-    assertEquals(ORDER.size(), 8);
-    assertEquals(ORDER.get(5), "s5.destroy");
-    assertEquals(ORDER.get(6), "s3.destroy");
-    assertEquals(ORDER.get(7), "s1.destroy");
+    assertThat(ORDER.size()).isEqualTo(8);
+    assertThat(ORDER.get(5)).isEqualTo("s5.destroy");
+    assertThat(ORDER.get(6)).isEqualTo("s3.destroy");
+    assertThat(ORDER.get(7)).isEqualTo("s1.destroy");
 
     // service add via setService exception
     ORDER.clear();
@@ -777,13 +777,13 @@ public class TestServer extends HTestCase {
       server.setService(MyService7.class);
       fail();
     } catch (ServerException ex) {
-      assertEquals(ServerException.ERROR.S09, ex.getError());
+      assertThat(ex.getError()).isEqualTo(ServerException.ERROR.S09);
     } catch (Exception ex) {
       fail();
     }
-    assertEquals(ORDER.size(), 6);
-    assertEquals(ORDER.get(4), "s3.destroy");
-    assertEquals(ORDER.get(5), "s1.destroy");
+    assertThat(ORDER.size()).isEqualTo(6);
+    assertThat(ORDER.get(4)).isEqualTo("s3.destroy");
+    assertThat(ORDER.get(5)).isEqualTo("s1.destroy");
 
     // service with dependency
     ORDER.clear();
@@ -792,8 +792,9 @@ public class TestServer extends HTestCase {
     conf.set("server.services", services);
     server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    assertEquals(server.get(MyService1.class).getInterface(), MyService1.class);
-    assertEquals(server.get(MyService6.class).getInterface(), MyService6.class);
+    assertThat(server.get(MyService1.class).getInterface()).isEqualTo(MyService1.class);
+    assertThat(server.get(MyService6.class).getInterface()).isEqualTo(MyService6.class);
+
     server.destroy();
   }
 

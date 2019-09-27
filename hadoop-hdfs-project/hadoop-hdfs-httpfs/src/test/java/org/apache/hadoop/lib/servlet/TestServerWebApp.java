@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.servlet;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.lib.server.Server;
@@ -39,10 +40,10 @@ public class TestServerWebApp extends HTestCase {
   @Test
   public void getHomeDir() {
     System.setProperty("TestServerWebApp0.home.dir", "/tmp");
-    assertEquals(ServerWebApp.getHomeDir("TestServerWebApp0"), "/tmp");
-    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
+    assertThat(ServerWebApp.getHomeDir("TestServerWebApp0")).isEqualTo("/tmp");
+    assertThat(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log")).isEqualTo("/tmp/log");
     System.setProperty("TestServerWebApp0.log.dir", "/tmplog");
-    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
+    assertThat(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log")).isEqualTo("/tmplog");
   }
 
   @Test
@@ -56,11 +57,11 @@ public class TestServerWebApp extends HTestCase {
     ServerWebApp server = new ServerWebApp("TestServerWebApp1") {
     };
 
-    assertEquals(server.getStatus(), Server.Status.UNDEF);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.UNDEF);
     server.contextInitialized(null);
-    assertEquals(server.getStatus(), Server.Status.NORMAL);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.NORMAL);
     server.contextDestroyed(null);
-    assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
+    assertThat(server.getStatus()).isEqualTo(Server.Status.SHUTDOWN);
   }
 
   @Test(expected = RuntimeException.class)
@@ -92,8 +93,8 @@ public class TestServerWebApp extends HTestCase {
     };
 
     InetSocketAddress address = server.resolveAuthority();
-    Assert.assertEquals("localhost", address.getHostName());
-    Assert.assertEquals(14000, address.getPort());
+    assertThat(address.getHostName()).isEqualTo("localhost");
+    assertThat(address.getPort()).isEqualTo(14000);
   }
 
 }

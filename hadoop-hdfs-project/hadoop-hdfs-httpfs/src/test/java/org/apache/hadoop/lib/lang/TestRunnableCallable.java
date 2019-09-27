@@ -19,7 +19,7 @@
 package org.apache.hadoop.lib.lang;
 
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Callable;
@@ -68,7 +68,7 @@ public class TestRunnableCallable extends HTestCase {
     rc.call();
     assertTrue(r.RUN);
 
-    assertEquals(rc.toString(), "R");
+    assertThat(rc.toString()).isEqualTo("R");
   }
 
   @Test
@@ -83,7 +83,7 @@ public class TestRunnableCallable extends HTestCase {
     rc.call();
     assertTrue(c.RUN);
 
-    assertEquals(rc.toString(), "C");
+    assertThat(rc.toString()).isEqualTo("C");
   }
 
   @Test(expected = RuntimeException.class)

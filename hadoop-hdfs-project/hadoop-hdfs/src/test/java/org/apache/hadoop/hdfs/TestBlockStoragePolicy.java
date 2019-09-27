@@ -154,7 +154,7 @@ public class TestBlockStoragePolicy {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
       if (policy != null) {
         final String s = policy.toString();
-        Assert.assertEquals(expectedPolicyStrings.get(i), s);
+        Assert.assertEquals(s, expectedPolicyStrings.get(i));
       }
     }
     Assert.assertEquals(POLICY_SUITE.getPolicy(HOT), POLICY_SUITE.getDefaultPolicy());

@@ -209,7 +209,7 @@ public class TestFSDirectory {
     List<XAttr> xAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs,
                                                      newXAttrs, EnumSet.of(
             XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-    assertEquals(xAttrs.size(), 4);
+    assertEquals(4, xAttrs.size());
     
     // Adding a trusted namespace xAttr, is affected by inode xAttrs limit.
     XAttr newXAttr1 = (new XAttr.Builder()).setNameSpace(

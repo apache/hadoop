@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -35,13 +35,13 @@ public class TestJSONProvider {
     JSONProvider p = new JSONProvider();
     assertTrue(p.isWriteable(JSONObject.class, null, null, null));
     assertFalse(p.isWriteable(this.getClass(), null, null, null));
-    assertEquals(p.getSize(null, null, null, null, null), -1);
+    assertThat(p.getSize(null, null, null, null, null)).isEqualTo(-1);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     JSONObject json = new JSONObject();
     json.put("a", "A");
     p.writeTo(json, JSONObject.class, null, null, null, null, baos);
     baos.close();
-    assertEquals(new String(baos.toByteArray()).trim(), "{\"a\":\"A\"}");
+    assertThat(new String(baos.toByteArray()).trim()).isEqualTo("{\"a\":\"A\"}");
   }
 
 }

@@ -170,9 +170,9 @@ public class TestQuotaByStorageType {
     assertEquals(file1Len, ssdConsumed);
 
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
-    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
-    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
+    assertEquals(file1Len * REPLICATION, cs.getSpaceConsumed());
+    assertEquals(file1Len, cs.getTypeConsumed(StorageType.SSD));
+    assertEquals(file1Len * 2, cs.getTypeConsumed(StorageType.DISK));
   }
 
   @Test(timeout = 60000)
@@ -211,9 +211,9 @@ public class TestQuotaByStorageType {
         counts.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), 0);
-    assertEquals(cs.getTypeConsumed(StorageType.SSD), 0);
-    assertEquals(cs.getTypeConsumed(StorageType.DISK), 0);
+    assertEquals(0, cs.getSpaceConsumed());
+    assertEquals(0, cs.getTypeConsumed(StorageType.SSD));
+    assertEquals(0, cs.getTypeConsumed(StorageType.DISK));
   }
 
   @Test(timeout = 60000)
@@ -257,9 +257,9 @@ public class TestQuotaByStorageType {
     }
 
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
-    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
-    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
+    assertEquals(file1Len * REPLICATION, cs.getSpaceConsumed());
+    assertEquals(file1Len, cs.getTypeConsumed(StorageType.SSD));
+    assertEquals(file1Len * 2, cs.getTypeConsumed(StorageType.DISK));
   }
 
   /**
@@ -582,9 +582,9 @@ public class TestQuotaByStorageType {
         counts1.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs1 = dfs.getContentSummary(sub1);
-    assertEquals(cs1.getSpaceConsumed(), file1Len * REPLICATION);
-    assertEquals(cs1.getTypeConsumed(StorageType.SSD), file1Len);
-    assertEquals(cs1.getTypeConsumed(StorageType.DISK), file1Len * 2);
+    assertEquals(file1Len * REPLICATION, cs1.getSpaceConsumed());
+    assertEquals(file1Len, cs1.getTypeConsumed(StorageType.SSD));
+    assertEquals(file1Len * 2, cs1.getTypeConsumed(StorageType.DISK));
 
     // Delete the snapshot s1
     dfs.deleteSnapshot(sub1, "s1");
@@ -600,9 +600,9 @@ public class TestQuotaByStorageType {
         counts2.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs2 = dfs.getContentSummary(sub1);
-    assertEquals(cs2.getSpaceConsumed(), 0);
-    assertEquals(cs2.getTypeConsumed(StorageType.SSD), 0);
-    assertEquals(cs2.getTypeConsumed(StorageType.DISK), 0);
+    assertEquals(0, cs2.getSpaceConsumed());
+    assertEquals(0, cs2.getTypeConsumed(StorageType.SSD));
+    assertEquals(0, cs2.getTypeConsumed(StorageType.DISK));
   }
 
   @Test(timeout = 60000)
@@ -640,9 +640,9 @@ public class TestQuotaByStorageType {
     assertEquals(newFile1Len, ssdConsumed);
 
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), newFile1Len * REPLICATION);
-    assertEquals(cs.getTypeConsumed(StorageType.SSD), newFile1Len);
-    assertEquals(cs.getTypeConsumed(StorageType.DISK), newFile1Len * 2);
+    assertEquals(newFile1Len * REPLICATION, cs.getSpaceConsumed());
+    assertEquals(newFile1Len, cs.getTypeConsumed(StorageType.SSD));
+    assertEquals(newFile1Len * 2, cs.getTypeConsumed(StorageType.DISK));
   }
 
   @Test
@@ -767,9 +767,9 @@ public class TestQuotaByStorageType {
 
     // Verify getContentSummary without any quota set
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
-    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
-    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
+    assertEquals(file1Len * REPLICATION, cs.getSpaceConsumed());
+    assertEquals(file1Len, cs.getTypeConsumed(StorageType.SSD));
+    assertEquals(file1Len * 2, cs.getTypeConsumed(StorageType.DISK));
   }
 
   @Test(timeout = 60000)
@@ -790,10 +790,10 @@ public class TestQuotaByStorageType {
     // Verify getContentSummary without any quota set
     // Expect no type quota and usage information available
     ContentSummary cs = dfs.getContentSummary(foo);
-    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
+    assertEquals(file1Len * REPLICATION, cs.getSpaceConsumed());
     for (StorageType t : StorageType.values()) {
-      assertEquals(cs.getTypeConsumed(t), 0);
-      assertEquals(cs.getTypeQuota(t), -1);
+      assertEquals(0, cs.getTypeConsumed(t));
+      assertEquals(-1, cs.getTypeQuota(t));
     }
   }
 

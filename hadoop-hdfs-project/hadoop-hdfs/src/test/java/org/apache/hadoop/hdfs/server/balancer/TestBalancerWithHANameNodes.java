@@ -108,7 +108,7 @@ public class TestBalancerWithHANameNodes {
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     assertEquals(1, namenodes.size());
     final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
-    assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+    assertEquals(r, ExitStatus.SUCCESS.getExitCode());
     TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
         cluster, BalancerParameters.DEFAULT);
   }

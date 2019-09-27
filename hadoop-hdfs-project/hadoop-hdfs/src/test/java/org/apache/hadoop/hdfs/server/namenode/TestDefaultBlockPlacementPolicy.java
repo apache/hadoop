@@ -155,7 +155,7 @@ public class TestDefaultBlockPlacementPolicy {
     final DatanodeManager dnm = namesystem.getBlockManager().getDatanodeManager();
     DatanodeDescriptor dnd3 = dnm.getDatanode(
         cluster.getDataNodes().get(3).getDatanodeId());
-    assertEquals(dnd3.getNetworkLocation(), clientRack);
+    assertEquals(clientRack, dnd3.getNetworkLocation());
     dnm.getDatanodeAdminManager().startDecommission(dnd3);
     try {
       testPlacement(clientMachine, clientRack, false);

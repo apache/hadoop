@@ -63,9 +63,9 @@ public class TestHAMetrics {
       FSNamesystem nn0 = cluster.getNamesystem(0);
       FSNamesystem nn1 = cluster.getNamesystem(1);
       
-      assertEquals(nn0.getHAState(), "standby");
+      assertEquals("standby", nn0.getHAState());
       assertTrue(0 < nn0.getMillisSinceLastLoadedEdits());
-      assertEquals(nn1.getHAState(), "standby");
+      assertEquals("standby", nn1.getHAState());
       assertTrue(0 < nn1.getMillisSinceLastLoadedEdits());
 
       cluster.transitionToActive(0);
@@ -165,7 +165,7 @@ public class TestHAMetrics {
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
       cluster.restartNameNode(0);
-      assertEquals(nn0.getHAState(), "standby");
+      assertEquals("standby", nn0.getHAState());
 
       // The restarted standby should report the correct count
       nn0 = cluster.getNamesystem(0);

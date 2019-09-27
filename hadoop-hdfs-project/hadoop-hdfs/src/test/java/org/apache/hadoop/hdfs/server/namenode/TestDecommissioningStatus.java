@@ -235,13 +235,13 @@ public class TestDecommissioningStatus {
       BlockManagerTestUtil.recheckDecommissionState(dm);
       final List<DatanodeDescriptor> decommissioningNodes = dm.getDecommissioningNodes();
       if (iteration == 0) {
-        assertEquals(decommissioningNodes.size(), 1);
+        assertEquals(1, decommissioningNodes.size());
         DatanodeDescriptor decommNode = decommissioningNodes.get(0);
         checkDecommissionStatus(decommNode, 3, 0, 1);
         checkDFSAdminDecommissionStatus(decommissioningNodes.subList(0, 1),
             fileSys, admin);
       } else {
-        assertEquals(decommissioningNodes.size(), 2);
+        assertEquals(2, decommissioningNodes.size());
         DatanodeDescriptor decommNode1 = decommissioningNodes.get(0);
         DatanodeDescriptor decommNode2 = decommissioningNodes.get(1);
         // This one is still 3,3,1 since it passed over the UC block 

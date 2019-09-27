@@ -183,7 +183,7 @@ public class TestHASafeMode {
 
     cluster.restartNameNode(1);
     nn1 = cluster.getNameNode(1);
-    assertEquals(nn1.getNamesystem().getTransactionsSinceLastLogRoll(), 0L);
+    assertEquals(0L, nn1.getNamesystem().getTransactionsSinceLastLogRoll());
   }
   
   /**

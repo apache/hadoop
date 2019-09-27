@@ -169,8 +169,8 @@ public class TestJspHelper {
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
 
     // token with auth-ed user
@@ -179,8 +179,8 @@ public class TestJspHelper {
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
     
     // completely different user, token trumps auth
@@ -189,8 +189,8 @@ public class TestJspHelper {
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
     
     // expected case
@@ -199,8 +199,8 @@ public class TestJspHelper {
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
 
     // if present token, ignore doas parameter
@@ -210,8 +210,8 @@ public class TestJspHelper {
 
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
 
     // if present token, ignore user.name parameter
@@ -221,8 +221,8 @@ public class TestJspHelper {
 
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
 
     // if present token, ignore user.name and doas parameter
@@ -232,8 +232,8 @@ public class TestJspHelper {
 
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromToken(ugi);
 
   }
@@ -273,21 +273,21 @@ public class TestJspHelper {
     request = getMockRequest(realUser, null, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(realUser, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
     
     // ugi for remote user = real user
     request = getMockRequest(realUser, realUser, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(realUser, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
     
     // if there is remote user via SPNEGO, ignore user.name param
     request = getMockRequest(realUser, user, null);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assert.assertEquals(realUser, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
   }
   
@@ -332,24 +332,24 @@ public class TestJspHelper {
     request = getMockRequest(realUser, null, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
     
     // proxy ugi for user vi a remote user = real user
     request = getMockRequest(realUser, realUser, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
 
     // if there is remote user via SPNEGO, ignore user.name, doas param
     request = getMockRequest(realUser, user, user);
     ugi = JspHelper.getUGI(context, request, conf);
     Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assert.assertEquals(realUser, ugi.getRealUser().getShortUserName());
+    Assert.assertEquals(user, ugi.getShortUserName());
     checkUgiFromAuth(ugi);
 
 

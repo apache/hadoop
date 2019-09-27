@@ -56,6 +56,8 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestHttpFSWithKerberos extends HFSTestCase {
 
   @After
@@ -125,7 +127,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
         AuthenticatedURL aUrl = new AuthenticatedURL();
         AuthenticatedURL.Token aToken = new AuthenticatedURL.Token();
         HttpURLConnection conn = aUrl.openConnection(url, aToken);
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
         return null;
       }
     });
@@ -141,8 +143,8 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(),
-                        HttpURLConnection.HTTP_UNAUTHORIZED);
+    assertThat(conn.getResponseCode()).isEqualTo(
+            HttpURLConnection.HTTP_UNAUTHORIZED);
   }
 
   @Test
@@ -161,7 +163,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
         AuthenticatedURL aUrl = new AuthenticatedURL();
         AuthenticatedURL.Token aToken = new AuthenticatedURL.Token();
         HttpURLConnection conn = aUrl.openConnection(url, aToken);
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
         JSONObject json = (JSONObject) new JSONParser()
           .parse(new InputStreamReader(conn.getInputStream()));
         json =
@@ -175,22 +177,22 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" +
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
 
         //try to renew the delegation token without SPNEGO credentials
         url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
         conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(),
-                            HttpURLConnection.HTTP_UNAUTHORIZED);
+        assertThat(conn.getResponseCode()).isEqualTo(
+                HttpURLConnection.HTTP_UNAUTHORIZED);
 
         //renew the delegation token with SPNEGO credentials
         url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
         conn = aUrl.openConnection(url, aToken);
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
 
         //cancel delegation token, no need for SPNEGO credentials
         url = new URL(TestJettyHelper.getJettyURL(),
@@ -198,15 +200,15 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
 
         //try to access httpfs with the canceled delegation token
         url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" +
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
-        Assert.assertEquals(conn.getResponseCode(),
-                            HttpURLConnection.HTTP_UNAUTHORIZED);
+        assertThat(conn.getResponseCode()).isEqualTo(
+                HttpURLConnection.HTTP_UNAUTHORIZED);
         return null;
       }
     });

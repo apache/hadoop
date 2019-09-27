@@ -186,23 +186,23 @@ public class TestOfflineImageViewerForAcl {
 
       // GETACLSTATUS operation to a directory without ACL
       AclStatus acl = webhdfs.getAclStatus(new Path("/dirWithNoAcl"));
-      assertEquals(writtenAcls.get("/dirWithNoAcl"), acl);
+      assertEquals(acl, writtenAcls.get("/dirWithNoAcl"));
 
       // GETACLSTATUS operation to a directory with a default ACL
       acl = webhdfs.getAclStatus(new Path("/dirWithDefaultAcl"));
-      assertEquals(writtenAcls.get("/dirWithDefaultAcl"), acl);
+      assertEquals(acl, writtenAcls.get("/dirWithDefaultAcl"));
 
       // GETACLSTATUS operation to a file without ACL
       acl = webhdfs.getAclStatus(new Path("/noAcl"));
-      assertEquals(writtenAcls.get("/noAcl"), acl);
+      assertEquals(acl, writtenAcls.get("/noAcl"));
 
       // GETACLSTATUS operation to a file with a ACL
       acl = webhdfs.getAclStatus(new Path("/withAcl"));
-      assertEquals(writtenAcls.get("/withAcl"), acl);
+      assertEquals(acl, writtenAcls.get("/withAcl"));
 
       // GETACLSTATUS operation to a file with several ACL entries
       acl = webhdfs.getAclStatus(new Path("/withSeveralAcls"));
-      assertEquals(writtenAcls.get("/withSeveralAcls"), acl);
+      assertEquals(acl, writtenAcls.get("/withSeveralAcls"));
 
       // GETACLSTATUS operation to a invalid path
       URL url = new URL("http://localhost:" + port +

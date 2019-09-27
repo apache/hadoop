@@ -934,7 +934,7 @@ public class TestEncryptionZones {
       FileEncryptionInfo feInfo =
           getFileEncryptionInfo(new Path(zone.toString() +
               "/success" + i));
-      assertEquals(feInfo.getCipherSuite(), CipherSuite.AES_CTR_NOPADDING);
+      assertEquals(CipherSuite.AES_CTR_NOPADDING, feInfo.getCipherSuite());
     }
 
     DFSClient old = fs.dfs;

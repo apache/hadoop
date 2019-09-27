@@ -87,6 +87,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -182,7 +183,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertNotNull(fs);
     URI uri = new URI(getScheme() + "://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
-    assertEquals(fs.getUri(), uri);
+    assertThat(fs.getUri()).isEqualTo(uri);
     fs.close();
   }
 
@@ -195,7 +196,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.close();
     fs = getHttpFSFileSystem();
     InputStream is = fs.open(new Path(path.toUri().getPath()));
-    assertEquals(is.read(), 1);
+    assertThat(is.read()).isEqualTo(1);
     is.close();
     fs.close();
   }
@@ -212,12 +213,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = FileSystem.get(getProxiedFSConf());
     FileStatus status = fs.getFileStatus(path);
     if (!isLocalFS()) {
-      assertEquals(status.getReplication(), 2);
-      assertEquals(status.getBlockSize(), 100 * 1024 * 1024);
+      assertThat(status.getReplication()).isEqualTo((short) 2);
+      assertThat(status.getBlockSize()).isEqualTo(100 * 1024 * 1024);
     }
-    assertEquals(status.getPermission(), permission);
+    assertThat(status.getPermission()).isEqualTo(permission);
     InputStream is = fs.open(path);
-    assertEquals(is.read(), 1);
+    assertThat(is.read()).isEqualTo(1);
     is.close();
     fs.close();
   }
@@ -255,9 +256,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.close();
       fs = FileSystem.get(getProxiedFSConf());
       InputStream is = fs.open(path);
-      assertEquals(is.read(), 1);
-      assertEquals(is.read(), 2);
-      assertEquals(is.read(), -1);
+      assertThat(is.read()).isEqualTo(1);
+      assertThat(is.read()).isEqualTo(2);
+      assertThat(is.read()).isEqualTo(-1);
       is.close();
       fs.close();
     }
@@ -281,7 +282,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       assertTrue("Recovery is not expected.", isReady);
 
       FileStatus fileStatus = fs.getFileStatus(file);
-      assertEquals(fileStatus.getLen(), newLength);
+      assertThat(fileStatus.getLen()).isEqualTo(newLength);
       AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
       fs.close();
@@ -635,8 +636,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = FileSystem.get(getProxiedFSConf());
       FileStatus status1 = fs.getFileStatus(path);
       fs.close();
-      assertEquals(status1.getOwner(), user);
-      assertEquals(status1.getGroup(), group);
+      assertThat(status1.getOwner()).isEqualTo(user);
+      assertThat(status1.getGroup()).isEqualTo(group);
     }
   }
 

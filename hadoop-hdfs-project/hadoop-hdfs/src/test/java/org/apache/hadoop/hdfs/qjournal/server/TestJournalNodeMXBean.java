@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -76,7 +77,7 @@ public class TestJournalNodeMXBean {
     // getJournalsStatus
     String journalStatus = (String) mbs.getAttribute(mxbeanName,
         "JournalsStatus");
-    assertEquals(jn.getJournalsStatus(), journalStatus);
+    assertThat(jn.getJournalsStatus()).isEqualTo(journalStatus);
     assertFalse(journalStatus.contains(NAMESERVICE));
 
     // format the journal ns1
@@ -87,7 +88,7 @@ public class TestJournalNodeMXBean {
     // check again after format
     // getJournalsStatus
     journalStatus = (String) mbs.getAttribute(mxbeanName, "JournalsStatus");
-    assertEquals(jn.getJournalsStatus(), journalStatus);
+    assertThat(jn.getJournalsStatus()).isEqualTo(journalStatus);
     Map<String, Map<String, String>> jMap = new HashMap<String, Map<String, String>>();
     Map<String, String> infoMap = new HashMap<String, String>();
     infoMap.put("Formatted", "true");
@@ -95,7 +96,7 @@ public class TestJournalNodeMXBean {
     Map<String, String> infoMap1 = new HashMap<>();
     infoMap1.put("Formatted", "false");
     jMap.put(MiniJournalCluster.CLUSTER_WAITACTIVE_URI, infoMap1);
-    assertEquals(JSON.toString(jMap), journalStatus);
+    assertThat(JSON.toString(jMap)).isEqualTo(journalStatus);
     
     // restart journal node without formatting
     jCluster = new MiniJournalCluster.Builder(new Configuration()).format(false)
@@ -104,7 +105,7 @@ public class TestJournalNodeMXBean {
     jn = jCluster.getJournalNode(0);
     // re-check 
     journalStatus = (String) mbs.getAttribute(mxbeanName, "JournalsStatus");
-    assertEquals(jn.getJournalsStatus(), journalStatus);
-    assertEquals(JSON.toString(jMap), journalStatus);
+    assertThat(jn.getJournalsStatus()).isEqualTo(journalStatus);
+    assertThat(JSON.toString(jMap)).isEqualTo(journalStatus);
   }
 }

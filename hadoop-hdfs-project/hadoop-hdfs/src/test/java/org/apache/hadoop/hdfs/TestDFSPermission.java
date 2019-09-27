@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -268,7 +268,7 @@ public class TestDFSPermission {
       boolean delete) throws IOException {
     try {
       // check its permission
-      assertEquals(getPermission(name), expectedPermission);
+      assertThat(getPermission(name)).isEqualTo(expectedPermission);
     } finally {
       // delete the file
       if (delete) {
@@ -362,7 +362,7 @@ public class TestDFSPermission {
       }
 
       // ensure /BSS/user1 still exists
-      assertEquals(fs.exists(user1Dir), true);
+      assertThat(fs.exists(user1Dir)).isEqualTo(true);
     } finally {
       fs = DFSTestUtil.login(fs, conf, SUPERUSER);
       fs.delete(rootDir, true);
@@ -444,8 +444,8 @@ public class TestDFSPermission {
       String expectedGroup) throws IOException {
     // check its owner and group
     FileStatus status = fs.getFileStatus(name);
-    assertEquals(status.getOwner(), expectedOwner);
-    assertEquals(status.getGroup(), expectedGroup);
+    assertThat(status.getOwner()).isEqualTo(expectedOwner);
+    assertThat(status.getGroup()).isEqualTo(expectedGroup);
   }
 
   final static private String ANCESTOR_NAME = "/ancestor";

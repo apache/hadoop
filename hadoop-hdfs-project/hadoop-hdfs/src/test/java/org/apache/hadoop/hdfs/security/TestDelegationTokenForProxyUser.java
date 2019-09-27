@@ -139,9 +139,9 @@ public class TestDelegationTokenForProxyUser {
       byte[] tokenId = tokens[0].getIdentifier();
       identifier.readFields(new DataInputStream(new ByteArrayInputStream(
           tokenId)));
-      Assert.assertEquals(identifier.getUser().getUserName(), PROXY_USER);
-      Assert.assertEquals(identifier.getUser().getRealUser().getUserName(),
-          REAL_USER);
+      Assert.assertEquals(PROXY_USER, identifier.getUser().getUserName());
+      Assert.assertEquals(REAL_USER,
+              identifier.getUser().getRealUser().getUserName());
     } catch (InterruptedException e) {
       //Do Nothing
     }

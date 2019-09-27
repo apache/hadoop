@@ -120,7 +120,7 @@ public class TestLightWeightHashSet{
       num++;
     }
     // check the number of element from the iterator
-    assertEquals(list.size(), num);
+    assertEquals(num, list.size());
     LOG.info("Test multi element basic - DONE");
   }
 

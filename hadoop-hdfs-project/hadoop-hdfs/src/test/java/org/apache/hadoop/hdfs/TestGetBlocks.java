@@ -125,7 +125,7 @@ public class TestGetBlocks {
       LocatedBlocks blocks = client.getNamenode().getBlockLocations(
           fileName.toString(), 0, blockSize);
       DatanodeInfo[] nodes = blocks.get(0).getLocations();
-      assertEquals(nodes.length, 3);
+      assertEquals(3, nodes.length);
       DataNode staleNode = null;
       DatanodeDescriptor staleNodeInfo = null;
       // stop the heartbeat of the first node
@@ -141,7 +141,7 @@ public class TestGetBlocks {
       LocatedBlocks blocksAfterStale = client.getNamenode().getBlockLocations(
           fileName.toString(), 0, blockSize);
       DatanodeInfo[] nodesAfterStale = blocksAfterStale.get(0).getLocations();
-      assertEquals(nodesAfterStale.length, 3);
+      assertEquals(3, nodesAfterStale.length);
       assertEquals(nodesAfterStale[2].getHostName(), nodes[0].getHostName());
 
       // restart the staleNode's heartbeat
@@ -151,7 +151,7 @@ public class TestGetBlocks {
       LocatedBlock lastBlock = client.getLocatedBlocks(fileName.toString(), 0,
           Long.MAX_VALUE).getLastLocatedBlock();
       nodes = lastBlock.getLocations();
-      assertEquals(nodes.length, 3);
+      assertEquals(3, nodes.length);
       // stop the heartbeat of the first node for the last block
       staleNode = this.stopDataNodeHeartbeat(cluster, nodes[0].getHostName());
       assertNotNull(staleNode);
@@ -164,7 +164,7 @@ public class TestGetBlocks {
       LocatedBlock lastBlockAfterStale = client.getLocatedBlocks(
           fileName.toString(), 0, Long.MAX_VALUE).getLastLocatedBlock();
       nodesAfterStale = lastBlockAfterStale.getLocations();
-      assertEquals(nodesAfterStale.length, 3);
+      assertEquals(3, nodesAfterStale.length);
       assertEquals(nodesAfterStale[2].getHostName(), nodes[0].getHostName());
     } finally {
       if (stm != null) {
@@ -237,26 +237,26 @@ public class TestGetBlocks {
       locs = namenode.getBlocks(dataNodes[0], fileLen, 0)
           .getBlocks();
       assertEquals(13, locs.length);
-      assertEquals(locs[0].getStorageIDs().length, 2);
-      assertEquals(locs[1].getStorageIDs().length, 2);
+      assertEquals(2, locs[0].getStorageIDs().length);
+      assertEquals(2, locs[1].getStorageIDs().length);
 
       // Should return 12 blocks, as minBlockSize is DEFAULT_BLOCK_SIZE
       locs = namenode.getBlocks(dataNodes[0], fileLen, DEFAULT_BLOCK_SIZE)
           .getBlocks();
       assertEquals(12, locs.length);
-      assertEquals(locs[0].getStorageIDs().length, 2);
-      assertEquals(locs[1].getStorageIDs().length, 2);
+      assertEquals(2, locs[0].getStorageIDs().length);
+      assertEquals(2, locs[1].getStorageIDs().length);
 
       // get blocks of size BlockSize from dataNodes[0]
       locs = namenode.getBlocks(dataNodes[0], DEFAULT_BLOCK_SIZE,
           DEFAULT_BLOCK_SIZE).getBlocks();
-      assertEquals(locs.length, 1);
-      assertEquals(locs[0].getStorageIDs().length, 2);
+      assertEquals(1, locs.length);
+      assertEquals(2, locs[0].getStorageIDs().length);
 
       // get blocks of size 1 from dataNodes[0]
       locs = namenode.getBlocks(dataNodes[0], 1, 1).getBlocks();
-      assertEquals(locs.length, 1);
-      assertEquals(locs[0].getStorageIDs().length, 2);
+      assertEquals(1, locs.length);
+      assertEquals(2, locs[0].getStorageIDs().length);
 
       // get blocks of size 0 from dataNodes[0]
       getBlocksWithException(namenode, dataNodes[0], 0, 0);

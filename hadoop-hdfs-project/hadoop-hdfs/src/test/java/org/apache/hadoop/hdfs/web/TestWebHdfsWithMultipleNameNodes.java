@@ -133,7 +133,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     for(int i = 0; i < webhdfs.length; i++) {
       final FSDataInputStream in = webhdfs[i].open(p);
       for(int c, j = 0; (c = in.read()) != -1; j++) {
-        Assert.assertEquals(writeStrings[i].charAt(j), c);
+        Assert.assertEquals(c, writeStrings[i].charAt(j));
       }
       in.close();
     }

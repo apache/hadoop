@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -147,8 +148,8 @@ public class TestHFSTestCase extends HFSTestCase {
       os.write(new byte[]{1});
       os.close();
       InputStream is = fs.open(new Path(TestHdfsHelper.getHdfsTestDir(), "foo"));
-      assertEquals(is.read(), 1);
-      assertEquals(is.read(), -1);
+      assertThat(is.read()).isEqualTo(1);
+      assertThat(is.read()).isEqualTo(-1);
       is.close();
     } finally {
       fs.close();
@@ -173,9 +174,9 @@ public class TestHFSTestCase extends HFSTestCase {
     server.start();
     URL url = new URL(TestJettyHelper.getJettyURL(), "/bar");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertThat(conn.getResponseCode()).isEqualTo(HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    assertEquals(reader.readLine(), "foo");
+    assertThat(reader.readLine()).isEqualTo("foo");
     reader.close();
   }
 

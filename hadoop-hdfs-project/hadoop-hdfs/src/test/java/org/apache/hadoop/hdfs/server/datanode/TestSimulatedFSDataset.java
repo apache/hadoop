@@ -160,7 +160,7 @@ public class TestSimulatedFSDataset {
   @Test
   public void testStorageUsage() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
-    assertEquals(fsdataset.getDfsUsed(), 0);
+    assertEquals(0, fsdataset.getDfsUsed());
     assertEquals(fsdataset.getRemaining(), fsdataset.getCapacity());
     int bytesAdded = addSomeBlocks(fsdataset);
     assertEquals(bytesAdded, fsdataset.getDfsUsed());

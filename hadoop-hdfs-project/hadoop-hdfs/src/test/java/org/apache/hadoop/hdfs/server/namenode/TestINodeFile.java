@@ -295,9 +295,9 @@ public class TestINodeFile {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
-    assertEquals(inf.getBlockType(), CONTIGUOUS);
+    assertEquals(CONTIGUOUS, inf.getBlockType());
     INodeFile striped = createStripedINodeFile(preferredBlockSize);
-    assertEquals(striped.getBlockType(), STRIPED);
+    assertEquals(STRIPED, striped.getBlockType());
   }
 
   /**
@@ -490,7 +490,7 @@ public class TestINodeFile {
       // Last inode ID should be root inode ID and inode map size should be 1
       int inodeCount = 1;
       long expectedLastInodeId = INodeId.ROOT_INODE_ID;
-      assertEquals(fsn.dir.rootDir.getId(), INodeId.ROOT_INODE_ID);
+      assertEquals(INodeId.ROOT_INODE_ID, fsn.dir.rootDir.getId());
       assertEquals(expectedLastInodeId, lastId);
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
 
@@ -1222,7 +1222,7 @@ public class TestINodeFile {
     assertEquals(xAttr, f1.getXAttrs().get(0));
     inf.removeXAttrFeature();
     f1 = inf.getXAttrFeature();
-    assertEquals(f1, null);
+    assertEquals(null, f1);
   }
 
   @Test

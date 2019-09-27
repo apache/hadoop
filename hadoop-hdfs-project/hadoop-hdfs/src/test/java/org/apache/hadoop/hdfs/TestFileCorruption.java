@@ -152,7 +152,7 @@ public class TestFileCorruption {
       // start a third datanode
       cluster.startDataNodes(conf, 1, true, null, null);
       ArrayList<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 3);
+      assertEquals(3, datanodes.size());
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
@@ -206,7 +206,7 @@ public class TestFileCorruption {
           " " +
           "IO error", blk == null);
       ArrayList<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 3);
+      assertEquals(3, datanodes.size());
       FSNamesystem ns = cluster.getNamesystem();
       //fail the storage on that node which has the block
       try {

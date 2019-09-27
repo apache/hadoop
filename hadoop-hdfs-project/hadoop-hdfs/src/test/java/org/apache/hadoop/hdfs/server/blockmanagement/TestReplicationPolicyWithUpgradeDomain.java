@@ -89,32 +89,32 @@ public class TestReplicationPolicyWithUpgradeDomain
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertEquals(storages[0], targets[0]);
 
     targets = chooseTarget(2);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertEquals(storages[0], targets[0]);
     assertFalse(isOnSameRack(targets[0], targets[1]));
-    assertEquals(getUpgradeDomains(targets).size(), 2);
+    assertEquals(2, getUpgradeDomains(targets).size());
 
     targets = chooseTarget(3);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[0], targets[0]);
     assertFalse(isOnSameRack(targets[0], targets[1]));
     assertTrue(isOnSameRack(targets[1], targets[2]));
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     targets = chooseTarget(4);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[0], targets[0]);
     assertTrue(isOnSameRack(targets[1], targets[2]) ||
         isOnSameRack(targets[2], targets[3]));
     assertFalse(isOnSameRack(targets[0], targets[2]));
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
@@ -136,20 +136,20 @@ public class TestReplicationPolicyWithUpgradeDomain
     chosenNodes.clear();
     excludedNodes.add(dataNodes[4]);
     targets = chooseTarget(3, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[0], targets[0]);
-    assertEquals(getRacks(targets).size(), 2);
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(2, getRacks(targets).size());
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[4]);
     excludedNodes.add(dataNodes[8]);
     targets = chooseTarget(3, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[0], targets[0]);
-    assertEquals(getRacks(targets).size(), 2);
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(2, getRacks(targets).size());
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     excludedNodes.clear();
     chosenNodes.clear();
@@ -157,7 +157,7 @@ public class TestReplicationPolicyWithUpgradeDomain
     excludedNodes.add(dataNodes[5]);
     excludedNodes.add(dataNodes[8]);
     targets = chooseTarget(3, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[0], targets[0]);
     assertEquals(storages[2], targets[1]);
     assertEquals(storages[7], targets[2]);
@@ -166,20 +166,20 @@ public class TestReplicationPolicyWithUpgradeDomain
     chosenNodes.clear();
     excludedNodes.add(dataNodes[4]);
     targets = chooseTarget(4, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[0], targets[0]);
     assertTrue(getRacks(targets).size()>=2);
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[4]);
     excludedNodes.add(dataNodes[8]);
     targets = chooseTarget(4, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[0], targets[0]);
     assertTrue(getRacks(targets).size()>=2);
-    assertEquals(getUpgradeDomains(targets).size(), 3);
+    assertEquals(3, getUpgradeDomains(targets).size());
 
     excludedNodes.clear();
     chosenNodes.clear();
@@ -209,7 +209,7 @@ public class TestReplicationPolicyWithUpgradeDomain
     excludedNodes.add(dataNodes[7]);
     excludedNodes.add(dataNodes[8]);
     targets = chooseTarget(3, chosenNodes, excludedNodes);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertEquals(storages[0], targets[0]);
     assertTrue(targets[1].equals(storages[1]) ||
         targets[1].equals(storages[2]));

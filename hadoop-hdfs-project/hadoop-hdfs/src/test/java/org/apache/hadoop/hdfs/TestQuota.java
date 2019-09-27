@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -227,24 +228,24 @@ public class TestQuota {
     // 3: create a file /test/datafile0
     final Path childFile0 = new Path(parent, "datafile0");
     DFSTestUtil.createFile(dfs, childFile0, fileLen, replication, 0);
-    
+
     // 4: count -q /test
     ContentSummary c = dfs.getContentSummary(parent);
     compareQuotaUsage(c, dfs, parent);
-    assertEquals(c.getFileCount()+c.getDirectoryCount(), 3);
-    assertEquals(c.getQuota(), 3);
-    assertEquals(c.getSpaceConsumed(), fileLen*replication);
-    assertEquals(c.getSpaceQuota(), spaceQuota);
+    assertThat(c.getFileCount()+c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getQuota()+c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getSpaceConsumed()+c.getDirectoryCount()).isEqualTo(fileLen*replication);
+    assertThat(c.getSpaceQuota()).isEqualTo(spaceQuota);
 
     // 5: count -q /test/data0
     c = dfs.getContentSummary(childDir0);
     compareQuotaUsage(c, dfs, childDir0);
-    assertEquals(c.getFileCount()+c.getDirectoryCount(), 1);
-    assertEquals(c.getQuota(), -1);
+    assertThat(c.getFileCount()+c.getDirectoryCount()).isEqualTo(1);
+    assertThat(c.getQuota()).isEqualTo(-1);
     // check disk space consumed
     c = dfs.getContentSummary(parent);
     compareQuotaUsage(c, dfs, parent);
-    assertEquals(c.getSpaceConsumed(), fileLen*replication);
+    assertThat(c.getSpaceConsumed()).isEqualTo(fileLen*replication);
 
     // 6: create a directory /test/data1
     final Path childDir1 = new Path(parent, "data1");
@@ -272,14 +273,14 @@ public class TestQuota {
     runCommand(admin, new String[]{"-clrQuota", parent.toString()}, false);
     c = dfs.getContentSummary(parent);
     compareQuotaUsage(c, dfs, parent);
-    assertEquals(c.getQuota(), -1);
-    assertEquals(c.getSpaceQuota(), spaceQuota);
+    assertThat(c.getQuota()).isEqualTo(-1);
+    assertThat(c.getSpaceQuota()).isEqualTo(spaceQuota);
 
     // 9: clear quota /test/data0
     runCommand(admin, new String[]{"-clrQuota", childDir0.toString()}, false);
     c = dfs.getContentSummary(childDir0);
     compareQuotaUsage(c, dfs, childDir0);
-    assertEquals(c.getQuota(), -1);
+    assertThat(c.getQuota()).isEqualTo(-1);
 
     // 10: create a file /test/datafile1
     fout = dfs.create(childFile1, replication);
@@ -300,8 +301,8 @@ public class TestQuota {
     runCommand(admin, false, "-clrSpaceQuota", parent.toString());
     c = dfs.getContentSummary(parent);
     compareQuotaUsage(c, dfs, parent);
-    assertEquals(c.getQuota(), -1);
-    assertEquals(c.getSpaceQuota(), -1);
+    assertThat(c.getQuota()).isEqualTo(-1);
+    assertThat(c.getSpaceQuota()).isEqualTo(-1);
 
     // now creating childFile1 should succeed
     DFSTestUtil.createFile(dfs, childFile1, fileLen, replication, 0);
@@ -327,8 +328,8 @@ public class TestQuota {
     assertTrue(hasException);
     c = dfs.getContentSummary(childDir0);
     compareQuotaUsage(c, dfs, childDir0);
-    assertEquals(c.getDirectoryCount()+c.getFileCount(), 1);
-    assertEquals(c.getQuota(), 1);
+    assertThat(c.getDirectoryCount()+c.getFileCount()).isEqualTo(1);
+    assertThat(c.getQuota()).isEqualTo(1);
 
     // 14a: set quota on a non-existent directory
     Path nonExistentPath = new Path(dir, "test1");
@@ -498,16 +499,16 @@ public class TestQuota {
     dfs.setQuota(quotaDir1, 6, HdfsConstants.QUOTA_DONT_SET);
     ContentSummary c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 3);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getQuota()).isEqualTo(6);
 
     // 3: set the quota of nqdir0/qdir1/qdir20 to be 7
     final Path quotaDir2 = new Path(parent, "nqdir0/qdir1/qdir20");
     dfs.setQuota(quotaDir2, 7, HdfsConstants.QUOTA_DONT_SET);
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 2);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(2);
+    assertThat(c.getQuota()).isEqualTo(7);
 
     // 4: Create directory nqdir0/qdir1/qdir21 and set its quota to 2
     final Path quotaDir3 = new Path(parent, "nqdir0/qdir1/qdir21");
@@ -515,16 +516,16 @@ public class TestQuota {
     dfs.setQuota(quotaDir3, 2, HdfsConstants.QUOTA_DONT_SET);
     c = dfs.getContentSummary(quotaDir3);
     compareQuotaUsage(c, dfs, quotaDir3);
-    assertEquals(c.getDirectoryCount(), 1);
-    assertEquals(c.getQuota(), 2);
+    assertThat(c.getDirectoryCount()).isEqualTo(1);
+    assertThat(c.getQuota()).isEqualTo(2);
 
     // 5: Create directory nqdir0/qdir1/qdir21/nqdir32
     Path tempPath = new Path(quotaDir3, "nqdir32");
     assertTrue(dfs.mkdirs(tempPath));
     c = dfs.getContentSummary(quotaDir3);
     compareQuotaUsage(c, dfs, quotaDir3);
-    assertEquals(c.getDirectoryCount(), 2);
-    assertEquals(c.getQuota(), 2);
+    assertThat(c.getDirectoryCount()).isEqualTo(2);
+    assertThat(c.getQuota()).isEqualTo(2);
 
     // 6: Create directory nqdir0/qdir1/qdir21/nqdir33
     tempPath = new Path(quotaDir3, "nqdir33");
@@ -537,20 +538,20 @@ public class TestQuota {
     assertTrue(hasException);
     c = dfs.getContentSummary(quotaDir3);
     compareQuotaUsage(c, dfs, quotaDir3);
-    assertEquals(c.getDirectoryCount(), 2);
-    assertEquals(c.getQuota(), 2);
+    assertThat(c.getDirectoryCount()).isEqualTo(2);
+    assertThat(c.getQuota()).isEqualTo(2);
 
     // 7: Create directory nqdir0/qdir1/qdir20/nqdir31
     tempPath = new Path(quotaDir2, "nqdir31");
     assertTrue(dfs.mkdirs(tempPath));
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 3);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getQuota()).isEqualTo(7);
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 6);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(6);
+    assertThat(c.getQuota()).isEqualTo(6);
 
     // 8: Create directory nqdir0/qdir1/qdir20/nqdir33
     tempPath = new Path(quotaDir2, "nqdir33");
@@ -567,12 +568,12 @@ public class TestQuota {
     dfs.rename(new Path(quotaDir3, "nqdir32"), tempPath);
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 4);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(4);
+    assertThat(c.getQuota()).isEqualTo(7);
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 6);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(6);
+    assertThat(c.getQuota()).isEqualTo(6);
 
     // 10: Move nqdir0/qdir1/qdir20/nqdir30 to nqdir0/qdir1/qdir21
     hasException = false;
@@ -600,12 +601,12 @@ public class TestQuota {
     assertTrue(dfs.rename(tempPath, new Path(parent, "nqdir0")));
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 2);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(2);
+    assertThat(c.getQuota()).isEqualTo(7);
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 4);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(4);
+    assertThat(c.getQuota()).isEqualTo(6);
 
     // 12: Create directory nqdir0/nqdir30/nqdir33
     assertTrue(dfs.mkdirs(new Path(parent, "nqdir0/nqdir30/nqdir33")));
@@ -623,39 +624,39 @@ public class TestQuota {
     assertTrue(dfs.rename(quotaDir3, quotaDir2));
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 4);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(4);
+    assertThat(c.getQuota()).isEqualTo(6);
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 3);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getQuota()).isEqualTo(7);
     tempPath = new Path(quotaDir2, "qdir21");
     c = dfs.getContentSummary(tempPath);
     compareQuotaUsage(c, dfs, tempPath);
-    assertEquals(c.getDirectoryCount(), 1);
-    assertEquals(c.getQuota(), 2);
+    assertThat(c.getDirectoryCount()).isEqualTo(1);
+    assertThat(c.getQuota()).isEqualTo(2);
 
     // 15: Delete nqdir0/qdir1/qdir20/qdir21
     dfs.delete(tempPath, true);
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 2);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(2);
+    assertThat(c.getQuota()).isEqualTo(7);
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 3);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(3);
+    assertThat(c.getQuota()).isEqualTo(6);
 
     // 16: Move nqdir0/qdir30 nqdir0/qdir1/qdir20
     assertTrue(dfs.rename(new Path(parent, "nqdir0/nqdir30"), quotaDir2));
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
-    assertEquals(c.getDirectoryCount(), 5);
-    assertEquals(c.getQuota(), 7);
+    assertThat(c.getDirectoryCount()).isEqualTo(5);
+    assertThat(c.getQuota()).isEqualTo(7);
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getDirectoryCount(), 6);
-    assertEquals(c.getQuota(), 6);
+    assertThat(c.getDirectoryCount()).isEqualTo(6);
+    assertThat(c.getQuota()).isEqualTo(6);
   }
   
   /**
@@ -683,14 +684,14 @@ public class TestQuota {
     dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 4 * fileSpace);
     ContentSummary c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getSpaceQuota(), 4 * fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo(4 * fileSpace);
 
     // set the quota of nqdir0/qdir1/qdir20 to 6 * fileSpace
     final Path quotaDir20 = new Path(parent, "nqdir0/qdir1/qdir20");
     dfs.setQuota(quotaDir20, HdfsConstants.QUOTA_DONT_SET, 6 * fileSpace);
     c = dfs.getContentSummary(quotaDir20);
     compareQuotaUsage(c, dfs, quotaDir20);
-    assertEquals(c.getSpaceQuota(), 6 * fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo(6 * fileSpace);
 
     // Create nqdir0/qdir1/qdir21 and set its space quota to 2 * fileSpace
     final Path quotaDir21 = new Path(parent, "nqdir0/qdir1/qdir21");
@@ -698,7 +699,7 @@ public class TestQuota {
     dfs.setQuota(quotaDir21, HdfsConstants.QUOTA_DONT_SET, 2 * fileSpace);
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceQuota(), 2 * fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo(2 * fileSpace);
 
     // 5: Create directory nqdir0/qdir1/qdir21/nqdir32
     Path tempPath = new Path(quotaDir21, "nqdir32");
@@ -709,7 +710,7 @@ public class TestQuota {
                            replication, 0);
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceConsumed(), fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(fileSpace);
 
     // Create a larger file nqdir0/qdir1/qdir21/nqdir33/
     boolean hasException = false;
@@ -724,13 +725,13 @@ public class TestQuota {
     assertTrue(dfs.delete(new Path(quotaDir21, "nqdir33"), true));
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceConsumed(), fileSpace);
-    assertEquals(c.getSpaceQuota(), 2*fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo(2 * fileSpace);
 
     // Verify space before the move:
     c = dfs.getContentSummary(quotaDir20);
     compareQuotaUsage(c, dfs, quotaDir20);
-    assertEquals(c.getSpaceConsumed(), 0);
+    assertThat(c.getSpaceConsumed()).isEqualTo(0);
 
     // Move nqdir0/qdir1/qdir21/nqdir32 nqdir0/qdir1/qdir20/nqdir30
     Path dstPath = new Path(quotaDir20, "nqdir30");
@@ -739,15 +740,15 @@ public class TestQuota {
 
     // verify space after the move
     c = dfs.getContentSummary(quotaDir20);
-    assertEquals(c.getSpaceConsumed(), fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(fileSpace);
     // verify space for its parent
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getSpaceConsumed(), fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(fileSpace);
     // verify space for source for the move
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceConsumed(), 0);
+    assertThat(c.getSpaceConsumed()).isEqualTo(0);
 
     final Path file2 = new Path(dstPath, "fileDir/file2");
     int file2Len = 2 * fileLen;
@@ -755,10 +756,10 @@ public class TestQuota {
     DFSTestUtil.createFile(dfs, file2, file2Len, replication, 0);
 
     c = dfs.getContentSummary(quotaDir20);
-    assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(3 * fileSpace);
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceConsumed(), 0);
+    assertThat(c.getSpaceConsumed()).isEqualTo(0);
 
     // Reverse: Move nqdir0/qdir1/qdir20/nqdir30 to nqdir0/qdir1/qdir21/
     hasException = false;
@@ -776,22 +777,22 @@ public class TestQuota {
 
     // verify space after the failed move
     c = dfs.getContentSummary(quotaDir20);
-    assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(3 * fileSpace);
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
-    assertEquals(c.getSpaceConsumed(), 0);
+    assertThat(c.getSpaceConsumed()).isEqualTo(0);
 
     // Test Append :
 
     // verify space quota
     c = dfs.getContentSummary(quotaDir1);
     compareQuotaUsage(c, dfs, quotaDir1);
-    assertEquals(c.getSpaceQuota(), 4 * fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo(4 * fileSpace);
 
     // verify space before append;
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(3 * fileSpace);
 
     OutputStream out = dfs.append(file2);
     // appending 1 fileLen should succeed
@@ -803,8 +804,7 @@ public class TestQuota {
     // verify space after append;
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 4 * fileSpace);
-
+    assertThat(c.getSpaceConsumed()).isEqualTo(4 * fileSpace);
     // now increase the quota for quotaDir1
     dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 5 * fileSpace);
     // Now, appending more than 1 fileLen should result in an error
@@ -825,7 +825,7 @@ public class TestQuota {
     // verify space after partial append
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 5 * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(5 * fileSpace);
 
     // Test set replication :
 
@@ -835,7 +835,7 @@ public class TestQuota {
     // verify that space is reduced by file2Len
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
+    assertThat(c.getSpaceConsumed()).isEqualTo(5 * fileSpace - file2Len);
 
     // now try to increase the replication and and expect an error.
     hasException = false;
@@ -849,7 +849,7 @@ public class TestQuota {
     // verify space consumed remains unchanged.
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
+    assertThat(c.getSpaceConsumed()).isEqualTo(5 * fileSpace - file2Len);
 
     // now increase the quota for quotaDir1 and quotaDir20
     dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 10 * fileSpace);
@@ -860,7 +860,7 @@ public class TestQuota {
     // verify increase in space
     c = dfs.getContentSummary(dstPath);
     compareQuotaUsage(c, dfs, dstPath);
-    assertEquals(c.getSpaceConsumed(), 5 * fileSpace + file2Len);
+    assertThat(c.getSpaceConsumed()).isEqualTo(5 * fileSpace + file2Len);
 
     // Test HDFS-2053 :
 
@@ -888,34 +888,34 @@ public class TestQuota {
         (sizeFactorC + 1) * fileSpace);
     c = dfs.getContentSummary(quotaDir2053_C);
     compareQuotaUsage(c, dfs, quotaDir2053_C);
-    assertEquals(c.getSpaceQuota(), (sizeFactorC + 1) * fileSpace);
+    assertThat(c.getSpaceQuota()).isEqualTo((sizeFactorC + 1) * fileSpace);
 
     // Create a file under subdirectory A
     DFSTestUtil.createFile(dfs, new Path(quotaDir2053_A, "fileA"),
         sizeFactorA * fileLen, replication, 0);
     c = dfs.getContentSummary(quotaDir2053_A);
     compareQuotaUsage(c, dfs, quotaDir2053_A);
-    assertEquals(c.getSpaceConsumed(), sizeFactorA * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(sizeFactorA * fileSpace);
 
     // Create a file under subdirectory B
     DFSTestUtil.createFile(dfs, new Path(quotaDir2053_B, "fileB"),
         sizeFactorB * fileLen, replication, 0);
     c = dfs.getContentSummary(quotaDir2053_B);
     compareQuotaUsage(c, dfs, quotaDir2053_B);
-    assertEquals(c.getSpaceConsumed(), sizeFactorB * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(sizeFactorB * fileSpace);
 
     // Create a file under subdirectory C (which has a space quota)
     DFSTestUtil.createFile(dfs, new Path(quotaDir2053_C, "fileC"),
         sizeFactorC * fileLen, replication, 0);
     c = dfs.getContentSummary(quotaDir2053_C);
     compareQuotaUsage(c, dfs, quotaDir2053_C);
-    assertEquals(c.getSpaceConsumed(), sizeFactorC * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(sizeFactorC * fileSpace);
 
     // Check space consumed for /hdfs-2053
     c = dfs.getContentSummary(quotaDir2053);
     compareQuotaUsage(c, dfs, quotaDir2053);
-    assertEquals(c.getSpaceConsumed(),
-        (sizeFactorA + sizeFactorB + sizeFactorC) * fileSpace);
+    assertThat(c.getSpaceConsumed()).isEqualTo(
+            (sizeFactorA + sizeFactorB + sizeFactorC) * fileSpace);
   }
 
   /**

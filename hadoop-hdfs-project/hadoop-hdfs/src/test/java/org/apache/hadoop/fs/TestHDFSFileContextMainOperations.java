@@ -137,7 +137,7 @@ public class TestHDFSFileContextMainOperations extends
     Assert.assertTrue("Recovery is not expected.", isReady);
 
     FileStatus fileStatus = fc.getFileStatus(file);
-    Assert.assertEquals(fileStatus.getLen(), newLength);
+    Assert.assertEquals(newLength, fileStatus.getLen());
     AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
     ContentSummary cs = fs.getContentSummary(dir);

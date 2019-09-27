@@ -63,7 +63,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
-      Assert.assertEquals(datanodes.size(), 1);
+      Assert.assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
@@ -71,49 +71,49 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
           "Hadoop:service=DataNode,name=DataNodeInfo");
       // get attribute "ClusterId"
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
-      Assert.assertEquals(datanode.getClusterId(), clusterId);
+      Assert.assertEquals(clusterId, datanode.getClusterId());
       // get attribute "Version"
       String version = (String)mbs.getAttribute(mxbeanName, "Version");
-      Assert.assertEquals(datanode.getVersion(),version);
+      Assert.assertEquals(version, datanode.getVersion());
       // get attribute "SotfwareVersion"
       String softwareVersion =
           (String)mbs.getAttribute(mxbeanName, "SoftwareVersion");
-      Assert.assertEquals(datanode.getSoftwareVersion(),softwareVersion);
+      Assert.assertEquals(softwareVersion, datanode.getSoftwareVersion());
       Assert.assertEquals(version, softwareVersion
           + ", r" + datanode.getRevision());
       // get attribute "RpcPort"
       String rpcPort = (String)mbs.getAttribute(mxbeanName, "RpcPort");
-      Assert.assertEquals(datanode.getRpcPort(),rpcPort);
+      Assert.assertEquals(rpcPort, datanode.getRpcPort());
       // get attribute "HttpPort"
       String httpPort = (String)mbs.getAttribute(mxbeanName, "HttpPort");
-      Assert.assertEquals(datanode.getHttpPort(),httpPort);
+      Assert.assertEquals(httpPort, datanode.getHttpPort());
       // get attribute "NamenodeAddresses"
       String namenodeAddresses = (String)mbs.getAttribute(mxbeanName, 
           "NamenodeAddresses");
-      Assert.assertEquals(datanode.getNamenodeAddresses(),namenodeAddresses);
+      Assert.assertEquals(namenodeAddresses, datanode.getNamenodeAddresses());
       // get attribute "getDatanodeHostname"
       String datanodeHostname = (String)mbs.getAttribute(mxbeanName,
           "DatanodeHostname");
-      Assert.assertEquals(datanode.getDatanodeHostname(),datanodeHostname);
+      Assert.assertEquals(datanodeHostname, datanode.getDatanodeHostname());
       // get attribute "getVolumeInfo"
       String volumeInfo = (String)mbs.getAttribute(mxbeanName, "VolumeInfo");
-      Assert.assertEquals(replaceDigits(datanode.getVolumeInfo()),
-          replaceDigits(volumeInfo));
+      Assert.assertEquals(replaceDigits(volumeInfo),
+              replaceDigits(datanode.getVolumeInfo()));
       // Ensure mxbean's XceiverCount is same as the DataNode's
       // live value.
       int xceiverCount = (Integer)mbs.getAttribute(mxbeanName,
           "XceiverCount");
-      Assert.assertEquals(datanode.getXceiverCount(), xceiverCount);
+      Assert.assertEquals(xceiverCount, datanode.getXceiverCount());
       // Ensure mxbean's XmitsInProgress is same as the DataNode's
       // live value.
       int xmitsInProgress =
           (Integer) mbs.getAttribute(mxbeanName, "XmitsInProgress");
-      Assert.assertEquals(datanode.getXmitsInProgress(), xmitsInProgress);
+      Assert.assertEquals(xmitsInProgress, datanode.getXmitsInProgress());
       String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
           "BPServiceActorInfo");
-      Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
+      Assert.assertEquals(bpActorInfo, datanode.getBPServiceActorInfo());
       String slowDisks = (String)mbs.getAttribute(mxbeanName, "SlowDisks");
-      Assert.assertEquals(datanode.getSlowDisks(), slowDisks);
+      Assert.assertEquals(slowDisks, datanode.getSlowDisks());
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -130,7 +130,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
     try (MiniDFSCluster cluster =
                  new MiniDFSCluster.Builder(simpleConf).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
-      Assert.assertEquals(datanodes.size(), 1);
+      Assert.assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -140,14 +140,14 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
       Assert.assertFalse(securityEnabled);
-      Assert.assertEquals(datanode.isSecurityEnabled(), securityEnabled);
+      Assert.assertEquals(securityEnabled, datanode.isSecurityEnabled());
     }
 
     // get attribute "SecurityEnabled" with secure configuration
     try (MiniDFSCluster cluster =
                  new MiniDFSCluster.Builder(secureConf).build()) {
       List<DataNode> datanodes = cluster.getDataNodes();
-      Assert.assertEquals(datanodes.size(), 1);
+      Assert.assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -157,7 +157,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
       Assert.assertTrue(securityEnabled);
-      Assert.assertEquals(datanode.isSecurityEnabled(), securityEnabled);
+      Assert.assertEquals(securityEnabled, datanode.isSecurityEnabled());
     }
 
     // setting back the authentication method
@@ -186,7 +186,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
           "Hadoop:service=DataNode,name=DataNodeInfo");
       String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
           "BPServiceActorInfo");
-      Assert.assertEquals(dn.getBPServiceActorInfo(), bpActorInfo);
+      Assert.assertEquals(bpActorInfo, dn.getBPServiceActorInfo());
       LOG.info("bpActorInfo is " + bpActorInfo);
       TypeReference<ArrayList<Map<String, String>>> typeRef
           = new TypeReference<ArrayList<Map<String, String>>>() {};
@@ -217,7 +217,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName =
@@ -274,7 +274,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
-      Assert.assertEquals(datanodes.size(), 1);
+      Assert.assertEquals(1, datanodes.size());
       DataNode datanode = datanodes.get(0);
       String slowDiskPath = "test/data1/slowVolume";
       datanode.getDiskMetrics().addSlowDiskForTesting(slowDiskPath, null);
@@ -284,7 +284,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
           "Hadoop:service=DataNode,name=DataNodeInfo");
 
       String slowDisks = (String)mbs.getAttribute(mxbeanName, "SlowDisks");
-      Assert.assertEquals(datanode.getSlowDisks(), slowDisks);
+      Assert.assertEquals(slowDisks, datanode.getSlowDisks());
       Assert.assertTrue(slowDisks.contains(slowDiskPath));
     } finally {
       if (cluster != null) {cluster.shutdown();}

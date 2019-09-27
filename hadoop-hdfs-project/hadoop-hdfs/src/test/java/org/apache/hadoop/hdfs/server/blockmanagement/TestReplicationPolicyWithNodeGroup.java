@@ -294,21 +294,21 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertEquals(storages[0], targets[0]);
 
 
     targets = chooseTarget(2);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertEquals(storages[0], targets[0]);
 
     assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[0], targets[0]);
 
     assertFalse(isOnSameRack(targets[0], targets[1]));
@@ -316,7 +316,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     assertFalse(isOnSameNodeGroup(targets[1], targets[2]));
 
     targets = chooseTarget(4);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[0], targets[0]);
 
     assertTrue(isOnSameRack(targets[1], targets[2]) ||
@@ -357,7 +357,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
         excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY,
         null);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[0], targets[0]);
 
     assertTrue(cluster.isNodeGroupAware());
@@ -402,25 +402,25 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertEquals(storages[1], targets[0]);
 
     targets = chooseTarget(2);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertEquals(storages[1], targets[0]);
     assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertEquals(storages[1], targets[0]);
     assertTrue(isOnSameRack(targets[1], targets[2]));
     assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(4);
-    assertEquals(targets.length, 4);
+    assertEquals(4, targets.length);
     assertEquals(storages[1], targets[0]);
     assertTrue(cluster.isNodeGroupAware());
     verifyNoTwoTargetsOnSameNodeGroup(targets);
@@ -452,19 +452,19 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertFalse(isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     for(int i=0; i<3; i++) {
       assertFalse(isOnSameRack(dataNodes[0], targets[i]));
     }
@@ -486,17 +486,17 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     updateHeartbeatWithUsage();
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, NODE);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1, NODE);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
 
     targets = chooseTarget(2, NODE);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3, NODE);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertTrue(isOnSameRack(targets[1], targets[2]));
     assertFalse(isOnSameRack(targets[0], targets[1]));
     verifyNoTwoTargetsOnSameNodeGroup(targets);
@@ -517,7 +517,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(1, dataNodes[7]);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertTrue(targets[0].getDatanodeDescriptor().equals(dataNodes[6]));
   }
 
@@ -536,19 +536,19 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     DatanodeStorageInfo[] targets;
     
     targets = chooseTarget(0, chosenNodes);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
     
     targets = chooseTarget(1, chosenNodes);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertFalse(isOnSameRack(dataNodes[0], targets[0]));
     
     targets = chooseTarget(2, chosenNodes);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertTrue(isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3, chosenNodes);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertTrue(isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(isOnSameNodeGroup(dataNodes[0], targets[0]));
     assertFalse(isOnSameRack(targets[0], targets[2]));
@@ -570,14 +570,14 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1, chosenNodes);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, chosenNodes);
-    assertEquals(targets.length, 2);
+    assertEquals(3, targets.length);
     assertFalse(isOnSameRack(dataNodes[0], targets[0]) && 
         isOnSameRack(dataNodes[0], targets[1]));
   }
@@ -598,26 +598,26 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
 
     targets = chooseTarget(1, chosenNodes);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertTrue(isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(isOnSameRack(dataNodes[3], targets[0]));
 
     targets = chooseTarget(1, dataNodes[3], chosenNodes);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertTrue(isOnSameRack(dataNodes[3], targets[0]));
     assertFalse(isOnSameNodeGroup(dataNodes[3], targets[0]));
     assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, chosenNodes);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertTrue(isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(isOnSameNodeGroup(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, dataNodes[3], chosenNodes);
-    assertEquals(targets.length, 2);
+    assertEquals(3, targets.length);
     assertTrue(isOnSameRack(dataNodes[3], targets[0]));
   }
   
@@ -714,17 +714,17 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, dataNodesInBoundaryCase[0]);
-    assertEquals(targets.length, 0);
+    assertEquals(0, targets.length);
     
     targets = chooseTarget(1, dataNodesInBoundaryCase[0]);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
 
     targets = chooseTarget(2, dataNodesInBoundaryCase[0]);
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3, dataNodesInBoundaryCase[0]);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertTrue(checkTargetsOnDifferentNodeGroup(targets));
   }
 
@@ -784,14 +784,14 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     DatanodeStorageInfo[] targets;
     // Test normal case -- 3 replicas
     targets = chooseTarget(3, dataNodesInMoreTargetsCase[0]);
-    assertEquals(targets.length, 3);
+    assertEquals(3, targets.length);
     assertTrue(checkTargetsOnDifferentNodeGroup(targets));
 
     // Test special case -- replica number over node groups.
     targets = chooseTarget(10, dataNodesInMoreTargetsCase[0]);
     assertTrue(checkTargetsOnDifferentNodeGroup(targets));
     // Verify it only can find 6 targets for placing replicas.
-    assertEquals(targets.length, 6);
+    assertEquals(6, targets.length);
   }
 
   @Test
@@ -842,7 +842,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     
     //Even there are three node groups, verify that 
     //only two targets are selected due to dependencies
-    assertEquals(targets.length, 2);
+    assertEquals(2, targets.length);
     assertEquals(targets[0], storagesForDependencies[1]);
     assertTrue(targets[1].equals(storagesForDependencies[3]) || targets[1].equals(storagesForDependencies[4]));
     
@@ -867,7 +867,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     favoredNodes.add(dataNodes[0]);
     favoredNodes.add(dataNodes[1]);
     targets = chooseTarget(1, dataNodes[7], null, favoredNodes);
-    assertEquals(targets.length, 1);
+    assertEquals(1, targets.length);
     assertTrue(favoredNodes.contains(targets[0].getDatanodeDescriptor()));
   }
 

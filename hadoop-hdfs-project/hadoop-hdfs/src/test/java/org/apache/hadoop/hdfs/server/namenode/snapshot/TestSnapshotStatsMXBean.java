@@ -63,11 +63,11 @@ public class TestSnapshotStatsMXBean {
           (CompositeData[]) mbs.getAttribute(
               mxbeanName, "SnapshottableDirectories");
       int numDirectories = Array.getLength(directories);
-      assertEquals(sm.getNumSnapshottableDirs(), numDirectories);
+      assertEquals(numDirectories, sm.getNumSnapshottableDirs());
       CompositeData[] snapshots =
           (CompositeData[]) mbs.getAttribute(mxbeanName, "Snapshots");
       int numSnapshots = Array.getLength(snapshots);
-      assertEquals(sm.getNumSnapshots(), numSnapshots);
+      assertEquals(numSnapshots, sm.getNumSnapshots());
 
       CompositeData d = (CompositeData) Array.get(directories, 0);
       CompositeData s = (CompositeData) Array.get(snapshots, 0);

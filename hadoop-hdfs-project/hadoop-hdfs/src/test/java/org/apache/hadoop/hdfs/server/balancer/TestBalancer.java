@@ -681,7 +681,7 @@ public class TestBalancer {
           break;
         }
       }
-      assertEquals(expectedExcludedNodes,actualExcludedNodeCount);
+      assertEquals(expectedExcludedNodes, actualExcludedNodeCount);
     } while (!balanced);
   }
 
@@ -1771,7 +1771,7 @@ public class TestBalancer {
 
     // Rolling upgrade should abort the balancer
     assertEquals(ExitStatus.UNFINALIZED_UPGRADE.getExitCode(),
-        Balancer.run(namenodes, p, conf));
+            Balancer.run(namenodes, p, conf));
 
     // Should work with the -runDuringUpgrade flag.
     BalancerParameters.Builder b =
@@ -1779,14 +1779,14 @@ public class TestBalancer {
     b.setRunDuringUpgrade(true);
     final BalancerParameters runDuringUpgrade = b.build();
     assertEquals(ExitStatus.SUCCESS.getExitCode(),
-        Balancer.run(namenodes, runDuringUpgrade, conf));
+            Balancer.run(namenodes, runDuringUpgrade, conf));
 
     // Finalize the rolling upgrade
     fs.rollingUpgrade(HdfsConstants.RollingUpgradeAction.FINALIZE);
 
     // Should also work after finalization.
     assertEquals(ExitStatus.SUCCESS.getExitCode(),
-        Balancer.run(namenodes, p, conf));
+            Balancer.run(namenodes, p, conf));
   }
 
   /**
@@ -1965,7 +1965,7 @@ public class TestBalancer {
           "-policy", BalancingPolicy.Node.INSTANCE.getName(),
           "-threshold", "1"
       });
-      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(BalancingPolicy.Node.INSTANCE, p.getBalancingPolicy());
       assertEquals(p.getThreshold(), 1.0, 0.001);
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
@@ -1986,9 +1986,9 @@ public class TestBalancer {
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
       });
-      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(BalancingPolicy.Node.INSTANCE, p.getBalancingPolicy());
       assertEquals(p.getThreshold(), 1.0, 0.001);
-      assertEquals(p.getSourceNodes(), sourceNodes);
+      assertEquals(sourceNodes, p.getSourceNodes());
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
       final int r = Balancer.run(namenodes, p, conf);
@@ -2004,9 +2004,9 @@ public class TestBalancer {
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
       });
-      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(BalancingPolicy.Node.INSTANCE, p.getBalancingPolicy());
       assertEquals(p.getThreshold(), 1.0, 0.001);
-      assertEquals(p.getSourceNodes(), sourceNodes);
+      assertEquals(sourceNodes, p.getSourceNodes());
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
       final int r = Balancer.run(namenodes, p, conf);
@@ -2024,9 +2024,9 @@ public class TestBalancer {
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
       });
-      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(BalancingPolicy.Node.INSTANCE, p.getBalancingPolicy());
       assertEquals(p.getThreshold(), 1.0, 0.001);
-      assertEquals(p.getSourceNodes(), sourceNodes);
+      assertEquals(sourceNodes, p.getSourceNodes());
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
       final int r = Balancer.run(namenodes, p, conf);

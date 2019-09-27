@@ -19,6 +19,7 @@
 package org.apache.hadoop.lib.util;
 
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
@@ -31,13 +32,11 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void notNullNotNull() {
-    assertEquals(Check.notNull("value", "name"), "value");
+    assertThat(Check.notNull("value", "name")).isEqualTo("value");
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void notNullNull() {
-    Check.notNull(null, "name");
-  }
+  public void notNullNull() { Check.notNull(null, "name"); }
 
   @Test
   public void notNullElementsNotNull() {
@@ -80,7 +79,7 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void notEmptyNotEmtpy() {
-    assertEquals(Check.notEmpty("value", "name"), "value");
+    assertThat(Check.notEmpty("value", "name")).isEqualTo("value");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -95,10 +94,10 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void validIdentifierValid() throws Exception {
-    assertEquals(Check.validIdentifier("a", 1, ""), "a");
-    assertEquals(Check.validIdentifier("a1", 2, ""), "a1");
-    assertEquals(Check.validIdentifier("a_", 3, ""), "a_");
-    assertEquals(Check.validIdentifier("_", 1, ""), "_");
+    assertThat(Check.validIdentifier("a", 1, "")).isEqualTo("a");
+    assertThat(Check.validIdentifier("a1", 2, "")).isEqualTo("a1");
+    assertThat(Check.validIdentifier("a_", 3, "")).isEqualTo("a_");
+    assertThat(Check.validIdentifier("_", 1, "")).isEqualTo("_");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -118,7 +117,7 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void checkGTZeroGreater() {
-    assertEquals(Check.gt0(120, "test"), 120);
+    assertThat(Check.gt0(120, "test")).isEqualTo(120);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -133,8 +132,8 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void checkGEZero() {
-    assertEquals(Check.ge0(120, "test"), 120);
-    assertEquals(Check.ge0(0, "test"), 0);
+    assertThat(Check.ge0(120, "test")).isEqualTo(120);
+    assertThat(Check.ge0(0, "test")).isEqualTo(0);
   }
 
   @Test(expected = IllegalArgumentException.class)

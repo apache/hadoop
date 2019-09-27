@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.lib.server;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -51,8 +51,8 @@ public class TestBaseService extends HTestCase {
   public void baseService() throws Exception {
     BaseService service = new MyService();
     assertNull(service.getInterface());
-    assertEquals(service.getPrefix(), "myservice");
-    assertEquals(service.getServiceDependencies().length, 0);
+    assertThat(service.getPrefix()).isEqualTo("myservice");
+    assertThat(service.getServiceDependencies().length).isEqualTo(0);
 
     Server server = Mockito.mock(Server.class);
     Configuration conf = new Configuration(false);
@@ -63,9 +63,10 @@ public class TestBaseService extends HTestCase {
     Mockito.when(server.getPrefixedName("myservice.")).thenReturn("server.myservice.");
 
     service.init(server);
-    assertEquals(service.getPrefixedName("foo"), "server.myservice.foo");
-    assertEquals(service.getServiceConfig().size(), 1);
-    assertEquals(service.getServiceConfig().get("foo"), "FOO");
+    assertThat(service.getPrefixedName("foo")).isEqualTo(
+            "server.myservice.foo");
+    assertThat(service.getServiceConfig().size()).isEqualTo(1);
+    assertThat(service.getServiceConfig().get("foo")).isEqualTo("FOO");
     assertTrue(MyService.INIT);
   }
 }
