@@ -388,42 +388,41 @@ public abstract class CryptoStreamsTestBase {
     Assert.assertArrayEquals(readData, expectedData);
   }
   
-  /** Test read fully */
+  /** Test read fully. */
   @Test(timeout=120000)
   public void testReadFully() throws Exception {
     OutputStream out = getOutputStream(defaultBufferSize);
     writeData(out);
     
-    InputStream in = getInputStream(defaultBufferSize);
-    final int len1 = dataLen / 4;
-    // Read len1 bytes
-    byte[] readData = new byte[len1];
-    readAll(in, readData, 0, len1);
-    byte[] expectedData = new byte[len1];
-    System.arraycopy(data, 0, expectedData, 0, len1);
-    Assert.assertArrayEquals(readData, expectedData);
-    
-    // Pos: 1/3 dataLen
-    readFullyCheck(in, dataLen / 3);
-    
-    // Read len1 bytes
-    readData = new byte[len1];
-    readAll(in, readData, 0, len1);
-    expectedData = new byte[len1];
-    System.arraycopy(data, len1, expectedData, 0, len1);
-    Assert.assertArrayEquals(readData, expectedData);
-    
-    // Pos: 1/2 dataLen
-    readFullyCheck(in, dataLen / 2);
-    
-    // Read len1 bytes
-    readData = new byte[len1];
-    readAll(in, readData, 0, len1);
-    expectedData = new byte[len1];
-    System.arraycopy(data, 2 * len1, expectedData, 0, len1);
-    Assert.assertArrayEquals(readData, expectedData);
-    
-    in.close();
+    try (InputStream in = getInputStream(defaultBufferSize)) {
+      final int len1 = dataLen / 4;
+      // Read len1 bytes
+      byte[] readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      byte[] expectedData = new byte[len1];
+      System.arraycopy(data, 0, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+
+      // Pos: 1/3 dataLen
+      readFullyCheck(in, dataLen / 3);
+
+      // Read len1 bytes
+      readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      expectedData = new byte[len1];
+      System.arraycopy(data, len1, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+
+      // Pos: 1/2 dataLen
+      readFullyCheck(in, dataLen / 2);
+
+      // Read len1 bytes
+      readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      expectedData = new byte[len1];
+      System.arraycopy(data, 2 * len1, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+    }
   }
   
   private void readFullyCheck(InputStream in, int pos) throws Exception {
@@ -437,6 +436,60 @@ public abstract class CryptoStreamsTestBase {
     result = new byte[dataLen]; // Exceeds maximum length 
     try {
       ((PositionedReadable) in).readFully(pos, result);
+      Assert.fail("Read fully exceeds maximum length should fail.");
+    } catch (EOFException e) {
+    }
+  }
+
+  /** Test byte byffer read fully. */
+  @Test(timeout=120000)
+  public void testByteBufferReadFully() throws Exception {
+    OutputStream out = getOutputStream(defaultBufferSize);
+    writeData(out);
+
+    try (InputStream in = getInputStream(defaultBufferSize)) {
+      final int len1 = dataLen / 4;
+      // Read len1 bytes
+      byte[] readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      byte[] expectedData = new byte[len1];
+      System.arraycopy(data, 0, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+
+      // Pos: 1/3 dataLen
+      byteBufferReadFullyCheck(in, dataLen / 3);
+
+      // Read len1 bytes
+      readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      expectedData = new byte[len1];
+      System.arraycopy(data, len1, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+
+      // Pos: 1/2 dataLen
+      byteBufferReadFullyCheck(in, dataLen / 2);
+
+      // Read len1 bytes
+      readData = new byte[len1];
+      readAll(in, readData, 0, len1);
+      expectedData = new byte[len1];
+      System.arraycopy(data, 2 * len1, expectedData, 0, len1);
+      Assert.assertArrayEquals(readData, expectedData);
+    }
+  }
+
+  private void byteBufferReadFullyCheck(InputStream in, int pos)
+          throws Exception {
+    ByteBuffer result = ByteBuffer.allocate(dataLen - pos);
+    ((ByteBufferPositionedReadable) in).readFully(pos, result);
+
+    byte[] expectedData = new byte[dataLen - pos];
+    System.arraycopy(data, pos, expectedData, 0, dataLen - pos);
+    Assert.assertArrayEquals(result.array(), expectedData);
+
+    result = ByteBuffer.allocate(dataLen); // Exceeds maximum length
+    try {
+      ((ByteBufferPositionedReadable) in).readFully(pos, result);
       Assert.fail("Read fully exceeds maximum length should fail.");
     } catch (EOFException e) {
     }
