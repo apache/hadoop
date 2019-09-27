@@ -18,13 +18,9 @@
 package org.apache.hadoop.ozone;
 
 import com.google.common.base.Joiner;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -37,17 +33,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPOutputStream;
 
 import com.google.common.base.Strings;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
@@ -58,10 +50,7 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -360,7 +349,7 @@ public final class OmUtils {
   }
 
   /**
-   * Write OM DB Checkpoint to an output stream as a compressed file (tgz)
+   * Write OM DB Checkpoint to an output stream as a compressed file (tgz).
    * @param checkpoint checkpoint file
    * @param destination desination output stream.
    * @throws IOException
@@ -379,9 +368,10 @@ public final class OmUtils {
         Path checkpointPath = checkpoint.getCheckpointLocation();
         for (Path path : Files.list(checkpointPath)
             .collect(Collectors.toList())) {
-
-          includeFile(path.toFile(), path.getFileName().toString(),
-              archiveOutputStream);
+          if (null != path) {
+            includeFile(path.toFile(), path.getFileName().toString(),
+                archiveOutputStream);
+          }
         }
       }
     } catch (CompressorException e) {

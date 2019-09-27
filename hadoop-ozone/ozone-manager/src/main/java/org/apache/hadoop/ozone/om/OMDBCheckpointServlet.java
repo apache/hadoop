@@ -126,7 +126,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
       }
 
       checkpoint = omDbStore.getCheckpoint(flush);
-      if (checkpoint == null) {
+      if (checkpoint == null || checkpoint.getCheckpointLocation() == null) {
         LOG.error("Unable to process metadata snapshot request. " +
             "Checkpoint request returned null.");
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

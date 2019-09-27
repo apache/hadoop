@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -141,7 +140,7 @@ class TestDBCheckpoint implements DBCheckpoint {
 
   private Path checkpointFile;
 
-  public TestDBCheckpoint(Path checkpointFile) {
+  TestDBCheckpoint(Path checkpointFile) {
     this.checkpointFile = checkpointFile;
   }
 
