@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
+import static org.apache.hadoop.ozone.recon.ReconUtils.createTarFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -41,7 +42,6 @@ import java.io.InputStream;
 import java.nio.file.Paths;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -96,7 +96,7 @@ public class TestOzoneManagerServiceProviderImpl extends
 
     DBCheckpoint checkpoint = omMetadataManager.getStore()
         .getCheckpoint(true);
-    File tarFile = OmUtils.createTarFile(checkpoint.getCheckpointLocation());
+    File tarFile = createTarFile(checkpoint.getCheckpointLocation());
     InputStream inputStream = new FileInputStream(tarFile);
     ReconUtils reconUtilsMock = getMockReconUtils();
     when(reconUtilsMock.makeHttpCall(any(), anyString()))
@@ -147,7 +147,7 @@ public class TestOzoneManagerServiceProviderImpl extends
     writer.close();
 
     //Create test tar file.
-    File tarFile = OmUtils.createTarFile(checkpointDir.toPath());
+    File tarFile = createTarFile(checkpointDir.toPath());
     InputStream fileInputStream = new FileInputStream(tarFile);
     ReconUtils reconUtilsMock = getMockReconUtils();
     when(reconUtilsMock.makeHttpCall(any(), anyString()))

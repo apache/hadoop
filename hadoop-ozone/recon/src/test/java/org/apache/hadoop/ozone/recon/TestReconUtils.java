@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.recon;
 
+import static org.apache.hadoop.ozone.recon.ReconUtils.createTarFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,15 +28,16 @@ import static org.mockito.Mockito.when;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -67,6 +69,44 @@ public class TestReconUtils {
   }
 
   @Test
+  public void testCreateTarFile() throws Exception {
+
+    File tempSnapshotDir = null;
+    FileInputStream fis = null;
+    FileOutputStream fos = null;
+    File tarFile = null;
+
+    try {
+      String testDirName = System.getProperty("java.io.tmpdir");
+      if (!testDirName.endsWith("/")) {
+        testDirName += "/";
+      }
+      testDirName += "TestCreateTarFile_Dir" + System.currentTimeMillis();
+      tempSnapshotDir = new File(testDirName);
+      tempSnapshotDir.mkdirs();
+
+      File file = new File(testDirName + "/temp1.txt");
+      FileWriter writer = new FileWriter(file);
+      writer.write("Test data 1");
+      writer.close();
+
+      file = new File(testDirName + "/temp2.txt");
+      writer = new FileWriter(file);
+      writer.write("Test data 2");
+      writer.close();
+
+      tarFile = createTarFile(Paths.get(testDirName));
+      Assert.assertNotNull(tarFile);
+
+    } finally {
+      org.apache.hadoop.io.IOUtils.closeStream(fis);
+      org.apache.hadoop.io.IOUtils.closeStream(fos);
+      FileUtils.deleteDirectory(tempSnapshotDir);
+      FileUtils.deleteQuietly(tarFile);
+    }
+  }
+
+  @Test
   public void testUntarCheckpointFile() throws Exception {
 
     File newDir = folder.newFolder();
@@ -87,7 +127,7 @@ public class TestReconUtils {
     writer.close();
 
     //Create test tar file.
-    File tarFile = OmUtils.createTarFile(newDir.toPath());
+    File tarFile = createTarFile(newDir.toPath());
     File outputDir = folder.newFolder();
     new ReconUtils().untarCheckpointFile(tarFile, outputDir.toPath());
 

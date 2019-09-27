@@ -24,8 +24,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -33,18 +36,30 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
 import com.google.common.base.Strings;
+
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.CompressorException;
+import org.apache.commons.compress.compressors.CompressorInputStream;
+import org.apache.commons.compress.compressors.CompressorOutputStream;
+import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
@@ -342,61 +357,47 @@ public final class OmUtils {
   }
 
   /**
-   * Given a source directory, create a tar.gz file from it.
-   *
-   * @param sourcePath the path to the directory to be archived.
-   * @return tar.gz file
+   * Write OM DB Checkpoint to an output stream as a compressed file (tgz)
+   * @param checkpoint checkpoint file
+   * @param destination desination output stream.
    * @throws IOException
    */
-  public static File createTarFile(Path sourcePath) throws IOException {
-    TarArchiveOutputStream tarOs = null;
-    try {
-      String sourceDir = sourcePath.toString();
-      String fileName = sourceDir.concat(".tar.gz");
-      FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-      GZIPOutputStream gzipOutputStream =
-          new GZIPOutputStream(new BufferedOutputStream(fileOutputStream));
-      tarOs = new TarArchiveOutputStream(gzipOutputStream);
-      File folder = new File(sourceDir);
-      File[] filesInDir = folder.listFiles();
-      if (filesInDir != null) {
-        for (File file : filesInDir) {
-          addFilesToArchive(file.getName(), file, tarOs);
+  public static void writeOmDBCheckpointToStream(DBCheckpoint checkpoint,
+                                                 OutputStream destination)
+      throws IOException {
+
+    try (CompressorOutputStream gzippedOut = new CompressorStreamFactory()
+        .createCompressorOutputStream(CompressorStreamFactory.GZIP,
+            destination)) {
+
+      try (ArchiveOutputStream archiveOutputStream =
+               new TarArchiveOutputStream(gzippedOut)) {
+
+        Path checkpointPath = checkpoint.getCheckpointLocation();
+        for (Path path : Files.list(checkpointPath)
+            .collect(Collectors.toList())) {
+
+          includeFile(path.toFile(), path.getFileName().toString(),
+              archiveOutputStream);
         }
       }
-      return new File(fileName);
-    } finally {
-      try {
-        org.apache.hadoop.io.IOUtils.closeStream(tarOs);
-      } catch (Exception e) {
-        LOG.error("Exception encountered when closing " +
-            "TAR file output stream: " + e);
-      }
+    } catch (CompressorException e) {
+      throw new IOException(
+          "Can't compress the checkpoint: " +
+              checkpoint.getCheckpointLocation(), e);
     }
   }
 
-  private static void addFilesToArchive(String source, File file,
-                                        TarArchiveOutputStream
-                                            tarFileOutputStream)
+  private static void includeFile(File file, String entryName,
+                           ArchiveOutputStream archiveOutputStream)
       throws IOException {
-    tarFileOutputStream.putArchiveEntry(new TarArchiveEntry(file, source));
-    if (file.isFile()) {
-      FileInputStream fileInputStream = new FileInputStream(file);
-      BufferedInputStream bufferedInputStream =
-          new BufferedInputStream(fileInputStream);
-      IOUtils.copy(bufferedInputStream, tarFileOutputStream);
-      tarFileOutputStream.closeArchiveEntry();
-      fileInputStream.close();
-    } else if (file.isDirectory()) {
-      tarFileOutputStream.closeArchiveEntry();
-      File[] filesInDir = file.listFiles();
-      if (filesInDir != null) {
-        for (File cFile : filesInDir) {
-          addFilesToArchive(cFile.getAbsolutePath(), cFile,
-              tarFileOutputStream);
-        }
-      }
+    ArchiveEntry archiveEntry =
+        archiveOutputStream.createArchiveEntry(file, entryName);
+    archiveOutputStream.putArchiveEntry(archiveEntry);
+    try (FileInputStream fis = new FileInputStream(file)) {
+      IOUtils.copy(fis, archiveOutputStream);
     }
+    archiveOutputStream.closeArchiveEntry();
   }
 
   /**
