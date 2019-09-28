@@ -2359,13 +2359,11 @@ public class BlockManager implements BlockStatsMXBean {
       if (isStriped) {
         blockIndex = ((BlockInfoStriped) block)
             .getStorageBlockIndex(storage);
-        if (state == StoredReplicaState.LIVE) {
-          if (!bitSet.get(blockIndex)) {
-            bitSet.set(blockIndex);
-          } else {
-            numReplicas.subtract(StoredReplicaState.LIVE, 1);
-            numReplicas.add(StoredReplicaState.REDUNDANT, 1);
-          }
+        if (!bitSet.get(blockIndex)) {
+          bitSet.set(blockIndex);
+        } else if (state == StoredReplicaState.LIVE) {
+          numReplicas.subtract(StoredReplicaState.LIVE, 1);
+          numReplicas.add(StoredReplicaState.REDUNDANT, 1);
         }
       }
 
