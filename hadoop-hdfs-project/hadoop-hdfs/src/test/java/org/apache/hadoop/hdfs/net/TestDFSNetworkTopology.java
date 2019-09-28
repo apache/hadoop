@@ -378,7 +378,8 @@ public class TestDFSNetworkTopology {
     HashSet<Node> excluded = new HashSet<>();
 
     excluded.add(new DatanodeInfoBuilder()
-        .setNodeID(DatanodeID.EMPTY_DATANODE_ID).build());
+        .setNodeID(new DatanodeID("null",
+            "null", "null", 0, 0, 0, 0)).build());
     Node node = CLUSTER.chooseRandomWithStorageType("/", "/l1/d1/r1", excluded,
         StorageType.ARCHIVE);
 
