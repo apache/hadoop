@@ -22,14 +22,18 @@ import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Helper class to perform Unsafe ByteString conversion from byteBuffer or byte
  * array depending on the config "ozone.UnsafeByteOperations.enabled".
  */
 public final class ByteStringHelper {
-  private static final AtomicBoolean INITIALIZED = new AtomicBoolean();
-  private static volatile boolean isUnsafeByteOperationsEnabled;
+  private static final String CALL_BEFORE_INIT_ERRORMSG = "The ByteStringHelper"
+      + "class is called to convert to ByteString before it was initialized."
+      + " Call ByteStringHelper.init(boolean) before using ByteStringHelper."
+      + "getByteString() methods.";
+  private static boolean isInitialized;
+  private static boolean isUnsafeByteOperationsEnabled;
 
   /**
    * There is no need to instantiate this class.
@@ -37,15 +41,23 @@ public final class ByteStringHelper {
   private ByteStringHelper() {
   }
 
-  public static void init(boolean isUnsafeByteOperation) {
-    final boolean set = INITIALIZED.compareAndSet(false, true);
-    if (set) {
-      ByteStringHelper.isUnsafeByteOperationsEnabled =
-          isUnsafeByteOperation;
+  /**
+   * Configures the utility methods.
+   * If the parameter is true, unsafe byte data warpping functions can be used
+   * for conversion, if false, the conversion will perform the copy of the data
+   * to be converted.
+   *
+   * @param enableUnsafeByteOperations specifies if unsafe byte wrappers can
+   *                                   or can not be used.
+   */
+  public static synchronized void init(boolean enableUnsafeByteOperations) {
+    if (!isInitialized) {
+      isUnsafeByteOperationsEnabled = enableUnsafeByteOperations;
+      isInitialized = true;
     } else {
       // already initialized, check values
-      Preconditions.checkState(isUnsafeByteOperationsEnabled
-          == isUnsafeByteOperation);
+      Preconditions.checkState(
+          isUnsafeByteOperationsEnabled == enableUnsafeByteOperations);
     }
   }
 
@@ -56,14 +68,35 @@ public final class ByteStringHelper {
     return bytes;
   }
 
+  /**
+   * Converts a ByteBuffer to a protobuf ByteString.
+   *
+   * This method should only be called after the class is initialized with the
+   * proper configuration.
+   *
+   * @param buffer the ByteBuffer to convert.
+   * @return the protobuf ByteString representation.
+   * @see #init(boolean)
+   */
   public static ByteString getByteString(ByteBuffer buffer) {
+    Preconditions.checkState(isInitialized, CALL_BEFORE_INIT_ERRORMSG);
     return isUnsafeByteOperationsEnabled ?
         UnsafeByteOperations.unsafeWrap(buffer) : copyFrom(buffer);
   }
 
+  /**
+   * Converts a byte array to a protobuf ByteString.
+   *
+   * This method should only be called after the class is initialized with the
+   * proper configuration.
+   *
+   * @param bytes the byte array to convert.
+   * @return the protobuf ByteString representation.
+   * @see #init(boolean)
+   */
   public static ByteString getByteString(byte[] bytes) {
+    Preconditions.checkState(isInitialized, CALL_BEFORE_INIT_ERRORMSG);
     return isUnsafeByteOperationsEnabled ?
         UnsafeByteOperations.unsafeWrap(bytes) : ByteString.copyFrom(bytes);
   }
-
 }
