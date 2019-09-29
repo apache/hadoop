@@ -38,7 +38,6 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +55,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -109,7 +109,6 @@ public class AzureBlobFileSystem extends FileSystem {
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH)) == null) {
         try {
           this.createFileSystem();

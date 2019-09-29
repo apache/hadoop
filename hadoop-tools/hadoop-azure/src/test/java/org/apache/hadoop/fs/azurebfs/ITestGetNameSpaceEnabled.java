@@ -21,11 +21,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.Path;
 import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
