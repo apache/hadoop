@@ -52,6 +52,7 @@ public class CSMMetrics {
 
   // Failure Metrics
   private @Metric MutableCounterLong numWriteStateMachineFails;
+  private @Metric MutableCounterLong numWriteDataFails;
   private @Metric MutableCounterLong numQueryStateMachineFails;
   private @Metric MutableCounterLong numApplyTransactionFails;
   private @Metric MutableCounterLong numReadStateMachineFails;
@@ -59,10 +60,13 @@ public class CSMMetrics {
   private @Metric MutableCounterLong numStartTransactionVerifyFailures;
   private @Metric MutableCounterLong numContainerNotOpenVerifyFailures;
 
+  private @Metric MutableRate applyTransaction;
+  private @Metric MutableRate writeStateMachineData;
+
   public CSMMetrics() {
     int numCmdTypes = ContainerProtos.Type.values().length;
     this.opsLatency = new MutableRate[numCmdTypes];
-    this.registry = new MetricsRegistry(CSMMetrics.class.getName());
+    this.registry = new MetricsRegistry(CSMMetrics.class.getSimpleName());
     for (int i = 0; i < numCmdTypes; i++) {
       opsLatency[i] = registry.newRate(
           ContainerProtos.Type.forNumber(i + 1).toString(),
@@ -95,6 +99,10 @@ public class CSMMetrics {
 
   public void incNumWriteStateMachineFails() {
     numWriteStateMachineFails.incr();
+  }
+
+  public void incNumWriteDataFails() {
+    numWriteDataFails.incr();
   }
 
   public void incNumQueryStateMachineFails() {
@@ -142,6 +150,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumWriteDataFails() {
+    return numWriteDataFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumQueryStateMachineFails() {
     return numQueryStateMachineFails.value();
   }
@@ -162,6 +175,11 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumReadStateMachineOps() {
+    return numReadStateMachineOps.value();
+  }
+
+  @VisibleForTesting
   public long getNumBytesWrittenCount() {
     return numBytesWrittenCount.value();
   }
@@ -169,6 +187,10 @@ public class CSMMetrics {
   @VisibleForTesting
   public long getNumBytesCommittedCount() {
     return numBytesCommittedCount.value();
+  }
+
+  public MutableRate getApplyTransactionLatency() {
+    return applyTransaction;
   }
 
   public void incPipelineLatency(ContainerProtos.Type type, long latencyNanos) {
@@ -184,6 +206,13 @@ public class CSMMetrics {
     numContainerNotOpenVerifyFailures.incr();
   }
 
+  public void recordApplyTransactionCompletion(long latencyNanos) {
+    applyTransaction.add(latencyNanos);
+  }
+
+  public void recordWriteStateMachineCompletion(long latencyNanos) {
+    writeStateMachineData.add(latencyNanos);
+  }
 
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();

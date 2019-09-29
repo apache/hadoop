@@ -57,6 +57,12 @@ class ParamBuilderForTest {
     return this;
   }
 
+  ParamBuilderForTest withQueue(String queue) {
+    params.add("--queue");
+    params.add(queue);
+    return this;
+  }
+
   ParamBuilderForTest withNumberOfWorkers(int numWorkers) {
     params.add("--num_workers");
     params.add(String.valueOf(numWorkers));

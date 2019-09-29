@@ -48,6 +48,8 @@ public abstract class MembershipState extends BaseRecord
   /** Expiration time in ms for this entry. */
   private static long expirationMs;
 
+  /** Deletion time in ms for this expired entry. */
+  private static long deletionMs;
 
   /** Comparator based on the name.*/
   public static final Comparator<MembershipState> NAME_COMPARATOR =
@@ -329,5 +331,24 @@ public abstract class MembershipState extends BaseRecord
    */
   public static void setExpirationMs(long time) {
     MembershipState.expirationMs = time;
+  }
+
+  @Override
+  public boolean isExpired() {
+    return getState() == EXPIRED;
+  }
+
+  @Override
+  public long getDeletionMs() {
+    return MembershipState.deletionMs;
+  }
+
+  /**
+   * Set the deletion time for this class.
+   *
+   * @param time Deletion time in milliseconds.
+   */
+  public static void setDeletionMs(long time) {
+    MembershipState.deletionMs = time;
   }
 }

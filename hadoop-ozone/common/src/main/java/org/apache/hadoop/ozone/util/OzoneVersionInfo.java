@@ -21,8 +21,8 @@ package org.apache.hadoop.ozone.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ClassUtil;
-import org.apache.hadoop.utils.HddsVersionInfo;
-import org.apache.hadoop.utils.VersionInfo;
+import org.apache.hadoop.hdds.utils.HddsVersionInfo;
+import org.apache.hadoop.hdds.utils.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

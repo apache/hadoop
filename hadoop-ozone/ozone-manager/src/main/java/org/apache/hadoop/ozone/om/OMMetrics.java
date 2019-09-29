@@ -60,10 +60,9 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyLists;
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
-  private @Metric MutableCounterLong numAllocateBlockCalls;
-  private @Metric MutableCounterLong numAddAllocateBlockCalls;
+  private @Metric MutableCounterLong numBlockAllocations;
   private @Metric MutableCounterLong numGetServiceLists;
-  private @Metric MutableCounterLong numListS3Buckets;
+  private @Metric MutableCounterLong numBucketS3Lists;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
@@ -91,13 +90,12 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyListFails;
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
-  private @Metric MutableCounterLong numBlockAllocateCallFails;
-  private @Metric MutableCounterLong numAddAllocateBlockCallFails;
+  private @Metric MutableCounterLong numBlockAllocationFails;
   private @Metric MutableCounterLong numGetServiceListFails;
-  private @Metric MutableCounterLong numListS3BucketsFails;
+  private @Metric MutableCounterLong numBucketS3ListFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
   private @Metric MutableCounterLong numCommitMultipartUploadParts;
-  private @Metric MutableCounterLong getNumCommitMultipartUploadPartFails;
+  private @Metric MutableCounterLong numCommitMultipartUploadPartFails;
   private @Metric MutableCounterLong numCompleteMultipartUploadFails;
   private @Metric MutableCounterLong numAbortMultipartUploads;
   private @Metric MutableCounterLong numAbortMultipartUploadFails;
@@ -114,16 +112,27 @@ public class OMMetrics {
 
   private @Metric MutableCounterLong numVolumes;
   private @Metric MutableCounterLong numBuckets;
+  private @Metric MutableCounterLong numS3Buckets;
 
   //TODO: This metric is an estimate and it may be inaccurate on restart if the
   // OM process was not shutdown cleanly. Key creations/deletions in the last
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
 
+
+
   // Metrics to track checkpointing statistics from last run.
   private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
+
+  private @Metric MutableCounterLong numBucketS3Creates;
+  private @Metric MutableCounterLong numBucketS3CreateFails;
+  private @Metric MutableCounterLong numBucketS3Deletes;
+  private @Metric MutableCounterLong numBucketS3DeleteFails;
+
+  private @Metric MutableCounterLong numListMultipartUploadFails;
+  private @Metric MutableCounterLong numListMultipartUploads;
 
   public OMMetrics() {
   }
@@ -133,6 +142,34 @@ public class OMMetrics {
     return ms.register(SOURCE_NAME,
         "Ozone Manager Metrics",
         new OMMetrics());
+  }
+
+  public void incNumS3BucketCreates() {
+    numBucketOps.incr();
+    numBucketS3Creates.incr();
+  }
+
+  public void incNumS3BucketCreateFails() {
+    numBucketS3CreateFails.incr();
+  }
+
+  public void incNumS3BucketDeletes() {
+    numBucketOps.incr();
+    numBucketS3Deletes.incr();
+  }
+
+  public void incNumS3BucketDeleteFails() {
+    numBucketOps.incr();
+    numBucketS3DeleteFails.incr();
+  }
+
+
+  public void incNumS3Buckets() {
+    numS3Buckets.incr();
+  }
+
+  public void decNumS3Buckets() {
+    numS3Buckets.incr();
   }
 
   public void incNumVolumes() {
@@ -160,15 +197,18 @@ public class OMMetrics {
   }
 
   public void setNumVolumes(long val) {
-    this.numVolumes.incr(val);
+    long oldVal = this.numVolumes.value();
+    this.numVolumes.incr(val - oldVal);
   }
 
   public void setNumBuckets(long val) {
-    this.numBuckets.incr(val);
+    long oldVal = this.numBuckets.value();
+    this.numBuckets.incr(val - oldVal);
   }
 
   public void setNumKeys(long val) {
-    this.numKeys.incr(val);
+    long oldVal = this.numKeys.value();
+    this.numKeys.incr(val- oldVal);
   }
 
   public long getNumVolumes() {
@@ -246,12 +286,12 @@ public class OMMetrics {
 
   public void incNumListS3Buckets() {
     numBucketOps.incr();
-    numListS3Buckets.incr();
+    numBucketS3Lists.incr();
   }
 
   public void incNumListS3BucketsFails() {
     numBucketOps.incr();
-    numListS3BucketsFails.incr();
+    numBucketS3ListFails.incr();
   }
 
   public void incNumInitiateMultipartUploads() {
@@ -269,7 +309,7 @@ public class OMMetrics {
   }
 
   public void incNumCommitMultipartUploadPartFails() {
-    numInitiateMultipartUploadFails.incr();
+    numCommitMultipartUploadPartFails.incr();
   }
 
   public void incNumCompleteMultipartUploads() {
@@ -286,10 +326,18 @@ public class OMMetrics {
     numAbortMultipartUploads.incr();
   }
 
+  public void incNumListMultipartUploadFails() {
+    numListMultipartUploadFails.incr();
+  }
+
+  public void incNumListMultipartUploads() {
+    numKeyOps.incr();
+    numListMultipartUploads.incr();
+  }
+
   public void incNumAbortMultipartUploadFails() {
     numAbortMultipartUploadFails.incr();
   }
-
   public void incNumListMultipartUploadParts() {
     numKeyOps.incr();
     numListMultipartUploadParts.incr();
@@ -436,19 +484,11 @@ public class OMMetrics {
   }
 
   public void incNumBlockAllocateCalls() {
-    numAllocateBlockCalls.incr();
+    numBlockAllocations.incr();
   }
 
   public void incNumBlockAllocateCallFails() {
-    numBlockAllocateCallFails.incr();
-  }
-
-  public void incNumAddAllocateBlockCalls() {
-    numAddAllocateBlockCalls.incr();
-  }
-
-  public void incNumAddAllocateBlockFails() {
-    numAddAllocateBlockCallFails.incr();
+    numBlockAllocationFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -672,12 +712,12 @@ public class OMMetrics {
 
   @VisibleForTesting
   public long getNumBlockAllocates() {
-    return numAllocateBlockCalls.value();
+    return numBlockAllocations.value();
   }
 
   @VisibleForTesting
   public long getNumBlockAllocateFails() {
-    return numBlockAllocateCallFails.value();
+    return numBlockAllocationFails.value();
   }
 
   @VisibleForTesting
@@ -687,12 +727,12 @@ public class OMMetrics {
 
   @VisibleForTesting
   public long getNumListS3Buckets() {
-    return numListS3Buckets.value();
+    return numBucketS3Lists.value();
   }
 
   @VisibleForTesting
   public long getNumListS3BucketsFails() {
-    return numListS3BucketsFails.value();
+    return numBucketS3ListFails.value();
   }
 
   public long getNumInitiateMultipartUploads() {

@@ -18,21 +18,18 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes;
+import org.apache.hadoop.util.DurationInfo;
 
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.createFiles;
 
 /**
  * Test some scalable operations related to file renaming and deletion.
@@ -40,6 +37,8 @@ import java.util.concurrent.Future;
 public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ADeleteManyFiles.class);
+
+  public static final String PREFIX = ITestPartialRenamesDeletes.PREFIX;
 
   /**
    * CAUTION: If this test starts failing, please make sure that the
@@ -55,65 +54,56 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
     final Path scaleTestDir = path("testBulkRenameAndDelete");
     final Path srcDir = new Path(scaleTestDir, "src");
     final Path finalDir = new Path(scaleTestDir, "final");
-    final long count = getOperationCount();
+    final int count = getConf().getInt(KEY_FILE_COUNT,
+        DEFAULT_FILE_COUNT);
     final S3AFileSystem fs = getFileSystem();
     ContractTestUtils.rm(fs, scaleTestDir, true, false);
     fs.mkdirs(srcDir);
-    fs.mkdirs(finalDir);
 
-    int testBufferSize = fs.getConf()
-        .getInt(ContractTestUtils.IO_CHUNK_BUFFER_SIZE,
-            ContractTestUtils.DEFAULT_IO_CHUNK_BUFFER_SIZE);
-    // use Executor to speed up file creation
-    ExecutorService exec = Executors.newFixedThreadPool(16);
-    final ExecutorCompletionService<Boolean> completionService =
-        new ExecutorCompletionService<>(exec);
-    try {
-      final byte[] data = ContractTestUtils.dataset(testBufferSize, 'a', 'z');
+    createFiles(fs, srcDir, 1, count, 0);
 
-      for (int i = 0; i < count; ++i) {
-        final String fileName = "foo-" + i;
-        completionService.submit(new Callable<Boolean>() {
-          @Override
-          public Boolean call() throws IOException {
-            ContractTestUtils.createFile(fs, new Path(srcDir, fileName),
-                false, data);
-            return fs.exists(new Path(srcDir, fileName));
-          }
-        });
-      }
-      for (int i = 0; i < count; ++i) {
-        final Future<Boolean> future = completionService.take();
-        try {
-          if (!future.get()) {
-            LOG.warn("cannot create file");
-          }
-        } catch (ExecutionException e) {
-          LOG.warn("Error while uploading file", e.getCause());
-          throw e;
-        }
-      }
-    } finally {
-      exec.shutdown();
+    FileStatus[] statuses = fs.listStatus(srcDir);
+    int nSrcFiles = statuses.length;
+    long sourceSize = 0;
+    for (FileStatus status : statuses) {
+      sourceSize += status.getLen();
     }
-
-    int nSrcFiles = fs.listStatus(srcDir).length;
-    fs.rename(srcDir, finalDir);
+    assertEquals("Source file Count", count, nSrcFiles);
+    ContractTestUtils.NanoTimer renameTimer = new ContractTestUtils.NanoTimer();
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Rename %s to %s", srcDir, finalDir)) {
+      assertTrue("Rename failed", fs.rename(srcDir, finalDir));
+    }
+    renameTimer.end();
+    LOG.info("Effective rename bandwidth {} MB/s",
+        renameTimer.bandwidthDescription(sourceSize));
+    LOG.info(String.format(
+        "Time to rename a file: %,03f milliseconds",
+        (renameTimer.nanosPerOperation(count) * 1.0f) / 1.0e6));
     assertEquals(nSrcFiles, fs.listStatus(finalDir).length);
     ContractTestUtils.assertPathDoesNotExist(fs, "not deleted after rename",
-        new Path(srcDir, "foo-" + 0));
+        new Path(srcDir, PREFIX + 0));
     ContractTestUtils.assertPathDoesNotExist(fs, "not deleted after rename",
-        new Path(srcDir, "foo-" + count / 2));
+        new Path(srcDir, PREFIX + count / 2));
     ContractTestUtils.assertPathDoesNotExist(fs, "not deleted after rename",
-        new Path(srcDir, "foo-" + (count - 1)));
+        new Path(srcDir, PREFIX + (count - 1)));
     ContractTestUtils.assertPathExists(fs, "not renamed to dest dir",
-        new Path(finalDir, "foo-" + 0));
+        new Path(finalDir, PREFIX + 0));
     ContractTestUtils.assertPathExists(fs, "not renamed to dest dir",
-        new Path(finalDir, "foo-" + count/2));
+        new Path(finalDir, PREFIX + count/2));
     ContractTestUtils.assertPathExists(fs, "not renamed to dest dir",
-        new Path(finalDir, "foo-" + (count-1)));
+        new Path(finalDir, PREFIX + (count-1)));
 
-    ContractTestUtils.assertDeleted(fs, finalDir, true, false);
+    ContractTestUtils.NanoTimer deleteTimer =
+        new ContractTestUtils.NanoTimer();
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Delete subtree %s", finalDir)) {
+      assertDeleted(finalDir, true);
+    }
+    deleteTimer.end();
+    LOG.info(String.format(
+        "Time to delete an object %,03f milliseconds",
+        (deleteTimer.nanosPerOperation(count) * 1.0f) / 1.0e6));
   }
 
 }

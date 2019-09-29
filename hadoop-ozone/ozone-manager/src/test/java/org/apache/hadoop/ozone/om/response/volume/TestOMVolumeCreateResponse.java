@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -69,6 +69,7 @@ public class TestOMVolumeCreateResponse {
     String volumeName = UUID.randomUUID().toString();
     String userName = "user1";
     VolumeList volumeList = VolumeList.newBuilder()
+        .setObjectID(1).setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
@@ -89,9 +90,11 @@ public class TestOMVolumeCreateResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
+
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
     Assert.assertEquals(omVolumeArgs,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+        omMetadataManager.getVolumeTable().iterator().next().getValue());
 
     Assert.assertEquals(volumeList,
         omMetadataManager.getUserTable().get(

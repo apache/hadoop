@@ -227,6 +227,18 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.activatePipeline(pipelineID);
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.deactivatePipeline(pipelineID);
+  }
+
+  @Override
   public void closePipeline(HddsProtos.PipelineID pipelineID)
       throws IOException {
     storageContainerLocationClient.closePipeline(pipelineID);
@@ -459,4 +471,21 @@ public class ContainerOperationClient implements ScmClient {
   public boolean forceExitSafeMode() throws IOException {
     return storageContainerLocationClient.forceExitSafeMode();
   }
+
+  @Override
+  public void startReplicationManager() throws IOException {
+    storageContainerLocationClient.startReplicationManager();
+  }
+
+  @Override
+  public void stopReplicationManager() throws IOException {
+    storageContainerLocationClient.stopReplicationManager();
+  }
+
+  @Override
+  public boolean getReplicationManagerStatus() throws IOException {
+    return storageContainerLocationClient.getReplicationManagerStatus();
+  }
+
+
 }

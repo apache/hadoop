@@ -15,12 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Usage: $0 [/path/to/some/example.jar:/path/to/another/example/created.jar]
+# Usage: $0 [/path/to/some/example.jar;/path/to/another/example/created.jar]
 #
 # accepts a single command line argument with a colon separated list of
 # paths to jars to check. Iterates through each such passed jar and checks
 # all the contained paths to make sure they follow the below constructed
 # safe list.
+
+# We use +=, which is a bash 3.1+ feature
+if [[ -z "${BASH_VERSINFO[0]}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 1 ]]; then
+  echo "bash v3.1+ is required. Sorry."
+  exit 1
+fi
+
+set -e
+set -o pipefail
 
 # we have to allow the directories that lead to the org/apache/hadoop dir
 allowed_expr="(^org/$|^org/apache/$"
@@ -30,7 +41,7 @@ allowed_expr="(^org/$|^org/apache/$"
 allowed_expr+="|^org/apache/hadoop/"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
-#   * whatever under the "webapps" directory; for minicluster UIs
+#   * whatever under the "webapps" directory; for things shipped by yarn
 allowed_expr+="|^webapps/"
 #   * Hadoop's default configuration files, which have the form
 #     "_module_-default.xml"
@@ -54,9 +65,23 @@ allowed_expr+="|^librocksdbjni-linux-ppc64le.so"
 allowed_expr+=")"
 declare -i bad_artifacts=0
 declare -a bad_contents
-IFS=: read -r -d '' -a artifact_list < <(printf '%s\0' "$1")
+declare -a artifact_list
+while IFS='' read -r -d ';' line; do artifact_list+=("$line"); done < <(printf '%s;' "$1")
+if [ "${#artifact_list[@]}" -eq 0 ]; then
+  echo "[ERROR] No artifacts passed in."
+  exit 1
+fi
+
+jar_list_failed ()
+{
+    echo "[ERROR] Listing jar contents for file '${artifact}' failed."
+    exit 1
+}
+trap jar_list_failed SIGUSR1
+
 for artifact in "${artifact_list[@]}"; do
-  bad_contents=($(jar tf "${artifact}" | grep -v -E "${allowed_expr}"))
+  # Note: On Windows the output from jar tf may contain \r\n's.  Normalize to \n.
+  while IFS='' read -r line; do bad_contents+=("$line"); done < <( ( jar tf "${artifact}" | sed 's/\\r//' || kill -SIGUSR1 $$ ) | grep -v -E "${allowed_expr}" )
   if [ ${#bad_contents[@]} -gt 0 ]; then
     echo "[ERROR] Found artifact with unexpected contents: '${artifact}'"
     echo "    Please check the following and either correct the build or update"

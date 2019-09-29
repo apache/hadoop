@@ -22,10 +22,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_HTTP_SCHEME;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RPC_SCHEME;
@@ -46,12 +46,12 @@ public class OzoneAddress {
 
   private String keyName = "";
 
-  public OzoneAddress() throws OzoneException {
+  public OzoneAddress() throws OzoneClientException {
     this("o3:///");
   }
 
   public OzoneAddress(String address)
-      throws OzoneException {
+      throws OzoneClientException {
     if (address == null || address.equals("")) {
       address = OZONE_RPC_SCHEME + ":///";
     }
@@ -87,27 +87,33 @@ public class OzoneAddress {
       scheme = OZONE_RPC_SCHEME;
     }
     if (scheme.equals(OZONE_HTTP_SCHEME)) {
-      if (ozoneURI.getHost() != null && !ozoneURI.getAuthority()
-          .equals(EMPTY_HOST)) {
-        if (ozoneURI.getPort() == -1) {
-          client = OzoneClientFactory.getRestClient(ozoneURI.getHost());
-        } else {
-          client = OzoneClientFactory
-              .getRestClient(ozoneURI.getHost(), ozoneURI.getPort(), conf);
-        }
-      } else {
-        client = OzoneClientFactory.getRestClient(conf);
-      }
+      throw new UnsupportedOperationException(
+          "REST schema is not supported any more. Please use AWS S3 protocol "
+              + "if you need REST interface.");
     } else if (scheme.equals(OZONE_RPC_SCHEME)) {
       if (ozoneURI.getHost() != null && !ozoneURI.getAuthority()
           .equals(EMPTY_HOST)) {
-        if (ozoneURI.getPort() == -1) {
+        if (OmUtils.isOmHAServiceId(conf, ozoneURI.getHost())) {
+          // When host is an HA service ID
+          if (ozoneURI.getPort() != -1) {
+            throw new OzoneClientException(
+                "Port " + ozoneURI.getPort() + " specified in URI but host '"
+                    + ozoneURI.getHost() + "' is a logical (HA) OzoneManager "
+                    + "and does not use port information.");
+          }
+          client = OzoneClientFactory.getRpcClient(ozoneURI.getHost(), conf);
+        } else if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
         } else {
           client = OzoneClientFactory
               .getRpcClient(ozoneURI.getHost(), ozoneURI.getPort(), conf);
         }
       } else {
+        // When host is not specified
+        if (OmUtils.isServiceIdsDefined(conf)) {
+          throw new OzoneClientException("Service ID or host name must not"
+              + " be omitted when ozone.om.service.ids is defined.");
+        }
         client = OzoneClientFactory.getRpcClient(conf);
       }
     } else {
@@ -126,7 +132,7 @@ public class OzoneAddress {
    * @throws OzoneException
    */
   protected URI parseURI(String uri)
-      throws OzoneException {
+      throws OzoneClientException {
     if ((uri == null) || uri.isEmpty()) {
       throw new OzoneClientException(
           "Ozone URI is needed to execute this command.");

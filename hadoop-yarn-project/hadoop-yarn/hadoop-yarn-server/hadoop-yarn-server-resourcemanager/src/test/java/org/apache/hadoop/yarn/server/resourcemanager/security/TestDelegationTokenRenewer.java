@@ -778,6 +778,7 @@ public class TestDelegationTokenRenewer {
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =
@@ -837,6 +838,7 @@ public class TestDelegationTokenRenewer {
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);         
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);    
     InetSocketAddress sockAddr =                                               
@@ -1460,6 +1462,7 @@ public class TestDelegationTokenRenewer {
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =
@@ -1502,6 +1505,7 @@ public class TestDelegationTokenRenewer {
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
     InetSocketAddress sockAddr =

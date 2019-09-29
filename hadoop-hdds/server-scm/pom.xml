@@ -101,12 +101,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>bcprov-jdk15on</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.dropwizard.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>findbugs</artifactId>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs</artifactId>
       <scope>provided</scope>
     </dependency>
   </dependencies>

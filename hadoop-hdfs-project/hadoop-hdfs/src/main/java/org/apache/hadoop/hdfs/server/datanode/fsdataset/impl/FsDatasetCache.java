@@ -23,7 +23,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION_POLLING_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION_POLLING_MS_DEFAULT;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -137,7 +136,7 @@ public class FsDatasetCache {
    */
   private final MappableBlockLoader cacheLoader;
 
-  private final MemoryCacheStats memCacheStats;
+  private final CacheStats memCacheStats;
 
   /**
    * Number of cache commands that could not be completed successfully
@@ -178,28 +177,15 @@ public class FsDatasetCache {
               ".  Reconfigure this to " + minRevocationPollingMs);
     }
     this.revocationPollingMs = confRevocationPollingMs;
-    // Both lazy writer and read cache are sharing this statistics.
-    this.memCacheStats = new MemoryCacheStats(
-        dataset.datanode.getDnConf().getMaxLockedMemory());
 
     this.cacheLoader = MappableBlockLoaderFactory.createCacheLoader(
         this.getDnConf());
-    cacheLoader.initialize(this);
-  }
-
-  /**
-   * Check if pmem cache is enabled.
-   */
-  private boolean isPmemCacheEnabled() {
-    return !cacheLoader.isTransientCache();
+    // Both lazy writer and read cache are sharing this statistics.
+    this.memCacheStats = cacheLoader.initialize(this.getDnConf());
   }
 
   DNConf getDnConf() {
     return this.dataset.datanode.getDnConf();
-  }
-
-  MemoryCacheStats getMemCacheStats() {
-    return memCacheStats;
   }
 
   /**
@@ -281,8 +267,8 @@ public class FsDatasetCache {
     Value prevValue = mappableBlockMap.get(key);
     boolean deferred = false;
 
-    if (!dataset.datanode.getShortCircuitRegistry().
-            processBlockMunlockRequest(key)) {
+    if (cacheLoader.isTransientCache() && !dataset.datanode.
+        getShortCircuitRegistry().processBlockMunlockRequest(key)) {
       deferred = true;
     }
     if (prevValue == null) {
@@ -452,7 +438,11 @@ public class FsDatasetCache {
         }
         LOG.debug("Successfully cached {}.  We are now caching {} bytes in"
             + " total.", key, newUsedBytes);
-        dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
+        // Only applicable to DRAM cache.
+        if (cacheLoader.isTransientCache()) {
+          dataset.datanode.
+              getShortCircuitRegistry().processBlockMlockEvent(key);
+        }
         numBlocksCached.addAndGet(1);
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
@@ -490,6 +480,11 @@ public class FsDatasetCache {
     }
 
     private boolean shouldDefer() {
+      // Currently, defer condition is just checked for DRAM cache case.
+      if (!cacheLoader.isTransientCache()) {
+        return false;
+      }
+
       /* If revocationTimeMs == 0, this is an immediate uncache request.
        * No clients were anchored at the time we made the request. */
       if (revocationTimeMs == 0) {
@@ -557,37 +552,32 @@ public class FsDatasetCache {
   /**
    * Get the approximate amount of DRAM cache space used.
    */
-  public long getCacheUsed() {
+  public long getMemCacheUsed() {
     return memCacheStats.getCacheUsed();
   }
 
   /**
-   * Get the approximate amount of persistent memory cache space used.
-   * TODO: advertise this metric to NameNode by FSDatasetMBean
+   * Get the approximate amount of cache space used either on DRAM or
+   * on persistent memory.
+   * @return
    */
-  public long getPmemCacheUsed() {
-    if (isPmemCacheEnabled()) {
-      return cacheLoader.getCacheUsed();
-    }
-    return 0;
+  public long getCacheUsed() {
+    return cacheLoader.getCacheUsed();
   }
 
   /**
-   * Get the maximum amount of bytes we can cache on DRAM.  This is a constant.
+   * Get the maximum amount of bytes we can cache on DRAM. This is a constant.
    */
-  public long getCacheCapacity() {
+  public long getMemCacheCapacity() {
     return memCacheStats.getCacheCapacity();
   }
 
   /**
-   * Get cache capacity of persistent memory.
-   * TODO: advertise this metric to NameNode by FSDatasetMBean
+   * Get the maximum amount of bytes we can cache either on DRAM or
+   * on persistent memory. This is a constant.
    */
-  public long getPmemCacheCapacity() {
-    if (isPmemCacheEnabled()) {
-      return cacheLoader.getCacheCapacity();
-    }
-    return 0;
+  public long getCacheCapacity() {
+    return cacheLoader.getCacheCapacity();
   }
 
   public long getNumBlocksFailedToCache() {
@@ -606,11 +596,6 @@ public class FsDatasetCache {
     ExtendedBlockId block = new ExtendedBlockId(blockId, bpid);
     Value val = mappableBlockMap.get(block);
     return (val != null) && val.state.shouldAdvertise();
-  }
-
-  @VisibleForTesting
-  MappableBlockLoader getCacheLoader() {
-    return cacheLoader;
   }
 
   /**

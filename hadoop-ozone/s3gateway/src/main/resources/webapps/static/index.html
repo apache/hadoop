@@ -21,12 +21,13 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self';">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <meta name="description" content="Apache Hadoop Ozone S3 gateway">
 
     <title>S3 gateway -- Apache Hadoop Ozone</title>
 
-    <link href="bootstrap-3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="bootstrap-3.4.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="hadoop.css" rel="stylesheet">
     <link href="ozone.css" rel="stylesheet">
 
@@ -68,12 +69,15 @@
 
     <p>For example with aws-cli:</p>
 
-    <pre>aws s3api --endpoint <script>document.write(window.location.href.replace("static/", ""))</script> create-bucket --bucket=wordcount</pre>
+    <pre>aws s3api --endpoint <span id="s3gurl"></span> create-bucket --bucket=wordcount</pre>
 
     <p>For more information, please check the <a href="docs">documentation.</a>
     </p>
 </div><!-- /.container -->
 
-<script src="static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+<script src="jquery-3.4.1.min.js"></script>
+<script src="bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script src="s3g.js"></script>
+
 </body>
 </html>

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeFile;
@@ -44,6 +45,7 @@ import java.text.SimpleDateFormat;
  */
 public class PBImageDelimitedTextWriter extends PBImageTextWriter {
   private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm";
+  private boolean printStoragePolicy;
 
   static class OutputEntryBuilder {
     private final SimpleDateFormat dateFormatter =
@@ -59,6 +61,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     private long fileSize = 0;
     private long nsQuota = 0;
     private long dsQuota = 0;
+    private int storagePolicy = 0;
 
     private String dirPermission = "-";
     private PermissionStatus permissionStatus;
@@ -79,6 +82,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
         if (file.hasAcl() && file.getAcl().getEntriesCount() > 0){
           aclPermission = "+";
         }
+        storagePolicy = file.getStoragePolicyID();
         break;
       case DIRECTORY:
         INodeDirectory dir = inode.getDirectory();
@@ -87,15 +91,17 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
         dsQuota = dir.getDsQuota();
         dirPermission = "d";
         permissionStatus = writer.getPermission(dir.getPermission());
-        if (dir.hasAcl() && dir.getAcl().getEntriesCount() > 0){
+        if (dir.hasAcl() && dir.getAcl().getEntriesCount() > 0) {
           aclPermission = "+";
         }
+        storagePolicy = writer.getStoragePolicy(dir.getXAttrs());
         break;
       case SYMLINK:
         INodeSymlink s = inode.getSymlink();
         modificationTime = s.getModificationTime();
         accessTime = s.getAccessTime();
         permissionStatus = writer.getPermission(s.getPermission());
+        storagePolicy = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
         break;
       default:
         break;
@@ -125,13 +131,23 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
           permissionStatus.getPermission().toString() + aclPermission);
       writer.append(buffer, permissionStatus.getUserName());
       writer.append(buffer, permissionStatus.getGroupName());
+      if (writer.printStoragePolicy) {
+        writer.append(buffer, storagePolicy);
+      }
       return buffer.substring(1);
     }
   }
 
   PBImageDelimitedTextWriter(PrintStream out, String delimiter, String tempPath)
       throws IOException {
+    this(out, delimiter, tempPath, false);
+  }
+
+  PBImageDelimitedTextWriter(PrintStream out, String delimiter,
+                             String tempPath, boolean printStoragePolicy)
+      throws IOException {
     super(out, delimiter, tempPath);
+    this.printStoragePolicy = printStoragePolicy;
   }
 
   @Override
@@ -162,6 +178,9 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, "Permission");
     append(buffer, "UserName");
     append(buffer, "GroupName");
+    if (printStoragePolicy) {
+      append(buffer, "StoragePolicyId");
+    }
     return buffer.toString();
   }
 

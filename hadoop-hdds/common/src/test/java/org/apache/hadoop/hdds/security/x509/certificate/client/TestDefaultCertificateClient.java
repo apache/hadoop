@@ -76,6 +76,8 @@ public class TestDefaultCertificateClient {
   private SecurityConfig omSecurityConfig;
   private SecurityConfig dnSecurityConfig;
   private final static String UTF = "UTF-8";
+  private final static String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
+  private final static String OM_COMPONENT = OMCertificateClient.COMPONENT_NAME;
   private KeyCodec omKeyCodec;
   private KeyCodec dnKeyCodec;
 
@@ -99,11 +101,11 @@ public class TestDefaultCertificateClient {
 
 
     keyGenerator = new HDDSKeyGenerator(omSecurityConfig);
-    omKeyCodec = new KeyCodec(omSecurityConfig);
-    dnKeyCodec = new KeyCodec(dnSecurityConfig);
+    omKeyCodec = new KeyCodec(omSecurityConfig, OM_COMPONENT);
+    dnKeyCodec = new KeyCodec(dnSecurityConfig, DN_COMPONENT);
 
-    Files.createDirectories(omSecurityConfig.getKeyLocation());
-    Files.createDirectories(dnSecurityConfig.getKeyLocation());
+    Files.createDirectories(omSecurityConfig.getKeyLocation(OM_COMPONENT));
+    Files.createDirectories(dnSecurityConfig.getKeyLocation(DN_COMPONENT));
     x509Certificate = generateX509Cert(null);
     certSerialId = x509Certificate.getSerialNumber().toString();
     getCertClient();
@@ -156,14 +158,18 @@ public class TestDefaultCertificateClient {
   }
 
   private void cleanupOldKeyPair() {
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPublicKeyFileName()).toFile());
   }
 
   /**
@@ -196,10 +202,12 @@ public class TestDefaultCertificateClient {
   @Test
   public void testSignDataStream() throws Exception {
     String data = RandomStringUtils.random(100, UTF);
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPublicKeyFileName()).toFile());
 
     // Expect error when there is no private key to sign.
     LambdaTestUtils.intercept(IOException.class, "Error while " +
@@ -285,8 +293,9 @@ public class TestDefaultCertificateClient {
     X509Certificate cert2 = generateX509Cert(keyPair);
     X509Certificate cert3 = generateX509Cert(keyPair);
 
-    Path certPath = dnSecurityConfig.getCertificateLocation();
-    CertificateCodec codec = new CertificateCodec(dnSecurityConfig);
+    Path certPath = dnSecurityConfig.getCertificateLocation(DN_COMPONENT);
+    CertificateCodec codec = new CertificateCodec(dnSecurityConfig,
+        DN_COMPONENT);
 
     // Certificate not found.
     LambdaTestUtils.intercept(CertificateException.class, "Error while" +
@@ -308,7 +317,7 @@ public class TestDefaultCertificateClient {
     codec.writeCertificate(certPath, "3.crt",
         getPEMEncodedString(cert3), true);
 
-    // Re instentiate DN client which will load certificates from filesystem.
+    // Re instantiate DN client which will load certificates from filesystem.
     dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
 
     assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
@@ -352,16 +361,20 @@ public class TestDefaultCertificateClient {
     omClientLog.clearOutput();
 
     // Case 1. Expect failure when keypair validation fails.
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPublicKeyFileName()).toFile());
 
 
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPrivateKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPublicKeyFileName()).toFile());
 
     omKeyCodec.writePrivateKey(keyPair.getPrivate());
     omKeyCodec.writePublicKey(keyPair2.getPublic());
@@ -387,16 +400,20 @@ public class TestDefaultCertificateClient {
     // Case 2. Expect failure when certificate is generated from different
     // private key and keypair validation fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getCertificateFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getCertificateFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getCertificateFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getCertificateFileName()).toFile());
 
-    CertificateCodec omCertCodec = new CertificateCodec(omSecurityConfig);
+    CertificateCodec omCertCodec = new CertificateCodec(omSecurityConfig,
+        OM_COMPONENT);
     omCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
 
-    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig);
+    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig,
+        DN_COMPONENT);
     dnCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
     // Check for DN.
@@ -416,10 +433,12 @@ public class TestDefaultCertificateClient {
     // private key and certificate validation fails.
 
     // Re write the correct public key.
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPublicKeyFileName()).toFile());
     getCertClient();
     omKeyCodec.writePublicKey(keyPair.getPublic());
     dnKeyCodec.writePublicKey(keyPair.getPublic());
@@ -440,10 +459,12 @@ public class TestDefaultCertificateClient {
 
     // Case 4. Failure when public key recovery fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
-        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
-    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
-        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
+        omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(
+        dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
+        dnSecurityConfig.getPublicKeyFileName()).toFile());
 
     // Check for DN.
     assertEquals(dnCertClient.init(), FAILURE);

@@ -29,17 +29,23 @@ public class TestClusterMetrics {
 
   private ClusterMetrics metrics;
   /**
-   * Test aMLaunchDelay and aMRegisterDelay Metrics
+   * Test below metrics
+   *  - aMLaunchDelay
+   *  - aMRegisterDelay
+   *  - aMContainerAllocationDelay
    */
   @Test
   public void testAmMetrics() throws Exception {
     assert(metrics != null);
     Assert.assertTrue(!metrics.aMLaunchDelay.changed());
     Assert.assertTrue(!metrics.aMRegisterDelay.changed());
+    Assert.assertTrue(!metrics.getAMContainerAllocationDelay().changed());
     metrics.addAMLaunchDelay(1);
     metrics.addAMRegisterDelay(1);
+    metrics.addAMContainerAllocationDelay(1);
     Assert.assertTrue(metrics.aMLaunchDelay.changed());
     Assert.assertTrue(metrics.aMRegisterDelay.changed());
+    Assert.assertTrue(metrics.getAMContainerAllocationDelay().changed());
   }
 
   @Before

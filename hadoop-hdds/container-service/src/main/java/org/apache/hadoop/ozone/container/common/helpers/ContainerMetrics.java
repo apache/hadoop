@@ -46,6 +46,8 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 @InterfaceAudience.Private
 @Metrics(about="Storage Container DataNode Metrics", context="dfs")
 public class ContainerMetrics {
+  public static final String STORAGE_CONTAINER_METRICS =
+      "StorageContainerMetrics";
   @Metric private MutableCounterLong numOps;
   private MutableCounterLong[] numOpsArray;
   private MutableCounterLong[] opsBytesArray;
@@ -89,9 +91,14 @@ public class ContainerMetrics {
     // Percentile measurement is off by default, by watching no intervals
     int[] intervals =
              conf.getInts(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY);
-    return ms.register("StorageContainerMetrics",
+    return ms.register(STORAGE_CONTAINER_METRICS,
                        "Storage Container Node Metrics",
                        new ContainerMetrics(intervals));
+  }
+
+  public static void remove() {
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.unregisterSource(STORAGE_CONTAINER_METRICS);
   }
 
   public void incContainerOpsMetrics(ContainerProtos.Type type) {

@@ -62,7 +62,8 @@ message PipelineID {
 enum PipelineState {
     PIPELINE_ALLOCATED = 1;
     PIPELINE_OPEN = 2;
-    PIPELINE_CLOSED = 3;
+    PIPELINE_DORMANT = 3;
+    PIPELINE_CLOSED = 4;
 }
 
 message Pipeline {

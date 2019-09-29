@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -138,7 +137,7 @@ public class Quota {
       boolean isChildPath = false;
 
       for (RemoteLocation d : dests) {
-        if (StringUtils.startsWith(loc.getDest(), d.getDest())) {
+        if (FederationUtil.isParentEntry(loc.getDest(), d.getDest())) {
           isChildPath = true;
           break;
         }

@@ -86,7 +86,7 @@ public class OzoneFileSystem extends BasicOzoneFileSystem
   @Override
   protected OzoneClientAdapter createAdapter(Configuration conf,
       String bucketStr,
-      String volumeStr, String omHost, String omPort,
+      String volumeStr, String omHost, int omPort,
       boolean isolatedClassloader) throws IOException {
 
     this.storageStatistics =
@@ -99,8 +99,7 @@ public class OzoneFileSystem extends BasicOzoneFileSystem
           storageStatistics);
 
     } else {
-      return new OzoneClientAdapterImpl(omHost,
-          Integer.parseInt(omPort), conf,
+      return new OzoneClientAdapterImpl(omHost, omPort, conf,
           volumeStr, bucketStr, storageStatistics);
     }
   }

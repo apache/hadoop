@@ -34,7 +34,7 @@ Ozone shell supports the following key commands.
 
 ### Get
 
-The key get command downloads a key from Ozone cluster to local file system.
+The `key get` command downloads a key from Ozone cluster to local file system.
 
 ***Params:***
 
@@ -52,7 +52,7 @@ local file sales.orc.
 
 ### Put
 
-Uploads a file from the local file system to the specified bucket.
+The `key put` command uploads a file from the local file system to the specified bucket.
 
 ***Params:***
 
@@ -61,7 +61,7 @@ Uploads a file from the local file system to the specified bucket.
 |--------------------------------|-----------------------------------------|
 |  Uri                           | The name of the key in **/volume/bucket/key** format.
 |  FileName                      | Local file to upload.
-| -r, --replication              | Optional, Number of copies, ONE or THREE are the options. Picks up the default from cluster configuration.
+| -r, \-\-replication              | Optional, Number of copies, ONE or THREE are the options. Picks up the default from cluster configuration.
 
 {{< highlight bash >}}
 ozone sh key put /hive/jan/corrected-sales.orc sales.orc
@@ -70,7 +70,7 @@ The above command will put the sales.orc as a new key into _/hive/jan/corrected-
 
 ### Delete
 
-The key delete command removes the key from the bucket.
+The `key delete` command removes the key from the bucket.
 
 ***Params:***
 
@@ -87,7 +87,8 @@ The above command deletes the key _/hive/jan/corrected-sales.orc_.
 
 ### Info
 
-The key info commands returns the information about the key.
+The `key info` commands returns the information about the key.
+
 ***Params:***
 
 | Arguments                      |  Comment                                |
@@ -103,15 +104,15 @@ key.
 
 ### List
 
-The key list command allows user to list all keys in a bucket.
+The `key list` command allows user to list all keys in a bucket.
 
 ***Params:***
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
-| -l, --length                   | Maximum number of results to return. Default: 1000
-| -p, --prefix                   | Optional, Only buckets that match this prefix will be returned.
-| -s, --start                    | The listing will start from key after the start key.
+| -l, \-\-length                   | Maximum number of results to return. Default: 1000
+| -p, \-\-prefix                   | Optional, Only buckets that match this prefix will be returned.
+| -s, \-\-start                    | The listing will start from key after the start key.
 |  Uri                           | The name of the _volume_.
 
 {{< highlight bash >}}
@@ -135,7 +136,4 @@ The `key rename` command changes the name of an existing key in the specified bu
 {{< highlight bash >}}
 ozone sh key rename /hive/jan sales.orc new_name.orc
 {{< /highlight >}}
-The above command will rename `sales.orc` to `new_name.orc` in the bucket `/hive/jan`.
-
-You can try out these commands from the docker instance of the [Alpha
-Cluster](runningviadocker.html).
+The above command will rename _sales.orc_ to _new\_name.orc_ in the bucket _/hive/jan_.

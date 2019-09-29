@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hdds;
 
-import org.apache.hadoop.utils.db.DBProfile;
+import org.apache.hadoop.hdds.utils.db.DBProfile;
 
 /**
  * This class contains constants for configuration keys and default values
@@ -65,14 +65,11 @@ public final class HddsConfigKeys {
   public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
   public static final String HDDS_SCM_SAFEMODE_ENABLED =
       "hdds.scm.safemode.enabled";
-  public static final String HDDS_CONTAINERSCRUB_ENABLED =
-      "hdds.containerscrub.enabled";
-  public static final boolean HDDS_CONTAINERSCRUB_ENABLED_DEFAULT = false;
+
   public static final boolean HDDS_SCM_SAFEMODE_ENABLED_DEFAULT = true;
   public static final String HDDS_SCM_SAFEMODE_MIN_DATANODE =
       "hdds.scm.safemode.min.datanode";
   public static final int HDDS_SCM_SAFEMODE_MIN_DATANODE_DEFAULT = 1;
-
 
   public static final String
       HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT =
@@ -179,34 +176,18 @@ public final class HddsConfigKeys {
   private HddsConfigKeys() {
   }
 
+  // Enable TLS for GRPC clients/server in ozone.
   public static final String HDDS_GRPC_TLS_ENABLED = "hdds.grpc.tls.enabled";
   public static final boolean HDDS_GRPC_TLS_ENABLED_DEFAULT = false;
 
-  public static final String HDDS_GRPC_MUTUAL_TLS_REQUIRED =
-      "hdds.grpc.mutual.tls.required";
-  public static final boolean HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT = false;
-
+  // Choose TLS provider the default is set to OPENSSL for better performance.
   public static final String HDDS_GRPC_TLS_PROVIDER = "hdds.grpc.tls.provider";
   public static final String HDDS_GRPC_TLS_PROVIDER_DEFAULT = "OPENSSL";
 
-  public static final String HDDS_TRUST_STORE_FILE_NAME =
-      "hdds.trust.cert.collection.file.name";
-  public static final String HDDS_TRUST_STORE_FILE_NAME_DEFAULT = "ca.crt";
-
-  public static final String
-      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME =
-      "hdds.server.cert.chain.file.name";
-  public static final String
-      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "server.crt";
-
-  public static final String
-      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME =
-      "hdds.client.cert.chain.file.name";
-  public static final String
-      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "client.crt";
-
+  // Test only settings for using test signed certificate, authority assume to
+  // be localhost.
   public static final String HDDS_GRPC_TLS_TEST_CERT = "hdds.grpc.tls" +
-      ".test_cert";
+      ".test.cert";
   public static final boolean HDDS_GRPC_TLS_TEST_CERT_DEFAULT = false;
 
   // Comma separated acls (users, groups) allowing clients accessing
@@ -237,6 +218,16 @@ public final class HddsConfigKeys {
   // hadoop-policy.xml, "*" allows all users/groups to access.
   public static final String HDDS_SECURITY_CLIENT_SCM_CERTIFICATE_PROTOCOL_ACL =
       "hdds.security.client.scm.certificate.protocol.acl";
+
+  // Determines if the Container Chunk Manager will write user data to disk
+  // Set to false only for specific performance tests
+  public static final String HDDS_CONTAINER_PERSISTDATA =
+      "hdds.container.chunk.persistdata";
+  public static final boolean HDDS_CONTAINER_PERSISTDATA_DEFAULT = true;
+
+  public static final String HDDS_CONTAINER_SCRUB_ENABLED =
+      "hdds.container.scrub.enabled";
+  public static final boolean HDDS_CONTAINER_SCRUB_ENABLED_DEFAULT = false;
 
   public static final String HDDS_DATANODE_HTTP_ENABLED_KEY =
       "hdds.datanode.http.enabled";

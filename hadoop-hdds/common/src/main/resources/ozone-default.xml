@@ -106,7 +106,7 @@
   </property>
   <property>
     <name>dfs.container.ratis.log.purge.gap</name>
-    <value>1000000000</value>
+    <value>1000000</value>
     <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
     <description>Purge gap between the last purged commit index
       and the current index, when the leader decides to purge its log.
@@ -184,6 +184,15 @@
     <tag>OZONE, RATIS</tag>
     <description>Number of transactions after which a ratis snapshot should be
       taken.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.statemachine.max.pending.apply-transactions</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Maximum number of pending apply transactions in a data
+      pipeline. The default value is kept same as default snapshot threshold
+      dfs.ratis.snapshot.threshold.
     </description>
   </property>
   <property>
@@ -322,7 +331,7 @@
 
   <property>
     <name>hdds.prometheus.endpoint.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>Enable prometheus compatible metric page on the HTTP
       servers.
@@ -453,19 +462,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.protocol</name>
-    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
-    <tag>OZONE, CLIENT, MANAGEMENT</tag>
-    <description>Protocol class to be used by the client to connect to ozone
-      cluster.
-      The build-in implementation includes:
-      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
-      org.apache.hadoop.ozone.client.rest.RestClient for REST
-      The default is the RpClient. Please do not change this unless you have a
-      very good understanding of what you are doing.
-    </description>
-  </property>
-  <property>
     <name>ozone.client.socket.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, CLIENT</tag>
@@ -541,7 +537,7 @@
   </property>
   <property>
     <name>ozone.om.address</name>
-    <value/>
+    <value>0.0.0.0:9862</value>
     <tag>OM, REQUIRED</tag>
     <description>
       The address of the Ozone OM service. This allows clients to discover
@@ -603,7 +599,7 @@
     <description>
       The actual address the OM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.om.http-address.
+      ozone.om.https-address.
     </description>
   </property>
   <property>
@@ -823,13 +819,13 @@
   <property>
     <name>ozone.scm.container.placement.impl</name>
     <value>
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
     </value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
       The class decides which datanode will be used to host the container replica. If not set,
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware will be used as default value.
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom will be used as default value.
     </description>
   </property>
   <property>
@@ -1031,7 +1027,7 @@
     <description>
       The actual address the SCM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.scm.http-address.
+      ozone.scm.https-address.
     </description>
   </property>
   <property>
@@ -1062,39 +1058,6 @@
     <description>
       Setting this flag to true dumps the HTTP request/ response in
       the logs. Very useful when debugging REST protocol.
-    </description>
-  </property>
-
-  <!--Client Settings-->
-  <property>
-    <name>scm.container.client.idle.threshold</name>
-    <value>10s</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      In the standalone pipelines, the SCM clients use netty to
-      communicate with the container. It also uses connection pooling to
-      reduce client side overheads. This allows a connection to stay idle for
-      a while before the connection is closed.
-    </description>
-  </property>
-  <property>
-    <name>scm.container.client.max.size</name>
-    <value>256</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of connections that we cached via
-      clientconnection pooling. If the number of connection
-      exceed this count then the oldest idle connection is evicted.
-    </description>
-  </property>
-
-  <property>
-    <name>scm.container.client.max.outstanding.requests</name>
-    <value>100</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of outstanding async requests that can be
-      handled by the Standalone as well as Ratis client.
     </description>
   </property>
 
@@ -1252,7 +1215,7 @@
 
   <property>
     <name>hdds.datanode.plugins</name>
-    <value>org.apache.hadoop.ozone.web.OzoneHddsDatanodeService</value>
+    <value></value>
     <description>
       Comma-separated list of HDDS datanode plug-ins to be activated when
       HDDS service starts as part of datanode.
@@ -1371,7 +1334,7 @@
   </property>
 
   <property>
-    <name>hdds.containerscrub.enabled</name>
+    <name>hdds.container.scrub.enabled</name>
     <value>false</value>
     <tag>DATANODE</tag>
     <description>
@@ -1516,7 +1479,7 @@
     <value>5m</value>
     <tag>OZONE, OM</tag>
     <description>Time interval used to store the omMetrics in to a
-      file. Background thread perodically stores the OM metrics in to a
+      file. Background thread periodically stores the OM metrics in to a
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
@@ -1628,6 +1591,14 @@
     <value>32MB</value>
     <tag>OZONE, DEBUG, OM, RATIS</tag>
     <description>Byte limit for Raft's Log Worker queue.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.log.purge.gap</name>
+    <value>1000000</value>
+    <tag>OZONE, OM, RATIS</tag>
+    <description>The minimum gap between log indices for Raft server to purge
+      its log segments after taking snapshot.
     </description>
   </property>
 
@@ -1802,7 +1773,7 @@
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>hdds.scm.http.kerberos.keytab.file</name>
+    <name>hdds.scm.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
@@ -1814,7 +1785,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.http.kerberos.keytab.file</name>
+    <name>ozone.om.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
       OzoneManager http server kerberos keytab.
@@ -1867,37 +1838,10 @@
     <description>HDDS GRPC server TLS provider.</description>
   </property>
   <property>
-    <name>hdds.client.cert.chain.file.name</name>
-    <value>client.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Client certificate file name. It is an optional
-      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
-      is set to true .</description>
-  </property>
-  <property>
-    <name>hdds.grpc.mutual.tls.required</name>
-    <value>false</value>
-    <tag>OZONE, HDDS, SECURITY, TLS</tag>
-    <description>If mutual tls check is enabled for GRPC.
-    Considered only if hdds.grpc.tls.enabled is set to true.</description>
-  </property>
-  <property>
     <name>hdds.grpc.tls.enabled</name>
     <value>false</value>
     <tag>OZONE, HDDS, SECURITY, TLS</tag>
     <description>If HDDS GRPC server TLS is enabled.</description>
-  </property>
-  <property>
-    <name>hdds.server.cert.chain.file.name</name>
-    <value>server.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Hdds server certificate file name.</description>
-  </property>
-  <property>
-    <name>hdds.trust.cert.collection.file.name</name>
-    <value>ca.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>HDDS Certificate Authority trust store file name.</description>
   </property>
   <property>
     <name>hdds.x509.default.duration</name>
@@ -2346,8 +2290,8 @@
     </description>
   </property>
   <property>
-    <name>dfs.network.topology.aware.read.enable</name>
-    <value>true</value>
+    <name>ozone.network.topology.aware.read</name>
+    <value>false</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>
       Whether to enable topology aware read to improve the read performance.

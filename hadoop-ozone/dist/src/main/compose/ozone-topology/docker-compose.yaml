@@ -19,7 +19,6 @@ services:
    datanode_1:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: datanode_1
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -34,7 +33,6 @@ services:
    datanode_2:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: datanode_2
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -49,7 +47,6 @@ services:
    datanode_3:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: datanode_3
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -64,7 +61,6 @@ services:
    datanode_4:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: datanode_4
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -79,7 +75,6 @@ services:
    om:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: om
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -95,7 +90,6 @@ services:
    scm:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
-      container_name: scm
       volumes:
          - ../..:/opt/hadoop
       ports:

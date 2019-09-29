@@ -482,14 +482,16 @@ public class WriteOperationHelper {
    * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
+   * @param operationState operational state for a bulk update
    */
   @Retries.OnceTranslated
-  public void revertCommit(String destKey) throws IOException {
+  public void revertCommit(String destKey,
+      @Nullable BulkOperationState operationState) throws IOException {
     once("revert commit", destKey,
         () -> {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,
-              destKey, true);
+              destKey, true, operationState);
           owner.maybeCreateFakeParentDirectory(destPath);
         }
     );
@@ -538,7 +540,7 @@ public class WriteOperationHelper {
   public BulkOperationState initiateCommitOperation(
       Path path) throws IOException {
     return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
-        BulkOperationState.OperationType.Put, path);
+        BulkOperationState.OperationType.Commit, path);
   }
 
   /**

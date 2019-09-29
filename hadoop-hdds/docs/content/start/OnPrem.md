@@ -1,5 +1,6 @@
 ---
 title: Ozone On Premise Installation
+weight: 20
 
 ---
 <!---
@@ -33,7 +34,7 @@ requests blocks from SCM, to which clients can write data.
 
 ## Setting up an Ozone only cluster
 
-* Please untar the ozone-<version> to the directory where you are going
+* Please untar the ozone-\<version\> to the directory where you are going
 to run Ozone from. We need Ozone jars on all machines in the cluster. So you
 need to do this on all machines in the cluster.
 
@@ -152,14 +153,13 @@ ozone om --init
 {{< /highlight >}}
 
 
-Once Ozone manager has created the Object Store, we are ready to run the name
-services.
+Once Ozone manager is initialized, we are ready to run the name service.
 
 {{< highlight bash >}}
 ozone --daemon start om
 {{< /highlight >}}
 
-At this point Ozone's name services, the Ozone manager, and the block service  SCM is both running.
+At this point Ozone's name services, the Ozone manager, and the block service  SCM is both running.\
 **Please note**: If SCM is not running
 ```om --init``` command will fail. SCM start will fail if on-disk data structures are missing. So please make sure you have done both ```scm --init``` and ```om --init``` commands.
 

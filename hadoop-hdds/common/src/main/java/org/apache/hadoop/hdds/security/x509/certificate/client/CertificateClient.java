@@ -70,6 +70,12 @@ public interface CertificateClient {
   X509Certificate getCertificate();
 
   /**
+   * Return the latest CA certificate known to the client.
+   * @return latest ca certificate known to the client.
+   */
+  X509Certificate getCACertificate();
+
+  /**
    * Verifies if this certificate is part of a trusted chain.
    * @param certificate - certificate.
    * @return true if it trusted, false otherwise.

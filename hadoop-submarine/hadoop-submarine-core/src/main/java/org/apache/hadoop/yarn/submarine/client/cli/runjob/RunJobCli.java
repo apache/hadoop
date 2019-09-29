@@ -71,13 +71,22 @@ import java.util.Map;
 public class RunJobCli extends AbstractCli {
   private static final Logger LOG =
       LoggerFactory.getLogger(RunJobCli.class);
+
+  private static final String TENSORFLOW = "TensorFlow";
+  private static final String PYTORCH = "PyTorch";
+  private static final String PS = "PS";
+  private static final String WORKER = "worker";
+  private static final String TENSORBOARD = "TensorBoard";
+
   private static final String CAN_BE_USED_WITH_TF_PYTORCH =
-      "Can be used with TensorFlow or PyTorch frameworks.";
-  private static final String CAN_BE_USED_WITH_TF_ONLY =
-      "Can only be used with TensorFlow framework.";
+      String.format("Can be used with %s or %s frameworks.",
+          TENSORFLOW, PYTORCH);
+  private static final String TENSORFLOW_ONLY =
+      String.format("Can only be used with %s framework.", TENSORFLOW);
   public static final String YAML_PARSE_FAILED = "Failed to parse " +
       "YAML config";
-
+  private static final String LOCAL_OR_ANY_FS_DIRECTORY = "Could be a local " +
+      "directory or any other directory on the file system.";
 
   private Options options;
   private JobSubmitter jobSubmitter;
@@ -112,50 +121,55 @@ public class RunJobCli extends AbstractCli {
             Framework.getValues()));
     options.addOption(CliConstants.NAME, true, "Name of the job");
     options.addOption(CliConstants.INPUT_PATH, true,
-        "Input of the job, could be local or other FS directory");
+        "Input of the job. " + LOCAL_OR_ANY_FS_DIRECTORY);
     options.addOption(CliConstants.CHECKPOINT_PATH, true,
-        "Training output directory of the job, "
-            + "could be local or other FS directory. This typically includes "
-            + "checkpoint files and exported model ");
+        "Training output directory of the job. " + LOCAL_OR_ANY_FS_DIRECTORY +
+            "This typically includes checkpoint files and exported model");
     options.addOption(CliConstants.SAVED_MODEL_PATH, true,
-        "Model exported path (savedmodel) of the job, which is needed when "
-            + "exported model is not placed under ${checkpoint_path}"
-            + "could be local or other FS directory. " +
-            "This will be used to serve.");
+        "Model exported path (saved model) of the job, which is needed when " +
+            "exported model is not placed under ${checkpoint_path}. " +
+            LOCAL_OR_ANY_FS_DIRECTORY + "This will be used to serve");
     options.addOption(CliConstants.DOCKER_IMAGE, true, "Docker image name/tag");
+    options.addOption(CliConstants.PS_DOCKER_IMAGE, true,
+        getDockerImageMessage(PS));
+    options.addOption(CliConstants.WORKER_DOCKER_IMAGE, true,
+        getDockerImageMessage(WORKER));
     options.addOption(CliConstants.QUEUE, true,
-        "Name of queue to run the job, by default it uses default queue");
+        "Name of queue to run the job. By default, the default queue is used");
 
     addWorkerOptions(options);
     addPSOptions(options);
     addTensorboardOptions(options);
 
     options.addOption(CliConstants.ENV, true,
-        "Common environment variable of worker/ps");
+        "Common environment variable passed to worker / PS");
     options.addOption(CliConstants.VERBOSE, false,
         "Print verbose log for troubleshooting");
     options.addOption(CliConstants.WAIT_JOB_FINISH, false,
-        "Specified when user want to wait the job finish");
-    options.addOption(CliConstants.QUICKLINK, true, "Specify quicklink so YARN"
-        + "web UI shows link to given role instance and port. When "
-        + "--tensorboard is specified, quicklink to tensorboard instance will "
-        + "be added automatically. The format of quick link is: "
-        + "Quick_link_label=http(or https)://role-name:port. For example, "
-        + "if want to link to first worker's 7070 port, and text of quicklink "
-        + "is Notebook_UI, user need to specify --quicklink "
-        + "Notebook_UI=https://master-0:7070");
+        "Specified when user wants to wait for jobs to finish");
+    options.addOption(CliConstants.QUICKLINK, true, "Specify quicklink so YARN "
+        + "web UI shows link to the given role instance and port. " +
+        "When --tensorboard is specified, quicklink to the " +
+        TENSORBOARD + " instance will be added automatically. " +
+        "The format of quick link is: "
+        + "Quick_link_label=http(or https)://role-name:port. " +
+        "For example, if users want to link to the first worker's 7070 port, " +
+        "and text of quicklink is Notebook_UI, " +
+        "users need to specify --quicklink Notebook_UI=https://master-0:7070");
     options.addOption(CliConstants.LOCALIZATION, true, "Specify"
         + " localization to make remote/local file/directory available to"
         + " all container(Docker)."
-        + " Argument format is \"RemoteUri:LocalFilePath[:rw] \" (ro"
-        + " permission is not supported yet)"
-        + " The RemoteUri can be a file or directory in local or"
-        + " HDFS or s3 or abfs or http .etc."
+        + " Argument format is: \"RemoteUri:LocalFilePath[:rw] \" "
+        + "(ro permission is not supported yet)."
+        + " The RemoteUri can be a local file or directory on the filesystem."
+        + " Alternatively, the following remote file systems / "
+        + "transmit mechanisms can be used: "
+        + " HDFS, S3 or abfs, HTTP, etc."
         + " The LocalFilePath can be absolute or relative."
-        + " If it's a relative path, it'll be"
+        + " If it is a relative path, it will be"
         + " under container's implied working directory"
-        + " but sub directory is not supported yet."
-        + " This option can be set mutiple times."
+        + " but sub-directory is not supported yet."
+        + " This option can be set multiple times."
         + " Examples are \n"
         + "-localization \"hdfs:///user/yarn/mydir2:/opt/data\"\n"
         + "-localization \"s3a:///a/b/myfile1:./\"\n"
@@ -163,12 +177,12 @@ public class RunJobCli extends AbstractCli {
         + "-localization \"/user/yarn/mydir3:/opt/mydir3\"\n"
         + "-localization \"./mydir1:.\"\n");
     options.addOption(CliConstants.KEYTAB, true, "Specify keytab used by the " +
-        "job under security environment");
+        "job under a secured environment");
     options.addOption(CliConstants.PRINCIPAL, true, "Specify principal used " +
-        "by the job under security environment");
+        "by the job under a secured environment");
     options.addOption(CliConstants.DISTRIBUTE_KEYTAB, false, "Distribute " +
-        "local keytab to cluster machines for service authentication. If not " +
-        "specified, pre-distributed keytab of which path specified by" +
+        "local keytab to cluster machines for service authentication. " +
+        "If not specified, pre-distributed keytab of which path specified by" +
         " parameter" + CliConstants.KEYTAB + " on cluster machines will be " +
         "used");
     options.addOption("h", "help", false, "Print help");
@@ -180,54 +194,67 @@ public class RunJobCli extends AbstractCli {
 
   private void addWorkerOptions(Options options) {
     options.addOption(CliConstants.N_WORKERS, true,
-        "Number of worker tasks of the job, by default it's 1." +
+        getNumberOfServiceMessage(WORKER, 1) +
             CAN_BE_USED_WITH_TF_PYTORCH);
     options.addOption(CliConstants.WORKER_DOCKER_IMAGE, true,
-        "Specify docker image for WORKER, when this is not specified, WORKER "
-            + "uses --" + CliConstants.DOCKER_IMAGE + " as default." +
+        getDockerImageMessage(WORKER) +
             CAN_BE_USED_WITH_TF_PYTORCH);
     options.addOption(CliConstants.WORKER_LAUNCH_CMD, true,
-        "Commandline of worker, arguments will be "
-            + "directly used to launch the worker" +
+        getLaunchCommandMessage(WORKER) +
             CAN_BE_USED_WITH_TF_PYTORCH);
     options.addOption(CliConstants.WORKER_RES, true,
-        "Resource of each worker, for example "
-            + "memory-mb=2048,vcores=2,yarn.io/gpu=2" +
+        getServiceResourceMessage(WORKER) +
             CAN_BE_USED_WITH_TF_PYTORCH);
   }
 
   private void addPSOptions(Options options) {
     options.addOption(CliConstants.N_PS, true,
-        "Number of PS tasks of the job, by default it's 0. " +
-            CAN_BE_USED_WITH_TF_ONLY);
+        getNumberOfServiceMessage("PS", 0) +
+            TENSORFLOW_ONLY);
     options.addOption(CliConstants.PS_DOCKER_IMAGE, true,
-        "Specify docker image for PS, when this is not specified, PS uses --"
-            + CliConstants.DOCKER_IMAGE + " as default." +
-            CAN_BE_USED_WITH_TF_ONLY);
+        getDockerImageMessage(PS) +
+            TENSORFLOW_ONLY);
     options.addOption(CliConstants.PS_LAUNCH_CMD, true,
-        "Commandline of worker, arguments will be "
-            + "directly used to launch the PS" +
-            CAN_BE_USED_WITH_TF_ONLY);
+        getLaunchCommandMessage("PS") +
+            TENSORFLOW_ONLY);
     options.addOption(CliConstants.PS_RES, true,
-        "Resource of each PS, for example "
-            + "memory-mb=2048,vcores=2,yarn.io/gpu=2" +
-            CAN_BE_USED_WITH_TF_ONLY);
+        getServiceResourceMessage("PS") +
+            TENSORFLOW_ONLY);
   }
 
   private void addTensorboardOptions(Options options) {
     options.addOption(CliConstants.TENSORBOARD, false,
-        "Should we run TensorBoard"
-            + " for this job? By default it's disabled." +
-            CAN_BE_USED_WITH_TF_ONLY);
+        "Should we run TensorBoard for this job? " +
+            "By default, TensorBoard is disabled." +
+            TENSORFLOW_ONLY);
     options.addOption(CliConstants.TENSORBOARD_RESOURCES, true,
-        "Specify resources of Tensorboard, by default it is "
+        "Specifies resources of Tensorboard. The default resource is: "
             + CliConstants.TENSORBOARD_DEFAULT_RESOURCES + "." +
-            CAN_BE_USED_WITH_TF_ONLY);
+            TENSORFLOW_ONLY);
     options.addOption(CliConstants.TENSORBOARD_DOCKER_IMAGE, true,
-        "Specify Tensorboard docker image. when this is not "
-            + "specified, Tensorboard " + "uses --" + CliConstants.DOCKER_IMAGE
-            + " as default." +
-            CAN_BE_USED_WITH_TF_ONLY);
+        getDockerImageMessage(TENSORBOARD));
+  }
+
+  private String getLaunchCommandMessage(String service) {
+    return String.format("Launch command of the %s, arguments will be "
+        + "directly used to launch the %s", service, service);
+  }
+
+  private String getServiceResourceMessage(String serviceType) {
+    return String.format("Resource of each %s process, for example: "
+        + "memory-mb=2048,vcores=2,yarn.io/gpu=2", serviceType);
+  }
+
+  private String getNumberOfServiceMessage(String serviceType,
+      int defaultValue) {
+    return String.format("Number of %s processes for the job. " +
+        "The default value is %d.", serviceType, defaultValue);
+  }
+
+  private String getDockerImageMessage(String serviceType) {
+    return String.format("Specifies docker image for the %s process. " +
+            "When not specified, %s uses --%s as a default value.",
+        serviceType, serviceType, CliConstants.DOCKER_IMAGE);
   }
 
   private void parseCommandLineAndGetRunJobParameters(String[] args)

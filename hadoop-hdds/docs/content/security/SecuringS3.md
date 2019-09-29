@@ -35,12 +35,12 @@ The user needs to `kinit` first and once they have authenticated via kerberos
 
 * S3 clients can get the secret access id and user secret from OzoneManager.
 
-```
+```bash
 ozone s3 getsecret
 ```
 This command will talk to ozone, validate the user via kerberos and generate
 the AWS credentials. The values will be printed out on the screen. You can
-set these values up in your .aws file for automatic access while working
+set these values up in your _.aws_ file for automatic access while working
 against Ozone S3 buckets.
 
 <div class="alert alert-danger" role="alert">
@@ -51,7 +51,7 @@ against Ozone S3 buckets.
 
 * Now you can proceed to setup these secrets in aws configs:
 
-```
+```bash
 aws configure set default.s3.signature_version s3v4
 aws configure set aws_access_key_id ${accessId}
 aws configure set aws_secret_access_key ${secret}

@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.freon;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -33,7 +34,16 @@ import picocli.CommandLine.Option;
 @Command(
     name = "ozone freon",
     description = "Load generator and tester tool for ozone",
-    subcommands = RandomKeyGenerator.class,
+    subcommands = {
+        RandomKeyGenerator.class,
+        OzoneClientKeyGenerator.class,
+        OzoneClientKeyValidator.class,
+        OmKeyGenerator.class,
+        OmBucketGenerator.class,
+        HadoopFsGenerator.class,
+        HadoopFsValidator.class,
+        SameKeyReader.class,
+        S3KeyGenerator.class},
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true)
 public class Freon extends GenericCli {
@@ -49,6 +59,7 @@ public class Freon extends GenericCli {
 
   @Override
   public void execute(String[] argv) {
+    HddsUtils.initializeMetrics(createOzoneConfiguration(), "ozone-freon");
     TracingUtil.initTracing("freon");
     super.execute(argv);
   }

@@ -61,6 +61,7 @@ public class CallQueueManager<E extends Schedulable>
   }
 
   private volatile boolean clientBackOffEnabled;
+  private boolean serverFailOverEnabled;
 
   // Atomic refs point to active callQueue
   // We have two so we can better control swapping
@@ -79,6 +80,10 @@ public class CallQueueManager<E extends Schedulable>
     BlockingQueue<E> bq = createCallQueueInstance(backingClass,
         priorityLevels, maxQueueSize, namespace, conf);
     this.clientBackOffEnabled = clientBackOffEnabled;
+    this.serverFailOverEnabled = conf.getBoolean(
+        namespace + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
+        CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT);
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
     LOG.info("Using callQueue: {}, queueCapacity: {}, " +
@@ -88,11 +93,12 @@ public class CallQueueManager<E extends Schedulable>
 
   @VisibleForTesting // only!
   CallQueueManager(BlockingQueue<E> queue, RpcScheduler scheduler,
-      boolean clientBackOffEnabled) {
+      boolean clientBackOffEnabled, boolean serverFailOverEnabled) {
     this.putRef = new AtomicReference<BlockingQueue<E>>(queue);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(queue);
     this.scheduler = scheduler;
     this.clientBackOffEnabled = clientBackOffEnabled;
+    this.serverFailOverEnabled = serverFailOverEnabled;
   }
 
   private static <T extends RpcScheduler> T createScheduler(
@@ -249,7 +255,9 @@ public class CallQueueManager<E extends Schedulable>
 
   // ideally this behavior should be controllable too.
   private void throwBackoff() throws IllegalStateException {
-    throw CallQueueOverflowException.DISCONNECT;
+    throw serverFailOverEnabled ?
+        CallQueueOverflowException.FAILOVER :
+        CallQueueOverflowException.DISCONNECT;
   }
 
   /**
@@ -421,7 +429,10 @@ public class CallQueueManager<E extends Schedulable>
         new CallQueueOverflowException(
             new RetriableException(TOO_BUSY + " - disconnecting"),
             RpcStatusProto.FATAL);
-
+    static final CallQueueOverflowException FAILOVER =
+        new CallQueueOverflowException(
+            new StandbyException(TOO_BUSY + " - disconnect and failover"),
+            RpcStatusProto.FATAL);
     CallQueueOverflowException(final IOException ioe,
         final RpcStatusProto status) {
       super("Queue full", new RpcServerException(ioe.getMessage(), ioe){

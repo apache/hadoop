@@ -18,16 +18,12 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import com.google.common.base.Preconditions;
 
@@ -44,14 +40,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
    */
   private final String bucketName;
   /**
-   * ACL's that are to be added for the bucket.
-   */
-  private List<OzoneAcl> addAcls;
-  /**
-   * ACL's that are to be removed from the bucket.
-   */
-  private List<OzoneAcl> removeAcls;
-  /**
    * Bucket Version flag.
    */
   private Boolean isVersionEnabled;
@@ -65,19 +53,14 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
    * Private constructor, constructed via builder.
    * @param volumeName - Volume name.
    * @param bucketName - Bucket name.
-   * @param addAcls - ACL's to be added.
-   * @param removeAcls - ACL's to be removed.
    * @param isVersionEnabled - Bucket version flag.
    * @param storageType - Storage type to be used.
    */
   private OmBucketArgs(String volumeName, String bucketName,
-                       List<OzoneAcl> addAcls, List<OzoneAcl> removeAcls,
       Boolean isVersionEnabled, StorageType storageType,
       Map<String, String> metadata) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
-    this.addAcls = addAcls;
-    this.removeAcls = removeAcls;
     this.isVersionEnabled = isVersionEnabled;
     this.storageType = storageType;
     this.metadata = metadata;
@@ -97,22 +80,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
    */
   public String getBucketName() {
     return bucketName;
-  }
-
-  /**
-   * Returns the ACL's that are to be added.
-   * @return {@literal List<OzoneAclInfo>}
-   */
-  public List<OzoneAcl> getAddAcls() {
-    return addAcls;
-  }
-
-  /**
-   * Returns the ACL's that are to be removed.
-   * @return {@literal List<OzoneAclInfo>}
-   */
-  public List<OzoneAcl> getRemoveAcls() {
-    return removeAcls;
   }
 
   /**
@@ -145,12 +112,8 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
     Map<String, String> auditMap = new LinkedHashMap<>();
     auditMap.put(OzoneConsts.VOLUME, this.volumeName);
     auditMap.put(OzoneConsts.BUCKET, this.bucketName);
-    if(this.addAcls != null){
-      auditMap.put(OzoneConsts.ADD_ACLS, this.addAcls.toString());
-    }
-    if(this.removeAcls != null){
-      auditMap.put(OzoneConsts.REMOVE_ACLS, this.removeAcls.toString());
-    }
+    auditMap.put(OzoneConsts.GDPR_FLAG,
+        this.metadata.get(OzoneConsts.GDPR_FLAG));
     auditMap.put(OzoneConsts.IS_VERSION_ENABLED,
                 String.valueOf(this.isVersionEnabled));
     if(this.storageType != null){
@@ -165,8 +128,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
   public static class Builder {
     private String volumeName;
     private String bucketName;
-    private List<OzoneAcl> addAcls;
-    private List<OzoneAcl> removeAcls;
     private Boolean isVersionEnabled;
     private StorageType storageType;
     private Map<String, String> metadata;
@@ -178,16 +139,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
 
     public Builder setBucketName(String bucket) {
       this.bucketName = bucket;
-      return this;
-    }
-
-    public Builder setAddAcls(List<OzoneAcl> acls) {
-      this.addAcls = acls;
-      return this;
-    }
-
-    public Builder setRemoveAcls(List<OzoneAcl> acls) {
-      this.removeAcls = acls;
       return this;
     }
 
@@ -213,8 +164,8 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
     public OmBucketArgs build() {
       Preconditions.checkNotNull(volumeName);
       Preconditions.checkNotNull(bucketName);
-      return new OmBucketArgs(volumeName, bucketName, addAcls,
-          removeAcls, isVersionEnabled, storageType, metadata);
+      return new OmBucketArgs(volumeName, bucketName, isVersionEnabled,
+          storageType, metadata);
     }
   }
 
@@ -225,14 +176,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
     BucketArgs.Builder builder = BucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName);
-    if(addAcls != null && !addAcls.isEmpty()) {
-      builder.addAllAddAcls(addAcls.stream().map(
-          OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
-    }
-    if(removeAcls != null && !removeAcls.isEmpty()) {
-      builder.addAllRemoveAcls(removeAcls.stream().map(
-          OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
-    }
     if(isVersionEnabled != null) {
       builder.setIsVersionEnabled(isVersionEnabled);
     }
@@ -250,10 +193,6 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
   public static OmBucketArgs getFromProtobuf(BucketArgs bucketArgs) {
     return new OmBucketArgs(bucketArgs.getVolumeName(),
         bucketArgs.getBucketName(),
-        bucketArgs.getAddAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
-        bucketArgs.getRemoveAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketArgs.hasIsVersionEnabled() ?
             bucketArgs.getIsVersionEnabled() : null,
         bucketArgs.hasStorageType() ? StorageType.valueOf(

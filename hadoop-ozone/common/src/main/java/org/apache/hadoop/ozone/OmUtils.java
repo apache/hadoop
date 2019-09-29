@@ -46,6 +46,9 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
@@ -60,6 +63,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KE
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,6 +140,29 @@ public final class OmUtils {
         host.get() + ":" + getOmRpcPort(conf));
   }
 
+  /**
+   * Returns true if OZONE_OM_SERVICE_IDS_KEY is defined and not empty.
+   * @param conf Configuration
+   * @return true if OZONE_OM_SERVICE_IDS_KEY is defined and not empty;
+   * else false.
+   */
+  public static boolean isServiceIdsDefined(Configuration conf) {
+    String val = conf.get(OZONE_OM_SERVICE_IDS_KEY);
+    return val != null && val.length() > 0;
+  }
+
+  /**
+   * Returns true if HA for OzoneManager is configured for the given service id.
+   * @param conf Configuration
+   * @param serviceId OM HA cluster service ID
+   * @return true if HA is configured in the configuration; else false.
+   */
+  public static boolean isOmHAServiceId(Configuration conf, String serviceId) {
+    Collection<String> omServiceIds = conf.getTrimmedStringCollection(
+        OZONE_OM_SERVICE_IDS_KEY);
+    return omServiceIds.contains(serviceId);
+  }
+
   public static int getOmRpcPort(Configuration conf) {
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
@@ -199,6 +226,8 @@ public final class OmUtils {
     case LookupFile:
     case ListStatus:
     case GetAcl:
+    case DBUpdates:
+    case ListMultipartUploads:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -221,13 +250,12 @@ public final class OmUtils {
     case GetDelegationToken:
     case RenewDelegationToken:
     case CancelDelegationToken:
-    case ApplyCreateKey:
-    case ApplyInitiateMultiPartUpload:
     case CreateDirectory:
     case CreateFile:
     case RemoveAcl:
     case SetAcl:
     case AddAcl:
+    case PurgeKeys:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
@@ -470,5 +498,39 @@ public final class OmUtils {
       throw new IllegalArgumentException("Unable to create path: " + dirFile);
     }
     return dirFile;
+  }
+
+  /**
+   * Prepares key info to be moved to deletedTable.
+   * 1. It strips GDPR metadata from key info
+   * 2. For given object key, if the repeatedOmKeyInfo instance is null, it
+   * implies that no entry for the object key exists in deletedTable so we
+   * create a new instance to include this key, else we update the existing
+   * repeatedOmKeyInfo instance.
+   * @param keyInfo args supplied by client
+   * @param repeatedOmKeyInfo key details from deletedTable
+   * @return {@link RepeatedOmKeyInfo}
+   * @throws IOException if I/O Errors when checking for key
+   */
+  public static RepeatedOmKeyInfo prepareKeyForDelete(OmKeyInfo keyInfo,
+      RepeatedOmKeyInfo repeatedOmKeyInfo) throws IOException{
+    // If this key is in a GDPR enforced bucket, then before moving
+    // KeyInfo to deletedTable, remove the GDPR related metadata from
+    // KeyInfo.
+    if(Boolean.valueOf(keyInfo.getMetadata().get(OzoneConsts.GDPR_FLAG))) {
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_FLAG);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
+      keyInfo.getMetadata().remove(OzoneConsts.GDPR_SECRET);
+    }
+
+    if(repeatedOmKeyInfo == null) {
+      //The key doesn't exist in deletedTable, so create a new instance.
+      repeatedOmKeyInfo = new RepeatedOmKeyInfo(keyInfo);
+    } else {
+      //The key exists in deletedTable, so update existing instance.
+      repeatedOmKeyInfo.addOmKeyInfo(keyInfo);
+    }
+
+    return repeatedOmKeyInfo;
   }
 }

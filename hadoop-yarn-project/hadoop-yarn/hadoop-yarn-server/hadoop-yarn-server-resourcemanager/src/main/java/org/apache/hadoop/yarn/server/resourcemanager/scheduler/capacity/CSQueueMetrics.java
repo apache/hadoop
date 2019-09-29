@@ -55,6 +55,14 @@ public class CSQueueMetrics extends QueueMetrics {
   MutableGaugeLong maxCapacityMB;
   @Metric("Maximum CPU in virtual cores")
   MutableGaugeInt maxCapacityVCores;
+  @Metric("Guaranteed capacity in percentage relative to parent")
+  private MutableGaugeFloat guaranteedCapacity;
+  @Metric("Guaranteed capacity in percentage relative to total partition")
+  private MutableGaugeFloat guaranteedAbsoluteCapacity;
+  @Metric("Maximum capacity in percentage relative to parent")
+  private MutableGaugeFloat maxCapacity;
+  @Metric("Maximum capacity in percentage relative to total partition")
+  private MutableGaugeFloat maxAbsoluteCapacity;
 
   CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
@@ -204,4 +212,35 @@ public class CSQueueMetrics extends QueueMetrics {
     return metrics;
   }
 
+  public float getGuaranteedCapacity() {
+    return guaranteedCapacity.value();
+  }
+
+  public float getGuaranteedAbsoluteCapacity() {
+    return guaranteedAbsoluteCapacity.value();
+  }
+
+  public void setGuaranteedCapacities(String partition, float capacity,
+      float absoluteCapacity) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      guaranteedCapacity.set(capacity);
+      guaranteedAbsoluteCapacity.set(absoluteCapacity);
+    }
+  }
+
+  public float getMaxCapacity() {
+    return maxCapacity.value();
+  }
+
+  public float getMaxAbsoluteCapacity() {
+    return maxAbsoluteCapacity.value();
+  }
+
+  public void setMaxCapacities(String partition, float capacity,
+      float absoluteCapacity) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      maxCapacity.set(capacity);
+      maxAbsoluteCapacity.set(absoluteCapacity);
+    }
+  }
 }

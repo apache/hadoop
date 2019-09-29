@@ -257,7 +257,7 @@ public class NMSimulator extends TaskRunner.Task {
       // normal container
       ContainerSimulator cs = new ContainerSimulator(container.getId(),
               container.getResource(), lifeTimeMS + System.currentTimeMillis(),
-              lifeTimeMS);
+              lifeTimeMS, container.getAllocationRequestId());
       containerQueue.add(cs);
       runningContainers.put(cs.getId(), cs);
     } else {

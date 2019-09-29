@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -183,6 +184,10 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   @Override
   public String getNamenodes() {
     final Map<String, Map<String, Object>> info = new LinkedHashMap<>();
+    if (membershipStore == null) {
+      return "{}";
+    }
+
     try {
       // Get the values from the store
       GetNamenodeRegistrationsRequest request =
@@ -252,6 +257,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   @Override
   public String getMountTable() {
     final List<Map<String, Object>> info = new LinkedList<>();
+    if (mountTableStore == null) {
+      return "[]";
+    }
 
     try {
       // Get all the mount points in order
@@ -302,6 +310,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   @Override
   public String getRouters() {
     final Map<String, Map<String, Object>> info = new LinkedHashMap<>();
+    if (routerStore == null) {
+      return "{}";
+    }
     try {
       // Get all the routers in order
       GetRouterRegistrationsRequest request =
@@ -391,6 +402,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public int getNumNamenodes() {
+    if (membershipStore == null) {
+      return 0;
+    }
     try {
       GetNamenodeRegistrationsRequest request =
           GetNamenodeRegistrationsRequest.newInstance();
@@ -406,6 +420,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public int getNumExpiredNamenodes() {
+    if (membershipStore == null) {
+      return 0;
+    }
     try {
       GetNamenodeRegistrationsRequest request =
           GetNamenodeRegistrationsRequest.newInstance();
@@ -577,7 +594,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public String getHostAndPort() {
-    InetSocketAddress address = this.router.getHttpServerAddress();
+    InetSocketAddress address = this.router.getRpcServerAddress();
     if (address != null) {
       try {
         String hostname = InetAddress.getLocalHost().getHostName();
@@ -670,6 +687,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
    */
   private Collection<String> getNamespaceInfo(
       Function<FederationNamespaceInfo, String> f) throws IOException {
+    if (membershipStore == null) {
+      return new HashSet<>();
+    }
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
         membershipStore.getNamespaceInfo(request);
@@ -719,8 +739,11 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
    */
   private List<MembershipState> getActiveNamenodeRegistrations()
       throws IOException {
-
     List<MembershipState> resultList = new ArrayList<>();
+    if (membershipStore == null) {
+      return resultList;
+    }
+
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
         membershipStore.getNamespaceInfo(request);

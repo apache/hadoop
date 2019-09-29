@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.util.Map;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -30,9 +34,7 @@ import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.response.key.OMKeyCreateResponse;
 import org.apache.hadoop.ozone.om.response.key.OMKeyDeleteResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -41,12 +43,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .KEY_NOT_FOUND;
@@ -55,8 +54,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_L
 /**
  * Handles DeleteKey request.
  */
-public class OMKeyDeleteRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMKeyDeleteRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMKeyDeleteRequest.class);
@@ -66,8 +64,24 @@ public class OMKeyDeleteRequest extends OMClientRequest
   }
 
   @Override
+  public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
+    DeleteKeyRequest deleteKeyRequest = getOmRequest().getDeleteKeyRequest();
+    Preconditions.checkNotNull(deleteKeyRequest);
+
+    OzoneManagerProtocolProtos.KeyArgs keyArgs = deleteKeyRequest.getKeyArgs();
+
+    OzoneManagerProtocolProtos.KeyArgs.Builder newKeyArgs =
+        keyArgs.toBuilder().setModificationTime(Time.now());
+
+    return getOmRequest().toBuilder()
+        .setDeleteKeyRequest(deleteKeyRequest.toBuilder()
+            .setKeyArgs(newKeyArgs)).setUserInfo(getUserInfo()).build();
+  }
+
+  @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     DeleteKeyRequest deleteKeyRequest = getOmRequest().getDeleteKeyRequest();
 
     OzoneManagerProtocolProtos.KeyArgs deleteKeyArgs =
@@ -89,40 +103,25 @@ public class OMKeyDeleteRequest extends OMClientRequest
         OzoneManagerProtocolProtos.OMResponse.newBuilder().setCmdType(
             OzoneManagerProtocolProtos.Type.DeleteKey).setStatus(
             OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
-
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    IOException exception = null;
+    boolean acquiredLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.DELETE,
-            volumeName, bucketName, keyName);
-      }
-    } catch (IOException ex) {
-      LOG.error("Delete failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, ex);
-      omMetrics.incNumKeyDeleteFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_KEY, auditMap,
-          ex, userInfo));
-      return new OMKeyCreateResponse(null, -1L,
-          createErrorOMResponse(omResponse, ex));
-    }
+      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName);
 
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+      String objectKey = omMetadataManager.getOzoneKey(
+          volumeName, bucketName, keyName);
 
-    String objectKey = omMetadataManager.getOzoneKey(
-        volumeName, bucketName, keyName);
-
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-        bucketName);
-    IOException exception = null;
-    OmKeyInfo omKeyInfo = null;
-    try {
+      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
 
       // Not doing bucket/volume checks here. In this way we can avoid db
       // checks for them.
       // TODO: Once we have volume/bucket full cache, we can add
       // them back, as these checks will be inexpensive at that time.
-      omKeyInfo = omMetadataManager.getKeyTable().get(objectKey);
+      OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(objectKey);
 
       if (omKeyInfo == null) {
         throw new OMException("Key not found", KEY_NOT_FOUND);
@@ -139,11 +138,24 @@ public class OMKeyDeleteRequest extends OMClientRequest
       // validation, so we don't need to add to cache.
       // TODO: Revisit if we need it later.
 
+      omClientResponse = new OMKeyDeleteResponse(omKeyInfo,
+          omResponse.setDeleteKeyResponse(
+              DeleteKeyResponse.newBuilder()).build());
+
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMKeyDeleteResponse(null,
+          createErrorOMResponse(omResponse, exception));
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
+      if (acquiredLock) {
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
     }
 
     // Performing audit logging outside of the lock.
@@ -153,13 +165,10 @@ public class OMKeyDeleteRequest extends OMClientRequest
     // return response.
     if (exception == null) {
       omMetrics.decNumKeys();
-      return new OMKeyDeleteResponse(omKeyInfo,
-          omResponse.setDeleteKeyResponse(
-              DeleteKeyResponse.newBuilder()).build());
+      return omClientResponse;
     } else {
       omMetrics.incNumKeyDeleteFails();
-      return new OMKeyDeleteResponse(null,
-          createErrorOMResponse(omResponse, exception));
+      return omClientResponse;
     }
 
   }

@@ -91,8 +91,6 @@ public class ExceptionDiags {
       Throwable t = ctor.newInstance(msg);
       return (T) (t.initCause(exception));
     } catch (Throwable e) {
-      LOG.warn("Unable to wrap exception of type " +
-               clazz + ": it has no (String) constructor", e);
       return exception;
     }
   }

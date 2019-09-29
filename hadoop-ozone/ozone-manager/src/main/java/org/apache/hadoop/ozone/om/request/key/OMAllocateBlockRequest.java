@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.key.OMAllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -53,10 +53,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
@@ -65,8 +63,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
 /**
  * Handles allocate block request.
  */
-public class OMAllocateBlockRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMAllocateBlockRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMAllocateBlockRequest.class);
@@ -138,7 +135,8 @@ public class OMAllocateBlockRequest extends OMClientRequest
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
         getOmRequest().getAllocateBlockRequest();
@@ -156,7 +154,7 @@ public class OMAllocateBlockRequest extends OMClientRequest
     long clientID = allocateBlockRequest.getClientID();
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
-    omMetrics.incNumAddAllocateBlockCalls();
+    omMetrics.incNumBlockAllocateCalls();
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
@@ -167,46 +165,22 @@ public class OMAllocateBlockRequest extends OMClientRequest
         OzoneManagerProtocolProtos.Type.AllocateBlock).setStatus(
         OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
 
+    IOException exception = null;
+    OmKeyInfo omKeyInfo = null;
     try {
       // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
-            volumeName, bucketName, keyName);
-      }
-    } catch (IOException ex) {
-      LOG.error("AllocateBlock failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, ex);
-      omMetrics.incNumBlockAllocateCallFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_BLOCK, auditMap,
-          ex, getOmRequest().getUserInfo()));
-      return new OMAllocateBlockResponse(null, -1L,
-          createErrorOMResponse(omResponse, ex));
-    }
+      checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    try {
+      OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
       validateBucketAndVolume(omMetadataManager, volumeName,
           bucketName);
-    } catch (IOException ex) {
-      LOG.error("AllocateBlock failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, ex);
-      omMetrics.incNumBlockAllocateCallFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_BLOCK, auditMap,
-          ex, getOmRequest().getUserInfo()));
-      return new OMAllocateBlockResponse(null, -1L,
-          createErrorOMResponse(omResponse, ex));
-    }
 
-    String openKey = omMetadataManager.getOpenKey(
-        volumeName, bucketName, keyName, clientID);
+      String openKey = omMetadataManager.getOpenKey(
+          volumeName, bucketName, keyName, clientID);
 
-    IOException exception = null;
-    OmKeyInfo omKeyInfo =  null;
+      // Here we don't acquire bucket/volume lock because for a single client
+      // allocateBlock is called in serial fashion.
 
-    // Here we don't acquire bucket/volume lock because for a single client
-    // allocateBlock is called in serial fashion.
-    try {
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(openKey);
       if (omKeyInfo == null) {
         throw new OMException("Open Key not found " + openKey, KEY_NOT_FOUND);
@@ -231,17 +205,22 @@ public class OMAllocateBlockRequest extends OMClientRequest
     auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_BLOCK, auditMap,
         exception, getOmRequest().getUserInfo()));
 
-
+    OMClientResponse omClientResponse = null;
     if (exception == null) {
       omResponse.setAllocateBlockResponse(AllocateBlockResponse.newBuilder()
           .setKeyLocation(blockLocation).build());
-      return new OMAllocateBlockResponse(omKeyInfo, clientID,
-          omResponse.build());
+      omClientResponse = new OMAllocateBlockResponse(omKeyInfo,
+          clientID, omResponse.build());
     } else {
       omMetrics.incNumBlockAllocateCallFails();
-      return new OMAllocateBlockResponse(null, -1L,
+      omClientResponse = new OMAllocateBlockResponse(null, -1L,
           createErrorOMResponse(omResponse, exception));
     }
+
+    omClientResponse.setFlushFuture(
+        ozoneManagerDoubleBufferHelper.add(omClientResponse,
+            transactionLogIndex));
+    return omClientResponse;
 
   }
 

@@ -13,10 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-mkdir -p ./target
-grep -r --include="*.java" "@author" .
-if [ $? -gt 0 ]; then
-  exit 0
-else
-  exit -1
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
+
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/author"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
+
+#hide this string to not confuse yetus
+AUTHOR="uthor"
+AUTHOR="@a${AUTHOR}"
+
+grep -r --include="*.java" "$AUTHOR" . | tee "$REPORT_FILE"
+
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
+   exit 1
 fi

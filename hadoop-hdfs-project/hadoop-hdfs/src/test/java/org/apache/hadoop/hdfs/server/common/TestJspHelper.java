@@ -21,12 +21,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -36,9 +38,11 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -371,8 +375,38 @@ public class TestJspHelper {
     }
   }
 
+  @Test
+  public void testGetUgiDuringStartup() throws Exception {
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
+    ServletContext context = mock(ServletContext.class);
+    String realUser = "TheDoctor";
+    String user = "TheNurse";
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    HttpServletRequest request;
 
+    Text ownerText = new Text(user);
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
+        ownerText, ownerText, new Text(realUser));
+    Token<DelegationTokenIdentifier> token =
+        new Token<DelegationTokenIdentifier>(dtId,
+            new DummySecretManager(0, 0, 0, 0));
+    String tokenString = token.encodeToUrlString();
 
+    // token with auth-ed user
+    request = getMockRequest(realUser, null, null);
+    when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
+        tokenString);
+
+    NameNode mockNN = mock(NameNode.class);
+    Mockito.doCallRealMethod().when(mockNN)
+        .verifyToken(Mockito.any(), Mockito.any());
+    when(context.getAttribute("name.node")).thenReturn(mockNN);
+
+    LambdaTestUtils.intercept(RetriableException.class,
+        "Namenode is in startup mode",
+        () -> JspHelper.getUGI(context, request, conf));
+  }
 
   private HttpServletRequest getMockRequest(String remoteUser, String user, String doAs) {
     HttpServletRequest request = mock(HttpServletRequest.class);

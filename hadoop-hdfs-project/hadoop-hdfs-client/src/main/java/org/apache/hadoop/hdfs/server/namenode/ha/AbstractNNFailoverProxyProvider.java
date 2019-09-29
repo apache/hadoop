@@ -234,7 +234,7 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
           conf, nameNodeUri, HdfsClientConfigKeys.Failover.RESOLVE_SERVICE_KEY);
     // If the address needs to be resolved, get all of the IP addresses
     // from this address and pass them into the proxy
-    LOG.info("Namenode domain name will be resolved with {}",
+    LOG.debug("Namenode domain name will be resolved with {}",
         dnr.getClass().getName());
     for (InetSocketAddress address : addressesOfNns) {
       String[] resolvedHostNames = dnr.getAllResolvedHostnameByDomainName(

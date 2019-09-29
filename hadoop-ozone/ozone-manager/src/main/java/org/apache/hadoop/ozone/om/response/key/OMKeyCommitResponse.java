@@ -22,9 +22,11 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for CommitKey request.
@@ -34,8 +36,9 @@ public class OMKeyCommitResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
   private long openKeySessionID;
 
-  public OMKeyCommitResponse(OmKeyInfo omKeyInfo, long openKeySessionID,
-      OzoneManagerProtocolProtos.OMResponse omResponse) {
+  public OMKeyCommitResponse(@Nullable OmKeyInfo omKeyInfo,
+      long openKeySessionID,
+      @Nonnull OzoneManagerProtocolProtos.OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
     this.openKeySessionID = openKeySessionID;

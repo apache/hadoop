@@ -39,22 +39,6 @@ spec:
     spec:
       securityContext:
         fsGroup: 1000
-      initContainers:
-      - name: init
-        image: '@docker.image@'
-        args:
-        - ozone
-        - om
-        - --init
-        env:
-        - name: WAITFOR
-          value: scm-0.scm:9876
-        envFrom:
-        - configMapRef:
-            name: config
-        volumeMounts:
-        - name: data
-          mountPath: /data
       containers:
       - name: om
         image: '@docker.image@'
@@ -64,6 +48,12 @@ spec:
         env:
         - name: WAITFOR
           value: scm-0.scm:9876
+        - name: ENSURE_OM_INITIALIZED
+          value: /data/metadata/om/current/VERSION
+        livenessProbe:
+          tcpSocket:
+            port: 9862
+          initialDelaySeconds: 30
         envFrom:
         - configMapRef:
             name: config

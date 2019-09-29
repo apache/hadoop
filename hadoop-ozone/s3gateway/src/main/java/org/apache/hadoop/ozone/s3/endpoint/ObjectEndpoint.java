@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.s3.endpoint;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -58,6 +59,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -74,11 +76,13 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
 import org.apache.commons.io.IOUtils;
 
+import org.apache.commons.lang3.tuple.Pair;
 import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.ENTITY_TOO_SMALL;
 import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.NO_SUCH_UPLOAD;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.ACCEPT_RANGE_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.CONTENT_RANGE_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER_RANGE;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER_SUPPORTED_UNIT;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
@@ -417,33 +421,19 @@ public class ObjectEndpoint extends EndpointBase {
 
   }
 
+  /**
+   * Initialize MultiPartUpload request.
+   * <p>
+   * Note: the specific content type is set by the HeaderPreprocessor.
+   */
   @POST
   @Produces(MediaType.APPLICATION_XML)
-  public Response multipartUpload(
+  @Consumes(HeaderPreprocessor.MULTIPART_UPLOAD_MARKER)
+  public Response initializeMultipartUpload(
       @PathParam("bucket") String bucket,
-      @PathParam("path") String key,
-      @QueryParam("uploads") String uploads,
-      @QueryParam("uploadId") @DefaultValue("") String uploadID,
-      CompleteMultipartUploadRequest request) throws IOException, OS3Exception {
-    if (!uploadID.equals("")) {
-      //Complete Multipart upload request.
-      return completeMultipartUpload(bucket, key, uploadID, request);
-    } else {
-      // Initiate Multipart upload request.
-      return initiateMultipartUpload(bucket, key);
-    }
-  }
-
-  /**
-   * Initiate Multipart upload request.
-   * @param bucket
-   * @param key
-   * @return Response
-   * @throws IOException
-   * @throws OS3Exception
-   */
-  private Response initiateMultipartUpload(String bucket, String key) throws
-      IOException, OS3Exception {
+      @PathParam("path") String key
+  )
+      throws IOException, OS3Exception {
     try {
       OzoneBucket ozoneBucket = getBucket(bucket);
       String storageType = headers.getHeaderString(STORAGE_CLASS_HEADER);
@@ -473,7 +463,6 @@ public class ObjectEndpoint extends EndpointBase {
       multipartUploadInitiateResponse.setKey(key);
       multipartUploadInitiateResponse.setUploadID(multipartInfo.getUploadID());
 
-
       return Response.status(Status.OK).entity(
           multipartUploadInitiateResponse).build();
     } catch (IOException ex) {
@@ -484,18 +473,15 @@ public class ObjectEndpoint extends EndpointBase {
   }
 
   /**
-   * Complete Multipart upload request.
-   * @param bucket
-   * @param key
-   * @param uploadID
-   * @param multipartUploadRequest
-   * @return Response
-   * @throws IOException
-   * @throws OS3Exception
+   * Complete a multipart upload.
    */
-  private Response completeMultipartUpload(String bucket, String key, String
-      uploadID, CompleteMultipartUploadRequest multipartUploadRequest) throws
-      IOException, OS3Exception {
+  @POST
+  @Produces(MediaType.APPLICATION_XML)
+  public Response completeMultipartUpload(@PathParam("bucket") String bucket,
+      @PathParam("path") String key,
+      @QueryParam("uploadId") @DefaultValue("") String uploadID,
+      CompleteMultipartUploadRequest multipartUploadRequest)
+      throws IOException, OS3Exception {
     OzoneBucket ozoneBucket = getBucket(bucket);
     Map<Integer, String> partsMap = new TreeMap<>();
     List<CompleteMultipartUploadRequest.Part> partList =
@@ -553,12 +539,45 @@ public class ObjectEndpoint extends EndpointBase {
       OzoneBucket ozoneBucket = getBucket(bucket);
       OzoneOutputStream ozoneOutputStream = ozoneBucket.createMultipartKey(
           key, length, partNumber, uploadID);
-      IOUtils.copy(body, ozoneOutputStream);
+
+      String copyHeader = headers.getHeaderString(COPY_SOURCE_HEADER);
+      if (copyHeader != null) {
+        Pair<String, String> result = parseSourceHeader(copyHeader);
+
+        String sourceBucket = result.getLeft();
+        String sourceKey = result.getRight();
+
+        try (OzoneInputStream sourceObject =
+            getBucket(sourceBucket).readKey(sourceKey)) {
+
+          String range =
+              headers.getHeaderString(COPY_SOURCE_HEADER_RANGE);
+          if (range != null) {
+            RangeHeader rangeHeader =
+                RangeHeaderParserUtil.parseRangeHeader(range, 0);
+            IOUtils.copyLarge(sourceObject, ozoneOutputStream,
+                rangeHeader.getStartOffset(),
+                rangeHeader.getEndOffset() - rangeHeader.getStartOffset());
+
+          } else {
+            IOUtils.copy(sourceObject, ozoneOutputStream);
+          }
+        }
+
+      } else {
+        IOUtils.copy(body, ozoneOutputStream);
+      }
       ozoneOutputStream.close();
       OmMultipartCommitUploadPartInfo omMultipartCommitUploadPartInfo =
           ozoneOutputStream.getCommitUploadPartInfo();
-      return Response.status(Status.OK).header("ETag",
-          omMultipartCommitUploadPartInfo.getPartName()).build();
+      String eTag = omMultipartCommitUploadPartInfo.getPartName();
+
+      if (copyHeader != null) {
+        return Response.ok(new CopyPartResult(eTag)).build();
+      } else {
+        return Response.ok().header("ETag",
+            eTag).build();
+      }
 
     } catch (OMException ex) {
       if (ex.getResult() == ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR) {
@@ -596,13 +615,9 @@ public class ObjectEndpoint extends EndpointBase {
       listPartsResponse.setPartNumberMarker(partNumberMarker);
       listPartsResponse.setTruncated(false);
 
-      if (ozoneMultipartUploadPartListParts.getReplicationType().toString()
-          .equals(ReplicationType.STAND_ALONE.toString())) {
-        listPartsResponse.setStorageClass(S3StorageType.REDUCED_REDUNDANCY
-            .toString());
-      } else {
-        listPartsResponse.setStorageClass(S3StorageType.STANDARD.toString());
-      }
+      listPartsResponse.setStorageClass(S3StorageType.fromReplicationType(
+          ozoneMultipartUploadPartListParts.getReplicationType(),
+          ozoneMultipartUploadPartListParts.getReplicationFactor()).toString());
 
       if (ozoneMultipartUploadPartListParts.isTruncated()) {
         listPartsResponse.setTruncated(
@@ -644,20 +659,10 @@ public class ObjectEndpoint extends EndpointBase {
                                         boolean storageTypeDefault)
       throws OS3Exception, IOException {
 
-    if (copyHeader.startsWith("/")) {
-      copyHeader = copyHeader.substring(1);
-    }
-    int pos = copyHeader.indexOf("/");
-    if (pos == -1) {
-      OS3Exception ex = S3ErrorTable.newError(S3ErrorTable
-          .INVALID_ARGUMENT, copyHeader);
-      ex.setErrorMessage("Copy Source must mention the source bucket and " +
-          "key: sourcebucket/sourcekey");
-      throw ex;
-    }
-    String sourceBucket = copyHeader.substring(0, pos);
-    String sourceKey = copyHeader.substring(pos + 1);
+    Pair<String, String> result = parseSourceHeader(copyHeader);
 
+    String sourceBucket = result.getLeft();
+    String sourceKey = result.getRight();
     OzoneInputStream sourceInputStream = null;
     OzoneOutputStream destOutputStream = null;
     boolean closed = false;
@@ -735,5 +740,27 @@ public class ObjectEndpoint extends EndpointBase {
         }
       }
     }
+  }
+
+  /**
+   * Parse the key and bucket name from copy header.
+   */
+  @VisibleForTesting
+  public static Pair<String, String> parseSourceHeader(String copyHeader)
+      throws OS3Exception {
+    String header = copyHeader;
+    if (header.startsWith("/")) {
+      header = copyHeader.substring(1);
+    }
+    int pos = header.indexOf("/");
+    if (pos == -1) {
+      OS3Exception ex = S3ErrorTable.newError(S3ErrorTable
+          .INVALID_ARGUMENT, header);
+      ex.setErrorMessage("Copy Source must mention the source bucket and " +
+          "key: sourcebucket/sourcekey");
+      throw ex;
+    }
+
+    return Pair.of(header.substring(0, pos), header.substring(pos + 1));
   }
 }

@@ -48,7 +48,7 @@ public class OzoneClientInvocationHandler implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
-    LOG.trace("Invoking method {} on proxy {}", method, proxy);
+    LOG.trace("Invoking method {} on target {}", method, target);
     try {
       long startTime = Time.monotonicNow();
       Object result = method.invoke(target, args);

@@ -29,7 +29,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+
+import javax.annotation.Nonnull;
 
 /**
  * Response for set owner request.
@@ -43,7 +45,7 @@ public class OMVolumeSetOwnerResponse extends OMClientResponse {
 
   public OMVolumeSetOwnerResponse(String oldOwner,
       VolumeList oldOwnerVolumeList, VolumeList newOwnerVolumeList,
-      OmVolumeArgs newOwnerVolumeArgs, OMResponse omResponse) {
+      OmVolumeArgs newOwnerVolumeArgs, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.oldOwner = oldOwner;
     this.oldOwnerVolumeList = oldOwnerVolumeList;

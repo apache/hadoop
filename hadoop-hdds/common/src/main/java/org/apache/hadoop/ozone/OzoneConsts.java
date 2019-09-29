@@ -119,6 +119,7 @@ public final class OzoneConsts {
   public static final String DN_CONTAINER_DB = "-dn-"+ CONTAINER_DB_SUFFIX;
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String OM_DB_NAME = "om.db";
+  public static final String OM_DB_BACKUP_PREFIX = "om.db.backup.";
   public static final String OM_DB_CHECKPOINTS_DIR_NAME = "om.db.checkpoints";
   public static final String OZONE_MANAGER_TOKEN_DB_NAME = "om-token.db";
   public static final String SCM_DB_NAME = "scm.db";
@@ -238,6 +239,8 @@ public final class OzoneConsts {
   public static final String KEY = "key";
   public static final String QUOTA = "quota";
   public static final String QUOTA_IN_BYTES = "quotaInBytes";
+  public static final String OBJECT_ID = "objectID";
+  public static final String UPDATE_ID = "updateID";
   public static final String CLIENT_ID = "clientID";
   public static final String OWNER = "owner";
   public static final String ADMIN = "admin";
@@ -247,6 +250,7 @@ public final class OzoneConsts {
   public static final String MAX_KEYS = "maxKeys";
   public static final String PREFIX = "prefix";
   public static final String KEY_PREFIX = "keyPrefix";
+  public static final String ACL = "acl";
   public static final String ACLS = "acls";
   public static final String USER_ACL = "userAcl";
   public static final String ADD_ACLS = "addAcls";
@@ -254,6 +258,7 @@ public final class OzoneConsts {
   public static final String MAX_NUM_OF_BUCKETS = "maxNumOfBuckets";
   public static final String TO_KEY_NAME = "toKeyName";
   public static final String STORAGE_TYPE = "storageType";
+  public static final String RESOURCE_TYPE = "resourceType";
   public static final String IS_VERSION_ENABLED = "isVersionEnabled";
   public static final String CREATION_TIME = "creationTime";
   public static final String DATA_SIZE = "dataSize";
@@ -264,6 +269,8 @@ public final class OzoneConsts {
   public static final String UPLOAD_ID = "uploadID";
   public static final String PART_NUMBER_MARKER = "partNumberMarker";
   public static final String MAX_PARTS = "maxParts";
+  public static final String S3_BUCKET = "s3Bucket";
+  public static final String S3_GETSECRET_USER = "S3GetSecretUser";
 
 
 
@@ -302,5 +309,19 @@ public final class OzoneConsts {
 
   public static final String JAVA_TMP_DIR = "java.io.tmpdir";
   public static final String LOCALHOST = "localhost";
+
+
+  public static final int S3_BUCKET_MIN_LENGTH = 3;
+  public static final int S3_BUCKET_MAX_LENGTH = 64;
+
+  //GDPR
+  public static final String GDPR_FLAG = "gdprEnabled";
+  public static final String GDPR_ALGORITHM_NAME = "AES";
+  public static final int GDPR_DEFAULT_RANDOM_SECRET_LENGTH = 16;
+  public static final String GDPR_CHARSET = "UTF-8";
+  public static final String GDPR_LENGTH = "length";
+  public static final String GDPR_SECRET = "secret";
+  public static final String GDPR_ALGORITHM = "algorithm";
+
 
 }

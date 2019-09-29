@@ -56,7 +56,7 @@ import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
-import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -145,6 +145,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_FLUSH,
       DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
+      DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
+  private boolean disableOutputStreamFlush;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
@@ -427,6 +431,10 @@ public class AbfsConfiguration{
     return this.enableFlush;
   }
 
+  public boolean isOutputStreamFlushDisabled() {
+    return this.disableOutputStreamFlush;
+  }
+
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
   }
@@ -435,7 +443,7 @@ public class AbfsConfiguration{
     return this.userAgentId;
   }
 
-  public SSLSocketFactoryEx.SSLChannelMode getPreferredSSLFactoryOption() {
+  public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
     return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
@@ -635,4 +643,10 @@ public class AbfsConfiguration{
   void setEnableFlush(boolean enableFlush) {
     this.enableFlush = enableFlush;
   }
+
+  @VisibleForTesting
+  void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
+    this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
 }

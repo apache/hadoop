@@ -155,7 +155,9 @@ public class FSEditLog implements LogsPurgeable {
   
   //initialize
   private JournalSet journalSet = null;
-  private EditLogOutputStream editLogStream = null;
+
+  @VisibleForTesting
+  EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
   // All of the threads which update/increment txid are synchronized,
@@ -1805,7 +1807,8 @@ public class FSEditLog implements LogsPurgeable {
    * @return The constructed journal manager
    * @throws IllegalArgumentException if no class is configured for uri
    */
-  private JournalManager createJournal(URI uri) {
+  @VisibleForTesting
+  JournalManager createJournal(URI uri) {
     Class<? extends JournalManager> clazz
       = getJournalClass(conf, uri.getScheme());
 

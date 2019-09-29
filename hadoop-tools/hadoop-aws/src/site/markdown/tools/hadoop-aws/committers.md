@@ -789,7 +789,7 @@ This surfaces when either of two conditions are met.
 `fail` and the output/destination directory exists.
 The job will fail in the driver during job setup.
 1. The Partitioned Committer is used with `fs.s3a.committer.staging.conflict-mode` set to
-`fail`  and one of the partitions. The specific task(s) generating conflicting data will fail
+`fail` and one of the partitions exist. The specific task(s) generating conflicting data will fail
 during task commit, which will cause the entire job to fail.
 
 If you are trying to write data and want write conflicts to be rejected, this is the correct

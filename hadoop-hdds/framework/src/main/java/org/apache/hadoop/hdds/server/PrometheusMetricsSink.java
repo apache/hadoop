@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hdds.server;
 
-import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
+import static org.apache.hadoop.hdds.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -45,10 +44,13 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Cached output lines for each metrics.
    */
-  private Map<String, String> metricLines = new HashMap<>();
+  private final Map<String, String> metricLines = new ConcurrentHashMap<>();
 
-  private static final Pattern UPPER_CASE_SEQ =
-      Pattern.compile("([A-Z]*)([A-Z])");
+  private static final Pattern SPLIT_PATTERN =
+      Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
+
+  private static final Pattern REPLACE_PATTERN =
+      Pattern.compile("[^a-zA-Z0-9]+");
 
   public PrometheusMetricsSink() {
   }
@@ -63,9 +65,13 @@ public class PrometheusMetricsSink implements MetricsSink {
             metricsRecord.name(), metrics.name());
 
         StringBuilder builder = new StringBuilder();
-        builder.append("# TYPE " + key + " " +
-            metrics.type().toString().toLowerCase() + "\n");
-        builder.append(key + "{");
+        builder.append("# TYPE ")
+            .append(key)
+            .append(" ")
+            .append(metrics.type().toString().toLowerCase())
+            .append("\n")
+            .append(key)
+            .append("{");
         String sep = "";
 
         //add tags
@@ -74,13 +80,17 @@ public class PrometheusMetricsSink implements MetricsSink {
 
           //ignore specific tag which includes sub-hierarchy
           if (!tagName.equals("numopenconnectionsperuser")) {
-            builder.append(
-                sep + tagName + "=\"" + tag.value() + "\"");
+            builder.append(sep)
+                .append(tagName)
+                .append("=\"")
+                .append(tag.value())
+                .append("\"");
             sep = ",";
           }
         }
         builder.append("} ");
         builder.append(metrics.value());
+        builder.append("\n");
         metricLines.put(key, builder.toString());
 
       }
@@ -88,7 +98,7 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   /**
-   * Convert CamelCase based namess to lower-case names where the separator
+   * Convert CamelCase based names to lower-case names where the separator
    * is the underscore, to follow prometheus naming conventions.
    */
   public String prometheusName(String recordName,
@@ -99,29 +109,16 @@ public class PrometheusMetricsSink implements MetricsSink {
         recordName.startsWith(ROCKSDB_CONTEXT_PREFIX)) {
       return recordName.toLowerCase() + "_" + metricName.toLowerCase();
     }
-    String baseName = upperFirst(recordName) + upperFirst(metricName);
-    Matcher m = UPPER_CASE_SEQ.matcher(baseName);
-    StringBuffer sb = new StringBuffer();
-    while (m.find()) {
-      String replacement = "_" + m.group(2).toLowerCase();
-      if (m.group(1).length() > 0) {
-        replacement = "_" + m.group(1).toLowerCase() + replacement;
-      }
-      m.appendReplacement(sb, replacement);
-    }
-    m.appendTail(sb);
 
-    //always prefixed with "_"
-    return sb.toString().substring(1);
+    String baseName = StringUtils.capitalize(recordName)
+        + StringUtils.capitalize(metricName);
+    return normalizeName(baseName);
   }
 
-  private String upperFirst(String name) {
-    if (Character.isLowerCase(name.charAt(0))) {
-      return Character.toUpperCase(name.charAt(0)) + name.substring(1);
-    } else {
-      return name;
-    }
-
+  public static String normalizeName(String baseName) {
+    String[] parts = SPLIT_PATTERN.split(baseName);
+    String result = String.join("_", parts).toLowerCase();
+    return REPLACE_PATTERN.matcher(result).replaceAll("_");
   }
 
   @Override
@@ -136,7 +133,7 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   public void writeMetrics(Writer writer) throws IOException {
     for (String line : metricLines.values()) {
-      writer.write(line + "\n");
+      writer.write(line);
     }
   }
 }

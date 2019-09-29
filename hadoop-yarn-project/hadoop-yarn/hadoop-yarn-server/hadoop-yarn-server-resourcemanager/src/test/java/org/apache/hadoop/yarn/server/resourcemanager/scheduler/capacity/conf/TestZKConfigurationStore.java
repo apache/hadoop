@@ -117,6 +117,8 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
 
+    assertNull(confStore.retrieve().get(YarnConfiguration.RM_HOSTNAME));
+
     // Create a new configuration store, and check for old configuration
     confStore = createConfStore();
     schedConf.set("key", "badVal");

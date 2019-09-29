@@ -24,16 +24,12 @@ import org.apache.hadoop.registry.client.impl.zk.ZKPathDumper;
 import org.apache.hadoop.registry.client.impl.zk.CuratorService;
 import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Login;
-import org.apache.zookeeper.server.ZooKeeperSaslServer;
-import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
@@ -56,36 +52,6 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
   public void afterTestSecureZKService() throws Throwable {
     disableKerberosDebugging();
     RegistrySecurity.clearZKSaslClientProperties();
-  }
-
-  /**
-  * this is a cut and paste of some of the ZK internal code that was
-   * failing on windows and swallowing its exceptions
-   */
-  @Test
-  public void testLowlevelZKSaslLogin() throws Throwable {
-    RegistrySecurity.bindZKToServerJAASContext(ZOOKEEPER_SERVER_CONTEXT);
-    String serverSection =
-        System.getProperty(ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY,
-            ZooKeeperSaslServer.DEFAULT_LOGIN_CONTEXT_NAME);
-    assertEquals(ZOOKEEPER_SERVER_CONTEXT, serverSection);
-
-    AppConfigurationEntry entries[];
-    entries = javax.security.auth.login.Configuration.getConfiguration()
-                                                     .getAppConfigurationEntry(
-                                                         serverSection);
-
-    assertNotNull("null entries", entries);
-
-    SaslServerCallbackHandler saslServerCallbackHandler =
-        new SaslServerCallbackHandler(
-            javax.security.auth.login.Configuration.getConfiguration());
-    Login login = new Login(serverSection, saslServerCallbackHandler);
-    try {
-      login.startThreadIfNeeded();
-    } finally {
-      login.shutdown();
-    }
   }
 
   @Test

@@ -18,15 +18,10 @@
 
 package org.apache.hadoop.ozone.container.replication;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +29,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,8 +46,6 @@ public class SimpleContainerDownloader implements ContainerDownloader {
 
   private final Path workingDirectory;
 
-  private ExecutorService executor;
-
   public SimpleContainerDownloader(Configuration conf) {
 
     String workDirString =
@@ -65,12 +57,6 @@ public class SimpleContainerDownloader implements ContainerDownloader {
     } else {
       workingDirectory = Paths.get(workDirString);
     }
-
-    ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("Container downloader thread - %d").build();
-    executor = Executors.newSingleThreadExecutor(build);
-    LOG.info("Starting container downloader service to copy "
-        + "containers to replicate.");
   }
 
   @Override
@@ -110,11 +96,7 @@ public class SimpleContainerDownloader implements ContainerDownloader {
   }
 
   @Override
-  public void close() throws IOException {
-    try {
-      executor.awaitTermination(10, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      LOG.error("Can't stop container downloader gracefully", e);
-    }
+  public void close() {
+    // noop
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -45,7 +46,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
@@ -78,6 +79,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public static XceiverClientRatis newXceiverClientRatis(
       org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
       Configuration ozoneConf) {
+    return newXceiverClientRatis(pipeline, ozoneConf, null);
+  }
+
+  public static XceiverClientRatis newXceiverClientRatis(
+      org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
+      Configuration ozoneConf, X509Certificate caCert) {
     final String rpcType = ozoneConf
         .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
             ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
@@ -87,7 +94,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
     final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
-        SecurityConfig(ozoneConf));
+        SecurityConfig(ozoneConf), caCert);
     return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
         retryPolicy, tlsConfig, clientRequestTimeout);
@@ -218,10 +225,33 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               .build();
       boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
       ByteString byteString = finalPayload.toByteString();
-      LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest,
+            sanitizeForDebug(finalPayload));
+      }
       return isReadOnlyRequest ?
           getClient().sendReadOnlyAsync(() -> byteString) :
           getClient().sendAsync(() -> byteString);
+    }
+  }
+
+  private ContainerCommandRequestProto sanitizeForDebug(
+      ContainerCommandRequestProto request) {
+    switch (request.getCmdType()) {
+    case PutSmallFile:
+      return request.toBuilder()
+          .setPutSmallFile(request.getPutSmallFile().toBuilder()
+              .clearData()
+          )
+          .build();
+    case WriteChunk:
+      return request.toBuilder()
+          .setWriteChunk(request.getWriteChunk().toBuilder()
+              .clearData()
+          )
+          .build();
+    default:
+      return request;
     }
   }
 

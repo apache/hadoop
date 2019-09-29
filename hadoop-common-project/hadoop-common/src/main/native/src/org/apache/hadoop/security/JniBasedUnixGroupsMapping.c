@@ -199,8 +199,5 @@ done:
   if (ginfo) {
     hadoop_group_info_free(ginfo);
   }
-  if (jgroupname) {
-    (*env)->DeleteLocalRef(env, jgroupname);
-  }
   return jgroups;
 }

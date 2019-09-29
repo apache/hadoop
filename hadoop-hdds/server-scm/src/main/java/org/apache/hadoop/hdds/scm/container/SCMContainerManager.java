@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerInfoProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.metrics.SCMContainerManagerMetrics;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -33,9 +34,9 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.utils.BatchOperation;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.hdds.utils.BatchOperation;
+import org.apache.hadoop.hdds.utils.MetadataStore;
+import org.apache.hadoop.hdds.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +72,8 @@ public class SCMContainerManager implements ContainerManager {
   private final PipelineManager pipelineManager;
   private final ContainerStateManager containerStateManager;
   private final int numContainerPerOwnerInPipeline;
+
+  private final SCMContainerManagerMetrics scmContainerManagerMetrics;
 
   /**
    * Constructs a mapping class that creates mapping between container names
@@ -109,6 +112,8 @@ public class SCMContainerManager implements ContainerManager {
             ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
 
     loadExistingContainers();
+
+    scmContainerManagerMetrics = SCMContainerManagerMetrics.create();
   }
 
   private void loadExistingContainers() throws IOException {
@@ -204,6 +209,7 @@ public class SCMContainerManager implements ContainerManager {
       int count) {
     lock.lock();
     try {
+      scmContainerManagerMetrics.incNumListContainersOps();
       final long startId = startContainerID == null ?
           0 : startContainerID.getId();
       final List<ContainerID> containersIds =
@@ -241,11 +247,17 @@ public class SCMContainerManager implements ContainerManager {
   public ContainerInfo allocateContainer(final ReplicationType type,
       final ReplicationFactor replicationFactor, final String owner)
       throws IOException {
-    lock.lock();
     try {
-      final ContainerInfo containerInfo =
-          containerStateManager.allocateContainer(pipelineManager, type,
+      lock.lock();
+      ContainerInfo containerInfo = null;
+      try {
+        containerInfo =
+            containerStateManager.allocateContainer(pipelineManager, type,
               replicationFactor, owner);
+      } catch (IOException ex) {
+        scmContainerManagerMetrics.incNumFailureCreateContainers();
+        throw ex;
+      }
       // Add container to DB.
       try {
         addContainerToDB(containerInfo);
@@ -286,7 +298,9 @@ public class SCMContainerManager implements ContainerManager {
         LOG.warn("Unable to remove the container {} from container store," +
                 " it's missing!", containerID);
       }
+      scmContainerManagerMetrics.incNumSuccessfulDeleteContainers();
     } catch (ContainerNotFoundException cnfe) {
+      scmContainerManagerMetrics.incNumFailureDeleteContainers();
       throw new SCMException(
           "Failed to delete container " + containerID + ", reason : " +
               "container doesn't exist.",
@@ -447,9 +461,16 @@ public class SCMContainerManager implements ContainerManager {
           containerInfo.getContainerID());
       containerStore.put(containerIDBytes,
           containerInfo.getProtobuf().toByteArray());
+      // Incrementing here, as allocateBlock to create a container calls
+      // getMatchingContainer() and finally calls this API to add newly
+      // created container to DB.
+      // Even allocateContainer calls this API to add newly allocated
+      // container to DB. So we need to increment metrics here.
+      scmContainerManagerMetrics.incNumSuccessfulCreateContainers();
     } catch (IOException ex) {
       // If adding to containerStore fails, we should remove the container
       // from in-memory map.
+      scmContainerManagerMetrics.incNumFailureCreateContainers();
       LOG.error("Add Container to DB failed for ContainerID #{}",
           containerInfo.getContainerID());
       try {
@@ -545,6 +566,27 @@ public class SCMContainerManager implements ContainerManager {
     }
     if (containerStore != null) {
       containerStore.close();
+    }
+
+    if (scmContainerManagerMetrics != null) {
+      this.scmContainerManagerMetrics.unRegister();
+    }
+  }
+
+  public void notifyContainerReportProcessing(boolean isFullReport,
+      boolean success) {
+    if (isFullReport) {
+      if (success) {
+        scmContainerManagerMetrics.incNumContainerReportsProcessedSuccessful();
+      } else {
+        scmContainerManagerMetrics.incNumContainerReportsProcessedFailed();
+      }
+    } else {
+      if (success) {
+        scmContainerManagerMetrics.incNumICRReportsProcessedSuccessful();
+      } else {
+        scmContainerManagerMetrics.incNumICRReportsProcessedFailed();
+      }
     }
   }
 }

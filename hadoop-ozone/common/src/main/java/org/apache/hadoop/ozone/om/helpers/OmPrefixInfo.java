@@ -21,14 +21,12 @@ package org.apache.hadoop.ozone.om.helpers;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PrefixInfo;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Wrapper class for Ozone prefix path info, currently mainly target for ACL but
@@ -53,6 +51,18 @@ public final class OmPrefixInfo extends WithMetadata {
    */
   public List<OzoneAcl> getAcls() {
     return acls;
+  }
+
+  public boolean addAcl(OzoneAcl acl) {
+    return OzoneAclUtil.addAcl(acls, acl);
+  }
+
+  public boolean removeAcl(OzoneAcl acl) {
+    return OzoneAclUtil.removeAcl(acls, acl);
+  }
+
+  public boolean setAcls(List<OzoneAcl> newAcls) {
+    return OzoneAclUtil.setAcl(acls, newAcls);
   }
 
   /**
@@ -87,7 +97,9 @@ public final class OmPrefixInfo extends WithMetadata {
     }
 
     public Builder setAcls(List<OzoneAcl> listOfAcls) {
-      this.acls = listOfAcls;
+      if (listOfAcls != null) {
+        acls.addAll(listOfAcls);
+      }
       return this;
     }
 
@@ -115,7 +127,6 @@ public final class OmPrefixInfo extends WithMetadata {
      */
     public OmPrefixInfo build() {
       Preconditions.checkNotNull(name);
-      Preconditions.checkNotNull(acls);
       return new OmPrefixInfo(name, acls, metadata);
     }
   }
@@ -125,9 +136,10 @@ public final class OmPrefixInfo extends WithMetadata {
    */
   public PrefixInfo getProtobuf() {
     PrefixInfo.Builder pib =  PrefixInfo.newBuilder().setName(name)
-        .addAllAcls(acls.stream().map(OMPBHelper::convertOzoneAcl)
-            .collect(Collectors.toList()))
         .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+    if (acls != null) {
+      pib.addAllAcls(OzoneAclUtil.toProtobuf(acls));
+    }
     return pib.build();
   }
 
@@ -138,12 +150,13 @@ public final class OmPrefixInfo extends WithMetadata {
    */
   public static OmPrefixInfo getFromProtobuf(PrefixInfo prefixInfo) {
     OmPrefixInfo.Builder opib = OmPrefixInfo.newBuilder()
-        .setName(prefixInfo.getName())
-        .setAcls(prefixInfo.getAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+        .setName(prefixInfo.getName());
     if (prefixInfo.getMetadataList() != null) {
       opib.addAllMetadata(KeyValueUtil
           .getFromProtobuf(prefixInfo.getMetadataList()));
+    }
+    if (prefixInfo.getAclsList() != null) {
+      opib.setAcls(OzoneAclUtil.fromProtobuf(prefixInfo.getAclsList()));
     }
     return opib.build();
   }

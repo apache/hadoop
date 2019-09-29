@@ -2,7 +2,8 @@
 title: "Ozone ACLs"
 date: "2019-April-03"
 weight: 6
-summary: Native ACL support provides ACL functionality without Ranger integration.
+summary: Native Ozone Authorizer provides Access Control List (ACL) support for Ozone without Ranger integration.
+icon: transfer
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -21,9 +22,9 @@ summary: Native ACL support provides ACL functionality without Ranger integratio
   limitations under the License.
 -->
 
-Ozone supports a set of native ACLs. These ACLs cane be used independently or
- along with Ranger. If Apache Ranger is enabled, then ACL will be checked
- first with Ranger and then Ozone's internal ACLs will be evaluated.
+Ozone supports a set of native ACLs. These ACLs can be used independently or
+along with Ranger. If Apache Ranger is enabled, then ACL will be checked
+first with Ranger and then Ozone's internal ACLs will be evaluated.
 
 Ozone ACLs are a super set of Posix and S3 ACLs.
 
@@ -31,10 +32,10 @@ The general format of an ACL is _object_:_who_:_rights_.
 
 Where an _object_ can be:
 
-1. **Volume** - An Ozone volume.  e.g. /volume
-2. **Bucket** - An Ozone bucket. e.g. /volume/bucket
-3. **Key** - An object key or an object. e.g. /volume/bucket/key
-4. **Prefix** - A path prefix for a specific key. e.g. /volume/bucket/prefix1/prefix2
+1. **Volume** - An Ozone volume.  e.g. _/volume_
+2. **Bucket** - An Ozone bucket. e.g. _/volume/bucket_
+3. **Key** - An object key or an object. e.g. _/volume/bucket/key_
+4. **Prefix** - A path prefix for a specific key. e.g. _/volume/bucket/prefix1/prefix2_
 
 Where a _who_ can be:
 
@@ -63,23 +64,22 @@ volume and keys in a bucket. Please note: Under Ozone, Only admins can create vo
  to the volume and buckets which allow listing of the child objects. Please note: The user and admins can list the volumes owned by the user.
 3. **Delete** – Allows the user to delete a volume, bucket or key.
 4. **Read** – Allows the user to read the metadata of a Volume and Bucket and
-data stream and metadata of a key(object).
+data stream and metadata of a key.
 5. **Write** - Allows the user to write the metadata of a Volume and Bucket and
-allows the user to overwrite an existing ozone key(object).
+allows the user to overwrite an existing ozone key.
 6. **Read_ACL** – Allows a user to read the ACL on a specific object.
 7. **Write_ACL** – Allows a user to write the ACL on a specific object.
 
-<h3>Ozone Native ACL APIs <span class="badge badge-secondary">Work in
-progress</span></h3>
+<h3>Ozone Native ACL APIs</h3>
 
 The ACLs can be manipulated by a set of APIs supported by Ozone. The APIs
 supported are:
 
-1. **SetAcl** – This API will take user principal, the name of the object, type
- of the object and a list of ACLs.
-
-2. **GetAcl** – This API will take the name of an ozone object and type of the
-object and will return a list of ACLs.
-3. **RemoveAcl** - It is possible that we might support an API called RemoveACL
- as a convenience API, but in reality it is just a GetACL followed by SetACL
- with an etag to avoid conflicts.
+1. **SetAcl** – This API will take user principal, the name, type
+of the ozone object and a list of ACLs.
+2. **GetAcl** – This API will take the name and type of the ozone object
+and will return a list of ACLs.
+3. **AddAcl** - This API will take the name, type of the ozone object, the
+ACL, and add it to existing ACL entries of the ozone object.
+4. **RemoveAcl** - This API will take the name, type of the
+ozone object and the ACL that has to be removed.

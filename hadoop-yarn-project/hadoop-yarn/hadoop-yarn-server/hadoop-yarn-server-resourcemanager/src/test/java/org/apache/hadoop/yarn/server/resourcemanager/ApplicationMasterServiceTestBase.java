@@ -17,6 +17,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -351,6 +355,56 @@ public abstract class ApplicationMasterServiceTestBase {
               RMAppAttemptState.FINISHING);
     } finally {
       rm.stop();
+    }
+  }
+
+  @Test(timeout = 1200000)
+  public void testRepeatedFinishApplicationMaster() throws Exception {
+
+    CountingDispatcher dispatcher = new CountingDispatcher();
+    MockRM rm = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
+
+    try {
+      rm.start();
+      // Register node1
+      MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
+      // Submit an application
+      RMApp app1 = rm.submitApp(2048);
+      MockAM am1 = MockRM.launchAM(app1, rm, nm1);
+      am1.registerAppAttempt();
+      FinishApplicationMasterRequest req = FinishApplicationMasterRequest
+          .newInstance(FinalApplicationStatus.FAILED, "", "");
+      for (int i = 0; i < 10; i++) {
+        am1.unregisterAppAttempt(req, false);
+      }
+      rm.drainEvents();
+      Assert.assertEquals("Expecting only one event", 1,
+          dispatcher.getEventCount());
+    } finally {
+      rm.stop();
+    }
+  }
+
+  static class CountingDispatcher extends DrainDispatcher {
+    private int eventreceived = 0;
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    protected void dispatch(Event event) {
+      if (event.getType() == RMAppAttemptEventType.UNREGISTERED) {
+        eventreceived++;
+      } else {
+        super.dispatch(event);
+      }
+    }
+
+    public int getEventCount() {
+      return eventreceived;
     }
   }
 

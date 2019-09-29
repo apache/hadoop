@@ -160,13 +160,25 @@ public class StateStoreService extends CompositeService {
     this.addService(monitorService);
 
     // Set expirations intervals for each record
-    MembershipState.setExpirationMs(conf.getLong(
+    MembershipState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT));
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
+    MembershipState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS,
+        RBFConfigKeys
+            .FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
 
     RouterState.setExpirationMs(conf.getTimeDuration(
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS,
         RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
+
+    RouterState.setDeletionMs(conf.getTimeDuration(
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS,
+        RBFConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     // Cache update service

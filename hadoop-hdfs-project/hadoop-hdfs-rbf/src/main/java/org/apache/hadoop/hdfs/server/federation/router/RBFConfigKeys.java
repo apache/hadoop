@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -39,12 +38,6 @@ import java.util.concurrent.TimeUnit;
  */
 @InterfaceAudience.Private
 public class RBFConfigKeys extends CommonConfigurationKeysPublic {
-
-  public static final String HDFS_RBF_SITE_XML = "hdfs-rbf-site.xml";
-
-  static {
-    Configuration.addDefaultResource(HDFS_RBF_SITE_XML);
-  }
 
   // HDFS Router-based federation
   public static final String FEDERATION_ROUTER_PREFIX =
@@ -201,10 +194,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS
+      = FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT = -1;
   public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
       FEDERATION_STORE_PREFIX + "router.expiration";
   public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS =
+      FEDERATION_STORE_ROUTER_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT = -1;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =

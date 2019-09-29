@@ -26,12 +26,14 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.Table;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -251,7 +253,7 @@ public interface OMMetadataManager {
    *
    * @return Deleted Table.
    */
-  Table<String, OmKeyInfo> getDeletedTable();
+  Table<String, RepeatedOmKeyInfo> getDeletedTable();
 
   /**
    * Gets the OpenKeyTable.
@@ -316,4 +318,22 @@ public interface OMMetadataManager {
    */
   <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
       throws IOException;
+
+  /**
+   * Returns an estimated number of rows in a table.  This is much quicker
+   * than {@link OMMetadataManager#countRowsInTable} but the result can be
+   * inaccurate.
+   * @param table Table
+   * @return long Estimated number of rows in the table.
+   * @throws IOException
+   */
+  <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
+      throws IOException;
+
+  /**
+   * Return the existing upload keys which includes volumeName, bucketName,
+   * keyName.
+   */
+  List<String> getMultipartUploadKeys(String volumeName,
+      String bucketName, String prefix) throws IOException;
 }

@@ -120,7 +120,7 @@
     padding-right: 5pt;
 }
 
-.mount-table-icon:before {
+.federationhealth-mounttable-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
     font-family: 'Glyphicons Halflings';
@@ -131,9 +131,29 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
-.mount-table-read-only-true:before {
-    color: #5fa341;
+.federationhealth-mounttable-readonly:before {
+    color: #000000;
     content: "\e033";
+}
+
+.federationhealth-mounttable-readwrite:before {
+    color: #000000;
+    content: "\e065";
+}
+
+.federationhealth-mounttable-legend {
+    list-style-type: none;
+    text-align: right;
+}
+
+.federationhealth-mounttable-legend li {
+    display: inline;
+    padding: 10pt;
+    padding-left: 10pt;
+}
+
+.federationhealth-mounttable-legend li:before {
+    padding-right: 5pt;
 }
 
 .mount-table-fault-tolerant-true:before {

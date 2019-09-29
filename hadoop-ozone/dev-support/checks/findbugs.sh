@@ -13,22 +13,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
 
-FINDBUGS_ALL_FILE=./target/findbugs-all.txt
+if ! type unionBugs >/dev/null 2>&1 || ! type convertXmlToText >/dev/null 2>&1; then
+  mvn -B -fae compile spotbugs:check -f pom.ozone.xml
+  exit $?
+fi
 
-mkdir -p ./target
-rm "$FINDBUGS_ALL_FILE" || true
-touch "$FINDBUGS_ALL_FILE"
+mvn -B -fae compile spotbugs:spotbugs -f pom.ozone.xml
 
-mvn -fn findbugs:check -Dfindbugs.failOnError=false  -am -pl :hadoop-ozone-dist -Phdds
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
 
-find hadoop-ozone -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
-find hadoop-hdds -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+touch "$REPORT_FILE"
 
-bugs=$(cat "$FINDBUGS_ALL_FILE" | wc -l)
+find hadoop-hdds hadoop-ozone -name spotbugsXml.xml -print0 | xargs -0 unionBugs -output "${REPORT_DIR}"/summary.xml
+convertXmlToText "${REPORT_DIR}"/summary.xml | tee -a "${REPORT_FILE}"
+convertXmlToText -html:fancy-hist.xsl "${REPORT_DIR}"/summary.xml "${REPORT_DIR}"/summary.html
 
-if [[ ${bugs} -gt 0 ]]; then
-   exit -1
-else
-   exit 0
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
+   exit 1
 fi

@@ -77,6 +77,10 @@ public class QueueMetrics implements MetricsSource {
   @Metric("# of active applications") MutableGaugeInt activeApplications;
   @Metric("App Attempt First Container Allocation Delay")
     MutableRate appAttemptFirstContainerAllocationDelay;
+  @Metric("Aggregate total of preempted memory MB")
+    MutableCounterLong aggregateMemoryMBPreempted;
+  @Metric("Aggregate total of preempted vcores")
+    MutableCounterLong aggregateVcoresPreempted;
 
   //Metrics updated only for "default" partition
   @Metric("Allocated memory in MB") MutableGaugeLong allocatedMB;
@@ -586,6 +590,23 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  public void updatePreemptedResources(Resource res) {
+    aggregateMemoryMBPreempted.incr(res.getMemorySize());
+    aggregateVcoresPreempted.incr(res.getVirtualCores());
+    if (parent != null) {
+      parent.updatePreemptedResources(res);
+    }
+  }
+
+  public void updatePreemptedForCustomResources(Resource res) {
+    if (queueMetricsForCustomResources != null) {
+      queueMetricsForCustomResources.increaseAggregatedPreempted(res);
+    }
+    if (parent != null) {
+      parent.updatePreemptedForCustomResources(res);
+    }
+  }
+
   public void updatePreemptedSecondsForCustomResources(Resource res,
           long seconds) {
     if (queueMetricsForCustomResources != null) {
@@ -753,6 +774,16 @@ public class QueueMetrics implements MetricsSource {
     return aggregateVcoreSecondsPreempted;
   }
 
+  @VisibleForTesting
+  public long getAggregateMemoryMBPreempted() {
+    return aggregateMemoryMBPreempted.value();
+  }
+
+  @VisibleForTesting
+  public long getAggregateVcoresPreempted() {
+    return aggregateVcoresPreempted.value();
+  }
+
   public long getAllocatedMB() {
     return allocatedMB.value();
   }
@@ -833,7 +864,37 @@ public class QueueMetrics implements MetricsSource {
     return aggregateContainersPreempted.value();
   }
 
-  public QueueMetricsForCustomResources getQueueMetricsForCustomResources() {
-    return queueMetricsForCustomResources;
+  /**
+   * Fills in Resource values from available metrics values of custom resources
+   * to @code{targetResource}, only if the corresponding
+   * value of @code{targetResource} is zero.
+   * If @code{fromResource} has a value less than the available metrics value
+   * for a particular resource, it will be set to the @code{targetResource}
+   * instead.
+   *
+   * @param fromResource The resource to compare available resource values with.
+   * @param targetResource The resource to save the values into.
+   */
+  public void fillInValuesFromAvailableResources(Resource fromResource,
+      Resource targetResource) {
+    if (queueMetricsForCustomResources != null) {
+      QueueMetricsCustomResource availableResources =
+          queueMetricsForCustomResources.getAvailable();
+
+      // We expect all custom resources contained in availableResources,
+      // so we will loop through all of them.
+      for (Map.Entry<String, Long> availableEntry : availableResources
+          .getValues().entrySet()) {
+        String resourceName = availableEntry.getKey();
+
+        // We only update the value if fairshare is 0 for that resource.
+        if (targetResource.getResourceValue(resourceName) == 0) {
+          Long availableValue = availableEntry.getValue();
+          long value = Math.min(availableValue,
+              fromResource.getResourceValue(resourceName));
+          targetResource.setResourceValue(resourceName, value);
+        }
+      }
+    }
   }
 }

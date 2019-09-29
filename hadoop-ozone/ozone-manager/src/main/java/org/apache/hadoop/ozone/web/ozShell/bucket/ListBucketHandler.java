@@ -18,19 +18,15 @@
 
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Visibility;
@@ -85,20 +81,20 @@ public class ListBucketHandler extends Handler {
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     Iterator<? extends OzoneBucket> bucketIterator =
         vol.listBuckets(prefix, startBucket);
-    List<BucketInfo> bucketList = new ArrayList<>();
+
+    int counter = 0;
     while (maxBuckets > 0 && bucketIterator.hasNext()) {
-      BucketInfo bucketInfo =
-          OzoneClientUtils.asBucketInfo(bucketIterator.next());
-      bucketList.add(bucketInfo);
+      ObjectPrinter.printObjectAsJson(bucketIterator.next());
+
       maxBuckets -= 1;
+      counter++;
     }
 
     if (isVerbose()) {
       System.out.printf("Found : %d buckets for volume : %s ",
-          bucketList.size(), volumeName);
+          counter, volumeName);
     }
-    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(bucketList)));
+
     return null;
   }
 

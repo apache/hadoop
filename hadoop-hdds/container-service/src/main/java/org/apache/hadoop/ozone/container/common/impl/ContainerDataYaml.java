@@ -80,6 +80,7 @@ public final class ContainerDataYaml {
   public static void createContainerFile(ContainerType containerType,
       ContainerData containerData, File containerFile) throws IOException {
     Writer writer = null;
+    FileOutputStream out = null;
     try {
       // Create Yaml for given container type
       Yaml yaml = getYamlForContainerType(containerType);
@@ -87,13 +88,17 @@ public final class ContainerDataYaml {
       containerData.computeAndSetChecksum(yaml);
 
       // Write the ContainerData with checksum to Yaml file.
-      writer = new OutputStreamWriter(new FileOutputStream(
-          containerFile), "UTF-8");
+      out = new FileOutputStream(
+          containerFile);
+      writer = new OutputStreamWriter(out, "UTF-8");
       yaml.dump(containerData, writer);
 
     } finally {
       try {
         if (writer != null) {
+          writer.flush();
+          // make sure the container metadata is synced to disk.
+          out.getFD().sync();
           writer.close();
         }
       } catch (IOException ex) {

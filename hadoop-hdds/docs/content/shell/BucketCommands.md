@@ -1,7 +1,7 @@
 ---
 title: Bucket Commands
 summary: Bucket commands help you to manage the life cycle of a volume.
-weight: 2
+weight: 3
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -26,17 +26,18 @@ Ozone shell supports the following bucket commands.
   * [delete](#delete)
   * [info](#info)
   * [list](#list)
-  * [update](#update)
 
 ### Create
 
-The bucket create command allows users to create a bucket.
+The `bucket create` command allows users to create a bucket.
 
 ***Params:***
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
+| -g, \-\-enforcegdpr            | Optional, if set to true it creates a GDPR compliant bucket, if not specified or set to false, it creates an ordinary bucket.
 |  Uri                           | The name of the bucket in **/volume/bucket** format.
+
 
 {{< highlight bash >}}
 ozone sh bucket create /hive/jan
@@ -47,7 +48,7 @@ Since no scheme was specified this command defaults to O3 (RPC) protocol.
 
 ### Delete
 
-The bucket delete command allows users to delete a bucket. If the
+The `bucket delete` command allows users to delete a bucket. If the
 bucket is not empty then this command will fail.
 
 ***Params:***
@@ -64,7 +65,8 @@ The above command will delete _jan_ bucket if it is empty.
 
 ### Info
 
-The bucket info commands returns the information about the bucket.
+The `bucket info` commands returns the information about the bucket.
+
 ***Params:***
 
 | Arguments                      |  Comment                                |
@@ -79,15 +81,15 @@ The above command will print out the information about _jan_ bucket.
 
 ### List
 
-The bucket list command allows users to list the buckets in a volume.
+The `bucket list` command allows users to list the buckets in a volume.
 
 ***Params:***
 
 | Arguments                      |  Comment                                |
 |--------------------------------|-----------------------------------------|
-| -l, --length                   | Maximum number of results to return. Default: 100
-| -p, --prefix                   | Optional, Only buckets that match this prefix will be returned.
-| -s, --start                    | The listing will start from key after the start key.
+| -l, \-\-length                   | Maximum number of results to return. Default: 100
+| -p, \-\-prefix                   | Optional, Only buckets that match this prefix will be returned.
+| -s, \-\-start                    | The listing will start from key after the start key.
 |  Uri                           | The name of the _volume_.
 
 {{< highlight bash >}}
@@ -95,35 +97,3 @@ ozone sh bucket list /hive
 {{< /highlight >}}
 
 This command will list all buckets on the volume _hive_.
-
-
-
-### Update
-
-The bucket update command allows changing access permissions on bucket.
-
-***Params:***
-
-| Arguments                      |  Comment                                |
-|--------------------------------|-----------------------------------------|
-| --addAcl                       | Optional, Comma separated ACLs that will added to bucket.
-|  --removeAcl                   | Optional, Comma separated list of acl to remove.
-|  Uri                           | The name of the bucket.
-
-{{< highlight bash >}}
-ozone sh bucket update --addAcl=user:bilbo:rw /hive/jan
-{{< /highlight >}}
-
-The above command gives user bilbo read/write permission to the bucket.
-
-### path
-The bucket command to provide ozone mapping for s3 bucket (Created via aws cli)
-
-{{< highlight bash >}}
-ozone s3 path <<s3Bucket>>
-{{< /highlight >}}
-
-The above command will print VolumeName and the mapping created for s3Bucket.
-
-You can try out these commands from the docker instance of the [Alpha
-Cluster](runningviadocker.html).

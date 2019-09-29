@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -53,7 +52,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -401,7 +399,6 @@ public class TestDistributedShell {
     YarnClient yarnClient = YarnClient.createYarnClient();
     yarnClient.init(new Configuration(yarnCluster.getConfig()));
     yarnClient.start();
-    String hostName = NetUtils.getHostname();
 
     boolean verified = false;
     String errorMessage = "";
@@ -420,10 +417,9 @@ public class TestDistributedShell {
         continue;
       }
       errorMessage =
-          "Expected host name to start with '" + hostName + "', was '"
-              + appReport.getHost() + "'. Expected rpc port to be '-1', was '"
+          "'. Expected rpc port to be '-1', was '"
               + appReport.getRpcPort() + "'.";
-      if (checkHostname(appReport.getHost()) && appReport.getRpcPort() == -1) {
+      if (appReport.getRpcPort() == -1) {
         verified = true;
       }
 
@@ -728,64 +724,6 @@ public class TestDistributedShell {
     List<String> argsList = new ArrayList<String>(Arrays.asList(args));
     argsList.addAll(Arrays.asList(newArgs));
     return argsList.toArray(new String[argsList.size()]);
-  }
-
-  /*
-   * NetUtils.getHostname() returns a string in the form "hostname/ip".
-   * Sometimes the hostname we get is the FQDN and sometimes the short name. In
-   * addition, on machines with multiple network interfaces, it runs any one of
-   * the ips. The function below compares the returns values for
-   * NetUtils.getHostname() accounting for the conditions mentioned.
-   */
-  private boolean checkHostname(String appHostname) throws Exception {
-
-    String hostname = NetUtils.getHostname();
-    if (hostname.equals(appHostname)) {
-      return true;
-    }
-
-    Assert.assertTrue("Unknown format for hostname " + appHostname,
-      appHostname.contains("/"));
-    Assert.assertTrue("Unknown format for hostname " + hostname,
-      hostname.contains("/"));
-
-    String[] appHostnameParts = appHostname.split("/");
-    String[] hostnameParts = hostname.split("/");
-
-    return (compareFQDNs(appHostnameParts[0], hostnameParts[0]) && checkIPs(
-      hostnameParts[0], hostnameParts[1], appHostnameParts[1]));
-  }
-
-  private boolean compareFQDNs(String appHostname, String hostname)
-      throws Exception {
-    if (appHostname.equals(hostname)) {
-      return true;
-    }
-    String appFQDN = InetAddress.getByName(appHostname).getCanonicalHostName();
-    String localFQDN = InetAddress.getByName(hostname).getCanonicalHostName();
-    return appFQDN.equals(localFQDN);
-  }
-
-  private boolean checkIPs(String hostname, String localIP, String appIP)
-      throws Exception {
-
-    if (localIP.equals(appIP)) {
-      return true;
-    }
-    boolean appIPCheck = false;
-    boolean localIPCheck = false;
-    InetAddress[] addresses = InetAddress.getAllByName(hostname);
-    for (InetAddress ia : addresses) {
-      if (ia.getHostAddress().equals(appIP)) {
-        appIPCheck = true;
-        continue;
-      }
-      if (ia.getHostAddress().equals(localIP)) {
-        localIPCheck = true;
-      }
-    }
-    return (appIPCheck && localIPCheck);
-
   }
 
   protected String getSleepCommand(int sec) {

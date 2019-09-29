@@ -23,6 +23,7 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +35,8 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeSetQuotaResponse;
-import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -49,8 +48,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyResponse;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 
@@ -58,7 +57,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_L
 /**
  * Handles set Quota request for volume.
  */
-public class OMVolumeSetQuotaRequest extends OMClientRequest {
+public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeSetQuotaRequest.class);
 
@@ -68,7 +67,8 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     SetVolumePropertyRequest setVolumePropertyRequest =
         getOmRequest().getSetVolumePropertyRequest();
@@ -100,6 +100,10 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
     auditMap.put(OzoneConsts.QUOTA,
         String.valueOf(setVolumePropertyRequest.getQuotaInBytes()));
 
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    IOException exception = null;
+    boolean acquireVolumeLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -107,24 +111,11 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE, volume,
             null, null);
       }
-    } catch (IOException ex) {
-      LOG.error("Changing volume quota failed for volume:{} quota:{}", volume,
-          setVolumePropertyRequest.getQuotaInBytes(), ex);
-      omMetrics.incNumVolumeUpdateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.SET_QUOTA, auditMap,
-          ex, userInfo));
-      return new OMVolumeCreateResponse(null, null,
-          createErrorOMResponse(omResponse, ex));
-    }
 
+      OmVolumeArgs omVolumeArgs = null;
 
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-
-    IOException exception = null;
-    OmVolumeArgs omVolumeArgs = null;
-
-    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
-    try {
+      acquireVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
+          volume);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -140,10 +131,23 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
           new CacheKey<>(dbVolumeKey),
           new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
 
+      omResponse.setSetVolumePropertyResponse(
+          SetVolumePropertyResponse.newBuilder().build());
+      omClientResponse = new OMVolumeSetQuotaResponse(omVolumeArgs,
+        omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMVolumeSetQuotaResponse(null,
+          createErrorOMResponse(omResponse, exception));
     } finally {
-      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
+      if (acquireVolumeLock) {
+        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      }
     }
 
     // Performing audit logging outside of the lock.
@@ -152,17 +156,17 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
 
     // return response after releasing lock.
     if (exception == null) {
-      omResponse.setSetVolumePropertyResponse(
-          SetVolumePropertyResponse.newBuilder().build());
-      return new OMVolumeSetQuotaResponse(omVolumeArgs, omResponse.build());
+      LOG.debug("Changing volume quota is successfully completed for volume: " +
+          "{} quota:{}", volume, setVolumePropertyRequest.getQuotaInBytes());
     } else {
       omMetrics.incNumVolumeUpdateFails();
       LOG.error("Changing volume quota failed for volume:{} quota:{}", volume,
           setVolumePropertyRequest.getQuotaInBytes(), exception);
-      return new OMVolumeSetQuotaResponse(null,
-          createErrorOMResponse(omResponse, exception));
     }
+    return omClientResponse;
   }
 
 
 }
+
+

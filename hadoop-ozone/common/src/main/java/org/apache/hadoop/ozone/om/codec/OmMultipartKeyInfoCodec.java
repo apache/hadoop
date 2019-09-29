@@ -22,7 +22,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.Codec;
 
 
 /**
