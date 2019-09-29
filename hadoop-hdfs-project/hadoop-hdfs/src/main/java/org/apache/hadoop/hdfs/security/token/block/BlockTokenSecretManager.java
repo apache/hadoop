@@ -65,17 +65,6 @@ public class BlockTokenSecretManager extends
 
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
-  /**
-   * In order to prevent serial No. of different NameNode from overlapping,
-   * Using 6 bits (identify 64=2^6 namenodes, and presuppose that no scenario
-   * where deploy more than 64 namenodes (include ANN, SBN, Observers, etc.)
-   * in one namespace) to identify index of NameNode, and the remainder 26 bits
-   * auto-incr to change the serial No.
-   */
-  @VisibleForTesting
-  public static final int NUM_VALID_BITS = 26;
-  private static final int LOW_MASK = (1 << NUM_VALID_BITS) - 1;
-
   private final boolean isMaster;
 
   /**
@@ -92,8 +81,8 @@ public class BlockTokenSecretManager extends
   private String blockPoolId;
   private final String encryptionAlgorithm;
 
-  private final int nnIndex;
-
+  private final int intRange;
+  private final int nnRangeStart;
   private final boolean useProto;
 
   private final boolean shouldWrapQOP;
@@ -152,7 +141,8 @@ public class BlockTokenSecretManager extends
   private BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
       long tokenLifetime, String blockPoolId, String encryptionAlgorithm,
       int nnIndex, int numNNs, boolean useProto, boolean shouldWrapQOP) {
-    this.nnIndex = nnIndex;
+    this.intRange = Integer.MAX_VALUE / numNNs;
+    this.nnRangeStart = intRange * nnIndex;
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
@@ -167,7 +157,8 @@ public class BlockTokenSecretManager extends
 
   @VisibleForTesting
   public synchronized void setSerialNo(int serialNo) {
-    this.serialNo = (serialNo & LOW_MASK) | (nnIndex << NUM_VALID_BITS);
+    // we mod the serial number by the range and then add that times the index
+    this.serialNo = (serialNo % intRange) + (nnRangeStart);
   }
 
   public void setBlockPoolId(String blockPoolId) {
