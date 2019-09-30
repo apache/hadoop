@@ -108,6 +108,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD = "fs.azure.account.oauth2.user.password";
   /** Key for oauth refresh token: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
+  /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
+  public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;
