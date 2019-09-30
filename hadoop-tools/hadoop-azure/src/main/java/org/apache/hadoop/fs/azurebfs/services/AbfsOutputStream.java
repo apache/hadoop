@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -289,10 +290,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        client.append(path, offset, bytes, 0,
-            bytesLength);
-        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-        return null;
+        final Instant start = client.latencyTracker.getLatencyInstant();
+        boolean success = false;
+        AbfsHttpOperation res = null;
+        try {
+          res = client.append(path, offset, bytes, 0,
+                  bytesLength).getResult();
+          byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+          success = true;
+          return null;
+        } finally {
+          client.latencyTracker.recordClientLatency(start, "writeCurrentBufferToService", "append", success, res);
+        }
       }
     });
 
@@ -334,8 +343,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
+    final Instant start = client.latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
+
     try {
-      client.flush(path, offset, retainUncommitedData, isClose);
+      res = client.flush(path, offset, retainUncommitedData, isClose).getResult();
+      success = true;
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -343,6 +357,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         }
       }
       throw new IOException(ex);
+    } finally {
+      client.latencyTracker.recordClientLatency(start, "flushWrittenBytesToServiceInternal", "flush", success, res);
     }
     this.lastFlushOffset = offset;
   }
