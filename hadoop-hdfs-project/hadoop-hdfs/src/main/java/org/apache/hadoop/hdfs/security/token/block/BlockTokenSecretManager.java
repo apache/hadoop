@@ -122,8 +122,6 @@ public class BlockTokenSecretManager extends
         encryptionAlgorithm, nnIndex, numNNs, useProto, shouldWrapQOP);
     Preconditions.checkArgument(nnIndex >= 0);
     Preconditions.checkArgument(numNNs > 0);
-    setSerialNo(new SecureRandom().nextInt());
-    generateKeys();
   }
 
   /**
@@ -152,13 +150,19 @@ public class BlockTokenSecretManager extends
     this.useProto = useProto;
     this.shouldWrapQOP = shouldWrapQOP;
     this.timer = new Timer();
+    setSerialNo(new SecureRandom().nextInt(Integer.MAX_VALUE));
+    LOG.info("Block token key range: [{}, {})",
+        nnRangeStart, nnRangeStart + intRange);
     generateKeys();
   }
 
   @VisibleForTesting
-  public synchronized void setSerialNo(int serialNo) {
+  public synchronized void setSerialNo(int nextNo) {
     // we mod the serial number by the range and then add that times the index
-    this.serialNo = (serialNo % intRange) + (nnRangeStart);
+    this.serialNo = (nextNo % intRange) + (nnRangeStart);
+    assert serialNo >= nnRangeStart && serialNo < (nnRangeStart + intRange) :
+      "serialNo " + serialNo + " is not in the designated range: [" +
+      nnRangeStart + ", " + (nnRangeStart + intRange) + ")";
   }
 
   public void setBlockPoolId(String blockPoolId) {
