@@ -229,6 +229,13 @@
                         <exclude>update*</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>com.google.protobuf:protobuf-java</artifact>
+                      <excludes>
+                        <exclude>google/protobuf/*.proto</exclude>
+                        <exclude>google/protobuf/**/*.proto</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>

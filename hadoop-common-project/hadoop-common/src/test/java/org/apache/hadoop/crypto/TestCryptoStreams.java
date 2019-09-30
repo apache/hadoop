@@ -331,6 +331,30 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     }
 
     @Override
+    public void readFully(long position, ByteBuffer buf) throws IOException {
+      if (buf == null) {
+        throw new NullPointerException();
+      } else if (!buf.hasRemaining()) {
+        return;
+      }
+
+      if (position > length) {
+        throw new IOException("Cannot read after EOF.");
+      }
+      if (position < 0) {
+        throw new IOException("Cannot read to negative offset.");
+      }
+
+      checkStream();
+
+      if (position + buf.remaining() > length) {
+        throw new EOFException("Reach the end of stream.");
+      }
+
+      buf.put(data, (int) position, buf.remaining());
+    }
+
+    @Override
     public void readFully(long position, byte[] b, int off, int len)
         throws IOException {
       if (b == null) {

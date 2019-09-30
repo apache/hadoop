@@ -680,7 +680,7 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket),
+          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
@@ -1236,9 +1236,12 @@ public final class S3ATestUtils {
    * Skip a test if the FS isn't marked as supporting magic commits.
    * @param fs filesystem
    */
-  public static void assumeMagicCommitEnabled(S3AFileSystem fs) {
+  public static void assumeMagicCommitEnabled(S3AFileSystem fs)
+      throws IOException {
     assume("Magic commit option disabled on " + fs,
-        fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
+        fs.hasPathCapability(
+            fs.getWorkingDirectory(),
+            CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
   }
 
   /**

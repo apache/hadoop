@@ -1203,14 +1203,59 @@ public final class S3AUtils {
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return new AWS client configuration
    * @throws IOException problem creating AWS client configuration
+   *
+   * @deprecated use {@link #createAwsConf(Configuration, String, String)}
    */
+  @Deprecated
   public static ClientConfiguration createAwsConf(Configuration conf,
       String bucket)
+      throws IOException {
+    return createAwsConf(conf, bucket, null);
+  }
+
+  /**
+   * Create a new AWS {@code ClientConfiguration}. All clients to AWS services
+   * <i>MUST</i> use this or the equivalents for the specific service for
+   * consistent setup of connectivity, UA, proxy settings.
+   *
+   * @param conf The Hadoop configuration
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param awsServiceIdentifier a string representing the AWS service (S3,
+   * DDB, etc) for which the ClientConfiguration is being created.
+   * @return new AWS client configuration
+   * @throws IOException problem creating AWS client configuration
+   */
+  public static ClientConfiguration createAwsConf(Configuration conf,
+      String bucket, String awsServiceIdentifier)
       throws IOException {
     final ClientConfiguration awsConf = new ClientConfiguration();
     initConnectionSettings(conf, awsConf);
     initProxySupport(conf, bucket, awsConf);
     initUserAgent(conf, awsConf);
+    if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
+      String configKey = null;
+      switch (awsServiceIdentifier) {
+      case AWS_SERVICE_IDENTIFIER_S3:
+        configKey = SIGNING_ALGORITHM_S3;
+        break;
+      case AWS_SERVICE_IDENTIFIER_DDB:
+        configKey = SIGNING_ALGORITHM_DDB;
+        break;
+      case AWS_SERVICE_IDENTIFIER_STS:
+        configKey = SIGNING_ALGORITHM_STS;
+        break;
+      default:
+        // Nothing to do. The original signer override is already setup
+      }
+      if (configKey != null) {
+        String signerOverride = conf.getTrimmed(configKey, "");
+        if (!signerOverride.isEmpty()) {
+          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier,
+              signerOverride);
+          awsConf.setSignerOverride(signerOverride);
+        }
+      }
+    }
     return awsConf;
   }
 

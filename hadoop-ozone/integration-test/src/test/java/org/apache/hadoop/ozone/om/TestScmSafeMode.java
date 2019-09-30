@@ -332,7 +332,7 @@ public class TestScmSafeMode {
 
   @Test(timeout = 300_000)
   public void testSCMSafeModeDisabled() throws Exception {
-    cluster.stop();
+    cluster.shutdown();
 
     // If safe mode is disabled, cluster should not be in safe mode even if
     // min number of datanodes are not started.

@@ -51,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -84,6 +85,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystemHelper.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -3865,5 +3867,20 @@ public class NativeAzureFileSystem extends FileSystem {
   @VisibleForTesting
   void updateDaemonUsers(List<String> daemonUsers) {
     this.daemonUsers = daemonUsers;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(path, capability)) {
+
+    case CommonPathCapabilities.FS_PERMISSIONS:
+      return true;
+    // Append support is dynamic
+    case CommonPathCapabilities.FS_APPEND:
+      return appendSupportEnabled;
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

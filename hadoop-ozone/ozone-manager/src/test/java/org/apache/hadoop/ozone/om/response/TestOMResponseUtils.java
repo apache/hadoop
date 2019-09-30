@@ -58,6 +58,8 @@ public final class TestOMResponseUtils {
 
     OzoneManagerProtocolProtos.VolumeList volumeList =
         OzoneManagerProtocolProtos.VolumeList.newBuilder()
+            .setObjectID(1)
+            .setUpdateID(1)
             .addVolumeNames(volumeName).build();
 
     OmVolumeArgs omVolumeArgs = OmVolumeArgs.newBuilder()

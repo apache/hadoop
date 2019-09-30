@@ -51,7 +51,15 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
+  /** Provides a config control to enable or disable ABFS Flush operations -
+   *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
+  /** Provides a config control to disable or enable OutputStream Flush API
+   *  operations in AbfsOutputStream. Flush() will trigger actions that
+   *  guarantee that buffered data is persistent with a perf cost while the API
+   *  documentation does not have such expectations of data being persisted.
+   *  Default value of this config is true. **/
+  public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
   public static final String FS_AZURE_USE_UPN = "fs.azure.use.upn";

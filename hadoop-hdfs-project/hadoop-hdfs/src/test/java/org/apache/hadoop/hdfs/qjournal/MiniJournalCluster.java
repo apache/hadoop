@@ -196,7 +196,11 @@ public class MiniJournalCluster {
   public JournalNode getJournalNode(int i) {
     return nodes[i].node;
   }
-  
+
+  public String getJournalNodeIpcAddress(int i) {
+    return nodes[i].ipcAddr.toString();
+  }
+
   public void restartJournalNode(int i) throws InterruptedException, IOException {
     JNInfo info = nodes[i];
     JournalNode jn = info.node;

@@ -86,6 +86,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
@@ -2667,7 +2668,7 @@ public abstract class TestOzoneRpcClientAbstract {
    * @throws Exception
    */
   @Test
-  public void testGDPR() throws Exception {
+  public void testKeyReadWriteForGDPR() throws Exception {
     //Step 1
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
@@ -2732,5 +2733,78 @@ public abstract class TestOzoneRpcClientAbstract {
     //Step 6
     Assert.assertNotEquals(text, new String(fileContent));
 
+  }
+
+  /**
+   * Tests deletedKey for GDPR.
+   * 1. Create GDPR Enabled bucket.
+   * 2. Create a Key in this bucket so it gets encrypted via GDPRSymmetricKey.
+   * 3. Read key and validate the content/metadata is as expected because the
+   * readKey will decrypt using the GDPR Symmetric Key with details from KeyInfo
+   * Metadata.
+   * 4. Delete this key in GDPR enabled bucket
+   * 5. Confirm the deleted key metadata in deletedTable does not contain the
+   * GDPR encryption details (flag, secret, algorithm).
+   * @throws Exception
+   */
+  @Test
+  public void testDeletedKeyForGDPR() throws Exception {
+    //Step 1
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs args = BucketArgs.newBuilder()
+        .addMetadata(OzoneConsts.GDPR_FLAG, "true").build();
+    volume.createBucket(bucketName, args);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertNotNull(bucket.getMetadata());
+    Assert.assertEquals("true",
+        bucket.getMetadata().get(OzoneConsts.GDPR_FLAG));
+
+    //Step 2
+    String text = "hello world";
+    Map<String, String> keyMetadata = new HashMap<>();
+    keyMetadata.put(OzoneConsts.GDPR_FLAG, "true");
+    OzoneOutputStream out = bucket.createKey(keyName,
+        text.getBytes().length, STAND_ALONE, ONE, keyMetadata);
+    out.write(text.getBytes());
+    out.close();
+
+    //Step 3
+    OzoneKeyDetails key = bucket.getKey(keyName);
+
+    Assert.assertEquals(keyName, key.getName());
+    Assert.assertEquals("true", key.getMetadata().get(OzoneConsts.GDPR_FLAG));
+    Assert.assertEquals("AES",
+        key.getMetadata().get(OzoneConsts.GDPR_ALGORITHM));
+    Assert.assertTrue(key.getMetadata().get(OzoneConsts.GDPR_SECRET) != null);
+
+    OzoneInputStream is = bucket.readKey(keyName);
+    byte[] fileContent = new byte[text.getBytes().length];
+    is.read(fileContent);
+    Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+        keyName, STAND_ALONE,
+        ONE));
+    Assert.assertEquals(text, new String(fileContent));
+
+    //Step 4
+    bucket.deleteKey(keyName);
+
+    //Step 5
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    String objectKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
+        keyName);
+    RepeatedOmKeyInfo deletedKeys =
+        omMetadataManager.getDeletedTable().get(objectKey);
+    Map<String, String> deletedKeyMetadata =
+        deletedKeys.getOmKeyInfoList().get(0).getMetadata();
+    Assert.assertFalse(deletedKeyMetadata.containsKey(OzoneConsts.GDPR_FLAG));
+    Assert.assertFalse(deletedKeyMetadata.containsKey(OzoneConsts.GDPR_SECRET));
+    Assert.assertFalse(
+        deletedKeyMetadata.containsKey(OzoneConsts.GDPR_ALGORITHM));
   }
 }
