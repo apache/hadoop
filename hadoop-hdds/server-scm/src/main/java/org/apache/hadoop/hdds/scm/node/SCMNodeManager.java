@@ -603,7 +603,7 @@ public class SCMNodeManager implements NodeManager {
 
   /**
    * Given datanode address(Ipaddress or hostname), return a list of
-   * DatanodeDetails for the datanodes registed on that address
+   * DatanodeDetails for the datanodes registered on that address.
    *
    * @param address datanode address
    * @return the given datanode, or empty list if none found
