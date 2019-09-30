@@ -106,6 +106,9 @@ public class DirectoryStagingCommitter extends StagingCommitter {
   public void preCommitJob(
       final JobContext context,
       final ActiveCommit pending) throws IOException {
+
+    // see if the files can be loaded.
+    super.preCommitJob(context, pending);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     Configuration fsConf = fs.getConf();

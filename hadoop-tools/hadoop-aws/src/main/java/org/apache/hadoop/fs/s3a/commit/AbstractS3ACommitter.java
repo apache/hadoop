@@ -482,6 +482,30 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
+   * Run a precommit check that all files are loadable.
+   * This check avoids the situation where the inability to read
+   * a file only surfaces partway through the job commit, so
+   * results in the destination being tainted.
+   * @param context job context
+   * @param pending the pending operations
+   * @throws IOException any failure
+   */
+  protected void precommitCheckPendingFiles(
+      final JobContext context,
+      final ActiveCommit pending) throws IOException {
+
+    FileSystem sourceFS = pending.getSourceFS();
+    try (DurationInfo ignored =
+             new DurationInfo(LOG, "Preflight Load of pending files")) {
+
+      Tasks.foreach(pending.getSourceFiles())
+          .stopOnFailure()
+          .executeWith(buildThreadPool(context))
+          .run(path -> PendingSet.load(sourceFS, path));
+    }
+  }
+
+  /**
    * Load a pendingset file and commit all of its contents.
    * @param commitContext context to commit through
    * @param activeCommit commit state
@@ -656,6 +680,10 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
   /**
    * Subclass-specific pre-Job-commit actions.
+   * The staging committers all load the pending files to verify that
+   * they can be loaded.
+   * The Magic committer does not, because of the overhead of reading files
+   * from S3 makes it too expensive.
    * @param context job context
    * @param pending the pending operations
    * @throws IOException any failure
@@ -675,7 +703,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * <p>
    * Commit internal: do the final commit sequence.
    * <p>
-   * The final commit action is to build the {@code __SUCCESS} file entry.
+   * The final commit action is to build the {@code _SUCCESS} file entry.
    * </p>
    * @param context job context
    * @throws IOException any failure

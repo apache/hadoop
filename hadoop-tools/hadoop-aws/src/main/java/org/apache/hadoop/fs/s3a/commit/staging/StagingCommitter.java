@@ -907,4 +907,20 @@ public class StagingCommitter extends AbstractS3ACommitter {
         defVal).toUpperCase(Locale.ENGLISH);
   }
 
+  /**
+   * Pre-commit actions for a job.
+   * Loads all the pending files to verify they can be loaded
+   * and parsed.
+   * @param context job context
+   * @param pending pending commits
+   * @throws IOException any failure
+   */
+  @Override
+  public void preCommitJob(
+      final JobContext context,
+      final ActiveCommit pending) throws IOException {
+
+    // see if the files can be loaded.
+    precommitCheckPendingFiles(context, pending);
+  }
 }

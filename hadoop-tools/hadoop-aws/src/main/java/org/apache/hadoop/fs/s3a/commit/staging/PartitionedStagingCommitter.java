@@ -19,9 +19,10 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
+import org.apache.hadoop.fs.s3a.commit.Tasks;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -111,6 +113,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
   }
 
   /**
+   * All
    * Job-side conflict resolution.
    * The partition path conflict resolution actions are:
    * <ol>
@@ -131,6 +134,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
     // enforce conflict resolution
     Configuration fsConf = fs.getConf();
+    boolean shouldPrecheckPendingFiles = true;
     switch (getConflictResolutionMode(context, fsConf)) {
     case FAIL:
       // FAIL checking is done on the task side, so this does nothing
@@ -140,12 +144,17 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       break;
     case REPLACE:
       // identify and replace the destination partitions
-      replacePartitions(pending);
+      replacePartitions(context, pending);
+      // and so there is no need to do another check.
+      shouldPrecheckPendingFiles = false;
       break;
     default:
       throw new PathCommitException("",
           getRole() + ": unknown conflict resolution mode: "
           + getConflictResolutionMode(context, fsConf));
+    }
+    if (shouldPrecheckPendingFiles) {
+      precommitCheckPendingFiles(context, pending);
     }
   }
 
@@ -154,7 +163,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
    * The original implementation relied on all the pending commits to be
    * loaded so could simply enumerate them.
    * This iteration does not do that; it has to reload all the files
-   * to build the list, after which it initiates the delete process.
+   * to build the set, after which it initiates the delete process.
+   * This is done in parallel.
    * <pre>
    *   Set<Path> partitions = pending.stream()
    *     .map(Path::getParent)
@@ -166,30 +176,41 @@ public class PartitionedStagingCommitter extends StagingCommitter {
    *   }
    * </pre>
    *
+   * @param context job context
    * @param pending the pending operations
    * @throws IOException any failure
    */
-  private void replacePartitions(ActiveCommit pending) throws IOException {
+  private void replacePartitions(
+      final JobContext context,
+      final ActiveCommit pending) throws IOException {
 
-    List<Path> sourceFiles = pending.getSourceFiles();
-    Set<Path> partitions = new LinkedHashSet<>(sourceFiles.size());
-    FileSystem fs = getDestFS();
+    Map<Path, String> partitions = new ConcurrentHashMap<>();
     FileSystem sourceFS = pending.getSourceFS();
     try (DurationInfo ignored =
              new DurationInfo(LOG, "Replacing partitions")) {
 
-      for (Path path: sourceFiles) {
-        PendingSet pendingSet = PendingSet.load(sourceFS, path);
-        for (SinglePendingCommit commit : pendingSet.getCommits()) {
-          Path parent = commit.destinationPath().getParent();
-          if (parent != null) {
-            partitions.add(parent);
-          }
-        }
-      }
+      // the parent directories are saved to a concurrent hash map.
+      // for a marginal optimisation, the previous parent is tracked, so
+      // if a task writes many files to the same dir, the synchronized map
+      // is updated only once.
+      Tasks.foreach(pending.getSourceFiles())
+          .stopOnFailure()
+          .executeWith(buildThreadPool(context))
+          .run(path -> {
+            PendingSet pendingSet = PendingSet.load(sourceFS, path);
+            Path lastParent = null;
+            for (SinglePendingCommit commit : pendingSet.getCommits()) {
+              Path parent = commit.destinationPath().getParent();
+              if (parent != null && !parent.equals(lastParent)) {
+                partitions.put(parent, "");
+                lastParent = parent;
+              }
+            }
+          });
     }
     // now do the deletes
-    for (Path partitionPath : partitions) {
+    FileSystem fs = getDestFS();
+    for (Path partitionPath : partitions.keySet()) {
       LOG.debug("{}: removing partition path to be replaced: " +
           getRole(), partitionPath);
       fs.delete(partitionPath, true);

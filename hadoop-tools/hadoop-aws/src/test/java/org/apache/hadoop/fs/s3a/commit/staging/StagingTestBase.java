@@ -498,8 +498,8 @@ public class StagingTestBase {
       activeUploads.put(id, key);
     }
 
-    public void addUploads(Map<String, String> uploads) {
-      activeUploads.putAll(uploads);
+    public void addUploads(Map<String, String> uploadMap) {
+      activeUploads.putAll(uploadMap);
     }
 
     @Override
@@ -673,14 +673,7 @@ public class StagingTestBase {
             CompleteMultipartUploadRequest req = getArgumentAt(invocation,
                 0, CompleteMultipartUploadRequest.class);
             String uploadId = req.getUploadId();
-            String removed = results.activeUploads.remove(uploadId);
-            if (removed == null) {
-              // upload doesn't exist
-              AmazonS3Exception ex = new AmazonS3Exception(
-                  "not found " + uploadId);
-              ex.setStatusCode(404);
-              throw ex;
-            }
+            removeUpload(results, uploadId);
             results.commits.add(req);
 
             return newResult(req);
@@ -701,14 +694,7 @@ public class StagingTestBase {
         AbortMultipartUploadRequest req = getArgumentAt(invocation,
             0, AbortMultipartUploadRequest.class);
         String id = req.getUploadId();
-        String p = results.activeUploads.remove(id);
-        if (p == null) {
-          // upload doesn't exist
-          AmazonS3Exception ex = new AmazonS3Exception(
-              "not found " + id);
-          ex.setStatusCode(404);
-          throw ex;
-        }
+        removeUpload(results, id);
         results.aborts.add(req);
         return null;
       }
@@ -759,6 +745,24 @@ public class StagingTestBase {
         });
 
     return mockClient;
+  }
+
+  /**
+   * Remove an upload from the upload map.
+   * @param results result set
+   * @param uploadId The upload ID to remove
+   * @throws AmazonS3Exception with error code 404 if the id is unknown.
+   */
+  protected static void removeUpload(final ClientResults results,
+      final String uploadId) {
+    String removed = results.activeUploads.remove(uploadId);
+    if (removed == null) {
+      // upload doesn't exist
+      AmazonS3Exception ex = new AmazonS3Exception(
+          "not found " + uploadId);
+      ex.setStatusCode(404);
+      throw ex;
+    }
   }
 
   private static CompleteMultipartUploadResult newResult(
