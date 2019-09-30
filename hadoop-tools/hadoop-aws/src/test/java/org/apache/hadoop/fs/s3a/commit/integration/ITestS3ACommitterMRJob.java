@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 import com.google.common.collect.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -81,7 +80,6 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.JAVA_IO_TMPDIR;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -130,10 +128,12 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  *     {@link CommitterTestBinding#test_500()}, for any post-MR-job tests.
  * </ol>
  *
- * A new S3A FileSystem instance is created for each test_ method, so the pre-execute and
- * post-execute validators cannot inspect the state of the FS as part of their tests.
- * However, as the MR workers and AM all run in their own processes, there's generally no
- * useful information about the job in the local S3AFileSystem instance.
+ * A new S3A FileSystem instance is created for each test_ method, so the
+ * pre-execute and post-execute validators cannot inspect the state of the
+ * FS as part of their tests.
+ * However, as the MR workers and AM all run in their own processes, there's
+ * generally no useful information about the job in the local S3AFileSystem
+ * instance.
  */
 @RunWith(Parameterized.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -164,10 +164,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @SuppressWarnings("StaticNonFinalField")
   private static ClusterBinding clusterBinding;
 
-  @BeforeClass
-  public static void setupClusters() throws IOException {
-    clusterBinding = createCluster(new JobConf(), false);
-  }
 
   @AfterClass
   public static void teardownClusters() throws IOException {
@@ -175,10 +171,24 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   }
 
   /**
+   * Demand create the cluster.
+   * @throws IOException failure.
+   */
+  private void createClusterOnDemand() throws IOException {
+    if (clusterBinding == null) {
+      clusterBinding = createCluster(new JobConf(), false);
+    }
+  }
+
+  /**
    * The committer binding for this instance.
    */
   private final CommitterTestBinding committerTestBinding;
 
+  /**
+   * Parameterized constructor.
+   * @param committerTestBinding binding for the test.
+   */
   public ITestS3ACommitterMRJob(
       final CommitterTestBinding committerTestBinding) {
     this.committerTestBinding = committerTestBinding;
@@ -186,6 +196,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
   @Override
   public void setup() throws Exception {
+    createClusterOnDemand();
     super.setup();
     // configure the test binding for this specific test case.
     committerTestBinding.setup(getClusterBinding(), getFileSystem());
@@ -199,7 +210,15 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   }
 
   @Rule
-  public final TemporaryFolder temp = new TemporaryFolder();
+  public final TemporaryFolder localFilesDir = new TemporaryFolder();
+
+  /**
+   * We stage work into a temporary directory rather than directly under
+   * the user's home directory, as that is often rejected by CI test
+   * runners.
+   */
+  @Rule
+  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
 
   @Override
   protected String committerName() {
@@ -251,7 +270,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     List<String> expectedFiles = new ArrayList<>(numFiles);
     Set<String> expectedKeys = Sets.newHashSet();
     for (int i = 0; i < numFiles; i += 1) {
-      File file = temp.newFile(i + ".text");
+      File file = localFilesDir.newFile(i + ".text");
       try (FileOutputStream out = new FileOutputStream(file)) {
         out.write(("file " + i).getBytes(StandardCharsets.UTF_8));
       }
@@ -268,21 +287,20 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     mrJob.setOutputFormatClass(LoggingTextOutputFormat.class);
     FileOutputFormat.setOutputPath(mrJob, outputPath);
 
-    File mockResultsFile = temp.newFile("committer.bin");
+    File mockResultsFile = localFilesDir.newFile("committer.bin");
     mockResultsFile.delete();
     String committerPath = "file:" + mockResultsFile;
     jobConf.set("mock-results-file", committerPath);
 
     // setting up staging options is harmless for other committers
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
-    File tmpDir = new File(System.getProperty(JAVA_IO_TMPDIR));
-    String tmpDirStr = tmpDir.toURI().toString();
-    LOG.info("Staging temp dir is {}", tmpDirStr);
-    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, tmpDirStr);
+    String staging = stagingFilesDir.getRoot().getAbsolutePath();
+    LOG.info("Staging temp dir is {}", staging);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, staging);
 
 
     mrJob.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.addInputPath(mrJob, new Path(temp.getRoot().toURI()));
+    FileInputFormat.addInputPath(mrJob, new Path(localFilesDir.getRoot().toURI()));
 
     mrJob.setMapperClass(MapClass.class);
     mrJob.setNumReduceTasks(0);
@@ -380,6 +398,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     committerTestBinding.validateResult(destPath, successData);
   }
 
+  /**
+   * This is the extra test which committer test bindings can add.
+   */
   @Test
   public void test_500() throws Throwable {
     committerTestBinding.test_500();
@@ -439,10 +460,19 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    */
   private abstract static class CommitterTestBinding {
 
+    /**
+     * Name.
+     */
     private final String committerName;
 
+    /**
+     * Cluster binding.
+     */
     private ClusterBinding binding;
 
+    /**
+     * The S3A filesystem.
+     */
     private S3AFileSystem remoteFS;
 
     /**
@@ -541,7 +571,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       assertNotNull("Not bound to a cluster", binding);
       assertNotNull("No cluster filesystem", getClusterFS());
       assertNotNull("No yarn cluster", binding.getYarn());
-
     }
   }
 
@@ -583,7 +612,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
           .describedAs("Staging committer temp path in cluster")
           .contains(pri + "/" + self)
           .endsWith("uuid/" + STAGING_UPLOADS);
-
     }
   }
 
