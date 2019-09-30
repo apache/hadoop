@@ -178,6 +178,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_USE_UPN)
   private boolean useUpn;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
+          DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
+  private boolean trackLatency;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -471,6 +475,10 @@ public class AbfsConfiguration{
     return this.useUpn;
   }
 
+  public boolean shouldTrackLatency() {
+    return this.trackLatency;
+  }
+
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
@@ -679,5 +687,4 @@ public class AbfsConfiguration{
     }
     return authority;
   }
-
 }

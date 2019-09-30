@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.UUID;
 
@@ -157,6 +159,44 @@ public class AbfsHttpOperation {
     sb.append(",");
     sb.append(method);
     sb.append(",");
+    sb.append(urlStr);
+    return sb.toString();
+  }
+
+  // Returns a trace message for the ABFS API logging service to consume
+  public String toKvpString() {
+    String urlStr = null;
+
+    try{
+      urlStr = URLEncoder.encode(url.toString(), "UTF-8");
+    } catch(UnsupportedEncodingException e) {
+      urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+    }
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=");
+    sb.append(statusCode);
+    sb.append(" e=");
+    sb.append(storageErrorCode);
+    sb.append(" ci=");
+    sb.append(clientRequestId);
+    sb.append(" ri=");
+    sb.append(requestId);
+    if (isTraceEnabled) {
+      sb.append(" ct=");
+      sb.append(connectionTimeMs);
+      sb.append(" st=");
+      sb.append(sendRequestTimeMs);
+      sb.append(" rt=");
+      sb.append(recvResponseTimeMs);
+    }
+    sb.append(" bs=");
+    sb.append(bytesSent);
+    sb.append(" br=");
+    sb.append(bytesReceived);
+    sb.append(" m=");
+    sb.append(method);
+    sb.append(" u=");
     sb.append(urlStr);
     return sb.toString();
   }

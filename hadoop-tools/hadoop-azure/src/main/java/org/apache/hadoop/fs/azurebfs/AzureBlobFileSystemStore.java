@@ -35,6 +35,7 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -81,6 +82,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.LatencyTracker;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
@@ -130,6 +132,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformer identityTransformer;
+  private final LatencyTracker latencyTracker;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration)
           throws IOException {
@@ -162,6 +165,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
+    this.latencyTracker = new LatencyTracker(fileSystemName, accountName, this.abfsConfiguration);
     initializeClient(uri, fileSystemName, accountName, useHttps);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
   }
@@ -211,10 +215,16 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
     if (!isNamespaceEnabledSet) {
+      final Instant start = latencyTracker.getLatencyInstant();
+      boolean success = false;
+      AbfsHttpOperation res = null;
+
       LOG.debug("Get root ACL status");
       try {
-        client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH);
+        AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH);
+        res = op.getResult();
         isNamespaceEnabled = true;
+        success = true;
       } catch (AbfsRestOperationException ex) {
         // Get ACL status is a HEAD request, its response doesn't contain errorCode
         // So can only rely on its status code to determine its account type.
@@ -222,6 +232,8 @@ public class AzureBlobFileSystemStore implements Closeable {
           throw ex;
         }
         isNamespaceEnabled = false;
+      } finally {
+        latencyTracker.recordClientLatency(start, "getIsNamespaceEnabled", "getAclStatus", success, res);
       }
       isNamespaceEnabledSet = true;
     }
@@ -265,182 +277,295 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
-    LOG.debug("getFilesystemProperties for filesystem: {}",
-            client.getFileSystem());
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    final Hashtable<String, String> parsedXmsProperties;
+    try {
+      LOG.debug("getFilesystemProperties for filesystem: {}",
+              client.getFileSystem());
 
-    final AbfsRestOperation op = client.getFilesystemProperties();
-    final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      final Hashtable<String, String> parsedXmsProperties;
 
-    parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
+      final AbfsRestOperation op = client.getFilesystemProperties();
+      res = op.getResult();
 
-    return parsedXmsProperties;
+      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+
+      parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
+      success = true;
+
+      return parsedXmsProperties;
+    } finally {
+      latencyTracker.recordClientLatency(start, "getFilesystemProperties", "getFilesystemProperties", success, res);
+    }
   }
 
   public void setFilesystemProperties(final Hashtable<String, String> properties)
       throws AzureBlobFileSystemException {
-    if (properties == null || properties.isEmpty()) {
-      return;
-    }
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    LOG.debug("setFilesystemProperties for filesystem: {} with properties: {}",
-            client.getFileSystem(),
-            properties);
-
-    final String commaSeparatedProperties;
     try {
-      commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-    } catch (CharacterCodingException ex) {
-      throw new InvalidAbfsRestOperationException(ex);
-    }
+      if (properties == null || properties.isEmpty()) {
+        return;
+      }
 
-    client.setFilesystemProperties(commaSeparatedProperties);
+      LOG.debug("setFilesystemProperties for filesystem: {} with properties: {}",
+              client.getFileSystem(),
+              properties);
+
+      final String commaSeparatedProperties;
+      try {
+        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
+      } catch (CharacterCodingException ex) {
+        throw new InvalidAbfsRestOperationException(ex);
+      }
+
+      final AbfsRestOperation op = client.setFilesystemProperties(commaSeparatedProperties);
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "setFilesystemProperties", "setFilesystemProperties", success, res);
+    }
   }
 
   public Hashtable<String, String> getPathStatus(final Path path) throws AzureBlobFileSystemException {
-    LOG.debug("getPathStatus for filesystem: {} path: {}",
-            client.getFileSystem(),
-           path);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    final Hashtable<String, String> parsedXmsProperties;
-    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    try {
+      LOG.debug("getPathStatus for filesystem: {} path: {}",
+              client.getFileSystem(),
+              path);
 
-    final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      final Hashtable<String, String> parsedXmsProperties;
+      final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+      res = op.getResult();
 
-    parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
+      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
-    return parsedXmsProperties;
+      parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
+
+      success = true;
+
+      return parsedXmsProperties;
+    } finally {
+      latencyTracker.recordClientLatency(start, "getPathStatus", "getPathStatus", success, res);
+    }
   }
 
   public void setPathProperties(final Path path, final Hashtable<String, String> properties) throws AzureBlobFileSystemException {
-    LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
-            client.getFileSystem(),
-            path,
-            properties);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    final String commaSeparatedProperties;
     try {
-      commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-    } catch (CharacterCodingException ex) {
-      throw new InvalidAbfsRestOperationException(ex);
+      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
+              client.getFileSystem(),
+              path,
+              properties);
+
+      final String commaSeparatedProperties;
+      try {
+        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
+      } catch (CharacterCodingException ex) {
+        throw new InvalidAbfsRestOperationException(ex);
+      }
+      final AbfsRestOperation op = client.setPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), commaSeparatedProperties);
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "setPathProperties", "setPathProperties", success, res);
     }
-    client.setPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), commaSeparatedProperties);
   }
 
   public void createFilesystem() throws AzureBlobFileSystemException {
-    LOG.debug("createFilesystem for filesystem: {}",
-            client.getFileSystem());
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    client.createFilesystem();
+    try {
+      LOG.debug("createFilesystem for filesystem: {}",
+              client.getFileSystem());
+
+      final AbfsRestOperation op = client.createFilesystem();
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "createFilesystem", "createFilesystem", success, res);
+    }
   }
 
   public void deleteFilesystem() throws AzureBlobFileSystemException {
-    LOG.debug("deleteFilesystem for filesystem: {}",
-            client.getFileSystem());
+    Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    client.deleteFilesystem();
+    try {
+      LOG.debug("deleteFilesystem for filesystem: {}",
+              client.getFileSystem());
+
+      final AbfsRestOperation op = client.deleteFilesystem();
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "deleteFilesystem", "deleteFilesystem", success, res);
+    }
   }
 
   public OutputStream createFile(final Path path, final boolean overwrite, final FsPermission permission,
                                  final FsPermission umask) throws AzureBlobFileSystemException {
-    boolean isNamespaceEnabled = getIsNamespaceEnabled();
-    LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
-            client.getFileSystem(),
-            path,
-            overwrite,
-            permission.toString(),
-            umask.toString(),
-            isNamespaceEnabled);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
-        isNamespaceEnabled ? getOctalNotation(permission) : null,
-        isNamespaceEnabled ? getOctalNotation(umask) : null);
+    try {
+      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
+              client.getFileSystem(),
+              path,
+              overwrite,
+              permission.toString(),
+              umask.toString(),
+              isNamespaceEnabled);
 
-    return new AbfsOutputStream(
-        client,
-        AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-        0,
-        abfsConfiguration.getWriteBufferSize(),
-        abfsConfiguration.isFlushEnabled(),
-        abfsConfiguration.isOutputStreamFlushDisabled());
+      final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null);
+      res = op.getResult();
+
+      success = true;
+
+      return new AbfsOutputStream(
+              client,
+              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+              0,
+              abfsConfiguration.getWriteBufferSize(),
+              abfsConfiguration.isFlushEnabled(),
+              abfsConfiguration.isOutputStreamFlushDisabled());
+    } finally {
+      latencyTracker.recordClientLatency(start, "createFile", "createPath", success, res);
+    }
   }
 
   public void createDirectory(final Path path, final FsPermission permission, final FsPermission umask)
       throws AzureBlobFileSystemException {
-    boolean isNamespaceEnabled = getIsNamespaceEnabled();
-    LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
-            client.getFileSystem(),
-            path,
-            permission,
-            umask,
-            isNamespaceEnabled);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), false, true,
-        isNamespaceEnabled ? getOctalNotation(permission) : null,
-        isNamespaceEnabled ? getOctalNotation(umask) : null);
+    try {
+      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
+              client.getFileSystem(),
+              path,
+              permission,
+              umask,
+              isNamespaceEnabled);
+
+      final AbfsRestOperation op = client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), false, true,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null);
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "createDirectory", "createPath", success, res);
+    }
   }
 
   public AbfsInputStream openFileForRead(final Path path, final FileSystem.Statistics statistics)
       throws AzureBlobFileSystemException {
-    LOG.debug("openFileForRead filesystem: {} path: {}",
-            client.getFileSystem(),
-            path);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    try {
+      LOG.debug("openFileForRead filesystem: {} path: {}",
+              client.getFileSystem(),
+              path);
 
-    final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-    final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+      res = op.getResult();
 
-    if (parseIsDirectory(resourceType)) {
-      throw new AbfsRestOperationException(
-              AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-              AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-              "openFileForRead must be used with files and not directories",
-              null);
+      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+      if (parseIsDirectory(resourceType)) {
+        throw new AbfsRestOperationException(
+                AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+                AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+                "openFileForRead must be used with files and not directories",
+                null);
+      }
+
+      success = true;
+
+      // Add statistics for InputStream
+      return new AbfsInputStream(client, statistics,
+              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
+              abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(),
+              abfsConfiguration.getTolerateOobAppends(), eTag);
+    } finally {
+      latencyTracker.recordClientLatency(start, "openFileForRead", "getPathStatus", success, res);
     }
-
-    // Add statistics for InputStream
-    return new AbfsInputStream(client, statistics,
-            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
-                abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(),
-                abfsConfiguration.getTolerateOobAppends(), eTag);
   }
 
   public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
           AzureBlobFileSystemException {
-    LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
-            client.getFileSystem(),
-            path,
-            overwrite);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    try {
+      LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
+              client.getFileSystem(),
+              path,
+              overwrite);
 
-    final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-    final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+      res = op.getResult();
 
-    if (parseIsDirectory(resourceType)) {
-      throw new AbfsRestOperationException(
-              AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-              AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-              "openFileForRead must be used with files and not directories",
-              null);
+      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+
+      if (parseIsDirectory(resourceType)) {
+        throw new AbfsRestOperationException(
+                AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+                AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+                "openFileForRead must be used with files and not directories",
+                null);
+      }
+
+      final long offset = overwrite ? 0 : contentLength;
+
+      success = true;
+
+      return new AbfsOutputStream(
+              client,
+              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+              offset,
+              abfsConfiguration.getWriteBufferSize(),
+              abfsConfiguration.isFlushEnabled(),
+              abfsConfiguration.isOutputStreamFlushDisabled());
+    } finally {
+      latencyTracker.recordClientLatency(start, "openFileForWrite", "getPathStatus", success, res);
     }
-
-    final long offset = overwrite ? 0 : contentLength;
-
-    return new AbfsOutputStream(
-        client,
-        AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-        offset,
-        abfsConfiguration.getWriteBufferSize(),
-        abfsConfiguration.isFlushEnabled(),
-        abfsConfiguration.isOutputStreamFlushDisabled());
   }
 
   public void rename(final Path source, final Path destination) throws
           AzureBlobFileSystemException {
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    boolean shouldContinue = true;
 
     if (isAtomicRenameKey(source.getName())) {
       LOG.warn("The atomic rename feature is not supported by the ABFS scheme; however rename,"
@@ -455,15 +580,34 @@ public class AzureBlobFileSystemStore implements Closeable {
     String continuation = null;
 
     do {
-      AbfsRestOperation op = client.renamePath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(source),
-              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(destination), continuation);
-      continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+      Instant start = latencyTracker.getLatencyInstant();
+      boolean success = false;
+      AbfsHttpOperation res = null;
 
-    } while (continuation != null && !continuation.isEmpty());
+      try {
+        AbfsRestOperation op = client.renamePath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(source),
+                AbfsHttpConstants.FORWARD_SLASH + getRelativePath(destination), continuation);
+        res = op.getResult();
+        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        success = true;
+        countAggregate++;
+        shouldContinue = continuation != null && !continuation.isEmpty();
+      } finally {
+        if(shouldContinue) {
+          latencyTracker.recordClientLatency(start, "rename", "renamePath", success, res);
+        } else {
+          latencyTracker.recordClientLatency(start, "rename", "renamePath", success, startAggregate, countAggregate, res);
+        }
+      }
+    } while (shouldContinue);
   }
 
   public void delete(final Path path, final boolean recursive)
       throws AzureBlobFileSystemException {
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    boolean shouldContinue = true;
+
     LOG.debug("delete filesystem: {} path: {} recursive: {}",
             client.getFileSystem(),
             path,
@@ -472,70 +616,102 @@ public class AzureBlobFileSystemStore implements Closeable {
     String continuation = null;
 
     do {
-      AbfsRestOperation op = client.deletePath(
-          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), recursive, continuation);
-      continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+      Instant start = latencyTracker.getLatencyInstant();
+      boolean success = false;
+      AbfsHttpOperation res = null;
 
-    } while (continuation != null && !continuation.isEmpty());
+      try {
+        AbfsRestOperation op = client.deletePath(
+                AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), recursive, continuation);
+        res = op.getResult();
+        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        success = true;
+        countAggregate++;
+        shouldContinue = continuation != null && !continuation.isEmpty();
+      } finally {
+        if (shouldContinue) {
+          latencyTracker.recordClientLatency(start, "delete", "deletePath", success, res);
+        } else {
+          latencyTracker.recordClientLatency(start, "delete", "deletePath", success, startAggregate, countAggregate, res);
+        }
+      }
+    } while (shouldContinue);
   }
 
   public FileStatus getFileStatus(final Path path) throws IOException {
-    boolean isNamespaceEnabled = getIsNamespaceEnabled();
-    LOG.debug("getFileStatus filesystem: {} path: {} isNamespaceEnabled: {}",
-            client.getFileSystem(),
-            path,
-            isNamespaceEnabled);
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
+    String calleeName = null;
 
-    final AbfsRestOperation op;
-    if (path.isRoot()) {
-      op = isNamespaceEnabled
-              ? client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH)
-              : client.getFilesystemProperties();
-    } else {
-      op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
-    }
+    try {
+      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      LOG.debug("getFileStatus filesystem: {} path: {} isNamespaceEnabled: {}",
+              client.getFileSystem(),
+              path,
+              isNamespaceEnabled);
 
-    final long blockSize = abfsConfiguration.getAzureBlockSize();
-    final AbfsHttpOperation result = op.getResult();
+      final AbfsRestOperation op;
+      if (path.isRoot()) {
+        if (isNamespaceEnabled) {
+          calleeName = "getAclStatus";
+          op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH);
+        } else {
+          calleeName = "getFilesystemProperties";
+          op = client.getFilesystemProperties();
+        }
+      } else {
+        calleeName = "getPathStatus";
+        op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+      }
 
-    final String eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
-    final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
-    final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
-    final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
-    final long contentLength;
-    final boolean resourceIsDir;
+      res = op.getResult();
+      final long blockSize = abfsConfiguration.getAzureBlockSize();
+      final AbfsHttpOperation result = op.getResult();
 
-    if (path.isRoot()) {
-      contentLength = 0;
-      resourceIsDir = true;
-    } else {
-      contentLength = parseContentLength(result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-      resourceIsDir = parseIsDirectory(result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
-    }
+      final String eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
+      final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
+      final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
+      final long contentLength;
+      final boolean resourceIsDir;
 
-    final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
+      if (path.isRoot()) {
+        contentLength = 0;
+        resourceIsDir = true;
+      } else {
+        contentLength = parseContentLength(result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+        resourceIsDir = parseIsDirectory(result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
+      }
+
+      final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
               true,
               userName);
 
-    final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
+      final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
               false,
               primaryUserGroup);
 
-    return new VersionedFileStatus(
-            transformedOwner,
-            transformedGroup,
-            permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
-                    : AbfsPermission.valueOf(permissions),
-            hasAcl,
-            contentLength,
-            resourceIsDir,
-            1,
-            blockSize,
-            parseLastModifiedTime(lastModified),
-            path,
-            eTag);
+      success = true;
+
+      return new VersionedFileStatus(
+              transformedOwner,
+              transformedGroup,
+              permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+                      : AbfsPermission.valueOf(permissions),
+              hasAcl,
+              contentLength,
+              resourceIsDir,
+              1,
+              blockSize,
+              parseLastModifiedTime(lastModified),
+              path,
+              eTag);
+    } finally {
+      latencyTracker.recordClientLatency(start, "getFileStatus", calleeName, success, res);
+    }
   }
 
   /**
@@ -559,6 +735,10 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   @InterfaceStability.Unstable
   public FileStatus[] listStatus(final Path path, final String startFrom) throws IOException {
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    boolean shouldContinue = true;
+
     LOG.debug("listStatus filesystem: {} path: {}, startFrom: {}",
             client.getFileSystem(),
             path,
@@ -576,53 +756,69 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
-      AbfsRestOperation op = client.listPath(relativePath, false, LIST_MAX_RESULTS, continuation);
-      continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-      ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
-      if (retrievedSchema == null) {
-        throw new AbfsRestOperationException(
-                AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-                AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                "listStatusAsync path not found",
-                null, op.getResult());
-      }
+      Instant start = latencyTracker.getLatencyInstant();
+      boolean success = false;
+      AbfsHttpOperation res = null;
 
-      long blockSize = abfsConfiguration.getAzureBlockSize();
-
-      for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-        final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), true, userName);
-        final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), false, primaryUserGroup);
-        final FsPermission fsPermission = entry.permissions() == null
-                ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
-                : AbfsPermission.valueOf(entry.permissions());
-        final boolean hasAcl = AbfsPermission.isExtendedAcl(entry.permissions());
-
-        long lastModifiedMillis = 0;
-        long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
-        boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
-        if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
-          lastModifiedMillis = parseLastModifiedTime(entry.lastModified());
+      try {
+        AbfsRestOperation op = client.listPath(relativePath, false, LIST_MAX_RESULTS, continuation);
+        res = op.getResult();
+        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
+        if (retrievedSchema == null) {
+          throw new AbfsRestOperationException(
+                  AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+                  AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+                  "listStatusAsync path not found",
+                  null, op.getResult());
         }
 
-        Path entryPath = new Path(File.separator + entry.name());
-        entryPath = entryPath.makeQualified(this.uri, entryPath);
+        long blockSize = abfsConfiguration.getAzureBlockSize();
 
-        fileStatuses.add(
-                new VersionedFileStatus(
-                        owner,
-                        group,
-                        fsPermission,
-                        hasAcl,
-                        contentLength,
-                        isDirectory,
-                        1,
-                        blockSize,
-                        lastModifiedMillis,
-                        entryPath,
-                        entry.eTag()));
+        for (ListResultEntrySchema entry : retrievedSchema.paths()) {
+          final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), true, userName);
+          final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), false, primaryUserGroup);
+          final FsPermission fsPermission = entry.permissions() == null
+                  ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+                  : AbfsPermission.valueOf(entry.permissions());
+          final boolean hasAcl = AbfsPermission.isExtendedAcl(entry.permissions());
+
+          long lastModifiedMillis = 0;
+          long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
+          boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
+          if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
+            lastModifiedMillis = parseLastModifiedTime(entry.lastModified());
+          }
+
+          Path entryPath = new Path(File.separator + entry.name());
+          entryPath = entryPath.makeQualified(this.uri, entryPath);
+
+          fileStatuses.add(
+                  new VersionedFileStatus(
+                          owner,
+                          group,
+                          fsPermission,
+                          hasAcl,
+                          contentLength,
+                          isDirectory,
+                          1,
+                          blockSize,
+                          lastModifiedMillis,
+                          entryPath,
+                          entry.eTag()));
+        }
+
+        success = true;
+        countAggregate++;
+        shouldContinue = continuation != null && !continuation.isEmpty();
+      } finally {
+        if (shouldContinue) {
+          latencyTracker.recordClientLatency(start, "listStatus", "listPath", success, res);
+        } else {
+          latencyTracker.recordClientLatency(start, "listStatus", "listPath", success, startAggregate, countAggregate, res);
+        }
       }
-
-    } while (continuation != null && !continuation.isEmpty());
+    } while (shouldContinue);
 
     return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
   }
@@ -684,212 +880,361 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public void setOwner(final Path path, final String owner, final String group) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "setOwner filesystem: {} path: {} owner: {} group: {}",
+              client.getFileSystem(),
+              path.toString(),
+              owner,
+              group);
+
+      final String transformedOwner = identityTransformer.transformUserOrGroupForSetRequest(owner);
+      final String transformedGroup = identityTransformer.transformUserOrGroupForSetRequest(group);
+
+      final AbfsRestOperation op = client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), transformedOwner, transformedGroup);
+
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "setOwner", "setOwner", success, res);
     }
-
-    LOG.debug(
-            "setOwner filesystem: {} path: {} owner: {} group: {}",
-            client.getFileSystem(),
-            path.toString(),
-            owner,
-            group);
-
-    final String transformedOwner = identityTransformer.transformUserOrGroupForSetRequest(owner);
-    final String transformedGroup = identityTransformer.transformUserOrGroupForSetRequest(group);
-
-    client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), transformedOwner, transformedGroup);
   }
 
   public void setPermission(final Path path, final FsPermission permission) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
-    }
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation res = null;
 
-    LOG.debug(
-            "setPermission filesystem: {} path: {} permission: {}",
-            client.getFileSystem(),
-            path.toString(),
-            permission.toString());
-    client.setPermission(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-            String.format(AbfsHttpConstants.PERMISSION_FORMAT, permission.toOctal()));
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "setPermission filesystem: {} path: {} permission: {}",
+              client.getFileSystem(),
+              path.toString(),
+              permission.toString());
+      final AbfsRestOperation op = client.setPermission(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+              String.format(AbfsHttpConstants.PERMISSION_FORMAT, permission.toOctal()));
+
+      res = op.getResult();
+
+      success = true;
+    } finally {
+      latencyTracker.recordClientLatency(start, "setPermission", "setPermission", success, res);
+    }
   }
 
   public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    Instant startSet = null;
+
+    boolean successGet = false;
+    boolean successSet = false;
+    AbfsHttpOperation resultGet = null;
+    AbfsHttpOperation resultSet = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "modifyAclEntries filesystem: {} path: {} aclSpec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
+      identityTransformer.transformAclEntriesForSetRequest(aclSpec);
+      final Map<String, String> modifyAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+      boolean useUpn = AbfsAclHelper.isUpnFormatAclEntries(modifyAclEntries);
+
+      final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), useUpn);
+      resultGet = op.getResult();
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+
+      AbfsAclHelper.modifyAclEntriesInternal(aclEntries, modifyAclEntries);
+
+      successGet = true;
+      countAggregate++;
+      startSet = latencyTracker.getLatencyInstant();
+
+      final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+              AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+      resultSet = setAclOp.getResult();
+
+      successSet = true;
+      countAggregate++;
+    } finally {
+      latencyTracker.recordClientLatency(startAggregate, startSet, "modifyAclEntries", "getAclStatus", successGet, resultGet);
+      latencyTracker.recordClientLatency(startSet, "modifyAclEntries", "setAcl", successSet, startAggregate, countAggregate, resultSet);
     }
-
-    LOG.debug(
-            "modifyAclEntries filesystem: {} path: {} aclSpec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
-    identityTransformer.transformAclEntriesForSetRequest(aclSpec);
-    final Map<String, String> modifyAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
-    boolean useUpn = AbfsAclHelper.isUpnFormatAclEntries(modifyAclEntries);
-
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), useUpn);
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-
-    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-
-    AbfsAclHelper.modifyAclEntriesInternal(aclEntries, modifyAclEntries);
-
-    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
   }
 
   public void removeAclEntries(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    Instant startSet = null;
+
+    boolean successGet = false;
+    boolean successSet = false;
+    AbfsHttpOperation resultGet = null;
+    AbfsHttpOperation resultSet = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "removeAclEntries filesystem: {} path: {} aclSpec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
+      identityTransformer.transformAclEntriesForSetRequest(aclSpec);
+      final Map<String, String> removeAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+      boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(removeAclEntries);
+
+      final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
+      resultGet = op.getResult();
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+
+      AbfsAclHelper.removeAclEntriesInternal(aclEntries, removeAclEntries);
+
+      successGet = true;
+      countAggregate++;
+      startSet = latencyTracker.getLatencyInstant();
+
+      final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+              AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+      resultSet = setAclOp.getResult();
+
+      successSet = true;
+      countAggregate++;
+    } finally {
+      latencyTracker.recordClientLatency(startAggregate, startSet, "removeAclEntries", "getAclStatus", successGet, resultGet);
+      latencyTracker.recordClientLatency(startSet, "removeAclEntries", "setAcl", successSet, startAggregate, countAggregate, resultSet);
     }
-
-    LOG.debug(
-            "removeAclEntries filesystem: {} path: {} aclSpec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
-    identityTransformer.transformAclEntriesForSetRequest(aclSpec);
-    final Map<String, String> removeAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
-    boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(removeAclEntries);
-
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-
-    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-
-    AbfsAclHelper.removeAclEntriesInternal(aclEntries, removeAclEntries);
-
-    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-            AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
   }
 
   public void removeDefaultAcl(final Path path) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
-    }
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    Instant startSet = null;
 
-    LOG.debug(
-            "removeDefaultAcl filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
+    boolean successGet = false;
+    boolean successSet = false;
+    AbfsHttpOperation resultGet = null;
+    AbfsHttpOperation resultSet = null;
 
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-    final Map<String, String> defaultAclEntries = new HashMap<>();
-
-    for (Map.Entry<String, String> aclEntry : aclEntries.entrySet()) {
-      if (aclEntry.getKey().startsWith("default:")) {
-        defaultAclEntries.put(aclEntry.getKey(), aclEntry.getValue());
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
       }
+
+      LOG.debug(
+              "removeDefaultAcl filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+
+      final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+      resultGet = op.getResult();
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> defaultAclEntries = new HashMap<>();
+
+      for (Map.Entry<String, String> aclEntry : aclEntries.entrySet()) {
+        if (aclEntry.getKey().startsWith("default:")) {
+          defaultAclEntries.put(aclEntry.getKey(), aclEntry.getValue());
+        }
+      }
+
+      aclEntries.keySet().removeAll(defaultAclEntries.keySet());
+
+      successGet = true;
+      countAggregate++;
+      startSet = latencyTracker.getLatencyInstant();
+
+      final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+      AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+      resultSet = setAclOp.getResult();
+
+      successSet = true;
+      countAggregate++;
+    } finally {
+      latencyTracker.recordClientLatency(startAggregate, startSet, "removeDefaultAcl", "getAclStatus", successGet, resultGet);
+      latencyTracker.recordClientLatency(startSet, "removeDefaultAcl", "setAcl", successSet, startAggregate, countAggregate, resultSet);
     }
-
-    aclEntries.keySet().removeAll(defaultAclEntries.keySet());
-
-    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
   }
 
   public void removeAcl(final Path path) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    Instant startSet = null;
+
+    boolean successGet = false;
+    boolean successSet = false;
+    AbfsHttpOperation resultGet = null;
+    AbfsHttpOperation resultSet = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "removeAcl filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+      final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+      resultGet = op.getResult();
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+      final Map<String, String> newAclEntries = new HashMap<>();
+
+      newAclEntries.put(AbfsHttpConstants.ACCESS_USER, aclEntries.get(AbfsHttpConstants.ACCESS_USER));
+      newAclEntries.put(AbfsHttpConstants.ACCESS_GROUP, aclEntries.get(AbfsHttpConstants.ACCESS_GROUP));
+      newAclEntries.put(AbfsHttpConstants.ACCESS_OTHER, aclEntries.get(AbfsHttpConstants.ACCESS_OTHER));
+
+      successGet = true;
+      countAggregate++;
+      startSet = latencyTracker.getLatencyInstant();
+
+      final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+      AbfsAclHelper.serializeAclSpec(newAclEntries), eTag);
+
+      resultSet = setAclOp.getResult();
+
+      successSet = true;
+      countAggregate++;
+    } finally {
+      latencyTracker.recordClientLatency(startAggregate, startSet, "removeAcl", "getAclStatus", successGet, resultGet);
+      latencyTracker.recordClientLatency(startSet, "removeAcl", "setAcl", successSet, startAggregate, countAggregate, resultSet);
     }
-
-    LOG.debug(
-            "removeAcl filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-
-    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-    final Map<String, String> newAclEntries = new HashMap<>();
-
-    newAclEntries.put(AbfsHttpConstants.ACCESS_USER, aclEntries.get(AbfsHttpConstants.ACCESS_USER));
-    newAclEntries.put(AbfsHttpConstants.ACCESS_GROUP, aclEntries.get(AbfsHttpConstants.ACCESS_GROUP));
-    newAclEntries.put(AbfsHttpConstants.ACCESS_OTHER, aclEntries.get(AbfsHttpConstants.ACCESS_OTHER));
-
-    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-        AbfsAclHelper.serializeAclSpec(newAclEntries), eTag);
   }
 
   public void setAcl(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant startAggregate = latencyTracker.getLatencyInstant();
+    long countAggregate = 0;
+    Instant startSet = null;
+
+    boolean successGet = false;
+    boolean successSet = false;
+    AbfsHttpOperation resultGet = null;
+    AbfsHttpOperation resultSet = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "setAcl filesystem: {} path: {} aclspec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
+      identityTransformer.transformAclEntriesForSetRequest(aclSpec);
+      final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+      final boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(aclEntries);
+
+      final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
+      resultGet = op.getResult();
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+      final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+
+      AbfsAclHelper.setAclEntriesInternal(aclEntries, getAclEntries);
+
+      startSet = latencyTracker.getLatencyInstant();
+      successGet = true;
+      countAggregate++;
+
+      final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+      AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+      resultSet = setAclOp.getResult();
+
+      successSet = true;
+      countAggregate++;
+    } finally {
+      latencyTracker.recordClientLatency(startAggregate, startSet, "setAcl", "getAclStatus", successGet, resultGet);
+      latencyTracker.recordClientLatency(startSet, "setAcl", "setAcl", successSet, startAggregate, countAggregate, resultSet);
     }
-
-    LOG.debug(
-            "setAcl filesystem: {} path: {} aclspec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
-    identityTransformer.transformAclEntriesForSetRequest(aclSpec);
-    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
-    final boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(aclEntries);
-
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
-    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-
-    final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-
-    AbfsAclHelper.setAclEntriesInternal(aclEntries, getAclEntries);
-
-    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
-        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
   }
 
   public AclStatus getAclStatus(final Path path) throws IOException {
-    if (!getIsNamespaceEnabled()) {
-      throw new UnsupportedOperationException(
-          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    final Instant start = latencyTracker.getLatencyInstant();
+    boolean success = false;
+    AbfsHttpOperation result = null;
+
+    try {
+      if (!getIsNamespaceEnabled()) {
+        throw new UnsupportedOperationException(
+                "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+      }
+
+      LOG.debug(
+              "getAclStatus filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+      AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+      result = op.getResult();
+
+      final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
+              result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              true,
+              userName);
+      final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
+              result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              false,
+              primaryUserGroup);
+
+      final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
+      final String aclSpecString = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL);
+
+      final List<AclEntry> aclEntries = AclEntry.parseAclSpec(AbfsAclHelper.processAclString(aclSpecString), true);
+      identityTransformer.transformAclEntriesForGetRequest(aclEntries, userName, primaryUserGroup);
+      final FsPermission fsPermission = permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+              : AbfsPermission.valueOf(permissions);
+
+      final AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
+      aclStatusBuilder.owner(transformedOwner);
+      aclStatusBuilder.group(transformedGroup);
+
+      aclStatusBuilder.setPermission(fsPermission);
+      aclStatusBuilder.stickyBit(fsPermission.getStickyBit());
+      aclStatusBuilder.addEntries(aclEntries);
+      success = true;
+      return aclStatusBuilder.build();
+    } finally {
+      latencyTracker.recordClientLatency(start, "getAclStatus", "getAclStatus", success, result);
     }
-
-    LOG.debug(
-            "getAclStatus filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
-    AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
-    AbfsHttpOperation result = op.getResult();
-
-    final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
-            result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
-            true,
-            userName);
-    final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
-            result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
-            false,
-            primaryUserGroup);
-
-    final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
-    final String aclSpecString = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL);
-
-    final List<AclEntry> aclEntries = AclEntry.parseAclSpec(AbfsAclHelper.processAclString(aclSpecString), true);
-    identityTransformer.transformAclEntriesForGetRequest(aclEntries, userName, primaryUserGroup);
-    final FsPermission fsPermission = permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
-            : AbfsPermission.valueOf(permissions);
-
-    final AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
-    aclStatusBuilder.owner(transformedOwner);
-    aclStatusBuilder.group(transformedGroup);
-
-    aclStatusBuilder.setPermission(fsPermission);
-    aclStatusBuilder.stickyBit(fsPermission.getStickyBit());
-    aclStatusBuilder.addEntries(aclEntries);
-    return aclStatusBuilder.build();
   }
 
   public boolean isAtomicRenameKey(String key) {
@@ -930,7 +1275,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             abfsConfiguration.getRawConfiguration());
     }
 
-    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider);
+    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider, latencyTracker);
   }
 
   private String getOctalNotation(FsPermission fsPermission) {
