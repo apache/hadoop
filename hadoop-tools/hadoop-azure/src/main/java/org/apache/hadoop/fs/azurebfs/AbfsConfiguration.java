@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +58,6 @@ import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
-import org.apache.hadoop.fs.azurebfs.utils.Utils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -480,13 +480,20 @@ public class AbfsConfiguration{
           String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
           tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
         } else if (tokenProviderClass == MsiTokenProvider.class) {
-          String authEndpoint = getMsiAuthEndpoint();
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
           String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String authority = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
           tokenProvider = new MsiTokenProvider(authEndpoint, tenantGuid,
-              clientId);
+              clientId, authority);
         } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
-          String authEndpoint = getRefreshTokenAuthEndpoint();
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
           String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
           String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
@@ -642,23 +649,11 @@ public class AbfsConfiguration{
     this.enableFlush = enableFlush;
   }
 
-  private String getMsiAuthEndpoint() throws IOException {
-    String authEndpoint = getPasswordString(
-        FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
-    if (Utils.isEmpty(authEndpoint)) {
-      authEndpoint =
-          AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
+  private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
+    String value = getPasswordString(key);
+    if (StringUtils.isBlank(value)) {
+      value = defaultValue;
     }
-    return authEndpoint;
-  }
-
-  private String getRefreshTokenAuthEndpoint() throws IOException {
-    String authEndpoint = getPasswordString(
-        FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
-    if (Utils.isEmpty(authEndpoint)) {
-      authEndpoint =
-          AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT;
-    }
-    return authEndpoint;
+    return value.trim();
   }
 }

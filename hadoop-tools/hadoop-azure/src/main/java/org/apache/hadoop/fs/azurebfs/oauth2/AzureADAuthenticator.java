@@ -112,14 +112,15 @@ public final class AzureADAuthenticator {
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in obtaining the token
    */
-  public static AzureADToken getTokenFromMsi(final String authEndpoint, String tenantGuid, String clientId,
-                                             boolean bypassCache) throws IOException {
+  public static AzureADToken getTokenFromMsi(final String authEndpoint,
+      final String tenantGuid, final String clientId, String authority,
+      boolean bypassCache) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("api-version", "2018-02-01");
     qp.add("resource", RESOURCE_NAME);
 
     if (tenantGuid != null && tenantGuid.length() > 0) {
-      String authority = "https://login.microsoftonline.com/" + tenantGuid;
+      authority = authority + tenantGuid;
       qp.add("authority", authority);
     }
 
@@ -149,8 +150,9 @@ public final class AzureADAuthenticator {
    * @return {@link AzureADToken} obtained using the refresh token
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
-  public static AzureADToken getTokenUsingRefreshToken(final String authEndpoint, String clientId,
-                                                       String refreshToken) throws IOException {
+  public static AzureADToken getTokenUsingRefreshToken(
+      final String authEndpoint, final String clientId,
+      final String refreshToken) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);

@@ -30,6 +30,8 @@ public class MsiTokenProvider extends AccessTokenProvider {
 
   private final String authEndpoint;
 
+  private final String authority;
+
   private final String tenantGuid;
 
   private final String clientId;
@@ -37,17 +39,18 @@ public class MsiTokenProvider extends AccessTokenProvider {
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
   public MsiTokenProvider(final String authEndpoint, final String tenantGuid,
-      final String clientId) {
+      final String clientId, final String authority) {
     this.authEndpoint = authEndpoint;
     this.tenantGuid = tenantGuid;
     this.clientId = clientId;
+    this.authority = authority;
   }
 
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from MSI");
     AzureADToken token = AzureADAuthenticator
-        .getTokenFromMsi(authEndpoint, tenantGuid, clientId, false);
+        .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
     return token;
   }
 }
