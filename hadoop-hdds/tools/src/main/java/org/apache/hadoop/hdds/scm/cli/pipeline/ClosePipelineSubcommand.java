@@ -20,31 +20,30 @@ package org.apache.hadoop.hdds.scm.cli.pipeline;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
 /**
- * Handler of closePipeline command.
+ * Handler of close pipeline command.
  */
 @CommandLine.Command(
-    name = "closePipeline",
+    name = "close",
     description = "Close pipeline",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
 public class ClosePipelineSubcommand implements Callable<Void> {
 
   @CommandLine.ParentCommand
-  private SCMCLI parent;
+  private PipelineCommands parent;
 
   @CommandLine.Parameters(description = "ID of the pipeline to close")
   private String pipelineId;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       scmClient.closePipeline(
           HddsProtos.PipelineID.newBuilder().setId(pipelineId).build());
       return null;
