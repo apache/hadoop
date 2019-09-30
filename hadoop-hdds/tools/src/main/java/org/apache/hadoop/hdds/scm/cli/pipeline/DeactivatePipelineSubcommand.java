@@ -20,31 +20,30 @@ package org.apache.hadoop.hdds.scm.cli.pipeline;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
 /**
- * Handler of deactivatePipeline command.
+ * Handler of deactivate pipeline command.
  */
 @CommandLine.Command(
-    name = "deactivatePipeline",
+    name = "deactivate",
     description = "Deactivates the given Pipeline",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
 public class DeactivatePipelineSubcommand implements Callable<Void> {
 
   @CommandLine.ParentCommand
-  private SCMCLI parent;
+  private PipelineCommands parent;
 
   @CommandLine.Parameters(description = "ID of the pipeline to deactivate")
   private String pipelineId;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       scmClient.deactivatePipeline(
           HddsProtos.PipelineID.newBuilder().setId(pipelineId).build());
       return null;
