@@ -48,6 +48,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -172,9 +173,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStati
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CustomResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -182,6 +185,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceTypeList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
@@ -407,6 +411,31 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return new ClusterMetricsInfo(this.rm);
   }
 
+  @POST
+  @Path(RMWSConsts.SCALING)
+  @Consumes({ MediaType.APPLICATION_JSON})
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
+  @Override
+  public ClusterScalingInfo getClusterScalingInfo(
+      @HeaderParam(RMWSConsts.SCALING_CUSTOM_HEADER_KEY)
+          String apiVersion,
+      @QueryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY)
+          String upscalingFactorInNodeResourceTypes,
+      NodeInstanceTypeList instanceTypeList) {
+    initForReadableEndpoints();
+    String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
+    if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
+      throw new BadRequestException("Requested " + RMWSConsts.SCALING_CUSTOM_HEADER_KEY +
+          ": " + apiVersion + " is not supported!");
+    }
+    if (instanceTypeList == null) {
+      throw new BadRequestException("Node instance types are needed!");
+    }
+    return new ClusterScalingInfo(this.rm,
+        upscalingFactorInNodeResourceTypes,
+        instanceTypeList.rebuild());
+  }
+
   @GET
   @Path(RMWSConsts.SCHEDULER)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -494,9 +523,26 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         nodeInfo.setNodeHTTPAddress(RMWSConsts.EMPTY);
       }
       nodesInfo.add(nodeInfo);
+      // get remaining timeout
+      Integer timeout = rmNode.getDecommissioningTimeout();
+      if (timeout == null) {
+        timeout = -1;
+      }
     }
-
     return nodesInfo;
+  }
+
+  private String buildDecommissionStr(int amCount, int appCount,
+      boolean isRecommendedDecommissionCandidate, int decommissioningRemainingTimeoutSecs) {
+    String flag = isRecommendedDecommissionCandidate == true ? "True" : "False";
+    String result =  "isRecommendedDecommissionCandidate: " +
+        flag + ", AM count:" + amCount + ", " +
+        "Running application count: " + appCount;
+    if (decommissioningRemainingTimeoutSecs != -1) {
+      result += ", " +
+          "Remaining decommissioning timeout seconds: " + decommissioningRemainingTimeoutSecs;
+    }
+    return result;
   }
 
   @GET

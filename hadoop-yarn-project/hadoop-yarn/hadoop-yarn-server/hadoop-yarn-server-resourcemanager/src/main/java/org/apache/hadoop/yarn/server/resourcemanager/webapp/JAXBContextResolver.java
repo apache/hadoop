@@ -76,6 +76,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
         { NewApplication.class, ApplicationSubmissionContextInfo.class,
             ContainerLaunchContextInfo.class, LocalResourceInfo.class,
             DelegationToken.class, AppQueue.class, AppPriority.class,
+            ClusterScalingInfo.class, NodeInstanceTypeList.class,
             ResourceOptionInfo.class };
 
     ArrayList<Class> finalcTypesList = new ArrayList<>();

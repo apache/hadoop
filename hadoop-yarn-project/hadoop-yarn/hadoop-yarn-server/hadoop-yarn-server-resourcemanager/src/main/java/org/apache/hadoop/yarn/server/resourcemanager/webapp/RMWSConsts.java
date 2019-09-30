@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+
 /**
  * Constants for {@code RMWebServiceProtocol}.
  */
@@ -74,6 +76,13 @@ public final class RMWSConsts {
 
   /** Path for {@code RMWebServiceProtocol#updateNodeResource}. */
   public static final String NODE_RESOURCE = "/nodes/{nodeId}/resource";
+
+  public static final String SCALING_CUSTOM_HEADER_KEY = "api-version";
+  public static final String SCALING_CUSTOM_HEADER_VERSION_V1 = "v1";
+
+  public static final String SCALING = "/scaling";
+  public static final String UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY =
+      "upscaling-factor-in-node-resource-types";
 
   /**
    * Path for {@code RMWebServiceProtocol#getApps} and
