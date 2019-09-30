@@ -63,7 +63,6 @@ services:
       - ../common-config
     environment:
       ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
-      CORE-SITE.xml_fs.o3fs.impl: org.apache.hadoop.fs.ozone.OzoneFileSystem
     command: ["/opt/hadoop/bin/ozone","scm"]
   rm:
     image: ${HADOOP_IMAGE}:${HADOOP_VERSION}

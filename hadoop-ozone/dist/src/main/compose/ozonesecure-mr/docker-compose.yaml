@@ -50,7 +50,6 @@ services:
       - 9874:9874
     environment:
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-      CORE-SITE.xml_fs.o3fs.impl: org.apache.hadoop.fs.ozone.OzoneFileSystem
     env_file:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
