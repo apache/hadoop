@@ -260,7 +260,7 @@ public final class XceiverServerRatis extends XceiverServer {
         conf.getObject(RatisServerConfiguration.class);
     int numSnapshotsRetained =
         ratisServerConfiguration.getNumSnapshotsRetained();
-    RaftServerConfigKeys.Snapshot.setSnapshotRetentionPolicy(properties,
+    RaftServerConfigKeys.Snapshot.setRetentionFileNum(properties,
         numSnapshotsRetained);
     return properties;
   }
