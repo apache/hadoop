@@ -143,7 +143,7 @@
           <artifactId>hadoop-yarn-common</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.fusesource.leveldbjni</groupId>
+          <groupId>${leveldbjni.group}</groupId>
           <artifactId>leveldbjni-all</artifactId>
         </exclusion>
         <exclusion>
@@ -484,7 +484,7 @@
           <artifactId>hadoop-yarn-server-common</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.fusesource.leveldbjni</groupId>
+          <groupId>${leveldbjni.group}</groupId>
           <artifactId>leveldbjni-all</artifactId>
         </exclusion>
         <exclusion>
