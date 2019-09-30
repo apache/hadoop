@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -157,30 +156,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   }
 
   /**
-   * The static cluster binding with the lifecycle of this test; served
-   * through instance-level methods for sharing across methods in the
-   * suite.
-   */
-  @SuppressWarnings("StaticNonFinalField")
-  private static ClusterBinding clusterBinding;
-
-
-  @AfterClass
-  public static void teardownClusters() throws IOException {
-    terminateCluster(clusterBinding);
-  }
-
-  /**
-   * Demand create the cluster.
-   * @throws IOException failure.
-   */
-  private void createClusterOnDemand() throws IOException {
-    if (clusterBinding == null) {
-      clusterBinding = createCluster(new JobConf(), false);
-    }
-  }
-
-  /**
    * The committer binding for this instance.
    */
   private final CommitterTestBinding committerTestBinding;
@@ -196,7 +171,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
   @Override
   public void setup() throws Exception {
-    createClusterOnDemand();
     super.setup();
     // configure the test binding for this specific test case.
     committerTestBinding.setup(getClusterBinding(), getFileSystem());
@@ -212,22 +186,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Rule
   public final TemporaryFolder localFilesDir = new TemporaryFolder();
 
-  /**
-   * We stage work into a temporary directory rather than directly under
-   * the user's home directory, as that is often rejected by CI test
-   * runners.
-   */
-  @Rule
-  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
-
   @Override
   protected String committerName() {
     return committerTestBinding.getCommitterName();
-  }
-
-  @Override
-  protected ClusterBinding getClusterBinding() {
-    return clusterBinding;
   }
 
   @Override
@@ -294,10 +255,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     // setting up staging options is harmless for other committers
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
-    String staging = stagingFilesDir.getRoot().getAbsolutePath();
-    LOG.info("Staging temp dir is {}", staging);
-    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, staging);
-
 
     mrJob.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.addInputPath(mrJob, new Path(localFilesDir.getRoot().toURI()));
@@ -327,7 +284,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
     String jobID = mrJob.getJobID().toString();
     String logLocation = "logs under "
-        + clusterBinding.getYarn().getTestWorkDir().getAbsolutePath();
+        + getYarn().getTestWorkDir().getAbsolutePath();
     try (DurationInfo ignore = new DurationInfo(LOG, "Job Execution")) {
       mrJob.waitForCompletion(true);
     }

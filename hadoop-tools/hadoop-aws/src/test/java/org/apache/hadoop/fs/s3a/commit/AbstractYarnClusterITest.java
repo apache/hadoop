@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import org.junit.AfterClass;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.deployService;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
@@ -66,9 +69,6 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.
  * If two subclasses of this class are instantiated in the same JVM, in order,
  * they are guaranteed to be isolated.
  *
- * History: this is a superclass extracted from
- * {@link AbstractITCommitMRJob} while adding support for testing terasorting.
- *
  */
 public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
@@ -83,7 +83,19 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
   private boolean scaleTest;
 
-  private boolean uniqueFilenames = false;
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    terminateCluster(clusterBinding);
+  }
 
   /**
    * This is the cluster binding which every subclass must create.
@@ -140,21 +152,11 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   }
 
   /**
-   * Create the cluster binding. This must be done in
-   * class setup of the (final) subclass.
-   * The local filesystem is used as the cluster FS.
-   * @param conf configuration to start with.
-   * @return the cluster binding.
-   * @throws IOException failure.
-   */
-  protected static ClusterBinding createCluster(JobConf conf)
-      throws IOException {
-    return createCluster(conf, false);
-  }
-
-  /**
-   * Create the cluster binding. This must be done in
-   * class setup of the (final) subclass.
+   * Create the cluster binding.
+   * The configuration will be patched by propagating down options
+   * from the maven build (S3Guard binding etc) and turning off unwanted
+   * YARN features.
+   *
    * If an HDFS cluster is requested,
    * the HDFS and YARN clusters will share the same configuration, so
    * the HDFS cluster binding is implicitly propagated to YARN.
@@ -164,10 +166,10 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * @return the cluster binding.
    * @throws IOException failure.
    */
-  protected static ClusterBinding createCluster(JobConf conf,
-      final boolean useHDFS)
-      throws IOException {
-
+  protected static ClusterBinding createCluster(
+      final JobConf conf,
+      final boolean useHDFS) throws IOException {
+    prepareTestConfiguration(conf);
     conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
     // minicluster tests overreact to not enough disk space.
@@ -186,9 +188,13 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return new ClusterBinding(clusterName, miniDFSClusterService, yarnCluster);
   }
 
-  protected static void terminateCluster(ClusterBinding clusterBinding) {
-    if (clusterBinding != null) {
-      clusterBinding.terminate();
+  /**
+   * Terminate the cluster if it is not null.
+   * @param cluster the cluster
+   */
+  protected static void terminateCluster(ClusterBinding cluster) {
+    if (cluster != null) {
+      cluster.terminate();
     }
   }
 
@@ -196,23 +202,30 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * Get the cluster binding for this subclass.
    * @return the cluster binding
    */
-  protected abstract ClusterBinding getClusterBinding();
-
-  protected MiniDFSClusterService getHdfs() {
-    return getClusterBinding().getHdfs();
+  protected ClusterBinding getClusterBinding() {
+    return clusterBinding;
   }
-
 
   protected MiniMRYarnCluster getYarn() {
     return getClusterBinding().getYarn();
   }
 
-  protected FileSystem getDFS() throws IOException {
-    MiniDFSClusterService hdfs = getHdfs();
-    return hdfs != null
-        ? hdfs.getClusterFS()
-        : FileSystem.getLocal(getConfiguration());
+  /**
+   * Get the cluster filesystem -hdfs or local.
+   * @return the filesystem shared across the yarn nodes.
+   */
+  protected FileSystem getClusterFS() throws IOException {
+    return getClusterBinding().getClusterFS();
   }
+
+
+  /**
+   * We stage work into a temporary directory rather than directly under
+   * the user's home directory, as that is often rejected by CI test
+   * runners.
+   */
+  @Rule
+  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
 
   /**
    * The name of the committer as returned by
@@ -221,16 +234,29 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    */
   protected abstract String committerName();
 
+  /**
+   * binding on demand rather than in a BeforeClass static method.
+   * Subclasses can override this to change the binding options.
+   * @return the cluster binding
+   */
+  protected ClusterBinding demandCreateClusterBinding() throws Exception {
+    return createCluster(new JobConf(), false);
+  }
+
   @Override
   public void setup() throws Exception {
     super.setup();
-    assertNotNull("cluster is not bound",
-        getClusterBinding());
 
     scaleTest = getTestPropertyBool(
         getConfiguration(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
+    if (getClusterBinding() == null) {
+      clusterBinding = demandCreateClusterBinding();
+    }
+    assertNotNull("cluster is not bound",
+        getClusterBinding());
+
   }
 
   @Override
@@ -259,17 +285,16 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   protected Configuration patchConfigurationForCommitter(
       final Configuration jobConf) {
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        uniqueFilenames);
+        isUniqueFilenames());
     bindCommitter(jobConf,
         CommitConstants.S3A_COMMITTER_FACTORY,
         committerName());
     // pass down the scale test flag
     jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
     // and fix the commit dir to the local FS across all workers.
-    File tmpDir = new File(System.getProperty(JAVA_IO_TMPDIR));
-    String tmpDirStr = tmpDir.toURI().toString();
-    LOG.info("Staging temp dir is {}", tmpDirStr);
-    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, tmpDirStr);
+    String staging = stagingFilesDir.getRoot().getAbsolutePath();
+    LOG.info("Staging temp dir is {}", staging);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, staging);
     return jobConf;
   }
 
@@ -316,6 +341,6 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   }
 
   public boolean isUniqueFilenames() {
-    return uniqueFilenames;
+    return false;
   }
 }

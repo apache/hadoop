@@ -20,13 +20,17 @@ package org.apache.hadoop.fs.s3a.commit.terasort;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +42,8 @@ import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
+import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
+import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -48,24 +54,24 @@ import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
  * Runs Terasort against S3A.
  *
- * This is all done on a shared mini YARN and HDFS clusters, set up before
- * any of the tests methods run.
- *
+ * Parameterized by committer name, using a YARN cluster
+ * shared across all test runs.
  * The tests run in sequence, so each operation is isolated.
- * This also means that the test paths deleted in test
+ * This also means that the test paths are  deleted in test
  * teardown; shared variables must all be static.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@RunWith(Parameterized.class)
 @SuppressWarnings("StaticNonFinalField")
-public abstract class AbstractCommitTerasortIT extends
-    AbstractYarnClusterITest {
+public class ITestCommitterTerasort extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(AbstractCommitTerasortIT.class);
+      LoggerFactory.getLogger(ITestCommitterTerasort.class);
 
   // all the durations are optional as they only get filled in when
   // a test run successfully completes. Failed tests don't have numbers.
@@ -77,6 +83,8 @@ public abstract class AbstractCommitTerasortIT extends
 
   private static Optional<DurationInfo> teravalidateStageDuration = empty();
 
+  private final String committerName;
+
   private Path terasortPath;
 
   private Path sortInput;
@@ -84,6 +92,22 @@ public abstract class AbstractCommitTerasortIT extends
   private Path sortOutput;
 
   private Path sortValidate;
+
+  /**
+   * Test array for parameterized test runs.
+   *
+   * @return the committer binding for this run.
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {DirectoryStagingCommitter.NAME},
+        {MagicS3GuardCommitter.NAME}});
+  }
+
+  public ITestCommitterTerasort(final String committerName) {
+    this.committerName = committerName;
+  }
 
   /**
    * Not using special paths here.
@@ -95,10 +119,24 @@ public abstract class AbstractCommitTerasortIT extends
   }
 
   @Override
+  protected String committerName() {
+    return committerName;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
     requireScaleTestsEnabled();
     prepareToTerasort();
+  }
+
+  /**
+   * Turn on the magic commit support for the FS.
+   * @param conf configuration
+   */
+  @Override
+  protected void applyCustomConfigOptions(JobConf conf) {
+    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
   }
 
   /**
@@ -141,7 +179,7 @@ public abstract class AbstractCommitTerasortIT extends
       final Path dest,
       final Tool tool,
       final String[] args,
-      int minimumFileCount) throws Exception {
+      final int minimumFileCount) throws Exception {
     int result;
     DurationInfo d = new DurationInfo(LOG, stage);
     try {
@@ -198,7 +236,8 @@ public abstract class AbstractCommitTerasortIT extends
         jobConf,
         sortOutput,
         new TeraSort(),
-        new String[]{sortInput.toString(), sortOutput.toString()}, 1);
+        new String[]{sortInput.toString(), sortOutput.toString()},
+        1);
   }
 
   @Test
@@ -212,7 +251,8 @@ public abstract class AbstractCommitTerasortIT extends
         jobConf,
         sortValidate,
         new TeraValidate(),
-        new String[]{sortOutput.toString(), sortValidate.toString()}, 0);
+        new String[]{sortOutput.toString(), sortValidate.toString()},
+        1);
   }
 
   /**
@@ -241,7 +281,7 @@ public abstract class AbstractCommitTerasortIT extends
     stage.accept("Completed", terasortDuration);
     String text = results.toString();
     File resultsFile = File.createTempFile("results", ".csv");
-    FileUtils.write(resultsFile, text, Charset.forName("UTF-8"));
+    FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
   }
 
