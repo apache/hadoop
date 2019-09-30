@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -295,7 +297,33 @@ public class SCMBlockProtocolServer implements
     boolean auditSuccess = true;
     try{
       NodeManager nodeManager = scm.getScmNodeManager();
-      Node client = nodeManager.getNodeByAddress(clientMachine);
+      Node client;
+      List<DatanodeDetails> possibleClients =
+          nodeManager.getNodesByAddress(clientMachine);
+      if (possibleClients.size() == 1) {
+        client = possibleClients.get(0);
+      } else if (possibleClients.size() == 0) {
+        client = null;
+      } else {
+        // Generally a test cluster with many DNs on the same host so check
+        // if any of the passed hosts match one of the client nodes
+        List<DatanodeDetails> matchedNodes = possibleClients.stream()
+            .filter(nodes::contains)
+            .collect(Collectors.toList());
+        if (matchedNodes.size() == 0) {
+          // None of the passed in nodes match a node running on the client
+          // host, so just set the client as the first one.
+          client = possibleClients.get(0);
+        } else if (matchedNodes.size() == 1) {
+          // Only one of the passed nodes matches a DN on the client, so use it
+          client = matchedNodes.get(0);
+        } else {
+          // Several of the passed nodes are running on the client address, so
+          // pick a random one.
+          Random rand = new Random();
+          client = matchedNodes.get(rand.nextInt(matchedNodes.size()));
+        }
+      }
       List<Node> nodeList = new ArrayList();
       nodes.stream().forEach(uuid -> {
         DatanodeDetails node = nodeManager.getNodeByUuid(uuid);
