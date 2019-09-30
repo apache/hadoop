@@ -20,31 +20,30 @@ package org.apache.hadoop.hdds.scm.cli.pipeline;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
 /**
- * Handler of activatePipeline command.
+ * Handler of activate pipeline command.
  */
 @CommandLine.Command(
-    name = "activatePipeline",
+    name = "activate",
     description = "Activates the given Pipeline",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
 public class ActivatePipelineSubcommand implements Callable<Void> {
 
   @CommandLine.ParentCommand
-  private SCMCLI parent;
+  private PipelineCommands parent;
 
   @CommandLine.Parameters(description = "ID of the pipeline to activate")
   private String pipelineId;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       scmClient.activatePipeline(
           HddsProtos.PipelineID.newBuilder().setId(pipelineId).build());
       return null;

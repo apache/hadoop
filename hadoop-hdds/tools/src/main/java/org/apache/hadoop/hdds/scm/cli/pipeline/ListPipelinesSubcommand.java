@@ -19,24 +19,23 @@
 package org.apache.hadoop.hdds.scm.cli.pipeline;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
 /**
- * Handler of listPipelines command.
+ * Handler of list pipelines command.
  */
 @CommandLine.Command(
-    name = "listPipelines",
+    name = "list",
     description = "List all active pipelines",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
 public class ListPipelinesSubcommand implements Callable<Void> {
 
   @CommandLine.ParentCommand
-  private SCMCLI parent;
+  private PipelineCommands parent;
 
   @CommandLine.Option(names = {"-ffc", "--filterByFactor"},
       description = "Filter listed pipelines by Factor(ONE/one)",
@@ -53,7 +52,7 @@ public class ListPipelinesSubcommand implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       if (isNullOrEmpty(factor) && isNullOrEmpty(state)) {
         scmClient.listPipelines().forEach(System.out::println);
       } else {

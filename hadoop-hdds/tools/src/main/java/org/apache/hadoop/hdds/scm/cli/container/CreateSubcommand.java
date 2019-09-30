@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.scm.cli.container;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
@@ -45,7 +44,7 @@ public class CreateSubcommand implements Callable<Void> {
       LoggerFactory.getLogger(CreateSubcommand.class);
 
   @ParentCommand
-  private SCMCLI parent;
+  private ContainerCommands parent;
 
   @Option(description = "Owner of the new container", defaultValue = "OZONE",
       required = false, names = {
@@ -55,7 +54,7 @@ public class CreateSubcommand implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       ContainerWithPipeline container = scmClient.createContainer(owner);
       LOG.info("Container {} is created.",
           container.getContainerInfo().getContainerID());

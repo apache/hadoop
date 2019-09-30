@@ -15,45 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hdds.scm.cli.container;
+
+import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.cli.MissingSubcommandException;
+import org.apache.hadoop.hdds.scm.cli.SCMCLI;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.client.ScmClient;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-import picocli.CommandLine.ParentCommand;
-
 /**
- * This is the handler that process delete container command.
+ * Subcommand to group container related operations.
  */
 @Command(
-    name = "delete",
-    description = "Delete container",
+    name = "container",
+    description = "Container specific operations",
     mixinStandardHelpOptions = true,
-    versionProvider = HddsVersionProvider.class)
-public class DeleteSubcommand implements Callable<Void> {
-
-  @Parameters(description = "Id of the container to close")
-  private long containerId;
-
-  @Option(names = {"-f",
-      "--force"}, description = "forcibly delete the container")
-  private boolean force;
+    versionProvider = HddsVersionProvider.class,
+    subcommands = {
+        ListSubcommand.class,
+        InfoSubcommand.class,
+        DeleteSubcommand.class,
+        CreateSubcommand.class,
+        CloseSubcommand.class
+    })
+public class ContainerCommands implements Callable<Void> {
 
   @ParentCommand
-  private ContainerCommands parent;
+  private SCMCLI parent;
+
+  public SCMCLI getParent() {
+    return parent;
+  }
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.getParent().createScmClient()) {
-      parent.getParent().checkContainerExists(scmClient, containerId);
-      scmClient.deleteContainer(containerId, force);
-      return null;
-    }
+    throw new MissingSubcommandException(
+        this.parent.getCmd().getSubcommands().get("container"));
   }
 }
