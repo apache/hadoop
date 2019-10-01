@@ -26,15 +26,21 @@ import java.util.Objects;
 
 import com.amazonaws.SignableRequest;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.Signer;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -47,7 +53,21 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
  */
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
-  private static final String TEST_KEY = "TEST_KEY";
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ITestCustomSigner.class);
+
+  private static final String TEST_ID_KEY = "TEST_ID_KEY";
+  private static final String TEST_REGION_KEY = "TEST_REGION_KEY";
+
+  private String regionName;
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    regionName = determineRegion(getFileSystem().getBucket());
+    LOG.info("Determined region name to be [{}] for bucket [{}]", regionName,
+        getFileSystem().getBucket());
+  }
 
   @Test
   public void testCustomSignerAndInitializer()
@@ -90,7 +110,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           .as("Store value should not be null").isNotNull();
       Assertions.assertThat(CustomSigner.lastStoreValue.conf)
           .as("Configuration should not be null").isNotNull();
-      Assertions.assertThat(CustomSigner.lastStoreValue.conf.get(TEST_KEY))
+      Assertions.assertThat(CustomSigner.lastStoreValue.conf.get(TEST_ID_KEY))
           .as("Configuration TEST_KEY mismatch").isEqualTo(identifier);
 
       return fs;
@@ -105,13 +125,27 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
             + CustomSignerInitializer.class.getName());
     conf.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
 
-    conf.set(TEST_KEY, identifier);
+    conf.set(TEST_ID_KEY, identifier);
+    conf.set(TEST_REGION_KEY, regionName);
 
     return conf;
   }
 
+  private String determineRegion(String bucketName) throws IOException {
+    AmazonS3 s3 = AmazonS3ClientBuilder.standard().withCredentials(
+        new SimpleAWSCredentialsProvider(null, createConfiguration()))
+        .withForceGlobalBucketAccessEnabled(true).withRegion("us-east-1")
+        .build();
+    String region = s3.getBucketLocation(bucketName);
+    //  See: https://forums.aws.amazon.com/thread.jspa?messageID=796829&tstart=0
+    if (region.equals("US")) {
+      region = "us-east-1";
+    }
+    return region;
+  }
+
   @Private
-  public static final class CustomSigner extends AWSS3V4Signer {
+  public static final class CustomSigner implements Signer {
 
     private static int invocationCount = 0;
     private static StoreValue lastStoreValue;
@@ -127,7 +161,10 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
-      super.sign(request, credentials);
+      AWSS3V4Signer realSigner = new AWSS3V4Signer();
+      realSigner.setServiceName("s3");
+      realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+      realSigner.sign(request, credentials);
     }
   }
 
