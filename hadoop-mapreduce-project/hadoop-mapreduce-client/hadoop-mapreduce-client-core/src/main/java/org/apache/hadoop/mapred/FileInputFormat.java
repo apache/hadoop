@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -250,7 +251,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
             job, dirs, recursive, inputFilter, false);
         locatedFiles = locatedFileStatusFetcher.getFileStatuses();
       } catch (InterruptedException e) {
-        throw new IOException("Interrupted while getting file statuses");
+        throw  (IOException)
+            new InterruptedIOException("Interrupted while getting file statuses")
+                .initCause(e);
       }
       result = Iterables.toArray(locatedFiles, FileStatus.class);
     }
