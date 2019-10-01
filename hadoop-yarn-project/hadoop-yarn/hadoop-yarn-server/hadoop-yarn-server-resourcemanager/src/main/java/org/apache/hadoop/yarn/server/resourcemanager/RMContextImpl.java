@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
@@ -34,7 +32,6 @@ import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
@@ -680,21 +677,5 @@ public class RMContextImpl implements RMContext {
   @Override
   public void incrTokenSequenceNo() {
     this.activeServiceContext.incrTokenSequenceNo();
-  }
-
-  public Set<String> getExclusiveEnforcedPartitions() {
-    Set<String> exclusiveEnforcedPartitions = new HashSet<>();
-    Configuration conf = getYarnConfiguration();
-    if (conf == null) {
-      return new HashSet<>();
-    }
-    String[] configuredPartitions = conf.getStrings(
-        YarnConfiguration.EXCLUSIVE_ENFORCED_PARTITIONS);
-    if (configuredPartitions != null) {
-      for (String partition : configuredPartitions) {
-        exclusiveEnforcedPartitions.add(partition);
-      }
-    }
-    return exclusiveEnforcedPartitions;
   }
 }
