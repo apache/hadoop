@@ -62,7 +62,7 @@ public final class OzoneS3Util {
       String rpcAddrKey = OmUtils.addKeySuffixes(OZONE_OM_ADDRESS_KEY,
           serviceId, nodeId);
       String rpcAddrStr = OmUtils.getOmRpcAddress(configuration, rpcAddrKey);
-      if (rpcAddrStr == null) {
+      if (rpcAddrStr == null || rpcAddrStr.isEmpty()) {
         throw new IllegalArgumentException("Could not find rpcAddress for " +
             OZONE_OM_ADDRESS_KEY + "." + serviceId + "." + nodeId);
       }
