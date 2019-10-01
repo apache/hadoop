@@ -29,6 +29,7 @@ HDFS Architecture
     * [Data Replication](#Data_Replication)
         * [Replica Placement: The First Baby Steps](#Replica_Placement:_The_First_Baby_Steps)
         * [Replica Selection](#Replica_Selection)
+        * [Block Placement Policies](#Block_Placement)
         * [Safemode](#Safemode)
     * [The Persistence of File System Metadata](#The_Persistence_of_File_System_Metadata)
     * [The Communication Protocols](#The_Communication_Protocols)
@@ -167,6 +168,9 @@ If there exists a replica on the same rack as the reader node,
 then that replica is preferred to satisfy the read request.
 If HDFS cluster spans multiple data centers,
 then a replica that is resident in the local data center is preferred over any remote replica.
+
+### Block Placement Policies
+As mentioned above when the replication factor is three, HDFS’s placement policy is to put one replica on the local machine if the writer is on a datanode, otherwise on a random datanode in the same rack as that of the writer, another replica on a node in a different (remote) rack, and the last on a different node in the same remote rack. If the replication factor is greater than 3, the placement of the 4th and following replicas are determined randomly while keeping the number of replicas per rack below the upper limit (which is basically (replicas - 1) / racks + 2). Additional to this HDFS supports 4 different pluggable block placement policies. Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault.
 
 ### Safemode
 
