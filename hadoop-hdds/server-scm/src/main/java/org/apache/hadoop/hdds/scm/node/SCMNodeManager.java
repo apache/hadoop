@@ -284,7 +284,8 @@ public class SCMNodeManager implements NodeManager {
    * @param dnsName String representing the hostname or IP of the node
    * @param uuid String representing the UUID of the registered node.
    */
-  private void addEntryTodnsToUuidMap(String dnsName, String uuid) {
+  private synchronized void addEntryTodnsToUuidMap(
+      String dnsName, String uuid) {
     Set<String> dnList = dnsToUuidMap.get(dnsName);
     if (dnList == null) {
       dnList = new HashSet<>();
