@@ -112,7 +112,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
     }
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
-    this.exclusiveEnforcedPartitions = context.getExclusiveEnforcedPartitions();
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   /**

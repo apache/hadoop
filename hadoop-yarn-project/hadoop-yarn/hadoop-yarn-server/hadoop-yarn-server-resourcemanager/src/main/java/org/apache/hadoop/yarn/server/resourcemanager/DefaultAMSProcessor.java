@@ -101,11 +101,14 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       RecordFactoryProvider.getRecordFactory(null);
 
   private RMContext rmContext;
+  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -209,8 +212,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       }
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         SchedulerUtils.enforcePartitionExclusivity(req,
-            getRmContext().getExclusiveEnforcedPartitions(),
-            asc.getNodeLabelExpression());
+            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
       }
     }
 
