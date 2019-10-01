@@ -23,6 +23,8 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
+import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
@@ -31,6 +33,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -41,6 +45,9 @@ import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -156,7 +163,12 @@ public class SchedConfCLI extends Configured implements Tool {
   @VisibleForTesting
   int formatSchedulerConf(String webAppAddress, WebResource resource)
       throws Exception {
-    Client webServiceClient = Client.create();
+    Configuration conf = getConf();
+    SSLFactory clientSslFactory = null;
+    if (YarnConfiguration.useHttps(conf)) {
+      clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    }
+    Client webServiceClient = createWebServiceClient(clientSslFactory);
     ClientResponse response = null;
     resource = (resource != null) ? resource :
         webServiceClient.resource(webAppAddress);
@@ -194,14 +206,24 @@ public class SchedConfCLI extends Configured implements Tool {
       if (response != null) {
         response.close();
       }
-      webServiceClient.destroy();
+      if (webServiceClient != null) {
+        webServiceClient.destroy();
+      }
+      if (clientSslFactory != null) {
+        clientSslFactory.destroy();
+      }
     }
   }
 
   @VisibleForTesting
   int updateSchedulerConfOnRMNode(String webAppAddress,
       SchedConfUpdateInfo updateInfo) throws Exception {
-    Client webServiceClient = Client.create();
+    Configuration conf = getConf();
+    SSLFactory clientSslFactory = null;
+    if (YarnConfiguration.useHttps(conf)) {
+      clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    }
+    Client webServiceClient = createWebServiceClient(clientSslFactory);
     ClientResponse response = null;
     WebResource resource = webServiceClient.resource(webAppAddress);
 
@@ -236,8 +258,40 @@ public class SchedConfCLI extends Configured implements Tool {
       if (response != null) {
         response.close();
       }
-      webServiceClient.destroy();
+      if (webServiceClient != null) {
+        webServiceClient.destroy();
+      }
+      if (clientSslFactory != null) {
+        clientSslFactory.destroy();
+      }
     }
+  }
+
+  private Client createWebServiceClient(SSLFactory clientSslFactory) {
+    Client webServiceClient = new Client(new URLConnectionClientHandler(
+        new HttpURLConnectionFactory() {
+        @Override
+        public HttpURLConnection getHttpURLConnection(URL url)
+            throws IOException {
+          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+          AuthenticatedURL aUrl;
+          HttpURLConnection conn = null;
+          try {
+            if (clientSslFactory != null) {
+              clientSslFactory.init();
+              aUrl = new AuthenticatedURL(null, clientSslFactory);
+            } else {
+              aUrl = new AuthenticatedURL();
+            }
+            conn = aUrl.openConnection(url, token);
+          } catch (Exception e) {
+            throw new IOException(e);
+          }
+          return conn;
+        }
+      }));
+    webServiceClient.setChunkedEncodingSize(null);
+    return webServiceClient;
   }
 
 
