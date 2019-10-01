@@ -45,10 +45,6 @@ abstract class AbstractINodeDiffList<N extends INode,
     return diffs != null ?
         DiffList.unmodifiableList(diffs) : DiffList.emptyList();
   }
-
-  public boolean isEmpty() {
-    return diffs == null || diffs.isEmpty();
-  }
   
   /** Clear the list. */
   public void clear() {

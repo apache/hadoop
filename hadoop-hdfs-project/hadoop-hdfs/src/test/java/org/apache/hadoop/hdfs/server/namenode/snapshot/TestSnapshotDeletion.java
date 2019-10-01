@@ -527,7 +527,7 @@ public class TestSnapshotDeletion {
     assertEquals(snapshot1.getId(), diffList.getLast().getSnapshotId());
     diffList = fsdir.getINode(metaChangeDir.toString()).asDirectory()
         .getDiffs();
-    assertEquals(null, diffList);
+    assertEquals(0, diffList.asList().size());
     
     // check 2. noChangeDir and noChangeFile are still there
     final INodeDirectory noChangeDirNode = 
