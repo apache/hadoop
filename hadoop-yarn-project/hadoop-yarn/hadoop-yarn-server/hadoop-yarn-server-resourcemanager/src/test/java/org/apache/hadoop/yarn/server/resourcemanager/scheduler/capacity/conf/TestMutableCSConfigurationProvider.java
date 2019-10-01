@@ -98,5 +98,9 @@ public class TestMutableCSConfigurationProvider {
     confProvider.confirmPendingMutation(false);
     assertNull(confProvider.loadConfiguration(conf).get(
         "yarn.scheduler.capacity.root.a.badKey"));
+
+    confProvider.formatConfigurationInStore(conf);
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
   }
 }

@@ -129,6 +129,15 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
 
 
   @Test
+  public void testFormatConfiguration() throws Exception {
+    schedConf.set("key", "val");
+    confStore.initialize(conf, schedConf, rmContext);
+    assertEquals("val", confStore.retrieve().get("key"));
+    confStore.format();
+    assertNull(confStore.retrieve());
+  }
+
+  @Test
   public void testPersistUpdatedConfiguration() throws Exception {
     confStore.initialize(conf, schedConf, rmContext);
     assertNull(confStore.retrieve().get("key"));

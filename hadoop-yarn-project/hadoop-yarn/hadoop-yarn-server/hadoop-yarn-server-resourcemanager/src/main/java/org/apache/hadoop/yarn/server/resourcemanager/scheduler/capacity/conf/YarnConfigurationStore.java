@@ -126,6 +126,12 @@ public abstract class YarnConfigurationStore {
   public abstract Configuration retrieve();
 
   /**
+   * Format the persisted configuration.
+   * @throws IOException on failure to format
+   */
+   public abstract void format() throws Exception;
+
+  /**
    * Get a list of confirmed configuration mutations starting from a given id.
    * @param fromId id from which to start getting mutations, inclusive
    * @return list of configuration mutations

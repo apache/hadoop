@@ -853,7 +853,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @GET
-  @Path("/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}")
+  @Path(RMWSConsts.GET_CONTAINER)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
@@ -867,7 +867,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @GET
-  @Path("/apps/{appid}/state")
+  @Path(RMWSConsts.APPS_APPID_STATE)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
@@ -2320,7 +2320,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @PUT
-  @Path("/scheduler-conf")
+  @Path(RMWSConsts.SCHEDULER_CONF)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
@@ -2372,7 +2372,39 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @GET
-  @Path("/scheduler-conf")
+  @Path(RMWSConsts.FORMAT_SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response formatSchedulerConfiguration(@Context HttpServletRequest hsr)
+      throws AuthorizationException {
+    // Only admin user allowed to format scheduler conf in configuration store
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      try {
+        MutableConfigurationProvider mutableConfigurationProvider =
+            ((MutableConfScheduler) scheduler).getMutableConfProvider();
+        mutableConfigurationProvider.formatConfigurationInStore(conf);
+        return Response.status(Status.OK).entity("Configuration under " +
+            "store successfully formatted.").build();
+      } catch (Exception e) {
+        LOG.error("Exception thrown when formating configuration", e);
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+            .build();
+      }
+    } else {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by " +
+          "MutableConfScheduler.").build();
+    }
+  }
+
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_CONF)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public Response getSchedulerConfiguration(@Context HttpServletRequest hsr)
