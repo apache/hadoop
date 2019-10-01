@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -204,7 +203,4 @@ public interface RMContext extends ApplicationMasterServiceContext {
   long getTokenSequenceNo();
 
   void incrTokenSequenceNo();
-
-  Set<String> getExclusiveEnforcedPartitions();
-
 }
