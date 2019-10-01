@@ -61,6 +61,11 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
   }
 
   @Override
+  public void format() {
+    this.schedConf = null;
+  }
+
+  @Override
   public synchronized Configuration retrieve() {
     return schedConf;
   }
