@@ -24,7 +24,7 @@ import java.util.Objects;
  * CacheKey for the RocksDB table.
  * @param <KEY>
  */
-public class CacheKey<KEY> {
+public class CacheKey<KEY> implements Comparable<KEY> {
 
   private final KEY key;
 
@@ -52,5 +52,19 @@ public class CacheKey<KEY> {
   @Override
   public int hashCode() {
     return Objects.hash(key);
+  }
+
+  @Override
+  public int compareTo(Object o) {
+    if(Objects.equals(key, ((CacheKey<?>)o).key)) {
+      return 0;
+    } else {
+      if (key instanceof String) {
+        return ((String) key).compareTo((String) ((CacheKey<?>)o).key);
+      } else {
+        // If not type string, convert to string and compare.
+        return key.toString().compareTo((((CacheKey<?>) o).key).toString());
+      }
+    }
   }
 }
