@@ -50,7 +50,7 @@ public abstract class OMVolumeRequest extends OMClientRequest {
    * @param volume - volume which needs to deleted from the volume list.
    * @param owner - Name of the Owner.
    * @param txID - The transaction ID that is updating this value.
-   * @return VolumeList - updated volume list for the user.
+   * @return UserVolumeInfo - updated UserVolumeInfo.
    * @throws IOException
    */
   protected UserVolumeInfo delVolumeFromOwnerList(UserVolumeInfo volumeList,

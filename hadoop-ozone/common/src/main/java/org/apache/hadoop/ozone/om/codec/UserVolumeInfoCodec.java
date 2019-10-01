@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
- * Codec to encode VolumeList as byte array.
+ * Codec to encode UserVolumeInfo as byte array.
  */
 public class UserVolumeInfoCodec implements Codec<UserVolumeInfo> {
 
