@@ -16,7 +16,11 @@
  */
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
-import org.apache.commons.lang.StringUtils;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -30,25 +34,24 @@ import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.net.NodeSchema;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+
+import org.apache.commons.lang.StringUtils;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.LEAF_SCHEMA;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.RACK_SCHEMA;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
+import org.hamcrest.MatcherAssert;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.mockito.Mockito;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-
-import static org.apache.hadoop.hdds.scm.net.NetConstants.LEAF_SCHEMA;
-import static org.apache.hadoop.hdds.scm.net.NetConstants.RACK_SCHEMA;
-import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.anyObject;
+import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
 /**
@@ -76,7 +79,7 @@ public class TestSCMContainerPlacementRackAware {
 
   @Parameterized.Parameters
   public static Collection<Object[]> setupDatanodes() {
-    return Arrays.asList(new Object[][]{{3}, {4}, {5}, {6}, {7}, {8}, {9},
+    return Arrays.asList(new Object[][] {{3}, {4}, {5}, {6}, {7}, {8}, {9},
         {10}, {11}, {12}, {13}, {14}, {15}});
   }
 
@@ -130,7 +133,6 @@ public class TestSCMContainerPlacementRackAware {
     policyNoFallback = new SCMContainerPlacementRackAware(
         nodeManager, conf, cluster, false, metrics);
   }
-
 
   @Test
   public void chooseNodeWithNoExcludedNodes() throws SCMException {
@@ -226,7 +228,7 @@ public class TestSCMContainerPlacementRackAware {
     assumeTrue(datanodeCount > NODE_PER_RACK * 2 &&
         (datanodeCount % NODE_PER_RACK > 1));
     int nodeNum = 5;
-    List<DatanodeDetails>  datanodeDetails =
+    List<DatanodeDetails> datanodeDetails =
         policy.chooseDatanodes(null, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
     Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
@@ -247,8 +249,8 @@ public class TestSCMContainerPlacementRackAware {
     long compromiseCount = metrics.getDatanodeChooseFallbackCount();
 
     // verify metrics
-    Assert.assertTrue(totalRequest == nodeNum);
-    Assert.assertTrue(successCount == nodeNum);
+    Assert.assertEquals(totalRequest, nodeNum);
+    Assert.assertEquals(successCount, nodeNum);
     Assert.assertTrue(tryCount > nodeNum);
     Assert.assertTrue(compromiseCount >= 1);
   }
@@ -263,7 +265,7 @@ public class TestSCMContainerPlacementRackAware {
       policyNoFallback.chooseDatanodes(null, null, nodeNum, 15);
       fail("Fallback prohibited, this call should fail");
     } catch (Exception e) {
-      assertTrue(e.getClass().getSimpleName().equals("SCMException"));
+      assertEquals("SCMException", e.getClass().getSimpleName());
     }
 
     // get metrics
@@ -272,10 +274,12 @@ public class TestSCMContainerPlacementRackAware {
     long tryCount = metrics.getDatanodeChooseAttemptCount();
     long compromiseCount = metrics.getDatanodeChooseFallbackCount();
 
-    Assert.assertTrue(totalRequest == nodeNum);
-    Assert.assertTrue(successCount >= 3);
-    Assert.assertTrue(tryCount >= nodeNum);
-    Assert.assertTrue(compromiseCount == 0);
+    Assert.assertEquals(totalRequest, nodeNum);
+    MatcherAssert.assertThat("Not enough success count", successCount,
+        greaterThanOrEqualTo(1L));
+    MatcherAssert.assertThat("Not enough try count", tryCount,
+        greaterThanOrEqualTo((long) 1L));
+    Assert.assertEquals(compromiseCount, 0);
   }
 
   @Test
@@ -289,8 +293,8 @@ public class TestSCMContainerPlacementRackAware {
     List<DatanodeDetails> datanodeDetails = policy.chooseDatanodes(
         excludedNodes, favoredNodes, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
-    Assert.assertTrue(datanodeDetails.get(0).getNetworkFullPath()
-        .equals(favoredNodes.get(0).getNetworkFullPath()));
+    Assert.assertEquals(datanodeDetails.get(0).getNetworkFullPath(),
+        favoredNodes.get(0).getNetworkFullPath());
 
     // no overlap between excludedNodes and favoredNodes, favoredNodes can been
     // chosen.
@@ -301,8 +305,8 @@ public class TestSCMContainerPlacementRackAware {
     datanodeDetails = policy.chooseDatanodes(
         excludedNodes, favoredNodes, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
-    Assert.assertTrue(datanodeDetails.get(0).getNetworkFullPath()
-        .equals(favoredNodes.get(0).getNetworkFullPath()));
+    Assert.assertEquals(datanodeDetails.get(0).getNetworkFullPath(),
+        favoredNodes.get(0).getNetworkFullPath());
 
     // there is overlap between excludedNodes and favoredNodes, favoredNodes
     // should not be chosen.
@@ -335,10 +339,11 @@ public class TestSCMContainerPlacementRackAware {
     long tryCount = metrics.getDatanodeChooseAttemptCount();
     long compromiseCount = metrics.getDatanodeChooseFallbackCount();
 
-    Assert.assertTrue(totalRequest == nodeNum);
-    Assert.assertTrue(successCount == 0);
-    Assert.assertTrue(tryCount > nodeNum);
-    Assert.assertTrue(compromiseCount == 0);
+    Assert.assertEquals(totalRequest, nodeNum);
+    Assert.assertEquals(successCount, 0);
+    MatcherAssert.assertThat("Not enough try", tryCount,
+        greaterThanOrEqualTo((long) nodeNum));
+    Assert.assertEquals(compromiseCount, 0);
   }
 
   @Test
