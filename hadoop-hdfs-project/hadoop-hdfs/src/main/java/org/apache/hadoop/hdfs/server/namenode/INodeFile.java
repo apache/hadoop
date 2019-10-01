@@ -744,6 +744,9 @@ public class INodeFile extends INodeWithAdditionalFields
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
       updateRemovedUnderConstructionFiles(reclaimContext);
+      if (sf.getDiffs().isEmpty()) {
+        this.removeFeature(sf);
+      }
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
