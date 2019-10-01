@@ -270,7 +270,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     // container happens outside of Ratis.
     IOUtils.write(builder.build().toByteArray(), out);
   }
-  
+
   public boolean isStateMachineHealthy() {
     return stateMachineHealthy.get();
   }
