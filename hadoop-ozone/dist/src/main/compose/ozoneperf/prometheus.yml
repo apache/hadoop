@@ -23,3 +23,13 @@ scrape_configs:
      - targets:
         - "scm:9876"
         - "om:9874"
+        - "ozoneperf_datanode_1:9882"
+        - "ozoneperf_datanode_2:9882"
+        - "ozoneperf_datanode_3:9882"
+        - "ozoneperf_datanode_4:9882"
+        - "ozoneperf_datanode_5:9882"
+        - "ozoneperf_datanode_6:9882"
+        - "ozoneperf_datanode_7:9882"
+        - "ozoneperf_datanode_8:9882"
+        - "ozoneperf_datanode_9:9882"
+        - "ozoneperf_datanode_10:9882"
