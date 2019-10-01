@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
+import java.util.TreeSet;
 
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
 
@@ -60,20 +61,34 @@ public class TestOmMetadataManager {
     String prefixBucketNameWithHadoopOwner = "hadoopBucket";
 
     TestOMRequestUtils.addVolumeToDB(volumeName1, omMetadataManager);
+
+
+    TreeSet<String> volumeABucketsPrefixWithOzoneOwner = new TreeSet<>();
+    TreeSet<String> volumeABucketsPrefixWithHadoopOwner = new TreeSet<>();
     for (int i=1; i<= 100; i++) {
       if (i % 2 == 0) {
+        volumeABucketsPrefixWithOzoneOwner.add(
+            prefixBucketNameWithOzoneOwner + i);
         addBucketsToCache(volumeName1, prefixBucketNameWithOzoneOwner + i);
       } else {
+        volumeABucketsPrefixWithHadoopOwner.add(
+            prefixBucketNameWithHadoopOwner + i);
         addBucketsToCache(volumeName1, prefixBucketNameWithHadoopOwner + i);
       }
     }
 
     String volumeName2 = "volumeB";
+    TreeSet<String> volumeBBucketsPrefixWithOzoneOwner = new TreeSet<>();
+    TreeSet<String> volumeBBucketsPrefixWithHadoopOwner = new TreeSet<>();
     TestOMRequestUtils.addVolumeToDB(volumeName2, omMetadataManager);
     for (int i=1; i<= 100; i++) {
       if (i % 2 == 0) {
+        volumeBBucketsPrefixWithOzoneOwner.add(
+            prefixBucketNameWithOzoneOwner + i);
         addBucketsToCache(volumeName2, prefixBucketNameWithOzoneOwner + i);
       } else {
+        volumeBBucketsPrefixWithHadoopOwner.add(
+            prefixBucketNameWithHadoopOwner + i);
         addBucketsToCache(volumeName2, prefixBucketNameWithHadoopOwner + i);
       }
     }
@@ -91,12 +106,23 @@ public class TestOmMetadataManager {
     }
 
 
+    String startBucket = prefixBucketNameWithOzoneOwner + 10;
     omBucketInfoList =
         omMetadataManager.listBuckets(volumeName1,
-            prefixBucketNameWithOzoneOwner + 10, prefixBucketNameWithOzoneOwner,
+            startBucket, prefixBucketNameWithOzoneOwner,
             100);
 
-    Assert.assertEquals(omBucketInfoList.size(),  49);
+    Assert.assertEquals(volumeABucketsPrefixWithOzoneOwner.tailSet(
+        startBucket).size() - 1, omBucketInfoList.size());
+
+    startBucket = prefixBucketNameWithOzoneOwner + 38;
+    omBucketInfoList =
+        omMetadataManager.listBuckets(volumeName1,
+            startBucket, prefixBucketNameWithOzoneOwner,
+            100);
+
+    Assert.assertEquals(volumeABucketsPrefixWithOzoneOwner.tailSet(
+        startBucket).size() - 1, omBucketInfoList.size());
 
     for (OmBucketInfo omBucketInfo : omBucketInfoList) {
       Assert.assertTrue(omBucketInfo.getBucketName().startsWith(
@@ -117,20 +143,27 @@ public class TestOmMetadataManager {
           prefixBucketNameWithHadoopOwner));
     }
 
-    String startBucket = null;
+    // Try to get buckets by count 10, like that get all buckets in the
+    // volumeB with prefixBucketNameWithHadoopOwner.
+    startBucket = null;
+    TreeSet<String> expectedBuckets = new TreeSet<>();
     for (int i=0; i<5; i++) {
+
       omBucketInfoList = omMetadataManager.listBuckets(volumeName2,
           startBucket, prefixBucketNameWithHadoopOwner, 10);
 
       Assert.assertEquals(omBucketInfoList.size(), 10);
 
       for (OmBucketInfo omBucketInfo : omBucketInfoList) {
+        expectedBuckets.add(omBucketInfo.getBucketName());
         Assert.assertTrue(omBucketInfo.getBucketName().startsWith(
             prefixBucketNameWithHadoopOwner));
         startBucket =  omBucketInfo.getBucketName();
       }
     }
 
+
+    Assert.assertEquals(volumeBBucketsPrefixWithHadoopOwner, expectedBuckets);
     // As now we have iterated all 50 buckets, calling next time should
     // return empty list.
     omBucketInfoList = omMetadataManager.listBuckets(volumeName2,
