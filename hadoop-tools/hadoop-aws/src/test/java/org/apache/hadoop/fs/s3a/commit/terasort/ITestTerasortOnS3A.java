@@ -68,10 +68,10 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized.class)
 @SuppressWarnings("StaticNonFinalField")
-public class ITestCommitterTerasort extends AbstractYarnClusterITest {
+public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestCommitterTerasort.class);
+      LoggerFactory.getLogger(ITestTerasortOnS3A.class);
 
   // all the durations are optional as they only get filled in when
   // a test run successfully completes. Failed tests don't have numbers.
@@ -105,7 +105,7 @@ public class ITestCommitterTerasort extends AbstractYarnClusterITest {
         {MagicS3GuardCommitter.NAME}});
   }
 
-  public ITestCommitterTerasort(final String committerName) {
+  public ITestTerasortOnS3A(final String committerName) {
     this.committerName = committerName;
   }
 

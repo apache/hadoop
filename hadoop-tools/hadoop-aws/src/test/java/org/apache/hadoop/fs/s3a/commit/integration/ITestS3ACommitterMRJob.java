@@ -257,7 +257,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.addInputPath(mrJob, new Path(localFilesDir.getRoot().toURI()));
+    FileInputFormat.addInputPath(mrJob,
+        new Path(localFilesDir.getRoot().toURI()));
 
     mrJob.setMapperClass(MapClass.class);
     mrJob.setNumReduceTasks(0);
