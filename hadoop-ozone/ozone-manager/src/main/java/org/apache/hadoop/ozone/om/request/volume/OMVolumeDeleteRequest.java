@@ -95,7 +95,7 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
       }
 
       OmVolumeArgs omVolumeArgs = null;
-      OzoneManagerProtocolProtos.VolumeList newVolumeList = null;
+      OzoneManagerProtocolProtos.UserVolumeInfo newVolumeList = null;
 
       acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
           volume);
