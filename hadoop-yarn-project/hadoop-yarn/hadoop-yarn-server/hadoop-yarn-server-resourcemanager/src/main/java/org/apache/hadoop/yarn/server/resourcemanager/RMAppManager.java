@@ -121,7 +121,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(conf);
-    this.exclusiveEnforcedPartitions = context.getExclusiveEnforcedPartitions();
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   /**
