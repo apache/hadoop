@@ -92,8 +92,7 @@ public class AddAclBucketHandler extends Handler {
     boolean result = client.getObjectStore().addAcl(obj,
         OzoneAcl.parseAcl(acl));
 
-    System.out.printf("%s%n", "Acl set successfully: " +
-        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
+    System.out.printf("%s%n", "Acl added successfully: " + result);
 
     client.close();
     return null;

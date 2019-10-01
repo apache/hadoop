@@ -68,7 +68,7 @@ public class RemoveAclKeyHandler extends Handler {
    */
   @Override
   public Void call() throws Exception {
-    Objects.requireNonNull(acl, "New acl to be added not specified.");
+    Objects.requireNonNull(acl, "ACL to be removed not specified.");
     OzoneAddress address = new OzoneAddress(uri);
     address.ensureKeyAddress();
     OzoneClient client = address.createClient(createOzoneConfiguration());
@@ -95,8 +95,8 @@ public class RemoveAclKeyHandler extends Handler {
     boolean result = client.getObjectStore().removeAcl(obj,
         OzoneAcl.parseAcl(acl));
 
-    System.out.printf("%s%n", "Acl set successfully: " +
-        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
+    System.out.printf("%s%n", "Acl removed successfully: " + result);
+
     client.close();
     return null;
   }

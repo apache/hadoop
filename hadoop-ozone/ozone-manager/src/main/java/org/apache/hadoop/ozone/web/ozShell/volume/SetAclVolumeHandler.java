@@ -92,8 +92,8 @@ public class SetAclVolumeHandler extends Handler {
     boolean result = client.getObjectStore().setAcl(obj,
         OzoneAcl.parseAcls(acls));
 
-    System.out.printf("%s%n", "Acl set successfully: " +
-        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
+    System.out.printf("%s%n", "Acl set successfully: " + result);
+
     client.close();
     return null;
   }
