@@ -16,20 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * Interface for S3A Delegation Token access.
  */
-@Public
-@Evolving
 public interface DelegationTokenProvider {
   Token<? extends TokenIdentifier> getFsDelegationToken() throws IOException;
 }

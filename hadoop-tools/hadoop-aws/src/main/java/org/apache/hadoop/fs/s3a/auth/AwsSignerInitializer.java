@@ -16,24 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.auth;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * Interface which can be implemented to allow initialization
- * of any custom signers which may be used by the {@link S3AFileSystem}.
- *
+ * Interface which can be implemented to allow initialization of any custom
+ * signers which may be used by the {@link S3AFileSystem}.
  */
-@Public
-@Evolving
 public interface AwsSignerInitializer {
 
   /**
    * Register a store instance.
+   *
    * @param bucketName the bucket name
    * @param storeConf the store configuration
    * @param dtProvider delegation token provider for the store
@@ -44,6 +42,7 @@ public interface AwsSignerInitializer {
 
   /**
    * Unregister a store instance.
+   *
    * @param bucketName the bucket name
    * @param storeConf the store configuration
    * @param dtProvider delegation token provider for the store

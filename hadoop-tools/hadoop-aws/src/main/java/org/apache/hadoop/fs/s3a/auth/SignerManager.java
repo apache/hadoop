@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -60,10 +61,9 @@ public class SignerManager implements Closeable {
   /**
    * Initialize custom signers and register them with the AWS SDK.
    *
-   * @param conf Hadoop configuration
    */
-  public void initCustomSigners(Configuration conf) {
-    String[] customSigners = conf.getTrimmedStrings(CUSTOM_SIGNERS);
+  public void initCustomSigners() {
+    String[] customSigners = ownerConf.getTrimmedStrings(CUSTOM_SIGNERS);
     if (customSigners == null || customSigners.length == 0) {
       // No custom signers specified, nothing to do.
       LOG.debug("No custom signers specified");
@@ -83,14 +83,14 @@ public class SignerManager implements Closeable {
         // Nothing to do. Trying to use a pre-defined Signer
       } else {
         // Register any custom Signer
-        maybeRegisterSigner(parts[0], parts[1], conf);
+        maybeRegisterSigner(parts[0], parts[1], ownerConf);
 
         // If an initializer is specified, take care of instantiating it and
         // setting it up
         if (parts.length == 3) {
           Class<? extends AwsSignerInitializer> clazz = null;
           try {
-            clazz = (Class<? extends AwsSignerInitializer>) conf
+            clazz = (Class<? extends AwsSignerInitializer>) ownerConf
                 .getClassByName(parts[2]);
           } catch (ClassNotFoundException e) {
             throw new RuntimeException(String.format(
