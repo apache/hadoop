@@ -370,6 +370,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   protected void maybeCreateSuccessMarkerFromCommits(JobContext context,
       ActiveCommit pending) throws IOException {
     List<String> filenames = new ArrayList<>(pending.size());
+    // The list of committed objects in pending is size limited in
+    // ActiveCommit.uploadCommitted.
     filenames.addAll(pending.committedObjects);
     maybeCreateSuccessMarker(context, filenames);
   }
@@ -469,9 +471,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
+          .suppressExceptions(false)
           .executeWith(buildThreadPool(context))
-          .onFailure((path, exception) ->
-              loadAndAbort(commitContext, pending, path, true, false))
           .abortWith(path ->
               loadAndAbort(commitContext, pending, path, true, false))
           .revertWith(path ->
@@ -500,6 +501,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
+          .suppressExceptions(false)
           .executeWith(buildThreadPool(context))
           .run(path -> PendingSet.load(sourceFS, path));
     }
@@ -522,6 +524,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(), path);
       Tasks.foreach(pendingSet.getCommits())
           .stopOnFailure()
+          .suppressExceptions(false)
           .executeWith(singleCommitThreadPool())
           .onFailure((commit, exception) ->
               commitContext.abortSingleCommit(commit))
@@ -960,10 +963,10 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         Tasks.foreach(pending.getSourceFiles())
             .executeWith(buildThreadPool(context))
             .suppressExceptions(suppressExceptions)
-            .run(f ->
+            .run(path ->
                 loadAndAbort(commitContext,
                     pending,
-                    f,
+                    path,
                     suppressExceptions,
                     deleteRemoteFiles));
       }
@@ -1067,7 +1070,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
      * Note that a file was committed.
      * Increase the counter of files and total size.
      * If there is room in the committedFiles list, the file
-     * will be logged.
+     * will be added to the list and so end up in the _SUCCESS file.
      * @param key key of the committed object.
      * @param size size in bytes.
      */

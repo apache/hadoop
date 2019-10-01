@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,6 +187,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
     Map<Path, String> partitions = new ConcurrentHashMap<>();
     FileSystem sourceFS = pending.getSourceFS();
+    ExecutorService pool = buildThreadPool(context);
     try (DurationInfo ignored =
              new DurationInfo(LOG, "Replacing partitions")) {
 
@@ -195,7 +197,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       // is updated only once.
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
-          .executeWith(buildThreadPool(context))
+          .suppressExceptions(false)
+          .executeWith(pool)
           .run(path -> {
             PendingSet pendingSet = PendingSet.load(sourceFS, path);
             Path lastParent = null;
@@ -210,11 +213,15 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     }
     // now do the deletes
     FileSystem fs = getDestFS();
-    for (Path partitionPath : partitions.keySet()) {
-      LOG.debug("{}: removing partition path to be replaced: " +
-          getRole(), partitionPath);
-      fs.delete(partitionPath, true);
-    }
+    Tasks.foreach(partitions.keySet())
+        .stopOnFailure()
+        .suppressExceptions(false)
+        .executeWith(pool)
+        .run(partitionPath -> {
+          LOG.debug("{}: removing partition path to be replaced: " +
+              getRole(), partitionPath);
+          fs.delete(partitionPath, true);
+        });
   }
 
 }

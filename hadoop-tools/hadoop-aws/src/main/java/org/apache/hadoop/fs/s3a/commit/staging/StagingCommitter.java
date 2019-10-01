@@ -698,6 +698,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       try {
         Tasks.foreach(taskOutput)
             .stopOnFailure()
+            .suppressExceptions(false)
             .executeWith(buildThreadPool(context))
             .run(stat -> {
               Path path = stat.getPath();
