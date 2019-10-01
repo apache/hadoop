@@ -36,6 +36,9 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+
 
 /**
  * Tests {@link FSSchedulerConfigurationStore}.
@@ -133,6 +136,19 @@ public class TestFSSchedulerConfigurationStore {
     storeConf = configurationStore.retrieve();
 
     compareConfig(conf, storeConf);
+  }
+
+  @Test
+  public void testFormatConfiguration() throws Exception {
+    assertTrue(testSchedulerConfigurationDir.exists());
+    Configuration schedulerConf = new Configuration();
+    schedulerConf.set("a", "a");
+    writeConf(schedulerConf);
+    configurationStore.initialize(conf, conf, null);
+    Configuration storedConfig = configurationStore.retrieve();
+    assertEquals("a", storedConfig.get("a"));
+    configurationStore.format();
+    assertFalse(testSchedulerConfigurationDir.exists());
   }
 
   @Test

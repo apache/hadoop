@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * CS configuration provider which implements
@@ -57,6 +58,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   private YarnConfigurationStore confStore;
   private ConfigurationMutationACLPolicy aclMutationPolicy;
   private RMContext rmContext;
+
+  private final ReentrantReadWriteLock formatLock =
+      new ReentrantReadWriteLock();
 
   public MutableCSConfigurationProvider(RMContext rmContext) {
     this.rmContext = rmContext;
@@ -152,16 +156,50 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
+  public void formatConfigurationInStore(Configuration config)
+      throws Exception {
+    formatLock.writeLock().lock();
+    try {
+      confStore.format();
+      Configuration initialSchedConf = new Configuration(false);
+      initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
+      this.schedConf = new Configuration(false);
+      // We need to explicitly set the key-values in schedConf, otherwise
+      // these configuration keys cannot be deleted when
+      // configuration is reloaded.
+      for (Map.Entry<String, String> kv : initialSchedConf) {
+        schedConf.set(kv.getKey(), kv.getValue());
+      }
+      confStore.initialize(config, schedConf, rmContext);
+      confStore.checkVersion();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      formatLock.writeLock().unlock();
+    }
+  }
+
+  @Override
   public void confirmPendingMutation(boolean isValid) throws Exception {
-    confStore.confirmMutation(isValid);
-    if (!isValid) {
-      schedConf = oldConf;
+    formatLock.readLock().lock();
+    try {
+      confStore.confirmMutation(isValid);
+      if (!isValid) {
+        schedConf = oldConf;
+      }
+    } finally {
+      formatLock.readLock().unlock();
     }
   }
 
   @Override
   public void reloadConfigurationFromStore() throws Exception {
-    schedConf = confStore.retrieve();
+    formatLock.readLock().lock();
+    try {
+      schedConf = confStore.retrieve();
+    } finally {
+      formatLock.readLock().unlock();
+    }
   }
 
   private List<String> getSiblingQueues(String queuePath, Configuration conf) {
