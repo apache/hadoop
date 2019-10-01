@@ -114,6 +114,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private S3AFileSystem fileSystem;
   private S3AContract s3AContract;
+  private DynamoDBMetadataStoreTableHandler tableHandler;
 
   private URI fsUri;
 
@@ -153,6 +154,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     try{
       super.setUp();
+      tableHandler = getDynamoMetadataStore().getTableHandler();
     } catch (FileNotFoundException e){
       LOG.warn("MetadataStoreTestBase setup failed. Waiting for table to be "
           + "deleted before trying again.");
@@ -613,7 +615,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = ddbms.getTable().getTableName();
     verifyTableInitialized(tableName, ddbms.getDynamoDB());
     // create existing table
-    ddbms.initTable();
+    tableHandler.initTable();
     verifyTableInitialized(tableName, ddbms.getDynamoDB());
   }
 
@@ -622,7 +624,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
    */
   @Test
   public void testItemVersionCompatibility() throws Throwable {
-    verifyVersionCompatibility("table",
+    DynamoDBMetadataStoreTableHandler.verifyVersionCompatibility("table",
         createVersionMarker(VERSION_MARKER, VERSION, 0));
   }
 
@@ -633,7 +635,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testItemLacksVersion() throws Throwable {
     intercept(IOException.class, E_NOT_VERSION_MARKER,
-        () -> verifyVersionCompatibility("table",
+        () -> DynamoDBMetadataStoreTableHandler.verifyVersionCompatibility("table",
             new Item().withPrimaryKey(
                 createVersionMarkerPrimaryKey(VERSION_MARKER))));
   }
@@ -663,16 +665,21 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
+      DynamoDBMetadataStoreTableHandler localTableHandler =
+          ddbms.getTableHandler();
+
       Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
       // check the tagging too
       verifyStoreTags(createTagMap(), ddbms);
 
       Item originalVersionMarker = table.getItem(VERSION_MARKER_PRIMARY_KEY);
       table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
+      assertNull("Version marker should be null after deleting it from the table.",
+          table.getItem(VERSION_MARKER_PRIMARY_KEY));
 
       // create existing table
       intercept(IOException.class, E_NO_VERSION_MARKER,
-          () -> ddbms.initTable());
+          () -> localTableHandler.initTable());
 
       // now add a different version marker
       Item v200 = createVersionMarker(VERSION_MARKER, VERSION * 2, 0);
@@ -680,7 +687,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
       // create existing table
       intercept(IOException.class, E_INCOMPATIBLE_VERSION,
-          () -> ddbms.initTable());
+          () -> localTableHandler.initTable());
 
       // create a marker with no version and expect failure
       final Item invalidMarker = new Item().withPrimaryKey(
@@ -689,11 +696,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       table.putItem(invalidMarker);
 
       intercept(IOException.class, E_NOT_VERSION_MARKER,
-          () -> ddbms.initTable());
+          () -> localTableHandler.initTable());
 
       // reinstate the version marker
       table.putItem(originalVersionMarker);
-      ddbms.initTable();
+      localTableHandler.initTable();
       conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
     } finally {
       destroy(ddbms);
