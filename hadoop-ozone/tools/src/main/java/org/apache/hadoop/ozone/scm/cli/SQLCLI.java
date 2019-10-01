@@ -34,7 +34,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAc
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.UserVolumeInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.util.Tool;
@@ -360,7 +360,7 @@ public class SQLCLI  extends Configured implements Tool {
                           byte[] value) throws IOException, SQLException {
     switch (type) {
     case USER:
-      VolumeList volumeList = VolumeList.parseFrom(value);
+      UserVolumeInfo volumeList = UserVolumeInfo.parseFrom(value);
       for (String volumeName : volumeList.getVolumeNamesList()) {
         String insertVolumeList =
             String.format(INSERT_VOLUME_LIST, keyName, volumeName);

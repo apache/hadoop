@@ -90,14 +90,14 @@ public class TestOMVolumeSetOwnerRequest extends TestOMVolumeRequest {
     Assert.assertEquals(newOwner, fromDBOwner);
 
 
-    OzoneManagerProtocolProtos.VolumeList newOwnerVolumeList =
+    OzoneManagerProtocolProtos.UserVolumeInfo newOwnerVolumeList =
         omMetadataManager.getUserTable().get(newOwnerKey);
 
     Assert.assertNotNull(newOwnerVolumeList);
     Assert.assertEquals(volumeName,
         newOwnerVolumeList.getVolumeNamesList().get(0));
 
-    OzoneManagerProtocolProtos.VolumeList oldOwnerVolumeList =
+    OzoneManagerProtocolProtos.UserVolumeInfo oldOwnerVolumeList =
         omMetadataManager.getUserTable().get(
             omMetadataManager.getUserKey(ownerKey));
 
