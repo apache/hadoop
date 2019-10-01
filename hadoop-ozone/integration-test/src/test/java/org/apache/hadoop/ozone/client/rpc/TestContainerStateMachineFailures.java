@@ -375,8 +375,6 @@ public class TestContainerStateMachineFailures {
             .getContainer(omKeyLocationInfo.getContainerID())
             .getContainerData();
     Assert.assertTrue(containerData instanceof KeyValueContainerData);
-    KeyValueContainerData keyValueContainerData =
-        (KeyValueContainerData) containerData;
     key.close();
     ContainerStateMachine stateMachine =
         (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
@@ -400,19 +398,11 @@ public class TestContainerStateMachineFailures {
     request.setContainerID(containerID);
     request.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-    // close container transaction will fail over Ratis and will initiate
-    // a pipeline close action
-
-    // Since the applyTransaction failure is propagated to Ratis,
-    // stateMachineUpdater will it exception while taking the next snapshot
-    // and should shutdown the RaftServerImpl. The client request will fail
-    // with RaftRetryFailureException.
     try {
       xceiverClient.sendCommand(request.build());
     } catch (IOException e) {
-      Assert.fail("Exceptionn should not be thrown");
+      Assert.fail("Exception should not be thrown");
     }
-    // Make sure the container is marked unhealthy
     Assert.assertTrue(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet().getContainer(containerID)
@@ -420,12 +410,10 @@ public class TestContainerStateMachineFailures {
             == ContainerProtos.ContainerDataProto.State.CLOSED);
     Assert.assertTrue(stateMachine.isStateMachineHealthy());
     try {
-      // try to take a new snapshot, ideally it should just fail
       stateMachine.takeSnapshot();
     } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof StateMachineException);
+      Assert.fail("Exception should not be thrown");
     }
-    // Make sure the latest snapshot is same as the previous one
     FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
     Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
   }

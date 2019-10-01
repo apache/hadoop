@@ -767,7 +767,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           // add the entry to the applyTransactionCompletionMap only if the
           // stateMachine is healthy i.e, there has been no applyTransaction
           // failures before.
-          if (stateMachineHealthy.get()) {
+          if (isStateMachineHealthy()) {
             final Long previous = applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
             Preconditions.checkState(previous == null);
