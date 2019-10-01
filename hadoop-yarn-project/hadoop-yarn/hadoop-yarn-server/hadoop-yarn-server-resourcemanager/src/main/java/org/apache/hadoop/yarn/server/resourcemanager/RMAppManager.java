@@ -125,7 +125,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         timelineServiceV2Enabled(conf);
     this.nodeLabelsEnabled = YarnConfiguration
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
-    this.exclusiveEnforcedPartitions = context.getExclusiveEnforcedPartitions();
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   /**

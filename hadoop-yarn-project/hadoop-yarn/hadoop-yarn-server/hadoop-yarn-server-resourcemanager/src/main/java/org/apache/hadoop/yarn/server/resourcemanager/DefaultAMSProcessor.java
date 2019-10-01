@@ -118,6 +118,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   private ResourceProfilesManager resourceProfilesManager;
   private boolean timelineServiceV2Enabled;
   private boolean nodelabelsEnabled;
+  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
@@ -128,6 +129,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         timelineServiceV2Enabled(rmContext.getYarnConfiguration());
     this.nodelabelsEnabled = YarnConfiguration
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -238,8 +241,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       }
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         SchedulerUtils.enforcePartitionExclusivity(req,
-            getRmContext().getExclusiveEnforcedPartitions(),
-            asc.getNodeLabelExpression());
+            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
       }
     }
 
