@@ -163,6 +163,10 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       // table version is always there as a plus one tag.
       assertEquals(tagMap.size() + 1, tags.size());
       for (Tag tag : tags) {
+        // skip the version marker tag
+        if (tag.getKey().equals(VERSION_MARKER)) {
+          continue;
+        }
         Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
       }
       // be sure to clean up - delete table
