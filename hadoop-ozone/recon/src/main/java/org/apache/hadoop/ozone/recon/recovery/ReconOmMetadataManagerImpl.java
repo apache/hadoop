@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.ozone.recon.recovery;
 
+import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_OM_SNAPSHOT_DB;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -28,6 +31,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
+import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,17 +46,28 @@ public class ReconOmMetadataManagerImpl extends OmMetadataManagerImpl
   private static final Logger LOG =
       LoggerFactory.getLogger(ReconOmMetadataManagerImpl.class);
 
-  @Inject
   private OzoneConfiguration ozoneConfiguration;
+  private ReconUtils reconUtils;
 
   @Inject
-  public ReconOmMetadataManagerImpl(OzoneConfiguration configuration) {
+  public ReconOmMetadataManagerImpl(OzoneConfiguration configuration,
+                                    ReconUtils reconUtils) {
+    this.reconUtils = reconUtils;
     this.ozoneConfiguration = configuration;
   }
 
   @Override
   public void start(OzoneConfiguration configuration) throws IOException {
     LOG.info("Starting ReconOMMetadataManagerImpl");
+    File reconDbDir =
+        reconUtils.getReconDbDir(configuration, OZONE_RECON_OM_SNAPSHOT_DB_DIR);
+    File lastKnownOMSnapshot =
+        reconUtils.getLastKnownDB(reconDbDir, RECON_OM_SNAPSHOT_DB);
+    if (lastKnownOMSnapshot != null) {
+      LOG.info("Last known snapshot for OM : {}",
+          lastKnownOMSnapshot.getAbsolutePath());
+      initializeNewRdbStore(lastKnownOMSnapshot);
+    }
   }
 
   /**
@@ -69,7 +84,7 @@ public class ReconOmMetadataManagerImpl extends OmMetadataManagerImpl
       addOMTablesAndCodecs(dbStoreBuilder);
       DBStore newStore = dbStoreBuilder.build();
       setStore(newStore);
-      LOG.info("Created new OM DB snapshot at {}.",
+      LOG.info("Created OM DB snapshot at {}.",
           dbFile.getAbsolutePath());
     } catch (IOException ioEx) {
       LOG.error("Unable to initialize Recon OM DB snapshot store.",

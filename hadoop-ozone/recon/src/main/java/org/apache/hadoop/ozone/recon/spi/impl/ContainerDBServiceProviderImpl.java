@@ -81,14 +81,7 @@ public class ContainerDBServiceProviderImpl
   public ContainerDBServiceProviderImpl(DBStore dbStore,
                                         Configuration sqlConfiguration) {
     globalStatsDao = new GlobalStatsDao(sqlConfiguration);
-    try {
-      this.containerKeyTable = dbStore.getTable(CONTAINER_KEY_TABLE,
-          ContainerKeyPrefix.class, Integer.class);
-      this.containerKeyCountTable = dbStore.getTable(CONTAINER_KEY_COUNT_TABLE,
-          Long.class, Long.class);
-    } catch (IOException e) {
-      LOG.error("Unable to create Container Key tables." + e);
-    }
+    initializeTables(dbStore);
   }
 
   /**
@@ -107,8 +100,9 @@ public class ContainerDBServiceProviderImpl
     File oldDBLocation = containerDbStore.getDbLocation();
     containerDbStore = ReconContainerDBProvider
         .getNewDBStore(configuration, reconUtils);
-    containerKeyTable = containerDbStore.getTable(CONTAINER_KEY_TABLE,
-        ContainerKeyPrefix.class, Integer.class);
+    LOG.info("Creating new Recon Container DB at {}",
+        containerDbStore.getDbLocation().getAbsolutePath());
+    initializeTables(containerDbStore);
 
     if (oldDBLocation.exists()) {
       LOG.info("Cleaning up old Recon Container DB at {}.",
@@ -127,6 +121,20 @@ public class ContainerDBServiceProviderImpl
     storeContainerCount(0L);
   }
 
+  /**
+   * Initialize the container DB tables.
+   * @param dbStore
+   */
+  private void initializeTables(DBStore dbStore) {
+    try {
+      this.containerKeyTable = dbStore.getTable(CONTAINER_KEY_TABLE,
+          ContainerKeyPrefix.class, Integer.class);
+      this.containerKeyCountTable = dbStore.getTable(CONTAINER_KEY_COUNT_TABLE,
+          Long.class, Long.class);
+    } catch (IOException e) {
+      LOG.error("Unable to create Container Key tables." + e);
+    }
+  }
   /**
    * Concatenate the containerID and Key Prefix using a delimiter and store the
    * count into the container DB store.
