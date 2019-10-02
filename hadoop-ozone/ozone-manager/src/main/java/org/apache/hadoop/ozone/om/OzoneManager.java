@@ -305,7 +305,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       AuthenticationException {
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
     Preconditions.checkNotNull(conf);
-    configuration = new OzoneConfiguration(conf);
+    configuration = conf;
     // Load HA related configurations
     OMHANodeDetails omhaNodeDetails =
         OMHANodeDetails.loadOMHAConfig(configuration);
