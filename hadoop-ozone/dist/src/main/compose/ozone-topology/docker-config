@@ -90,4 +90,3 @@ LOG4J2.PROPERTIES_logger.audit.appenderRef.file.ref=RollingFile
 LOG4J2.PROPERTIES_rootLogger.level=INFO
 LOG4J2.PROPERTIES_rootLogger.appenderRefs=stdout
 LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
-CORE-SITE.XML_hadoop.security.authentication=simple
