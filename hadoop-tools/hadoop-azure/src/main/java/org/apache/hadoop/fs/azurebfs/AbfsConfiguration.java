@@ -29,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
@@ -71,6 +72,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AbfsConfiguration{
+
   private final Configuration rawConfig;
   private final String accountName;
   private final boolean isSecure;
@@ -496,6 +498,7 @@ public class AbfsConfiguration{
           String authority = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+          authority = appendSlashIfNeeded(authority);
           tokenProvider = new MsiTokenProvider(authEndpoint, tenantGuid,
               clientId, authority);
         } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
@@ -668,6 +671,13 @@ public class AbfsConfiguration{
       value = defaultValue;
     }
     return value.trim();
+  }
+
+  private String appendSlashIfNeeded(String authority) {
+    if (!authority.endsWith(AbfsHttpConstants.FORWARD_SLASH)) {
+      authority = authority + AbfsHttpConstants.FORWARD_SLASH;
+    }
+    return authority;
   }
 
 }

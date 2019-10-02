@@ -29,13 +29,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class AuthConfigurations {
 
-  /** Default OAuth token end point for the MSI flow */
+  /** Default OAuth token end point for the MSI flow. */
   public static final String DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT =
       "http://169.254.169.254/metadata/identity/oauth2/token";
-  /** Default value for authority for the MSI flow */
+  /** Default value for authority for the MSI flow. */
   public static final String DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY =
       "https://login.microsoftonline.com/";
-  /** Default OAuth token end point for the refresh token flow */
+  /** Default OAuth token end point for the refresh token flow. */
   public static final String
       DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT =
       "https://login.microsoftonline.com/Common/oauth2/token";
