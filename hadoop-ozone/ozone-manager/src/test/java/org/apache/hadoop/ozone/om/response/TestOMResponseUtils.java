@@ -56,8 +56,8 @@ public final class TestOMResponseUtils {
                     .getDefaultInstance())
             .build();
 
-    OzoneManagerProtocolProtos.VolumeList volumeList =
-        OzoneManagerProtocolProtos.VolumeList.newBuilder()
+    OzoneManagerProtocolProtos.UserVolumeInfo userVolumeInfo =
+        OzoneManagerProtocolProtos.UserVolumeInfo.newBuilder()
             .setObjectID(1)
             .setUpdateID(1)
             .addVolumeNames(volumeName).build();
@@ -67,7 +67,7 @@ public final class TestOMResponseUtils {
         .setVolume(volumeName).setCreationTime(Time.now()).build();
 
     OMVolumeCreateResponse omVolumeCreateResponse =
-        new OMVolumeCreateResponse(omVolumeArgs, volumeList, omResponse);
+        new OMVolumeCreateResponse(omVolumeArgs, userVolumeInfo, omResponse);
 
 
     OmBucketInfo omBucketInfo = TestOMResponseUtils.createBucket(

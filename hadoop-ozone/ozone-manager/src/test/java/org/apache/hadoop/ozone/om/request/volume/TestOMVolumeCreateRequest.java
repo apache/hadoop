@@ -140,10 +140,10 @@ public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
     Assert.assertEquals(volumeInfo.getCreationTime(),
         omVolumeArgs.getCreationTime());
 
-    OzoneManagerProtocolProtos.VolumeList volumeList = omMetadataManager
+    OzoneManagerProtocolProtos.UserVolumeInfo userVolumeInfo = omMetadataManager
         .getUserTable().get(ownerKey);
-    Assert.assertNotNull(volumeList);
-    Assert.assertEquals(volumeName, volumeList.getVolumeNames(0));
+    Assert.assertNotNull(userVolumeInfo);
+    Assert.assertEquals(volumeName, userVolumeInfo.getVolumeNames(0));
 
     // Create another volume for the user.
     originalRequest = createVolumeRequest("vol1", adminName,

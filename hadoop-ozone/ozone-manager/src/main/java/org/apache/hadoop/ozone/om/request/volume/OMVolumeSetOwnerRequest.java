@@ -117,8 +117,8 @@ public class OMVolumeSetOwnerRequest extends OMVolumeRequest {
 
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
 
-      OzoneManagerProtocolProtos.VolumeList oldOwnerVolumeList = null;
-      OzoneManagerProtocolProtos.VolumeList newOwnerVolumeList = null;
+      OzoneManagerProtocolProtos.UserVolumeInfo oldOwnerVolumeList = null;
+      OzoneManagerProtocolProtos.UserVolumeInfo newOwnerVolumeList = null;
       OmVolumeArgs omVolumeArgs = null;
 
 
