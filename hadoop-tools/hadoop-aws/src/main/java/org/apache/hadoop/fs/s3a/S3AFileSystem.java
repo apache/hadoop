@@ -95,6 +95,8 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
+import org.apache.hadoop.fs.s3a.auth.SignerManager;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
@@ -108,6 +110,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -182,7 +185,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
-    AWSPolicyProvider {
+    AWSPolicyProvider, DelegationTokenProvider {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -362,8 +365,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       useListV1 = (listVersion == 1);
 
-      signerManager = new SignerManager();
-      signerManager.initCustomSigners(conf);
+      signerManager = new SignerManager(bucket, this, conf, owner);
+      signerManager.initCustomSigners();
 
       // creates the AWS client, including overriding auth chain if
       // the FS came with a DT
@@ -1333,6 +1336,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         dst, dstKey, p.getRight(),
         operationCallbacks);
     return renameOperation.execute();
+  }
+
+  @Override public Token<? extends TokenIdentifier> getFsDelegationToken()
+      throws IOException {
+    return getDelegationToken(null);
   }
 
   /**
