@@ -30,17 +30,61 @@ option java_generic_services = true;
 
 option java_generate_equals_and_hash = true;
 
-package hadoop.hdds;
+package hadoop.hdds.security;
 
 import "hdds.proto";
 
+/**
+All commands is send as request and all response come back via
+Response class. If adding new functions please follow this protocol, since
+our tracing and visibility tools depend on this pattern.
+*/
+message SCMSecurityRequest {
+    required Type cmdType = 1; // Type of the command
+
+    optional string traceID = 2;
+
+    optional SCMGetDataNodeCertRequestProto getDataNodeCertRequest = 3;
+    optional SCMGetOMCertRequestProto getOMCertRequest = 4;
+    optional SCMGetCertificateRequestProto getCertificateRequest = 5;
+    optional SCMGetCACertificateRequestProto getCACertificateRequest = 6;
+
+}
+
+message SCMSecurityResponse {
+    required Type cmdType = 1; // Type of the command
+
+    // A string that identifies this command, we generate  Trace ID in Ozone
+    // frontend and this allows us to trace that command all over ozone.
+    optional string traceID = 2;
+
+    optional bool success = 3 [default = true];
+
+    optional string message = 4;
+
+    required Status status = 5;
+
+    optional SCMGetCertResponseProto getCertResponseProto = 6;
+
+}
+
+enum Type {
+    GetDataNodeCertificate = 1;
+    GetOMCertificate = 2;
+    GetCertificate = 3;
+    GetCACertificate = 4;
+}
+
+enum Status {
+    OK = 1;
+}
 /**
 * This message is send by data node to prove its identity and get an SCM
 * signed certificate.
 */
 message SCMGetDataNodeCertRequestProto {
-  required DatanodeDetailsProto datanodeDetails = 1;
-  required string CSR = 2;
+    required DatanodeDetailsProto datanodeDetails = 1;
+    required string CSR = 2;
 }
 
 /**
@@ -48,15 +92,15 @@ message SCMGetDataNodeCertRequestProto {
 * signed certificate.
 */
 message SCMGetOMCertRequestProto {
-  required OzoneManagerDetailsProto omDetails = 1;
-  required string CSR = 2;
+    required OzoneManagerDetailsProto omDetails = 1;
+    required string CSR = 2;
 }
 
 /**
 * Proto request to get a certificate with given serial id.
 */
 message SCMGetCertificateRequestProto {
-  required string certSerialId = 1;
+    required string certSerialId = 1;
 }
 
 /**
@@ -69,39 +113,17 @@ message SCMGetCACertificateRequestProto {
  * Returns a certificate signed by SCM.
  */
 message SCMGetCertResponseProto {
-  enum ResponseCode {
-    success = 1;
-    authenticationFailed = 2;
-    invalidCSR = 3;
-  }
-  required ResponseCode responseCode = 1;
-  required string x509Certificate = 2; // Base64 encoded X509 certificate.
-  optional string x509CACertificate = 3; // Base64 encoded CA X509 certificate.
+    enum ResponseCode {
+        success = 1;
+        authenticationFailed = 2;
+        invalidCSR = 3;
+    }
+    required ResponseCode responseCode = 1;
+    required string x509Certificate = 2; // Base64 encoded X509 certificate.
+    optional string x509CACertificate = 3; // Base64 encoded CA X509 certificate.
 }
 
 
 service SCMSecurityProtocolService {
-  /**
-  * Get SCM signed certificate for DataNode.
-  */
-  rpc getDataNodeCertificate (SCMGetDataNodeCertRequestProto) returns
-  (SCMGetCertResponseProto);
-
-  /**
-  * Get SCM signed certificate for DataNode.
-  */
-  rpc getOMCertificate (SCMGetOMCertRequestProto) returns
-  (SCMGetCertResponseProto);
-
-  /**
-   * Get SCM signed certificate for DataNode.
-   */
-  rpc getCertificate (SCMGetCertificateRequestProto) returns
-  (SCMGetCertResponseProto);
-
-  /**
-   * Get SCM signed certificate for DataNode.
-   */
-  rpc getCACertificate (SCMGetCACertificateRequestProto) returns
-  (SCMGetCertResponseProto);
+    rpc submitRequest (SCMSecurityRequest) returns (SCMSecurityResponse);
 }
