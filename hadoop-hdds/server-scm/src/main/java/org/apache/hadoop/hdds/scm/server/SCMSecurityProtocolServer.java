@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm.server;
 
 import com.google.protobuf.BlockingService;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
@@ -32,7 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
-import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocol.SCMSecurityProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
@@ -41,7 +42,9 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateSer
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 import org.apache.hadoop.security.KerberosInfo;
+
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +65,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   private final CertificateServer certificateServer;
   private final RPC.Server rpcServer;
   private final InetSocketAddress rpcAddress;
+  private final ProtocolMessageMetrics metrics;
 
   SCMSecurityProtocolServer(OzoneConfiguration conf,
       CertificateServer certificateServer) throws IOException {
@@ -76,10 +80,13 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
     // SCM security service RPC service.
     RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
         ProtobufRpcEngine.class);
+    metrics = new ProtocolMessageMetrics("ScmSecurityProtocol",
+        "SCM Security protocol metrics",
+        SCMSecurityProtocolProtos.Type.values());
     BlockingService secureProtoPbService =
         SCMSecurityProtocolProtos.SCMSecurityProtocolService
             .newReflectiveBlockingService(
-                new SCMSecurityProtocolServerSideTranslatorPB(this));
+                new SCMSecurityProtocolServerSideTranslatorPB(this, metrics));
     this.rpcServer =
         StorageContainerManager.startRpcServer(
             conf,
@@ -96,8 +103,8 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   /**
    * Get SCM signed certificate for DataNode.
    *
-   * @param dnDetails       - DataNode Details.
-   * @param certSignReq     - Certificate signing request.
+   * @param dnDetails   - DataNode Details.
+   * @param certSignReq - Certificate signing request.
    * @return String         - SCM signed pem encoded certificate.
    */
   @Override
@@ -122,8 +129,8 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   /**
    * Get SCM signed certificate for OM.
    *
-   * @param omDetails       - OzoneManager Details.
-   * @param certSignReq     - Certificate signing request.
+   * @param omDetails   - OzoneManager Details.
+   * @param certSignReq - Certificate signing request.
    * @return String         - SCM signed pem encoded certificate.
    */
   @Override
@@ -147,7 +154,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   /**
    * Get SCM signed certificate with given serial id.
    *
-   * @param certSerialId    - Certificate serial id.
+   * @param certSerialId - Certificate serial id.
    * @return string         - pem encoded SCM signed certificate.
    */
   @Override
@@ -196,12 +203,14 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   public void start() {
     LOGGER.info(StorageContainerManager.buildRpcServerStartMessage("Starting"
         + " RPC server for SCMSecurityProtocolServer.", getRpcAddress()));
+    metrics.register();
     getRpcServer().start();
   }
 
   public void stop() {
     try {
       LOGGER.info("Stopping the SCMSecurityProtocolServer.");
+      metrics.unregister();
       getRpcServer().stop();
     } catch (Exception ex) {
       LOGGER.error("SCMSecurityProtocolServer stop failed.", ex);
