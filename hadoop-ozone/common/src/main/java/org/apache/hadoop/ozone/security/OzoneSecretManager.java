@@ -189,7 +189,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   public synchronized void start(CertificateClient client)
       throws IOException {
     Preconditions.checkState(!isRunning());
-    this.certClient = client;
+    setCertClient(client);
     updateCurrentKey(new KeyPair(certClient.getPublicKey(),
         certClient.getPrivateKey()));
     setIsRunning(true);
