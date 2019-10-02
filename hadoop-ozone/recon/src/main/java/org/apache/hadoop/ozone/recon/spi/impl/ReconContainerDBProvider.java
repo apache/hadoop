@@ -23,6 +23,7 @@ import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_CONTAINER_DB;
 import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 
+import java.io.File;
 import java.nio.file.Path;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -49,15 +50,29 @@ public class ReconContainerDBProvider implements Provider<DBStore> {
   private static final Logger LOG =
       LoggerFactory.getLogger(ReconContainerDBProvider.class);
 
-  @Inject
   private OzoneConfiguration configuration;
+  private ReconUtils reconUtils;
 
   @Inject
-  private ReconUtils reconUtils;
+  public ReconContainerDBProvider(OzoneConfiguration configuration,
+                                  ReconUtils reconUtils) {
+    this.configuration = configuration;
+    this.reconUtils = reconUtils;
+  }
 
   @Override
   public DBStore get() {
-    DBStore dbStore = getNewDBStore(configuration, reconUtils);
+    DBStore dbStore;
+    File reconDbDir =
+        reconUtils.getReconDbDir(configuration, OZONE_RECON_DB_DIR);
+    File lastKnownOMSnapshot =
+        reconUtils.getLastKnownDB(reconDbDir, RECON_CONTAINER_DB);
+    if (lastKnownOMSnapshot != null) {
+      dbStore = getDBStore(configuration, reconUtils,
+          lastKnownOMSnapshot.getName());
+    } else {
+      dbStore = getNewDBStore(configuration, reconUtils);
+    }
     if (dbStore == null) {
       throw new ProvisionException("Unable to provide instance of DBStore " +
           "store.");
@@ -65,10 +80,9 @@ public class ReconContainerDBProvider implements Provider<DBStore> {
     return dbStore;
   }
 
-  public static DBStore getNewDBStore(OzoneConfiguration configuration,
-                                      ReconUtils reconUtils) {
+  private static DBStore getDBStore(OzoneConfiguration configuration,
+                            ReconUtils reconUtils, String dbName) {
     DBStore dbStore = null;
-    String dbName = RECON_CONTAINER_DB + "_" + System.currentTimeMillis();
     try {
       Path metaDir = reconUtils.getReconDbDir(
           configuration, OZONE_RECON_DB_DIR).toPath();
@@ -85,5 +99,11 @@ public class ReconContainerDBProvider implements Provider<DBStore> {
       LOG.error("Unable to initialize Recon container metadata store.", ex);
     }
     return dbStore;
+  }
+
+  static DBStore getNewDBStore(OzoneConfiguration configuration,
+                               ReconUtils reconUtils) {
+    String dbName = RECON_CONTAINER_DB + "_" + System.currentTimeMillis();
+    return getDBStore(configuration, reconUtils, dbName);
   }
 }
