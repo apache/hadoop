@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
+    .UserVolumeInfo;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.Table;
@@ -225,7 +225,7 @@ public interface OMMetadataManager {
    *
    * @return UserTable.
    */
-  Table<String, VolumeList> getUserTable();
+  Table<String, UserVolumeInfo> getUserTable();
 
   /**
    * Returns the Volume Table.
