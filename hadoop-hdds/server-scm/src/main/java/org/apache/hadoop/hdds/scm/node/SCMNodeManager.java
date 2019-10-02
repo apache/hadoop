@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -284,6 +285,9 @@ public class SCMNodeManager implements NodeManager {
    * @param dnsName String representing the hostname or IP of the node
    * @param uuid String representing the UUID of the registered node.
    */
+  @SuppressFBWarnings(value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="The method is synchronized and this is the only place "+
+          "dnsToUuidMap is modified")
   private synchronized void addEntryTodnsToUuidMap(
       String dnsName, String uuid) {
     Set<String> dnList = dnsToUuidMap.get(dnsName);
