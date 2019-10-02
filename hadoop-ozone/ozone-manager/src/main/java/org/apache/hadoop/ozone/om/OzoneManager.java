@@ -627,7 +627,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     return new OzoneDelegationTokenSecretManager(conf, tokenMaxLifetime,
         tokenRenewInterval, tokenRemoverScanInterval, omRpcAddressTxt,
-        s3SecretManager);
+        s3SecretManager, certClient);
   }
 
   private OzoneBlockTokenSecretManager createBlockTokenSecretManager(
