@@ -185,8 +185,8 @@ public class ReconUtils {
     String lastKnownSnapshotFileName = null;
     long lastKnonwnSnapshotTs = Long.MIN_VALUE;
     if (reconDbDir != null) {
-      File[] snapshotFiles = reconDbDir.listFiles((dir, name) -> name
-          .startsWith(fileNamePrefix));
+      File[] snapshotFiles = reconDbDir.listFiles((dir, name) ->
+          name.startsWith(fileNamePrefix));
       if (snapshotFiles != null) {
         for (File snapshotFile : snapshotFiles) {
           String fileName = snapshotFile.getName();
@@ -195,7 +195,7 @@ public class ReconUtils {
             if (fileNameSplits.length <= 1) {
               continue;
             }
-            long snapshotTimestamp = Long.valueOf(fileNameSplits[1]);
+            long snapshotTimestamp = Long.parseLong(fileNameSplits[1]);
             if (lastKnonwnSnapshotTs < snapshotTimestamp) {
               lastKnonwnSnapshotTs = snapshotTimestamp;
               lastKnownSnapshotFileName = fileName;
