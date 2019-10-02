@@ -623,10 +623,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   /**
    * Return the number of bytes available.
    * If the inner stream is closed, the value is 1 for consistency
-   * with S3ObjectStream (and so address
-   * http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144 ).
+   * with S3ObjectStream -and so address the GZip bug
+   * http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144 .
    * If the stream is open, then it is the amount returned by the
-   * HTTP connection.
+   * wrapped stream.
    * @return a value greater than or equal to zero.
    * @throws IOException IO failure.
    */

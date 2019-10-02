@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,8 +42,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyRead;
 /**
  * Test Seek operations
  */
-public abstract class AbstractContractSeekTest
-        extends AbstractFSContractTestBase {
+public abstract class AbstractContractSeekTest extends AbstractFSContractTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractSeekTest.class);
 
@@ -69,7 +69,7 @@ public abstract class AbstractContractSeekTest
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setInt(IO_FILE_BUFFER_SIZE_KEY, 4096);
+    conf.setInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY, 4096);
     return conf;
   }
 
@@ -173,7 +173,7 @@ public abstract class AbstractContractSeekTest
     try {
       long offset = instream.getPos();
     } catch (IOException e) {
-      // its valid to raise error here; but the test is applied to make
+      // it is valid to raise error here; but the test is applied to make
       // sure there's no other exception like an NPE.
 
     }
@@ -206,8 +206,8 @@ public abstract class AbstractContractSeekTest
       long p = instream.getPos();
       LOG.warn("Seek to -1 returned a position of " + p);
       int result = instream.read();
-      fail("expected an exception, got data " + result
-          + " at a position of " + p);
+      fail(
+        "expected an exception, got data " + result + " at a position of " + p);
     } catch (EOFException e) {
       //bad seek -expected
       handleExpectedException(e);
@@ -340,8 +340,8 @@ public abstract class AbstractContractSeekTest
 
   @Test
   public void testPositionedBulkReadDoesntChangePosition() throws Throwable {
-    describe("verify that a positioned read" 
-        + " does not change the getPos() value");
+    describe(
+      "verify that a positioned read does not change the getPos() value");
     assumeSupportsPositionedReadable();
     Path testSeekFile = path("bigseekfile.txt");
     byte[] block = dataset(65536, 0, 255);
@@ -462,8 +462,7 @@ public abstract class AbstractContractSeekTest
       fail("Expected an exception");
     } catch (EOFException e) {
       handleExpectedException(e);
-    } catch (IOException |IllegalArgumentException
-            | IndexOutOfBoundsException e) {
+    } catch (IOException |IllegalArgumentException | IndexOutOfBoundsException e) {
       handleRelaxedException("readFully with a negative position ",
           "EOFException",
           e);
