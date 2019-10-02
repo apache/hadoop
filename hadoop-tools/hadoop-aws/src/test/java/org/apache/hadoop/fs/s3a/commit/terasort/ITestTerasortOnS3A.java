@@ -23,9 +23,12 @@ import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
+import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.terasort.TeraGen;
 import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
@@ -52,8 +54,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
@@ -62,8 +62,13 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
  * Parameterized by committer name, using a YARN cluster
  * shared across all test runs.
  * The tests run in sequence, so each operation is isolated.
- * This also means that the test paths are  deleted in test
+ * This also means that the test paths are deleted in test
  * teardown; shared variables must all be static.
+ *
+ * The test is a scale test; for each parameter it takes a few minutes to
+ * run the full suite.
+ * Before anyone calls that out as slow: try running the test with the file
+ * committer.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized.class)
@@ -73,24 +78,36 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestTerasortOnS3A.class);
 
-  // all the durations are optional as they only get filled in when
-  // a test run successfully completes. Failed tests don't have numbers.
+  public static final int EXPECTED_PARTITION_COUNT = 10;
+
+  public static final int PARTITION_SAMPLE_SIZE = 1000;
+
+  public static final int ROW_COUNT = 1000;
+
+  /**
+   * Duration tracker created in the first of the test cases and closed
+   * in {@link #test_140_teracomplete()}.
+   */
   private static Optional<DurationInfo> terasortDuration = empty();
 
-  private static Optional<DurationInfo> teragenStageDuration = empty();
+  /**
+   * Tracker of which stages are completed and how long they took.
+   */
+  private static Map<String, DurationInfo> completedStages = new HashMap<>();
 
-  private static Optional<DurationInfo> terasortStageDuration = empty();
-
-  private static Optional<DurationInfo> teravalidateStageDuration = empty();
-
+  /** Name of the committer for this run. */
   private final String committerName;
 
+  /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
 
+  /** Input (teragen) path. */
   private Path sortInput;
 
+  /** Path where sorted data goes. */
   private Path sortOutput;
 
+  /** Path for validated job's output. */
   private Path sortValidate;
 
   /**
@@ -131,49 +148,82 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   }
 
   /**
-   * Turn on the magic commit support for the FS.
+   * Set up the job conf with the options for terasort chosen by the scale
+   * options.
    * @param conf configuration
    */
   @Override
   protected void applyCustomConfigOptions(JobConf conf) {
+    // small sample size for faster runs
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+    conf.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(),
+        getSampleSizeForEachPartition());
+    conf.setInt(TeraSortConfigKeys.NUM_PARTITIONS.key(),
+        getExpectedPartitionCount());
+    conf.setBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
+        false);
+  }
+
+  private int getExpectedPartitionCount() {
+    return EXPECTED_PARTITION_COUNT;
+  }
+
+  private int getSampleSizeForEachPartition() {
+    return PARTITION_SAMPLE_SIZE;
+  }
+
+  protected int getRowCount() {
+    return ROW_COUNT;
   }
 
   /**
-   * Set up for terasorting by initializing paths.
-   * The paths used must be unique across parallel runs.
+   * Set up the terasort by initializing paths variables
+   * The paths used must be unique across parameterized runs but
+   * common across all test cases in a single parameterized run.
    */
   private void prepareToTerasort() {
     // small sample size for faster runs
-    Configuration yarnConfig = getYarn().getConfig();
-    yarnConfig.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(), 1000);
-    yarnConfig.setBoolean(
-        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
-        true);
-    yarnConfig.setBoolean(
-        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
-        false);
-    terasortPath = new Path("/terasort-" + getClass().getSimpleName())
+    terasortPath = new Path("/terasort-" + committerName)
         .makeQualified(getFileSystem());
     sortInput = new Path(terasortPath, "sortin");
     sortOutput = new Path(terasortPath, "sortout");
     sortValidate = new Path(terasortPath, "validate");
-    if (!terasortDuration.isPresent()) {
-      terasortDuration = Optional.of(new DurationInfo(LOG, "Terasort"));
-    }
+
   }
 
   /**
-   * Execute a single stage in the terasort,
-   * @param stage Stage name for messages/assertions.
+   * Declare that a stage has completed.
+   * @param stage stage name/key in the map
+   * @param d duration.
+   */
+  private static void completedStage(final String stage,
+      final DurationInfo d) {
+    completedStages.put(stage, d);
+  }
+
+  /**
+   * Declare a stage which is required for this test case.
+   * @param stage stage name
+   */
+  private static void requireStage(final String stage) {
+    Assume.assumeTrue(
+        "Required stage was not completed: " + stage,
+        completedStages.get(stage) != null);
+  }
+
+  /**
+   * Execute a single stage in the terasort.
+   * Updates the completed stages map with the stage duration -if successful.
+   * @param stage Stage name for the stages map.
    * @param jobConf job conf
-   * @param dest destination directory -the _SUCCESS File will be expected here.
+   * @param dest destination directory -the _SUCCESS file will be expected here.
    * @param tool tool to run.
    * @param args args for the tool.
    * @param minimumFileCount minimum number of files to have been created
    * @throws Exception any failure
    */
-  private Optional<DurationInfo> executeStage(
+  private void executeStage(
       final String stage,
       final JobConf jobConf,
       final Path dest,
@@ -193,18 +243,24 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
         + " failed", 0, result);
     validateSuccessFile(dest, committerName(), getFileSystem(), stage,
         minimumFileCount);
-    return Optional.of(d);
+    completedStage(stage, d);
   }
 
   /**
    * Set up terasort by cleaning out the destination, and note the initial
    * time before any of the jobs are executed.
+   *
+   * This is executed first <i>for each parameterized run</i>.
+   * It is where all variables which need to be reset for each run need
+   * to be reset.
    */
   @Test
   public void test_100_terasort_setup() throws Throwable {
     describe("Setting up for a terasort");
 
     getFileSystem().delete(terasortPath, true);
+    completedStages = new HashMap<>();
+    terasortDuration = Optional.of(new DurationInfo(LOG, false, "Terasort"));
   }
 
   @Test
@@ -214,25 +270,25 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
 
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
-    teragenStageDuration = executeStage("Teragen",
+    executeStage("teragen",
         jobConf,
         sortInput,
         new TeraGen(),
-        new String[]{Integer.toString(SCALE_TEST_KEYS), sortInput.toString()},
+        new String[]{Integer.toString(getRowCount()), sortInput.toString()},
         1);
   }
+
 
   @Test
   public void test_120_terasort() throws Throwable {
     describe("Terasort from %s to %s", sortInput, sortOutput);
+    requireStage("teragen");
     getFileSystem().delete(sortOutput, true);
 
     loadSuccessFile(getFileSystem(), sortInput, "previous teragen stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
-    // this job adds some data, so skip it.
-    jobConf.set(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
-    terasortStageDuration = executeStage("TeraSort",
+    executeStage("terasort",
         jobConf,
         sortOutput,
         new TeraSort(),
@@ -243,11 +299,12 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   @Test
   public void test_130_teravalidate() throws Throwable {
     describe("TeraValidate from %s to %s", sortOutput, sortValidate);
+    requireStage("terasort");
     getFileSystem().delete(sortValidate, true);
     loadSuccessFile(getFileSystem(), sortOutput, "previous terasort stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
-    teravalidateStageDuration = executeStage("TeraValidate",
+    executeStage("teravalidate",
         jobConf,
         sortValidate,
         new TeraValidate(),
@@ -261,7 +318,10 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    */
   @Test
   public void test_140_teracomplete() throws Throwable {
-    terasortDuration.get().close();
+    terasortDuration.ifPresent(d -> {
+      d.close();
+      completedStage("overall", d);
+    });
 
     final StringBuilder results = new StringBuilder();
     results.append("\"Operation\"\t\"Duration\"\n");
@@ -269,16 +329,17 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     // this is how you dynamically create a function in a method
     // for use afterwards.
     // Works because there's no IOEs being raised in this sequence.
-    BiConsumer<String, Optional<DurationInfo>> stage =
-        (s, od) ->
-            results.append(String.format("\"%s\"\t\"%s\"\n",
-                s,
-                od.map(DurationInfo::getDurationString).orElse("")));
+    Consumer<String> stage = (s) -> {
+      DurationInfo duration = completedStages.get(s);
+      results.append(String.format("\"%s\"\t\"%s\"\n",
+          s,
+          duration == null ? "" : duration));
+    };
 
-    stage.accept("Generate", teragenStageDuration);
-    stage.accept("Terasort", terasortStageDuration);
-    stage.accept("Validate", teravalidateStageDuration);
-    stage.accept("Completed", terasortDuration);
+    stage.accept("teragen");
+    stage.accept("terasort");
+    stage.accept("teravalidate");
+    stage.accept("overall");
     String text = results.toString();
     File resultsFile = File.createTempFile("results", ".csv");
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
@@ -300,12 +361,17 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     getFileSystem().delete(terasortPath, true);
   }
 
+  /**
+   * Dump the files under a path -but not fail if the path is not present.,
+   * @param path path to dump
+   * @throws Exception any failure.
+   */
   protected void dumpOutputTree(Path path) throws Exception {
     LOG.info("Files under output directory {}", path);
     try {
       lsR(getFileSystem(), path, true);
     } catch (FileNotFoundException e) {
-      LOG.info("Output directory not found");
+      LOG.info("Output directory {} not found", path);
     }
   }
 }

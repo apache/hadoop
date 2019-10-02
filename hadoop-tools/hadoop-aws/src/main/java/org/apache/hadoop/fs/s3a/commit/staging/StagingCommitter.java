@@ -495,11 +495,10 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected List<SinglePendingCommit> listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
-    Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
     try {
+      Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
           context.getConfiguration());
-      LOG.info("Listing pending uploads from {}", wrappedJobAttemptPath);
       return loadPendingsetFiles(context, suppressExceptions, attemptFS,
           listAndFilter(attemptFS,
               wrappedJobAttemptPath, false,
@@ -507,12 +506,10 @@ public class StagingCommitter extends AbstractS3ACommitter {
     } catch (FileNotFoundException e) {
       // this can mean the job was aborted early on, so don't confuse people
       // with long stack traces that aren't the underlying problem.
-      maybeIgnore(suppressExceptions, "Pending upload directory "
-          + wrappedJobAttemptPath + " not found", e);
+      maybeIgnore(suppressExceptions, "Pending upload directory not found", e);
     } catch (IOException e) {
       // unable to work with endpoint, if suppressing errors decide our actions
-      maybeIgnore(suppressExceptions,
-          "Listing pending uploads in " + wrappedJobAttemptPath, e);
+      maybeIgnore(suppressExceptions, "Listing pending uploads", e);
     }
     // reached iff an IOE was caught and swallowed
     return new ArrayList<>(0);

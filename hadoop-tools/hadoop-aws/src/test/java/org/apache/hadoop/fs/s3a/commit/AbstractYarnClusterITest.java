@@ -47,7 +47,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.JAVA_IO_TMPDIR;
 
 /**
  * Full integration test MR jobs.
@@ -76,10 +75,12 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
       LoggerFactory.getLogger(AbstractYarnClusterITest.class);
 
   private static final int TEST_FILE_COUNT = 1;
-  private static final int SCALE_TEST_FILE_COUNT = 2;
+  private static final int SCALE_TEST_FILE_COUNT = 10;
 
   public static final int SCALE_TEST_KEYS = 100;
   public static final int BASE_TEST_KEYS = 10;
+
+  public static final int NO_OF_NODEMANAGERS = 2;
 
   private boolean scaleTest;
 
@@ -95,6 +96,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   @AfterClass
   public static void teardownClusters() throws IOException {
     terminateCluster(clusterBinding);
+    clusterBinding = null;
   }
 
   /**
@@ -184,7 +186,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
             ? deployService(conf, new MiniDFSClusterService())
             : null;
     MiniMRYarnCluster yarnCluster = deployService(conf,
-        new MiniMRYarnCluster(clusterName, 2));
+        new MiniMRYarnCluster(clusterName, NO_OF_NODEMANAGERS));
     return new ClusterBinding(clusterName, miniDFSClusterService, yarnCluster);
   }
 
@@ -264,14 +266,23 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return SCALE_TEST_TIMEOUT_SECONDS * 1000;
   }
 
-  protected JobConf newJobConf() {
-    return new JobConf(getYarn().getConfig());
+  /**
+   * Create a job configuration.
+   * This creates a new job conf from the yarn
+   * cluster configuration then calls
+   * {@link #applyCustomConfigOptions(JobConf)} to allow it to be customized.
+   * @return the new job configuration.
+   * @throws IOException failure
+   */
+  protected JobConf newJobConf() throws IOException {
+    JobConf jobConf = new JobConf(getYarn().getConfig());
+    jobConf.addResource(getConfiguration());
+    applyCustomConfigOptions(jobConf);
+    return jobConf;
   }
 
 
-  protected Job createJob() throws IOException {
-    Configuration jobConf = getClusterBinding().getConf();
-    jobConf.addResource(getConfiguration());
+  protected Job createJob(Configuration jobConf) throws IOException {
     Job mrJob = Job.getInstance(jobConf, getMethodName());
     patchConfigurationForCommitter(mrJob.getConfiguration());
     return mrJob;
@@ -290,7 +301,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
         CommitConstants.S3A_COMMITTER_FACTORY,
         committerName());
     // pass down the scale test flag
-    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
+    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, isScaleTest());
     // and fix the commit dir to the local FS across all workers.
     String staging = stagingFilesDir.getRoot().getAbsolutePath();
     LOG.info("Staging temp dir is {}", staging);
@@ -303,7 +314,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * @return the number of mappers to create.
    */
   public int getTestFileCount() {
-    return scaleTest ? SCALE_TEST_FILE_COUNT : TEST_FILE_COUNT;
+    return isScaleTest() ? SCALE_TEST_FILE_COUNT : TEST_FILE_COUNT;
   }
 
   /**

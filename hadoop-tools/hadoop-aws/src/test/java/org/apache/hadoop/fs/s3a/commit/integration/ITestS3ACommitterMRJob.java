@@ -242,7 +242,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
     Collections.sort(expectedFiles);
 
-    Job mrJob = createJob();
+    Job mrJob = createJob(newJobConf());
     JobConf jobConf = (JobConf) mrJob.getConfiguration();
 
     mrJob.setOutputFormatClass(LoggingTextOutputFormat.class);
@@ -386,6 +386,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       super.setup(context);
       // force in Log4J logging
       org.apache.log4j.BasicConfigurator.configure();
+      // and pick up scale test flag as passed down
       boolean scaleMap = context.getConfiguration()
           .getBoolean(KEY_SCALE_TESTS_ENABLED, false);
       operations = scaleMap ? SCALE_TEST_KEYS : BASE_TEST_KEYS;
