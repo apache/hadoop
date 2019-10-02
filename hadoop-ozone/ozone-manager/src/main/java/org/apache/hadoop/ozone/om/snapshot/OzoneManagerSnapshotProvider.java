@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.ozone.om.OMNodeDetails;
+import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
 import org.apache.http.Header;
