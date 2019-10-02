@@ -352,26 +352,30 @@ public final class Constants {
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
-   * name will be associated with this signer class in the S3 SDK. e.g. Single
-   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass Multiple
-   * CustomSigners {@literal ->} 'CSigner1:CustomSignerClass1,CSigner2:CustomerSignerClass2
+   * name will be associated with this signer class in the S3 SDK.
+   * Examples
+   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass'
+   * CustomSigners {@literal ->} 'CSigner1:CSigner1Class,CSigner2:CSigner2Class'
+   * Initializer {@literal ->} 'CSigner1:CSigner1Class:CSigner1InitializerClass'
+   * With Existing {@literal ->} 'AWS4Signer,CSigner1,CSigner2:CSigner2Class'
    */
   public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
 
   /**
    * There's 3 parameters that can be used to specify a non-default signing
-   * algorithm. fs.s3a.signing-algorithm - This property has existed for the
-   * longest time. If specified, without either of the other 2 properties being
-   * specified, this signing algorithm will be used for S3 and DDB (S3Guard).
-   * The other 2 properties override this value for S3 or DDB.
+   * algorithm.<br>
+   * fs.s3a.signing-algorithm - This property has existed for the longest time.
+   * If specified, without either of the other 2 properties being specified,
+   * this signing algorithm will be used for S3 and DDB (S3Guard). <br>
+   * The other 2 properties override this value for S3 or DDB. <br>
    * fs.s3a.s3.signing-algorithm - Allows overriding the S3 Signing algorithm.
    * This does not affect DDB. Specifying this property without specifying
    * fs.s3a.signing-algorithm will only update the signing algorithm for S3
-   * requests, and the default will be used for DDB fs.s3a.ddb.signing-algorithm
-   * - Allows overriding the DDB Signing algorithm. This does not affect S3.
-   * Specifying this property without specifying fs.s3a.signing-algorithm will
-   * only update the signing algorithm for DDB requests, and the default will be
-   * used for S3
+   * requests, and the default will be used for DDB.<br>
+   * fs.s3a.ddb.signing-algorithm - Allows overriding the DDB Signing algorithm.
+   * This does not affect S3. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for
+   * DDB requests, and the default will be used for S3.
    */
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 
