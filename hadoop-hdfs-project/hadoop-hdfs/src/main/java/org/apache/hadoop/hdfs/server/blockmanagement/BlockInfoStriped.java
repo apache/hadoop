@@ -244,6 +244,11 @@ public class BlockInfoStriped extends BlockInfo {
     return true;
   }
 
+  @Override
+  boolean isProvided() {
+    return false;
+  }
+
   /**
    * This class contains datanode storage information and block index in the
    * block group.

@@ -19,7 +19,10 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -62,6 +65,28 @@ public class TestBlockInfo {
 
     Assert.assertTrue(added);
     Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+  }
+
+  @Test
+  public void testAddProvidedStorage() throws Exception {
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+
+    DatanodeStorageInfo storage = mock(DatanodeStorageInfo.class);
+    when(storage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    boolean added = blockInfo.addStorage(storage, blockInfo);
+
+    Assert.assertTrue(added);
+    Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+    Assert.assertTrue(blockInfo.isProvided());
+
+    blockInfo = new BlockInfoContiguous((short) 3);
+    storage = mock(DatanodeStorageInfo.class);
+    when(storage.getStorageType()).thenReturn(StorageType.DISK);
+    added = blockInfo.addStorage(storage, blockInfo);
+
+    Assert.assertTrue(added);
+    Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+    Assert.assertFalse(blockInfo.isProvided());
   }
 
   @Test
