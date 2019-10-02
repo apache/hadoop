@@ -292,7 +292,7 @@ public class SCMNodeManager implements NodeManager {
       String dnsName, String uuid) {
     Set<String> dnList = dnsToUuidMap.get(dnsName);
     if (dnList == null) {
-      dnList = new HashSet<>();
+      dnList = ConcurrentHashMap.newKeySet();
       dnsToUuidMap.put(dnsName, dnList);
     }
     dnList.add(uuid);
