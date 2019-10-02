@@ -47,8 +47,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.UserVolumeInfo;
 import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
@@ -133,7 +132,7 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
         }
       }
 
-      VolumeList volumeList = null;
+      UserVolumeInfo volumeList = null;
 
       // acquire lock.
       acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
