@@ -22,29 +22,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
-import org.apache.hadoop.hdds.scm.server.SCMBlockProtocolServer;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StorageContainerLocationProtocolService;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.insight.BaseInsightPoint;
 import org.apache.hadoop.ozone.insight.Component.Type;
 import org.apache.hadoop.ozone.insight.LoggerSource;
 import org.apache.hadoop.ozone.insight.MetricGroupDisplay;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocolServerSideTranslatorPB;
 
 /**
  * Insight metric to check the SCM block location protocol behaviour.
  */
-public class ScmProtocolBlockLocationInsight extends BaseInsightPoint {
+public class ScmProtocolContainerLocationInsight extends BaseInsightPoint {
 
   @Override
   public List<LoggerSource> getRelatedLoggers(boolean verbose) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers.add(
         new LoggerSource(Type.SCM,
-            ScmBlockLocationProtocolServerSideTranslatorPB.class,
+            StorageContainerLocationProtocolServerSideTranslatorPB.class,
             defaultLevel(verbose)));
-    loggers.add(new LoggerSource(Type.SCM,
-        SCMBlockProtocolServer.class,
-        defaultLevel(verbose)));
+    new LoggerSource(Type.SCM,
+        StorageContainerLocationProtocolService.class,
+        defaultLevel(verbose));
     return loggers;
   }
 
@@ -57,15 +57,15 @@ public class ScmProtocolBlockLocationInsight extends BaseInsightPoint {
 
     addRpcMetrics(metrics, Type.SCM, filter);
 
-    addProtocolMessageMetrics(metrics, "scm_block_location_protocol",
-        Type.SCM, ScmBlockLocationProtocolProtos.Type.values());
+    addProtocolMessageMetrics(metrics, "scm_container_location_protocol",
+        Type.SCM, StorageContainerLocationProtocolProtos.Type.values());
 
     return metrics;
   }
 
   @Override
   public String getDescription() {
-    return "SCM Block location protocol endpoint";
+    return "SCM Container location protocol endpoint";
   }
 
 }
