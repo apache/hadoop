@@ -120,7 +120,7 @@ public abstract class AbstractOMMetadataManagerTest {
         .getAbsolutePath());
 
     ReconOMMetadataManager reconOMMetaMgr =
-        new ReconOmMetadataManagerImpl(configuration);
+        new ReconOmMetadataManagerImpl(configuration, new ReconUtils());
     reconOMMetaMgr.start(configuration);
 
     reconOMMetaMgr.updateOmDB(
