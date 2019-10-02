@@ -53,7 +53,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -406,7 +405,8 @@ public class MockNodeManager implements NodeManager {
    * @param dnsName String representing the hostname or IP of the node
    * @param uuid String representing the UUID of the registered node.
    */
-  private synchronized void addEntryTodnsToUuidMap(String dnsName, String uuid) {
+  private synchronized void addEntryTodnsToUuidMap(
+      String dnsName, String uuid) {
     Set<String> dnList = dnsToUuidMap.get(dnsName);
     if (dnList == null) {
       dnList = ConcurrentHashMap.newKeySet();
