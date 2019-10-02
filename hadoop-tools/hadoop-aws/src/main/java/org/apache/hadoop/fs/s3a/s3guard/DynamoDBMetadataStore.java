@@ -226,14 +226,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /** Current version number. */
   public static final int VERSION = 100;
 
-  /** Error: version marker not found in table. */
-  public static final String E_NO_VERSION_MARKER
-      = "S3Guard table lacks version marker.";
-
-  /** Error: version mismatch. */
-  public static final String E_INCOMPATIBLE_VERSION
-      = "Database table is from an incompatible S3Guard version.";
-
   @VisibleForTesting
   static final String BILLING_MODE
       = "billing-mode";

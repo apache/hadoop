@@ -28,6 +28,7 @@ import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
@@ -57,7 +58,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import static java.lang.String.valueOf;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT;
@@ -65,8 +68,6 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRIT
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_INCOMPATIBLE_VERSION;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_NO_VERSION_MARKER;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_ON_DEMAND_NO_SET_CAPACITY;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER;
@@ -77,24 +78,40 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.e
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.extractVersionFromMarker;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.keySchema;
 
+/**
+ * Table handling for dynamo tables, factored out from DynamoDBMetadataStore
+ * Mainly
+ */
 public class DynamoDBMetadataStoreTableHandler {
   public static final Logger LOG = LoggerFactory.getLogger(
       DynamoDBMetadataStoreTableHandler.class);
+
+  /** Error: version marker not found in table but the table is not empty. */
+  public static final String E_NO_VERSION_MARKER_AND_NOT_EMPTY
+      = "S3Guard table lacks version marker, and not empty.";
+
+  /** Error: version mismatch. */
+  public static final String E_INCOMPATIBLE_TAG_VERSION
+      = "Database table is from an incompatible S3Guard version based on table TAG.";
+
+  /** Error: version mismatch. */
+  public static final String E_INCOMPATIBLE_ITEM_VERSION
+      = "Database table is from an incompatible S3Guard version based on table ITEM.";
 
   /** Invoker for IO. Until configured properly, use try-once. */
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.NO_OP
   );
 
-  private AmazonDynamoDB amazonDynamoDB;
+  final private AmazonDynamoDB amazonDynamoDB;
   final private DynamoDB dynamoDB;
   final private String tableName;
-  private Table table;
-  private String region;
-  private Configuration conf;
-  private final Invoker readOp;
-  private final RetryPolicy batchWriteRetryPolicy;
+  final private String region;
+  final private Configuration conf;
+  final private Invoker readOp;
+  final private RetryPolicy batchWriteRetryPolicy;
 
+  private Table table;
   private String tableArn;
 
   public DynamoDBMetadataStoreTableHandler(DynamoDB dynamoDB,
@@ -164,8 +181,8 @@ public class DynamoDBMetadataStoreTableHandler {
               + ": tableName='" + tableName + "', region=" + region);
         }
 
+        verifyVersionCompatibility();
         final Item versionMarker = getVersionMarkerItem();
-        verifyVersionCompatibility(tableName, versionMarker);
         Long created = extractCreationTimeFromMarker(versionMarker);
         LOG.debug("Using existing DynamoDB table {} in region {} created {}",
             tableName, region, (created != null) ? new Date(created) : null);
@@ -209,25 +226,37 @@ public class DynamoDBMetadataStoreTableHandler {
     return table;
   }
 
-  private void addVersionMarkerToEmptyTable(String tableName)
-      throws IOException {
-    final ScanResult result = readOp.retry(
-        "scan",
-        null,
-        true,
-        () -> {
-          final ScanRequest req = new ScanRequest().withTableName(
-              tableName).withLimit(1);
-          return amazonDynamoDB.scan(req);
-        }
-    );
-    boolean isEmptyTable = result.getCount() == 0;
+  protected void tagTableWithVersionMarker() {
+    TagResourceRequest tagResourceRequest = new TagResourceRequest()
+        .withResourceArn(table.getDescription().getTableArn())
+        .withTags(newVersionMarkerTag());
+    amazonDynamoDB.tagResource(tagResourceRequest);
+  }
 
-    if (!isEmptyTable) {
-      // the table is not empty, do nothing.
+  // todo test
+  protected static Item getVersionMarkerFromTags(Table table,
+      AmazonDynamoDB addb) {
+    final List<Tag> tags;
+    try {
+      final TableDescription description = table.describe();
+      ListTagsOfResourceRequest listTagsOfResourceRequest =
+          new ListTagsOfResourceRequest()
+              .withResourceArn(description.getTableArn());
+      tags = addb.listTagsOfResource(listTagsOfResourceRequest).getTags();
+    } catch (ResourceNotFoundException e) {
+      LOG.error("Table: {} not found.");
+      throw e;
+    }
+
+    final Optional<Tag> first = tags.stream()
+        .filter(tag -> tag.getKey().equals(VERSION_MARKER)).findFirst();
+    if (first.isPresent()) {
+      final Tag vmTag = first.get();
+      return createVersionMarker(
+          vmTag.getKey(), Integer.valueOf(vmTag.getValue()), 0
+      );
     } else {
-      // the table is empty, add version marker
-      putVersionMarkerToTable();
+      return null;
     }
   }
 
@@ -236,6 +265,10 @@ public class DynamoDBMetadataStoreTableHandler {
    * marker.
    * Creating an setting up the table isn't wrapped by any retry operations;
    * the wait for a table to become available is RetryTranslated.
+   * The tags are added to the table during creation, not after creation.
+   * We can assume that tagging and creating the table is a single atomic
+   * operation.
+   *
    * @param capacity capacity to provision. If null: create a per-request
    * table.
    * @throws IOException on any failure.
@@ -248,7 +281,8 @@ public class DynamoDBMetadataStoreTableHandler {
       CreateTableRequest request = new CreateTableRequest()
           .withTableName(tableName)
           .withKeySchema(keySchema())
-          .withAttributeDefinitions(attributeDefinitions());
+          .withAttributeDefinitions(attributeDefinitions())
+          .withTags(getTableTagsFromConfig());
       if (capacity != null) {
         mode = String.format("with provisioned read capacity %d and"
                 + " write capacity %s",
@@ -270,15 +304,17 @@ public class DynamoDBMetadataStoreTableHandler {
     }
     waitForTableActive(table);
     putVersionMarkerToTable();
-    tagTable();
   }
 
   /**
-   *  Add tags from configuration to the existing DynamoDB table.
+   *  Return tags from configuration and the version marker for adding to
+   *  dynamo table during creation
    */
   @Retries.OnceRaw
-  public void tagTable() {
+  public List<Tag> getTableTagsFromConfig() {
     List<Tag> tags = new ArrayList<>();
+
+    // from configuration
     Map<String, String> tagProperties =
         conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG);
     for (Map.Entry<String, String> tagMapEntry : tagProperties.entrySet()) {
@@ -286,39 +322,124 @@ public class DynamoDBMetadataStoreTableHandler {
           .withValue(tagMapEntry.getValue());
       tags.add(tag);
     }
-    if (tags.isEmpty()) {
-      return;
-    }
+    // add the version marker
+    tags.add(newVersionMarkerTag());
+    return tags;
+  }
 
-    TagResourceRequest tagResourceRequest = new TagResourceRequest()
-        .withResourceArn(table.getDescription().getTableArn())
-        .withTags(tags);
-    amazonDynamoDB.tagResource(tagResourceRequest);
+  /**
+   * Create a new version marker tag
+   * @return a new version marker tag
+   */
+  private static Tag newVersionMarkerTag() {
+    return new Tag().withKey(VERSION_MARKER).withValue(valueOf(VERSION));
   }
 
   /**
    * Verify that a table version is compatible with this S3Guard client.
-   * @param tableName name of the table (for error messages)
-   * @param versionMarker the version marker retrieved from the table
+   *
+   * Checks for consistency between the version marker as the item and tag.
+   *
+   * <pre>
+   *   1. If the table lacks both version markers AND it's empty,
+   *      both markers will be added.
+   *      If the table is not empty the check throws {@link IOException}
+   *   2. If there's no version marker ITEM, the compatibility with the TAG
+   *      will be checked, and the version marker ITEM will be added if the
+   *      TAG version is compatible.
+   *      If the TAG version is not compatible, the check throws {@link IOException}
+   *   3. If there's no version marker TAG, the compatibility with the ITEM
+   *      version marker will be checked, and the version marker ITEM will be
+   *      added if the ITEM version is compatible.
+   *      If the ITEM version is not compatible, the check throws {@link IOException}
+   *   4. If the TAG and ITEM versions are both present then both will be checked
+   *      for compatibility. If the ITEM or TAG version marker is not compatible,
+   *      the check throws {@link IOException}
+   * </pre>
+   *
    * @throws IOException on any incompatibility
    */
   @VisibleForTesting
-  static void verifyVersionCompatibility(String tableName,
-      Item versionMarker) throws IOException {
-    if (versionMarker == null) {
-      LOG.warn("Table {} contains no version marker", tableName);
-      throw new IOException(E_NO_VERSION_MARKER
-          + " Table: " + tableName);
-    } else {
-      final int version = extractVersionFromMarker(versionMarker);
-      if (VERSION != version) {
-        // version mismatch. Unless/until there is support for
-        // upgrading versions, treat this as an incompatible change
-        // and fail.
-        throw new IOException(E_INCOMPATIBLE_VERSION
-            + " Table " + tableName
-            + " Expected version " + VERSION + " actual " + version);
+  protected void verifyVersionCompatibility() throws IOException {
+    final Item versionMarkerItem = getVersionMarkerItem();
+    final Item versionMarkerFromTag =
+        getVersionMarkerFromTags(table, amazonDynamoDB);
+
+    LOG.debug("versionMarkerItem: {};  versionMarkerFromTag: {}",
+        versionMarkerItem, versionMarkerFromTag);
+
+    if (versionMarkerItem == null && versionMarkerFromTag == null) {
+      if (!isEmptyTable(tableName, amazonDynamoDB)) {
+        LOG.error("Table is not empty but missing the version maker. Failing.");
+        throw new IOException(E_NO_VERSION_MARKER_AND_NOT_EMPTY
+            + " Table: " + tableName);
       }
+
+      LOG.info("Table {} contains no version marker item or tag. " +
+              "The table is empty, so the version marker will be added " +
+              "as TAG and ITEM.", tableName);
+
+      tagTableWithVersionMarker();
+      putVersionMarkerToTable();
+    }
+
+    if (versionMarkerItem == null && versionMarkerFromTag != null) {
+      final int tagVersionMarker =
+          extractVersionFromMarker(versionMarkerFromTag);
+      throwExceptionOnVersionMismatch(tagVersionMarker, tableName,
+          E_INCOMPATIBLE_TAG_VERSION);
+
+      LOG.info("Table {} contains no version marker ITEM but contains " +
+              "compatible version marker TAG. Restoring the version marker " +
+              "item from tag.", tableName);
+
+      putVersionMarkerToTable();
+    }
+
+    if (versionMarkerItem != null && versionMarkerFromTag == null) {
+      final int itemVersionMarker =
+          extractVersionFromMarker(versionMarkerItem);
+      throwExceptionOnVersionMismatch(itemVersionMarker, tableName,
+          E_INCOMPATIBLE_ITEM_VERSION);
+
+      LOG.info("Table {} contains no version marker TAG but contains " +
+          "compatible version marker ITEM. Restoring the version marker " +
+          "item from item.", tableName);
+
+      tagTableWithVersionMarker();
+    }
+
+    if (versionMarkerItem != null && versionMarkerFromTag != null) {
+      final int tagVersionMarker =
+          extractVersionFromMarker(versionMarkerFromTag);
+      final int itemVersionMarker =
+          extractVersionFromMarker(versionMarkerItem);
+
+      throwExceptionOnVersionMismatch(tagVersionMarker, tableName,
+          E_INCOMPATIBLE_TAG_VERSION);
+      throwExceptionOnVersionMismatch(itemVersionMarker, tableName,
+          E_INCOMPATIBLE_ITEM_VERSION);
+
+      LOG.info("Table {} contains correct version marker TAG and ITEM.",
+          tableName);
+    }
+  }
+
+  private static boolean isEmptyTable(String tableName, AmazonDynamoDB aadb) {
+    final ScanRequest req = new ScanRequest().withTableName(
+        tableName).withLimit(1);
+    final ScanResult result = aadb.scan(req);
+    return result.getCount() == 0;
+  }
+
+  private static void throwExceptionOnVersionMismatch(int actual,
+      String tableName,
+      String exMsg) throws IOException {
+
+    if (VERSION != actual) {
+      throw new IOException(exMsg + " Table " + tableName
+          + " Expected version: " + VERSION + " actual tag version: " +
+          actual);
     }
   }
 
@@ -414,7 +535,7 @@ public class DynamoDBMetadataStoreTableHandler {
    */
   @VisibleForTesting
   @Retries.RetryTranslated
-  Item getVersionMarkerItem() throws IOException {
+  protected Item getVersionMarkerItem() throws IOException {
     final PrimaryKey versionMarkerKey =
         createVersionMarkerPrimaryKey(VERSION_MARKER);
     int retryCount = 0;
@@ -440,7 +561,8 @@ public class DynamoDBMetadataStoreTableHandler {
         if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
           break;
         } else {
-          LOG.debug("Sleeping {} ms before next retry", action.delayMillis);
+          LOG.warn("Version marker in the dynamo table was null. " +
+              "Sleeping {} ms before next retry", action.delayMillis);
           Thread.sleep(action.delayMillis);
         }
       } catch (Exception e) {
@@ -517,10 +639,6 @@ public class DynamoDBMetadataStoreTableHandler {
       throws IOException {
     provisionTable(readCapacity, writeCapacity);
     waitForTableActive(table);
-  }
-
-  public String getTableName() {
-    return tableName;
   }
 
   public Table getTable() {
