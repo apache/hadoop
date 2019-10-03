@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -77,4 +78,6 @@ public interface PipelineManager extends Closeable, PipelineManagerMXBean {
   void triggerPipelineCreation();
 
   void incNumBlocksAllocatedMetric(PipelineID id);
+
+  GrpcTlsConfig getGrpcTlsConfig();
 }

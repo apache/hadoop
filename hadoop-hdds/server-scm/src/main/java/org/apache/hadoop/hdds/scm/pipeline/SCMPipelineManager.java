@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -36,6 +37,7 @@ import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.apache.hadoop.utils.Scheduler;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,14 +83,16 @@ public class SCMPipelineManager implements PipelineManager {
   private final Configuration conf;
   // Pipeline Manager MXBean
   private ObjectName pmInfoBean;
+  private GrpcTlsConfig grpcTlsConfig;
 
   public SCMPipelineManager(Configuration conf, NodeManager nodeManager,
-      EventPublisher eventPublisher) throws IOException {
+      EventPublisher eventPublisher, GrpcTlsConfig grpcTlsConfig)
+      throws IOException {
     this.lock = new ReentrantReadWriteLock();
     this.conf = conf;
     this.stateManager = new PipelineStateManager(conf);
     this.pipelineFactory = new PipelineFactory(nodeManager, stateManager,
-        conf);
+        conf, grpcTlsConfig);
     // TODO: See if thread priority needs to be set for these threads
     scheduler = new Scheduler("RatisPipelineUtilsThread", false, 1);
     this.backgroundPipelineCreator =
@@ -110,12 +114,14 @@ public class SCMPipelineManager implements PipelineManager {
     this.pmInfoBean = MBeans.register("SCMPipelineManager",
         "SCMPipelineManagerInfo", this);
     initializePipelineState();
+    this.grpcTlsConfig = grpcTlsConfig;
   }
 
   public PipelineStateManager getStateManager() {
     return stateManager;
   }
 
+  @VisibleForTesting
   public void setPipelineProvider(ReplicationType replicationType,
                                   PipelineProvider provider) {
     pipelineFactory.setProvider(replicationType, provider);
@@ -378,7 +384,7 @@ public class SCMPipelineManager implements PipelineManager {
    * @throws IOException
    */
   private void destroyPipeline(Pipeline pipeline) throws IOException {
-    RatisPipelineUtils.destroyPipeline(pipeline, conf);
+    RatisPipelineUtils.destroyPipeline(pipeline, conf, grpcTlsConfig);
     // remove the pipeline from the pipeline manager
     removePipeline(pipeline.getId());
     triggerPipelineCreation();
@@ -408,6 +414,11 @@ public class SCMPipelineManager implements PipelineManager {
   @Override
   public void incNumBlocksAllocatedMetric(PipelineID id) {
     metrics.incNumBlocksAllocated(id);
+  }
+
+  @Override
+  public GrpcTlsConfig getGrpcTlsConfig() {
+    return grpcTlsConfig;
   }
 
   @Override

@@ -269,7 +269,7 @@ public final class XceiverServerRatis extends XceiverServer {
             .getDuration(), timeUnit);
     final TimeDuration nodeFailureTimeout =
         TimeDuration.valueOf(duration, timeUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);
@@ -391,8 +391,8 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
       localPort = 0;
     }
-    GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfig(
-          new SecurityConfig(ozoneConf));
+    GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfigForDN(
+          new SecurityConfig(ozoneConf), caClient);
 
     return new XceiverServerRatis(datanodeDetails, localPort,
         dispatcher, ozoneConf, context, tlsConfig, caClient);

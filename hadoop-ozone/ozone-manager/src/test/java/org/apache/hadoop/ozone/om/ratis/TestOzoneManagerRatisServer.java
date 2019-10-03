@@ -183,6 +183,7 @@ public class TestOzoneManagerRatisServer {
         .setOMServiceId(customOmServiceId)
         .build();
     // Starts a single node Ratis server
+    omRatisServer.stop();
     OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
         .newOMRatisServer(newConf, ozoneManager, omNodeDetails,
             Collections.emptyList());
@@ -197,5 +198,6 @@ public class TestOzoneManagerRatisServer {
     RaftGroupId raftGroupId = newOmRatisServer.getRaftGroup().getGroupId();
     Assert.assertEquals(uuid, raftGroupId.getUuid());
     Assert.assertEquals(raftGroupId.toByteString().size(), 16);
+    newOmRatisServer.stop();
   }
 }
