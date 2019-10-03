@@ -2564,6 +2564,37 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return rm.getClientRMService().getContainers(request).getContainerList();
   }
 
+  @GET
+  @Path(RMWSConsts.FORMAT_SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response formatSchedulerConfiguration(@Context HttpServletRequest hsr)
+      throws AuthorizationException {
+    // Only admin user allowed to format scheduler conf in configuration store
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      try {
+        MutableConfigurationProvider mutableConfigurationProvider =
+            ((MutableConfScheduler) scheduler).getMutableConfProvider();
+        mutableConfigurationProvider.formatConfigurationInStore(conf);
+        return Response.status(Status.OK).entity("Configuration under " +
+            "store successfully formatted.").build();
+      } catch (Exception e) {
+        LOG.error("Exception thrown when formating configuration", e);
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+            .build();
+      }
+    } else {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by " +
+          "MutableConfScheduler.").build();
+    }
+  }
+
   @PUT
   @Path(RMWSConsts.SCHEDULER_CONF)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,

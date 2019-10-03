@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -39,14 +40,12 @@ import com.google.common.base.Strings;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -74,6 +73,8 @@ import org.slf4j.LoggerFactory;
  */
 public final class OmUtils {
   public static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
+  private static final SecureRandom SRAND = new SecureRandom();
+  private static byte[] randomBytes = new byte[32];
 
   private OmUtils() {
   }
@@ -275,9 +276,9 @@ public final class OmUtils {
 
   public static byte[] getSHADigest() throws IOException {
     try {
+      SRAND.nextBytes(randomBytes);
       MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-      return sha.digest(RandomStringUtils.random(32)
-          .getBytes(StandardCharsets.UTF_8));
+      return sha.digest(randomBytes);
     } catch (NoSuchAlgorithmException ex) {
       throw new IOException("Error creating an instance of SHA-256 digest.\n" +
           "This could possibly indicate a faulty JRE");
@@ -405,18 +406,14 @@ public final class OmUtils {
   /**
    * If a OM conf is only set with key suffixed with OM Node ID, return the
    * set value.
-   * @return null if base conf key is set, otherwise the value set for
-   * key suffixed with Node ID.
+   * @return if the value is set for key suffixed with OM Node ID, return the
+   * value, else return null.
    */
   public static String getConfSuffixedWithOMNodeId(Configuration conf,
       String confKey, String omServiceID, String omNodeId) {
-    String confValue = conf.getTrimmed(confKey);
-    if (StringUtils.isNotEmpty(confValue)) {
-      return null;
-    }
     String suffixedConfKey = OmUtils.addKeySuffixes(
         confKey, omServiceID, omNodeId);
-    confValue = conf.getTrimmed(suffixedConfKey);
+    String confValue = conf.getTrimmed(suffixedConfKey);
     if (StringUtils.isNotEmpty(confValue)) {
       return confValue;
     }

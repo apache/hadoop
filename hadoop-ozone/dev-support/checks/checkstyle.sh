@@ -36,7 +36,7 @@ find "." -name checkstyle-errors.xml -print0 \
   | tee "$REPORT_FILE"
 
 ## generate counter
-wc -l "$REPORT_DIR/summary.txt" | awk '{print $1}'> "$REPORT_DIR/failures"
+grep -c ':' "$REPORT_FILE" > "$REPORT_DIR/failures"
 
 if [[ -s "${REPORT_FILE}" ]]; then
    exit 1

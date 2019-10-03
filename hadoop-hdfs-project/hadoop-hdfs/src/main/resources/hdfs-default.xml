@@ -3303,6 +3303,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.state.context.enabled</name>
+  <value>false</value>
+  <description>
+    Whether enable namenode sending back its current txnid back to client.
+    Setting this to true is required by Consistent Read from Standby feature.
+    But for regular cases, this should be set to false to avoid the overhead
+    of updating and maintaining this state.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.ec.system.default.policy</name>
   <value>RS-6-3-1024k</value>
   <description>The default erasure coding policy name will be used
