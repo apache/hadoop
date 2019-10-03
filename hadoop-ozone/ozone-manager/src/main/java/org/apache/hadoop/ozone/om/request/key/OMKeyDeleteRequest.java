@@ -139,13 +139,12 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
       // TODO: Revisit if we need it later.
 
       omClientResponse = new OMKeyDeleteResponse(omKeyInfo,
-          deleteKeyArgs.getModificationTime(),
           omResponse.setDeleteKeyResponse(
               DeleteKeyResponse.newBuilder()).build());
 
     } catch (IOException ex) {
       exception = ex;
-      omClientResponse = new OMKeyDeleteResponse(null, 0,
+      omClientResponse = new OMKeyDeleteResponse(null,
           createErrorOMResponse(omResponse, exception));
     } finally {
       if (omClientResponse != null) {

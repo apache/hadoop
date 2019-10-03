@@ -315,10 +315,11 @@
       function augment_read_only(mountTable) {
         for (var i = 0, e = mountTable.length; i < e; ++i) {
           if (mountTable[i].readonly == true) {
-            mountTable[i].readonly = "true"
-            mountTable[i].status = "Read only"
+            mountTable[i].readonly = "readonly"
+            mountTable[i].status = "Read Only"
           } else {
-            mountTable[i].readonly = "false"
+            mountTable[i].readonly = "readwrite"
+            mountTable[i].status = "Read Write"
           }
         }
       }

@@ -308,6 +308,8 @@ message VolumeInfo {
     repeated hadoop.hdds.KeyValue metadata = 5;
     repeated OzoneAclInfo volumeAcls = 6;
     optional uint64 creationTime = 7;
+    optional uint64 objectID = 8;
+    optional uint64 updateID = 9;
 }
 
 /**
@@ -350,8 +352,10 @@ message CreateVolumeResponse {
 
 }
 
-message VolumeList {
+message UserVolumeInfo {
     repeated string volumeNames = 1;
+    optional uint64 objectID = 2;
+    optional uint64 updateID = 3;
 }
 
 /**
@@ -596,7 +600,6 @@ message InfoBucketRequest {
 }
 
 message InfoBucketResponse {
-
     optional BucketInfo bucketInfo = 2;
 }
 
@@ -687,6 +690,10 @@ message KeyInfo {
     repeated OzoneAclInfo acls = 13;
 }
 
+message RepeatedKeyInfo {
+    repeated KeyInfo keyInfo = 1;
+}
+
 message OzoneFileStatusProto {
     required hadoop.fs.FileStatusProto status = 1;
 }
@@ -751,7 +758,6 @@ message CreateKeyRequest {
 }
 
 message CreateKeyResponse {
-
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations
     // (similar to a cookie).
@@ -764,7 +770,6 @@ message LookupKeyRequest {
 }
 
 message LookupKeyResponse {
-
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations (similar
     // to a cookie).
@@ -840,7 +845,6 @@ message ListKeysRequest {
 }
 
 message ListKeysResponse {
-
     repeated KeyInfo keyInfo = 2;
 }
 
@@ -949,8 +953,7 @@ message S3ListBucketsRequest {
 }
 
 message S3ListBucketsResponse {
-
-    repeated BucketInfo bucketInfo = 2;
+   repeated BucketInfo bucketInfo = 2;
 }
 
 message MultipartInfoInitiateRequest {
@@ -1020,7 +1023,6 @@ message MultipartUploadListPartsRequest {
 }
 
 message MultipartUploadListPartsResponse {
-
     optional hadoop.hdds.ReplicationType type = 2;
     optional hadoop.hdds.ReplicationFactor factor = 3;
     optional uint32 nextPartNumberMarker = 4;

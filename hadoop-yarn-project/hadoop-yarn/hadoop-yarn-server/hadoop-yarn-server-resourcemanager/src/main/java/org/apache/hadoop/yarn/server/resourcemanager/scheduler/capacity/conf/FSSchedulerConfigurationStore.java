@@ -156,6 +156,11 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
         + finalConfigPath);
   }
 
+  @Override
+  public void format() throws Exception {
+    fileSystem.delete(schedulerConfDir, true);
+  }
+
   private Path getFinalConfigPath(Path tempPath) {
     String tempConfigPathStr = tempPath.getName();
     if (!tempConfigPathStr.endsWith(TMP)) {

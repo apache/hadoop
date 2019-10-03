@@ -4301,4 +4301,13 @@
     <value>60000</value>
   </property>
 
+  <property>
+    <description>
+      Comma-separated list of partitions. If a label P is in this list,
+      then the RM will enforce that an app has resource requests with label
+      P iff that app's node label expression is P.
+    </description>
+    <name>yarn.node-labels.exclusive-enforced-partitions</name>
+    <value></value>
+  </property>
 </configuration>

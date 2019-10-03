@@ -491,4 +491,10 @@ class ChRootedFileSystem extends FilterFileSystem {
       throws IOException, UnsupportedOperationException {
     return super.openFile(fullPath(path));
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return super.hasPathCapability(fullPath(path), capability);
+  }
 }

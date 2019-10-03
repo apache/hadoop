@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -265,11 +266,15 @@ public final class TestOMRequestUtils {
    */
   public static void addUserToDB(String volumeName, String ownerName,
       OMMetadataManager omMetadataManager) throws Exception {
-    OzoneManagerProtocolProtos.VolumeList volumeList =
-        OzoneManagerProtocolProtos.VolumeList.newBuilder()
-            .addVolumeNames(volumeName).build();
+    OzoneManagerProtocolProtos.UserVolumeInfo userVolumeInfo =
+        OzoneManagerProtocolProtos.UserVolumeInfo
+            .newBuilder()
+            .addVolumeNames(volumeName)
+            .setObjectID(1)
+            .setUpdateID(1)
+            .build();
     omMetadataManager.getUserTable().put(
-        omMetadataManager.getUserKey(ownerName), volumeList);
+        omMetadataManager.getUserKey(ownerName), userVolumeInfo);
   }
 
   /**
@@ -370,10 +375,16 @@ public final class TestOMRequestUtils {
 
     // Delete key from KeyTable and put in DeletedKeyTable
     omMetadataManager.getKeyTable().delete(ozoneKey);
-    String deletedKeyName = OmUtils.getDeletedKeyName(ozoneKey, Time.now());
-    omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
 
-    return deletedKeyName;
+    RepeatedOmKeyInfo repeatedOmKeyInfo =
+        omMetadataManager.getDeletedTable().get(ozoneKey);
+
+    repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(omKeyInfo,
+        repeatedOmKeyInfo);
+
+    omMetadataManager.getDeletedTable().put(ozoneKey, repeatedOmKeyInfo);
+
+    return ozoneKey;
   }
 
   /**

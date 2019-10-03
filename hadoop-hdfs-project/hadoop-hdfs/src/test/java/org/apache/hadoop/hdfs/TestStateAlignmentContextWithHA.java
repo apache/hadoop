@@ -94,6 +94,7 @@ public class TestStateAlignmentContextWithHA {
     CONF.setBoolean(String.format(
         "fs.%s.impl.disable.cache", HdfsConstants.HDFS_URI_SCHEME), true);
     CONF.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, NUMDATANODES);
+    CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
 
     qjmhaCluster = HATestUtil.setUpObserverCluster(CONF, 1, NUMDATANODES, true);
     cluster = qjmhaCluster.getDfsCluster();

@@ -434,7 +434,7 @@ public class DFSAdmin extends FsShell {
   private static final String commonUsageSummary =
     "\t[-report [-live] [-dead] [-decommissioning] " +
     "[-enteringmaintenance] [-inmaintenance]]\n" +
-    "\t[-safemode <enter | leave | get | wait>]\n" +
+    "\t[-safemode <enter | leave | get | wait | forceExit>]\n" +
     "\t[-saveNamespace [-beforeShutdown]]\n" +
     "\t[-rollEdits]\n" +
     "\t[-restoreFailedStorage true|false|check]\n" +

@@ -22,11 +22,14 @@ RESULT_DIR=${RESULT_DIR:-"$COMPOSE_DIR/result"}
 RESULT_DIR_INSIDE="/tmp/smoketest/$(basename "$COMPOSE_ENV_NAME")/result"
 SMOKETEST_DIR_INSIDE="${OZONE_DIR:-/opt/hadoop}/smoketest"
 
-#delete previous results
-rm -rf "$RESULT_DIR"
-mkdir -p "$RESULT_DIR"
-#Should be writeable from the docker containers where user is different.
-chmod ogu+w "$RESULT_DIR"
+## @description create results directory, purging any prior data
+create_results_dir() {
+  #delete previous results
+  rm -rf "$RESULT_DIR"
+  mkdir -p "$RESULT_DIR"
+  #Should be writeable from the docker containers where user is different.
+  chmod ogu+w "$RESULT_DIR"
+}
 
 ## @description print the number of datanodes up
 ## @param the docker-compose file
@@ -80,6 +83,8 @@ wait_for_datanodes(){
 ## @param number of datanodes to start and wait for (default: 3)
 start_docker_env(){
   local -i datanode_count=${1:-3}
+
+  create_results_dir
 
   docker-compose -f "$COMPOSE_FILE" down
   docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}" \
