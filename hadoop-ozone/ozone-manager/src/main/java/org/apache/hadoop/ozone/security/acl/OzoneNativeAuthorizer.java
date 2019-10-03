@@ -69,6 +69,9 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
     Objects.requireNonNull(ozObject);
     Objects.requireNonNull(context);
     OzoneObjInfo objInfo;
+    RequestContext parentContext;
+    boolean isACLTypeCreate = (context.getAclRights() == ACLType.CREATE);
+    boolean isACLTypeDelete = (context.getAclRights() == ACLType.DELETE);
 
     if (ozObject instanceof OzoneObjInfo) {
       objInfo = (OzoneObjInfo) ozObject;
@@ -77,25 +80,52 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
           "configured to work with OzoneObjInfo type only.", INVALID_REQUEST);
     }
 
+    // For CREATE and DELETE acl requests, the parents need to be checked
+    // for WRITE acl. If Key create request is received, then we need to
+    // check if user has WRITE acl set on Bucket and Volume. In all other cases
+    // the parents also need to be checked for the same acl type.
+    if (isACLTypeCreate || isACLTypeDelete) {
+      parentContext = RequestContext.newBuilder()
+        .setClientUgi(context.getClientUgi())
+        .setIp(context.getIp())
+        .setAclType(context.getAclType())
+        .setAclRights(ACLType.WRITE)
+        .build();
+    } else {
+      parentContext = context;
+    }
+
     switch (objInfo.getResourceType()) {
     case VOLUME:
       LOG.trace("Checking access for volume:" + objInfo);
       return volumeManager.checkAccess(objInfo, context);
     case BUCKET:
       LOG.trace("Checking access for bucket:" + objInfo);
-      return (bucketManager.checkAccess(objInfo, context)
-          && volumeManager.checkAccess(objInfo, context));
+      // Skip bucket access check for CREATE acl since
+      // bucket will not exist at the time of creation
+      boolean bucketAccess = isACLTypeCreate
+          || bucketManager.checkAccess(objInfo, context);
+      return (bucketAccess
+          && volumeManager.checkAccess(objInfo, parentContext));
     case KEY:
       LOG.trace("Checking access for Key:" + objInfo);
-      return (keyManager.checkAccess(objInfo, context)
-          && prefixManager.checkAccess(objInfo, context)
-          && bucketManager.checkAccess(objInfo, context)
-          && volumeManager.checkAccess(objInfo, context));
+      // Skip key access check for CREATE acl since
+      // key will not exist at the time of creation
+      boolean keyAccess = isACLTypeCreate
+          || keyManager.checkAccess(objInfo, context);
+      return (keyAccess
+          && prefixManager.checkAccess(objInfo, parentContext)
+          && bucketManager.checkAccess(objInfo, parentContext)
+          && volumeManager.checkAccess(objInfo, parentContext));
     case PREFIX:
       LOG.trace("Checking access for Prefix:" + objInfo);
-      return (prefixManager.checkAccess(objInfo, context)
-          && bucketManager.checkAccess(objInfo, context)
-          && volumeManager.checkAccess(objInfo, context));
+      // Skip prefix access check for CREATE acl since
+      // prefix will not exist at the time of creation
+      boolean prefixAccess = isACLTypeCreate
+          || prefixManager.checkAccess(objInfo, context);
+      return (prefixAccess
+          && bucketManager.checkAccess(objInfo, parentContext)
+          && volumeManager.checkAccess(objInfo, parentContext));
     default:
       throw new OMException("Unexpected object type:" +
           objInfo.getResourceType(), INVALID_REQUEST);

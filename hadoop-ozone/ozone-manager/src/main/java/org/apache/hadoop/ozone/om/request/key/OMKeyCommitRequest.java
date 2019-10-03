@@ -25,6 +25,9 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.slf4j.Logger;
@@ -112,11 +115,20 @@ public class OMKeyCommitRequest extends OMKeyRequest {
     IOException exception = null;
     OmKeyInfo omKeyInfo = null;
     OMClientResponse omClientResponse = null;
+    boolean bucketLockAcquired = false;
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
+      // Native authorizer requires client id as part of keyname to check
+      // write ACL on key. Add client id to key name if ozone native
+      // authorizer is configured.
+      Configuration config = new OzoneConfiguration();
+      String keyNameForAclCheck = keyName;
+      if (OmUtils.isNativeAuthorizerEnabled(config)) {
+        keyNameForAclCheck = keyName + "/" + commitKeyRequest.getClientID();
+      }
+      checkKeyAcls(ozoneManager, volumeName, bucketName, keyNameForAclCheck,
           IAccessAuthorizer.ACLType.WRITE);
 
       List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
@@ -129,8 +141,8 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
           keyName, commitKeyRequest.getClientID());
 
-      omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-          bucketName);
+      bucketLockAcquired = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(dbOpenKey);
@@ -168,8 +180,11 @@ public class OMKeyCommitRequest extends OMKeyRequest {
             ozoneManagerDoubleBufferHelper.add(omClientResponse,
                 transactionLogIndex));
       }
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
+
+      if(bucketLockAcquired) {
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
     }
 
     // Performing audit logging outside of the lock.
