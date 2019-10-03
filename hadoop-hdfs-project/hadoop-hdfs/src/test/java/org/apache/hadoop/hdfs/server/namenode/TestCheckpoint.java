@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.assertNNHasCheckpoints;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.getNameNodeCurrentDirs;
+import static org.apache.hadoop.hdfs.server.namenode.ImageServlet.RECENT_IMAGE_CHECK_ENABLED;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -2472,6 +2473,60 @@ public class TestCheckpoint {
       cleanup(secondary);
       cleanup(cluster);
       tmpDir.delete();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testActiveRejectSmallerDeltaImage() throws Exception {
+    MiniDFSCluster cluster = null;
+    Configuration conf = new HdfsConfiguration();
+    // Set the delta txid threshold to 10
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 10);
+    // Set the delta time threshold to some arbitrarily large value, so
+    // it does not trigger a checkpoint during this test.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 900000);
+
+    SecondaryNameNode secondary = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      // enable small delta rejection
+      NameNode active = cluster.getNameNode();
+      active.httpServer.getHttpServer()
+          .setAttribute(RECENT_IMAGE_CHECK_ENABLED, true);
+
+      secondary = startSecondaryNameNode(conf);
+
+      FileSystem fs = cluster.getFileSystem();
+      assertEquals(0, active.getNamesystem().getFSImage()
+          .getMostRecentCheckpointTxId());
+
+      // create 5 dir.
+      for (int i = 0; i < 5; i++) {
+        fs.mkdirs(new Path("dir-" + i));
+      }
+
+      // Checkpoint 1st
+      secondary.doCheckpoint();
+      // at this point, the txid delta is smaller than threshold 10.
+      // active does not accept this image.
+      assertEquals(0, active.getNamesystem().getFSImage()
+          .getMostRecentCheckpointTxId());
+
+      // create another 10 dir.
+      for (int i = 0; i < 10; i++) {
+        fs.mkdirs(new Path("dir2-" + i));
+      }
+
+      // Checkpoint 2nd
+      secondary.doCheckpoint();
+      // here the delta is large enough and active accepts this image.
+      assertEquals(21, active.getNamesystem().getFSImage()
+          .getMostRecentCheckpointTxId());
+    } finally {
+      cleanup(secondary);
+      cleanup(cluster);
     }
   }
 
