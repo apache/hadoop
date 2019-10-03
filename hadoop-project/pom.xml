@@ -838,6 +838,18 @@
         <version>1.6</version>
       </dependency>
       <dependency>
+        <groupId>commons-digester</groupId>
+        <artifactId>commons-digester</artifactId>
+        <version>1.8</version>
+      </dependency>
+      <!-- Override the version of commons-beanutils dependent by
+      commons-digester from 1.7.0 to 1.9.4 -->
+      <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.9.4</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.4</version>
