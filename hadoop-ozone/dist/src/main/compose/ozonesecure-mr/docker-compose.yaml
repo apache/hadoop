@@ -37,7 +37,7 @@ services:
       - ./docker-config
     command: ["hadoop", "kms"]
   datanode:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     networks:
       - ozone
     volumes:
@@ -48,7 +48,7 @@ services:
     env_file:
       - docker-config
   om:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: om
     networks:
       - ozone
@@ -62,7 +62,7 @@ services:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
   s3g:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: s3g
     networks:
       - ozone
@@ -74,7 +74,7 @@ services:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: scm
     networks:
       - ozone
