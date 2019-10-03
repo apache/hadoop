@@ -99,9 +99,11 @@ YARN-SITE.XML_yarn.log-aggregation-enable=true
 YARN-SITE.XML_yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
 YARN-SITE.XML_yarn.nodemanager.delete.debug-delay-sec=600
 
-YARN-SITE.XML_yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
-YARN-SITE.XML_yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
-YARN-SITE.XML_yarn.nodemanager.linux-container-executor.group=hadoop
+# Yarn LinuxContainer requires the /opt/hadoop/etc/hadoop to be owned by root and not modifiable by other users,
+# which prevents start.sh from changing the configurations based on docker-config
+# YARN-SITE.XML_yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
+# YARN-SITE.XML_yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
+# YARN-SITE.XML_yarn.nodemanager.linux-container-executor.group=hadoop
 
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-applications=10000
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-am-resource-percent=0.1
