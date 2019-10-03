@@ -17,7 +17,7 @@
 version: "3"
 services:
    datanode:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
         - ../..:/opt/hadoop
@@ -28,7 +28,7 @@ services:
       env_file:
         - ./docker-config
    om:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
@@ -40,7 +40,7 @@ services:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
    scm:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
