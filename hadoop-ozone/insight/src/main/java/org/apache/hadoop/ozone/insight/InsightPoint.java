@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.insight;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Definition of a specific insight points.
@@ -44,6 +45,9 @@ public interface InsightPoint {
    */
   List<Class> getConfigurationClasses();
 
-
+  /**
+   * Decide if the specific log should be displayed or not..
+   */
+  boolean filterLog(Map<String, String> filters, String logLine);
 
 }

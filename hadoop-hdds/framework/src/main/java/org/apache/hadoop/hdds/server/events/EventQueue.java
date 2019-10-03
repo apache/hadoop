@@ -163,12 +163,12 @@ public class EventQueue implements EventPublisher, AutoCloseable {
           queuedCount.incrementAndGet();
           if (LOG.isTraceEnabled()) {
             LOG.debug(
-                "Delivering event {} to executor/handler {}: <json>{}</json>",
+                "Delivering [event={}] to executor/handler {}: <json>{}</json>",
                 event.getName(),
                 executorAndHandlers.getKey().getName(),
                 TRACING_SERIALIZER.toJson(payload).replaceAll("\n", "\\\\n"));
           } else if (LOG.isDebugEnabled()) {
-            LOG.debug("Delivering event {} to executor/handler {}: {}",
+            LOG.debug("Delivering [event={}] to executor/handler {}: {}",
                 event.getName(),
                 executorAndHandlers.getKey().getName(),
                 payload.getClass().getSimpleName());

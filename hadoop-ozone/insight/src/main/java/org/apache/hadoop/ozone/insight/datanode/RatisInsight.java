@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.insight.datanode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -72,4 +73,8 @@ public class RatisInsight extends BaseInsightPoint implements InsightPoint {
     return "More information about one ratis datanode ring.";
   }
 
+  @Override
+  public boolean filterLog(Map<String, String> filters, String logLine) {
+    return true;
+  }
 }

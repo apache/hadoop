@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -185,4 +186,18 @@ public abstract class BaseInsightPoint implements InsightPoint {
     metrics.add(performance);
   }
 
+  @Override
+  public boolean filterLog(Map<String, String> filters, String logLine) {
+    if (filters == null) {
+      return true;
+    }
+    boolean result = true;
+    for (Entry<String, String> entry : filters.entrySet()) {
+      if (!logLine.matches(
+          String.format(".*\\[%s=%s\\].*", entry.getKey(), entry.getValue()))) {
+        result = result & false;
+      }
+    }
+    return result;
+  }
 }

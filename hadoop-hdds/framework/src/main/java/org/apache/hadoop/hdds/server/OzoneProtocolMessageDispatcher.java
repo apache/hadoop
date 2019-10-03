@@ -59,7 +59,7 @@ public class OzoneProtocolMessageDispatcher<REQUEST, RESPONSE> {
     try {
       if (logger.isTraceEnabled()) {
         logger.trace(
-            "{} {} request is received: <json>{}</json>",
+            "[service={}] [type={}] request is received: <json>{}</json>",
             serviceName,
             type.toString(),
             request.toString().replaceAll("\n", "\\\\n"));
@@ -73,7 +73,7 @@ public class OzoneProtocolMessageDispatcher<REQUEST, RESPONSE> {
 
       if (logger.isTraceEnabled()) {
         logger.trace(
-            "{} {} request is processed. Response: "
+            "[service={}] [type={}] request is processed. Response: "
                 + "<json>{}</json>",
             serviceName,
             type.toString(),

@@ -23,8 +23,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -59,6 +61,10 @@ public class LogSubcommand extends BaseInsightSubCommand
       + "show more information / detailed message")
   private boolean verbose;
 
+  @CommandLine.Option(names = "-f", description = "Enable verbose mode to "
+      + "show more information / detailed message")
+  private Map<String, String> filters;
+
   @Override
   public Void call() throws Exception {
     OzoneConfiguration conf =
@@ -76,7 +82,8 @@ public class LogSubcommand extends BaseInsightSubCommand
     Set<Component> sources = loggers.stream().map(LoggerSource::getComponent)
         .collect(Collectors.toSet());
     try {
-      streamLog(conf, sources, loggers);
+      streamLog(conf, sources, loggers,
+          (logLine) -> insight.filterLog(filters, logLine));
     } finally {
       for (LoggerSource logger : loggers) {
         setLogLevel(conf, logger.getLoggerName(), logger.getComponent(),
@@ -86,12 +93,20 @@ public class LogSubcommand extends BaseInsightSubCommand
     return null;
   }
 
+  /**
+   * Stream log from multiple endpoint.
+   *
+   * @param conf           Configuration (to find the log endpoints)
+   * @param sources        Components to connect to (like scm, om...)
+   * @param relatedLoggers loggers to display
+   * @param filter         any additional filter
+   */
   private void streamLog(OzoneConfiguration conf, Set<Component> sources,
-      List<LoggerSource> relatedLoggers) {
+      List<LoggerSource> relatedLoggers, Function<String, Boolean> filter) {
     List<Thread> loggers = new ArrayList<>();
     for (Component sourceComponent : sources) {
       loggers.add(new Thread(
-          () -> streamLog(conf, sourceComponent, relatedLoggers)));
+          () -> streamLog(conf, sourceComponent, relatedLoggers, filter)));
     }
     for (Thread thread : loggers) {
       thread.start();
@@ -106,7 +121,7 @@ public class LogSubcommand extends BaseInsightSubCommand
   }
 
   private void streamLog(OzoneConfiguration conf, Component logComponent,
-      List<LoggerSource> loggers) {
+      List<LoggerSource> loggers, Function<String, Boolean> filter) {
     HttpClient client = HttpClientBuilder.create().build();
 
     HttpGet get = new HttpGet(getHost(conf, logComponent) + "/logstream");
@@ -118,7 +133,8 @@ public class LogSubcommand extends BaseInsightSubCommand
         bufferedReader.lines()
             .filter(line -> {
               for (LoggerSource logger : loggers) {
-                if (line.contains(logger.getLoggerName())) {
+                if (line.contains(logger.getLoggerName()) && filter
+                    .apply(line)) {
                   return true;
                 }
               }
