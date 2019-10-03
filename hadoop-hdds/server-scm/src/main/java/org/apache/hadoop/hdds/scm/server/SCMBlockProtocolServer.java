@@ -299,24 +299,8 @@ public class SCMBlockProtocolServer implements
       Node client = null;
       List<DatanodeDetails> possibleClients =
           nodeManager.getNodesByAddress(clientMachine);
-      if (possibleClients.size() == 1) {
+      if (possibleClients.size()>0){
         client = possibleClients.get(0);
-      } else if (possibleClients.size() > 1) {
-        // Generally a test cluster with many DNs on the same host so check
-        // if any of the passed hosts match one of the client nodes
-        List<DatanodeDetails> matchedNodes = possibleClients.stream()
-            .filter(nodes::contains)
-            .collect(Collectors.toList());
-        if (matchedNodes.size() == 0) {
-          // None of the passed in nodes match a node running on the client
-          // host, so just set the client as the first one originally found as
-          // the client is part of the cluster and the nodes are sorted by
-          // distance from the client.
-          client = possibleClients.get(0);
-        } else {
-          // One or more matches the client, so just use the first one.
-          client = matchedNodes.get(0);
-        }
       }
       List<Node> nodeList = new ArrayList();
       nodes.stream().forEach(uuid -> {
