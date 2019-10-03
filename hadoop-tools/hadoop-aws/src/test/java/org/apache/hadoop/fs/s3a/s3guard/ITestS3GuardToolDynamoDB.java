@@ -164,7 +164,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       assertEquals(tagMap.size() + 1, tags.size());
       for (Tag tag : tags) {
         // skip the version marker tag
-        if (tag.getKey().equals(VERSION_MARKER)) {
+        if (tag.getKey().equals(VERSION_MARKER_TAG_NAME)) {
           continue;
         }
         Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());

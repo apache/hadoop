@@ -221,7 +221,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
       OPERATIONS_LOG_NAME);
 
   /** parent/child name to use in the version marker. */
-  public static final String VERSION_MARKER = "../VERSION";
+  public static final String VERSION_MARKER_ITEM_NAME = "../VERSION";
+
+  /** parent/child name to use in the version marker. */
+  public static final String VERSION_MARKER_TAG_NAME = "s3guard_version";
 
   /** Current version number. */
   public static final int VERSION = 100;
@@ -1429,32 +1432,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void destroy() throws IOException {
-    if (table == null) {
-      LOG.info("In destroy(): no table to delete");
-      return;
-    }
-    LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);
-    Preconditions.checkNotNull(dynamoDB, "Not connected to DynamoDB");
-    try {
-      invoker.retry("delete", null, true,
-          () -> table.delete());
-      table.waitForDelete();
-    } catch (IllegalArgumentException ex) {
-      throw new TableDeleteTimeoutException(tableName,
-          "Timeout waiting for the table " + tableHandler.getTableArn()
-              + " to be deleted", ex);
-    } catch (FileNotFoundException rnfe) {
-      LOG.info("FileNotFoundException while deleting DynamoDB table {} in "
-              + "region {}.  This may indicate that the table does not exist, "
-              + "or has been deleted by another concurrent thread or process.",
-          tableName, region);
-    } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      LOG.warn("Interrupted while waiting for DynamoDB table {} being deleted",
-          tableName, ie);
-      throw new InterruptedIOException("Table " + tableName
-          + " in region " + region + " has not been deleted");
-    }
+    tableHandler.destroy();
   }
 
   @Retries.RetryTranslated

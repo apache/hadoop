@@ -118,7 +118,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       LoggerFactory.getLogger(ITestDynamoDBMetadataStore.class);
   public static final PrimaryKey
       VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
-      DynamoDBMetadataStore.VERSION_MARKER);
+      DynamoDBMetadataStore.VERSION_MARKER_ITEM_NAME);
 
   private S3AFileSystem fileSystem;
   private S3AContract s3AContract;
@@ -722,7 +722,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     LOG.info("5/6: add a different marker tag to the table: init should fail");
     deleteVersionMarkerItem(table);
     removeVersionMarkerTag(table, addb);
-    Item v200 = createVersionMarker(VERSION_MARKER, VERSION * 2, 0);
+    Item v200 = createVersionMarker(VERSION_MARKER_ITEM_NAME, VERSION * 2, 0);
     table.putItem(v200);
     intercept(IOException.class, E_INCOMPATIBLE_ITEM_VERSION,
         () -> localTableHandler.initTable());
@@ -744,7 +744,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private void tagTableWithCustomVersion(Table table,
       AmazonDynamoDB addb,
       int wrongVersion) {
-    final Tag vmTag = new Tag().withKey(VERSION_MARKER)
+    final Tag vmTag = new Tag().withKey(VERSION_MARKER_TAG_NAME)
         .withValue(valueOf(wrongVersion));
     TagResourceRequest tagResourceRequest = new TagResourceRequest()
         .withResourceArn(table.getDescription().getTableArn())
@@ -755,7 +755,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private void removeVersionMarkerTag(Table table, AmazonDynamoDB addb) {
     addb.untagResource(new UntagResourceRequest()
         .withResourceArn(table.describe().getTableArn())
-        .withTagKeys(VERSION_MARKER));
+        .withTagKeys(VERSION_MARKER_TAG_NAME));
   }
 
   private void deleteVersionMarkerItem(Table table) {
