@@ -84,12 +84,11 @@ public class BlockInfoContiguous extends BlockInfo {
   @Override
   boolean isProvided() {
     int len = getCapacity();
-    for(int idx = 0; idx < len; idx++) {
-      DatanodeStorageInfo cur = getStorageInfo(idx);
-      if(cur != null) {
-        if (cur.getStorageType() == StorageType.PROVIDED) {
-          return true;
-        }
+    for (int idx = 0; idx < len; idx++) {
+      DatanodeStorageInfo storage = getStorageInfo(idx);
+      if (storage != null
+          && storage.getStorageType().equals(StorageType.PROVIDED)) {
+        return true;
       }
     }
     return false;
