@@ -56,6 +56,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKS
 public final class DBStoreBuilder {
   private static final Logger LOG =
       LoggerFactory.getLogger(DBStoreBuilder.class);
+  public static final Logger ROCKS_DB_LOGGER =
+      LoggerFactory.getLogger(RocksDB.class);
   private Set<TableConfig> tables;
   private DBProfile dbProfile;
   private DBOptions rocksDBOption;
@@ -205,12 +207,10 @@ public final class DBStoreBuilder {
     }
 
     if (rocksDBConfiguration.isRocksdbLoggingEnabled()) {
-      Logger rocksdbLogger =
-          LoggerFactory.getLogger(RocksDB.class);
       org.rocksdb.Logger logger = new org.rocksdb.Logger(option) {
         @Override
         protected void log(InfoLogLevel infoLogLevel, String s) {
-          rocksdbLogger.info(s);
+          ROCKS_DB_LOGGER.info(s);
         }
       };
       InfoLogLevel level = InfoLogLevel.valueOf(rocksDBConfiguration
