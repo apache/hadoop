@@ -69,24 +69,35 @@ public class TestBlockInfo {
 
   @Test
   public void testAddProvidedStorage() throws Exception {
+    // block with only provided storage
     BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
-
-    DatanodeStorageInfo storage = mock(DatanodeStorageInfo.class);
-    when(storage.getStorageType()).thenReturn(StorageType.PROVIDED);
-    boolean added = blockInfo.addStorage(storage, blockInfo);
-
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    boolean added = blockInfo.addStorage(providedStorage, blockInfo);
     Assert.assertTrue(added);
-    Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+    Assert.assertEquals(providedStorage, blockInfo.getStorageInfo(0));
     Assert.assertTrue(blockInfo.isProvided());
+  }
 
-    blockInfo = new BlockInfoContiguous((short) 3);
-    storage = mock(DatanodeStorageInfo.class);
-    when(storage.getStorageType()).thenReturn(StorageType.DISK);
-    added = blockInfo.addStorage(storage, blockInfo);
-
+  @Test
+  public void testAddTwoStorageTypes() throws Exception {
+    // block with only disk storage
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+    DatanodeStorageInfo diskStorage = mock(DatanodeStorageInfo.class);
+    DatanodeDescriptor mockDN = mock(DatanodeDescriptor.class);
+    when(diskStorage.getDatanodeDescriptor()).thenReturn(mockDN);
+    when(diskStorage.getStorageType()).thenReturn(StorageType.DISK);
+    boolean added = blockInfo.addStorage(diskStorage, blockInfo);
     Assert.assertTrue(added);
-    Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+    Assert.assertEquals(diskStorage, blockInfo.getStorageInfo(0));
     Assert.assertFalse(blockInfo.isProvided());
+
+    // now add provided storage
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    added = blockInfo.addStorage(providedStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertTrue(blockInfo.isProvided());
   }
 
   @Test
