@@ -64,8 +64,9 @@ public class ConfiguredFailoverProxyProvider<T> extends
 
   @Override
   public void performFailover(T currentProxy) {
+    RPC.stopProxy(currentProxy);
     //reset the IP address in case  the stale IP was the cause for failover
-    LOG.info("Resetting cached proxy");
+    LOG.info("Resetting cached proxy: " + currentProxyIndex);
     resetProxyAddress(proxies, currentProxyIndex);
     incrementProxyIndex();
   }
