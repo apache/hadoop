@@ -42,7 +42,6 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -74,9 +73,10 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.ha.OMHANodeDetails;
+import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
@@ -207,10 +207,6 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_F
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODE_ID_KEY;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME_DEFAULT;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
@@ -310,12 +306,32 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
     Preconditions.checkNotNull(conf);
     configuration = conf;
+    // Load HA related configurations
+    OMHANodeDetails omhaNodeDetails =
+        OMHANodeDetails.loadOMHAConfig(configuration);
+
+    this.peerNodes = omhaNodeDetails.getPeerNodeDetails();
+    this.omNodeDetails = omhaNodeDetails.getLocalNodeDetails();
+
+    omStorage = new OMStorage(conf);
+    omId = omStorage.getOmId();
+
+    // In case of single OM Node Service there will be no OM Node ID
+    // specified, set it to value from om storage
+    if (this.omNodeDetails.getOMNodeId() == null) {
+      this.omNodeDetails =
+          OMHANodeDetails.getOMNodeDetails(conf, omNodeDetails.getOMServiceId(),
+              omStorage.getOmId(), omNodeDetails.getRpcAddress(),
+              omNodeDetails.getRatisPort());
+    }
+
+    loginOMUserIfSecurityEnabled(conf);
+
     this.maxUserVolumeCount = conf.getInt(OZONE_OM_USER_MAX_VOLUME,
         OZONE_OM_USER_MAX_VOLUME_DEFAULT);
     Preconditions.checkArgument(this.maxUserVolumeCount > 0,
         OZONE_OM_USER_MAX_VOLUME + " value should be greater than zero");
-    omStorage = new OMStorage(conf);
-    omId = omStorage.getOmId();
+
     if (omStorage.getState() != StorageState.INITIALIZED) {
       throw new OMException("OM not initialized.",
           ResultCodes.OM_NOT_INITIALIZED);
@@ -342,8 +358,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
 
-    // Load HA related configurations
-    loadOMHAConfigs(configuration);
+
     InetSocketAddress omNodeRpcAddr = omNodeDetails.getRpcAddress();
     omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
 
@@ -420,7 +435,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             OzoneManagerProtocolProtos.Type.values());
 
     // Start Om Rpc Server.
-    omRpcServer = getRpcServer(conf);
+    omRpcServer = getRpcServer(configuration);
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
 
@@ -511,195 +526,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public boolean isGrpcBlockTokenEnabled() {
     return grpcBlockTokenEnabled;
-  }
-
-  /**
-   * Inspects and loads OM node configurations.
-   *
-   * If {@link OMConfigKeys#OZONE_OM_SERVICE_IDS_KEY} is configured with
-   * multiple ids and/ or if {@link OMConfigKeys#OZONE_OM_NODE_ID_KEY} is not
-   * specifically configured , this method determines the omServiceId
-   * and omNodeId by matching the node's address with the configured
-   * addresses. When a match is found, it sets the omServicId and omNodeId from
-   * the corresponding configuration key. This method also finds the OM peers
-   * nodes belonging to the same OM service.
-   *
-   * @param conf
-   */
-  private void loadOMHAConfigs(Configuration conf) {
-    InetSocketAddress localRpcAddress = null;
-    String localOMServiceId = null;
-    String localOMNodeId = null;
-    int localRatisPort = 0;
-    Collection<String> omServiceIds = conf.getTrimmedStringCollection(
-        OZONE_OM_SERVICE_IDS_KEY);
-
-    String knownOMNodeId = conf.get(OZONE_OM_NODE_ID_KEY);
-    int found = 0;
-    boolean isOMAddressSet = false;
-
-    for (String serviceId : OmUtils.emptyAsSingletonNull(omServiceIds)) {
-      Collection<String> omNodeIds = OmUtils.getOMNodeIds(conf, serviceId);
-
-      List<OMNodeDetails> peerNodesList = new ArrayList<>();
-      boolean isPeer = false;
-      for (String nodeId : OmUtils.emptyAsSingletonNull(omNodeIds)) {
-        if (knownOMNodeId != null && !knownOMNodeId.equals(nodeId)) {
-          isPeer = true;
-        } else {
-          isPeer = false;
-        }
-        String rpcAddrKey = OmUtils.addKeySuffixes(OZONE_OM_ADDRESS_KEY,
-            serviceId, nodeId);
-        String rpcAddrStr = OmUtils.getOmRpcAddress(conf, rpcAddrKey);
-        if (rpcAddrStr == null) {
-          continue;
-        }
-
-        // If OM address is set for any node id, we will not fallback to the
-        // default
-        isOMAddressSet = true;
-
-        String ratisPortKey = OmUtils.addKeySuffixes(OZONE_OM_RATIS_PORT_KEY,
-            serviceId, nodeId);
-        int ratisPort = conf.getInt(ratisPortKey, OZONE_OM_RATIS_PORT_DEFAULT);
-
-        InetSocketAddress addr = null;
-        try {
-          addr = NetUtils.createSocketAddr(rpcAddrStr);
-        } catch (Exception e) {
-          LOG.warn("Exception in creating socket address " + addr, e);
-          continue;
-        }
-        if (!addr.isUnresolved()) {
-          if (!isPeer && OmUtils.isAddressLocal(addr)) {
-            localRpcAddress = addr;
-            localOMServiceId = serviceId;
-            localOMNodeId = nodeId;
-            localRatisPort = ratisPort;
-            found++;
-          } else {
-            // This OMNode belongs to same OM service as the current OMNode.
-            // Add it to peerNodes list.
-            String httpAddr = OmUtils.getHttpAddressForOMPeerNode(conf,
-                serviceId, nodeId, addr.getHostName());
-            String httpsAddr = OmUtils.getHttpsAddressForOMPeerNode(conf,
-                serviceId, nodeId, addr.getHostName());
-            OMNodeDetails peerNodeInfo = new OMNodeDetails.Builder()
-                .setOMServiceId(serviceId)
-                .setOMNodeId(nodeId)
-                .setRpcAddress(addr)
-                .setRatisPort(ratisPort)
-                .setHttpAddress(httpAddr)
-                .setHttpsAddress(httpsAddr)
-                .build();
-            peerNodesList.add(peerNodeInfo);
-          }
-        }
-      }
-      if (found == 1) {
-        LOG.debug("Found one matching OM address with service ID: {} and node" +
-                " ID: {}", localOMServiceId, localOMNodeId);
-
-        setOMNodeDetails(localOMServiceId, localOMNodeId, localRpcAddress,
-            localRatisPort);
-
-        this.peerNodes = peerNodesList;
-
-        LOG.info("Found matching OM address with OMServiceId: {}, " +
-            "OMNodeId: {}, RPC Address: {} and Ratis port: {}",
-            localOMServiceId, localOMNodeId,
-            NetUtils.getHostPortString(localRpcAddress), localRatisPort);
-        return;
-      } else if (found > 1) {
-        String msg = "Configuration has multiple " + OZONE_OM_ADDRESS_KEY +
-            " addresses that match local node's address. Please configure the" +
-            " system with " + OZONE_OM_SERVICE_IDS_KEY + " and " +
-            OZONE_OM_ADDRESS_KEY;
-        throw new OzoneIllegalArgumentException(msg);
-      }
-    }
-
-    if (!isOMAddressSet) {
-      // No OM address is set. Fallback to default
-      InetSocketAddress omAddress = OmUtils.getOmAddress(conf);
-      int ratisPort = conf.getInt(OZONE_OM_RATIS_PORT_KEY,
-          OZONE_OM_RATIS_PORT_DEFAULT);
-
-      LOG.info("Configuration either no {} set. Falling back to the default " +
-          "OM address {}", OZONE_OM_ADDRESS_KEY, omAddress);
-
-      setOMNodeDetails(null, null, omAddress, ratisPort);
-
-    } else {
-      String msg = "Configuration has no " + OZONE_OM_ADDRESS_KEY + " " +
-          "address that matches local node's address. Please configure the " +
-          "system with " + OZONE_OM_ADDRESS_KEY;
-      LOG.info(msg);
-      throw new OzoneIllegalArgumentException(msg);
-    }
-  }
-
-  /**
-   * Builds and sets OMNodeDetails object.
-   */
-  private void setOMNodeDetails(String serviceId, String nodeId,
-      InetSocketAddress rpcAddress, int ratisPort) {
-
-    if (serviceId == null) {
-      // If no serviceId is set, take the default serviceID om-service
-      serviceId = OzoneConsts.OM_SERVICE_ID_DEFAULT;
-      LOG.info("OM Service ID is not set. Setting it to the default ID: {}",
-          serviceId);
-    }
-    if (nodeId == null) {
-      // If no nodeId is set, take the omId from omStorage as the nodeID
-      nodeId = omId;
-      LOG.info("OM Node ID is not set. Setting it to the OmStorage's " +
-          "OmID: {}", nodeId);
-    }
-
-    this.omNodeDetails = new OMNodeDetails.Builder()
-        .setOMServiceId(serviceId)
-        .setOMNodeId(nodeId)
-        .setRpcAddress(rpcAddress)
-        .setRatisPort(ratisPort)
-        .build();
-
-    // Set this nodes OZONE_OM_ADDRESS_KEY to the discovered address.
-    configuration.set(OZONE_OM_ADDRESS_KEY,
-        NetUtils.getHostPortString(rpcAddress));
-
-    // Get and set Http(s) address of local node. If base config keys are
-    // not set, check for keys suffixed with OM serivce ID and node ID.
-    setOMNodeSpecificConfigs(serviceId, nodeId);
-  }
-
-  /**
-   * Check if any of the following configuration keys have been set using OM
-   * Node ID suffixed to the key. If yes, then set the base key with the
-   * configured valued.
-   *    1. {@link OMConfigKeys#OZONE_OM_HTTP_ADDRESS_KEY}
-   *    2. {@link OMConfigKeys#OZONE_OM_HTTPS_ADDRESS_KEY}
-   *    3. {@link OMConfigKeys#OZONE_OM_HTTP_BIND_HOST_KEY}
-   *    4. {@link OMConfigKeys#OZONE_OM_HTTPS_BIND_HOST_KEY}
-   */
-  private void setOMNodeSpecificConfigs(String omServiceId, String omNodeId) {
-    String[] confKeys = new String[] {
-        OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
-        OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY,
-        OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KEY,
-        OMConfigKeys.OZONE_OM_HTTPS_BIND_HOST_KEY};
-
-    for (String confKey : confKeys) {
-      String confValue = OmUtils.getConfSuffixedWithOMNodeId(
-          configuration, confKey, omServiceId, omNodeId);
-      if (confValue != null) {
-        LOG.info("Setting configuration key {} with value of key {}: {}",
-            confKey, OmUtils.addKeySuffixes(confKey, omNodeId), confValue);
-        configuration.set(confKey, confValue);
-      }
-    }
   }
 
   private KeyProviderCryptoExtension createKeyProviderExt(
@@ -1024,7 +850,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public static OzoneManager createOm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
-    loginOMUserIfSecurityEnabled(conf);
     return new OzoneManager(conf);
   }
 
@@ -1053,6 +878,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public static boolean omInit(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
+    OMHANodeDetails.loadOMHAConfig(conf);
     loginOMUserIfSecurityEnabled(conf);
     OMStorage omStorage = new OMStorage(conf);
     StorageState state = omStorage.getState();
@@ -1361,7 +1187,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return omRpcServer;
     }
 
-    InetSocketAddress omNodeRpcAddr = OmUtils.getOmAddress(configuration);
+    InetSocketAddress omNodeRpcAddr = OmUtils.getOmAddress(conf);
 
     final int handlerCount = conf.getInt(OZONE_OM_HANDLER_COUNT_KEY,
         OZONE_OM_HANDLER_COUNT_DEFAULT);

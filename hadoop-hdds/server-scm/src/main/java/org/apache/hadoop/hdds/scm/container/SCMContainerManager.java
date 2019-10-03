@@ -572,4 +572,21 @@ public class SCMContainerManager implements ContainerManager {
       this.scmContainerManagerMetrics.unRegister();
     }
   }
+
+  public void notifyContainerReportProcessing(boolean isFullReport,
+      boolean success) {
+    if (isFullReport) {
+      if (success) {
+        scmContainerManagerMetrics.incNumContainerReportsProcessedSuccessful();
+      } else {
+        scmContainerManagerMetrics.incNumContainerReportsProcessedFailed();
+      }
+    } else {
+      if (success) {
+        scmContainerManagerMetrics.incNumICRReportsProcessedSuccessful();
+      } else {
+        scmContainerManagerMetrics.incNumICRReportsProcessedFailed();
+      }
+    }
+  }
 }

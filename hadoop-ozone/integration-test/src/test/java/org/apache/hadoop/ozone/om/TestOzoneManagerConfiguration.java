@@ -119,10 +119,13 @@ public class TestOzoneManagerConfiguration {
     String omNode1Id = "omNode1";
     String omNode2Id = "omNode2";
     String omNodesKeyValue = omNode1Id + "," + omNode2Id;
-    conf.set(OMConfigKeys.OZONE_OM_NODES_KEY, omNodesKeyValue);
+    String serviceID = "service1";
+    conf.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, serviceID);
+    conf.set(OMConfigKeys.OZONE_OM_NODES_KEY + "." + serviceID,
+        omNodesKeyValue);
 
-    String omNode1RpcAddrKey = getOMAddrKeyWithSuffix(null, omNode1Id);
-    String omNode2RpcAddrKey = getOMAddrKeyWithSuffix(null, omNode2Id);
+    String omNode1RpcAddrKey = getOMAddrKeyWithSuffix(serviceID, omNode1Id);
+    String omNode2RpcAddrKey = getOMAddrKeyWithSuffix(serviceID, omNode2Id);
 
     conf.set(omNode1RpcAddrKey, "0.0.0.0");
     conf.set(omNode2RpcAddrKey, "122.0.0.122");

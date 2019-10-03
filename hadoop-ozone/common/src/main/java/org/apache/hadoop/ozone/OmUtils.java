@@ -46,7 +46,6 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -405,18 +404,14 @@ public final class OmUtils {
   /**
    * If a OM conf is only set with key suffixed with OM Node ID, return the
    * set value.
-   * @return null if base conf key is set, otherwise the value set for
-   * key suffixed with Node ID.
+   * @return if the value is set for key suffixed with OM Node ID, return the
+   * value, else return null.
    */
   public static String getConfSuffixedWithOMNodeId(Configuration conf,
       String confKey, String omServiceID, String omNodeId) {
-    String confValue = conf.getTrimmed(confKey);
-    if (StringUtils.isNotEmpty(confValue)) {
-      return null;
-    }
     String suffixedConfKey = OmUtils.addKeySuffixes(
         confKey, omServiceID, omNodeId);
-    confValue = conf.getTrimmed(suffixedConfKey);
+    String confValue = conf.getTrimmed(suffixedConfKey);
     if (StringUtils.isNotEmpty(confValue)) {
       return confValue;
     }
