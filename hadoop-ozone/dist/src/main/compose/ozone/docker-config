@@ -29,14 +29,6 @@ OZONE-SITE.XML_hdds.profiler.endpoint.enabled=true
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 ASYNC_PROFILER_HOME=/opt/profiler
-LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
-LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
-LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
-LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
-LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
-LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
-LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
-LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.grpc.client.GrpcClientProtocolClient=WARN
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
 #BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm
