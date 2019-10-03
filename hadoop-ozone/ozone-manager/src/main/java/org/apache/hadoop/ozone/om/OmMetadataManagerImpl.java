@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.client.BlockID;
@@ -653,7 +656,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
+
     List<OmKeyInfo> result = new ArrayList<>();
+    if (maxKeys == 0) {
+      return result;
+    }
+
     if (Strings.isNullOrEmpty(volumeName)) {
       throw new OMException("Volume name is required.",
           ResultCodes.VOLUME_NOT_FOUND);
@@ -688,26 +696,78 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       seekPrefix = getBucketKey(volumeName, bucketName + OM_KEY_PREFIX);
     }
     int currentCount = 0;
-    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
-        getKeyTable()
-            .iterator()) {
-      KeyValue<String, OmKeyInfo> kv = keyIter.seek(seekKey);
-      while (currentCount < maxKeys && keyIter.hasNext()) {
-        kv = keyIter.next();
-        // Skip the Start key if needed.
-        if (kv != null && skipStartKey && kv.getKey().equals(seekKey)) {
-          continue;
+
+
+    TreeMap<String, OmKeyInfo> cacheKeyMap = new TreeMap<>();
+    Set<String> deletedKeySet = new TreeSet<>();
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmKeyInfo>>> iterator =
+        keyTable.cacheIterator();
+
+
+    while (iterator.hasNext()) {
+      Map.Entry< CacheKey<String>, CacheValue<OmKeyInfo>> entry =
+          iterator.next();
+
+      String key = entry.getKey().getCacheKey();
+      OmKeyInfo omKeyInfo = entry.getValue().getCacheValue();
+      // Making sure that entry in cache is not for delete key request.
+
+      if (omKeyInfo != null) {
+        if (key.startsWith(seekPrefix) && key.compareTo(seekKey) >= 0) {
+          cacheKeyMap.put(key, omKeyInfo);
         }
-        if (kv != null && kv.getKey().startsWith(seekPrefix)) {
-          result.add(kv.getValue());
-          currentCount++;
-        } else {
-          // The SeekPrefix does not match any more, we can break out of the
-          // loop.
-          break;
+      } else {
+        deletedKeySet.add(key);
+      }
+    }
+
+    // Get maxKeys from DB if it has.
+    if (currentCount < maxKeys) {
+      try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
+               keyIter = getKeyTable().iterator()) {
+        KeyValue< String, OmKeyInfo > kv = keyIter.seek(seekKey);
+        while (currentCount < maxKeys && keyIter.hasNext()) {
+          kv = keyIter.next();
+          if (kv != null && kv.getKey().startsWith(seekPrefix)) {
+
+           // Entry should not be marked for delete, consider only those
+            // entries.
+            if(!deletedKeySet.contains(kv.getKey()) &&
+                !cacheKeyMap.containsKey(kv.getKey()) &&
+                kv.getKey().startsWith(seekPrefix)) {
+              cacheKeyMap.put(kv.getKey(), kv.getValue());
+              currentCount++;
+            }
+          } else {
+            // The SeekPrefix does not match any more, we can break out of the
+            // loop.
+            break;
+          }
         }
       }
     }
+
+    // Finally DB entries and cache entries are merged, then return the count
+    // of maxKeys from the sorted map.
+    currentCount = 0;
+
+    for (Map.Entry<String, OmKeyInfo>  cacheKey : cacheKeyMap.entrySet()) {
+      if (cacheKey.getKey().equals(seekKey) && skipStartKey) {
+        continue;
+      }
+
+      result.add(cacheKey.getValue());
+      currentCount++;
+
+      if (currentCount == maxKeys) {
+        break;
+      }
+    }
+
+    // Clear map and set.
+    cacheKeyMap.clear();
+    deletedKeySet.clear();
+
     return result;
   }
 
