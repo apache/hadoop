@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -150,6 +151,10 @@ public class SLSRunner extends Configured implements Tool {
     SLS, RUMEN, SYNTH
   }
 
+  public static final String NETWORK_CACHE_TTL = "networkaddress.cache.ttl";
+  public static final String NETWORK_NEGATIVE_CACHE_TTL =
+      "networkaddress.cache.negative.ttl";
+
   private TraceType inputType;
   private SynthTraceJobProducer stjp;
 
@@ -241,6 +246,9 @@ public class SLSRunner extends Configured implements Tool {
 
   public void start() throws IOException, ClassNotFoundException, YarnException,
       InterruptedException {
+
+    enableDNSCaching(getConf());
+
     // start resource manager
     startRM();
     // start node managers
@@ -258,6 +266,23 @@ public class SLSRunner extends Configured implements Tool {
     waitForNodesRunning();
     // starting the runner once everything is ready to go,
     runner.start();
+  }
+
+  /**
+   * Enables DNS Caching based on config. If DNS caching is enabled, then set
+   * the DNS cache to infinite time. Since in SLS random nodes are added, DNS
+   * resolution can take significant time which can cause erroneous results.
+   * For more details, check <a href=
+   * "https://docs.oracle.com/javase/8/docs/technotes/guides/net/properties.html">
+   * Java Networking Properties</a>
+   * @param conf Configuration object.
+   */
+  static void enableDNSCaching(Configuration conf) {
+    if (conf.getBoolean(SLSConfiguration.DNS_CACHING_ENABLED,
+        SLSConfiguration.DNS_CACHING_ENABLED_DEFAULT)) {
+      Security.setProperty(NETWORK_CACHE_TTL, "-1");
+      Security.setProperty(NETWORK_NEGATIVE_CACHE_TTL, "-1");
+    }
   }
 
   private void startRM() throws ClassNotFoundException, YarnException {
