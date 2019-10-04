@@ -83,9 +83,9 @@ public final class ContainerMetadataScrubberMetrics {
     this.ms = ms;
   }
 
-  public static ContainerMetadataScrubberMetrics create(Configuration conf) {
+  public static ContainerMetadataScrubberMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    String name = "ContainerDataScrubberMetrics";
+    String name = "ContainerMetadataScrubberMetrics";
     return ms.register(name, null,
         new ContainerMetadataScrubberMetrics(name, ms));
   }

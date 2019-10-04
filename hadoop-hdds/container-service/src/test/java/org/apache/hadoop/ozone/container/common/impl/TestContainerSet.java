@@ -97,7 +97,7 @@ public class TestContainerSet {
     assertEquals(10, containerSet.containerCount());
 
     // Using containerIterator.
-    Iterator<Container> containerIterator = containerSet.getContainerIterator();
+    Iterator<Container<?>> containerIterator = containerSet.getContainerIterator();
 
     int count = 0;
     while(containerIterator.hasNext()) {
@@ -116,7 +116,7 @@ public class TestContainerSet {
     assertEquals(10, count);
 
     //Using containerMapIterator.
-    Iterator<Map.Entry<Long, Container>> containerMapIterator = containerSet
+    Iterator<Map.Entry<Long, Container<?>>> containerMapIterator = containerSet
         .getContainerMapIterator();
 
     count = 0;
@@ -160,25 +160,24 @@ public class TestContainerSet {
       containerSet.addContainer(kv);
     }
 
-    Iterator<Container> iter1 = containerSet.getContainerIterator(vol1);
+    Iterator<Container<?>> iter1 = containerSet.getContainerIterator(vol1);
     int count1 = 0;
     while (iter1.hasNext()) {
       Container c = iter1.next();
-      assertTrue((c.getContainerData().getContainerID() % 2) == 0);
+      assertEquals(0, (c.getContainerData().getContainerID() % 2));
       count1++;
     }
     assertEquals(5, count1);
 
-    Iterator<Container> iter2 = containerSet.getContainerIterator(vol2);
+    Iterator<Container<?>> iter2 = containerSet.getContainerIterator(vol2);
     int count2 = 0;
     while (iter2.hasNext()) {
       Container c = iter2.next();
-      assertTrue((c.getContainerData().getContainerID() % 2) == 1);
+      assertEquals(1, (c.getContainerData().getContainerID() % 2));
       count2++;
     }
     assertEquals(5, count2);
   }
-
 
   @Test
   public void testGetContainerReport() throws IOException {

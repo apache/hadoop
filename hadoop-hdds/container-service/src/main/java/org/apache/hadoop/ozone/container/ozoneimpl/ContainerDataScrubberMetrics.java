@@ -103,8 +103,7 @@ public final class ContainerDataScrubberMetrics {
     this.ms = ms;
   }
 
-  public static ContainerDataScrubberMetrics create(final Configuration conf,
-                                             final String volumeName) {
+  public static ContainerDataScrubberMetrics create(final String volumeName) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     String name = "ContainerDataScrubberMetrics-"+ (volumeName.isEmpty()
         ? "UndefinedDataNodeVolume"+ ThreadLocalRandom.current().nextInt()
