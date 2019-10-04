@@ -352,7 +352,7 @@ message CreateVolumeResponse {
 
 }
 
-message VolumeList {
+message UserVolumeInfo {
     repeated string volumeNames = 1;
     optional uint64 objectID = 2;
     optional uint64 updateID = 3;

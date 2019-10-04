@@ -71,6 +71,13 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
   }
 
   @Override
+  public void loadInitial(CACHEKEY cacheKey, CACHEVALUE cacheValue) {
+    // No need to add entry to epochEntries. Adding to cache is required during
+    // normal put operation.
+    cache.put(cacheKey, cacheValue);
+  }
+
+  @Override
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
     cache.put(cacheKey, value);
     epochEntries.add(new EpochEntry<>(value.getEpoch(), cacheKey));

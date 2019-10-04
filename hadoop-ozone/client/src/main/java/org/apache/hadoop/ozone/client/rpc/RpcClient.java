@@ -94,6 +94,7 @@ import javax.crypto.CipherOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.InvalidKeyException;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -587,7 +588,7 @@ public class RpcClient implements ClientProtocol {
 
     if(Boolean.valueOf(metadata.get(OzoneConsts.GDPR_FLAG))){
       try{
-        GDPRSymmetricKey gKey = new GDPRSymmetricKey();
+        GDPRSymmetricKey gKey = new GDPRSymmetricKey(new SecureRandom());
         metadata.putAll(gKey.getKeyDetails());
       }catch (Exception e) {
         if(e instanceof InvalidKeyException &&

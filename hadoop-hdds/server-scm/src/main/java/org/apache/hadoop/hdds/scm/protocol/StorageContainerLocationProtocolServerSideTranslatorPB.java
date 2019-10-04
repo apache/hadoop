@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -7,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,16 +41,18 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.SCMDeleteContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.SCMDeleteContainerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.SCMListContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ScmContainerLocationRequest;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ScmContainerLocationResponse;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ScmContainerLocationResponse.Status;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerRequestProto;
@@ -61,11 +62,13 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.hdds.server.OzoneProtocolMessageDispatcher;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import io.opentracing.Scope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -76,288 +79,315 @@ import io.opentracing.Scope;
 public final class StorageContainerLocationProtocolServerSideTranslatorPB
     implements StorageContainerLocationProtocolPB {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(
+          StorageContainerLocationProtocolServerSideTranslatorPB.class);
+
   private final StorageContainerLocationProtocol impl;
+
+  private OzoneProtocolMessageDispatcher<ScmContainerLocationRequest,
+      ScmContainerLocationResponse>
+      dispatcher;
 
   /**
    * Creates a new StorageContainerLocationProtocolServerSideTranslatorPB.
    *
-   * @param impl {@link StorageContainerLocationProtocol} server implementation
+   * @param impl            {@link StorageContainerLocationProtocol} server
+   *                        implementation
+   * @param protocolMetrics
    */
   public StorageContainerLocationProtocolServerSideTranslatorPB(
-      StorageContainerLocationProtocol impl) throws IOException {
+      StorageContainerLocationProtocol impl,
+      ProtocolMessageMetrics protocolMetrics) throws IOException {
     this.impl = impl;
+    this.dispatcher =
+        new OzoneProtocolMessageDispatcher<>("ScmContainerLocation",
+            protocolMetrics, LOG);
   }
 
   @Override
-  public ContainerResponseProto allocateContainer(RpcController unused,
-      ContainerRequestProto request) throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("allocateContainer", request.getTraceID())) {
-      ContainerWithPipeline containerWithPipeline = impl
-          .allocateContainer(request.getReplicationType(),
-              request.getReplicationFactor(), request.getOwner());
-      return ContainerResponseProto.newBuilder()
-          .setContainerWithPipeline(containerWithPipeline.getProtobuf())
-          .setErrorCode(ContainerResponseProto.Error.success)
-          .build();
+  public ScmContainerLocationResponse submitRequest(RpcController controller,
+      ScmContainerLocationRequest request) throws ServiceException {
+    return dispatcher
+        .processRequest(request, this::processRequest, request.getCmdType(),
+            request.getTraceID());
+  }
+
+  public ScmContainerLocationResponse processRequest(
+      ScmContainerLocationRequest request) throws ServiceException {
+    try {
+      switch (request.getCmdType()) {
+      case AllocateContainer:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setContainerResponse(
+                allocateContainer(request.getContainerRequest()))
+            .build();
+      case GetContainer:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setGetContainerResponse(
+                getContainer(request.getGetContainerRequest()))
+            .build();
+      case GetContainerWithPipeline:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setGetContainerWithPipelineResponse(getContainerWithPipeline(
+                request.getGetContainerWithPipelineRequest()))
+            .build();
+      case ListContainer:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setScmListContainerResponse(listContainer(
+                request.getScmListContainerRequest()))
+            .build();
+      case QueryNode:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setNodeQueryResponse(queryNode(request.getNodeQueryRequest()))
+            .build();
+      case NotifyObjectStageChange:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setObjectStageChangeResponse(notifyObjectStageChange(
+                request.getObjectStageChangeRequest()))
+            .build();
+      case ListPipelines:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setListPipelineResponse(listPipelines(
+                request.getListPipelineRequest()))
+            .build();
+      case ActivatePipeline:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setActivatePipelineResponse(activatePipeline(
+                request.getActivatePipelineRequest()))
+            .build();
+      case GetScmInfo:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setGetScmInfoResponse(getScmInfo(
+                request.getGetScmInfoRequest()))
+            .build();
+      case InSafeMode:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setInSafeModeResponse(inSafeMode(
+                request.getInSafeModeRequest()))
+            .build();
+      case ForceExitSafeMode:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setForceExitSafeModeResponse(forceExitSafeMode(
+                request.getForceExitSafeModeRequest()))
+            .build();
+      case StartReplicationManager:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setStartReplicationManagerResponse(startReplicationManager(
+                request.getStartReplicationManagerRequest()))
+            .build();
+      case StopReplicationManager:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setStopReplicationManagerResponse(stopReplicationManager(
+                request.getStopReplicationManagerRequest()))
+            .build();
+      case GetReplicationManagerStatus:
+        return ScmContainerLocationResponse.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setStatus(Status.OK)
+            .setReplicationManagerStatusResponse(getReplicationManagerStatus(
+                request.getSeplicationManagerStatusRequest()))
+            .build();
+      default:
+        throw new IllegalArgumentException(
+            "Unknown command type: " + request.getCmdType());
+      }
 
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
-  @Override
+  public ContainerResponseProto allocateContainer(ContainerRequestProto request)
+      throws IOException {
+    ContainerWithPipeline containerWithPipeline = impl
+        .allocateContainer(request.getReplicationType(),
+            request.getReplicationFactor(), request.getOwner());
+    return ContainerResponseProto.newBuilder()
+        .setContainerWithPipeline(containerWithPipeline.getProtobuf())
+        .setErrorCode(ContainerResponseProto.Error.success)
+        .build();
+
+  }
+
   public GetContainerResponseProto getContainer(
-      RpcController controller, GetContainerRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("getContainer", request.getTraceID())) {
-      ContainerInfo container = impl.getContainer(request.getContainerID());
-      return GetContainerResponseProto.newBuilder()
-          .setContainerInfo(container.getProtobuf())
-          .build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      GetContainerRequestProto request) throws IOException {
+    ContainerInfo container = impl.getContainer(request.getContainerID());
+    return GetContainerResponseProto.newBuilder()
+        .setContainerInfo(container.getProtobuf())
+        .build();
   }
 
-  @Override
   public GetContainerWithPipelineResponseProto getContainerWithPipeline(
-      RpcController controller, GetContainerWithPipelineRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("getContainerWithPipeline",
-            request.getTraceID())) {
-      ContainerWithPipeline container = impl
-          .getContainerWithPipeline(request.getContainerID());
-      return GetContainerWithPipelineResponseProto.newBuilder()
-          .setContainerWithPipeline(container.getProtobuf())
-          .build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      GetContainerWithPipelineRequestProto request)
+      throws IOException {
+    ContainerWithPipeline container = impl
+        .getContainerWithPipeline(request.getContainerID());
+    return GetContainerWithPipelineResponseProto.newBuilder()
+        .setContainerWithPipeline(container.getProtobuf())
+        .build();
   }
 
-  @Override
-  public SCMListContainerResponseProto listContainer(RpcController controller,
-      SCMListContainerRequestProto request) throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("listContainer", request.getTraceID())) {
-      long startContainerID = 0;
-      int count = -1;
+  public SCMListContainerResponseProto listContainer(
+      SCMListContainerRequestProto request) throws IOException {
 
-      // Arguments check.
-      if (request.hasStartContainerID()) {
-        // End container name is given.
-        startContainerID = request.getStartContainerID();
-      }
-      count = request.getCount();
-      List<ContainerInfo> containerList =
-          impl.listContainer(startContainerID, count);
-      SCMListContainerResponseProto.Builder builder =
-          SCMListContainerResponseProto.newBuilder();
-      for (ContainerInfo container : containerList) {
-        builder.addContainers(container.getProtobuf());
-      }
-      return builder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    long startContainerID = 0;
+    int count = -1;
+
+    // Arguments check.
+    if (request.hasStartContainerID()) {
+      // End container name is given.
+      startContainerID = request.getStartContainerID();
     }
+    count = request.getCount();
+    List<ContainerInfo> containerList =
+        impl.listContainer(startContainerID, count);
+    SCMListContainerResponseProto.Builder builder =
+        SCMListContainerResponseProto.newBuilder();
+    for (ContainerInfo container : containerList) {
+      builder.addContainers(container.getProtobuf());
+    }
+    return builder.build();
   }
 
-  @Override
   public SCMDeleteContainerResponseProto deleteContainer(
-      RpcController controller, SCMDeleteContainerRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("deleteContainer", request.getTraceID())) {
-      impl.deleteContainer(request.getContainerID());
-      return SCMDeleteContainerResponseProto.newBuilder().build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      SCMDeleteContainerRequestProto request)
+      throws IOException {
+    impl.deleteContainer(request.getContainerID());
+    return SCMDeleteContainerResponseProto.newBuilder().build();
+
   }
 
-  @Override
-  public StorageContainerLocationProtocolProtos.NodeQueryResponseProto
-      queryNode(RpcController controller,
+  public NodeQueryResponseProto queryNode(
       StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("queryNode", request.getTraceID())) {
-      HddsProtos.NodeState nodeState = request.getState();
-      List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
-          request.getScope(), request.getPoolName());
-      return StorageContainerLocationProtocolProtos
-          .NodeQueryResponseProto.newBuilder()
-          .addAllDatanodes(datanodes)
-          .build();
-    } catch (Exception e) {
-      throw new ServiceException(e);
-    }
+      throws IOException {
+
+    HddsProtos.NodeState nodeState = request.getState();
+    List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
+        request.getScope(), request.getPoolName());
+    return NodeQueryResponseProto.newBuilder()
+        .addAllDatanodes(datanodes)
+        .build();
+
   }
 
-  @Override
   public ObjectStageChangeResponseProto notifyObjectStageChange(
-      RpcController controller, ObjectStageChangeRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("notifyObjectStageChange",
-            request.getTraceID())) {
-      impl.notifyObjectStageChange(request.getType(), request.getId(),
-          request.getOp(), request.getStage());
-      return ObjectStageChangeResponseProto.newBuilder().build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      ObjectStageChangeRequestProto request)
+      throws IOException {
+    impl.notifyObjectStageChange(request.getType(), request.getId(),
+        request.getOp(), request.getStage());
+    return ObjectStageChangeResponseProto.newBuilder().build();
   }
 
-  @Override
-  public PipelineResponseProto allocatePipeline(
-      RpcController controller, PipelineRequestProto request)
-      throws ServiceException {
-    // TODO : Wiring this up requires one more patch.
-    return null;
-  }
-
-  @Override
   public ListPipelineResponseProto listPipelines(
-      RpcController controller, ListPipelineRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("listPipelines", request.getTraceID())) {
-      ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
-          .newBuilder();
-      List<Pipeline> pipelines = impl.listPipelines();
-      for (Pipeline pipeline : pipelines) {
-        HddsProtos.Pipeline protobufMessage = pipeline.getProtobufMessage();
-        builder.addPipelines(protobufMessage);
-      }
-      return builder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+      ListPipelineRequestProto request)
+      throws IOException {
+    ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
+        .newBuilder();
+    List<Pipeline> pipelines = impl.listPipelines();
+    for (Pipeline pipeline : pipelines) {
+      HddsProtos.Pipeline protobufMessage = pipeline.getProtobufMessage();
+      builder.addPipelines(protobufMessage);
     }
+    return builder.build();
   }
 
-  @Override
   public ActivatePipelineResponseProto activatePipeline(
-      RpcController controller, ActivatePipelineRequestProto request)
-      throws ServiceException {
-    try (Scope ignored = TracingUtil
-        .importAndCreateScope("activatePipeline", request.getTraceID())) {
-      impl.activatePipeline(request.getPipelineID());
-      return ActivatePipelineResponseProto.newBuilder().build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      ActivatePipelineRequestProto request)
+      throws IOException {
+    impl.activatePipeline(request.getPipelineID());
+    return ActivatePipelineResponseProto.newBuilder().build();
   }
 
-  @Override
   public DeactivatePipelineResponseProto deactivatePipeline(
-      RpcController controller, DeactivatePipelineRequestProto request)
-      throws ServiceException {
-    try (Scope ignored = TracingUtil
-        .importAndCreateScope("deactivatePipeline", request.getTraceID())) {
-      impl.deactivatePipeline(request.getPipelineID());
-      return DeactivatePipelineResponseProto.newBuilder().build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      DeactivatePipelineRequestProto request)
+      throws IOException {
+    impl.deactivatePipeline(request.getPipelineID());
+    return DeactivatePipelineResponseProto.newBuilder().build();
   }
 
-  @Override
   public ClosePipelineResponseProto closePipeline(
       RpcController controller, ClosePipelineRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("closePipeline", request.getTraceID())) {
-      impl.closePipeline(request.getPipelineID());
-      return ClosePipelineResponseProto.newBuilder().build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+      throws IOException {
+
+    impl.closePipeline(request.getPipelineID());
+    return ClosePipelineResponseProto.newBuilder().build();
+
   }
 
-  @Override
   public HddsProtos.GetScmInfoResponseProto getScmInfo(
-      RpcController controller, HddsProtos.GetScmInfoRequestProto req)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("getScmInfo", req.getTraceID())) {
-      ScmInfo scmInfo = impl.getScmInfo();
-      return HddsProtos.GetScmInfoResponseProto.newBuilder()
-          .setClusterId(scmInfo.getClusterId())
-          .setScmId(scmInfo.getScmId())
-          .build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      HddsProtos.GetScmInfoRequestProto req)
+      throws IOException {
+    ScmInfo scmInfo = impl.getScmInfo();
+    return HddsProtos.GetScmInfoResponseProto.newBuilder()
+        .setClusterId(scmInfo.getClusterId())
+        .setScmId(scmInfo.getScmId())
+        .build();
 
   }
 
-  @Override
   public InSafeModeResponseProto inSafeMode(
-      RpcController controller,
-      InSafeModeRequestProto request) throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("inSafeMode", request.getTraceID())) {
-      return InSafeModeResponseProto.newBuilder()
-          .setInSafeMode(impl.inSafeMode()).build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      InSafeModeRequestProto request) throws IOException {
+
+    return InSafeModeResponseProto.newBuilder()
+        .setInSafeMode(impl.inSafeMode()).build();
+
   }
 
-  @Override
   public ForceExitSafeModeResponseProto forceExitSafeMode(
-      RpcController controller, ForceExitSafeModeRequestProto request)
-      throws ServiceException {
-    try (Scope scope = TracingUtil
-        .importAndCreateScope("forceExitSafeMode", request.getTraceID())) {
-      return ForceExitSafeModeResponseProto.newBuilder()
-          .setExitedSafeMode(impl.forceExitSafeMode()).build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      ForceExitSafeModeRequestProto request)
+      throws IOException {
+    return ForceExitSafeModeResponseProto.newBuilder()
+        .setExitedSafeMode(impl.forceExitSafeMode()).build();
+
   }
 
-  @Override
   public StartReplicationManagerResponseProto startReplicationManager(
-      RpcController controller, StartReplicationManagerRequestProto request)
-      throws ServiceException {
-    try (Scope ignored = TracingUtil.importAndCreateScope(
-        "startReplicationManager", request.getTraceID())) {
-      impl.startReplicationManager();
-      return StartReplicationManagerResponseProto.newBuilder().build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      StartReplicationManagerRequestProto request)
+      throws IOException {
+    impl.startReplicationManager();
+    return StartReplicationManagerResponseProto.newBuilder().build();
   }
 
-  @Override
   public StopReplicationManagerResponseProto stopReplicationManager(
-      RpcController controller, StopReplicationManagerRequestProto request)
-      throws ServiceException {
-    try (Scope ignored = TracingUtil.importAndCreateScope(
-        "stopReplicationManager", request.getTraceID())) {
-      impl.stopReplicationManager();
-      return StopReplicationManagerResponseProto.newBuilder().build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      StopReplicationManagerRequestProto request)
+      throws IOException {
+    impl.stopReplicationManager();
+    return StopReplicationManagerResponseProto.newBuilder().build();
+
   }
 
-  @Override
   public ReplicationManagerStatusResponseProto getReplicationManagerStatus(
-      RpcController controller, ReplicationManagerStatusRequestProto request)
-      throws ServiceException {
-    try (Scope ignored = TracingUtil.importAndCreateScope(
-        "getReplicationManagerStatus", request.getTraceID())) {
-      return ReplicationManagerStatusResponseProto.newBuilder()
-          .setIsRunning(impl.getReplicationManagerStatus()).build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      ReplicationManagerStatusRequestProto request)
+      throws IOException {
+    return ReplicationManagerStatusResponseProto.newBuilder()
+        .setIsRunning(impl.getReplicationManagerStatus()).build();
   }
 
 }
