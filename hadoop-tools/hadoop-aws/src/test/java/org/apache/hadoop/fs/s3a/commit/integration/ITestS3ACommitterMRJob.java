@@ -632,10 +632,10 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
         final FileStatus st = fs.getFileStatus(magicDir);
         StringBuilder result = new StringBuilder("Found magic dir which should"
             + " have been deleted at ").append(st).append('\n');
-        result.append("[");
+        result.append(" [");
         applyLocatedFiles(fs.listFiles(magicDir, true),
-            (status) -> result.append(status.getPath()).append('\n'));
-        result.append("[");
+            (status) -> result.append(" ").append(status.getPath()).append('\n'));
+        result.append("]");
         return result.toString();
       });
     }
