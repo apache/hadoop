@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: "3"
+version: "3.5"
 services:
   kdc:
     build:
@@ -23,17 +23,23 @@ services:
       args:
         buildno: 1
     hostname: kdc
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/hadoop
   kms:
-      image: apache/hadoop:${HADOOP_VERSION}
-      ports:
+    image: apache/hadoop:${HADOOP_VERSION}
+    networks:
+      - ozone
+    ports:
       - 9600:9600
-      env_file:
+    env_file:
       - ./docker-config
-      command: ["hadoop", "kms"]
+    command: ["hadoop", "kms"]
   datanode:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/hadoop
     ports:
@@ -42,8 +48,10 @@ services:
     env_file:
       - docker-config
   om:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: om
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/hadoop
     ports:
@@ -54,8 +62,10 @@ services:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
   s3g:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: s3g
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/hadoop
     ports:
@@ -64,8 +74,10 @@ services:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: scm
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/hadoop
     ports:
@@ -78,6 +90,8 @@ services:
   rm:
     image: apache/hadoop:${HADOOP_VERSION}
     hostname: rm
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/ozone
     ports:
@@ -90,6 +104,8 @@ services:
   nm:
     image: apache/hadoop:${HADOOP_VERSION}
     hostname: nm
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/ozone
     env_file:
@@ -100,7 +116,10 @@ services:
     command: ["yarn","nodemanager"]
   jhs:
     image: apache/hadoop:${HADOOP_VERSION}
+    container_name: jhs
     hostname: jhs
+    networks:
+      - ozone
     volumes:
       - ../..:/opt/ozone
     ports:
@@ -111,13 +130,6 @@ services:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
       WAIT_FOR: rm:8088
     command: ["yarn","timelineserver"]
-  spark:
-    image: ahadoop/spark-2.4:hadoop-3.2
-    hostname: spark
-    volumes:
-      - ../..:/opt/hadoop
-    ports:
-      - 4040:4040
-    env_file:
-      - docker-config
-    command: ["watch","-n","100000","ls"]
+networks:
+  ozone:
+    name: ozone

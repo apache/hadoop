@@ -88,7 +88,7 @@ public class MockNodeManager implements NodeManager {
   private final Node2PipelineMap node2PipelineMap;
   private final Node2ContainerMap node2ContainerMap;
   private NetworkTopology clusterMap;
-  private ConcurrentHashMap<String, String> dnsToUuidMap;
+  private ConcurrentHashMap<String, Set<String>> dnsToUuidMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
@@ -386,7 +386,7 @@ public class MockNodeManager implements NodeManager {
     try {
       node2ContainerMap.insertNewDatanode(datanodeDetails.getUuid(),
           Collections.emptySet());
-      dnsToUuidMap.put(datanodeDetails.getIpAddress(),
+      addEntryTodnsToUuidMap(datanodeDetails.getIpAddress(),
           datanodeDetails.getUuidString());
       if (clusterMap != null) {
         datanodeDetails.setNetworkName(datanodeDetails.getUuidString());
@@ -396,6 +396,23 @@ public class MockNodeManager implements NodeManager {
       e.printStackTrace();
     }
     return null;
+  }
+
+  /**
+   * Add an entry to the dnsToUuidMap, which maps hostname / IP to the DNs
+   * running on that host. As each address can have many DNs running on it,
+   * this is a one to many mapping.
+   * @param dnsName String representing the hostname or IP of the node
+   * @param uuid String representing the UUID of the registered node.
+   */
+  private synchronized void addEntryTodnsToUuidMap(
+      String dnsName, String uuid) {
+    Set<String> dnList = dnsToUuidMap.get(dnsName);
+    if (dnList == null) {
+      dnList = ConcurrentHashMap.newKeySet();
+      dnsToUuidMap.put(dnsName, dnList);
+    }
+    dnList.add(uuid);
   }
 
   /**
@@ -484,8 +501,19 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
-  public DatanodeDetails getNodeByAddress(String address) {
-    return getNodeByUuid(dnsToUuidMap.get(address));
+  public List<DatanodeDetails> getNodesByAddress(String address) {
+    List<DatanodeDetails> results = new LinkedList<>();
+    Set<String> uuids = dnsToUuidMap.get(address);
+    if (uuids == null) {
+      return results;
+    }
+    for(String uuid : uuids) {
+      DatanodeDetails dn = getNodeByUuid(uuid);
+      if (dn != null) {
+        results.add(dn);
+      }
+    }
+    return results;
   }
 
   public void setNetworkTopology(NetworkTopology topology) {
