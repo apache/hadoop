@@ -201,7 +201,7 @@ public class TestBlockDeletingService {
     BlockDeletingServiceTestImpl svc =
         getBlockDeletinService(containerSet, conf, 1000);
     svc.start();
-    GenericTestUtils.waitFor(() -> svc.isStarted(), 100, 3000);
+    GenericTestUtils.waitFor(svc::isStarted, 100, 3000);
 
     // Ensure 1 container was created
     List<ContainerData> containerData = Lists.newArrayList();
@@ -210,7 +210,7 @@ public class TestBlockDeletingService {
 
     try(ReferenceCountedDB meta = BlockUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf)) {
-      Map<Long, Container> containerMap = containerSet.getContainerMapCopy();
+      Map<Long, Container<?>> containerMap = containerSet.getContainerMapCopy();
       // NOTE: this test assumes that all the container is KetValueContainer and
       // have DeleteTransactionId in KetValueContainerData. If other
       // types is going to be added, this test should be checked.
@@ -261,7 +261,7 @@ public class TestBlockDeletingService {
     BlockDeletingServiceTestImpl service =
         getBlockDeletinService(containerSet, conf, 1000);
     service.start();
-    GenericTestUtils.waitFor(() -> service.isStarted(), 100, 3000);
+    GenericTestUtils.waitFor(service::isStarted, 100, 3000);
 
     // Run some deleting tasks and verify there are threads running
     service.runDeletingTasks();
@@ -340,7 +340,7 @@ public class TestBlockDeletingService {
 
       // The block deleting successfully and shouldn't catch timed
       // out warning log.
-      Assert.assertTrue(!newLog.getOutput().contains(
+      Assert.assertFalse(newLog.getOutput().contains(
           "Background task executes timed out, retrying in next interval"));
     }
     svc.shutdown();
@@ -351,9 +351,7 @@ public class TestBlockDeletingService {
     OzoneContainer ozoneContainer = Mockito.mock(OzoneContainer.class);
     Mockito.when(ozoneContainer.getContainerSet()).thenReturn(containerSet);
     Mockito.when(ozoneContainer.getWriteChannel()).thenReturn(null);
-    BlockDeletingServiceTestImpl service =
-        new BlockDeletingServiceTestImpl(ozoneContainer, timeout, conf);
-    return service;
+    return new BlockDeletingServiceTestImpl(ozoneContainer, timeout, conf);
   }
 
   @Test(timeout = 30000)
@@ -382,7 +380,7 @@ public class TestBlockDeletingService {
     service.start();
 
     try {
-      GenericTestUtils.waitFor(() -> service.isStarted(), 100, 3000);
+      GenericTestUtils.waitFor(service::isStarted, 100, 3000);
       // 1st interval processes 1 container 1 block and 10 chunks
       deleteAndWait(service, 1);
       Assert.assertEquals(10, getNumberOfChunksInContainers(containerSet));
@@ -395,7 +393,7 @@ public class TestBlockDeletingService {
           if (getNumberOfChunksInContainers(containerSet) == 0) {
             return true;
           }
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
         return false;
       }, 100, 100000);
       Assert.assertEquals(0, getNumberOfChunksInContainers(containerSet));
@@ -436,7 +434,7 @@ public class TestBlockDeletingService {
     service.start();
 
     try {
-      GenericTestUtils.waitFor(() -> service.isStarted(), 100, 3000);
+      GenericTestUtils.waitFor(service::isStarted, 100, 3000);
       // Total blocks = 3 * 5 = 15
       // block per task = 2
       // number of containers = 5
@@ -453,10 +451,10 @@ public class TestBlockDeletingService {
   }
 
   private int getNumberOfChunksInContainers(ContainerSet containerSet) {
-    Iterator<Container> containerIterator = containerSet.getContainerIterator();
+    Iterator<Container<?>> iterator = containerSet.getContainerIterator();
     int numChunks = 0;
-    while (containerIterator.hasNext()) {
-      Container container = containerIterator.next();
+    while (iterator.hasNext()) {
+      Container container = iterator.next();
       File chunkDir = FileUtils.getFile(
           ((KeyValueContainerData) container.getContainerData())
               .getChunksPath());

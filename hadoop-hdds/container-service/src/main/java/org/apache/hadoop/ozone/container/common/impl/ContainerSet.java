@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.List;
@@ -40,7 +41,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.stream.Collectors;
 
 
 /**
@@ -50,17 +50,17 @@ public class ContainerSet {
 
   private static final Logger LOG = LoggerFactory.getLogger(ContainerSet.class);
 
-  private final ConcurrentSkipListMap<Long, Container> containerMap = new
+  private final ConcurrentSkipListMap<Long, Container<?>> containerMap = new
       ConcurrentSkipListMap<>();
   private final ConcurrentSkipListSet<Long> missingContainerSet =
       new ConcurrentSkipListSet<>();
   /**
    * Add Container to container map.
-   * @param container
+   * @param container container to be added
    * @return If container is added to containerMap returns true, otherwise
    * false
    */
-  public boolean addContainer(Container container) throws
+  public boolean addContainer(Container<?> container) throws
       StorageContainerException {
     Preconditions.checkNotNull(container, "container cannot be null");
 
@@ -81,10 +81,10 @@ public class ContainerSet {
 
   /**
    * Returns the Container with specified containerId.
-   * @param containerId
+   * @param containerId ID of the container to get
    * @return Container
    */
-  public Container getContainer(long containerId) {
+  public Container<?> getContainer(long containerId) {
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
     return containerMap.get(containerId);
@@ -92,14 +92,14 @@ public class ContainerSet {
 
   /**
    * Removes the Container matching with specified containerId.
-   * @param containerId
+   * @param containerId ID of the container to remove
    * @return If container is removed from containerMap returns true, otherwise
    * false
    */
   public boolean removeContainer(long containerId) {
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
-    Container removed = containerMap.remove(containerId);
+    Container<?> removed = containerMap.remove(containerId);
     if(removed == null) {
       LOG.debug("Container with containerId {} is not present in " +
           "containerMap", containerId);
@@ -122,9 +122,9 @@ public class ContainerSet {
 
   /**
    * Return an container Iterator over {@link ContainerSet#containerMap}.
-   * @return {@literal Iterator<Container>}
+   * @return {@literal Iterator<Container<?>>}
    */
-  public Iterator<Container> getContainerIterator() {
+  public Iterator<Container<?>> getContainerIterator() {
     return containerMap.values().iterator();
   }
 
@@ -132,26 +132,23 @@ public class ContainerSet {
    * Return an iterator of containers associated with the specified volume.
    *
    * @param  volume the HDDS volume which should be used to filter containers
-   * @return {@literal Iterator<Container>}
+   * @return {@literal Iterator<Container<?>>}
    */
-  public Iterator<Container> getContainerIterator(HddsVolume volume) {
+  public Iterator<Container<?>> getContainerIterator(HddsVolume volume) {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(volume.getStorageID());
     String volumeUuid = volume.getStorageID();
-    return containerMap.values()
-                       .stream()
-                       .filter(x -> volumeUuid.equals(
-                               x.getContainerData().getVolume()
-                                       .getStorageID()))
-                       .iterator();
+    return containerMap.values().stream()
+        .filter(x -> volumeUuid.equals(x.getContainerData().getVolume()
+            .getStorageID()))
+        .iterator();
   }
 
   /**
    * Return an containerMap iterator over {@link ContainerSet#containerMap}.
    * @return containerMap Iterator
    */
-  public Iterator<Map.Entry<Long, Container>> getContainerMapIterator() {
-    containerMap.keySet().stream().collect(Collectors.toSet());
+  public Iterator<Map.Entry<Long, Container<?>>> getContainerMapIterator() {
     return containerMap.entrySet().iterator();
   }
 
@@ -160,11 +157,11 @@ public class ContainerSet {
    * @return containerMap
    */
   @VisibleForTesting
-  public Map<Long, Container> getContainerMapCopy() {
+  public Map<Long, Container<?>> getContainerMapCopy() {
     return ImmutableMap.copyOf(containerMap);
   }
 
-  public Map<Long, Container> getContainerMap() {
+  public Map<Long, Container<?>> getContainerMap() {
     return Collections.unmodifiableMap(containerMap);
   }
 
@@ -179,7 +176,6 @@ public class ContainerSet {
    * @param startContainerId - Return containers with Id &gt;= startContainerId.
    * @param count - how many to return
    * @param data - Actual containerData
-   * @throws StorageContainerException
    */
   public void listContainer(long startContainerId, long count,
                             List<ContainerData> data) throws
@@ -193,14 +189,14 @@ public class ContainerSet {
             "must be positive");
     LOG.debug("listContainer returns containerData starting from {} of count " +
         "{}", startContainerId, count);
-    ConcurrentNavigableMap<Long, Container> map;
+    ConcurrentNavigableMap<Long, Container<?>> map;
     if (startContainerId == 0) {
       map = containerMap.tailMap(containerMap.firstKey(), true);
     } else {
       map = containerMap.tailMap(startContainerId, true);
     }
     int currentCount = 0;
-    for (Container entry : map.values()) {
+    for (Container<?> entry : map.values()) {
       if (currentCount < count) {
         data.add(entry.getContainerData());
         currentCount++;
@@ -214,7 +210,6 @@ public class ContainerSet {
    * Get container report.
    *
    * @return The container report.
-   * @throws IOException
    */
   public ContainerReportsProto getContainerReport() throws IOException {
     LOG.debug("Starting container report iteration.");
@@ -222,13 +217,12 @@ public class ContainerSet {
     // No need for locking since containerMap is a ConcurrentSkipListMap
     // And we can never get the exact state since close might happen
     // after we iterate a point.
-    List<Container> containers = containerMap.values().stream().collect(
-        Collectors.toList());
+    List<Container<?>> containers = new ArrayList<>(containerMap.values());
 
     ContainerReportsProto.Builder crBuilder =
         ContainerReportsProto.newBuilder();
 
-    for (Container container: containers) {
+    for (Container<?> container: containers) {
       crBuilder.addReports(container.getContainerReport());
     }
 
@@ -257,7 +251,7 @@ public class ContainerSet {
         LOG.warn("Adding container {} to missing container set.", id);
         missingContainerSet.add(id);
       } else {
-        Container container = containerMap.get(id);
+        Container<?> container = containerMap.get(id);
         long containerBCSID = container.getBlockCommitSequenceId();
         long snapshotBCSID = mapEntry.getValue();
         if (containerBCSID < snapshotBCSID) {
