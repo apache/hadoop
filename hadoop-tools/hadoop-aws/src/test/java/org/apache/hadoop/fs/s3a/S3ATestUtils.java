@@ -601,7 +601,7 @@ public final class S3ATestUtils {
     String tmpDir = conf.get(HADOOP_TMP_DIR, "target/build/test");
     if (testUniqueForkId != null) {
       // patch temp dir for the specific branch
-      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
+      tmpDir = tmpDir + File.separator + testUniqueForkId;
       conf.set(HADOOP_TMP_DIR, tmpDir);
     }
     conf.set(BUFFER_DIR, tmpDir);
