@@ -82,6 +82,7 @@ import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.fs.s3a.impl.CopyOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1408,6 +1409,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final S3AReadOpContext readContext) throws IOException {
       return S3AFileSystem.this.copyFile(srcKey, destKey,
           srcAttributes.getLen(), srcAttributes, readContext);
+    }
+
+    @Override
+    public CopyResult copyFile(URI src,
+        URI dst,
+        S3ObjectAttributes srcAttributes,
+        S3AReadOpContext readContext) throws IOException {
+      return S3AFileSystem.this.copyFile(src.getHost(), pathToKey(new Path(src)), dst.getHost(),
+          pathToKey(new Path(dst)), srcAttributes.getLen(), srcAttributes, readContext);
     }
 
     @Override
@@ -2833,6 +2843,60 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Copy a file from one location to another location.
+   * <ul>
+   *   <li>Fails if source file is absent.</li>
+   *   <li>Fails if destination folder does not exist.</li>
+   *   <li>Fails if destination file exists.</li>
+   * </ul>
+   *
+   * @param srcFile  URI to be copied
+   * @param dstFile copied file
+   * @throws FileNotFoundException source file is not present
+   * @throws FileAlreadyExistsException destination file already present
+   * @throws IOException any other s3 exception
+   * @throws InterruptedIOException when interrupted
+   */
+  @Retries.RetryTranslated
+  @InterfaceStability.Unstable
+  public void copyFile(URI srcFile, URI dstFile)
+      throws FileNotFoundException, FileAlreadyExistsException, IOException,
+      InterruptedIOException {
+    entryPoint(INVOCATION_COPY);
+    validateSchemes(srcFile, dstFile);
+    S3AFileStatus srcStatus = (S3AFileStatus) getFileStatus(new Path(srcFile));
+    try {
+      CopyOperation copyOperation = new CopyOperation(
+          createStoreContext(),
+          srcStatus, srcFile, dstFile,
+          operationCallbacks);
+      copyOperation.execute();
+    } catch (FileNotFoundException e) {
+      LOG.debug("Couldn't copy {} - does not exist: {}", srcFile, e.toString());
+      instrumentation.errorIgnored();
+    } catch (AmazonClientException e) {
+      throw translateException("copy", new Path(srcFile), e);
+    }
+  }
+
+  /**
+   * Validate source and destination file schemes.
+   *
+   * @param srcFile source file
+   * @param dstFile destination file
+   */
+  private void validateSchemes(URI srcFile, URI dstFile) {
+    if (!srcFile.getScheme().equals(getScheme())) {
+      throw new IllegalArgumentException("srcFile "
+          + srcFile + " scheme does not match " + getScheme());
+    }
+    if (!dstFile.getScheme().equals(getScheme())) {
+      throw new IllegalArgumentException("srcFile "
+          + srcFile + " scheme does not match " + getScheme());
+    }
+  }
+
+  /**
    * Helper function to determine if a collection of paths is empty
    * after accounting for tombstone markers (if provided).
    * @param keys Collection of path (prefixes / directories or keys).
@@ -3186,6 +3250,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private CopyResult copyFile(String srcKey, String dstKey, long size,
       S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
       throws IOException, InterruptedIOException  {
+    return copyFile(bucket, srcKey, bucket, dstKey, size, srcAttributes, readContext);
+  }
+
+  /**
+   * Copy a single object in the bucket via a COPY operation.
+   * There's no update of metadata, directory markers, etc.
+   * Callers must implement.
+   *
+   * @param srcBucket source bucket name
+   * @param srcKey source object path
+   * @param dstBucket destination bucket name
+   * @param dstKey destination object path
+   * @param size object size
+   * @param srcAttributes S3 attributes of the source object
+   * @param readContext the read context
+   * @return the result of the copy
+   * @throws InterruptedIOException the operation was interrupted
+   * @throws IOException Other IO problems
+   */
+  @Retries.RetryTranslated
+  private CopyResult copyFile(String srcBucket, String srcKey, String dstBucket,
+      String dstKey, long size, S3ObjectAttributes srcAttributes,
+      S3AReadOpContext readContext)
+      throws IOException, InterruptedIOException {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
     ProgressListener progressListener = progressEvent -> {
@@ -3241,7 +3329,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         true,
         () -> {
           CopyObjectRequest copyObjectRequest =
-              new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+              new CopyObjectRequest(srcBucket, srcKey, dstBucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
 
           setOptionalCopyObjectRequestParameters(copyObjectRequest);
@@ -4122,6 +4210,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // capability depends on FS configuration
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
+
+    case CommonPathCapabilities.FS_NATIVE_COPY:
+      return true;
 
     default:
       return super.hasPathCapability(p, capability);

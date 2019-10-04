@@ -1601,6 +1601,27 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Copy a file from one location to another location.
+   *
+   * <ul>
+   *   <li>Fails if source file is absent.</li>
+   *   <li>Fails if destination folder does not exist.</li>
+   *   <li>Fails if destination file exists.</li>
+   *   <li>Fails if source is a directory.</li>
+   * </ul>
+   *
+   * @param srcFile URI to be copied
+   * @param dstFile copied file
+   * @throws IOException IO failure
+   */
+  @InterfaceStability.Unstable
+  public void copyFile(URI srcFile, URI dstFile)
+      throws IOException {
+    throw new UnsupportedOperationException("Not implemented by the " +
+        getClass().getSimpleName() + " FileSystem implementation");
+  }
+
+  /**
    * Delete a file/directory.
    * @deprecated Use {@link #delete(Path, boolean)} instead.
    */
