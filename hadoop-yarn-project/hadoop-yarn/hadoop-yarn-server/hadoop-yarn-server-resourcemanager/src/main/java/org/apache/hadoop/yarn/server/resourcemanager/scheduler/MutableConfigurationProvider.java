@@ -65,6 +65,12 @@ public interface MutableConfigurationProvider {
    */
   Configuration getConfiguration();
 
+  /**
+   * Get the last updated scheduler config version.
+   * @return Last updated scheduler config version.
+   */
+  long getConfigVersion() throws Exception;
+
   void formatConfigurationInStore(Configuration conf) throws Exception;
 
   /**

@@ -148,6 +148,13 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
     tempConfigPath = null;
   }
 
+  @Override
+  public long getConfigVersion() throws Exception {
+    String version = getLatestConfigPath().getName().
+        substring(YarnConfiguration.CS_CONFIGURATION_FILE.length() + 1);
+    return Long.parseLong(version);
+  }
+
   private void finalizeFileSystemFile() throws IOException {
     // call confirmMutation() make sure tempConfigPath is not null
     Path finalConfigPath = getFinalConfigPath(tempConfigPath);
