@@ -172,22 +172,18 @@ public class OzoneContainer {
     ContainerScrubberConfiguration c = config.getObject(
         ContainerScrubberConfiguration.class);
     boolean enabled = c.isEnabled();
-    long metadataScanInterval = c.getMetadataScanInterval();
-    long bytesPerSec = c.getBandwidthPerVolume();
 
     if (!enabled) {
       LOG.info("Background container scanner has been disabled.");
     } else {
       if (this.metadataScanner == null) {
-        this.metadataScanner = new ContainerMetadataScanner(config, controller,
-            metadataScanInterval);
+        this.metadataScanner = new ContainerMetadataScanner(c, controller);
       }
       this.metadataScanner.start();
 
       dataScanners = new ArrayList<>();
       for (HddsVolume v : volumeSet.getVolumesList()) {
-        ContainerDataScanner s = new ContainerDataScanner(config, controller,
-            v, bytesPerSec);
+        ContainerDataScanner s = new ContainerDataScanner(c, controller, v);
         s.start();
         dataScanners.add(s);
       }
