@@ -703,7 +703,14 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     Iterator<Map.Entry<CacheKey<String>, CacheValue<OmKeyInfo>>> iterator =
         keyTable.cacheIterator();
 
-
+    //TODO: We can avoid this iteration if table cache has stored entries in
+    // treemap. Currently HashMap is used in Cache. HashMap get operation is an
+    // constant time operation, where as for treeMap get is log(n).
+    // So if we move to treemap, the get operation will be affected. As get
+    // is frequent operation on table. So, for now in list we iterate cache map
+    // and construct treeMap which match with keyPrefix and are greater than or
+    // equal to startKey. Later we can revisit this, if list operation
+    // is becoming slow.
     while (iterator.hasNext()) {
       Map.Entry< CacheKey<String>, CacheValue<OmKeyInfo>> entry =
           iterator.next();
@@ -722,27 +729,27 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     }
 
     // Get maxKeys from DB if it has.
-    if (currentCount < maxKeys) {
-      try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
-               keyIter = getKeyTable().iterator()) {
-        KeyValue< String, OmKeyInfo > kv = keyIter.seek(seekKey);
-        while (currentCount < maxKeys && keyIter.hasNext()) {
-          kv = keyIter.next();
-          if (kv != null && kv.getKey().startsWith(seekPrefix)) {
 
-           // Entry should not be marked for delete, consider only those
-            // entries.
-            if(!deletedKeySet.contains(kv.getKey()) &&
-                !cacheKeyMap.containsKey(kv.getKey()) &&
-                kv.getKey().startsWith(seekPrefix)) {
-              cacheKeyMap.put(kv.getKey(), kv.getValue());
-              currentCount++;
-            }
-          } else {
-            // The SeekPrefix does not match any more, we can break out of the
-            // loop.
-            break;
+    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
+             keyIter = getKeyTable().iterator()) {
+      KeyValue< String, OmKeyInfo > kv;
+      keyIter.seek(seekKey);
+      // we need to iterate maxKeys + 1 here because if skipStartKey is true,
+      // we should skip that entry and return the result.
+      while (currentCount < maxKeys + 1 && keyIter.hasNext()) {
+        kv = keyIter.next();
+        if (kv != null && kv.getKey().startsWith(seekPrefix)) {
+
+          // Entry should not be marked for delete, consider only those
+          // entries.
+          if(!deletedKeySet.contains(kv.getKey())) {
+            cacheKeyMap.put(kv.getKey(), kv.getValue());
+            currentCount++;
           }
+        } else {
+          // The SeekPrefix does not match any more, we can break out of the
+          // loop.
+          break;
         }
       }
     }
