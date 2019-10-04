@@ -47,6 +47,7 @@ public interface ChecksumByteBuffer extends Checksum {
    * An abstract class implementing {@link ChecksumByteBuffer}
    * with a 32-bit checksum and a lookup table.
    */
+  @SuppressWarnings("innerassignment")
   abstract class CrcIntTable implements ChecksumByteBuffer {
     /** Current CRC value with bit-flipped. */
     private int crc;
@@ -98,14 +99,21 @@ public interface ChecksumByteBuffer extends Checksum {
 
       // loop unroll - duff's device style
       switch (b.remaining()) {
-        case 7: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 6: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 5: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 4: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 3: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 2: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        case 1: crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
-        default: // noop
+      case 7:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 6:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 5:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 4:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 3:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 2:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      case 1:
+        crc = (crc >>> 8) ^ table[((crc ^ b.get()) & 0xff)];
+      default: // noop
       }
 
       return crc;
