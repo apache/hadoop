@@ -95,6 +95,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -117,6 +118,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -144,6 +146,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 0);
     KeyDeletingService keyDeletingService =
