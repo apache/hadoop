@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -46,7 +47,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore;
 import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
 import org.apache.hadoop.mapreduce.lib.input.InvalidInputException;
 
@@ -54,7 +55,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL_ENTRY_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
@@ -63,7 +63,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isS3GuardTestPropertySet;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.setMetadataStore;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -83,8 +83,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * test for S3Guard + Auth to see how failures move around.
  * <ol>
  *   <li>Tests only run if an assumed role is provided.</li>
- *   <li>And the s3guard tests use the local metastore if
- *   there was not one already.</li>
+ *   <li>And the S3Guard tests require DynamoDB.</li>
  * </ol>
  * The tests are all bundled into one big test case.
  * From a purist unit test perspective, this is utterly wrong as it goes
@@ -108,6 +107,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * To simplify maintenance, the operations tested are broken up into
  * their own methods, with fields used to share the restricted role and
  * created paths.
+ *
  */
 @SuppressWarnings("ThrowableNotThrown")
 @RunWith(Parameterized.class)
@@ -227,15 +227,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // in a guarded test run, except for the special case of raw,
     // all DDB settings are left alone.
     removeBaseAndBucketOverrides(bucketName, conf,
-        METADATASTORE_AUTHORITATIVE,
-        S3GUARD_METASTORE_LOCAL_ENTRY_TTL);
+        METADATASTORE_AUTHORITATIVE);
+    removeBucketOverrides(bucketName, conf,
+        S3_METADATA_STORE_IMPL);
     if (!s3guard) {
       removeBaseAndBucketOverrides(bucketName, conf,
           S3_METADATA_STORE_IMPL);
     }
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authMode);
-    // TTL of 0 so debugging does not cause expiry.
-    conf.setInt(S3GUARD_METASTORE_LOCAL_ENTRY_TTL, 0);
     disableFilesystemCaching(conf);
     return conf;
   }
@@ -246,7 +245,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     if (s3guard) {
       // s3guard is required for those test runs where any of the
       // guard options are set
-      assumeS3GuardState(s3guard, getConfiguration());
+      assumeS3GuardState(true, getConfiguration());
     }
     assumeRoleTests();
   }
@@ -366,21 +365,34 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             .addResources(directory(noReadDir)));
     readonlyFS = (S3AFileSystem) basePath.getFileSystem(roleConfig);
     verifyS3GuardSettings(readonlyFS, "readonly");
-    if (realFS.getMetadataStore() instanceof LocalMetadataStore) {
-      // because the metastore is local, we need to copy it into the new
-      // FS instance. Otherwise path lookups will fall back to S3.
-      setMetadataStore(readonlyFS, realFS.getMetadataStore());
-    }
   }
 
+  /**
+   * Verify that the FS (real or restricted) meets the
+   * requirement of the test.
+   * S3Guard tests are skipped if the (default) store is not
+   * a DDB store consistent across all FS instances.
+   * The raw tests fail if somehow the FS does still have a S3Guard metastore.
+   * @param fs filesystem
+   * @param storeType store role for error messages.
+   */
   protected void verifyS3GuardSettings(final S3AFileSystem fs,
       final String storeType) {
-    Assertions.assertThat(fs.hasMetadataStore())
-        .describedAs("Metadata store in "
-                + storeType
-                + " fs: %s",
-            fs.getMetadataStore())
-        .isEqualTo(s3guard);
+    if (s3guard) {
+      Assumptions.assumeThat(fs.getMetadataStore())
+          .describedAs("Metadata store in "
+                  + storeType
+                  + " fs: %s",
+              fs.getMetadataStore())
+          .isInstanceOf(DynamoDBMetadataStore.class);
+    } else {
+      Assertions.assertThat(fs.hasMetadataStore())
+          .describedAs("Metadata store in "
+                  + storeType
+                  + " fs: %s",
+              fs.getMetadataStore())
+          .isFalse();
+    }
   }
 
   /**
