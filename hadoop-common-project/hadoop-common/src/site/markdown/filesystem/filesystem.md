@@ -905,6 +905,27 @@ the file, then verify the invariants in the `PathHandle` using
 `getFileStatus(Path)` to implement `CONTENT`. This could yield false
 positives and it requires additional RPC traffic.
 
+
+### `copyFile(URI srcFile, URI dstFile)`
+
+Copies a file `srcFile` to another file `dstFile`.
+
+Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
+
+#### Preconditions
+
+    if not exists(FS, srcFile) : raise FileNotFoundException
+
+    if not exists(parentFolder(dstFile)) : raise [IllegalArguementException]
+
+    if isDirectory(srcFile) : raise [IllegalArguementException]
+
+    if exists(dstFile) : raise FileAlreadyExistsException
+
+#### Postconditions
+
+`dstFile` is available in the filesystem.
+
 ### `boolean delete(Path p, boolean recursive)`
 
 Delete a path, be it a file, symbolic link or directory. The
