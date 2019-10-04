@@ -179,4 +179,12 @@ public interface ContainerManager extends Closeable {
    */
   ContainerInfo getMatchingContainer(long size, String owner,
       Pipeline pipeline, List<ContainerID> excludedContainerIDS);
+
+  /**
+   * Once after report processor handler completes, call this to notify
+   * container manager to increment metrics.
+   * @param isFullReport
+   * @param success
+   */
+  void notifyContainerReportProcessing(boolean isFullReport, boolean success);
 }

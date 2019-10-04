@@ -114,7 +114,7 @@ public class TestOzoneManagerServiceProviderImpl extends
     Assert.assertNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_two"));
 
-    ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot();
+    assertTrue(ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot());
 
     assertNotNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_one"));
@@ -241,10 +241,10 @@ public class TestOzoneManagerServiceProviderImpl extends
         .reInitializeTasks(omMetadataManager);
 
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
-        new OzoneManagerServiceProviderImpl(configuration, omMetadataManager,
+        new MockOzoneServiceProvider(configuration, omMetadataManager,
             reconTaskControllerMock, new ReconUtils(), ozoneManagerProtocol);
 
-    //Should trigger full snapshot request.
+    // Should trigger full snapshot request.
     ozoneManagerServiceProvider.syncDataFromOM();
 
     ArgumentCaptor<ReconTaskStatus> captor =
@@ -313,5 +313,26 @@ public class TestOzoneManagerServiceProviderImpl extends
         .DBUpdatesRequest.class))).thenReturn(dbUpdatesWrapper);
     return ozoneManagerProtocolMock;
   }
+}
 
+/**
+ * Mock OzoneManagerServiceProviderImpl which overrides
+ * updateReconOmDBWithNewSnapshot.
+ */
+class MockOzoneServiceProvider extends OzoneManagerServiceProviderImpl {
+
+  MockOzoneServiceProvider(OzoneConfiguration configuration,
+                           ReconOMMetadataManager omMetadataManager,
+                           ReconTaskController reconTaskController,
+                           ReconUtils reconUtils,
+                           OzoneManagerProtocol ozoneManagerClient)
+      throws IOException {
+    super(configuration, omMetadataManager, reconTaskController, reconUtils,
+        ozoneManagerClient);
+  }
+
+  @Override
+  public boolean updateReconOmDBWithNewSnapshot() {
+    return true;
+  }
 }

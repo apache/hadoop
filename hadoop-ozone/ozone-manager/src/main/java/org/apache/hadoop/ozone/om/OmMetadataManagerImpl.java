@@ -44,9 +44,10 @@ import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmPrefixInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
+import org.apache.hadoop.ozone.om.codec.RepeatedOmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
-import org.apache.hadoop.ozone.om.codec.VolumeListCodec;
+import org.apache.hadoop.ozone.om.codec.UserVolumeInfoCodec;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -57,9 +58,11 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.UserVolumeInfo;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -87,31 +90,31 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * OM DB stores metadata as KV pairs in different column families.
    * <p>
    * OM DB Schema:
-   * |-------------------------------------------------------------------|
-   * |  Column Family     |        VALUE                                 |
-   * |-------------------------------------------------------------------|
-   * | userTable          |     user->VolumeList                         |
-   * |-------------------------------------------------------------------|
-   * | volumeTable        |     /volume->VolumeInfo                      |
-   * |-------------------------------------------------------------------|
-   * | bucketTable        |     /volume/bucket-> BucketInfo              |
-   * |-------------------------------------------------------------------|
-   * | keyTable           | /volumeName/bucketName/keyName->KeyInfo      |
-   * |-------------------------------------------------------------------|
-   * | deletedTable       | /volumeName/bucketName/keyName->KeyInfo      |
-   * |-------------------------------------------------------------------|
-   * | openKey            | /volumeName/bucketName/keyName/id->KeyInfo   |
-   * |-------------------------------------------------------------------|
-   * | s3Table            | s3BucketName -> /volumeName/bucketName       |
-   * |-------------------------------------------------------------------|
-   * | s3SecretTable      | s3g_access_key_id -> s3Secret                |
-   * |-------------------------------------------------------------------|
-   * | dTokenTable        | s3g_access_key_id -> s3Secret                |
-   * |-------------------------------------------------------------------|
-   * | prefixInfoTable    | prefix -> PrefixInfo                         |
-   * |-------------------------------------------------------------------|
-   * |  multipartInfoTable| /volumeName/bucketName/keyName/uploadId ->...|
-   * |-------------------------------------------------------------------|
+   * |----------------------------------------------------------------------|
+   * |  Column Family     |        VALUE                                    |
+   * |----------------------------------------------------------------------|
+   * | userTable          |     /user->UserVolumeInfo                       |
+   * |----------------------------------------------------------------------|
+   * | volumeTable        |     /volume->VolumeInfo                         |
+   * |----------------------------------------------------------------------|
+   * | bucketTable        |     /volume/bucket-> BucketInfo                 |
+   * |----------------------------------------------------------------------|
+   * | keyTable           | /volumeName/bucketName/keyName->KeyInfo         |
+   * |----------------------------------------------------------------------|
+   * | deletedTable       | /volumeName/bucketName/keyName->RepeatedKeyInfo |
+   * |----------------------------------------------------------------------|
+   * | openKey            | /volumeName/bucketName/keyName/id->KeyInfo      |
+   * |----------------------------------------------------------------------|
+   * | s3Table            | s3BucketName -> /volumeName/bucketName          |
+   * |----------------------------------------------------------------------|
+   * | s3SecretTable      | s3g_access_key_id -> s3Secret                   |
+   * |----------------------------------------------------------------------|
+   * | dTokenTable        | s3g_access_key_id -> s3Secret                   |
+   * |----------------------------------------------------------------------|
+   * | prefixInfoTable    | prefix -> PrefixInfo                            |
+   * |----------------------------------------------------------------------|
+   * |  multipartInfoTable| /volumeName/bucketName/keyName/uploadId ->...   |
+   * |----------------------------------------------------------------------|
    */
 
   public static final String USER_TABLE = "userTable";
@@ -168,7 +171,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<String, VolumeList> getUserTable() {
+  public Table<String, UserVolumeInfo> getUserTable() {
     return userTable;
   }
 
@@ -192,7 +195,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<String, OmKeyInfo> getDeletedTable() {
+  public Table<String, RepeatedOmKeyInfo> getDeletedTable() {
     return deletedTable;
   }
 
@@ -261,9 +264,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(PREFIX_TABLE)
         .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
+        .addCodec(RepeatedOmKeyInfo.class, new RepeatedOmKeyInfoCodec())
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
-        .addCodec(VolumeList.class, new VolumeListCodec())
+        .addCodec(UserVolumeInfo.class, new UserVolumeInfoCodec())
         .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
         .addCodec(S3SecretValue.class, new S3SecretValueCodec())
         .addCodec(OmPrefixInfo.class, new OmPrefixInfoCodec());
@@ -276,7 +280,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    */
   protected void initializeOmTables() throws IOException {
     userTable =
-        this.store.getTable(USER_TABLE, String.class, VolumeList.class);
+        this.store.getTable(USER_TABLE, String.class, UserVolumeInfo.class);
     checkTableStatus(userTable, USER_TABLE);
 
     TableCacheImpl.CacheCleanupPolicy cleanupPolicy =
@@ -296,8 +300,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(keyTable, KEY_TABLE);
 
-    deletedTable =
-        this.store.getTable(DELETED_TABLE, String.class, OmKeyInfo.class);
+    deletedTable = this.store.getTable(DELETED_TABLE, String.class,
+        RepeatedOmKeyInfo.class);
     checkTableStatus(deletedTable, DELETED_TABLE);
 
     openKeyTable =
@@ -703,7 +707,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public List<OmVolumeArgs> listVolumes(String userName,
       String prefix, String startKey, int maxKeys) throws IOException {
     List<OmVolumeArgs> result = Lists.newArrayList();
-    VolumeList volumes;
+    UserVolumeInfo volumes;
     if (StringUtil.isBlank(userName)) {
       throw new OMException("User name is required to list Volumes.",
           ResultCodes.USER_NOT_FOUND);
@@ -744,15 +748,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     return result;
   }
 
-  private VolumeList getVolumesByUser(String userNameKey)
+  private UserVolumeInfo getVolumesByUser(String userNameKey)
       throws OMException {
     try {
-      VolumeList volumeList = getUserTable().get(userNameKey);
-      if (volumeList == null) {
+      UserVolumeInfo userVolInfo = getUserTable().get(userNameKey);
+      if (userVolInfo == null) {
         // No volume found for this user, return an empty list
-        return VolumeList.newBuilder().build();
+        return UserVolumeInfo.newBuilder().build();
       } else {
-        return volumeList;
+        return userVolInfo;
       }
     } catch (IOException e) {
       throw new OMException("Unable to get volumes info by the given user, "
@@ -765,25 +769,26 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public List<BlockGroup> getPendingDeletionKeys(final int keyCount)
       throws IOException {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
-    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
-        getDeletedTable()
-            .iterator()) {
+    try (TableIterator<String, ? extends KeyValue<String, RepeatedOmKeyInfo>>
+             keyIter = getDeletedTable().iterator()) {
       int currentCount = 0;
       while (keyIter.hasNext() && currentCount < keyCount) {
-        KeyValue<String, OmKeyInfo> kv = keyIter.next();
+        KeyValue<String, RepeatedOmKeyInfo> kv = keyIter.next();
         if (kv != null) {
-          OmKeyInfo info = kv.getValue();
+          RepeatedOmKeyInfo infoList = kv.getValue();
           // Get block keys as a list.
-          OmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
-          List<BlockID> item = latest.getLocationList().stream()
-              .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
-              .collect(Collectors.toList());
-          BlockGroup keyBlocks = BlockGroup.newBuilder()
-              .setKeyName(kv.getKey())
-              .addAllBlockIDs(item)
-              .build();
-          keyBlocksList.add(keyBlocks);
-          currentCount++;
+          for(OmKeyInfo info : infoList.getOmKeyInfoList()){
+            OmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
+            List<BlockID> item = latest.getLocationList().stream()
+                .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
+                .collect(Collectors.toList());
+            BlockGroup keyBlocks = BlockGroup.newBuilder()
+                .setKeyName(kv.getKey())
+                .addAllBlockIDs(item)
+                .build();
+            keyBlocksList.add(keyBlocks);
+            currentCount++;
+          }
         }
       }
     }

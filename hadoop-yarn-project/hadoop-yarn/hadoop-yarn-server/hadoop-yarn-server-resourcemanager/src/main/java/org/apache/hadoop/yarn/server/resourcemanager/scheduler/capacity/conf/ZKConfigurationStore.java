@@ -133,6 +133,11 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   }
 
   @Override
+  public void format() throws Exception {
+    zkManager.delete(confStorePath);
+  }
+
+  @Override
   public synchronized void storeVersion() throws Exception {
     byte[] data =
         ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();

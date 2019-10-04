@@ -102,9 +102,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    Assume.assumeTrue("S3 Select is not enabled",
-        getFileSystem().hasCapability(S3_SELECT_CAPABILITY));
     csvPath = path(getMethodName() + ".csv");
+    Assume.assumeTrue("S3 Select is not enabled",
+        getFileSystem().hasPathCapability(csvPath, S3_SELECT_CAPABILITY));
     selectConf = new Configuration(false);
     selectConf.setBoolean(SELECT_ERRORS_INCLUDE_SQL, true);
     createStandardCsvFile(getFileSystem(), csvPath, ALL_QUOTES);

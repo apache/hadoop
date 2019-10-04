@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.request.volume;
 
 import java.util.UUID;
 
+import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -73,6 +74,11 @@ public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
       OMClientResponse omClientResponse =
           omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1,
               ozoneManagerDoubleBufferHelper);
+      Assert.assertTrue(omClientResponse instanceof OMVolumeCreateResponse);
+      OMVolumeCreateResponse respone =
+          (OMVolumeCreateResponse) omClientResponse;
+      Assert.assertEquals(1, respone.getOmVolumeArgs().getObjectID());
+      Assert.assertEquals(1, respone.getOmVolumeArgs().getUpdateID());
     } catch (IllegalArgumentException ex){
       GenericTestUtils.assertExceptionContains("should be greater than zero",
           ex);
@@ -106,7 +112,7 @@ public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
     omVolumeCreateRequest = new OMVolumeCreateRequest(modifiedRequest);
 
     OMClientResponse omClientResponse =
-        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 2,
             ozoneManagerDoubleBufferHelper);
 
     OzoneManagerProtocolProtos.OMResponse omResponse =
@@ -124,6 +130,8 @@ public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
         omMetadataManager.getVolumeTable().get(volumeKey);
     // As request is valid volume table should not have entry.
     Assert.assertNotNull(omVolumeArgs);
+    Assert.assertEquals(2, omVolumeArgs.getObjectID());
+    Assert.assertEquals(2, omVolumeArgs.getUpdateID());
 
     // Check data from table and request.
     Assert.assertEquals(volumeInfo.getVolume(), omVolumeArgs.getVolume());
@@ -132,10 +140,10 @@ public class TestOMVolumeCreateRequest extends TestOMVolumeRequest {
     Assert.assertEquals(volumeInfo.getCreationTime(),
         omVolumeArgs.getCreationTime());
 
-    OzoneManagerProtocolProtos.VolumeList volumeList = omMetadataManager
+    OzoneManagerProtocolProtos.UserVolumeInfo userVolumeInfo = omMetadataManager
         .getUserTable().get(ownerKey);
-    Assert.assertNotNull(volumeList);
-    Assert.assertEquals(volumeName, volumeList.getVolumeNames(0));
+    Assert.assertNotNull(userVolumeInfo);
+    Assert.assertEquals(volumeName, userVolumeInfo.getVolumeNames(0));
 
     // Create another volume for the user.
     originalRequest = createVolumeRequest("vol1", adminName,

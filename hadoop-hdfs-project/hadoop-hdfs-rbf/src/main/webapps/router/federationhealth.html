@@ -384,6 +384,12 @@
 <!-- Mount table -->
 <script type="text/x-dust-template" id="tmpl-mounttable">
 <div class="page-header"><h1>Mount Table</h1></div>
+<div>
+  <ul class="federationhealth-mounttable-legend">
+    <li class="federationhealth-mounttable-icon federationhealth-mounttable-readonly">Read Only</li>
+    <li class="federationhealth-mounttable-icon federationhealth-mounttable-readwrite">Read Write</li>
+  </ul>
+</div>
 <small>
 <table class="table">
   <thead>
@@ -392,7 +398,7 @@
       <th>Target nameservice</th>
       <th>Target path</th>
       <th>Order</th>
-      <th>Read only</th>
+      <th>Mount option</th>
       <th>Fault tolerant</th>
       <th>Owner</th>
       <th>Group</th>
@@ -409,7 +415,7 @@
       <td>{nameserviceId}</td>
       <td>{path}</td>
       <td>{order}</td>
-      <td align="center" class="mount-table-icon mount-table-read-only-{readonly}" title="{status}"/>
+      <td align="center" class="federationhealth-mounttable-icon federationhealth-mounttable-{readonly}" title="{status}"/>
       <td align="center" class="mount-table-icon mount-table-fault-tolerant-{faulttolerant}" title="{ftStatus}"></td>
       <td>{ownerName}</td>
       <td>{groupName}</td>

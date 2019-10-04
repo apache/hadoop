@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 
@@ -78,6 +79,19 @@ public class BlockInfoContiguous extends BlockInfo {
     // set the last entry to null
     setStorageInfo(lastNode, null);
     return true;
+  }
+
+  @Override
+  boolean isProvided() {
+    int len = getCapacity();
+    for (int idx = 0; idx < len; idx++) {
+      DatanodeStorageInfo storage = getStorageInfo(idx);
+      if (storage != null
+          && storage.getStorageType().equals(StorageType.PROVIDED)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

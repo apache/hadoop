@@ -57,7 +57,7 @@ import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
-import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocolServerSideTranslatorPB;
 
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
@@ -295,7 +295,12 @@ public class SCMBlockProtocolServer implements
     boolean auditSuccess = true;
     try{
       NodeManager nodeManager = scm.getScmNodeManager();
-      Node client = nodeManager.getNodeByAddress(clientMachine);
+      Node client = null;
+      List<DatanodeDetails> possibleClients =
+          nodeManager.getNodesByAddress(clientMachine);
+      if (possibleClients.size()>0){
+        client = possibleClients.get(0);
+      }
       List<Node> nodeList = new ArrayList();
       nodes.stream().forEach(uuid -> {
         DatanodeDetails node = nodeManager.getNodeByUuid(uuid);

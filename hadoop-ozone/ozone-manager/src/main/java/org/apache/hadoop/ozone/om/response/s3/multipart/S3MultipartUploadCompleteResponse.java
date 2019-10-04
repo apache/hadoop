@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for Multipart Upload Complete request.
@@ -39,7 +40,7 @@ public class S3MultipartUploadCompleteResponse extends OMClientResponse {
 
 
   public S3MultipartUploadCompleteResponse(@Nullable String multipartKey,
-      @Nullable OmKeyInfo omKeyInfo, OMResponse omResponse) {
+      @Nullable OmKeyInfo omKeyInfo, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.omKeyInfo = omKeyInfo;

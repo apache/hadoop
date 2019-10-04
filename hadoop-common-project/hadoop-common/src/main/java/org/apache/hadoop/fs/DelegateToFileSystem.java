@@ -281,4 +281,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       int bufferSize) throws IOException {
     return fsImpl.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    return fsImpl.hasPathCapability(path, capability);
+  }
 }

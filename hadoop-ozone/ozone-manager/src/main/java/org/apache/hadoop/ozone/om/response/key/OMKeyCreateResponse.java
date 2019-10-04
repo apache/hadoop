@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.response.key;
 
 import java.io.IOException;
 import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -38,7 +39,7 @@ public class OMKeyCreateResponse extends OMClientResponse {
   private long openKeySessionID;
 
   public OMKeyCreateResponse(@Nullable OmKeyInfo omKeyInfo,
-      long openKeySessionID, OMResponse omResponse) {
+      long openKeySessionID, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
     this.openKeySessionID = openKeySessionID;
