@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.SecureModeLocalUserAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
@@ -213,13 +214,24 @@ public class ResourceLocalizationService extends CompositeService
     this.delService = delService;
     this.dirsHandler = dirsHandler;
 
-    this.disablePrivateVis = UserGroupInformation.isSecurityEnabled() &&
+    // If an app user application require private resources, when local user
+    // pooling is enabled, we will treat the private resources as application
+    // resources. This means for each application we will download (localize)
+    // the resources to application folder, and will delete it after the
+    // application is finished.
+    boolean secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
         context.getConf().getBoolean(
             YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
             YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
-    if (this.disablePrivateVis) {
+    if (secureModeUseLocalUser) {
+      this.disablePrivateVis = true;
       LOG.info("When " + YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER +
           " is true, treat PRIVATE visibility as APPLICATION");
+      SecureModeLocalUserAllocator.getInstance(context.getConf())
+        .setDeletionService(delService);
+    }
+    else {
+      this.disablePrivateVis = false;
     }
 
     this.cacheCleanup = new HadoopScheduledThreadPoolExecutor(1,

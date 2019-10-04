@@ -18,11 +18,20 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +58,9 @@ class LocalUserInfo {
  * b) all FileDeletionTask for that appUser is executed;
  * c) all log aggregation/handling requests for appUser's applications are done
  *
+ * If DeletionService is set, during deallocation, we will check if usercache
+ * folder for the app user exists, if yes queue a FileDeletionTask.
+ *
  * For now allocation is only maintained in memory so it does not support
  * node manager recovery mode.
  */
@@ -61,6 +73,17 @@ public class SecureModeLocalUserAllocator {
   private ArrayList<Boolean> allocated;
   private int localUserCount;
   private String localUserPrefix;
+  private DeletionService delService;
+  private String[] nmLocalDirs;
+  private static FileContext lfs = getLfs();
+
+  private static FileContext getLfs() {
+    try {
+      return FileContext.getLocalFSFileContext();
+    } catch (UnsupportedFileSystemException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   SecureModeLocalUserAllocator(Configuration conf) {
     if (conf.getBoolean(YarnConfiguration.NM_RECOVERY_ENABLED,
@@ -85,6 +108,7 @@ public class SecureModeLocalUserAllocator {
     for (int i=0; i<localUserCount; ++i) {
       allocated.add(false);
     }
+    nmLocalDirs = conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS);
   }
 
   public static SecureModeLocalUserAllocator getInstance(Configuration conf) {
@@ -96,6 +120,10 @@ public class SecureModeLocalUserAllocator {
       }
     }
     return instance;
+  }
+
+  public void setDeletionService(DeletionService delService) {
+    this.delService = delService;
   }
 
   /**
@@ -285,8 +313,32 @@ public class SecureModeLocalUserAllocator {
     if (localUserInfo.fileOpCount <= 0 &&
         localUserInfo.appCount <= 0 &&
         localUserInfo.logHandlingCount <= 0) {
-      appUserToLocalUser.remove(appUser);
+      String localUser = appUserToLocalUser.remove(appUser).localUser;
       allocated.set(localUserInfo.localUserIndex, false);
+      if (delService != null) {
+        // check if node manager usercache folder exists
+        for (String localDir : nmLocalDirs) {
+          Path usersDir = new Path(localDir, ContainerLocalizer.USERCACHE);
+          Path userDir = new Path(usersDir, appUser);
+          FileStatus status;
+          try {
+            status = lfs.getFileStatus(userDir);
+          }
+          catch(FileNotFoundException fs) {
+            status = null;
+          }
+          catch(IOException ie) {
+            String msg = "Could not get file status for local dir " + userDir;
+            LOG.warn(msg, ie);
+            throw new YarnRuntimeException(msg, ie);
+          }
+          if (status != null) {
+            FileDeletionTask delTask = new FileDeletionTask(delService, localUser,
+                userDir, null);
+            delService.delete(delTask);
+          }
+        }
+      }
       LOG.info("Deallocated local user index " + localUserInfo.localUserIndex +
           " for appUser " + appUser);
     }
