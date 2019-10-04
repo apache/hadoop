@@ -130,8 +130,8 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         if (OmUtils.isOmHAServiceId(conf, omHost)) {
           // If omHost is a service id, it shouldn't use a port
           throw new IllegalArgumentException("Port " + omPort +
-              " specified in URI but host '" + omHost + "' is "
-              + "a logical (HA) OzoneManager and does not use port information.");
+              " specified in URI but host '" + omHost + "' is a "
+              + "logical (HA) OzoneManager and does not use port information.");
         }
       } else {
         // When port number is not specified, read it from config
