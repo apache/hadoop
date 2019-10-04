@@ -2711,7 +2711,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, StatusProbeEnum.ALL, tombstones),
+          s3GetFileStatus(path, key, probes, tombstones),
           instrumentation,
           ttlTimeProvider);
     }
@@ -2735,29 +2735,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       String key,
       final Set<StatusProbeEnum> probes,
       final Set<Path> tombstones) throws IOException {
-    if (!key.isEmpty() && probes.contains(StatusProbeEnum.Head)) {
-      try {
-        ObjectMetadata meta = getObjectMetadata(key);
+    if (!key.isEmpty()) {
+      if (probes.contains(StatusProbeEnum.Head)) {
+        try {
+          ObjectMetadata meta = getObjectMetadata(key);
 
-        if (objectRepresentsDirectory(key, meta.getContentLength())) {
-          LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(Tristate.TRUE, path, username);
-        } else {
-          LOG.debug("Found exact file: normal file");
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username,
-              meta.getETag(),
-              meta.getVersionId());
-        }
-      } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404) {
+          if (objectRepresentsDirectory(key, meta.getContentLength())) {
+            LOG.debug("Found exact file: fake directory");
+            return new S3AFileStatus(Tristate.TRUE, path, username);
+          } else {
+            LOG.debug("Found exact file: normal file");
+            return new S3AFileStatus(meta.getContentLength(),
+                dateToLong(meta.getLastModified()),
+                path,
+                getDefaultBlockSize(path),
+                username,
+                meta.getETag(),
+                meta.getVersionId());
+          }
+        } catch (AmazonServiceException e) {
+          if (e.getStatusCode() != SC_404) {
+            throw translateException("getFileStatus", path, e);
+          }
+        } catch (AmazonClientException e) {
           throw translateException("getFileStatus", path, e);
         }
-      } catch (AmazonClientException e) {
-        throw translateException("getFileStatus", path, e);
       }
 
       // Look for the dir marker
