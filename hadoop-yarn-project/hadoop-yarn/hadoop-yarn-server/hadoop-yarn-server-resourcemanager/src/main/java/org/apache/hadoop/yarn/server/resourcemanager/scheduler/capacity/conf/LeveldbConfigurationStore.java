@@ -68,6 +68,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private static final String DB_NAME = "yarn-conf-store";
   private static final String LOG_KEY = "log";
   private static final String VERSION_KEY = "version";
+  private static final String CONF_VERSION_KEY = "conf-version";
 
   private DB db;
   private long maxLogs;
@@ -124,6 +125,10 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           return 1;
         } else if (key2Str.equals(LOG_KEY)) {
           return -1;
+        } else if (key1Str.equals(CONF_VERSION_KEY)) {
+          return 1;
+        } else if (key2Str.equals(CONF_VERSION_KEY)) {
+          return -1;
         }
         return key1Str.compareTo(key2Str);
       }
@@ -146,6 +151,10 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     File dbfile = new File(storeRoot.toString());
     try {
       db = JniDBFactory.factory.open(dbfile, options);
+      if (db.get(bytes(CONF_VERSION_KEY)) == null) {
+        db.put(bytes(CONF_VERSION_KEY),
+            bytes(String.valueOf(System.currentTimeMillis())));
+      }
     } catch (NativeDB.DBException e) {
       if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
         LOG.info("Creating conf database at " + dbfile);
@@ -158,6 +167,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
             initBatch.put(bytes(kv.getKey()), bytes(kv.getValue()));
           }
           db.write(initBatch);
+          db.put(bytes(CONF_VERSION_KEY),
+              bytes(String.valueOf(System.currentTimeMillis())));
         } catch (DBException dbErr) {
           throw new IOException(dbErr.getMessage(), dbErr);
         }
@@ -215,6 +226,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       }
     }
     db.write(updateBatch);
+    db.put(bytes(CONF_VERSION_KEY),
+        bytes(String.valueOf(System.currentTimeMillis())));
     pendingMutation = null;
   }
 
@@ -250,12 +263,20 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       Map.Entry<byte[], byte[]> entry = itr.next();
       String key = new String(entry.getKey(), StandardCharsets.UTF_8);
       String value = new String(entry.getValue(), StandardCharsets.UTF_8);
-      if (key.equals(LOG_KEY) || key.equals(VERSION_KEY)) {
+      if (key.equals(LOG_KEY) || key.equals(VERSION_KEY) ||
+          key.equals(CONF_VERSION_KEY)) {
         break;
       }
       config.set(key, value);
     }
     return config;
+  }
+
+  @Override
+  public long getConfigVersion() throws Exception {
+    String version = new String(db.get(bytes(CONF_VERSION_KEY)),
+        StandardCharsets.UTF_8);
+    return Long.parseLong(version);
   }
 
   @Override
