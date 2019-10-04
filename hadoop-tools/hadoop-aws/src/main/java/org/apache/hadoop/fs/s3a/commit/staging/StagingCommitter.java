@@ -677,7 +677,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
     // we will try to abort the ones that had already succeeded.
     int commitCount = taskOutput.size();
     final Queue<SinglePendingCommit> commits = new ConcurrentLinkedQueue<>();
-    LOG.info("{}: uploading from staging directory to S3", getRole());
+    LOG.info("{}: uploading from staging directory to S3 {}", getRole(),
+        attemptPath);
     LOG.info("{}: Saving pending data information to {}",
         getRole(), commitsAttemptPath);
     if (taskOutput.isEmpty()) {
