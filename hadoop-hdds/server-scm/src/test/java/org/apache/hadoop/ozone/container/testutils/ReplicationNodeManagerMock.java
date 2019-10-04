@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.LinkedList;
 
 /**
  * A Node Manager to test replication.
@@ -323,7 +324,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   @Override
-  public DatanodeDetails getNodeByAddress(String address) {
-    return null;
+  public List<DatanodeDetails> getNodesByAddress(String address) {
+    return new LinkedList<>();
   }
 }
