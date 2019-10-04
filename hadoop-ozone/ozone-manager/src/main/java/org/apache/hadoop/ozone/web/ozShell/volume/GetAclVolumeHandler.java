@@ -69,8 +69,8 @@ public class GetAclVolumeHandler extends Handler {
             OzoneObj.StoreType.valueOf(storeType))
         .build();
     List<OzoneAcl> result = client.getObjectStore().getAcl(obj);
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(result)));
+    System.out.printf("%s%n",
+        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
     client.close();
     return null;
   }
