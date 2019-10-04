@@ -36,15 +36,18 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.hadoop.hdds.conf.ConfigTag.OZONE;
@@ -305,6 +308,10 @@ public class XceiverClientManager implements Closeable {
       return HddsProtos.ReplicationType.RATIS;
     }
     return HddsProtos.ReplicationType.STAND_ALONE;
+  }
+
+  public Function<ByteBuffer, ByteString> byteBufferToByteStringConversion(){
+    return ByteStringConversion.createByteBufferConversion(conf);
   }
 
   /**
