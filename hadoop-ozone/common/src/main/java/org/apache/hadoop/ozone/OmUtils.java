@@ -370,9 +370,12 @@ public final class OmUtils {
         Path checkpointPath = checkpoint.getCheckpointLocation();
         for (Path path : Files.list(checkpointPath)
             .collect(Collectors.toList())) {
-          if (null != path) {
-            includeFile(path.toFile(), path.getFileName().toString(),
-                archiveOutputStream);
+          if (path != null) {
+            Path fileName = path.getFileName();
+            if (fileName != null) {
+              includeFile(path.toFile(), fileName.toString(),
+                  archiveOutputStream);
+            }
           }
         }
       }

@@ -24,6 +24,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.
     OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -135,11 +136,14 @@ public class OMDBCheckpointServlet extends HttpServlet {
       omMetrics.setLastCheckpointCreationTimeTaken(
           checkpoint.checkpointCreationTimeTaken());
 
+      Path file = checkpoint.getCheckpointLocation().getFileName();
+      if (file == null) {
+        return;
+      }
       response.setContentType("application/x-tgz");
       response.setHeader("Content-Disposition",
           "attachment; filename=\"" +
-              checkpoint.getCheckpointLocation().getFileName().toString() +
-              ".tgz\"");
+               file.toString() + ".tgz\"");
       // Ratis snapshot index used when downloading DB checkpoint to OM follower
       response.setHeader(OM_RATIS_SNAPSHOT_INDEX,
           String.valueOf(ratisSnapshotIndex));
