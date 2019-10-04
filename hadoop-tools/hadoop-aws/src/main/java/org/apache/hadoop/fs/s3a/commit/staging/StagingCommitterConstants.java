@@ -34,7 +34,7 @@ public final class StagingCommitterConstants {
   /**
    * The temporary path for staging data, if not explicitly set.
    * By using an unqualified path, this will be qualified to be relative
-   * to the users' home directory, so protectec from access for others.
+   * to the users' home directory, so protected from access for others.
    */
   public static final String FILESYSTEM_TEMP_PATH = "tmp/staging";
 
