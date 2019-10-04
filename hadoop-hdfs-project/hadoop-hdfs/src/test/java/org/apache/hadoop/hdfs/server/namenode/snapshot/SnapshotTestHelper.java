@@ -238,8 +238,7 @@ public class SnapshotTestHelper {
            "\\{blockUCState=\\w+, primaryNodeIndex=[-\\d]+, replicas=\\[\\]\\}",
            "");
         }
-        
-        assertEquals(line1, line2);
+        assertEquals(line1.trim(), line2.trim());
       }
       Assert.assertNull(reader1.readLine());
       Assert.assertNull(reader2.readLine());

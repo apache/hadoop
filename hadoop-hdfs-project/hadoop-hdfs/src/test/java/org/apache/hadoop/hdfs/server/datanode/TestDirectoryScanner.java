@@ -25,6 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hdfs.protocol.Block.BLOCK_FILE_PREFIX;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo.ReplicaDirInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -1090,8 +1092,9 @@ public class TestDirectoryScanner {
 
   @Test
   public void testDirectoryScannerInFederatedCluster() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration(CONF);
     //Create Federated cluster with two nameservices and one DN
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
         .numDataNodes(1).build()) {
       cluster.waitActive();
@@ -1108,7 +1111,7 @@ public class TestDirectoryScanner {
       int bp2Files = 2;
       writeFile(fs2, bp2Files);
       //Call the Directory scanner
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, conf);
       scanner.setRetainDiffs(true);
       scanner.reconcile();
       //Check blocks in corresponding BP
@@ -1122,6 +1125,72 @@ public class TestDirectoryScanner {
         scanner = null;
       }
     }
+  }
+
+  private static final String SEP = System.getProperty("file.separator");
+
+  /**
+   * Test parsing LocalReplica. We should be able to find the replica's path
+   * even if the replica's dir doesn't match the idToBlockDir.
+   */
+  @Test(timeout = 3000)
+  public void testLocalReplicaParsing() {
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    long blkId = getRandomBlockId();
+    File blockDir = DatanodeUtil.idToBlockDir(new File(baseDir), blkId);
+    String subdir1 = new File(blockDir.getParent()).getName();
+
+    // test parsing dir without ./subdir/subdir
+    ReplicaDirInfo info = ReplicaInfo.parseBaseDir(new File(baseDir), blkId);
+    assertEquals(baseDir, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path doesn't match the idToBLockDir.
+    String pathWithOneSubdir = baseDir + SEP + subdir1;
+    info = ReplicaInfo.parseBaseDir(new File(pathWithOneSubdir), blkId);
+    assertEquals(pathWithOneSubdir, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path doesn't match the idToBlockDir.
+    String badPath = baseDir + SEP + subdir1 + SEP + "subdir-not-exist";
+    info = ReplicaInfo.parseBaseDir(new File(badPath), blkId);
+    assertEquals(badPath, info.baseDirPath);
+    assertEquals(false, info.hasSubidrs);
+
+    // test when path matches the idToBlockDir.
+    info = ReplicaInfo.parseBaseDir(blockDir, blkId);
+    assertEquals(baseDir, info.baseDirPath);
+    assertEquals(true, info.hasSubidrs);
+  }
+
+  /**
+   * Test whether can LocalReplica.updateWithReplica() correct the wrongly
+   * recorded replica location.
+   */
+  @Test(timeout = 3000)
+  public void testLocalReplicaUpdateWithReplica() throws Exception {
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    long blkId = getRandomBlockId();
+    File blockDir = DatanodeUtil.idToBlockDir(new File(baseDir), blkId);
+    String subdir2 = blockDir.getName();
+    String subdir1 = new File(blockDir.getParent()).getName();
+    String diskSub = subdir2.equals("subdir0") ? "subdir1" : "subdir0";
+
+    // the block file on disk.
+    File diskBlockDir = new File(baseDir + SEP + subdir1 + SEP + diskSub);
+    File realBlkFile = new File(diskBlockDir, BLOCK_FILE_PREFIX + blkId);
+    // the block file in mem.
+    File memBlockDir = blockDir;
+    ReplicaInfo localReplica =
+        new FinalizedReplica(blkId, 0, 0, null, memBlockDir);
+
+    // DirectoryScanner find the inconsistent file and try to make it right
+    localReplica.setDir(diskBlockDir);
+    assertEquals(realBlkFile, localReplica.getBlockFile());
+  }
+
+  public long getRandomBlockId() {
+    return Math.abs(new Random().nextLong());
   }
 
   private void writeFile(FileSystem fs, int numFiles) throws IOException {

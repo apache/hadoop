@@ -51,7 +51,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   private Text kind;
   private Text service;
   private TokenRenewer renewer;
-  
+
   /**
    * Construct a token given a token identifier and a secret manager for the
    * type of the token identifier.
@@ -107,7 +107,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   public byte[] getIdentifier() {
     return identifier;
   }
-  
+
   private static Class<? extends TokenIdentifier>
       getClassForIdentifier(Text kind) {
     Class<? extends TokenIdentifier> cls = null;
@@ -188,6 +188,14 @@ public class Token<T extends TokenIdentifier> implements Writable {
    */
   public void setService(Text newService) {
     service = newService;
+  }
+
+  public void setID(byte[] bytes) {
+    identifier = bytes;
+  }
+
+  public void setPassword(byte[] newPassword) {
+    password = newPassword;
   }
 
   /**

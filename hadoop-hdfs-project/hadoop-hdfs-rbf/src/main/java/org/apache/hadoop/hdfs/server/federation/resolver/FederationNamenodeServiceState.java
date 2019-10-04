@@ -35,6 +35,9 @@ public enum FederationNamenodeServiceState {
     case ACTIVE:
       return FederationNamenodeServiceState.ACTIVE;
     case STANDBY:
+    // TODO: we should probably have a separate state OBSERVER for RBF and
+    // treat it differently.
+    case OBSERVER:
       return FederationNamenodeServiceState.STANDBY;
     case INITIALIZING:
       return FederationNamenodeServiceState.UNAVAILABLE;

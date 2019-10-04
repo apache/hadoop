@@ -243,7 +243,7 @@ public class TestDelegationTokenRemoteFetcher {
       ChannelBuffer cbuffer = ChannelBuffers.buffer(fileLength);
       cbuffer.writeBytes(out.getData());
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-      response.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
+      response.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
           String.valueOf(fileLength));
       response.setContent(cbuffer);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
@@ -260,7 +260,7 @@ public class TestDelegationTokenRemoteFetcher {
       ChannelBuffer cbuffer = ChannelBuffers.buffer(bytes.length);
       cbuffer.writeBytes(bytes);
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-      response.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
+      response.headers().set(HttpHeaders.Names.CONTENT_LENGTH,
           String.valueOf(bytes.length));
       response.setContent(cbuffer);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
@@ -316,7 +316,7 @@ public class TestDelegationTokenRemoteFetcher {
         // Mimic SPNEGO authentication
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1,
             HttpResponseStatus.OK);
-        response.addHeader("Set-Cookie", "hadoop-auth=1234");
+        response.headers().set("Set-Cookie", "hadoop-auth=1234");
         e.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
       } else if (request.getMethod() != GET) {
         e.getChannel().close();

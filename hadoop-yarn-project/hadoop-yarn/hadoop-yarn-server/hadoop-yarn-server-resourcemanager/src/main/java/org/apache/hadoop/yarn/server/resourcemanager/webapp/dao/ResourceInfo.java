@@ -20,46 +20,83 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
+
 
 @XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 public class ResourceInfo {
+
+  @XmlElement
   long memory;
+  @XmlElement
   int vCores;
-  
+  @XmlElement
+  ResourceInformationsInfo resourceInformations =
+      new ResourceInformationsInfo();
+
+  private Resource resources;
+
   public ResourceInfo() {
   }
 
   public ResourceInfo(Resource res) {
-    memory = res.getMemorySize();
-    vCores = res.getVirtualCores();
+    // Make sure no NPE.
+    if (res != null) {
+      memory = res.getMemorySize();
+      vCores = res.getVirtualCores();
+      resources = Resources.clone(res);
+      resourceInformations.addAll(res.getAllResourcesListCopy());
+    }
   }
 
   public long getMemorySize() {
-    return memory;
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
+    return resources.getMemorySize();
   }
 
   public int getvCores() {
-    return vCores;
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
+    return resources.getVirtualCores();
   }
-  
+
   @Override
   public String toString() {
-    return "<memory:" + memory + ", vCores:" + vCores + ">";
+    return getResource().toString();
   }
 
   public void setMemory(int memory) {
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
     this.memory = memory;
+    resources.setMemorySize(memory);
   }
 
   public void setvCores(int vCores) {
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
     this.vCores = vCores;
+    resources.setVirtualCores(vCores);
   }
 
   public Resource getResource() {
-    return Resource.newInstance(memory, vCores);
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
+    return Resource.newInstance(resources);
+  }
+
+  public ResourceInformationsInfo getResourcesInformations() {
+    return resourceInformations;
   }
 }

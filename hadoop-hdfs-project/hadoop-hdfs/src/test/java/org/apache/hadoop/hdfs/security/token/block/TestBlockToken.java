@@ -411,4 +411,28 @@ public class TestBlockToken {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Verify that block token serialNo is always within the range designated to
+   * to the NameNode.
+   */
+  @Test
+  public void testBlockTokenRanges() throws IOException {
+    final int interval = 1024;
+    final int numNNs = Integer.MAX_VALUE / interval;
+    for(int nnIdx = 0; nnIdx < 64; nnIdx++) {
+      BlockTokenSecretManager sm = new BlockTokenSecretManager(
+          blockKeyUpdateInterval, blockTokenLifetime, nnIdx, numNNs,
+          "fake-pool", null, false);
+      int rangeStart = nnIdx * interval;
+      for(int i = 0; i < interval * 3; i++) {
+        int serialNo = sm.getSerialNoForTesting();
+        assertTrue(
+            "serialNo " + serialNo + " is not in the designated range: [" +
+                rangeStart + ", " + (rangeStart + interval) + ")",
+                serialNo >= rangeStart && serialNo < (rangeStart + interval));
+        sm.updateKeys();
+      }
+    }
+  }
 }

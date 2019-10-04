@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.hadoop.mapreduce.MRJobConfig.MR_AM_RESOURCE_PREFIX;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -84,6 +87,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -93,6 +97,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -659,16 +665,76 @@ public class YARNRunner implements ClientProtocol {
 
   private List<ResourceRequest> generateResourceRequests() throws IOException {
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemorySize(
-        conf.getInt(
-            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
-        )
-    );
-    capability.setVirtualCores(
-        conf.getInt(
-            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
-        )
-    );
+    boolean memorySet = false;
+    boolean cpuVcoresSet = false;
+    List<ResourceInformation> resourceRequests = ResourceUtils
+        .getRequestedResourcesFromConfig(conf, MR_AM_RESOURCE_PREFIX);
+    for (ResourceInformation resourceReq : resourceRequests) {
+      String resourceName = resourceReq.getName();
+      if (MRJobConfig.RESOURCE_TYPE_NAME_MEMORY.equals(resourceName) ||
+          MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY.equals(
+              resourceName)) {
+        if (memorySet) {
+          throw new IllegalArgumentException(
+              "Only one of the following keys " +
+                  "can be specified for a single job: " +
+                  MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY + ", " +
+                  MRJobConfig.RESOURCE_TYPE_NAME_MEMORY);
+        }
+        String units = isEmpty(resourceReq.getUnits()) ?
+            ResourceUtils.getDefaultUnit(ResourceInformation.MEMORY_URI) :
+              resourceReq.getUnits();
+        capability.setMemorySize(
+            UnitsConversionUtil.convert(units, "Mi", resourceReq.getValue()));
+        memorySet = true;
+        if (conf.get(MRJobConfig.MR_AM_VMEM_MB) != null) {
+          LOG.warn("Configuration " + MR_AM_RESOURCE_PREFIX +
+              resourceName + "=" + resourceReq.getValue() +
+              resourceReq.getUnits() + " is overriding the " +
+              MRJobConfig.MR_AM_VMEM_MB + "=" +
+              conf.get(MRJobConfig.MR_AM_VMEM_MB) + " configuration");
+        }
+      } else if (MRJobConfig.RESOURCE_TYPE_NAME_VCORE.equals(resourceName)) {
+        capability.setVirtualCores(
+            (int) UnitsConversionUtil.convert(resourceReq.getUnits(), "",
+                resourceReq.getValue()));
+        cpuVcoresSet = true;
+        if (conf.get(MRJobConfig.MR_AM_CPU_VCORES) != null) {
+          LOG.warn("Configuration " + MR_AM_RESOURCE_PREFIX +
+              resourceName + "=" + resourceReq.getValue() +
+              resourceReq.getUnits() + " is overriding the " +
+              MRJobConfig.MR_AM_CPU_VCORES + "=" +
+              conf.get(MRJobConfig.MR_AM_CPU_VCORES) + " configuration");
+        }
+      } else if (!MRJobConfig.MR_AM_VMEM_MB.equals(
+          MR_AM_RESOURCE_PREFIX + resourceName) &&
+          !MRJobConfig.MR_AM_CPU_VCORES.equals(
+              MR_AM_RESOURCE_PREFIX + resourceName)) {
+        // the "mb", "cpu-vcores" resource types are not processed here
+        // since the yarn.app.mapreduce.am.resource.mb,
+        // yarn.app.mapreduce.am.resource.cpu-vcores keys are used for
+        // backward-compatibility - which is handled after this loop
+        ResourceInformation resourceInformation = capability
+            .getResourceInformation(resourceName);
+        resourceInformation.setUnits(resourceReq.getUnits());
+        resourceInformation.setValue(resourceReq.getValue());
+        capability.setResourceInformation(resourceName, resourceInformation);
+      }
+    }
+    if (!memorySet) {
+      capability.setMemorySize(
+          conf.getInt(
+              MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
+          )
+      );
+    }
+    if (!cpuVcoresSet) {
+      capability.setVirtualCores(
+          conf.getInt(
+              MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
+          )
+      );
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("AppMaster capability = " + capability);
     }

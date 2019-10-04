@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
@@ -1079,6 +1080,20 @@ public class RouterRpcServer extends AbstractService
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
       throws IOException {
     return clientProto.listOpenFiles(prevId);
+  }
+
+  @Override
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Router does not support getHAServiceState");
+  }
+
+  @Override
+  public void msync() throws IOException {
+    // TODO revisit if router should support msync
+    throw new UnsupportedOperationException(
+        "msync is not supported for router");
   }
 
   @Override // NamenodeProtocol

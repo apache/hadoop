@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -277,7 +278,8 @@ public class PBHelper {
   public static RemoteEditLogManifestProto convert(
       RemoteEditLogManifest manifest) {
     RemoteEditLogManifestProto.Builder builder = RemoteEditLogManifestProto
-        .newBuilder();
+        .newBuilder()
+        .setCommittedTxnId(manifest.getCommittedTxnId());
     for (RemoteEditLog log : manifest.getLogs()) {
       builder.addLogs(convert(log));
     }
@@ -291,7 +293,13 @@ public class PBHelper {
     for (RemoteEditLogProto l : manifest.getLogsList()) {
       logs.add(convert(l));
     }
-    return new RemoteEditLogManifest(logs);
+    long committedId = HdfsServerConstants.INVALID_TXID;
+    if (manifest.hasCommittedTxnId()) {
+      // An older version JN may not have this field, in which case committedId
+      // is set to INVALID_TXID.
+      committedId = manifest.getCommittedTxnId();
+    }
+    return new RemoteEditLogManifest(logs, committedId);
   }
 
   public static CheckpointCommandProto convert(CheckpointCommand cmd) {
@@ -734,6 +742,8 @@ public class PBHelper {
       return HAServiceState.ACTIVE;
     case STANDBY:
       return HAServiceState.STANDBY;
+    case OBSERVER:
+      return HAServiceState.OBSERVER;
     default:
       throw new IllegalArgumentException("Unexpected HAServiceStateProto:"
           + s);
@@ -749,6 +759,8 @@ public class PBHelper {
       return NNHAStatusHeartbeatProto.State.ACTIVE;
     case STANDBY:
       return NNHAStatusHeartbeatProto.State.STANDBY;
+    case OBSERVER:
+      return NNHAStatusHeartbeatProto.State.OBSERVER;
     default:
       throw new IllegalArgumentException("Unexpected HAServiceState:"
           + s);

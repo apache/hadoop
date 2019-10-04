@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.slf4j.Logger;
@@ -126,6 +127,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerReInitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.AbstractContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.SignalContainersLauncherEvent;
@@ -204,7 +206,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ContainersMonitor containersMonitor;
   private Server server;
   private final ResourceLocalizationService rsrcLocalizationSrvc;
-  private final ContainersLauncher containersLauncher;
+  private final AbstractContainersLauncher containersLauncher;
   private final AuxServices auxiliaryServices;
   private final NodeManagerMetrics metrics;
 
@@ -558,9 +560,21 @@ public class ContainerManagerImpl extends CompositeService implements
     return nmTimelinePublisherLocal;
   }
 
-  protected ContainersLauncher createContainersLauncher(Context context,
-      ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
+  protected AbstractContainersLauncher createContainersLauncher(
+      Context ctxt, ContainerExecutor exec) {
+    Class<? extends AbstractContainersLauncher> containersLauncherClass =
+        ctxt.getConf()
+            .getClass(YarnConfiguration.NM_CONTAINERS_LAUNCHER_CLASS,
+                ContainersLauncher.class, AbstractContainersLauncher.class);
+    AbstractContainersLauncher launcher;
+    try {
+      launcher = ReflectionUtils.newInstance(containersLauncherClass,
+          ctxt.getConf());
+      launcher.init(ctxt, this.dispatcher, exec, dirsHandler, this);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return launcher;
   }
 
   protected EventHandler<ApplicationEvent> createApplicationEventDispatcher() {
@@ -1431,8 +1445,35 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
     ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
-    LOG.info("Returning " + containerStatus);
+    logContainerStatus("Returning ", containerStatus);
     return containerStatus;
+  }
+
+  private void logContainerStatus(String prefix, ContainerStatus status) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(prefix);
+    sb.append("ContainerStatus: [");
+    sb.append("ContainerId: ");
+    sb.append(status.getContainerId()).append(", ");
+    sb.append("ExecutionType: ");
+    sb.append(status.getExecutionType()).append(", ");
+    sb.append("State: ");
+    sb.append(status.getState()).append(", ");
+    sb.append("Capability: ");
+    sb.append(status.getCapability()).append(", ");
+    sb.append("Diagnostics: ");
+    sb.append(LOG.isDebugEnabled() ? status.getDiagnostics() : "...");
+    sb.append(", ");
+    sb.append("ExitStatus: ");
+    sb.append(status.getExitStatus()).append(", ");
+    sb.append("IP: ");
+    sb.append(status.getIPs()).append(", ");
+    sb.append("Host: ");
+    sb.append(status.getHost()).append(", ");
+    sb.append("ContainerSubState: ");
+    sb.append(status.getContainerSubState());
+    sb.append("]");
+    LOG.info(sb.toString());
   }
 
   @Private

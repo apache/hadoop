@@ -18,40 +18,25 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
-import static org.fusesource.leveldbjni.JniDBFactory.asString;
-import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-
-import org.slf4j.Logger;
-import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Set;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
@@ -59,9 +44,12 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Deletion
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
-import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -73,10 +61,26 @@ import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static org.fusesource.leveldbjni.JniDBFactory.asString;
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
+
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
@@ -148,10 +152,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
 
+  private static final String CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX =
+      "/assignedResources_";
+
   private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
   private boolean isNewlyCreated;
+  private boolean isHealthy;
   private Timer compactionTimer;
 
   /**
@@ -166,6 +174,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   protected void startStorage() throws IOException {
+    // Assume that we're healthy when we start
+    isHealthy = true;
   }
 
   @Override
@@ -184,6 +194,36 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     return isNewlyCreated;
   }
 
+  /**
+   * If the state store throws an error after recovery has been performed
+   * then we can not trust it any more to reflect the NM state. We need to
+   * mark the store and node unhealthy.
+   * Errors during the recovery will cause a service failure and thus a NM
+   * start failure. Do not need to mark the store unhealthy for those.
+   * @param dbErr Exception
+   */
+  private void markStoreUnHealthy(DBException dbErr) {
+    // Always log the error here, we might not see the error in the caller
+    LOG.error("Statestore exception: ", dbErr);
+    // We have already been marked unhealthy so no need to do it again.
+    if (!isHealthy) {
+      return;
+    }
+    // Mark unhealthy, an out of band heartbeat will be sent and the state
+    // will remain unhealthy (not recoverable).
+    // No need to close the store: does not make any difference at this point.
+    isHealthy = false;
+    // We could get here before the nodeStatusUpdater is set
+    NodeStatusUpdater nsu = getNodeStatusUpdater();
+    if (nsu != null) {
+      nsu.reportException(dbErr);
+    }
+  }
+
+  @VisibleForTesting
+  boolean isHealthy() {
+    return isHealthy;
+  }
 
   @Override
   public List<RecoveredContainerState> loadContainersState()
@@ -309,6 +349,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         rcs.setWorkDir(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_LOG_DIR_KEY_SUFFIX)) {
         rcs.setLogDir(asString(entry.getValue()));
+      } else if (suffix.startsWith(CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX)) {
+        String resourceType = suffix.substring(
+            CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX.length());
+        ResourceMappings.AssignedResources assignedResources =
+            ResourceMappings.AssignedResources.fromBytes(entry.getValue());
+        rcs.getResourceMappings().addAssignedResources(resourceType,
+            assignedResources);
       } else {
         LOG.warn("the container " + containerId
             + " will be killed because of the unknown key " + key
@@ -349,6 +396,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         db.write(batch);
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -373,6 +421,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -388,6 +437,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -403,6 +453,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -419,6 +470,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -436,6 +488,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(diagnostics.toString()));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -454,6 +507,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -483,6 +537,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -499,6 +554,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -515,6 +571,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(Integer.toString(exitCode)));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -527,6 +584,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(Integer.toString(remainingRetryAttempts)));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -539,6 +597,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(workDir));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -551,6 +610,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(logDir));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -584,6 +644,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -633,6 +694,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), p.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -654,6 +716,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -810,6 +873,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -833,6 +897,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -856,6 +921,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -921,6 +987,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), taskProto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -931,6 +998,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1004,6 +1072,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1018,6 +1087,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(dbKey), pb.getProto().toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1091,6 +1161,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(expTime.toString()));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1102,6 +1173,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1152,6 +1224,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1162,8 +1235,45 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public void storeAssignedResources(Container container,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "storeAssignedResources: containerId=" + container.getContainerId()
+              + ", assignedResources=" + StringUtils
+              .join(",", assignedResources));
+
+    }
+
+    String keyResChng = CONTAINERS_KEY_PREFIX + container.getContainerId().toString()
+        + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        ResourceMappings.AssignedResources res =
+            new ResourceMappings.AssignedResources();
+        res.updateAssignedResources(assignedResources);
+
+        // New value will overwrite old values for the same key
+        batch.put(bytes(keyResChng), res.toBytes());
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+
+    // update container resource mapping.
+    updateContainerResourceMapping(container, resourceType, assignedResources);
   }
 
   @SuppressWarnings("deprecation")
@@ -1322,6 +1432,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       try {
         db.delete(bytes(dbkey));
       } catch (DBException e) {
+        markStoreUnHealthy(e);
         throw new IOException(e);
       }
       return;
@@ -1336,6 +1447,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(fullkey), data);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1347,6 +1459,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(fullkey));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1370,6 +1483,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         candidates.add(key);
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     } finally {
       if (iter != null) {
@@ -1383,6 +1497,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         db.delete(bytes(key));
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1502,6 +1617,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @VisibleForTesting
   DB getDB() {
     return db;
+  }
+
+  @VisibleForTesting
+  void setDB(DB testDb) {
+    this.db = testDb;
   }
 
   /**

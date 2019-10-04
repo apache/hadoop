@@ -72,6 +72,9 @@ public abstract class HAAdmin extends Configured implements Tool {
         new UsageInfo("[--"+FORCEACTIVE+"] <serviceId>", "Transitions the service into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
+      .put("-transitionToObserver",
+          new UsageInfo("<serviceId>",
+              "Transitions the service into Observer state"))
     .put("-failover",
         new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <serviceId> <serviceId>",
             "Failover from the first service to the second.\n" +
@@ -221,6 +224,28 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceProtocolHelper.transitionToStandby(proto, createReqInfo());
     return 0;
   }
+
+  private int transitionToObserver(final CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
+      errOut.println("transitionToObserver: incorrect number of arguments");
+      printUsage(errOut, "-transitionToObserver");
+      return -1;
+    }
+
+    HAServiceTarget target = resolveTarget(argv[0]);
+    if (!checkSupportObserver(target)) {
+      return -1;
+    }
+    if (!checkManualStateManagementOK(target)) {
+      return -1;
+    }
+    HAServiceProtocol proto = target.getProxy(getConf(), 0);
+    HAServiceProtocolHelper.transitionToObserver(proto, createReqInfo());
+    return 0;
+  }
+
   /**
    * Ensure that we are allowed to manually manage the HA state of the target
    * service. If automatic failover is configured, then the automatic
@@ -247,6 +272,21 @@ public abstract class HAAdmin extends Configured implements Tool {
       }
     }
     return true;
+  }
+
+  /**
+   * Check if the target supports the Observer state.
+   * @param target the target to check
+   * @return true if the target support Observer state, false otherwise.
+   */
+  private boolean checkSupportObserver(HAServiceTarget target) {
+    if (target.supportObserver()) {
+      return true;
+    } else {
+      errOut.println(
+          "The target " + target + " doesn't support Observer state.");
+      return false;
+    }
   }
 
   private StateChangeRequestInfo createReqInfo() {
@@ -436,6 +476,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     // Mutative commands take FORCEMANUAL option
     if ("-transitionToActive".equals(cmd) ||
         "-transitionToStandby".equals(cmd) ||
+        "-transitionToObserver".equals(cmd) ||
         "-failover".equals(cmd)) {
       opts.addOption(FORCEMANUAL, false,
           "force manual control even if auto-failover is enabled");
@@ -461,6 +502,8 @@ public abstract class HAAdmin extends Configured implements Tool {
       return transitionToActive(cmdLine);
     } else if ("-transitionToStandby".equals(cmd)) {
       return transitionToStandby(cmdLine);
+    } else if ("-transitionToObserver".equals(cmd)) {
+      return transitionToObserver(cmdLine);
     } else if ("-failover".equals(cmd)) {
       return failover(cmdLine);
     } else if ("-getServiceState".equals(cmd)) {

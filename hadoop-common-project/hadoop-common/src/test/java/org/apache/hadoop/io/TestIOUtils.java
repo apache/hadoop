@@ -21,9 +21,11 @@ package org.apache.hadoop.io;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -288,5 +290,36 @@ public class TestIOUtils {
     } finally {
       FileUtils.deleteDirectory(dir);
     }
+  }
+
+  @Test
+  public void testCloseStreams() throws IOException {
+    File tmpFile = null;
+    FileOutputStream fos;
+    BufferedOutputStream bos;
+    FileOutputStream nullStream = null;
+
+    try {
+      tmpFile = new File(GenericTestUtils.getTestDir(), "testCloseStreams.txt");
+      fos = new FileOutputStream(tmpFile) {
+        @Override
+        public void close() throws IOException {
+          throw new IOException();
+        }
+      };
+      bos = new BufferedOutputStream(
+          new FileOutputStream(tmpFile)) {
+        @Override
+        public void close() {
+          throw new NullPointerException();
+        }
+      };
+
+      IOUtils.closeStreams(fos, bos, nullStream);
+      IOUtils.closeStreams();
+    } finally {
+      FileUtils.deleteQuietly(tmpFile);
+    }
+
   }
 }

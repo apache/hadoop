@@ -1206,6 +1206,62 @@
 </property>
 
 <property>
+  <name>dfs.image.parallel.load</name>
+  <value>false</value>
+  <description>
+    If true, write sub-section entries to the fsimage index so it can
+    be loaded in parallel. Also controls whether parallel loading
+    will be used for an image previously created with sub-sections.
+    If the image contains sub-sections and this is set to false,
+    parallel loading will not be used.
+    Parallel loading is not compatible with image compression,
+    so if dfs.image.compress is set to true this setting will be
+    ignored and no parallel loading will occur.
+    Enabling this feature may impact rolling upgrades and downgrades if
+    the previous version does not support this feature. If the feature was
+    enabled and a downgrade is required, first set this parameter to
+    false and then save the namespace to create a fsimage with no
+    sub-sections and then perform the downgrade.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.target.sections</name>
+  <value>12</value>
+  <description>
+    Controls the number of sub-sections that will be written to
+    fsimage for each section. This should be larger than
+    dfs.image.parallel.threads, otherwise all threads will not be
+    used when loading. Ideally, have at least twice the number
+    of target sections as threads, so each thread must load more
+    than one section to avoid one long running section affecting
+    the load time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.inode.threshold</name>
+  <value>1000000</value>
+  <description>
+    If the image contains less inodes than this setting, then
+    do not write sub-sections and hence disable parallel loading.
+    This is because small images load very quickly in serial and
+    parallel loading is not needed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.threads</name>
+  <value>4</value>
+  <description>
+    The number of threads to use when dfs.image.parallel.load is
+    enabled. This setting should be less than
+    dfs.image.parallel.target.sections. The optimal number of
+    threads will depend on the hardware and environment.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.delegation.key.update-interval</name>
   <value>86400000</value>
   <description>The update interval for master key for delegation tokens 
@@ -1564,8 +1620,26 @@
   <name>dfs.ha.tail-edits.period</name>
   <value>60</value>
   <description>
-    How often, in seconds, the StandbyNode should check for new
-    finalized log segments in the shared edits log.
+    How often, the StandbyNode and ObserverNode should check if there are new
+    edit log entries ready to be consumed. This is the minimum period between
+    checking; exponential backoff will be applied if no edits are found and
+    dfs.ha.tail-edits.period.backoff-max is configured. By default, no
+    backoff is applied.
+    Supports multiple time unit suffix (case insensitive), as described
+    in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.period.backoff-max</name>
+  <value>0</value>
+  <description>
+    The maximum time the tailer should wait between checking for new edit log
+    entries. Exponential backoff will be applied when an edit log tail is
+    performed but no edits are available to be read. Values less than or
+    equal to zero disable backoff entirely; this is the default behavior.
+    Supports multiple time unit suffix (case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -2539,7 +2613,7 @@
 
 <property>
   <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
-  <value>2.0</value>
+  <value>0.5</value>
   <description>
     Determines when an active namenode will roll its own edit log.
     The actual threshold (in number of edits) is determined by multiplying
@@ -2790,6 +2864,27 @@
     The maximum combined size of the name and value of an extended attribute
     in bytes. It should be larger than 0, and less than or equal to maximum
     size hard limit which is 32768.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.in-progress</name>
+  <value>false</value>
+  <description>
+    Whether enable standby namenode to tail in-progress edit logs.
+    Clients might want to turn it on when they want Standby NN to have
+    more up-to-date data.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.state.context.enabled</name>
+  <value>false</value>
+  <description>
+    Whether enable namenode sending back its current txnid back to client.
+    Setting this to true is required by Consistent Read from Standby feature.
+    But for regular cases, this should be set to false to avoid the overhead
+    of updating and maintaining this state.
   </description>
 </property>
 
@@ -3862,6 +3957,18 @@
 </property>
 
 <property>
+  <name>dfs.journalnode.edit-cache-size.bytes</name>
+  <value>1048576</value>
+  <description>
+    The size, in bytes, of the in-memory cache of edits to keep on the
+    JournalNode. This cache is used to serve edits for tailing via the RPC-based
+    mechanism, and is only enabled when dfs.ha.tail-edits.in-progress is true.
+    Transactions range in size but are around 200 bytes on average, so the
+    default of 1MB can store around 5000 transactions.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.kerberos.internal.spnego.principal</name>
   <value></value>
   <description>
@@ -4503,6 +4610,50 @@
       The number of block deletion increment.
       This setting will control the block increment deletion rate to
       ensure that other waiters on the lock can get in.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.rpc-address.auxiliary-ports</name>
+    <value></value>
+    <description>
+      A comma separated list of auxiliary ports for the NameNode to listen on.
+      This allows exposing multiple NN addresses to clients.
+      Particularly, it is used to enforce different SASL levels on different ports.
+      Empty list indicates that auxiliary ports are disabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.send.qop.enabled</name>
+    <value>false</value>
+    <description>
+      A boolean specifies whether NameNode should encrypt the established QOP
+      and include it in block token. The encrypted QOP will be used by DataNode
+      as target QOP, overwriting DataNode configuration. This ensures DataNode
+      will use exactly the same QOP NameNode and client has already agreed on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.encrypt.data.overwrite.downstream.derived.qop</name>
+    <value>false</value>
+    <description>
+      A boolean specifies whether DN should overwrite the downstream
+      QOP in a write pipeline. This is used in the case where client
+      talks to first DN with a QOP, but inter-DN communication needs to be
+      using a different QOP. If set to false, the default behaviour is that
+      inter-DN communication will use the same QOP as client-DN connection.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.encrypt.data.overwrite.downstream.new.qop</name>
+    <value></value>
+    <description>
+      When dfs.datanode.overwrite.downstream.derived.qop is set to true,
+      this configuration specifies the new QOP to be used to overwrite
+      inter-DN QOP.
     </description>
   </property>
 </configuration>

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,13 +44,26 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
 @Private
 @Unstable
 public abstract class NMStateStoreService extends AbstractService {
 
+  private NodeStatusUpdater nodeStatusUpdater = null;
+
   public NMStateStoreService(String name) {
     super(name);
+  }
+
+  protected NodeStatusUpdater getNodeStatusUpdater() {
+    return nodeStatusUpdater;
+  }
+
+  public void setNodeStatusUpdater(NodeStatusUpdater nodeStatusUpdater) {
+    this.nodeStatusUpdater = nodeStatusUpdater;
   }
 
   public static class RecoveredApplicationsState {
@@ -90,6 +104,7 @@ public abstract class NMStateStoreService extends AbstractService {
     private RecoveredContainerType recoveryType =
         RecoveredContainerType.RECOVER;
     private long startTime;
+    private ResourceMappings resMappings = new ResourceMappings();
 
     public RecoveredContainerStatus getStatus() {
       return status;
@@ -173,6 +188,14 @@ public abstract class NMStateStoreService extends AbstractService {
 
     public void setRecoveryType(RecoveredContainerType recoveryType) {
       this.recoveryType = recoveryType;
+    }
+
+    public ResourceMappings getResourceMappings() {
+      return resMappings;
+    }
+
+    public void setResourceMappings(ResourceMappings mappings) {
+      this.resMappings = mappings;
     }
   }
 
@@ -718,9 +741,31 @@ public abstract class NMStateStoreService extends AbstractService {
   public abstract void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
       throws IOException;
 
+  /**
+   * Store the assigned resources to a container.
+   *
+   * @param container NMContainer
+   * @param resourceType Resource Type
+   * @param assignedResources Assigned resources
+   * @throws IOException if fails
+   */
+  public abstract void storeAssignedResources(Container container,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException;
+
   protected abstract void initStorage(Configuration conf) throws IOException;
 
   protected abstract void startStorage() throws IOException;
 
   protected abstract void closeStorage() throws IOException;
+
+  protected void updateContainerResourceMapping(Container container,
+      String resourceType, List<Serializable> assignedResources) {
+    // Update Container#getResourceMapping.
+    ResourceMappings.AssignedResources newAssigned =
+        new ResourceMappings.AssignedResources();
+    newAssigned.updateAssignedResources(assignedResources);
+    container.getResourceMappings().addAssignedResources(resourceType,
+        newAssigned);
+  }
 }

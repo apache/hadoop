@@ -21,6 +21,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import java.util.Collections;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -252,7 +253,41 @@ public class TestStandbyCheckpoints {
     dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
     FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.<String>of());
   }
-  
+
+  /**
+   * Test for the case of when there are observer NameNodes, Standby node is
+   * able to upload fsImage to Observer node as well.
+   */
+  @Test(timeout = 300000)
+  public void testStandbyAndObserverState() throws Exception {
+    // Transition 2 to observer
+    cluster.transitionToObserver(1);
+    doEdits(0, 10);
+    // After a rollEditLog, Standby(nn1) 's next checkpoint would be
+    // ahead of observer(nn2).
+    nns[0].getRpcServer().rollEditLog();
+
+    // After standby creating a checkpoint, it will try to push the image to
+    // active and all observer, updating it's own txid to the most recent.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
+    HATestUtil.waitForCheckpoint(cluster, 2, ImmutableList.of(12));
+
+    assertEquals(12, nns[2].getNamesystem().getFSImage()
+        .getMostRecentCheckpointTxId());
+    assertEquals(12, nns[1].getNamesystem().getFSImage()
+        .getMostRecentCheckpointTxId());
+
+    List<File> dirs = Lists.newArrayList();
+    // observer and standby both have this same image.
+    dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 2));
+    dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
+    FSImageTestUtil.assertParallelFilesAreIdentical(
+        dirs, Collections.<String>emptySet());
+    // Restore 2 back to standby
+    cluster.transitionToStandby(2);
+  }
+
   /**
    * Test for the case when the SBN is configured to checkpoint based
    * on a time period, but no transactions are happening on the

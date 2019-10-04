@@ -56,7 +56,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private Map<String, N> nodeNameToNodeMap = new HashMap<>();
   private Map<String, List<N>> nodesPerRack = new HashMap<>();
 
-  private Resource clusterCapacity = Resources.clone(Resources.none());
+  private Resource clusterCapacity = Resources.createResource(0, 0);
   private Resource staleClusterCapacity = null;
 
   // Max allocation
@@ -220,10 +220,15 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
         return configuredMaxAllocation;
       }
 
-      return Resources.createResource(
-          Math.min(configuredMaxAllocation.getMemorySize(), maxNodeMemory),
-          Math.min(configuredMaxAllocation.getVirtualCores(), maxNodeVCores)
-      );
+      Resource ret = Resources.clone(configuredMaxAllocation);
+      if (ret.getMemorySize() > maxNodeMemory) {
+        ret.setMemorySize(maxNodeMemory);
+      }
+      if (ret.getVirtualCores() > maxNodeVCores) {
+        ret.setVirtualCores(maxNodeVCores);
+      }
+
+      return ret;
     } finally {
       readLock.unlock();
     }

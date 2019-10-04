@@ -78,6 +78,17 @@ public class TestMapreduceConfigFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("mapreduce.local.clientfactory.class.name");
     xmlPropsToSkipCompare.add("mapreduce.jobtracker.system.dir");
     xmlPropsToSkipCompare.add("mapreduce.jobtracker.staging.root.dir");
+
+    // Resource type related properties are only prefixes,
+    // they need to be postfixed with the resource name
+    // in order to take effect.
+    // There is nothing to be added to mapred-default.xml
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.MR_AM_RESOURCE_PREFIX);
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.MAP_RESOURCE_TYPE_PREFIX);
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX);
   }
 
 }

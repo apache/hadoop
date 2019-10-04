@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -63,8 +65,27 @@ public class YarnConfiguration extends Configuration {
   public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
 
   @Private
+  public static final String RESOURCE_TYPES_CONFIGURATION_FILE =
+      "resource-types.xml";
+
+  @Private
+  public static final String NODE_RESOURCES_CONFIGURATION_FILE =
+      "node-resources.xml";
+
+  @Private
   public static final List<String> RM_CONFIGURATION_FILES =
       Collections.unmodifiableList(Arrays.asList(
+          RESOURCE_TYPES_CONFIGURATION_FILE,
+          DR_CONFIGURATION_FILE,
+          CS_CONFIGURATION_FILE,
+          HADOOP_POLICY_CONFIGURATION_FILE,
+          YARN_SITE_CONFIGURATION_FILE,
+          CORE_SITE_CONFIGURATION_FILE));
+
+  @Private
+  public static final List<String> NM_CONFIGURATION_FILES =
+      Collections.unmodifiableList(Arrays.asList(
+          NODE_RESOURCES_CONFIGURATION_FILE,
           DR_CONFIGURATION_FILE,
           CS_CONFIGURATION_FILE,
           HADOOP_POLICY_CONFIGURATION_FILE,
@@ -107,6 +128,16 @@ public class YarnConfiguration extends Configuration {
   //Configurations
 
   public static final String YARN_PREFIX = "yarn.";
+
+  /////////////////////////////
+  // Resource types configs
+  ////////////////////////////
+
+  public static final String RESOURCE_TYPES =
+      YarnConfiguration.YARN_PREFIX + "resource-types";
+
+  public static final String NM_RESOURCES_PREFIX =
+      YarnConfiguration.NM_PREFIX + "resource-type.";
 
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
@@ -486,6 +517,24 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.include-path";
   public static final String DEFAULT_RM_NODES_INCLUDE_FILE_PATH = "";
+
+  /** Enable submission pre-processor.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      RM_PREFIX + "submission-preprocessor.enabled";
+  public static final boolean DEFAULT_RM_SUBMISSION_PREPROCESSOR_ENABLED =
+      false;
+
+  /** Path to file with hosts for the submission processor to handle.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      RM_PREFIX + "submission-preprocessor.file-path";
+  public static final String DEFAULT_RM_SUBMISSION_PREPROCESSOR_FILE_PATH =
+      "";
+
+  /** Submission processor refresh interval.*/
+  public static final String RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS =
+      RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
+  public static final int
+      DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
   
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
@@ -1381,6 +1430,39 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_YARN_MBIT =
       NM_NETWORK_RESOURCE_PREFIX + "outbound-bandwidth-yarn-mbit";
+
+  /**
+   * Prefix for computation resources, example of computation resources like
+   * GPU / FPGA / TPU, etc.
+   */
+  @Private
+  public static final String NM_RESOURCE_PLUGINS =
+      NM_PREFIX + "resource-plugins";
+
+  /**
+   * Prefix for gpu configurations. Work in progress: This configuration
+   * parameter may be changed/removed in the future.
+   */
+  @Private
+  public static final String NM_GPU_RESOURCE_PREFIX =
+      NM_RESOURCE_PLUGINS + ".gpu.";
+
+  @Private
+  public static final String NM_GPU_ALLOWED_DEVICES =
+      NM_GPU_RESOURCE_PREFIX + "allowed-gpu-devices";
+  @Private
+  public static final String AUTOMATICALLY_DISCOVER_GPU_DEVICES = "auto";
+
+  /**
+   * This setting controls where to how to invoke GPU binaries
+   */
+  @Private
+  public static final String NM_GPU_PATH_TO_EXEC =
+      NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
+
+  @Private
+  public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
+
 
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
@@ -3127,6 +3209,26 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
       CENTRALIZED_NODELABEL_CONFIGURATION_TYPE;
 
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX
+      = "exclusive-enforced-partitions";
+
+  public static final String EXCLUSIVE_ENFORCED_PARTITIONS = NODE_LABELS_PREFIX
+      + EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX;
+
+  @Private
+  public static Set<String> getExclusiveEnforcedPartitions(
+      Configuration conf) {
+    Set<String> exclusiveEnforcedPartitions = new HashSet<>();
+    String[] configuredPartitions = conf.getStrings(
+        EXCLUSIVE_ENFORCED_PARTITIONS);
+    if (configuredPartitions != null) {
+      for (String partition : configuredPartitions) {
+        exclusiveEnforcedPartitions.add(partition);
+      }
+    }
+    return exclusiveEnforcedPartitions;
+  }
+
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";
 
@@ -3329,6 +3431,12 @@ public class YarnConfiguration extends Configuration {
   public static final String
       DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS =
       DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS;
+
+  /**
+   * Containers launcher implementation to use.
+   */
+  public static final String NM_CONTAINERS_LAUNCHER_CLASS =
+      NM_PREFIX + "containers-launcher.class";
 
   public YarnConfiguration() {
     super();

@@ -46,13 +46,13 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   public Collection<S> getSchedulableEntities() {
     return schedulableEntities;
   }
-  
+
   @Override
-  public Iterator<S> getAssignmentIterator() {
+  public Iterator<S> getAssignmentIterator(IteratorSelector sel) {
     reorderScheduleEntities();
     return schedulableEntities.iterator();
   }
-  
+
   @Override
   public Iterator<S> getPreemptionIterator() {
     reorderScheduleEntities();
@@ -137,5 +137,5 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
 
   @Override
   public abstract String getInfo();
-  
+
 }

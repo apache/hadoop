@@ -234,7 +234,7 @@ public class TableListing {
         Column column = columns[i];
         if (column.wrap) {
           int maxWidth = column.getMaxWidth();
-          if (maxWidth > 4) {
+          if (maxWidth > 10) {
             column.setWrapWidth(maxWidth-1);
             modified = true;
             width -= 1;

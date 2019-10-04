@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -748,6 +751,102 @@ public class TestDecommission extends AdminStatesBaseTest {
     BlockManagerTestUtil.recheckDecommissionState(dm);
     assertTrackedAndPending(dm.getDatanodeAdminManager(), 2, 0);
   }
+
+  /**
+   * Simulate the following scene:
+   * Client writes Block(bk1) to three data nodes (dn1/dn2/dn3). bk1 has been
+   * completely written to three data nodes, and the data node succeeds
+   * FinalizeBlock, joins IBR and waits to report to NameNode. The client
+   * commits bk1 after receiving the ACK. When the DN has not been reported
+   * to the IBR, all three nodes dn1/dn2/dn3 enter Decommissioning and then the
+   * DN reports the IBR.
+   */
+  @Test(timeout = 360000)
+  public void testAllocAndIBRWhileDecommission() throws IOException {
+    LOG.info("Starting test testAllocAndIBRWhileDecommission");
+    // Simulating IBR delay report by using long interval.
+    getConf().setLong(
+        DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY, 10000);
+    startCluster(1, 6);
+    getCluster().waitActive();
+    FSNamesystem ns = getCluster().getNamesystem(0);
+    DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
+
+    Path file = new Path("/testAllocAndIBRWhileDecommission");
+
+    DistributedFileSystem dfs = getCluster().getFileSystem();
+    FSDataOutputStream out = dfs.create(file, true,
+        getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY,
+            4096), (short) 3, blockSize);
+
+    // Write first block data to the file, write one more long number will
+    // commit first block and allocate second block.
+    long writtenBytes = 0;
+    while (writtenBytes + 8 < blockSize) {
+      out.writeLong(writtenBytes);
+      writtenBytes += 8;
+    }
+    out.hsync();
+
+    // Get fist block information
+    LocatedBlock firstLocatedBlock =
+        NameNodeAdapter.getBlockLocations(getCluster().getNameNode(),
+            "/testAllocAndIBRWhileDecommission", 0, fileSize)
+            .getLastLocatedBlock();
+    DatanodeInfo[] firstBlockLocations = firstLocatedBlock.getLocations();
+
+    // Close first block's datanode heartbeat and IBR.
+    ArrayList<String> toDecom = new ArrayList<>();
+    ArrayList<DatanodeInfo> decomDNInfos = new ArrayList<>();
+    for (DatanodeInfo datanodeInfo : firstBlockLocations) {
+      toDecom.add(datanodeInfo.getXferAddr());
+      decomDNInfos.add(dm.getDatanode(datanodeInfo));
+      DataNode dn = getDataNode(datanodeInfo);
+      DataNodeTestUtils.triggerHeartbeat(dn);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    }
+
+    // Write more than one block, then commit first block, allocate second
+    // block.
+    while (writtenBytes <= blockSize) {
+      out.writeLong(writtenBytes);
+      writtenBytes += 8;
+    }
+    out.hsync();
+
+    // Heartbeat and IBR closed, so the first block UCState is COMMITTED, not
+    // COMPLETE.
+    assertEquals(BlockUCState.COMMITTED,
+        ((BlockInfo) firstLocatedBlock.getBlock().getLocalBlock())
+            .getBlockUCState());
+
+    // Decommission all nodes of the first block
+    initExcludeHosts(toDecom);
+    refreshNodes(0);
+
+    // Waiting nodes at DECOMMISSION_INPROGRESS state.
+    for (DatanodeInfo dnDecom : decomDNInfos) {
+      waitNodeState(dnDecom, AdminStates.DECOMMISSION_INPROGRESS);
+      DataNode dn = getDataNode(dnDecom);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    }
+
+    // Recover first block's datanode hertbeat and IBR, then report the first
+    // block state to NN.
+    for (DataNode dn : getCluster().getDataNodes()) {
+      DataNodeTestUtils.triggerHeartbeat(dn);
+    }
+
+    // NN receive first block report, transfer block state from COMMITTED to
+    // COMPLETE.
+    assertEquals(BlockUCState.COMPLETE,
+        ((BlockInfo) firstLocatedBlock.getBlock().getLocalBlock())
+            .getBlockUCState());
+
+    out.close();
+
+    shutdownCluster();
+  }
   
   /**
    * Tests restart of namenode while datanode hosts are added to exclude file
@@ -992,6 +1091,63 @@ public class TestDecommission extends AdminStatesBaseTest {
     // Recommission all nodes
     for (DatanodeInfo dn : decommissionedNodes) {
       putNodeInService(0, dn);
+    }
+  }
+
+  /**
+   * Test DatanodeAdminManager#monitor can swallow any exceptions by default.
+   */
+  @Test(timeout=120000)
+  public void testPendingNodeButDecommissioned() throws Exception {
+    // Only allow one node to be decom'd at a time
+    getConf().setInt(
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+        1);
+    // Disable the normal monitor runs
+    getConf().setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY,
+        Integer.MAX_VALUE);
+    startCluster(1, 2);
+    final DatanodeManager datanodeManager =
+        getCluster().getNamesystem().getBlockManager().getDatanodeManager();
+    final DatanodeAdminManager decomManager =
+        datanodeManager.getDatanodeAdminManager();
+
+    ArrayList<DatanodeInfo> decommissionedNodes = Lists.newArrayList();
+    List<DataNode> dns = getCluster().getDataNodes();
+    // Try to decommission 2 datanodes
+    for (int i = 0; i < 2; i++) {
+      DataNode d = dns.get(i);
+      DatanodeInfo dn = takeNodeOutofService(0, d.getDatanodeUuid(), 0,
+          decommissionedNodes, AdminStates.DECOMMISSION_INPROGRESS);
+      decommissionedNodes.add(dn);
+    }
+
+    assertEquals(2, decomManager.getNumPendingNodes());
+
+    // Set one datanode state to Decommissioned after decommission ops.
+    DatanodeDescriptor dn = datanodeManager.getDatanode(dns.get(0)
+        .getDatanodeId());
+    dn.setDecommissioned();
+
+    try {
+      // Trigger DatanodeAdminManager#monitor
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+
+      // Wait for OutOfServiceNodeBlocks to be 0
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          if (decomManager.getNumTrackedNodes() == 0) {
+            return true;
+          }
+          return false;
+        }
+      }, 500, 30000);
+      assertTrue(GenericTestUtils.anyThreadMatching(
+          Pattern.compile("DatanodeAdminMonitor-.*")));
+    } catch (ExecutionException e) {
+      GenericTestUtils.assertExceptionContains("in an invalid state!", e);
+      fail("DatanodeAdminManager#monitor does not swallow exceptions.");
     }
   }
 

@@ -401,4 +401,9 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   public InetSocketAddress getHttpsAddress() {
     return httpServer.getHttpsAddress();
   }
+
+  @VisibleForTesting
+  public Journal getJournal(String  jid) {
+    return journalsById.get(jid);
+  }
 }

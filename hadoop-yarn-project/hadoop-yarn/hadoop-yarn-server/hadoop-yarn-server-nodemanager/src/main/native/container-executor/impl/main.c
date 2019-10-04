@@ -22,6 +22,8 @@
 #include "util.h"
 #include "get_executable.h"
 #include "utils/string-utils.h"
+#include "modules/gpu/gpu-module.h"
+#include "modules/cgroups/cgroups-operations.h"
 
 #include <errno.h>
 #include <grp.h>
@@ -241,6 +243,14 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     return INVALID_ARGUMENT_NUMBER;
   }
 
+  /*
+   * Check if it is a known module, if yes, redirect to module
+   */
+  if (strcmp("--module-gpu", argv[1]) == 0) {
+    return handle_gpu_request(&update_cgroups_parameters, "gpu", argc - 1,
+           &argv[1]);
+  }
+
   if (strcmp("--checksetup", argv[1]) == 0) {
     *operation = CHECK_SETUP;
     return 0;
@@ -325,6 +335,7 @@ static int validate_arguments(int argc, char **argv , int *operation) {
         return FEATURE_DISABLED;
     }
   }
+
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
     parsing here is extensive enough that it done in a separate function */

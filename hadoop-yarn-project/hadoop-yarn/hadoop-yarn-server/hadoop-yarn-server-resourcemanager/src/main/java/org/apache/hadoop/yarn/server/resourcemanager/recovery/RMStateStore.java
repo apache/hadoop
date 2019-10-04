@@ -815,6 +815,13 @@ public abstract class RMStateStore extends AbstractService {
     getRMStateStoreEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
+  @SuppressWarnings("unchecked")
+  public void updateApplicationState(ApplicationStateData appState,
+      boolean notifyApp) {
+    getRMStateStoreEventHandler().handle(new RMStateUpdateAppEvent(appState,
+        notifyApp));
+  }
+
   public void updateApplicationStateSynchronously(ApplicationStateData appState,
       boolean notifyApp, SettableFuture<Object> resultFuture) {
     handleStoreEvent(
@@ -853,11 +860,8 @@ public abstract class RMStateStore extends AbstractService {
             appAttempt.getAppAttemptId(),
             appAttempt.getMasterContainer(),
             credentials, appAttempt.getStartTime(),
-            resUsage.getMemorySeconds(),
-            resUsage.getVcoreSeconds(),
-            attempMetrics.getPreemptedMemory(),
-            attempMetrics.getPreemptedVcore()
-            );
+            resUsage.getResourceUsageSecondsMap(),
+            attempMetrics.getPreemptedResourceSecondsMap());
 
     getRMStateStoreEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));

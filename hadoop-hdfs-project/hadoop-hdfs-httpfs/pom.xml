@@ -44,7 +44,7 @@
     </httpfs.tomcat.dist.dir>
     <kerberos.realm>LOCALHOST</kerberos.realm>
     <test.exclude.kerberos.test>**/TestHttpFSWithKerberos.java</test.exclude.kerberos.test>
-    <tomcat.download.url>https://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.download.url>
+    <tomcat.download.url>https://archive.apache.org/dist/tomcat/tomcat-8/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.download.url>
   </properties>
 
   <dependencies>

@@ -43,6 +43,12 @@ message DataTransferEncryptorMessageProto {
   optional bytes payload = 2;
   optional string message = 3;
   repeated CipherOptionProto cipherOption = 4;
+  optional HandshakeSecretProto handshakeSecret = 5;
+}
+
+message HandshakeSecretProto {
+  required bytes secret = 1;
+  required string bpid = 2;
 }
 
 message BaseHeaderProto {

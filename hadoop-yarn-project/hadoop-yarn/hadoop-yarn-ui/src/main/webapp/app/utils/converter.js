@@ -130,6 +130,57 @@ export default {
     }
     return value.toFixed(1) + " " + unit;
   },
+  resourceToSimplifiedUnit: function (value, unit) {
+    // First convert unit to base unit ("").
+    var normalizedValue = value;
+    if (unit === "Ki") {
+      normalizedValue = normalizedValue * 1024;
+    } else if (unit === "Mi") {
+      normalizedValue = normalizedValue * 1024 * 1024;
+    } else if (unit === "Gi") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024;
+    } else if (unit === "Ti") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024 * 1024;
+    } else if (unit === "Pi") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024 * 1024 * 1024;
+    } else if (unit === "K" || unit === "k") {
+      normalizedValue = normalizedValue * 1000;
+    } else if (unit === "M" || unit === "m") {
+      normalizedValue = normalizedValue * 1000 * 1000;
+    } else if (unit === "G" || unit === "g") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000;
+    } else if (unit === "T" || unit === "t") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000 * 1000;
+    } else if (unit === "P" || unit === "p") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000 * 1000 * 1000;
+    }
+
+    // From baseunit ("") convert to most human readable unit
+    // (which value < 1024 * 0.9).
+    var finalUnit = "";
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Ki";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Mi";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Gi";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Ti";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Pi";
+    }
+
+    return normalizedValue.toFixed(1) + " " + finalUnit;
+  },
   msToElapsedTimeUnit: function(millisecs, short) {
     var seconds = Math.floor(millisecs / 1000);
     var days = Math.floor(seconds / (3600 * 24));

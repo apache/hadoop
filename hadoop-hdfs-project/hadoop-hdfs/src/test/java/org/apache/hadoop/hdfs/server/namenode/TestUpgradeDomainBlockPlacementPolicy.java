@@ -65,14 +65,8 @@ public class TestUpgradeDomainBlockPlacementPolicy {
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   static final String[] racks =
       { "/RACK1", "/RACK1", "/RACK1", "/RACK2", "/RACK2", "/RACK2" };
-  /**
-   *  Use host names that can be resolved (
-   *  InetSocketAddress#isUnresolved == false). Otherwise,
-   *  CombinedHostFileManager won't allow those hosts.
-   */
   static final String[] hosts =
-      {"127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1",
-          "127.0.0.1", "127.0.0.1"};
+      {"host1", "host2", "host3", "host4", "host5", "host6"};
   static final String[] upgradeDomains =
       {"ud5", "ud2", "ud3", "ud1", "ud2", "ud4"};
   static final Set<DatanodeID> expectedDatanodeIDs = new HashSet<>();
@@ -134,7 +128,12 @@ public class TestUpgradeDomainBlockPlacementPolicy {
     for (int i = 0; i < hosts.length; i++) {
       datanodes[i] = new DatanodeAdminProperties();
       DatanodeID datanodeID = cluster.getDataNodes().get(i).getDatanodeId();
-      datanodes[i].setHostName(datanodeID.getHostName());
+      /*
+       *  Use host names that can be resolved (
+       *  InetSocketAddress#isUnresolved == false). Otherwise,
+       *  CombinedHostFileManager won't allow those hosts.
+       */
+      datanodes[i].setHostName(datanodeID.getIpAddr());
       datanodes[i].setPort(datanodeID.getXferPort());
       datanodes[i].setUpgradeDomain(upgradeDomains[i]);
     }
@@ -168,7 +167,12 @@ public class TestUpgradeDomainBlockPlacementPolicy {
     for (int i = 0; i < hosts.length; i++) {
       datanodes[i] = new DatanodeAdminProperties();
       DatanodeID datanodeID = cluster.getDataNodes().get(i).getDatanodeId();
-      datanodes[i].setHostName(datanodeID.getHostName());
+      /*
+       *  Use host names that can be resolved (
+       *  InetSocketAddress#isUnresolved == false). Otherwise,
+       *  CombinedHostFileManager won't allow those hosts.
+       */
+      datanodes[i].setHostName(datanodeID.getIpAddr());
       datanodes[i].setPort(datanodeID.getXferPort());
       datanodes[i].setUpgradeDomain(upgradeDomains[i]);
     }

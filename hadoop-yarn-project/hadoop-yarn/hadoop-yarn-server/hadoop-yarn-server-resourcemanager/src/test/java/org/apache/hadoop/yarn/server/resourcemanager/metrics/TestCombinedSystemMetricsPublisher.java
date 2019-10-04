@@ -30,7 +30,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -481,9 +484,16 @@ public class TestCombinedSystemMetricsPublisher {
     when(rmApp.getCurrentAppAttempt()).thenReturn(appAttempt);
     when(rmApp.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
+    Map<String, Long> resourceMap = new HashMap<>();
+    resourceMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
+    resourceMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
+    Map<String, Long> preemptedMap = new HashMap<>();
+    preemptedMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
     when(rmApp.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, Integer.MAX_VALUE,
-            Long.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE));
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceMap,
+            preemptedMap));
     when(rmApp.getApplicationTags()).thenReturn(
         Collections.<String> emptySet());
     ApplicationSubmissionContext appSubmissionContext =

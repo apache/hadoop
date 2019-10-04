@@ -18,21 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import java.util.*;
-
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 
 
 public class MockSchedulableEntity implements SchedulableEntity {
-  
+
   private String id;
   private long serial = 0;
   private Priority priority;
   private boolean isRecovering;
+  private String partition = "";
 
   public MockSchedulableEntity() { }
   
@@ -100,5 +98,14 @@ public class MockSchedulableEntity implements SchedulableEntity {
 
   protected void setRecovering(boolean entityRecovering) {
     this.isRecovering = entityRecovering;
+  }
+
+  @Override
+  public String getPartition() {
+    return partition;
+  }
+
+  public void setPartition(String partition) {
+    this.partition = partition;
   }
 }

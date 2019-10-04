@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -70,6 +72,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -855,4 +858,17 @@ public abstract class YarnClient extends AbstractService {
     throw new UnsupportedOperationException("The sub-class extending "
         + YarnClient.class.getName() + " is expected to implement this !");
   }
+
+  /**
+   * <p>
+   * Get available resource types supported by RM.
+   * </p>
+   * @return list of supported resource types with detailed information
+   * @throws YarnException if any issue happens inside YARN
+   * @throws IOException in case of other others
+   */
+  @Public
+  @Unstable
+  public abstract List<ResourceTypeInfo> getResourceTypeInfo()
+      throws YarnException, IOException;
 }

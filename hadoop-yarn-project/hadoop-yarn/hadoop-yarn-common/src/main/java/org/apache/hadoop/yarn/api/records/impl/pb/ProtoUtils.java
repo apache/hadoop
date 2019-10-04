@@ -19,10 +19,15 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -45,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -73,6 +79,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryPolicyProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypesProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
@@ -448,6 +455,45 @@ public class ProtoUtils {
   public static YarnServiceProtos.UpdateContainerErrorProto
       convertToProtoFormat(UpdateContainerError t) {
     return ((UpdateContainerErrorPBImpl) t).getProto();
+  }
+
+  /*
+   * ResourceTypes
+   */
+  public static ResourceTypesProto converToProtoFormat(ResourceTypes e) {
+    return ResourceTypesProto.valueOf(e.name());
+  }
+
+  public static ResourceTypes convertFromProtoFormat(ResourceTypesProto e) {
+    return ResourceTypes.valueOf(e.name());
+  }
+
+  public static Map<String, Long> convertStringLongMapProtoListToMap(
+      List<YarnProtos.StringLongMapProto> pList) {
+    Resource tmp = Resource.newInstance(0, 0);
+    Map<String, Long> ret = new HashMap<>();
+    for (ResourceInformation entry : tmp.getResources()) {
+      ret.put(entry.getName(), 0L);
+    }
+    if (pList != null) {
+      for (YarnProtos.StringLongMapProto p : pList) {
+        ret.put(p.getKey(), p.getValue());
+      }
+    }
+    return ret;
+  }
+
+  public static List<YarnProtos.StringLongMapProto> convertMapToStringLongMapProtoList(
+      Map<String, Long> map) {
+    List<YarnProtos.StringLongMapProto> ret = new ArrayList<>();
+    for (Map.Entry<String, Long> entry : map.entrySet()) {
+      YarnProtos.StringLongMapProto.Builder tmp =
+          YarnProtos.StringLongMapProto.newBuilder();
+      tmp.setKey(entry.getKey());
+      tmp.setValue(entry.getValue());
+      ret.add(tmp.build());
+    }
+    return ret;
   }
 }
 

@@ -21,10 +21,16 @@ package org.apache.hadoop.yarn.server.nodemanager.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+
+import java.util.Map;
 
 /**
  * Helper class to determine hardware related characteristics such as the
@@ -240,8 +246,8 @@ public class NodeManagerHardwareUtils {
     return cores;
   }
 
-  private static int getConfiguredMemoryMB(Configuration conf) {
-    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB,
+  private static long getConfiguredMemoryMB(Configuration conf) {
+    long memoryMb = conf.getLong(YarnConfiguration.NM_PMEM_MB,
         YarnConfiguration.DEFAULT_NM_PMEM_MB);
     if (memoryMb == -1) {
       memoryMb = YarnConfiguration.DEFAULT_NM_PMEM_MB;
@@ -264,7 +270,7 @@ public class NodeManagerHardwareUtils {
    *          - the configuration for the NodeManager
    * @return the amount of memory that will be used for YARN containers in MB.
    */
-  public static int getContainerMemoryMB(Configuration conf) {
+  public static long getContainerMemoryMB(Configuration conf) {
     if (!isHardwareDetectionEnabled(conf)) {
       return getConfiguredMemoryMB(conf);
     }
@@ -293,7 +299,7 @@ public class NodeManagerHardwareUtils {
    *          - the configuration for the NodeManager
    * @return the amount of memory that will be used for YARN containers in MB.
    */
-  public static int getContainerMemoryMB(ResourceCalculatorPlugin plugin,
+  public static long getContainerMemoryMB(ResourceCalculatorPlugin plugin,
       Configuration conf) {
     if (!isHardwareDetectionEnabled(conf) || plugin == null) {
       return getConfiguredMemoryMB(conf);
@@ -301,26 +307,24 @@ public class NodeManagerHardwareUtils {
     return getContainerMemoryMBInternal(plugin, conf);
   }
 
-  private static int getContainerMemoryMBInternal(ResourceCalculatorPlugin plugin,
+  private static long getContainerMemoryMBInternal(ResourceCalculatorPlugin plugin,
       Configuration conf) {
-    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
+    long memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
     if (memoryMb == -1) {
-      int physicalMemoryMB =
-          (int) (plugin.getPhysicalMemorySize() / (1024 * 1024));
-      int hadoopHeapSizeMB =
-          (int) (Runtime.getRuntime().maxMemory() / (1024 * 1024));
-      int containerPhysicalMemoryMB =
-          (int) (0.8f * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
-      int reservedMemoryMB =
-          conf.getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
+      long physicalMemoryMB = (plugin.getPhysicalMemorySize() / (1024 * 1024));
+      long hadoopHeapSizeMB = (Runtime.getRuntime().maxMemory()
+          / (1024 * 1024));
+      long containerPhysicalMemoryMB = (long) (0.8f
+          * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
+      long reservedMemoryMB = conf
+          .getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
       if (reservedMemoryMB != -1) {
         containerPhysicalMemoryMB = physicalMemoryMB - reservedMemoryMB;
       }
-      if(containerPhysicalMemoryMB <= 0) {
+      if (containerPhysicalMemoryMB <= 0) {
         LOG.error("Calculated memory for YARN containers is too low."
             + " Node memory is " + physicalMemoryMB
-            + " MB, system reserved memory is "
-            + reservedMemoryMB + " MB.");
+            + " MB, system reserved memory is " + reservedMemoryMB + " MB.");
       }
       containerPhysicalMemoryMB = Math.max(containerPhysicalMemoryMB, 0);
       memoryMb = containerPhysicalMemoryMB;
@@ -331,5 +335,51 @@ public class NodeManagerHardwareUtils {
       throw new IllegalArgumentException(message);
     }
     return memoryMb;
+  }
+
+  /**
+   * Get the resources for the node.
+   * @param configuration configuration file
+   * @return the resources for the node
+   */
+  public static Resource getNodeResources(Configuration configuration) {
+    Configuration conf = new Configuration(configuration);
+    String memory = ResourceInformation.MEMORY_MB.getName();
+    String vcores = ResourceInformation.VCORES.getName();
+
+    Resource ret = Resource.newInstance(0, 0);
+    Map<String, ResourceInformation> resourceInformation =
+        ResourceUtils.getNodeResourceInformation(conf);
+    for (Map.Entry<String, ResourceInformation> entry : resourceInformation
+        .entrySet()) {
+      ret.setResourceInformation(entry.getKey(), entry.getValue());
+      LOG.debug("Setting key " + entry.getKey() + " to " + entry.getValue());
+    }
+    if (resourceInformation.containsKey(memory)) {
+      Long value = resourceInformation.get(memory).getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new YarnRuntimeException("Value '" + value
+            + "' for resource memory is more than the maximum for an integer.");
+      }
+      ResourceInformation memResInfo = resourceInformation.get(memory);
+      if(memResInfo.getValue() == 0) {
+        ret.setMemorySize(getContainerMemoryMB(conf));
+        LOG.debug("Set memory to " + ret.getMemorySize());
+      }
+    }
+    if (resourceInformation.containsKey(vcores)) {
+      Long value = resourceInformation.get(vcores).getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new YarnRuntimeException("Value '" + value
+            + "' for resource vcores is more than the maximum for an integer.");
+      }
+      ResourceInformation vcoresResInfo = resourceInformation.get(vcores);
+      if(vcoresResInfo.getValue() == 0) {
+        ret.setVirtualCores(getVCores(conf));
+        LOG.debug("Set vcores to " + ret.getVirtualCores());
+      }
+    }
+    LOG.debug("Node resource information map is " + ret);
+    return ret;
   }
 }

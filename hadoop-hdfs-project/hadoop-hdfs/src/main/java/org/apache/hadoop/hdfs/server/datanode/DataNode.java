@@ -1472,6 +1472,11 @@ public class DataNode extends ReconfigurableBase
     return UUID.randomUUID().toString();
   }
 
+  @VisibleForTesting
+  public SaslDataTransferClient getSaslClient() {
+    return saslClient;
+  }
+
   /**
    * Verify that the DatanodeUuid has been initialized. If this is a new
    * datanode then we generate a new Datanode Uuid and persist it to disk.
@@ -1689,6 +1694,11 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public int getXferPort() {
     return streamingAddr.getPort();
+  }
+
+  @VisibleForTesting
+  public SaslDataTransferServer getSaslServer() {
+    return saslServer;
   }
 
   /**

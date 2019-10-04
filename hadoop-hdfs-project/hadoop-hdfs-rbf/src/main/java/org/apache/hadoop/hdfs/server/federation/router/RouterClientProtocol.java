@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -1394,6 +1395,20 @@ public class RouterClientProtocol implements ClientProtocol {
       throws IOException {
     rpcServer.checkOperation(OperationCategory.READ, false);
     return null;
+  }
+
+  @Override
+  public void msync() throws IOException {
+    // TODO revisit if router should support msync
+    throw new UnsupportedOperationException(
+        "msync is not supported for router");
+  }
+
+  @Override
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Router does not support getHAServiceState");
   }
 
   /**

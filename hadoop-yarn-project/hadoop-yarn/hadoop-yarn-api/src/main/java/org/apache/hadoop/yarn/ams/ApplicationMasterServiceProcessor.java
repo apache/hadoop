@@ -52,11 +52,13 @@ public interface ApplicationMasterServiceProcessor {
    * @param request Register Request.
    * @param response Register Response.
    * @throws IOException IOException.
+   * @throws YarnException in critical situation where invalid
+   *         profiles/resources are added.
    */
-  void registerApplicationMaster(
-      ApplicationAttemptId applicationAttemptId,
+  void registerApplicationMaster(ApplicationAttemptId applicationAttemptId,
       RegisterApplicationMasterRequest request,
-      RegisterApplicationMasterResponse response) throws IOException;
+      RegisterApplicationMasterResponse response)
+      throws IOException, YarnException;
 
   /**
    * Allocate call.

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -99,6 +101,7 @@ import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Testing applications being retired from RM.
@@ -151,6 +154,7 @@ public class TestAppManager{
     metricsPublisher = mock(SystemMetricsPublisher.class);
     context.setSystemMetricsPublisher(metricsPublisher);
     context.setRMApplicationHistoryWriter(writer);
+    ((RMContextImpl) context).setYarnConfiguration(new YarnConfiguration());
     return context;
   }
 
@@ -247,6 +251,8 @@ public class TestAppManager{
     ResourceScheduler scheduler = mockResourceScheduler();
     ((RMContextImpl)rmContext).setScheduler(scheduler);
     Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    ((RMContextImpl) rmContext).setYarnConfiguration(conf);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     appMonitor = new TestRMAppManager(rmContext,
@@ -818,6 +824,9 @@ public class TestAppManager{
   @Test (timeout = 30000)
   public void testEscapeApplicationSummary() {
     RMApp app = mock(RMAppImpl.class);
+    ApplicationSubmissionContext asc = mock(ApplicationSubmissionContext.class);
+    when(asc.getNodeLabelExpression()).thenReturn("test");
+    when(app.getApplicationSubmissionContext()).thenReturn(asc);
     when(app.getApplicationId()).thenReturn(
         ApplicationId.newInstance(100L, 1));
     when(app.getName()).thenReturn("Multiline\n\n\r\rAppName");
@@ -827,9 +836,13 @@ public class TestAppManager{
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
     when(app.getLaunchTime()).thenReturn(2000L);
+    when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
+    resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
     RMAppMetrics metrics =
         new RMAppMetrics(Resource.newInstance(1234, 56),
-            10, 1, 16384, 64, 0, 0);
+            10, 1, resourceSecondsMap, new HashMap<String, Long>());
     when(app.getRMAppMetrics()).thenReturn(metrics);
 
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
@@ -851,6 +864,8 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
     Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
     Assert.assertTrue(msg.contains("applicationType=MAPREDUCE"));
+    Assert.assertTrue(msg.contains("applicationTags=tag1\\,tag2"));
+    Assert.assertTrue(msg.contains("applicationNodeLabel=test"));
  }
   
   @Test

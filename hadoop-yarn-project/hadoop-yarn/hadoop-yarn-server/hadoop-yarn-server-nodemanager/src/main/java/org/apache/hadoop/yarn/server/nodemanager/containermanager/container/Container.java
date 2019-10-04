@@ -98,4 +98,11 @@ public interface Container extends EventHandler<ContainerEvent> {
   void sendPauseEvent(String description);
 
   Priority getPriority();
+
+  /**
+   * Get assigned resource mappings to the container.
+   *
+   * @return Resource Mappings of the container
+   */
+  ResourceMappings getResourceMappings();
 }

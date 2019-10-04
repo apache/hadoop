@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
@@ -356,6 +358,7 @@ public class NameNode extends ReconfigurableBase implements
       LoggerFactory.getLogger("BlockStateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
+  public static final HAState OBSERVER_STATE = new StandbyState(true);
 
   private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
 
@@ -504,7 +507,12 @@ public class NameNode extends ReconfigurableBase implements
     LOG.info("Setting ADDRESS {}", address);
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, address);
   }
-  
+
+  @VisibleForTesting
+  public HttpServer2 getHttpServer() {
+    return httpServer.getHttpServer();
+  }
+
   /**
    * Fetches the address for services to use when connecting to namenode
    * based on the value of fallback returns null if the special
@@ -978,9 +986,11 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   protected HAState createHAState(StartupOption startOpt) {
-    if (!haEnabled || startOpt == StartupOption.UPGRADE 
+    if (!haEnabled || startOpt == StartupOption.UPGRADE
         || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
+    } else if (startOpt == StartupOption.OBSERVER) {
+      return OBSERVER_STATE;
     } else {
       return STANDBY_STATE;
     }
@@ -1059,10 +1069,39 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
+   * @return The auxiliary nameNode RPC addresses, or empty set if there
+   * is none.
+   */
+  public Set<InetSocketAddress> getAuxiliaryNameNodeAddresses() {
+    return rpcServer.getAuxiliaryRpcAddresses();
+  }
+
+  /**
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
     return NetUtils.getHostPortString(getNameNodeAddress());
+  }
+
+  /**
+   * Return a host:port format string corresponds to an auxiliary
+   * port configured on NameNode. If there are multiple auxiliary ports,
+   * an arbitrary one is returned. If there is no auxiliary listener, returns
+   * null.
+   *
+   * @return a string of format host:port that points to an auxiliary NameNode
+   *         address, or null if there is no such address.
+   */
+  @VisibleForTesting
+  public String getNNAuxiliaryRpcAddress() {
+    Set<InetSocketAddress> auxiliaryAddrs = getAuxiliaryNameNodeAddresses();
+    if (auxiliaryAddrs.isEmpty()) {
+      return null;
+    }
+    // since set has no particular order, returning the first element of
+    // from the iterator is effectively arbitrary.
+    InetSocketAddress addr = auxiliaryAddrs.iterator().next();
+    return NetUtils.getHostPortString(addr);
   }
 
   /**
@@ -1443,6 +1482,8 @@ public class NameNode extends ReconfigurableBase implements
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
+      } else if (StartupOption.OBSERVER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.OBSERVER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)
           || StartupOption.UPGRADEONLY.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd) ? 
@@ -1774,16 +1815,36 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
+    if (state == OBSERVER_STATE) {
+      throw new ServiceFailedException(
+          "Cannot transition from '" + OBSERVER_STATE + "' to '" +
+              ACTIVE_STATE + "'");
+    }
     state.setState(haContext, ACTIVE_STATE);
   }
-  
-  synchronized void transitionToStandby() 
+
+  synchronized void transitionToStandby()
       throws ServiceFailedException, AccessControlException {
     namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, STANDBY_STATE);
+  }
+
+  synchronized void transitionToObserver()
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
+    if (!haEnabled) {
+      throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    // Transition from ACTIVE to OBSERVER is forbidden.
+    if (state == ACTIVE_STATE) {
+      throw new ServiceFailedException(
+          "Cannot transition from '" + ACTIVE_STATE + "' to '" +
+              OBSERVER_STATE + "'");
+    }
+    state.setState(haContext, OBSERVER_STATE);
   }
 
   synchronized HAServiceStatus getServiceStatus()
@@ -1937,7 +1998,8 @@ public class NameNode extends ReconfigurableBase implements
     @Override
     public void startStandbyServices() throws IOException {
       try {
-        namesystem.startStandbyServices(getConf());
+        namesystem.startStandbyServices(getConf(),
+            state == NameNode.OBSERVER_STATE);
       } catch (Throwable t) {
         doImmediateShutdown(t);
       }
@@ -1984,6 +2046,9 @@ public class NameNode extends ReconfigurableBase implements
     
     @Override
     public boolean allowStaleReads() {
+      if (state == OBSERVER_STATE) {
+        return true;
+      }
       return allowStaleStandbyReads;
     }
 
@@ -1995,6 +2060,10 @@ public class NameNode extends ReconfigurableBase implements
   
   public boolean isActiveState() {
     return (state.equals(ACTIVE_STATE));
+  }
+
+  public boolean isObserverState() {
+    return state.equals(OBSERVER_STATE);
   }
 
   /**

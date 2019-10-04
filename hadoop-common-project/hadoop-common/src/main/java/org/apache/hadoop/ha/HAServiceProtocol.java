@@ -51,6 +51,7 @@ public interface HAServiceProtocol {
     INITIALIZING("initializing"),
     ACTIVE("active"),
     STANDBY("standby"),
+    OBSERVER("observer"),
     STOPPING("stopping");
 
     private String name;
@@ -147,6 +148,23 @@ public interface HAServiceProtocol {
                                     throws ServiceFailedException,
                                            AccessControlException,
                                            IOException;
+
+  /**
+   * Request service to transition to observer state. No operation, if the
+   * service is already in observer state.
+   *
+   * @throws ServiceFailedException
+   *           if transition from standby to observer fails.
+   * @throws AccessControlException
+   *           if access is denied.
+   * @throws IOException
+   *           if other errors happen
+   */
+  @Idempotent
+  void transitionToObserver(StateChangeRequestInfo reqInfo)
+                              throws ServiceFailedException,
+                                     AccessControlException,
+                                     IOException;
 
   /**
    * Return the current status of the service. The status indicates

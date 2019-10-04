@@ -102,9 +102,11 @@ public class TestApplicationMasterService {
     }
 
     @Override
-    public void registerApplicationMaster(ApplicationAttemptId
-        applicationAttemptId, RegisterApplicationMasterRequest request,
-        RegisterApplicationMasterResponse response) throws IOException {
+    public void registerApplicationMaster(
+        ApplicationAttemptId applicationAttemptId,
+        RegisterApplicationMasterRequest request,
+        RegisterApplicationMasterResponse response)
+        throws IOException, YarnException {
       nextProcessor.registerApplicationMaster(
           applicationAttemptId, request, response);
     }
@@ -144,7 +146,8 @@ public class TestApplicationMasterService {
     public void registerApplicationMaster(
         ApplicationAttemptId applicationAttemptId,
         RegisterApplicationMasterRequest request,
-        RegisterApplicationMasterResponse response) throws IOException {
+        RegisterApplicationMasterResponse response)
+        throws IOException, YarnException {
       beforeRegCount.incrementAndGet();
       nextProcessor.registerApplicationMaster(applicationAttemptId,
               request, response);

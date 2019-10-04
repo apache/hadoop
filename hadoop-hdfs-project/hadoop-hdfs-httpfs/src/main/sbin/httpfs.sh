@@ -31,7 +31,14 @@ BASEDIR=`cd ${BASEDIR}/..;pwd`
 
 HTTPFS_SILENT=${HTTPFS_SILENT:-true}
 
-source ${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}/httpfs-config.sh
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}"
+source ${HADOOP_LIBEXEC_DIR}/httpfs-config.sh
+
+if [[ -z "${JAVA_LIBRARY_PATH}" ]]; then
+  JAVA_LIBRARY_PATH="${HADOOP_LIBEXEC_DIR}/../lib/native/"
+else
+  JAVA_LIBRARY_PATH="${HADOOP_LIBEXEC_DIR}/../lib/native/:${JAVA_LIBRARY_PATH}"
+fi
 
 # The Java System property 'httpfs.http.port' it is not used by HttpFS,
 # it is used in Tomcat's server.xml configuration file
@@ -40,6 +47,7 @@ print "Using   CATALINA_OPTS:       ${CATALINA_OPTS}"
 
 catalina_opts="-Dproc_httpfs";
 catalina_opts="${catalina_opts} -Dhttpfs.log.dir=${HTTPFS_LOG}"
+catalina_opts="${catalina_opts} -Djava.library.path=${JAVA_LIBRARY_PATH}"
 
 print "Adding to CATALINA_OPTS:     ${catalina_opts}"
 

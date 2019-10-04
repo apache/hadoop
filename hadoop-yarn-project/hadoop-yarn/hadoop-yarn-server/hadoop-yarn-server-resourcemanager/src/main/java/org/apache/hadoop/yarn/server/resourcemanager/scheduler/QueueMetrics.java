@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -76,6 +77,10 @@ public class QueueMetrics implements MetricsSource {
   @Metric("# of active applications") MutableGaugeInt activeApplications;
   @Metric("App Attempt First Container Allocation Delay")
     MutableRate appAttemptFirstContainerAllocationDelay;
+  @Metric("Aggregate total of preempted memory MB")
+    MutableCounterLong aggregateMemoryMBPreempted;
+  @Metric("Aggregate total of preempted vcores")
+    MutableCounterLong aggregateVcoresPreempted;
 
   //Metrics updated only for "default" partition
   @Metric("Allocated memory in MB") MutableGaugeLong allocatedMB;
@@ -552,6 +557,14 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  public void updatePreemptedResources(Resource res) {
+    aggregateMemoryMBPreempted.incr(res.getMemorySize());
+    aggregateVcoresPreempted.incr(res.getVirtualCores());
+    if (parent != null) {
+      parent.updatePreemptedResources(res);
+    }
+  }
+
   public void reserveResource(String partition, String user, Resource res) {
     if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       reserveResource(user, res);
@@ -731,5 +744,15 @@ public class QueueMetrics implements MetricsSource {
 
   public long getAggregatePreemptedContainers() {
     return aggregateContainersPreempted.value();
+  }
+
+  @VisibleForTesting
+  public long getAggregateMemoryMBPreempted() {
+    return aggregateMemoryMBPreempted.value();
+  }
+
+  @VisibleForTesting
+  public long getAggregateVcoresPreempted() {
+    return aggregateVcoresPreempted.value();
   }
 }

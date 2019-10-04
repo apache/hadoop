@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -194,7 +195,8 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public RMAppMetrics getRMAppMetrics() {
-      return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, 0, 0, 0, 0);
+      return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<String, Long>(),
+          new HashMap<String, Long>());
     }
 
     @Override
@@ -354,8 +356,9 @@ public abstract class MockAsm extends MockApps {
       public ApplicationReport createAndGetApplicationReport(
           String clientUserName, boolean allowAccess) {
         ApplicationResourceUsageReport usageReport =
-            ApplicationResourceUsageReport.newInstance(0, 0, null, null, null, 
-            0, 0, 0, 0, 0, 0);
+            ApplicationResourceUsageReport
+                .newInstance(0, 0, null, null, null, new HashMap<String, Long>(), 0, 0,
+                    new HashMap<String, Long>());
         ApplicationReport report = ApplicationReport.newInstance(
             getApplicationId(), appAttemptId, getUser(), getQueue(), 
             getName(), null, 0, null, null, getDiagnostics().toString(), 

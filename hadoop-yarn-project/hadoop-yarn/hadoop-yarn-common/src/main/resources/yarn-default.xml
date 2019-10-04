@@ -3456,6 +3456,45 @@
   </property>
 
   <property>
+    <description>
+      When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
+      YARN NodeManager needs to run GPU discovery binary (now only support
+      nvidia-smi) to get GPU-related information.
+      When value is empty (default), YARN NodeManager will try to locate
+      discovery executable itself.
+      An example of the config value is: /usr/local/bin/nvidia-smi
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Enable additional discovery/isolation of resources on the NodeManager,
+      split by comma. By default, this is empty. Acceptable values: { "yarn-io/gpu" }.
+    </description>
+    <name>yarn.nodemanager.resource-plugins</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specify GPU devices which can be managed by YARN NodeManager, split by comma
+      Number of GPU devices will be reported to RM to make scheduling decisions.
+      Set to auto (default) let YARN automatically discover GPU resource from
+      system.
+      Manually specify GPU devices if auto detect GPU device failed or admin
+      only want subset of GPU devices managed by YARN. GPU device is identified
+      by their minor device number. A common approach to get minor device number
+      of GPUs is using "nvidia-smi -q" and search "Minor Number" output. An
+      example of manual specification is "0,1,2,4" to allow YARN NodeManager
+      to manage GPU devices with minor number 0/1/2/4.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+    <value>auto</value>
+  </property>
+
+  <property>
     <description>The http address of the timeline reader web application.</description>
     <name>yarn.timeline-service.reader.webapp.address</name>
     <value>${yarn.timeline-service.webapp.address}</value>
@@ -3479,4 +3518,52 @@
     <value></value>
   </property>
 
+  <!-- resource types configuration -->
+  <property>
+    <name>yarn.resource-types</name>
+    <value></value>
+    <description>
+    The resource types to be used for scheduling. Use resource-types.xml
+    to specify details about the individual resource types.
+    </description>
+  </property>
+
+  <property>
+    <description>
+      Containers launcher implementation for determining how containers
+      are launched within NodeManagers.
+    </description>
+    <name>yarn.nodemanager.containers-launcher.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the Pre processing of Application Submission context with server side configuration
+    </description>
+    <name>yarn.resourcemanager.submission-preprocessor.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Path to file with hosts for the submission processor to handle.</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Submission processor refresh interval</description>
+    <name>yarn.resourcemanager.submission-preprocessor.file-refresh-interval-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      Comma-separated list of partitions. If a label P is in this list,
+      then the RM will enforce that an app has resource requests with label
+      P iff that app's node label expression is P.
+    </description>
+    <name>yarn.node-labels.exclusive-enforced-partitions</name>
+    <value></value>
+  </property>
 </configuration>
