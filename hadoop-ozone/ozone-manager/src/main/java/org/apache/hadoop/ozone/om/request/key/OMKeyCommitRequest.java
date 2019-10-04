@@ -123,7 +123,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       // Native authorizer requires client id as part of keyname to check
       // write ACL on key. Add client id to key name if ozone native
       // authorizer is configured.
-      Configuration config = new OzoneConfiguration();
+      Configuration config = ozoneManager.getConfiguration();
       String keyNameForAclCheck = keyName;
       if (OmUtils.isNativeAuthorizerEnabled(config)) {
         keyNameForAclCheck = keyName + "/" + commitKeyRequest.getClientID();
