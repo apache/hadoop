@@ -64,7 +64,6 @@ public class ConfiguredFailoverProxyProvider<T> extends
 
   @Override
   public void performFailover(T currentProxy) {
-    RPC.stopProxy(currentProxy);
     //reset the IP address in case  the stale IP was the cause for failover
     LOG.info("Resetting cached proxy: " + currentProxyIndex);
     resetProxyAddress(proxies, currentProxyIndex);
@@ -86,7 +85,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
         if (proxy.proxy instanceof Closeable) {
           ((Closeable)proxy.proxy).close();
         } else {
-          RPC.stopProxy(proxy.proxy);
+          stopProxy(proxy.proxy);
         }
       }
     }
@@ -105,6 +104,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
    */
   protected void resetProxyAddress(List<NNProxyInfo<T>> proxies, int index) {
     try {
+      stopProxy(proxies.get(index).proxy);
       InetSocketAddress oldAddress = proxies.get(index).getAddress();
       InetSocketAddress address = NetUtils.createSocketAddr(
               oldAddress.getHostName() + ":" + oldAddress.getPort());
@@ -113,5 +113,9 @@ public class ConfiguredFailoverProxyProvider<T> extends
     } catch (Exception e) {
       throw new RuntimeException("Could not refresh NN address", e);
     }
+  }
+  
+  protected void stopProxy(T proxy) {
+    RPC.stopProxy(proxy);
   }
 }
