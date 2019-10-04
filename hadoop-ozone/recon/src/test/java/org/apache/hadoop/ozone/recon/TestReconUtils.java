@@ -133,4 +133,35 @@ public class TestReconUtils {
     assertEquals("File 1 Contents", contents);
   }
 
+  @Test
+  public void testGetLastKnownDB() throws IOException {
+    File newDir = folder.newFolder();
+
+    File file1 = Paths.get(newDir.getAbsolutePath(), "valid_1")
+        .toFile();
+    String str = "File1 Contents";
+    BufferedWriter writer = new BufferedWriter(new FileWriter(
+        file1.getAbsolutePath()));
+    writer.write(str);
+    writer.close();
+
+    File file2 = Paths.get(newDir.getAbsolutePath(), "valid_2")
+        .toFile();
+    str = "File2 Contents";
+    writer = new BufferedWriter(new FileWriter(file2.getAbsolutePath()));
+    writer.write(str);
+    writer.close();
+
+
+    File file3 = Paths.get(newDir.getAbsolutePath(), "invalid_3")
+        .toFile();
+    str = "File3 Contents";
+    writer = new BufferedWriter(new FileWriter(file3.getAbsolutePath()));
+    writer.write(str);
+    writer.close();
+
+    ReconUtils reconUtils = new ReconUtils();
+    File latestValidFile = reconUtils.getLastKnownDB(newDir, "valid");
+    assertTrue(latestValidFile.getName().equals("valid_2"));
+  }
 }
