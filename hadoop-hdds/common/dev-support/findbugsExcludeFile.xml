@@ -25,4 +25,9 @@
     <Class name="org.apache.hadoop.hdds.cli.GenericCli"></Class>
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.ozone.common.ChecksumByteBuffer$CrcIntTable" />
+    <Method name="update" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH,SF_SWITCH_NO_DEFAULT" />
+  </Match>
 </FindBugsFilter>
