@@ -82,16 +82,12 @@ public class TestChecksum {
    * not match.
    */
   @Test
-  public void testChecksumMismatchForDifferentChecksumTypes() throws Exception {
-    byte[] data = RandomStringUtils.randomAlphabetic(55).getBytes();
-
+  public void testChecksumMismatchForDifferentChecksumTypes() {
     // Checksum1 of type SHA-256
     Checksum checksum1 = getChecksum(null);
-    ChecksumData checksumData1 = checksum1.computeChecksum(data);
 
     // Checksum2 of type CRC32
     Checksum checksum2 = getChecksum(ContainerProtos.ChecksumType.CRC32);
-    ChecksumData checksumData2 = checksum2.computeChecksum(data);
 
     // The two checksums should not match as they have different types
     Assert.assertNotEquals(

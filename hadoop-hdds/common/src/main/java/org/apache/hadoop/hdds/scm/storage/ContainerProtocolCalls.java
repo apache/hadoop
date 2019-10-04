@@ -337,7 +337,7 @@ public final class ContainerProtocolCalls  {
         KeyValue.newBuilder().setKey("OverWriteRequested").setValue("true")
             .build();
     Checksum checksum = new Checksum();
-    ChecksumData checksumData = checksum.computeChecksum(data, 0, data.length);
+    final ChecksumData checksumData = checksum.computeChecksum(data);
     ChunkInfo chunk =
         ChunkInfo.newBuilder()
             .setChunkName(blockID.getLocalID() + "_chunk")

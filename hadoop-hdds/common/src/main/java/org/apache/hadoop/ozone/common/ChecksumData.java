@@ -36,8 +36,8 @@ public class ChecksumData {
   private ChecksumType type;
   // Checksum will be computed for every bytesPerChecksum number of bytes and
   // stored sequentially in checksumList
-  private int bytesPerChecksum;
-  private List<ByteString> checksums;
+  private final int bytesPerChecksum;
+  private final List<ByteString> checksums;
 
   public ChecksumData(ChecksumType checksumType, int bytesPerChecksum) {
     this(checksumType, bytesPerChecksum, Lists.newArrayList());
