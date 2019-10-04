@@ -130,3 +130,6 @@ services:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
       WAIT_FOR: rm:8088
     command: ["yarn","timelineserver"]
+networks:
+  ozone:
+    name: ozone
