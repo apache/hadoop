@@ -111,13 +111,3 @@ services:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
       WAIT_FOR: rm:8088
     command: ["yarn","timelineserver"]
-  spark:
-    image: ahadoop/spark-2.4:hadoop-3.2
-    hostname: spark
-    volumes:
-      - ../..:/opt/hadoop
-    ports:
-      - 4040:4040
-    env_file:
-      - docker-config
-    command: ["watch","-n","100000","ls"]
