@@ -153,8 +153,8 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
     try {
 
       // TODO to support S3 ACL later.
-      acquiredS3Lock = omMetadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
-          s3BucketName);
+      acquiredS3Lock = omMetadataManager.getLock().acquireWriteLock(
+          S3_BUCKET_LOCK, s3BucketName);
 
       // First check if this s3Bucket exists
       if (omMetadataManager.getS3Table().isExist(s3BucketName)) {
@@ -165,9 +165,10 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
       OMVolumeCreateResponse omVolumeCreateResponse = null;
       try {
         acquiredVolumeLock =
-            omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volumeName);
-        acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
-            userName);
+            omMetadataManager.getLock().acquireWriteLock(VOLUME_LOCK,
+                volumeName);
+        acquiredUserLock = omMetadataManager.getLock().acquireWriteLock(
+            USER_LOCK, userName);
         // Check if volume exists, if it does not exist create
         // ozone volume.
         String volumeKey = omMetadataManager.getVolumeKey(volumeName);
@@ -188,10 +189,10 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
         }
       } finally {
         if (acquiredUserLock) {
-          omMetadataManager.getLock().releaseLock(USER_LOCK, userName);
+          omMetadataManager.getLock().releaseWriteLock(USER_LOCK, userName);
         }
         if (acquiredVolumeLock) {
-          omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volumeName);
+          omMetadataManager.getLock().releaseWriteLock(VOLUME_LOCK, volumeName);
         }
       }
 
@@ -227,7 +228,8 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquiredS3Lock) {
-        omMetadataManager.getLock().releaseLock(S3_BUCKET_LOCK, s3BucketName);
+        omMetadataManager.getLock().releaseWriteLock(
+            S3_BUCKET_LOCK, s3BucketName);
       }
     }
 
@@ -266,7 +268,7 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
     OmBucketInfo omBucketInfo = null;
     try {
       acquireBucketLock =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
               s3BucketName);
       String bucketKey = omMetadataManager.getBucketKey(volumeName,
           s3BucketName);
@@ -285,7 +287,7 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
       }
     } finally {
       if (acquireBucketLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             s3BucketName);
       }
     }
