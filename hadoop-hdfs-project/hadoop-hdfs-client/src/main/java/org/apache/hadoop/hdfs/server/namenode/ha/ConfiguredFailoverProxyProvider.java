@@ -114,7 +114,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
       throw new RuntimeException("Could not refresh NN address", e);
     }
   }
-  
+
   protected void stopProxy(T proxy) {
     RPC.stopProxy(proxy);
   }
