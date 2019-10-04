@@ -3064,10 +3064,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         transfers = null;
       }
       HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY, TimeUnit.SECONDS);
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
       boundedThreadPool = null;
       HadoopExecutors.shutdown(unboundedThreadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY, TimeUnit.SECONDS);
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
       unboundedThreadPool = null;
       S3AUtils.closeAll(LOG, metadataStore, instrumentation);
       metadataStore = null;

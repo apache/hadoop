@@ -51,7 +51,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY;
+import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -874,7 +874,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     if (threadPool != null) {
       LOG.debug("Destroying thread pool");
       HadoopExecutors.shutdown(threadPool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY, TimeUnit.SECONDS);
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
       threadPool = null;
     }
   }

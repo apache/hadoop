@@ -842,5 +842,5 @@ public final class Constants {
    * How long to wait for the thread pool to terminate when cleaning up.
    * Value: {@value} seconds.
    */
-  public static final int THREAD_POOL_SHUTDOWN_DELAY = 30;
+  public static final int THREAD_POOL_SHUTDOWN_DELAY_SECONDS = 30;
 }
