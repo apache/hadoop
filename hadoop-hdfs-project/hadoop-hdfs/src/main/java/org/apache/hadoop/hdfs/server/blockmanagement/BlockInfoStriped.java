@@ -245,6 +245,15 @@ public class BlockInfoStriped extends BlockInfo {
   }
 
   /**
+   * Striped blocks on Provided Storage is not supported. All blocks on
+   * Provided storage are assumed to be "contiguous".
+   */
+  @Override
+  boolean isProvided() {
+    return false;
+  }
+
+  /**
    * This class contains datanode storage information and block index in the
    * block group.
    */

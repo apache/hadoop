@@ -25,11 +25,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -98,7 +100,7 @@ public class SCMNodeManager implements NodeManager {
   private final NetworkTopology clusterMap;
   private final DNSToSwitchMapping dnsToSwitchMapping;
   private final boolean useHostname;
-  private final ConcurrentHashMap<String, String> dnsToUuidMap =
+  private final ConcurrentHashMap<String, Set<String>> dnsToUuidMap =
       new ConcurrentHashMap<>();
 
   /**
@@ -260,7 +262,7 @@ public class SCMNodeManager implements NodeManager {
       }
       nodeStateManager.addNode(datanodeDetails);
       clusterMap.add(datanodeDetails);
-      dnsToUuidMap.put(dnsName, datanodeDetails.getUuidString());
+      addEntryTodnsToUuidMap(dnsName, datanodeDetails.getUuidString());
       // Updating Node Report, as registration is successful
       processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
@@ -273,6 +275,26 @@ public class SCMNodeManager implements NodeManager {
         .setDatanode(datanodeDetails)
         .setClusterID(this.scmStorageConfig.getClusterID())
         .build();
+  }
+
+  /**
+   * Add an entry to the dnsToUuidMap, which maps hostname / IP to the DNs
+   * running on that host. As each address can have many DNs running on it,
+   * this is a one to many mapping.
+   * @param dnsName String representing the hostname or IP of the node
+   * @param uuid String representing the UUID of the registered node.
+   */
+  @SuppressFBWarnings(value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="The method is synchronized and this is the only place "+
+          "dnsToUuidMap is modified")
+  private synchronized void addEntryTodnsToUuidMap(
+      String dnsName, String uuid) {
+    Set<String> dnList = dnsToUuidMap.get(dnsName);
+    if (dnList == null) {
+      dnList = ConcurrentHashMap.newKeySet();
+      dnsToUuidMap.put(dnsName, dnList);
+    }
+    dnList.add(uuid);
   }
 
   /**
@@ -584,29 +606,34 @@ public class SCMNodeManager implements NodeManager {
   }
 
   /**
-   * Given datanode address(Ipaddress or hostname), returns the DatanodeDetails
-   * for the node.
+   * Given datanode address(Ipaddress or hostname), return a list of
+   * DatanodeDetails for the datanodes registered on that address.
    *
    * @param address datanode address
-   * @return the given datanode, or null if not found
+   * @return the given datanode, or empty list if none found
    */
   @Override
-  public DatanodeDetails getNodeByAddress(String address) {
+  public List<DatanodeDetails> getNodesByAddress(String address) {
+    List<DatanodeDetails> results = new LinkedList<>();
     if (Strings.isNullOrEmpty(address)) {
       LOG.warn("address is null");
-      return null;
+      return results;
     }
-    String uuid = dnsToUuidMap.get(address);
-    if (uuid != null) {
+    Set<String> uuids = dnsToUuidMap.get(address);
+    if (uuids == null) {
+      LOG.warn("Cannot find node for address {}", address);
+      return results;
+    }
+
+    for (String uuid : uuids) {
       DatanodeDetails temp = DatanodeDetails.newBuilder().setUuid(uuid).build();
       try {
-        return nodeStateManager.getNode(temp);
+        results.add(nodeStateManager.getNode(temp));
       } catch (NodeNotFoundException e) {
         LOG.warn("Cannot find node for uuid {}", uuid);
       }
     }
-    LOG.warn("Cannot find node for address {}", address);
-    return null;
+    return results;
   }
 
   private String nodeResolve(String hostname) {

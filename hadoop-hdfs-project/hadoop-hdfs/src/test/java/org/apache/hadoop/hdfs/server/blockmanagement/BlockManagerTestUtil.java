@@ -81,7 +81,8 @@ public class BlockManagerTestUtil {
 
   /**
    * @return a tuple of the replica state (number racks, number live
-   * replicas, and number needed replicas) for the given block.
+   * replicas, number needed replicas and number of UpgradeDomains) for the
+   * given block.
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) {
     final BlockManager bm = namesystem.getBlockManager();
@@ -90,7 +91,8 @@ public class BlockManagerTestUtil {
       final BlockInfo storedBlock = bm.getStoredBlock(b);
       return new int[]{getNumberOfRacks(bm, b),
           bm.countNodes(storedBlock).liveReplicas(),
-          bm.neededReconstruction.contains(storedBlock) ? 1 : 0};
+          bm.neededReconstruction.contains(storedBlock) ? 1 : 0,
+          getNumberOfDomains(bm, b)};
     } finally {
       namesystem.readUnlock();
     }
@@ -118,6 +120,30 @@ public class BlockManagerTestUtil {
       }
     }
     return rackSet.size();
+  }
+
+  /**
+   * @return the number of UpgradeDomains over which a given block is replicated
+   * decommissioning/decommissioned nodes are not counted. corrupt replicas
+   * are also ignored.
+   */
+  private static int getNumberOfDomains(final BlockManager blockManager,
+                                        final Block b) {
+    final Set<String> domSet = new HashSet<String>(0);
+    final Collection<DatanodeDescriptor> corruptNodes =
+        getCorruptReplicas(blockManager).getNodes(b);
+    for(DatanodeStorageInfo storage : blockManager.blocksMap.getStorages(b)) {
+      final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
+      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
+        if ((corruptNodes == null) || !corruptNodes.contains(cur)) {
+          String domain = cur.getUpgradeDomain();
+          if (domain != null && !domSet.contains(domain)) {
+            domSet.add(domain);
+          }
+        }
+      }
+    }
+    return domSet.size();
   }
 
   /**
