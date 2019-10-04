@@ -165,6 +165,14 @@ public class LockManager<R> {
    * @return {@link ActiveLock} instance
    */
   private ActiveLock getLockForLocking(final R resource) {
+    /*
+     * While getting a lock object for locking we should
+     * atomically increment the active count of the lock.
+     *
+     * This is to avoid cases where the selected lock could
+     * be removed from the activeLocks map and returned to
+     * the object pool.
+     */
     return activeLocks.compute(resource, (k, v) -> {
       final ActiveLock lock;
       try {
