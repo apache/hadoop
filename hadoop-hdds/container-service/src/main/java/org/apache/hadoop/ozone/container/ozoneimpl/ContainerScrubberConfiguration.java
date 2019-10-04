@@ -22,8 +22,6 @@ import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigTag;
 import org.apache.hadoop.hdds.conf.ConfigType;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * This class defines configuration parameters for container scrubber.
  **/

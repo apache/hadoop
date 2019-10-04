@@ -451,10 +451,10 @@ public class TestBlockDeletingService {
   }
 
   private int getNumberOfChunksInContainers(ContainerSet containerSet) {
-    Iterator<Container<?>> containerIterator = containerSet.getContainerIterator();
+    Iterator<Container<?>> iterator = containerSet.getContainerIterator();
     int numChunks = 0;
-    while (containerIterator.hasNext()) {
-      Container container = containerIterator.next();
+    while (iterator.hasNext()) {
+      Container container = iterator.next();
       File chunkDir = FileUtils.getFile(
           ((KeyValueContainerData) container.getContainerData())
               .getChunksPath());

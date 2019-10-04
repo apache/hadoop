@@ -59,10 +59,10 @@ public class ContainerDataScanner extends Thread {
                               HddsVolume volume) {
     this.controller = controller;
     this.volume = volume;
-    this.dataScanInterval = conf.getDataScanInterval();
-    this.throttler = new HddsDataTransferThrottler(conf.getBandwidthPerVolume());
-    this.canceler = new Canceler();
-    this.metrics = ContainerDataScrubberMetrics.create(volume.toString());
+    dataScanInterval = conf.getDataScanInterval();
+    throttler = new HddsDataTransferThrottler(conf.getBandwidthPerVolume());
+    canceler = new Canceler();
+    metrics = ContainerDataScrubberMetrics.create(volume.toString());
     setName("ContainerDataScanner(" + volume + ")");
     setDaemon(true);
   }

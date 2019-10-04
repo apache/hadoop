@@ -172,7 +172,6 @@ public class OzoneContainer {
     ContainerScrubberConfiguration c = config.getObject(
         ContainerScrubberConfiguration.class);
     boolean enabled = c.isEnabled();
-    long metadataScanInterval = c.getMetadataScanInterval();
 
     if (!enabled) {
       LOG.info("Background container scanner has been disabled.");

@@ -96,12 +96,11 @@ public class TestContainerSet {
 
     assertEquals(10, containerSet.containerCount());
 
-    // Using containerIterator.
-    Iterator<Container<?>> containerIterator = containerSet.getContainerIterator();
+    Iterator<Container<?>> iterator = containerSet.getContainerIterator();
 
     int count = 0;
-    while(containerIterator.hasNext()) {
-      Container kv = containerIterator.next();
+    while(iterator.hasNext()) {
+      Container kv = iterator.next();
       ContainerData containerData = kv.getContainerData();
       long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
