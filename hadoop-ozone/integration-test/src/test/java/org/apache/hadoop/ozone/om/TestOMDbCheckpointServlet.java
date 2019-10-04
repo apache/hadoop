@@ -155,8 +155,6 @@ public class TestOMDbCheckpointServlet {
       Assert.assertTrue(
           omMetrics.getLastCheckpointCreationTimeTaken() == 0);
       Assert.assertTrue(
-          omMetrics.getLastCheckpointTarOperationTimeTaken() == 0);
-      Assert.assertTrue(
           omMetrics.getLastCheckpointStreamingTimeTaken() == 0);
 
       omDbCheckpointServletMock.doGet(requestMock, responseMock);
@@ -164,8 +162,6 @@ public class TestOMDbCheckpointServlet {
       Assert.assertTrue(tempFile.length() > 0);
       Assert.assertTrue(
           omMetrics.getLastCheckpointCreationTimeTaken() > 0);
-      Assert.assertTrue(
-          omMetrics.getLastCheckpointTarOperationTimeTaken() > 0);
       Assert.assertTrue(
           omMetrics.getLastCheckpointStreamingTimeTaken() > 0);
     } finally {
