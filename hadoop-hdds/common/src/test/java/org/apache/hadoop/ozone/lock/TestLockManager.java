@@ -29,34 +29,143 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TestLockManager {
 
   @Test(timeout = 1000)
-  public void testWithDifferentResource() {
-    LockManager<String> manager = new LockManager<>(new OzoneConfiguration());
-    manager.lock("/resourceOne");
+  public void testWriteLockWithDifferentResource() {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    manager.writeLock("/resourceOne");
     // This should work, as they are different resource.
-    manager.lock("/resourceTwo");
-    manager.unlock("/resourceOne");
-    manager.unlock("/resourceTwo");
+    manager.writeLock("/resourceTwo");
+    manager.writeUnlock("/resourceOne");
+    manager.writeUnlock("/resourceTwo");
     Assert.assertTrue(true);
   }
 
   @Test
-  public void testWithSameResource() throws Exception {
-    LockManager<String> manager = new LockManager<>(new OzoneConfiguration());
-    manager.lock("/resourceOne");
-    AtomicBoolean gotLock = new AtomicBoolean(false);
+  public void testWriteLockWithSameResource() throws Exception {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    final AtomicBoolean gotLock = new AtomicBoolean(false);
+    manager.writeLock("/resourceOne");
     new Thread(() -> {
-      manager.lock("/resourceOne");
+      manager.writeLock("/resourceOne");
       gotLock.set(true);
-      manager.unlock("/resourceOne");
+      manager.writeUnlock("/resourceOne");
     }).start();
-    // Let's give some time for the new thread to run
+    // Let's give some time for the other thread to run
     Thread.sleep(100);
-    // Since the new thread is trying to get lock on same object, it will wait.
+    // Since the other thread is trying to get write lock on same object,
+    // it will wait.
     Assert.assertFalse(gotLock.get());
-    manager.unlock("/resourceOne");
-    // Since we have released the lock, the new thread should have the lock
-    // now
-    // Let's give some time for the new thread to run
+    manager.writeUnlock("/resourceOne");
+    // Since we have released the write lock, the other thread should have
+    // the lock now
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    Assert.assertTrue(gotLock.get());
+  }
+
+  @Test(timeout = 1000)
+  public void testReadLockWithDifferentResource() {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    manager.readLock("/resourceOne");
+    manager.readLock("/resourceTwo");
+    manager.readUnlock("/resourceOne");
+    manager.readUnlock("/resourceTwo");
+    Assert.assertTrue(true);
+  }
+
+  @Test
+  public void testReadLockWithSameResource() throws Exception {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    final AtomicBoolean gotLock = new AtomicBoolean(false);
+    manager.readLock("/resourceOne");
+    new Thread(() -> {
+      manager.readLock("/resourceOne");
+      gotLock.set(true);
+      manager.readUnlock("/resourceOne");
+    }).start();
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    // Since the new thread is trying to get read lock, it should work.
+    Assert.assertTrue(gotLock.get());
+    manager.readUnlock("/resourceOne");
+  }
+
+  @Test
+  public void testWriteReadLockWithSameResource() throws Exception {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    final AtomicBoolean gotLock = new AtomicBoolean(false);
+    manager.writeLock("/resourceOne");
+    new Thread(() -> {
+      manager.readLock("/resourceOne");
+      gotLock.set(true);
+      manager.readUnlock("/resourceOne");
+    }).start();
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    // Since the other thread is trying to get read lock on same object,
+    // it will wait.
+    Assert.assertFalse(gotLock.get());
+    manager.writeUnlock("/resourceOne");
+    // Since we have released the write lock, the other thread should have
+    // the lock now
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    Assert.assertTrue(gotLock.get());
+  }
+
+  @Test
+  public void testReadWriteLockWithSameResource() throws Exception {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    final AtomicBoolean gotLock = new AtomicBoolean(false);
+    manager.readLock("/resourceOne");
+    new Thread(() -> {
+      manager.writeLock("/resourceOne");
+      gotLock.set(true);
+      manager.writeUnlock("/resourceOne");
+    }).start();
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    // Since the other thread is trying to get write lock on same object,
+    // it will wait.
+    Assert.assertFalse(gotLock.get());
+    manager.readUnlock("/resourceOne");
+    // Since we have released the read lock, the other thread should have
+    // the lock now
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    Assert.assertTrue(gotLock.get());
+  }
+
+  @Test
+  public void testMultiReadWriteLockWithSameResource() throws Exception {
+    final LockManager<String> manager =
+        new LockManager<>(new OzoneConfiguration());
+    final AtomicBoolean gotLock = new AtomicBoolean(false);
+    manager.readLock("/resourceOne");
+    manager.readLock("/resourceOne");
+    new Thread(() -> {
+      manager.writeLock("/resourceOne");
+      gotLock.set(true);
+      manager.writeUnlock("/resourceOne");
+    }).start();
+    // Let's give some time for the other thread to run
+    Thread.sleep(100);
+    // Since the other thread is trying to get write lock on same object,
+    // it will wait.
+    Assert.assertFalse(gotLock.get());
+    manager.readUnlock("/resourceOne");
+    //We have only released one read lock, we still hold another read lock.
+    Thread.sleep(100);
+    Assert.assertFalse(gotLock.get());
+    manager.readUnlock("/resourceOne");
+    // Since we have released the read lock, the other thread should have
+    // the lock now
+    // Let's give some time for the other thread to run
     Thread.sleep(100);
     Assert.assertTrue(gotLock.get());
   }

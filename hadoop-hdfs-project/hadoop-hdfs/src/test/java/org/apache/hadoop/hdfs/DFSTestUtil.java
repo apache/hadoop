@@ -556,17 +556,24 @@ public class DFSTestUtil {
     }
   }
 
+  public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
+      int racks, int replicas, int neededReplicas)
+      throws TimeoutException, InterruptedException {
+    waitForReplication(cluster, b, racks, replicas, neededReplicas, 0);
+  }
+
   /*
    * Wait up to 20s for the given block to be replicated across
    * the requested number of racks, with the requested number of
    * replicas, and the requested number of replicas still needed.
    */
   public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
-      int racks, int replicas, int neededReplicas)
+      int racks, int replicas, int neededReplicas, int neededDomains)
       throws TimeoutException, InterruptedException {
     int curRacks = 0;
     int curReplicas = 0;
     int curNeededReplicas = 0;
+    int curDomains = 0;
     int count = 0;
     final int ATTEMPTS = 20;
 
@@ -577,17 +584,21 @@ public class DFSTestUtil {
       curRacks = r[0];
       curReplicas = r[1];
       curNeededReplicas = r[2];
+      curDomains = r[3];
       count++;
     } while ((curRacks != racks ||
               curReplicas != replicas ||
-              curNeededReplicas != neededReplicas) && count < ATTEMPTS);
+        curNeededReplicas != neededReplicas ||
+        (neededDomains != 0 && curDomains != neededDomains))
+        && count < ATTEMPTS);
 
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for replication."
           + " Needed replicas = "+neededReplicas
           + " Cur needed replicas = "+curNeededReplicas
           + " Replicas = "+replicas+" Cur replicas = "+curReplicas
-          + " Racks = "+racks+" Cur racks = "+curRacks);
+          + " Racks = "+racks+" Cur racks = "+curRacks
+          + " Domains = "+neededDomains+" Cur domains = "+curDomains);
     }
   }
 

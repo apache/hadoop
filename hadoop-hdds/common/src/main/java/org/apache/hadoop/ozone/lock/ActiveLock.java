@@ -18,22 +18,22 @@
 package org.apache.hadoop.ozone.lock;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Lock implementation which also maintains counter.
  */
 public final class ActiveLock {
 
-  private Lock lock;
+  private ReadWriteLock lock;
   private AtomicInteger count;
 
   /**
    * Use ActiveLock#newInstance to create instance.
    */
   private ActiveLock() {
-    this.lock = new ReentrantLock();
+    this.lock = new ReentrantReadWriteLock();
     this.count = new AtomicInteger(0);
   }
 
@@ -47,21 +47,58 @@ public final class ActiveLock {
   }
 
   /**
-   * Acquires the lock.
+   * Acquires read lock.
    *
-   * <p>If the lock is not available then the current thread becomes
-   * disabled for thread scheduling purposes and lies dormant until the
-   * lock has been acquired.
+   * <p>Acquires the read lock if the write lock is not held by
+   * another thread and returns immediately.
+   *
+   * <p>If the write lock is held by another thread then
+   * the current thread becomes disabled for thread scheduling
+   * purposes and lies dormant until the read lock has been acquired.
    */
-  public void lock() {
-    lock.lock();
+  void readLock() {
+    lock.readLock().lock();
   }
 
   /**
-   * Releases the lock.
+   * Attempts to release the read lock.
+   *
+   * <p>If the number of readers is now zero then the lock
+   * is made available for write lock attempts.
    */
-  public void unlock() {
-    lock.unlock();
+  void readUnlock() {
+    lock.readLock().unlock();
+  }
+
+  /**
+   * Acquires write lock.
+   *
+   * <p>Acquires the write lock if neither the read nor write lock
+   * are held by another thread
+   * and returns immediately, setting the write lock hold count to
+   * one.
+   *
+   * <p>If the current thread already holds the write lock then the
+   * hold count is incremented by one and the method returns
+   * immediately.
+   *
+   * <p>If the lock is held by another thread then the current
+   * thread becomes disabled for thread scheduling purposes and
+   * lies dormant until the write lock has been acquired.
+   */
+  void writeLock() {
+    lock.writeLock().lock();
+  }
+
+  /**
+   * Attempts to release the write lock.
+   *
+   * <p>If the current thread is the holder of this lock then
+   * the hold count is decremented. If the hold count is now
+   * zero then the lock is released.
+   */
+  void writeUnlock() {
+    lock.writeLock().unlock();
   }
 
   /**

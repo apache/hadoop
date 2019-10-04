@@ -20,8 +20,6 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +34,6 @@ import org.junit.rules.TemporaryFolder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.ProvisionException;
 import com.google.inject.Singleton;
 
 /**
@@ -68,20 +65,10 @@ public class TestReconContainerDBProvider {
 
   @Test
   public void testGet() throws Exception {
-
     ReconContainerDBProvider reconContainerDBProvider = injector.getInstance(
         ReconContainerDBProvider.class);
     DBStore dbStore = reconContainerDBProvider.get();
     assertNotNull(dbStore);
-
-    ReconContainerDBProvider reconContainerDBProviderNew = new
-        ReconContainerDBProvider();
-    try {
-      reconContainerDBProviderNew.get();
-      fail();
-    } catch (Exception e) {
-      assertTrue(e instanceof ProvisionException);
-    }
   }
 
 }
