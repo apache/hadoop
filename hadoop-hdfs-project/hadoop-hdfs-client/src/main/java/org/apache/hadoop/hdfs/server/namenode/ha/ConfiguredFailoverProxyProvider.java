@@ -81,13 +81,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public synchronized void close() throws IOException {
     for (ProxyInfo<T> proxy : proxies) {
-      if (proxy.proxy != null) {
-        if (proxy.proxy instanceof Closeable) {
-          ((Closeable)proxy.proxy).close();
-        } else {
-          stopProxy(proxy.proxy);
-        }
-      }
+      stopProxy(proxy.proxy);
     }
   }
 
@@ -116,6 +110,16 @@ public class ConfiguredFailoverProxyProvider<T> extends
   }
 
   protected void stopProxy(T proxy) {
-    RPC.stopProxy(proxy);
+    if (proxy != null) {
+      if (proxy instanceof Closeable) {
+        try {
+          ((Closeable)proxy).close();
+        } catch(IOException e) {
+          throw new RuntimeException("Could not close proxy", e);
+        }
+      } else {
+        RPC.stopProxy(proxy);
+      }
+    }
   }
 }
