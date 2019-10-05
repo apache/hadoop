@@ -133,12 +133,6 @@ public abstract class YarnConfigurationStore {
   public abstract void format() throws Exception;
 
   /**
-   * Get the last updated config version.
-   * @return Last updated config version.
-   */
-  public abstract long getConfigVersion() throws Exception;
-
-  /**
    * Get a list of confirmed configuration mutations starting from a given id.
    * @param fromId id from which to start getting mutations, inclusive
    * @return list of configuration mutations
