@@ -58,7 +58,7 @@ class LocalUserInfo {
  * b) all FileDeletionTask for that appUser is executed;
  * c) all log aggregation/handling requests for appUser's applications are done
  *
- * If DeletionService is set, during deallocation, we will check if usercache
+ * If DeletionService is set, during deallocation, we will check if appcache
  * folder for the app user exists, if yes queue a FileDeletionTask.
  *
  * For now allocation is only maintained in memory so it does not support
@@ -316,13 +316,14 @@ public class SecureModeLocalUserAllocator {
       String localUser = appUserToLocalUser.remove(appUser).localUser;
       allocated.set(localUserInfo.localUserIndex, false);
       if (delService != null) {
-        // check if node manager usercache folder exists
+        // check if node manager usercache/<appUser>/appcache folder exists
         for (String localDir : nmLocalDirs) {
           Path usersDir = new Path(localDir, ContainerLocalizer.USERCACHE);
           Path userDir = new Path(usersDir, appUser);
+          Path userAppCacheDir = new Path(userDir, ContainerLocalizer.APPCACHE);
           FileStatus status;
           try {
-            status = lfs.getFileStatus(userDir);
+            status = lfs.getFileStatus(userAppCacheDir);
           }
           catch(FileNotFoundException fs) {
             status = null;
@@ -334,7 +335,7 @@ public class SecureModeLocalUserAllocator {
           }
           if (status != null) {
             FileDeletionTask delTask = new FileDeletionTask(delService, localUser,
-                userDir, null);
+                userAppCacheDir, null);
             delService.delete(delTask);
           }
         }
