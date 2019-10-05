@@ -159,12 +159,6 @@ public class TestContainerStateMachine {
   @Test
   public void testRatisSnapshotRetention() throws Exception {
 
-    ContainerStateMachine stateMachine =
-        (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
-    SimpleStateMachineStorage storage =
-        (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Assert.assertNull(storage.findLatestSnapshot());
-
     // Write 10 keys. Num snapshots should be equal to config value.
     for (int i = 1; i <= 10; i++) {
       OzoneOutputStream key =
@@ -180,9 +174,10 @@ public class TestContainerStateMachine {
     RatisServerConfiguration ratisServerConfiguration =
         conf.getObject(RatisServerConfiguration.class);
 
-    stateMachine =
+    ContainerStateMachine stateMachine =
         (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
-    storage = (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
+    SimpleStateMachineStorage storage = (SimpleStateMachineStorage)
+        stateMachine.getStateMachineStorage();
     Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     int numSnapshots = parentPath.getParent().toFile().listFiles().length;
     Assert.assertTrue(Math.abs(ratisServerConfiguration
