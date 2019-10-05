@@ -188,8 +188,6 @@
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
-                    <!-- MR jobs spawn enough processes that they use up all RAM -->
-                    <exclude>**/ITest*CommitMRJob.java</exclude>
                     <!-- operations across the metastore -->
                     <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
                   </excludes>
@@ -231,8 +229,6 @@
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <!-- and that they don't conflict with the other MR jobs for RAM -->
                     <include>**/ITestTerasort*.java</include>
-                    <!-- MR jobs spawn enough processes that they use up all RAM -->
-                    <include>**/ITest*CommitMRJob.java</include>
                     <!-- operations across the metastore -->
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3GuardDDBRootOperations.java</include>

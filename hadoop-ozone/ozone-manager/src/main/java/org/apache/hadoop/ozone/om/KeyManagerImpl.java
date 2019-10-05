@@ -193,7 +193,6 @@ public class KeyManagerImpl implements KeyManager {
     this.secretManager = secretManager;
     this.kmsProvider = kmsProvider;
 
-    start(conf);
   }
 
   @Override

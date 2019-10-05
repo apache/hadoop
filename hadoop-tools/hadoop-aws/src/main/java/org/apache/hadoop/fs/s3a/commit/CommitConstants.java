@@ -255,4 +255,10 @@ public final class CommitConstants {
   public static final String FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS =
       "fs.s3a.committer.staging.abort.pending.uploads";
 
+  /**
+   * The limit to the number of committed objects tracked during
+   * job commits and saved to the _SUCCESS file.
+   */
+  public static final int SUCCESS_MARKER_FILE_LIMIT = 100;
+
 }
