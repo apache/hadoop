@@ -135,11 +135,6 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public long getConfigVersion() throws Exception {
-    return confStore.getConfigVersion();
-  }
-
-  @Override
   public ConfigurationMutationACLPolicy getAclMutationPolicy() {
     return aclMutationPolicy;
   }
