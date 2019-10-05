@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -25,16 +26,21 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
@@ -43,7 +49,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Use metrics to assert about the cost of file status queries.
  * {@link S3AFileSystem#getFileStatus(Path)}.
+ * Parameterized on guarded vs raw.
  */
+@RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
   private MetricDiff metadataRequests;
@@ -52,9 +60,48 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
 
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {"raw", false},
+        {"guarded", true}
+    });
+  }
+
+  private final String name;
+
+  private final boolean s3guard;
+
+  public ITestS3AFileOperationCost(final String name, final boolean s3guard) {
+    this.name = name;
+    this.s3guard = s3guard;
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    String bucketName = getTestBucketName(conf);
+    removeBucketOverrides(bucketName, conf,
+        S3_METADATA_STORE_IMPL);
+    if (!s3guard) {
+      // in a raw run remove all s3guard settings
+      removeBaseAndBucketOverrides(bucketName, conf,
+          S3_METADATA_STORE_IMPL);
+    }
+    disableFilesystemCaching(conf);
+    return conf;
+  }
   @Override
   public void setup() throws Exception {
     super.setup();
+    if (s3guard) {
+      // s3guard is required for those test runs where any of the
+      // guard options are set
+      assumeS3GuardState(true, getConfiguration());
+    }
     S3AFileSystem fs = getFileSystem();
     metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
     listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
