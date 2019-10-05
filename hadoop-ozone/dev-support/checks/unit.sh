@@ -17,7 +17,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
 export MAVEN_OPTS="-Xmx4096m"
-mvn -B -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem,\!:hadoop-ozone-tools
+mvn -B -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem,\!:hadoop-ozone-tools "$@"
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/unit"}
 mkdir -p "$REPORT_DIR"
