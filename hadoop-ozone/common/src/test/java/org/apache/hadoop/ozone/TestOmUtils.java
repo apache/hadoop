@@ -19,31 +19,39 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link OmUtils}.
  */
 public class TestOmUtils {
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
   @Rule
   public Timeout timeout = new Timeout(60_000);
 
@@ -96,22 +104,13 @@ public class TestOmUtils {
   }
 
   @Test
-  public void testCreateTarFile() throws Exception {
+  public void testWriteCheckpointToOutputStream() throws Exception {
 
-    File tempSnapshotDir = null;
     FileInputStream fis = null;
     FileOutputStream fos = null;
-    File tarFile = null;
 
     try {
-      String testDirName = System.getProperty("java.io.tmpdir");
-      if (!testDirName.endsWith("/")) {
-        testDirName += "/";
-      }
-      testDirName += "TestCreateTarFile_Dir" + System.currentTimeMillis();
-      tempSnapshotDir = new File(testDirName);
-      tempSnapshotDir.mkdirs();
-
+      String testDirName = folder.newFolder().getAbsolutePath();
       File file = new File(testDirName + "/temp1.txt");
       FileWriter writer = new FileWriter(file);
       writer.write("Test data 1");
@@ -122,14 +121,60 @@ public class TestOmUtils {
       writer.write("Test data 2");
       writer.close();
 
-      tarFile = OmUtils.createTarFile(Paths.get(testDirName));
-      Assert.assertNotNull(tarFile);
-
+      File outputFile =
+          new File(Paths.get(testDirName, "output_file.tgz").toString());
+      TestDBCheckpoint dbCheckpoint = new TestDBCheckpoint(
+          Paths.get(testDirName));
+      OmUtils.writeOmDBCheckpointToStream(dbCheckpoint,
+          new FileOutputStream(outputFile));
+      assertNotNull(outputFile);
     } finally {
       IOUtils.closeStream(fis);
       IOUtils.closeStream(fos);
-      FileUtils.deleteDirectory(tempSnapshotDir);
-      FileUtils.deleteQuietly(tarFile);
     }
+  }
+
+}
+
+class TestDBCheckpoint implements DBCheckpoint {
+
+  private Path checkpointFile;
+
+  TestDBCheckpoint(Path checkpointFile) {
+    this.checkpointFile = checkpointFile;
+  }
+
+  @Override
+  public Path getCheckpointLocation() {
+    return checkpointFile;
+  }
+
+  @Override
+  public long getCheckpointTimestamp() {
+    return 0;
+  }
+
+  @Override
+  public long getLatestSequenceNumber() {
+    return 0;
+  }
+
+  @Override
+  public long checkpointCreationTimeTaken() {
+    return 0;
+  }
+
+  @Override
+  public void cleanupCheckpoint() throws IOException {
+    FileUtils.deleteDirectory(checkpointFile.toFile());
+  }
+
+  @Override
+  public void setRatisSnapshotIndex(long omRatisSnapshotIndex) {
+  }
+
+  @Override
+  public long getRatisSnapshotIndex() {
+    return 0;
   }
 }

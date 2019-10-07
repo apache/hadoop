@@ -85,6 +85,9 @@
                   </resources>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
+                  <resource>ozone-default-generated.xml</resource>
+                </transformer>
               </transformers>
               <relocations>
                 <relocation>

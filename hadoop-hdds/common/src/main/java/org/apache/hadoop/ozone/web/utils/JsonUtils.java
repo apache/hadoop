@@ -43,10 +43,9 @@ public final class JsonUtils {
     // Never constructed
   }
 
-  public static String toJsonStringWithDefaultPrettyPrinter(String jsonString)
+  public static String toJsonStringWithDefaultPrettyPrinter(Object obj)
       throws IOException {
-    Object json = READER.readValue(jsonString);
-    return WRITTER.writeValueAsString(json);
+    return WRITTER.writeValueAsString(obj);
   }
 
   public static String toJsonString(Object obj) throws IOException {
