@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -61,8 +61,8 @@ public class LogSubcommand extends BaseInsightSubCommand
       + "show more information / detailed message")
   private boolean verbose;
 
-  @CommandLine.Option(names = "-f", description = "Enable verbose mode to "
-      + "show more information / detailed message")
+  @CommandLine.Option(names = "-f", description = "Define filters to scope "
+      + "the output (eg. -f datanode=_1234_datanode_id)")
   private Map<String, String> filters;
 
   @Override
@@ -102,7 +102,7 @@ public class LogSubcommand extends BaseInsightSubCommand
    * @param filter         any additional filter
    */
   private void streamLog(OzoneConfiguration conf, Set<Component> sources,
-      List<LoggerSource> relatedLoggers, Function<String, Boolean> filter) {
+      List<LoggerSource> relatedLoggers, Predicate<String> filter) {
     List<Thread> loggers = new ArrayList<>();
     for (Component sourceComponent : sources) {
       loggers.add(new Thread(
@@ -121,7 +121,7 @@ public class LogSubcommand extends BaseInsightSubCommand
   }
 
   private void streamLog(OzoneConfiguration conf, Component logComponent,
-      List<LoggerSource> loggers, Function<String, Boolean> filter) {
+      List<LoggerSource> loggers, Predicate<String> filter) {
     HttpClient client = HttpClientBuilder.create().build();
 
     HttpGet get = new HttpGet(getHost(conf, logComponent) + "/logstream");
@@ -134,7 +134,7 @@ public class LogSubcommand extends BaseInsightSubCommand
             .filter(line -> {
               for (LoggerSource logger : loggers) {
                 if (line.contains(logger.getLoggerName()) && filter
-                    .apply(line)) {
+                    .test(line)) {
                   return true;
                 }
               }

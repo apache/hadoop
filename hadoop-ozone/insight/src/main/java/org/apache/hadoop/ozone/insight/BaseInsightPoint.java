@@ -195,9 +195,9 @@ public abstract class BaseInsightPoint implements InsightPoint {
     for (Entry<String, String> entry : filters.entrySet()) {
       if (!logLine.matches(
           String.format(".*\\[%s=%s\\].*", entry.getKey(), entry.getValue()))) {
-        result = result & false;
+        return false;
       }
     }
-    return result;
+    return true;
   }
 }
