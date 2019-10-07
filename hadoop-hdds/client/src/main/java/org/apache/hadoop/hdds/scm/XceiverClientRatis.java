@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -56,7 +57,6 @@ import org.apache.ratis.protocol.RaftException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -219,39 +219,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     try (Scope scope = GlobalTracer.get()
         .buildSpan("XceiverClientRatis." + request.getCmdType().name())
         .startActive(true)) {
-      ContainerCommandRequestProto finalPayload =
-          ContainerCommandRequestProto.newBuilder(request)
-              .setTraceID(TracingUtil.exportCurrentSpan())
-              .build();
-      boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
-      ByteString byteString = finalPayload.toByteString();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest,
-            sanitizeForDebug(finalPayload));
+      final ContainerCommandRequestMessage message
+          = ContainerCommandRequestMessage.toMessage(
+              request, TracingUtil.exportCurrentSpan());
+      if (HddsUtils.isReadOnly(request)) {
+        LOG.debug("sendCommandAsync ReadOnly {}", message);
+        return getClient().sendReadOnlyAsync(message);
+      } else {
+        LOG.debug("sendCommandAsync {}", message);
+        return getClient().sendAsync(message);
       }
-      return isReadOnlyRequest ?
-          getClient().sendReadOnlyAsync(() -> byteString) :
-          getClient().sendAsync(() -> byteString);
-    }
-  }
-
-  private ContainerCommandRequestProto sanitizeForDebug(
-      ContainerCommandRequestProto request) {
-    switch (request.getCmdType()) {
-    case PutSmallFile:
-      return request.toBuilder()
-          .setPutSmallFile(request.getPutSmallFile().toBuilder()
-              .clearData()
-          )
-          .build();
-    case WriteChunk:
-      return request.toBuilder()
-          .setWriteChunk(request.getWriteChunk().toBuilder()
-              .clearData()
-          )
-          .build();
-    default:
-      return request;
     }
   }
 
