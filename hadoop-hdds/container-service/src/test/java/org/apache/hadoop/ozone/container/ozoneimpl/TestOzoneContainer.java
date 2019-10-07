@@ -41,12 +41,15 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 import java.util.UUID;
@@ -61,6 +64,9 @@ import static org.junit.Assert.assertEquals;
  * This class is used to test OzoneContainer.
  */
 public class TestOzoneContainer {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOzoneContainer.class);
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -148,7 +154,6 @@ public class TestOzoneContainer {
   @Test
   public void testContainerCreateDiskFull() throws Exception {
     long containerSize = (long) StorageUnit.MB.toBytes(100);
-    boolean diskSpaceException = false;
 
     // Format the volumes
     for (HddsVolume volume : volumeSet.getVolumesList()) {
@@ -164,16 +169,14 @@ public class TestOzoneContainer {
     keyValueContainer = new KeyValueContainer(keyValueContainerData, conf);
 
     // we expect an out of space Exception
-    try {
-      keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
-    } catch (StorageContainerException e) {
-      if (e.getResult() == DISK_OUT_OF_SPACE) {
-        diskSpaceException = true;
-      }
+    StorageContainerException e = LambdaTestUtils.intercept(
+        StorageContainerException.class,
+        () -> keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId)
+    );
+    if (!DISK_OUT_OF_SPACE.equals(e.getResult())) {
+      LOG.info("Unexpected error during container creation", e);
     }
-
-    // Test failed if there was no exception
-    assertEquals(true, diskSpaceException);
+    assertEquals(DISK_OUT_OF_SPACE, e.getResult());
   }
 
   //verify committed space on each volume
