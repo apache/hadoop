@@ -31,7 +31,7 @@ OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
 OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
 OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
-OZONE_SITE.XML_ozone.administrators=*
+OZONE-SITE.XML_ozone.administrators=*
 
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
@@ -62,8 +62,8 @@ HADOOP-POLICY.XML_org.apache.hadoop.yarn.server.api.ResourceTracker.acl=*
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 
-CORE-SITE.xml_fs.AbstractFileSystem.o3fs.impl=org.apache.hadoop.fs.ozone.OzFs
-CORE-SITE.xml_fs.defaultFS=o3fs://bucket1.vol1/
+CORE-SITE.XML_fs.AbstractFileSystem.o3fs.impl=org.apache.hadoop.fs.ozone.OzFs
+CORE-SITE.XML_fs.defaultFS=o3fs://bucket1.vol1/
 
 MAPRED-SITE.XML_mapreduce.framework.name=yarn
 MAPRED-SITE.XML_yarn.app.mapreduce.am.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
@@ -75,12 +75,12 @@ MAPRED-SITE.XML_mapreduce.reduce.memory.mb=2048
 MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
 
 YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
-YARN_SITE.XML_yarn.timeline-service.enabled=true
-YARN_SITE.XML_yarn.timeline-service.generic.application.history.enabled=true
-YARN_SITE.XML_yarn.timeline-service.hostname=jhs
+YARN-SITE.XML_yarn.timeline-service.enabled=true
+YARN-SITE.XML_yarn.timeline-service.generic.application.history.enabled=true
+YARN-SITE.XML_yarn.timeline-service.hostname=jhs
 YARN-SITE.XML_yarn.timeline-service.principal=jhs/jhs@EXAMPLE.COM
 YARN-SITE.XML_yarn.timeline-service.keytab=/etc/security/keytabs/jhs.keytab
-YARN_SITE.XML_yarn.log.server.url=http://jhs:8188/applicationhistory/logs/
+YARN-SITE.XML_yarn.log.server.url=http://jhs:8188/applicationhistory/logs/
 
 YARN-SITE.XML_yarn.nodemanager.principal=nm/_HOST@EXAMPLE.COM
 YARN-SITE.XML_yarn.nodemanager.keytab=/etc/security/keytabs/nm.keytab
@@ -93,15 +93,17 @@ YARN-SITE.XML_yarn.nodemanager.disk-health-checker.enable=false
 YARN-SITE.XML_yarn.resourcemanager.hostname=rm
 YARN-SITE.XML_yarn.resourcemanager.keytab=/etc/security/keytabs/rm.keytab
 YARN-SITE.XML_yarn.resourcemanager.principal=rm/rm@EXAMPLE.COM
-YARN_SITE_XML_yarn.resourcemanager.system.metrics.publisher.enabled=true
+YARN-SITE.XML_yarn.resourcemanager.system.metrics.publisher.enabled=true
 
 YARN-SITE.XML_yarn.log-aggregation-enable=true
-YARN-SITE.yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
-YARN-SITE.yarn.nodemanager.delete.debug-delay-sec=600
+YARN-SITE.XML_yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
+YARN-SITE.XML_yarn.nodemanager.delete.debug-delay-sec=600
 
-YARN-SITE.yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
-YARN-SITE.yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
-YARN-SITE.yarn.nodemanager.linux-container-executor.group=hadoop
+# Yarn LinuxContainer requires the /opt/hadoop/etc/hadoop to be owned by root and not modifiable by other users,
+# which prevents start.sh from changing the configurations based on docker-config
+# YARN-SITE.XML_yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
+# YARN-SITE.XML_yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
+# YARN-SITE.XML_yarn.nodemanager.linux-container-executor.group=hadoop
 
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-applications=10000
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-am-resource-percent=0.1

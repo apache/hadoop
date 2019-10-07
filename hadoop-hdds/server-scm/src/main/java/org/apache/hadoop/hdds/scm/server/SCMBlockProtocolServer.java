@@ -295,7 +295,12 @@ public class SCMBlockProtocolServer implements
     boolean auditSuccess = true;
     try{
       NodeManager nodeManager = scm.getScmNodeManager();
-      Node client = nodeManager.getNodeByAddress(clientMachine);
+      Node client = null;
+      List<DatanodeDetails> possibleClients =
+          nodeManager.getNodesByAddress(clientMachine);
+      if (possibleClients.size()>0){
+        client = possibleClients.get(0);
+      }
       List<Node> nodeList = new ArrayList();
       nodes.stream().forEach(uuid -> {
         DatanodeDetails node = nodeManager.getNodeByUuid(uuid);

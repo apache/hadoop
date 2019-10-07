@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -94,8 +93,8 @@ public class SetAclKeyHandler extends Handler {
     boolean result = client.getObjectStore().setAcl(obj,
         OzoneAcl.parseAcls(acls));
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString("Acl set successfully: " + result)));
+    System.out.printf("%s%n", "Acl set successfully: " + result);
+
     client.close();
     return null;
   }

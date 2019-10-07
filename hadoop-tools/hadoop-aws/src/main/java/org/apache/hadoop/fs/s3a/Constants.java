@@ -837,4 +837,10 @@ public final class Constants {
   public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
   public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
   public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
+
+  /**
+   * How long to wait for the thread pool to terminate when cleaning up.
+   * Value: {@value} seconds.
+   */
+  public static final int THREAD_POOL_SHUTDOWN_DELAY_SECONDS = 30;
 }

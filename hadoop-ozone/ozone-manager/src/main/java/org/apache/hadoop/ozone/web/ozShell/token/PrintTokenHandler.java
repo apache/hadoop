@@ -65,7 +65,7 @@ public class PrintTokenHandler extends Handler {
     token.decodeFromUrlString(encodedToken);
 
     System.out.printf("%s", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(token.toString())));
+        token.toString()));
     return null;
   }
 }

@@ -63,7 +63,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -440,8 +443,7 @@ public final class S3ATestUtils {
    */
   public static void assumeS3GuardState(boolean shouldBeEnabled,
       Configuration originalConf) throws URISyntaxException {
-    boolean isEnabled = getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
-        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false));
+    boolean isEnabled = isS3GuardTestPropertySet(originalConf);
     Assume.assumeThat("Unexpected S3Guard test state:"
             + " shouldBeEnabled=" + shouldBeEnabled
             + " and isEnabled=" + isEnabled,
@@ -460,12 +462,21 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Is the test option for S3Guard set?
+   * @param conf configuration to examine.
+   * @return true if the config or system property turns s3guard tests on
+   */
+  public static boolean isS3GuardTestPropertySet(final Configuration conf) {
+    return getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
+        conf.getBoolean(TEST_S3GUARD_ENABLED, false));
+  }
+
+  /**
    * Conditionally set the S3Guard options from test properties.
    * @param conf configuration
    */
   public static void maybeEnableS3Guard(Configuration conf) {
-    if (getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
-        conf.getBoolean(TEST_S3GUARD_ENABLED, false))) {
+    if (isS3GuardTestPropertySet(conf)) {
       // S3Guard is enabled.
       boolean authoritative = getTestPropertyBool(conf,
           TEST_S3GUARD_AUTHORITATIVE,
@@ -598,7 +609,7 @@ public final class S3ATestUtils {
     String tmpDir = conf.get(HADOOP_TMP_DIR, "target/build/test");
     if (testUniqueForkId != null) {
       // patch temp dir for the specific branch
-      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
+      tmpDir = tmpDir + File.separator + testUniqueForkId;
       conf.set(HADOOP_TMP_DIR, tmpDir);
     }
     conf.set(BUFFER_DIR, tmpDir);
@@ -755,8 +766,9 @@ public final class S3ATestUtils {
     for (String option : options) {
       final String stripped = option.substring("fs.s3a.".length());
       String target = bucketPrefix + stripped;
-      if (conf.get(target) != null) {
-        LOG.debug("Removing option {}", target);
+      String v = conf.get(target);
+      if (v != null) {
+        LOG.debug("Removing option {}; was {}", target, v);
         conf.unset(target);
       }
     }
@@ -1270,6 +1282,16 @@ public final class S3ATestUtils {
     return Boolean.valueOf(persists);
   }
 
+  /**
+   * Set the metadata store of a filesystem instance to the given
+   * store, via a package-private setter method.
+   * @param fs filesystem.
+   * @param ms metastore
+   */
+  public static void setMetadataStore(S3AFileSystem fs, MetadataStore ms) {
+    fs.setMetadataStore(ms);
+}
+
   public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
       throws IOException {
     final RemoteIterator<LocatedFileStatus> listIter =
@@ -1345,5 +1367,42 @@ public final class S3ATestUtils {
     return (S3AFileStatus) eventually(
         STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
         () -> fs.getFileStatus(testFilePath));
+  }
+
+  /**
+   * This creates a set containing all current threads and some well-known
+   * thread names whose existence should not fail test runs.
+   * They are generally static cleaner threads created by various classes
+   * on instantiation.
+   * @return a set of threads to use in later assertions.
+   */
+  public static Set<String> listInitialThreadsForLifecycleChecks() {
+    Set<String> threadSet = getCurrentThreadNames();
+    // static filesystem statistics cleaner
+    threadSet.add(
+        "org.apache.hadoop.fs.FileSystem$Statistics$StatisticsDataReferenceCleaner");
+    // AWS progress callbacks
+    threadSet.add("java-sdk-progress-listener-callback-thread");
+    // another AWS thread
+    threadSet.add("java-sdk-http-connection-reaper");
+    // java.lang.UNIXProcess. maybe if chmod is called?
+    threadSet.add("process reaper");
+    // once a quantile has been scheduled, the mutable quantile thread pool
+    // is initialized; it has a minimum thread size of 1.
+    threadSet.add("MutableQuantiles-0");
+    // IDE?
+    threadSet.add("Attach Listener");
+    return threadSet;
+  }
+
+  /**
+   * Get a set containing the names of all active threads.
+   * @return the current set of threads.
+   */
+  public static Set<String> getCurrentThreadNames() {
+    return Thread.getAllStackTraces().keySet()
+        .stream()
+        .map(Thread::getName)
+        .collect(Collectors.toCollection(TreeSet::new));
   }
 }

@@ -52,6 +52,12 @@ import org.apache.hadoop.util.JsonSerialization;
  * Applications reading this data should use/check the {@link #name} field
  * to differentiate from any other JSON-based manifest and to identify
  * changes in the output format.
+ *
+ * Note: to deal with scale issues, the S3A committers do not include any
+ * more than the number of objects listed in
+ * {@link org.apache.hadoop.fs.s3a.commit.CommitConstants#SUCCESS_MARKER_FILE_LIMIT}.
+ * This is intended to suffice for basic integration tests.
+ * Larger tests should examine the generated files themselves.
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
