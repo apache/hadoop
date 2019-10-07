@@ -121,7 +121,7 @@ public final class AzureADAuthenticator {
 
     if (tenantGuid != null && tenantGuid.length() > 0) {
       authority = authority + tenantGuid;
-      LOG.debug("MSI authority : " + authority);
+      LOG.debug("MSI authority : {}", authority);
       qp.add("authority", authority);
     }
 
