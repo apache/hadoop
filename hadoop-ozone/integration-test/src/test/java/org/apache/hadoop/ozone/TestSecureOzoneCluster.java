@@ -53,6 +53,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -153,6 +154,18 @@ public final class TestSecureOzoneCluster {
     try {
       conf = new OzoneConfiguration();
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "localhost");
+
+      conf.setInt(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_KEY, ServerSocketUtil
+              .getPort(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_KEY, ServerSocketUtil
+              .getPort(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_KEY,
+              ServerSocketUtil.getPort(ScmConfigKeys
+                      .OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
+              ServerSocketUtil.getPort(ScmConfigKeys
+                      .OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT, 100));
+
       DefaultMetricsSystem.setMiniClusterMode(true);
       final String path = folder.newFolder().toString();
       metaDirPath = Paths.get(path, "om-meta");
