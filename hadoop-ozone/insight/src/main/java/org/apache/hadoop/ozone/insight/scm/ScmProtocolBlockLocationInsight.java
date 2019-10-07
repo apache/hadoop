@@ -36,7 +36,8 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocolServerSideTra
 public class ScmProtocolBlockLocationInsight extends BaseInsightPoint {
 
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers.add(
         new LoggerSource(Type.SCM,

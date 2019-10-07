@@ -72,7 +72,7 @@ public class LogSubcommand extends BaseInsightSubCommand
     InsightPoint insight =
         getInsight(conf, insightName);
 
-    List<LoggerSource> loggers = insight.getRelatedLoggers(verbose);
+    List<LoggerSource> loggers = insight.getRelatedLoggers(verbose, filters);
 
     for (LoggerSource logger : loggers) {
       setLogLevel(conf, logger.getLoggerName(), logger.getComponent(),

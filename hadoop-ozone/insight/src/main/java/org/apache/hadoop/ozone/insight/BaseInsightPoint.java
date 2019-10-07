@@ -74,9 +74,12 @@ public abstract class BaseInsightPoint implements InsightPoint {
    * List the related loggers.
    *
    * @param verbose true if verbose logging is requested.
+   * @param filters additional key value pair to further filter the output.
+   *                (eg. datanode=123-2323-datanode-id)
    */
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
     List<LoggerSource> loggers = new ArrayList<>();
     return loggers;
   }

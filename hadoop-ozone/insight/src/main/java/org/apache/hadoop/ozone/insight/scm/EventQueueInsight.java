@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.insight.scm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.insight.BaseInsightPoint;
@@ -31,7 +32,8 @@ import org.apache.hadoop.ozone.insight.LoggerSource;
 public class EventQueueInsight extends BaseInsightPoint {
 
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers
         .add(new LoggerSource(Type.SCM, EventQueue.class,

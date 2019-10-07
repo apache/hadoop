@@ -35,7 +35,8 @@ import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslat
 public class OmProtocolInsight extends BaseInsightPoint {
 
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers.add(
         new LoggerSource(Type.OM,

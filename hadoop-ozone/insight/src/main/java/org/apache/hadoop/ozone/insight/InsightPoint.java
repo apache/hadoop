@@ -33,7 +33,8 @@ public interface InsightPoint {
   /**
    * List of the related loggers.
    */
-  List<LoggerSource> getRelatedLoggers(boolean verbose);
+  List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters);
 
   /**
    * List of the related metrics.

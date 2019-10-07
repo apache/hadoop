@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.insight.scm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.ozone.insight.BaseInsightPoint;
@@ -32,7 +33,8 @@ import org.apache.hadoop.ozone.insight.MetricGroupDisplay;
 public class ReplicaManagerInsight extends BaseInsightPoint {
 
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
     List<LoggerSource> loggers = new ArrayList<>();
     loggers.add(new LoggerSource(Type.SCM, ReplicationManager.class,
         defaultLevel(verbose)));

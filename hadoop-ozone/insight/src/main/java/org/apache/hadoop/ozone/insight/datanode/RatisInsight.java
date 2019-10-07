@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -37,6 +38,7 @@ import org.apache.hadoop.ozone.insight.LoggerSource;
  */
 public class RatisInsight extends BaseInsightPoint implements InsightPoint {
 
+  public static final String PIPLINE_FILTER = "pipeline";
   private OzoneConfiguration conf;
 
   public RatisInsight(OzoneConfiguration conf) {
@@ -44,15 +46,28 @@ public class RatisInsight extends BaseInsightPoint implements InsightPoint {
   }
 
   @Override
-  public List<LoggerSource> getRelatedLoggers(boolean verbose) {
+  public List<LoggerSource> getRelatedLoggers(boolean verbose,
+      Map<String, String> filters) {
+    if (filters == null || !filters.containsKey(PIPLINE_FILTER)) {
+      throw new IllegalArgumentException(PIPLINE_FILTER
+          + " filter should be specified (-f pipline=<pipelineid)");
+    }
+
+    String pipelineId = filters.get(PIPLINE_FILTER);
     List<LoggerSource> result = new ArrayList<>();
     try {
       ScmClient scmClient = createScmClient(conf);
-      Pipeline pipeline = scmClient.listPipelines()
+      Optional<Pipeline> pipelineSelection = scmClient.listPipelines()
           .stream()
           .filter(d -> d.getNodes().size() > 1)
-          .findFirst()
-          .get();
+          .filter(
+              pipline -> pipline.getId().getId().toString().equals(pipelineId))
+          .findFirst();
+
+      if (!pipelineSelection.isPresent()) {
+        throw new IllegalArgumentException("No such multi-node pipeline.");
+      }
+      Pipeline pipeline = pipelineSelection.get();
       for (DatanodeDetails datanode : pipeline.getNodes()) {
         Component dn =
             new Component(Type.DATANODE, datanode.getUuid().toString(),
