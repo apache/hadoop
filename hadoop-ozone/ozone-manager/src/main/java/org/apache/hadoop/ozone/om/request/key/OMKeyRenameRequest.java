@@ -50,6 +50,9 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
+
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
@@ -123,10 +126,17 @@ public class OMKeyRenameRequest extends OMKeyRequest {
       acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
-      // Not doing bucket/volume checks here. In this way we can avoid db
-      // checks for them.
-      // TODO: Once we have volume/bucket full cache, we can add
-      // them back, as these checks will be inexpensive at that time.
+      // Check volume exist.
+      if (omMetadataManager.getVolumeTable().isExist(volumeName)) {
+        throw new OMException("Volume not found " + volumeName,
+            VOLUME_NOT_FOUND);
+      }
+
+      // Check bucket exist.
+      if (omMetadataManager.getBucketTable().isExist(bucketName)) {
+        throw new OMException("Bucket not found " + bucketName,
+            BUCKET_NOT_FOUND);
+      }
 
       // fromKeyName should exist
       String fromKey = omMetadataManager.getOzoneKey(
