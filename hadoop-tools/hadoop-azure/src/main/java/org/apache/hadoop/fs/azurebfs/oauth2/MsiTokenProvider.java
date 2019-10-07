@@ -28,21 +28,29 @@ import org.slf4j.LoggerFactory;
  */
 public class MsiTokenProvider extends AccessTokenProvider {
 
+  private final String authEndpoint;
+
+  private final String authority;
+
   private final String tenantGuid;
 
   private final String clientId;
 
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
-  public MsiTokenProvider(final String tenantGuid, final String clientId) {
+  public MsiTokenProvider(final String authEndpoint, final String tenantGuid,
+      final String clientId, final String authority) {
+    this.authEndpoint = authEndpoint;
     this.tenantGuid = tenantGuid;
     this.clientId = clientId;
+    this.authority = authority;
   }
 
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from MSI");
-    AzureADToken token = AzureADAuthenticator.getTokenFromMsi(tenantGuid, clientId, false);
+    AzureADToken token = AzureADAuthenticator
+        .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
     return token;
   }
 }
