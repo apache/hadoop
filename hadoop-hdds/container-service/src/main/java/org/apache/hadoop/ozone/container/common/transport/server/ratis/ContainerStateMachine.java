@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
@@ -313,7 +314,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     long startTime = Time.monotonicNowNanos();
     final ContainerCommandRequestProto proto =
-        getContainerCommandRequestProto(request.getMessage().getContent());
+        message2ContainerCommandRequestProto(request.getMessage());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     try {
       dispatcher.validateContainerCommand(proto);
@@ -363,7 +364,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           .setStateMachine(this)
           .setServerRole(RaftPeerRole.LEADER)
           .setStateMachineContext(startTime)
-          .setLogData(request.getMessage().getContent())
+          .setLogData(proto.toByteString())
           .build();
     }
 
@@ -381,6 +382,11 @@ public class ContainerStateMachine extends BaseStateMachine {
     return ContainerCommandRequestProto.newBuilder(
         ContainerCommandRequestProto.parseFrom(request))
         .setPipelineID(gid.getUuid().toString()).build();
+  }
+
+  private ContainerCommandRequestProto message2ContainerCommandRequestProto(
+      Message message) throws InvalidProtocolBufferException {
+    return ContainerCommandRequestMessage.toProto(message.getContent(), gid);
   }
 
   private ContainerCommandResponseProto dispatchCommand(
@@ -530,7 +536,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     try {
       metrics.incNumQueryStateMachineOps();
       final ContainerCommandRequestProto requestProto =
-          getContainerCommandRequestProto(request.getContent());
+          message2ContainerCommandRequestProto(request);
       return CompletableFuture
           .completedFuture(runCommand(requestProto, null)::toByteString);
     } catch (IOException e) {
