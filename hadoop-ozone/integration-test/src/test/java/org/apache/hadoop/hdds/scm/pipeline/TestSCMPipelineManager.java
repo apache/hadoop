@@ -21,16 +21,25 @@ package org.apache.hadoop.hdds.scm.pipeline;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -40,12 +49,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.google.protobuf.ByteString;
 
 /**
  * Test cases to verify PipelineManager.
@@ -313,5 +317,72 @@ public class TestSCMPipelineManager {
             Pipeline.PipelineState.OPEN).contains(pipeline));
 
     pipelineManager.close();
+  }
+
+  @Test
+  public void testPipelineOpenOnlyWhenLeaderReported() throws Exception {
+    EventQueue eventQueue = new EventQueue();
+    SCMPipelineManager pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue, null);
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+    Pipeline pipeline = pipelineManager
+        .createPipeline(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE);
+    // close manager
+    pipelineManager.close();
+    // new pipeline manager loads the pipelines from the db in ALLOCATED state
+    pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue, null);
+    mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+    Assert.assertEquals(Pipeline.PipelineState.ALLOCATED,
+        pipelineManager.getPipeline(pipeline.getId()).getPipelineState());
+
+    SCMSafeModeManager scmSafeModeManager =
+        new SCMSafeModeManager(new OzoneConfiguration(),
+            new ArrayList<>(), pipelineManager, eventQueue);
+    PipelineReportHandler pipelineReportHandler =
+        new PipelineReportHandler(scmSafeModeManager, pipelineManager, conf);
+
+    // Report pipelines with leaders
+    List<DatanodeDetails> nodes = pipeline.getNodes();
+    Assert.assertEquals(3, nodes.size());
+    // Send leader for only first 2 dns
+    nodes.subList(0 ,2).forEach(dn ->
+        sendPipelineReport(dn, pipeline, pipelineReportHandler, true));
+    sendPipelineReport(nodes.get(2), pipeline, pipelineReportHandler, false);
+
+    Assert.assertEquals(Pipeline.PipelineState.ALLOCATED,
+        pipelineManager.getPipeline(pipeline.getId()).getPipelineState());
+
+    nodes.forEach(dn ->
+        sendPipelineReport(dn, pipeline, pipelineReportHandler, true));
+
+    Assert.assertEquals(Pipeline.PipelineState.OPEN,
+        pipelineManager.getPipeline(pipeline.getId()).getPipelineState());
+  }
+
+  private void sendPipelineReport(DatanodeDetails dn,
+      Pipeline pipeline, PipelineReportHandler pipelineReportHandler,
+      boolean sendLeaderId) {
+
+    PipelineReportsProto.Builder reportProtoBuilder =
+        PipelineReportsProto.newBuilder();
+    PipelineReport.Builder reportBuilder = PipelineReport.newBuilder();
+    reportBuilder.setPipelineID(pipeline.getId().getProtobuf());
+    if (sendLeaderId) {
+      reportBuilder.setLeaderID(ByteString.copyFromUtf8("raftPeer-1"));
+    }
+
+    pipelineReportHandler.onMessage(new PipelineReportFromDatanode(dn,
+        reportProtoBuilder.addPipelineReport(
+            reportBuilder.build()).build()), new EventQueue());
   }
 }

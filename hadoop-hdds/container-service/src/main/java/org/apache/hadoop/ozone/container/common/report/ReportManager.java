@@ -27,7 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +43,8 @@ public final class ReportManager {
       LoggerFactory.getLogger(ReportManager.class);
 
   private final StateContext context;
-  private final List<ReportPublisher> publishers;
+  private final Map<Class<? extends GeneratedMessage>, ReportPublisher>
+      publishers;
   private final ScheduledExecutorService executorService;
 
   /**
@@ -52,7 +55,7 @@ public final class ReportManager {
    * @param publishers List of publishers which generates report
    */
   private ReportManager(StateContext context,
-                        List<ReportPublisher> publishers) {
+        Map<Class<? extends GeneratedMessage>, ReportPublisher> publishers) {
     this.context = context;
     this.publishers = publishers;
     this.executorService = HadoopExecutors.newScheduledThreadPool(
@@ -66,9 +69,14 @@ public final class ReportManager {
    * report publishers.
    */
   public void init() {
-    for (ReportPublisher publisher : publishers) {
+    for (ReportPublisher publisher : publishers.values()) {
       publisher.init(context, executorService);
     }
+  }
+
+  public ReportPublisher getReportPublisher(
+      Class<? extends GeneratedMessage> publisherClass) {
+    return publishers.get(publisherClass);
   }
 
   /**
@@ -94,18 +102,31 @@ public final class ReportManager {
   }
 
   /**
+   * Test friendly builder
+   */
+  public static Builder newBuilder(ReportPublisherFactory publisherFactory) {
+    return new Builder(publisherFactory);
+  }
+
+  /**
    * Builder to construct {@link ReportManager}.
    */
   public static final class Builder {
 
     private StateContext stateContext;
-    private List<ReportPublisher> reportPublishers;
+    private Map<Class<? extends GeneratedMessage>, ReportPublisher>
+        reportPublishers;
     private ReportPublisherFactory publisherFactory;
 
 
     private Builder(Configuration conf) {
-      this.reportPublishers = new ArrayList<>();
+      this.reportPublishers = new HashMap<>();
       this.publisherFactory = new ReportPublisherFactory(conf);
+    }
+
+    private Builder(ReportPublisherFactory publisherFactory) {
+      this.reportPublishers = new HashMap<>();
+      this.publisherFactory = publisherFactory;
     }
 
     /**
@@ -128,19 +149,7 @@ public final class ReportManager {
      * @return ReportManager.Builder
      */
     public Builder addPublisherFor(Class<? extends GeneratedMessage> report) {
-      reportPublishers.add(publisherFactory.getPublisherFor(report));
-      return this;
-    }
-
-    /**
-     * Adds new ReportPublisher to the ReportManager.
-     *
-     * @param publisher ReportPublisher
-     *
-     * @return ReportManager.Builder
-     */
-    public Builder addPublisher(ReportPublisher publisher) {
-      reportPublishers.add(publisher);
+      reportPublishers.put(report, publisherFactory.getPublisherFor(report));
       return this;
     }
 
@@ -153,6 +162,5 @@ public final class ReportManager {
       Preconditions.checkNotNull(stateContext);
       return new ReportManager(stateContext, reportPublishers);
     }
-
   }
 }

@@ -32,6 +32,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Manages the state of pipelines in SCM. All write operations like pipeline
  * creation, removal and updates should come via SCMPipelineManager.
@@ -52,9 +54,7 @@ class PipelineStateManager {
 
   void addPipeline(Pipeline pipeline) throws IOException {
     pipelineStateMap.addPipeline(pipeline);
-    if (pipeline.getPipelineState() == PipelineState.OPEN) {
-      LOG.info("Created pipeline " + pipeline);
-    }
+    LOG.info("Created pipeline " + pipeline);
   }
 
   void addContainerToPipeline(PipelineID pipelineId, ContainerID containerID)
@@ -131,8 +131,8 @@ class PipelineStateManager {
       throw new IOException("Closed pipeline can not be opened");
     }
     if (pipeline.getPipelineState() == PipelineState.ALLOCATED) {
-      pipeline = pipelineStateMap
-          .updatePipelineState(pipelineId, PipelineState.OPEN);
+      pipeline = pipelineStateMap.updatePipelineState(
+          pipelineId, PipelineState.OPEN);
       LOG.info("Pipeline {} moved to OPEN state", pipeline.toString());
     }
     return pipeline;
@@ -160,5 +160,10 @@ class PipelineStateManager {
       throws IOException {
     pipelineStateMap
         .updatePipelineState(pipelineID, PipelineState.DORMANT);
+  }
+
+  @VisibleForTesting
+  PipelineStateMap getPipelineStateMap() {
+    return pipelineStateMap;
   }
 }

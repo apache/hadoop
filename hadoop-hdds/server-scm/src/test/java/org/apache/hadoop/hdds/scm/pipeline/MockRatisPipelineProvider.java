@@ -19,9 +19,13 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Mock Ratis Pipeline Provider for Mock Nodes.
@@ -41,5 +45,16 @@ public class MockRatisPipelineProvider extends RatisPipelineProvider {
   @Override
   public void shutdown() {
     // Do nothing.
+  }
+
+  @Override
+  public Pipeline create(HddsProtos.ReplicationFactor factor, List<DatanodeDetails> nodes) {
+    return Pipeline.newBuilder()
+        .setId(PipelineID.randomId())
+        .setState(Pipeline.PipelineState.OPEN)
+        .setType(HddsProtos.ReplicationType.RATIS)
+        .setFactor(factor)
+        .setNodes(nodes)
+        .build();
   }
 }

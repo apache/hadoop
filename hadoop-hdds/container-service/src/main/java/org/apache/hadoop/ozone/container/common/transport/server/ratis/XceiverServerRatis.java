@@ -19,11 +19,14 @@
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
+
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
@@ -66,8 +69,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Collections;
 import java.util.Set;
@@ -107,6 +112,8 @@ public final class XceiverServerRatis extends XceiverServer {
   // TODO: Remove the gids set when Ratis supports an api to query active
   // pipelines
   private final Set<RaftGroupId> raftGids = new HashSet<>();
+  // pipeline leaders
+  private Map<RaftGroupId, RaftPeerId> leaderIdMap = new HashMap<>();
 
   @SuppressWarnings("parameternumber")
   private XceiverServerRatis(DatanodeDetails dd, int port,
@@ -598,6 +605,9 @@ public final class XceiverServerRatis extends XceiverServer {
       for (RaftGroupId groupId : gids) {
         reports.add(PipelineReport.newBuilder()
             .setPipelineID(PipelineID.valueOf(groupId.getUuid()).getProtobuf())
+            .setLeaderID(leaderIdMap.containsKey(groupId) ?
+                ByteString.copyFromUtf8(leaderIdMap.get(groupId).toString()) :
+                ByteString.EMPTY)
             .build());
       }
       return reports;
@@ -685,5 +695,18 @@ public final class XceiverServerRatis extends XceiverServer {
 
   void notifyGroupAdd(RaftGroupId gid) {
     raftGids.add(gid);
+  }
+
+  void handleLeaderChangedNotification(RaftGroupMemberId groupMemberId,
+                                       RaftPeerId raftPeerId) {
+    LOG.info("Leader change notification received for group: {} with new " +
+        "leaderId: {}", groupMemberId.getGroupId(), raftPeerId);
+    // Save the reported leader to be sent with the report to SCM
+    leaderIdMap.put(groupMemberId.getGroupId(), raftPeerId);
+    // Publish new reports with leaderID
+    context.getParent().getReportManager().getReportPublisher(
+        PipelineReportsProto.class).run();
+    // Trigger HB immediately
+    context.getParent().triggerHeartbeat();
   }
 }

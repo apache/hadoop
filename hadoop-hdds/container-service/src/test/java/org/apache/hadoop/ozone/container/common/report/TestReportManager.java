@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +30,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import com.google.protobuf.GeneratedMessage;
 
 /**
  * Test cases to test {@link ReportManager}.
@@ -40,13 +43,21 @@ public class TestReportManager {
     Configuration conf = new OzoneConfiguration();
     StateContext dummyContext = Mockito.mock(StateContext.class);
     ReportPublisher dummyPublisher = Mockito.mock(ReportPublisher.class);
-    ReportManager.Builder builder = ReportManager.newBuilder(conf);
+    ReportPublisherFactory publisherFactory = Mockito.mock(
+        ReportPublisherFactory.class);
+    Mockito.when(publisherFactory.getPublisherFor(any())).thenReturn(
+        dummyPublisher);
+    ReportManager.Builder builder = ReportManager.newBuilder(publisherFactory);
     builder.setStateContext(dummyContext);
-    builder.addPublisher(dummyPublisher);
+    GeneratedMessage generatedMessageMock = Mockito.mock(
+        GeneratedMessage.class, Mockito.RETURNS_DEEP_STUBS);
+    builder.addPublisherFor(generatedMessageMock.getClass());
     ReportManager reportManager = builder.build();
     reportManager.init();
     verify(dummyPublisher, times(1)).init(eq(dummyContext),
         any(ScheduledExecutorService.class));
 
   }
+
+
 }

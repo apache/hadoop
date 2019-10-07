@@ -33,7 +33,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PIPELINE_REPORT_INTERVA
  * Publishes Pipeline which will be sent to SCM as part of heartbeat.
  * PipelineReport consist of the following information about each containers:
  *   - pipelineID
- *
+ *   - LeaderID
  */
 public class PipelineReportPublisher extends
     ReportPublisher<PipelineReportsProto> {

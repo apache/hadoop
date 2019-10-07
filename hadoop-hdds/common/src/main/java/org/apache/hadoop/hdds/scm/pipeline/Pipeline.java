@@ -19,12 +19,15 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import com.google.common.base.Preconditions;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +44,7 @@ import java.util.stream.Collectors;
  */
 public final class Pipeline {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(Pipeline.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Pipeline.class);
   private final PipelineID id;
   private final ReplicationType type;
   private final ReplicationFactor factor;
@@ -51,6 +53,8 @@ public final class Pipeline {
   private Map<DatanodeDetails, Long> nodeStatus;
   // nodes with ordered distance to client
   private ThreadLocal<List<DatanodeDetails>> nodesInOrder = new ThreadLocal<>();
+  // Current reported Leader for the pipeline
+  private RaftPeerId leaderId;
 
   /**
    * The immutable properties of pipeline object is used in
@@ -101,6 +105,17 @@ public final class Pipeline {
    */
   public PipelineState getPipelineState() {
     return state;
+  }
+
+  public RaftPeerId getLeaderId() {
+    return leaderId;
+  }
+
+  /**
+   * Pipeline object, outside of letting leader id to be set, is immutable.
+   */
+  void setLeaderId(RaftPeerId leaderId) {
+    this.leaderId = leaderId;
   }
 
   /**
@@ -175,7 +190,7 @@ public final class Pipeline {
         .setType(type)
         .setFactor(factor)
         .setState(PipelineState.getProtobuf(state))
-        .setLeaderID("")
+        .setLeaderID(leaderId != null ? leaderId.toString() : "")
         .addAllMembers(nodeStatus.keySet().stream()
             .map(DatanodeDetails::getProtoBufMessage)
             .collect(Collectors.toList()));
@@ -207,6 +222,8 @@ public final class Pipeline {
         .setFactor(pipeline.getFactor())
         .setType(pipeline.getType())
         .setState(PipelineState.fromProtobuf(pipeline.getState()))
+        .setLeaderId(StringUtils.isNotEmpty(pipeline.getLeaderID()) ?
+            RaftPeerId.valueOf(pipeline.getLeaderID()) : null)
         .setNodes(pipeline.getMembersList().stream()
             .map(DatanodeDetails::getFromProtoBuf).collect(Collectors.toList()))
         .setNodesInOrder(pipeline.getMemberOrdersList())
@@ -275,6 +292,7 @@ public final class Pipeline {
     private Map<DatanodeDetails, Long> nodeStatus = null;
     private List<Integer> nodeOrder = null;
     private List<DatanodeDetails> nodesInOrder = null;
+    private RaftPeerId leaderId = null;
 
     public Builder() {}
 
@@ -307,6 +325,11 @@ public final class Pipeline {
       return this;
     }
 
+    public Builder setLeaderId(RaftPeerId leaderId1) {
+      this.leaderId = leaderId1;
+      return this;
+    }
+
     public Builder setNodes(List<DatanodeDetails> nodes) {
       this.nodeStatus = new LinkedHashMap<>();
       nodes.forEach(node -> nodeStatus.put(node, -1L));
@@ -325,6 +348,7 @@ public final class Pipeline {
       Preconditions.checkNotNull(state);
       Preconditions.checkNotNull(nodeStatus);
       Pipeline pipeline = new Pipeline(id, type, factor, state, nodeStatus);
+      pipeline.setLeaderId(leaderId);
 
       if (nodeOrder != null && !nodeOrder.isEmpty()) {
         // This branch is for build from ProtoBuf

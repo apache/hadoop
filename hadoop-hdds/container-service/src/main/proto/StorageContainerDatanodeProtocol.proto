@@ -239,6 +239,7 @@ message ContainerAction {
 
 message PipelineReport {
   required PipelineID pipelineID = 1;
+  optional bytes leaderID = 2;
 }
 
 message PipelineReportsProto {

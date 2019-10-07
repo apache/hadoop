@@ -18,25 +18,28 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.PipelineReport;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
-import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.server
-    .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Objects;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 
 /**
  * Handles Pipeline Reports from datanode.
@@ -50,6 +53,8 @@ public class PipelineReportHandler implements
   private final Configuration conf;
   private final SCMSafeModeManager scmSafeModeManager;
   private final boolean pipelineAvailabilityCheck;
+  private Map<PipelineID, Map<UUID, ByteString>>
+      reportedLeadersForPipeline = new HashMap<>();
 
   public PipelineReportHandler(SCMSafeModeManager scmSafeModeManager,
       PipelineManager pipelineManager,
@@ -72,8 +77,8 @@ public class PipelineReportHandler implements
     DatanodeDetails dn = pipelineReportFromDatanode.getDatanodeDetails();
     PipelineReportsProto pipelineReport =
         pipelineReportFromDatanode.getReport();
-    Preconditions.checkNotNull(dn, "Pipeline Report is "
-        + "missing DatanodeDetails.");
+    Preconditions.checkNotNull(dn, "Pipeline Report is " +
+        "missing DatanodeDetails.");
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Processing pipeline report for dn: {}", dn);
     }
@@ -89,7 +94,6 @@ public class PipelineReportHandler implements
       publisher.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
           pipelineReportFromDatanode);
     }
-
   }
 
   private void processPipelineReport(PipelineReport report, DatanodeDetails dn)
@@ -104,12 +108,24 @@ public class PipelineReportHandler implements
       return;
     }
 
+    if (report.hasLeaderID()) {
+      Map<UUID, ByteString> ids =
+          reportedLeadersForPipeline.computeIfAbsent(pipelineID,
+              k -> new HashMap<>());
+      ids.put(dn.getUuid(), report.getLeaderID());
+    }
+
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
-      LOGGER.info("Pipeline {} reported by {}", pipeline.getId(), dn);
-      pipeline.reportDatanode(dn);
-      if (pipeline.isHealthy()) {
-        // if all the dns have reported, pipeline can be moved to OPEN state
+      LOGGER.info("Pipeline {} reported by {} with leaderId {}",
+          pipeline.getId(), dn, report.getLeaderID().toStringUtf8());
+      Map<UUID, ByteString> leaderIdPairs =
+          reportedLeadersForPipeline.get(pipelineID);
+      if (leaderIdPairs.size() == pipeline.getFactor().getNumber() &&
+          leaderIdPairs.values().stream().distinct().count() == 1) {
+        // All datanodes reported same leader
         pipelineManager.openPipeline(pipelineID);
+        pipeline.setLeaderId(
+            RaftPeerId.valueOf(report.getLeaderID().toString()));
       }
     } else {
       // In OPEN state case just report the datanode

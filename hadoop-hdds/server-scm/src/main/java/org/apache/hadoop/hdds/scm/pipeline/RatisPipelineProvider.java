@@ -58,6 +58,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Implements Api for creating ratis pipelines.
  */
@@ -153,29 +155,22 @@ public class RatisPipelineProvider implements PipelineProvider {
       throw new InsufficientDatanodesException(e);
     }
 
-    Pipeline pipeline = Pipeline.newBuilder()
-        .setId(PipelineID.randomId())
-        .setState(PipelineState.OPEN)
-        .setType(ReplicationType.RATIS)
-        .setFactor(factor)
-        .setNodes(dns)
-        .build();
+    Pipeline pipeline = create(factor, dns);
     initializePipeline(pipeline);
     return pipeline;
   }
 
   @Override
   public Pipeline create(ReplicationFactor factor,
-      List<DatanodeDetails> nodes) {
+                         List<DatanodeDetails> nodes) {
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.OPEN)
+        .setState(PipelineState.ALLOCATED)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(nodes)
         .build();
   }
-
 
   @Override
   public void shutdown() {
@@ -252,5 +247,10 @@ public class RatisPipelineProvider implements PipelineProvider {
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
     }
+  }
+
+  @VisibleForTesting
+  PipelineStateManager getStateManager() {
+    return stateManager;
   }
 }
