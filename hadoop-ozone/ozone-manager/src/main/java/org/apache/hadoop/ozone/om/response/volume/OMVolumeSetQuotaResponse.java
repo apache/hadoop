@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
 
+import javax.annotation.Nonnull;
+
 /**
  * Response for set quota request.
  */
@@ -35,7 +37,7 @@ public class OMVolumeSetQuotaResponse extends OMClientResponse {
   private OmVolumeArgs omVolumeArgs;
 
   public OMVolumeSetQuotaResponse(OmVolumeArgs omVolumeArgs,
-      OMResponse omResponse) {
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
   }

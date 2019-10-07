@@ -62,6 +62,9 @@ public class OzoneClientProducer {
   @Inject
   private Text omService;
 
+  @Inject
+  private String omServiceID;
+
 
   @Produces
   public OzoneClient createClient() throws IOException {
@@ -105,7 +108,13 @@ public class OzoneClientProducer {
     } catch (Exception e) {
       LOG.error("Error: ", e);
     }
-    return OzoneClientFactory.getClient(ozoneConfiguration);
+
+    if (omServiceID == null) {
+      return OzoneClientFactory.getClient(ozoneConfiguration);
+    } else {
+      // As in HA case, we need to pass om service ID.
+      return OzoneClientFactory.getRpcClient(omServiceID, ozoneConfiguration);
+    }
   }
 
   @VisibleForTesting

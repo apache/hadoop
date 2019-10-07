@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -91,9 +90,13 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Globber;
+import org.apache.hadoop.fs.s3a.auth.SignerManager;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
@@ -107,6 +110,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -150,8 +154,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -180,7 +186,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
-    AWSPolicyProvider {
+    AWSPolicyProvider, DelegationTokenProvider {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -360,8 +366,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       useListV1 = (listVersion == 1);
 
-      signerManager = new SignerManager();
-      signerManager.initCustomSigners(conf);
+      signerManager = new SignerManager(bucket, this, conf, owner);
+      signerManager.initCustomSigners();
 
       // creates the AWS client, including overriding auth chain if
       // the FS came with a DT
@@ -1331,6 +1337,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         dst, dstKey, p.getRight(),
         operationCallbacks);
     return renameOperation.execute();
+  }
+
+  @Override public Token<? extends TokenIdentifier> getFsDelegationToken()
+      throws IOException {
+    return getDelegationToken(null);
   }
 
   /**
@@ -2471,7 +2482,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param newDir the current working directory.
    */
   public void setWorkingDirectory(Path newDir) {
-    workingDir = newDir;
+    workingDir = makeQualified(newDir);
   }
 
   /**
@@ -3052,6 +3063,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         transfers.shutdownNow(true);
         transfers = null;
       }
+      HadoopExecutors.shutdown(boundedThreadPool, LOG,
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+      boundedThreadPool = null;
+      HadoopExecutors.shutdown(unboundedThreadPool, LOG,
+          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+      unboundedThreadPool = null;
       S3AUtils.closeAll(LOG, metadataStore, instrumentation);
       metadataStore = null;
       instrumentation = null;
@@ -3668,19 +3685,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
-    entryPoint(INVOCATION_GLOB_STATUS);
-    return super.globStatus(pathPattern);
+    return globStatus(pathPattern, ACCEPT_ALL);
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * Override superclass so as to disable symlink resolution and so avoid
+   * some calls to the FS which may have problems when the store is being
+   * inconsistent.
    * {@inheritDoc}
    */
   @Override
-  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+  public FileStatus[] globStatus(
+      final Path pathPattern,
+      final PathFilter filter)
       throws IOException {
     entryPoint(INVOCATION_GLOB_STATUS);
-    return super.globStatus(pathPattern, filter);
+    return Globber.createGlobber(this)
+        .withPathPattern(pathPattern)
+        .withPathFiltern(filter)
+        .withResolveSymlinks(true)
+        .build()
+        .glob();
   }
 
   /**
@@ -4046,7 +4071,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
-    LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
+    LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
     getAmazonS3Client().abortMultipartUpload(
         new AbortMultipartUploadRequest(getBucket(),
             destKey,
@@ -4066,7 +4091,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     uploadId = upload.getUploadId();
     if (LOG.isInfoEnabled()) {
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      LOG.info("Aborting multipart upload {} to {} initiated by {} on {}",
+      LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
           uploadId, destKey, upload.getInitiator(),
           df.format(upload.getInitiated()));
     }
@@ -4084,17 +4109,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return instrumentation.newCommitterStatistics();
   }
 
-  /**
-   * Return the capabilities of this filesystem instance.
-   * @param capability string to query the stream support for.
-   * @return whether the FS instance has the capability.
-   */
+  @SuppressWarnings("deprecation")
   @Override
-  public boolean hasCapability(String capability) {
-
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
+    case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER_OLD:
       // capability depends on FS configuration
       return isMagicCommitEnabled();
 
@@ -4102,7 +4125,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // select is only supported if enabled
       return selectBinding.isEnabled();
 
+    case CommonPathCapabilities.FS_CHECKSUMS:
+      // capability depends on FS configuration
+      return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
+          ETAG_CHECKSUM_ENABLED_DEFAULT);
+
     default:
+      return super.hasPathCapability(p, capability);
+    }
+  }
+
+  /**
+   * Return the capabilities of this filesystem instance.
+   *
+   * This has been supplanted by {@link #hasPathCapability(Path, String)}.
+   * @param capability string to query the stream support for.
+   * @return whether the FS instance has the capability.
+   */
+  @Deprecated
+  @Override
+  public boolean hasCapability(String capability) {
+    try {
+      return hasPathCapability(workingDir, capability);
+    } catch (IOException ex) {
+      // should never happen, so log and downgrade.
+      LOG.debug("Ignoring exception on hasCapability({}})", capability, ex);
       return false;
     }
   }

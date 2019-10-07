@@ -169,8 +169,15 @@ public class TestOzoneDelegationTokenSecretManager {
     validateHash(token.getPassword(), token.getIdentifier());
   }
 
-  @Test
-  public void testRenewTokenSuccess() throws Exception {
+  private void restartSecretManager() throws IOException {
+    secretManager.stop();
+    secretManager = null;
+    secretManager = createSecretManager(conf, tokenMaxLifetime,
+        expiryTime, tokenRemoverScanInterval);
+  }
+
+  private void testRenewTokenSuccessHelper(boolean restartSecretManager)
+      throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
     secretManager.start(certificateClient);
@@ -178,8 +185,23 @@ public class TestOzoneDelegationTokenSecretManager {
         TEST_USER,
         TEST_USER);
     Thread.sleep(10 * 5);
+
+    if (restartSecretManager) {
+      restartSecretManager();
+    }
+
     long renewalTime = secretManager.renewToken(token, TEST_USER.toString());
     Assert.assertTrue(renewalTime > 0);
+  }
+
+  @Test
+  public void testReloadAndRenewToken() throws Exception {
+    testRenewTokenSuccessHelper(true);
+  }
+
+  @Test
+  public void testRenewTokenSuccess() throws Exception {
+    testRenewTokenSuccessHelper(false);
   }
 
   /**
@@ -375,6 +397,7 @@ public class TestOzoneDelegationTokenSecretManager {
       createSecretManager(OzoneConfiguration config, long tokenMaxLife,
       long expiry, long tokenRemoverScanTime) throws IOException {
     return new OzoneDelegationTokenSecretManager(config, tokenMaxLife,
-        expiry, tokenRemoverScanTime, serviceRpcAdd, s3SecretManager);
+        expiry, tokenRemoverScanTime, serviceRpcAdd, s3SecretManager,
+        certificateClient);
   }
 }

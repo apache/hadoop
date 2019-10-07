@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,10 +49,11 @@ public class GDPRSymmetricKey {
    * Default constructor creates key with default values.
    * @throws Exception
    */
-  public GDPRSymmetricKey() throws Exception {
+  public GDPRSymmetricKey(SecureRandom secureRandom) throws Exception {
     algorithm = OzoneConsts.GDPR_ALGORITHM_NAME;
-    secret = RandomStringUtils
-        .randomAlphabetic(OzoneConsts.GDPR_DEFAULT_RANDOM_SECRET_LENGTH);
+    secret = RandomStringUtils.random(
+        OzoneConsts.GDPR_DEFAULT_RANDOM_SECRET_LENGTH,
+        0, 0, true, true, null, secureRandom);
     this.secretKey = new SecretKeySpec(
         secret.getBytes(OzoneConsts.GDPR_CHARSET), algorithm);
     this.cipher = Cipher.getInstance(algorithm);

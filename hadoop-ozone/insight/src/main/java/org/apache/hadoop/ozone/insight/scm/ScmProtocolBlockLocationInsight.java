@@ -28,7 +28,7 @@ import org.apache.hadoop.ozone.insight.BaseInsightPoint;
 import org.apache.hadoop.ozone.insight.Component.Type;
 import org.apache.hadoop.ozone.insight.LoggerSource;
 import org.apache.hadoop.ozone.insight.MetricGroupDisplay;
-import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocolServerSideTranslatorPB;
 
 /**
  * Insight metric to check the SCM block location protocol behaviour.
@@ -42,9 +42,9 @@ public class ScmProtocolBlockLocationInsight extends BaseInsightPoint {
         new LoggerSource(Type.SCM,
             ScmBlockLocationProtocolServerSideTranslatorPB.class,
             defaultLevel(verbose)));
-    new LoggerSource(Type.SCM,
+    loggers.add(new LoggerSource(Type.SCM,
         SCMBlockProtocolServer.class,
-        defaultLevel(verbose));
+        defaultLevel(verbose)));
     return loggers;
   }
 

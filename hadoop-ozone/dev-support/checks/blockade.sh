@@ -21,7 +21,7 @@ OZONE_VERSION=$(grep "<ozone.version>" "$DIR/../../pom.xml" | sed 's/<[^>]*>//g'
 cd "$DIR/../../dist/target/ozone-$OZONE_VERSION/tests" || exit 1
 
 source ${DIR}/../../dist/target/ozone-${OZONE_VERSION}/compose/ozoneblockade/.env
-export HADOOP_RUNNER_VERSION
+export OZONE_RUNNER_VERSION
 export HDDS_VERSION
 
 python -m pytest -s blockade

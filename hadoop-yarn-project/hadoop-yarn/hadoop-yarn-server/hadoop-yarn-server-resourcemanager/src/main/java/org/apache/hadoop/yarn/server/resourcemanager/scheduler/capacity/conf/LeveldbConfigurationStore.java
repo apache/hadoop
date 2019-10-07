@@ -98,6 +98,13 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     }
   }
 
+  @Override
+  public void format() throws Exception {
+    close();
+    FileSystem fs = FileSystem.getLocal(conf);
+    fs.delete(getStorageDir(), true);
+  }
+
   private void initDatabase(Configuration config) throws Exception {
     Path storeRoot = createStorageDir();
     Options options = new Options();

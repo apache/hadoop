@@ -446,4 +446,9 @@ public abstract class FilterFs extends AbstractFileSystem {
     return myFs.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
   }
 
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    return myFs.hasPathCapability(path, capability);
+  }
 }

@@ -151,8 +151,8 @@ class OzoneCluster(object):
 
         # check if docker is up.
 
-        if "HADOOP_RUNNER_VERSION" not in os.environ:
-            self.__logger__.error("HADOOP_RUNNER_VERSION is not set.")
+        if "OZONE_RUNNER_VERSION" not in os.environ:
+            self.__logger__.error("OZONE_RUNNER_VERSION is not set.")
             sys.exit(1)
 
         if "HDDS_VERSION" not in os.environ:

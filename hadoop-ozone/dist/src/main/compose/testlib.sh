@@ -22,11 +22,14 @@ RESULT_DIR=${RESULT_DIR:-"$COMPOSE_DIR/result"}
 RESULT_DIR_INSIDE="/tmp/smoketest/$(basename "$COMPOSE_ENV_NAME")/result"
 SMOKETEST_DIR_INSIDE="${OZONE_DIR:-/opt/hadoop}/smoketest"
 
-#delete previous results
-rm -rf "$RESULT_DIR"
-mkdir -p "$RESULT_DIR"
-#Should be writeable from the docker containers where user is different.
-chmod ogu+w "$RESULT_DIR"
+## @description create results directory, purging any prior data
+create_results_dir() {
+  #delete previous results
+  rm -rf "$RESULT_DIR"
+  mkdir -p "$RESULT_DIR"
+  #Should be writeable from the docker containers where user is different.
+  chmod ogu+w "$RESULT_DIR"
+}
 
 ## @description print the number of datanodes up
 ## @param the docker-compose file
@@ -74,6 +77,7 @@ wait_for_datanodes(){
       sleep 2
    done
    echo "WARNING! Datanodes are not started successfully. Please check the docker-compose files"
+   return 1
 }
 
 ## @description  Starts a docker-compose based test environment
@@ -81,13 +85,16 @@ wait_for_datanodes(){
 start_docker_env(){
   local -i datanode_count=${1:-3}
 
-  docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}" \
+  create_results_dir
+
+  docker-compose -f "$COMPOSE_FILE" --no-ansi down
+  docker-compose -f "$COMPOSE_FILE" --no-ansi up -d --scale datanode="${datanode_count}" \
     && wait_for_datanodes "$COMPOSE_FILE" "${datanode_count}" \
     && sleep 10
 
   if [[ $? -gt 0 ]]; then
-    docker-compose -f "$COMPOSE_FILE" down
+    OUTPUT_NAME="$COMPOSE_ENV_NAME"
+    stop_docker_env
     return 1
   fi
 }
@@ -131,9 +138,9 @@ execute_command_in_container(){
 
 ## @description  Stops a docker-compose based test environment (with saving the logs)
 stop_docker_env(){
-  docker-compose -f "$COMPOSE_FILE" logs > "$RESULT_DIR/docker-$OUTPUT_NAME.log"
+  docker-compose -f "$COMPOSE_FILE" --no-ansi logs > "$RESULT_DIR/docker-$OUTPUT_NAME.log"
   if [ "${KEEP_RUNNING:-false}" = false ]; then
-     docker-compose -f "$COMPOSE_FILE" down
+     docker-compose -f "$COMPOSE_FILE" --no-ansi down
   fi
 }
 

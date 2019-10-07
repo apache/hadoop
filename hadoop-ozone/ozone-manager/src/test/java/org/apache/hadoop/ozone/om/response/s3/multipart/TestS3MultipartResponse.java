@@ -113,8 +113,7 @@ public class TestS3MultipartResponse {
         .setAbortMultiPartUploadResponse(
             MultipartUploadAbortResponse.newBuilder().build()).build();
 
-    return new S3MultipartUploadAbortResponse(multipartKey, timeStamp,
-            omMultipartKeyInfo,
+    return new S3MultipartUploadAbortResponse(multipartKey, omMultipartKeyInfo,
             omResponse);
   }
 

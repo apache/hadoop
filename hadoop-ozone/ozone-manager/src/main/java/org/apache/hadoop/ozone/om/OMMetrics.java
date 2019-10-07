@@ -123,7 +123,6 @@ public class OMMetrics {
 
   // Metrics to track checkpointing statistics from last run.
   private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
-  private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
 
   private @Metric MutableCounterLong numBucketS3Creates;
@@ -511,10 +510,6 @@ public class OMMetrics {
     this.lastCheckpointCreationTimeTaken.set(val);
   }
 
-  public void setLastCheckpointTarOperationTimeTaken(long val) {
-    this.lastCheckpointTarOperationTimeTaken.set(val);
-  }
-
   public void setLastCheckpointStreamingTimeTaken(long val) {
     this.lastCheckpointStreamingTimeTaken.set(val);
   }
@@ -754,11 +749,6 @@ public class OMMetrics {
   @VisibleForTesting
   public long getLastCheckpointCreationTimeTaken() {
     return lastCheckpointCreationTimeTaken.value();
-  }
-
-  @VisibleForTesting
-  public long getLastCheckpointTarOperationTimeTaken() {
-    return lastCheckpointTarOperationTimeTaken.value();
   }
 
   @VisibleForTesting

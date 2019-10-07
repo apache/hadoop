@@ -95,7 +95,7 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
       }
 
       OmVolumeArgs omVolumeArgs = null;
-      OzoneManagerProtocolProtos.VolumeList newVolumeList = null;
+      OzoneManagerProtocolProtos.UserVolumeInfo newVolumeList = null;
 
       acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
           volume);
@@ -115,7 +115,8 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
 
       // delete the volume from the owner list
       // as well as delete the volume entry
-      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner);
+      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner,
+          transactionLogIndex);
 
       omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
           new CacheValue<>(Optional.of(newVolumeList), transactionLogIndex));

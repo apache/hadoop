@@ -1065,6 +1065,25 @@ public class TestSCMNodeManager {
   }
 
   /**
+   * Test getNodesByAddress when using IPs.
+   *
+   */
+  @Test
+  public void testgetNodesByAddressWithIpAddress()
+      throws IOException, InterruptedException, AuthenticationException {
+    testGetNodesByAddress(false);
+  }
+
+  /**
+   * Test getNodesByAddress when using hostnames.
+   */
+  @Test
+  public void testgetNodesByAddressWithHostname()
+      throws IOException, InterruptedException, AuthenticationException {
+    testGetNodesByAddress(true);
+  }
+
+  /**
    * Test add node into a 4-layer network topology during node register.
    */
   @Test
@@ -1152,11 +1171,55 @@ public class TestSCMNodeManager {
       // test get node
       if (useHostname) {
         Arrays.stream(hostNames).forEach(hostname ->
-            Assert.assertNotNull(nodeManager.getNodeByAddress(hostname)));
+            Assert.assertNotEquals(0, nodeManager.getNodesByAddress(hostname)
+                .size()));
       } else {
         Arrays.stream(ipAddress).forEach(ip ->
-            Assert.assertNotNull(nodeManager.getNodeByAddress(ip)));
+            Assert.assertNotEquals(0, nodeManager.getNodesByAddress(ip)
+                .size()));
       }
     }
   }
+
+  /**
+   * Test add node into a 4-layer network topology during node register.
+   */
+  private void testGetNodesByAddress(boolean useHostname)
+      throws IOException, InterruptedException, AuthenticationException {
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
+        MILLISECONDS);
+
+    // create a set of hosts - note two hosts on "host1"
+    String[] hostNames = {"host1", "host1", "host2", "host3", "host4"};
+    String[] ipAddress =
+        {"1.2.3.4", "1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+
+    if (useHostname) {
+      conf.set(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, "true");
+    }
+    final int nodeCount = hostNames.length;
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        DatanodeDetails node = TestUtils.createDatanodeDetails(
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
+        nodeManager.register(node, null, null);
+      }
+      // test get node
+      Assert.assertEquals(0, nodeManager.getNodesByAddress(null).size());
+      if (useHostname) {
+        Assert.assertEquals(2,
+            nodeManager.getNodesByAddress("host1").size());
+        Assert.assertEquals(1, nodeManager.getNodesByAddress("host2").size());
+        Assert.assertEquals(0, nodeManager.getNodesByAddress("unknown").size());
+      } else {
+        Assert.assertEquals(2,
+            nodeManager.getNodesByAddress("1.2.3.4").size());
+        Assert.assertEquals(1, nodeManager.getNodesByAddress("2.3.4.5").size());
+        Assert.assertEquals(0, nodeManager.getNodesByAddress("1.9.8.7").size());
+      }
+    }
+  }
+
 }

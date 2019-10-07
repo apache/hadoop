@@ -233,4 +233,12 @@ public class AbstractContainerReportHandler {
     return replicaState.get() == ContainerReplicaProto.State.UNHEALTHY;
   }
 
+  /**
+   * Return ContainerManager.
+   * @return {@link ContainerManager}
+   */
+  protected ContainerManager getContainerManager() {
+    return containerManager;
+  }
+
 }

@@ -21,6 +21,8 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.security.SecureRandom;
+
 /**
  * Tests GDPRSymmetricKey structure.
  */
@@ -28,7 +30,7 @@ public class TestGDPRSymmetricKey {
 
   @Test
   public void testKeyGenerationWithDefaults() throws Exception {
-    GDPRSymmetricKey gkey = new GDPRSymmetricKey();
+    GDPRSymmetricKey gkey = new GDPRSymmetricKey(new SecureRandom());
 
     Assert.assertTrue(gkey.getCipher().getAlgorithm()
         .equalsIgnoreCase(OzoneConsts.GDPR_ALGORITHM_NAME));

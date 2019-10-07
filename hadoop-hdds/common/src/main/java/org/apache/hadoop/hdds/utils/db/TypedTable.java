@@ -104,7 +104,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
           // We should build cache after OM restart when clean up policy is
           // NEVER. Setting epoch value -1, so that when it is marked for
           // delete, this will be considered for cleanup.
-          cache.put(new CacheKey<>(kv.getKey()),
+          cache.loadInitial(new CacheKey<>(kv.getKey()),
               new CacheValue<>(Optional.of(kv.getValue()), EPOCH_DEFAULT));
         }
       }

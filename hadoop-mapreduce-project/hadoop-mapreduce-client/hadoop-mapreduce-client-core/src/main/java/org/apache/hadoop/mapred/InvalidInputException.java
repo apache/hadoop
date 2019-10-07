@@ -38,10 +38,14 @@ public class InvalidInputException extends IOException {
   
   /**
    * Create the exception with the given list.
+   * The first element of the list is used as the init cause value.
    * @param probs the list of problems to report. this list is not copied.
    */
   public InvalidInputException(List<IOException> probs) {
     problems = probs;
+    if (!probs.isEmpty()) {
+      initCause(probs.get(0));
+    }
   }
   
   /**
