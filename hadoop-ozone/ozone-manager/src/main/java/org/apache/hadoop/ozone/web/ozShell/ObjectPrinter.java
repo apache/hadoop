@@ -29,8 +29,7 @@ public final class ObjectPrinter {
   }
 
   public static String getObjectAsJson(Object o) throws IOException {
-    return JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(o));
+    return JsonUtils.toJsonStringWithDefaultPrettyPrinter(o);
   }
 
   public static void printObjectAsJson(Object o) throws IOException {

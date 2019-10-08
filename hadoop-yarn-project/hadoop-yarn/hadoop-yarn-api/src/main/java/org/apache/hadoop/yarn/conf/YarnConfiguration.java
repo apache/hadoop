@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -3794,6 +3796,20 @@ public class YarnConfiguration extends Configuration {
 
   public static final String EXCLUSIVE_ENFORCED_PARTITIONS = NODE_LABELS_PREFIX
       + EXCLUSIVE_ENFORCED_PARTITIONS_SUFFIX;
+
+  @Private
+  public static Set<String> getExclusiveEnforcedPartitions(
+      Configuration conf) {
+    Set<String> exclusiveEnforcedPartitions = new HashSet<>();
+    String[] configuredPartitions = conf.getStrings(
+        EXCLUSIVE_ENFORCED_PARTITIONS);
+    if (configuredPartitions != null) {
+      for (String partition : configuredPartitions) {
+        exclusiveEnforcedPartitions.add(partition);
+      }
+    }
+    return exclusiveEnforcedPartitions;
+  }
 
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";

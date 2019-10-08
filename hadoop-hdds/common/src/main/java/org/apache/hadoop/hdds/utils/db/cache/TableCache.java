@@ -44,6 +44,15 @@ public interface TableCache<CACHEKEY extends CacheKey,
   CACHEVALUE get(CACHEKEY cacheKey);
 
   /**
+   * This method should be called for tables with cache cleanup policy
+   * {@link TableCacheImpl.CacheCleanupPolicy#NEVER} after system restart to
+   * fill up the cache.
+   * @param cacheKey
+   * @param cacheValue
+   */
+  void loadInitial(CACHEKEY cacheKey, CACHEVALUE cacheValue);
+
+  /**
    * Add an entry to the cache, if the key already exists it overrides.
    * @param cacheKey
    * @param value

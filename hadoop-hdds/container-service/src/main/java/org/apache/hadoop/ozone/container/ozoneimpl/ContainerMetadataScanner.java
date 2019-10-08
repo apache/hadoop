@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,24 +43,22 @@ public class ContainerMetadataScanner extends Thread {
    */
   private boolean stopping = false;
 
-  public ContainerMetadataScanner(Configuration conf,
-                                  ContainerController controller,
-                                  long metadataScanInterval) {
+  public ContainerMetadataScanner(ContainerScrubberConfiguration conf,
+                                  ContainerController controller) {
     this.controller = controller;
-    this.metadataScanInterval = metadataScanInterval;
-    this.metrics = ContainerMetadataScrubberMetrics.create(conf);
+    this.metadataScanInterval = conf.getMetadataScanInterval();
+    this.metrics = ContainerMetadataScrubberMetrics.create();
     setName("ContainerMetadataScanner");
     setDaemon(true);
   }
 
   @Override
   public void run() {
-    /**
-     * the outer daemon loop exits on down()
+    /*
+     * the outer daemon loop exits on shutdown()
      */
     LOG.info("Background ContainerMetadataScanner starting up");
     while (!stopping) {
-      long start = System.nanoTime();
       runIteration();
       if(!stopping) {
         metrics.resetNumUnhealthyContainers();
@@ -71,9 +68,9 @@ public class ContainerMetadataScanner extends Thread {
   }
 
   @VisibleForTesting
-  public void runIteration() {
+  void runIteration() {
     long start = System.nanoTime();
-    Iterator<Container> containerIt = controller.getContainers();
+    Iterator<Container<?>> containerIt = controller.getContainers();
     while (!stopping && containerIt.hasNext()) {
       Container container = containerIt.next();
       try {

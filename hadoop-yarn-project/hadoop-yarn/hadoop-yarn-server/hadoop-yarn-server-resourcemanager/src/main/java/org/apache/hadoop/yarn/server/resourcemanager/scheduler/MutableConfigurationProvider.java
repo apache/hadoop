@@ -65,6 +65,8 @@ public interface MutableConfigurationProvider {
    */
   Configuration getConfiguration();
 
+  void formatConfigurationInStore(Configuration conf) throws Exception;
+
   /**
    * Closes the configuration provider, releasing any required resources.
    * @throws IOException on failure to close

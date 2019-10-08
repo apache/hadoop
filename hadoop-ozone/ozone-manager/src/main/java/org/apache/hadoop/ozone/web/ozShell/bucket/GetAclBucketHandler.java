@@ -75,8 +75,8 @@ public class GetAclBucketHandler extends Handler {
 
     List<OzoneAcl> result = client.getObjectStore().getAcl(obj);
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(result)));
+    System.out.printf("%s%n",
+        JsonUtils.toJsonStringWithDefaultPrettyPrinter(result));
     client.close();
     return null;
   }

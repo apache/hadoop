@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -103,8 +102,7 @@ public final class ContainerDataScrubberMetrics {
     this.ms = ms;
   }
 
-  public static ContainerDataScrubberMetrics create(final Configuration conf,
-                                             final String volumeName) {
+  public static ContainerDataScrubberMetrics create(final String volumeName) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     String name = "ContainerDataScrubberMetrics-"+ (volumeName.isEmpty()
         ? "UndefinedDataNodeVolume"+ ThreadLocalRandom.current().nextInt()

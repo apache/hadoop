@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -46,6 +45,7 @@ public class ContainerDataScanner extends Thread {
   private final DataTransferThrottler throttler;
   private final Canceler canceler;
   private final ContainerDataScrubberMetrics metrics;
+  private final long dataScanInterval;
 
   /**
    * True if the thread is stopping.<p/>
@@ -54,15 +54,15 @@ public class ContainerDataScanner extends Thread {
   private volatile boolean stopping = false;
 
 
-  public ContainerDataScanner(Configuration conf,
+  public ContainerDataScanner(ContainerScrubberConfiguration conf,
                               ContainerController controller,
-                              HddsVolume volume, long bytesPerSec) {
+                              HddsVolume volume) {
     this.controller = controller;
     this.volume = volume;
-    this.throttler = new HddsDataTransferThrottler(bytesPerSec);
-    this.canceler = new Canceler();
-    this.metrics = ContainerDataScrubberMetrics.create(conf,
-        volume.toString());
+    dataScanInterval = conf.getDataScanInterval();
+    throttler = new HddsDataTransferThrottler(conf.getBandwidthPerVolume());
+    canceler = new Canceler();
+    metrics = ContainerDataScrubberMetrics.create(volume.toString());
     setName("ContainerDataScanner(" + volume + ")");
     setDaemon(true);
   }
@@ -89,7 +89,7 @@ public class ContainerDataScanner extends Thread {
   @VisibleForTesting
   public void runIteration() {
     long startTime = System.nanoTime();
-    Iterator<Container> itr = controller.getContainers(volume);
+    Iterator<Container<?>> itr = controller.getContainers(volume);
     while (!stopping && itr.hasNext()) {
       Container c = itr.next();
       if (c.shouldScanData()) {
@@ -110,16 +110,26 @@ public class ContainerDataScanner extends Thread {
     }
     long totalDuration = System.nanoTime() - startTime;
     if (!stopping) {
-      metrics.incNumScanIterations();
-      LOG.info("Completed an iteration of container data scrubber in" +
-              " {} minutes." +
-              " Number of  iterations (since the data-node restart) : {}" +
-              ", Number of containers scanned in this iteration : {}" +
-              ", Number of unhealthy containers found in this iteration : {}",
-          TimeUnit.NANOSECONDS.toMinutes(totalDuration),
-          metrics.getNumScanIterations(),
-          metrics.getNumContainersScanned(),
-          metrics.getNumUnHealthyContainers());
+      if (metrics.getNumContainersScanned() > 0) {
+        metrics.incNumScanIterations();
+        LOG.info("Completed an iteration of container data scrubber in" +
+                " {} minutes." +
+                " Number of iterations (since the data-node restart) : {}" +
+                ", Number of containers scanned in this iteration : {}" +
+                ", Number of unhealthy containers found in this iteration : {}",
+            TimeUnit.NANOSECONDS.toMinutes(totalDuration),
+            metrics.getNumScanIterations(),
+            metrics.getNumContainersScanned(),
+            metrics.getNumUnHealthyContainers());
+      }
+      long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(totalDuration);
+      long remainingSleep = dataScanInterval - elapsedMillis;
+      if (remainingSleep > 0) {
+        try {
+          Thread.sleep(remainingSleep);
+        } catch (InterruptedException ignored) {
+        }
+      }
     }
   }
 

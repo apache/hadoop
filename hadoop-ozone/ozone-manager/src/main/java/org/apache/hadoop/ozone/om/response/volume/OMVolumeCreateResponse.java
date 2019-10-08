@@ -27,8 +27,7 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.UserVolumeInfo;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
@@ -39,14 +38,14 @@ import javax.annotation.Nonnull;
  */
 public class OMVolumeCreateResponse extends OMClientResponse {
 
-  private VolumeList volumeList;
+  private UserVolumeInfo userVolumeInfo;
   private OmVolumeArgs omVolumeArgs;
 
   public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
-      VolumeList volumeList, @Nonnull OMResponse omResponse) {
+      UserVolumeInfo userVolumeInfo, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
-    this.volumeList = volumeList;
+    this.userVolumeInfo = userVolumeInfo;
   }
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
@@ -63,7 +62,7 @@ public class OMVolumeCreateResponse extends OMClientResponse {
       omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
           dbVolumeKey, omVolumeArgs);
       omMetadataManager.getUserTable().putWithBatch(batchOperation, dbUserKey,
-          volumeList);
+          userVolumeInfo);
     }
   }
 

@@ -61,6 +61,7 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +104,7 @@ public class SCMClientProtocolServer implements
   private final StorageContainerManager scm;
   private final OzoneConfiguration conf;
   private SafeModePrecheck safeModePrecheck;
+  private final ProtocolMessageMetrics protocolMetrics;
 
   public SCMClientProtocolServer(OzoneConfiguration conf,
       StorageContainerManager scm) throws IOException {
@@ -115,10 +117,16 @@ public class SCMClientProtocolServer implements
     RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
 
+    protocolMetrics = ProtocolMessageMetrics
+        .create("ScmContainerLocationProtocol",
+            "SCM ContainerLocation protocol metrics",
+            StorageContainerLocationProtocolProtos.Type.values());
+
     // SCM Container Service RPC
     BlockingService storageProtoPbService =
         newReflectiveBlockingService(
-            new StorageContainerLocationProtocolServerSideTranslatorPB(this));
+            new StorageContainerLocationProtocolServerSideTranslatorPB(this,
+                protocolMetrics));
 
     final InetSocketAddress scmAddress = HddsServerUtil
         .getScmClientBindAddress(conf);
@@ -147,6 +155,7 @@ public class SCMClientProtocolServer implements
   }
 
   public void start() {
+    protocolMetrics.register();
     LOG.info(
         StorageContainerManager.buildRpcServerStartMessage(
             "RPC server for Client ", getClientRpcAddress()));
@@ -154,6 +163,7 @@ public class SCMClientProtocolServer implements
   }
 
   public void stop() {
+    protocolMetrics.unregister();
     try {
       LOG.info("Stopping the RPC server for Client Protocol");
       getClientRpcServer().stop();

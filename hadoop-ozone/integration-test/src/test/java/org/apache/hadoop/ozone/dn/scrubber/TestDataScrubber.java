@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerMetadataScanner;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerScrubberConfiguration;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -159,8 +160,10 @@ public class TestDataScrubber {
     deleteDirectory(chunksDir);
     Assert.assertFalse(chunksDir.exists());
 
-    ContainerMetadataScanner sb = new ContainerMetadataScanner(ozoneConfig,
-        oc.getController(), 0);
+    ContainerScrubberConfiguration conf = ozoneConfig.getObject(
+        ContainerScrubberConfiguration.class);
+    ContainerMetadataScanner sb = new ContainerMetadataScanner(conf,
+        oc.getController());
     sb.scrub(c);
 
     // wait for the incremental container report to propagate to SCM

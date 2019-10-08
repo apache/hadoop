@@ -611,11 +611,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
 
   public void close() {
     synchronized (metricsSystemLock) {
+      // it is critical to close each quantile, as they start a scheduled
+      // task in a shared thread pool.
       putLatencyQuantile.stop();
       throttleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
       int activeSources = --metricsSourceActiveCounter;
       if (activeSources == 0) {
+        LOG.debug("Shutting down metrics publisher");
         metricsSystem.publishMetricsNow();
         metricsSystem.shutdown();
         metricsSystem = null;

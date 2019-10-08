@@ -67,6 +67,7 @@ import org.junit.Test;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCopyMapper {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyMapper.class);
@@ -769,7 +770,7 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(tmpFS.getFileStatus(
                   new Path(SOURCE_PATH + "/src/file"))),
                 context);
-            Assert.assertEquals(stubContext.getWriter().values().size(), 1);
+            assertThat(stubContext.getWriter().values().size()).isEqualTo(1);
             Assert.assertTrue(stubContext.getWriter().values().get(0).toString().startsWith("SKIP"));
             Assert.assertTrue(stubContext.getWriter().values().get(0).toString().
                 contains(SOURCE_PATH + "/src/file"));

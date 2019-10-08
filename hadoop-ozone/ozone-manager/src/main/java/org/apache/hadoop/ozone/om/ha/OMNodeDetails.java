@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.om;
+package org.apache.hadoop.ozone.om.ha;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.http.HttpConfig;

@@ -24,7 +24,7 @@ services:
       ports:
          - 9878:9878
    datanode:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -33,7 +33,7 @@ services:
       env_file:
         - ./docker-config
    om:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -44,7 +44,7 @@ services:
           - ./docker-config
       command: ["ozone","om"]
    scm:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -55,7 +55,7 @@ services:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["ozone","scm"]
    s3g1:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -64,7 +64,7 @@ services:
           - ./docker-config
       command: ["ozone","s3g"]
    s3g2:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -73,7 +73,7 @@ services:
          - ./docker-config
       command: ["ozone","s3g"]
    s3g3:
-      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
       ports:

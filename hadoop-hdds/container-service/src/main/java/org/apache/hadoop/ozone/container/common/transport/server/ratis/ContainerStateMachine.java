@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
@@ -150,7 +151,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   private final Cache<Long, ByteString> stateMachineDataCache;
   private final boolean isBlockTokenEnabled;
   private final TokenVerifier tokenVerifier;
-  private final AtomicBoolean isStateMachineHealthy;
+  private final AtomicBoolean stateMachineHealthy;
 
   private final Semaphore applyTransactionSemaphore;
   /**
@@ -190,7 +191,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         ScmConfigKeys.
             DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT);
     applyTransactionSemaphore = new Semaphore(maxPendingApplyTransactions);
-    isStateMachineHealthy = new AtomicBoolean(true);
+    stateMachineHealthy = new AtomicBoolean(true);
     this.executors = new ExecutorService[numContainerOpExecutors];
     for (int i = 0; i < numContainerOpExecutors; i++) {
       final int index = i;
@@ -271,11 +272,15 @@ public class ContainerStateMachine extends BaseStateMachine {
     IOUtils.write(builder.build().toByteArray(), out);
   }
 
+  public boolean isStateMachineHealthy() {
+    return stateMachineHealthy.get();
+  }
+
   @Override
   public long takeSnapshot() throws IOException {
     TermIndex ti = getLastAppliedTermIndex();
     long startTime = Time.monotonicNow();
-    if (!isStateMachineHealthy.get()) {
+    if (!isStateMachineHealthy()) {
       String msg =
           "Failed to take snapshot " + " for " + gid + " as the stateMachine"
               + " is unhealthy. The last applied index is at " + ti;
@@ -309,7 +314,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     long startTime = Time.monotonicNowNanos();
     final ContainerCommandRequestProto proto =
-        getContainerCommandRequestProto(request.getMessage().getContent());
+        message2ContainerCommandRequestProto(request.getMessage());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     try {
       dispatcher.validateContainerCommand(proto);
@@ -359,7 +364,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           .setStateMachine(this)
           .setServerRole(RaftPeerRole.LEADER)
           .setStateMachineContext(startTime)
-          .setLogData(request.getMessage().getContent())
+          .setLogData(proto.toByteString())
           .build();
     }
 
@@ -377,6 +382,11 @@ public class ContainerStateMachine extends BaseStateMachine {
     return ContainerCommandRequestProto.newBuilder(
         ContainerCommandRequestProto.parseFrom(request))
         .setPipelineID(gid.getUuid().toString()).build();
+  }
+
+  private ContainerCommandRequestProto message2ContainerCommandRequestProto(
+      Message message) throws InvalidProtocolBufferException {
+    return ContainerCommandRequestMessage.toProto(message.getContent(), gid);
   }
 
   private ContainerCommandResponseProto dispatchCommand(
@@ -526,7 +536,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     try {
       metrics.incNumQueryStateMachineOps();
       final ContainerCommandRequestProto requestProto =
-          getContainerCommandRequestProto(request.getContent());
+          message2ContainerCommandRequestProto(request);
       return CompletableFuture
           .completedFuture(runCommand(requestProto, null)::toByteString);
     } catch (IOException e) {
@@ -731,7 +741,11 @@ public class ContainerStateMachine extends BaseStateMachine {
           metrics.incPipelineLatency(cmdType,
               Time.monotonicNowNanos() - startTime);
         }
-        if (r.getResult() != ContainerProtos.Result.SUCCESS) {
+        // ignore close container exception while marking the stateMachine
+        // unhealthy
+        if (r.getResult() != ContainerProtos.Result.SUCCESS
+            && r.getResult() != ContainerProtos.Result.CONTAINER_NOT_OPEN
+            && r.getResult() != ContainerProtos.Result.CLOSED_CONTAINER_IO) {
           StorageContainerException sce =
               new StorageContainerException(r.getMessage(), r.getResult());
           LOG.error(
@@ -744,7 +758,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           // caught in stateMachineUpdater in Ratis and ratis server will
           // shutdown.
           applyTransactionFuture.completeExceptionally(sce);
-          isStateMachineHealthy.compareAndSet(true, false);
+          stateMachineHealthy.compareAndSet(true, false);
           ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
         } else {
           LOG.debug(
@@ -759,7 +773,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           // add the entry to the applyTransactionCompletionMap only if the
           // stateMachine is healthy i.e, there has been no applyTransaction
           // failures before.
-          if (isStateMachineHealthy.get()) {
+          if (isStateMachineHealthy()) {
             final Long previous = applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
             Preconditions.checkState(previous == null);

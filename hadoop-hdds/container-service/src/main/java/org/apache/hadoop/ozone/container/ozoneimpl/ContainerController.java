@@ -140,7 +140,6 @@ public class ContainerController {
    * @param containerId Id of the container to be deleted
    * @param force if this is set to true, we delete container without checking
    * state of the container.
-   * @throws IOException
    */
   public void deleteContainer(final long containerId, boolean force)
       throws IOException {
@@ -160,7 +159,7 @@ public class ContainerController {
     return handlers.get(container.getContainerType());
   }
 
-  public Iterator<Container> getContainers() {
+  public Iterator<Container<?>> getContainers() {
     return containerSet.getContainerIterator();
   }
 
@@ -171,7 +170,8 @@ public class ContainerController {
    * @param  volume the HDDS volume which should be used to filter containers
    * @return {@literal Iterator<Container>}
    */
-  public Iterator<Container> getContainers(HddsVolume volume) {
+  public Iterator<Container<?>> getContainers(HddsVolume volume) {
     return containerSet.getContainerIterator(volume);
   }
+
 }

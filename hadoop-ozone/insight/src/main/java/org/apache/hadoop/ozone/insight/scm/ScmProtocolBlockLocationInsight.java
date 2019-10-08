@@ -42,9 +42,9 @@ public class ScmProtocolBlockLocationInsight extends BaseInsightPoint {
         new LoggerSource(Type.SCM,
             ScmBlockLocationProtocolServerSideTranslatorPB.class,
             defaultLevel(verbose)));
-    new LoggerSource(Type.SCM,
+    loggers.add(new LoggerSource(Type.SCM,
         SCMBlockProtocolServer.class,
-        defaultLevel(verbose));
+        defaultLevel(verbose)));
     return loggers;
   }
 

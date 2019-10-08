@@ -21,16 +21,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import org.junit.Assert;
 import org.junit.Test;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test prometheus Sink.
@@ -60,12 +62,54 @@ public class TestPrometheusMetricsSink {
 
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
     Assert.assertTrue(
         "The expected metric line is missing from prometheus metrics output",
         writtenMetrics.contains(
             "test_metrics_num_bucket_create_fails{context=\"dfs\"")
     );
+
+    metrics.stop();
+    metrics.shutdown();
+  }
+
+  @Test
+  public void testPublishWithSameName() throws IOException {
+    //GIVEN
+    MetricsSystem metrics = DefaultMetricsSystem.instance();
+
+    metrics.init("test");
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+    metrics.register("Prometheus", "Prometheus", sink);
+    metrics.register("FooBar", "fooBar", (MetricsSource) (collector, all) -> {
+      collector.addRecord("RpcMetrics").add(new MetricsTag(PORT_INFO, "1234"))
+          .addGauge(COUNTER_INFO, 123).endRecord();
+
+      collector.addRecord("RpcMetrics").add(new MetricsTag(
+          PORT_INFO, "2345")).addGauge(COUNTER_INFO, 234).endRecord();
+    });
+
+    metrics.start();
+    metrics.publishMetricsNow();
+
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    OutputStreamWriter writer = new OutputStreamWriter(stream, UTF_8);
+
+    //WHEN
+    sink.writeMetrics(writer);
+    writer.flush();
+
+    //THEN
+    String writtenMetrics = stream.toString(UTF_8.name());
+    Assert.assertTrue(
+        "The expected metric line is missing from prometheus metrics output",
+        writtenMetrics.contains(
+            "rpc_metrics_counter{port=\"2345\""));
+
+    Assert.assertTrue(
+        "The expected metric line is missing from prometheus metrics "
+            + "output",
+        writtenMetrics.contains(
+            "rpc_metrics_counter{port=\"1234\""));
 
     metrics.stop();
     metrics.shutdown();
@@ -127,4 +171,29 @@ public class TestPrometheusMetricsSink {
     @Metric
     private MutableCounterLong numBucketCreateFails;
   }
+
+  public static final MetricsInfo PORT_INFO = new MetricsInfo() {
+    @Override
+    public String name() {
+      return "PORT";
+    }
+
+    @Override
+    public String description() {
+      return "port";
+    }
+  };
+
+  public static final MetricsInfo COUNTER_INFO = new MetricsInfo() {
+    @Override
+    public String name() {
+      return "COUNTER";
+    }
+
+    @Override
+    public String description() {
+      return "counter";
+    }
+  };
+
 }
