@@ -127,8 +127,10 @@ public final class ChunkUtils {
       return null;
     });
 
-    log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
-        bufferSize);
+    if (log.isDebugEnabled()) {
+      log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
+          bufferSize);
+    }
   }
 
   /**

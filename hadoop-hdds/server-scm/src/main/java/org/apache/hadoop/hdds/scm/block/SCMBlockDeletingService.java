@@ -168,11 +168,13 @@ public class SCMBlockDeletingService extends BackgroundService {
             // offline for sometime, the cached commands be flooded.
             eventPublisher.fireEvent(SCMEvents.RETRIABLE_DATANODE_COMMAND,
                 new CommandForDatanode<>(dnId, new DeleteBlocksCommand(dnTXs)));
-            LOG.debug(
-                "Added delete block command for datanode {} in the queue,"
-                    + " number of delete block transactions: {}, TxID list: {}",
-                dnId, dnTXs.size(), String.join(",",
-                    transactions.getTransactionIDList(dnId)));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                  "Added delete block command for datanode {} in the queue," +
+                      " number of delete block transactions: {}, TxID list: {}",
+                  dnId, dnTXs.size(), String.join(",",
+                      transactions.getTransactionIDList(dnId)));
+            }
           }
         }
         containerManager.updateDeleteTransactionId(transactionMap);

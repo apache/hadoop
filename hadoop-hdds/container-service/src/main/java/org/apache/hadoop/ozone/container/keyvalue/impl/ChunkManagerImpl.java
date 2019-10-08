@@ -87,10 +87,11 @@ public class ChunkManagerImpl implements ChunkManager {
       boolean isOverwrite = ChunkUtils.validateChunkForOverwrite(
           chunkFile, info);
       File tmpChunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
-
-      LOG.debug(
-          "writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file:{}",
-          info.getChunkName(), stage, chunkFile, tmpChunkFile);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file:{}",
+            info.getChunkName(), stage, chunkFile, tmpChunkFile);
+      }
 
       switch (stage) {
       case WRITE_DATA:

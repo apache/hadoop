@@ -308,8 +308,10 @@ public class ContainerStateMap {
         // be in an inconsistent state,
 
         lifeCycleStateMap.update(currentState, newState, containerID);
-        LOG.trace("Updated the container {} to new state. Old = {}, new = " +
-            "{}", containerID, currentState, newState);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Updated the container {} to new state. Old = {}, new = " +
+              "{}", containerID, currentState, newState);
+        }
 
         // Just flush both old and new data sets from the result cache.
         flushCache(currentInfo);

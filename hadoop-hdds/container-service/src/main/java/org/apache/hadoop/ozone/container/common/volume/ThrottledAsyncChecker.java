@@ -129,9 +129,11 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
           completedChecks.get(target);
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
-        LOG.debug("Skipped checking {}. Time since last check {}ms " +
-                "is less than the min gap {}ms.",
-            target, msSinceLastCheck, minMsBetweenChecks);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipped checking {}. Time since last check {}ms " +
+                  "is less than the min gap {}ms.",
+              target, msSinceLastCheck, minMsBetweenChecks);
+        }
         return Optional.empty();
       }
     }

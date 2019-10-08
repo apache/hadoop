@@ -114,8 +114,10 @@ public class CloseContainerCommandHandler implements CommandHandler {
         break;
       case UNHEALTHY:
       case INVALID:
-        LOG.debug("Cannot close the container #{}, the container is"
-            + " in {} state.", containerId, container.getContainerState());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cannot close the container #{}, the container is"
+              + " in {} state.", containerId, container.getContainerState());
+        }
       default:
         break;
       }

@@ -165,8 +165,10 @@ public class ContainerOperationClient implements ScmClient {
 
     // TODO : Should we change the state on the client side ??
     // That makes sense, but it is not needed for the client to work.
-    LOG.debug("Pipeline creation successful. Pipeline: {}",
-        pipeline.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Pipeline creation successful. Pipeline: {}",
+          pipeline.toString());
+    }
   }
 
   @Override
@@ -379,7 +381,9 @@ public class ContainerOperationClient implements ScmClient {
       throws IOException {
     XceiverClientSpi client = null;
     try {
-      LOG.debug("Close container {}", pipeline);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Close container {}", pipeline);
+      }
       /*
       TODO: two orders here, revisit this later:
       1. close on SCM first, then on data node
