@@ -1422,6 +1422,29 @@ public class TestTaskAttempt{
     assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
+  @Test
+  public void testTooManyFetchFailureWhileSuccessFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+    TaskId reducetaskId = MRBuilderUtils.newTaskId(taImpl.getID().getTaskId()
+        .getJobId(), 1, TaskType.REDUCE);
+    TaskAttemptId reduceTAId =
+        MRBuilderUtils.newTaskAttemptId(reducetaskId, 0);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
+
+    taImpl.handle(new TaskAttemptTooManyFetchFailureEvent(taImpl.getID(),
+        reduceTAId, "Host"));
+    assertEquals("Task attempt is not in FAILED state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
   private void setupTaskAttemptFinishingMonitor(
       EventHandler eventHandler, JobConf jobConf, AppContext appCtx) {
     TaskAttemptFinishingMonitor taskAttemptFinishingMonitor =
