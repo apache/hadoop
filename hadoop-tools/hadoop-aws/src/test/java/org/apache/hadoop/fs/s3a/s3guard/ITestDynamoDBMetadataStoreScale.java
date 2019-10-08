@@ -210,11 +210,9 @@ public class ITestDynamoDBMetadataStoreScale
       // if this doesn't throttle, all is well.
       super.test_020_Moves();
     } catch (AWSServiceThrottledException ex) {
-      // if the service was throttled, we expect the exception text
-      GenericTestUtils.assertExceptionContains(
-          DynamoDBMetadataStore.HINT_DDB_IOPS_TOO_LOW,
-          ex,
-          "Expected throttling message");
+      // if the service was throttled, all is good.
+      // log and continue
+      LOG.warn("DDB connection was throttled", ex);
     } finally {
       LOG.info("Statistics {}", tracker);
     }
