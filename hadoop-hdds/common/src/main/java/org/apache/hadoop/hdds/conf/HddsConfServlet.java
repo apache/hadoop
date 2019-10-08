@@ -171,7 +171,9 @@ public class HddsConfServlet extends HttpServlet {
           Properties properties = config.getAllPropertiesByTag(tag);
           propMap.put(tag, properties);
         } else {
-          LOG.debug("Not a valid tag" + tag);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Not a valid tag" + tag);
+          }
         }
       }
       out.write(gson.toJsonTree(propMap).toString());

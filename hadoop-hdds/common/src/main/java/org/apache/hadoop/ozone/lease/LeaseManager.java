@@ -110,7 +110,7 @@ public class LeaseManager<T> {
   public synchronized Lease<T> acquire(T resource, long timeout)
       throws LeaseAlreadyExistException {
     checkStatus();
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Acquiring lease on {} for {} milliseconds", resource, timeout);
     }
     if(activeLeases.containsKey(resource)) {
@@ -150,7 +150,7 @@ public class LeaseManager<T> {
   public synchronized void release(T resource)
       throws LeaseNotFoundException {
     checkStatus();
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Releasing lease on {}", resource);
     }
     Lease<T> lease = activeLeases.remove(resource);
@@ -206,7 +206,7 @@ public class LeaseManager<T> {
 
     @Override
     public void run() {
-      while(monitor) {
+      while (monitor) {
         LOG.debug("{}-LeaseMonitor: checking for lease expiry", name);
         long sleepTime = Long.MAX_VALUE;
 

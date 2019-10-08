@@ -55,11 +55,12 @@ public class RandomContainerDeletionChoosingPolicy
       if (currentCount < count) {
         result.add(entry);
         currentCount++;
-
-        LOG.debug("Select container {} for block deletion, "
-            + "pending deletion blocks num: {}.",
-            entry.getContainerID(),
-            ((KeyValueContainerData)entry).getNumPendingDeletionBlocks());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Select container {} for block deletion, "
+                  + "pending deletion blocks num: {}.",
+              entry.getContainerID(),
+              ((KeyValueContainerData) entry).getNumPendingDeletionBlocks());
+        }
       } else {
         break;
       }

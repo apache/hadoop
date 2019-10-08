@@ -128,8 +128,10 @@ public class KeyValueBlockIterator implements BlockIterator<BlockData>,
       KeyValue block = blockIterator.next();
       if (blockFilter.filterKey(null, block.getKey(), null)) {
         nextBlock = BlockUtils.getBlockData(block.getValue());
-        LOG.trace("Block matching with filter found: blockID is : {} for " +
-            "containerID {}", nextBlock.getLocalID(), containerId);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Block matching with filter found: blockID is : {} for " +
+              "containerID {}", nextBlock.getLocalID(), containerId);
+        }
         return true;
       }
       hasNext();

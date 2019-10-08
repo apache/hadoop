@@ -48,8 +48,10 @@ public class ContainerActionsHandler implements
       ContainerID containerId = ContainerID.valueof(action.getContainerID());
       switch (action.getAction()) {
       case CLOSE:
-        LOG.debug("Closing container {} in datanode {} because the" +
-            " container is {}.", containerId, dd, action.getReason());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Closing container {} in datanode {} because the" +
+              " container is {}.", containerId, dd, action.getReason());
+        }
         publisher.fireEvent(SCMEvents.CLOSE_CONTAINER, containerId);
         break;
       default:

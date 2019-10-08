@@ -155,8 +155,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
   private ContainerCommandResponseProto dispatchRequest(
       ContainerCommandRequestProto msg, DispatcherContext dispatcherContext) {
     Preconditions.checkNotNull(msg);
-    LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
-        msg.getTraceID());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
+          msg.getTraceID());
+    }
 
     AuditAction action = ContainerCommandRequestPBHelper.getAuditAction(
         msg.getCmdType());
@@ -553,7 +555,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       }
       break;
 
-    default: LOG.debug("Invalid audit event status - " + result);
+    default:
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Invalid audit event status - " + result);
+      }
     }
   }
 

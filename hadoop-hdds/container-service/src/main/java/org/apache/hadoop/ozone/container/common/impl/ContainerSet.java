@@ -65,9 +65,11 @@ public class ContainerSet {
     Preconditions.checkNotNull(container, "container cannot be null");
 
     long containerId = container.getContainerData().getContainerID();
-    if(containerMap.putIfAbsent(containerId, container) == null) {
-      LOG.debug("Container with container Id {} is added to containerMap",
-          containerId);
+    if (containerMap.putIfAbsent(containerId, container) == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Container with container Id {} is added to containerMap",
+            containerId);
+      }
       // wish we could have done this from ContainerData.setState
       container.getContainerData().commitSpace();
       return true;
@@ -100,7 +102,7 @@ public class ContainerSet {
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
     Container<?> removed = containerMap.remove(containerId);
-    if(removed == null) {
+    if (removed == null) {
       LOG.debug("Container with containerId {} is not present in " +
           "containerMap", containerId);
       return false;
