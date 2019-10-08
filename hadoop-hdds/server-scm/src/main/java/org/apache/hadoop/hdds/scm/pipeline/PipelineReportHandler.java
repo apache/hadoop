@@ -113,6 +113,8 @@ public class PipelineReportHandler implements
           reportedLeadersForPipeline.computeIfAbsent(pipelineID,
               k -> new HashMap<>());
       ids.put(dn.getUuid(), report.getLeaderID());
+      pipeline.setLeaderId(
+          RaftPeerId.valueOf(report.getLeaderID().toString()));
     }
 
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
@@ -124,8 +126,6 @@ public class PipelineReportHandler implements
           leaderIdPairs.values().stream().distinct().count() == 1) {
         // All datanodes reported same leader
         pipelineManager.openPipeline(pipelineID);
-        pipeline.setLeaderId(
-            RaftPeerId.valueOf(report.getLeaderID().toString()));
       }
     } else {
       // In OPEN state case just report the datanode
