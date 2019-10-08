@@ -378,6 +378,87 @@ public class TestBlockManagerSafeMode {
   }
 
   /**
+   * Test block manager won't leave safe mode if datanode threshold is not met
+   * only if datanodeThreshold is configured > 0.
+   */
+  @Test(timeout = 30000)
+  public void testDatanodeThreshodShouldBeMetOnlyIfConfigured()
+          throws Exception {
+    bmSafeMode.activate(BLOCK_TOTAL);
+
+    //Blocks received is set to threshold
+    setBlockSafe(BLOCK_THRESHOLD);
+
+    //datanodeThreshold is configured to 1 but not all DNs registered .
+    // Expecting safe mode .
+    when(dn.getNumLiveDataNodes()).thenReturn(1);
+    setDatanodeThreshold(1);
+    bmSafeMode.checkSafeMode();
+    assertTrue(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 1 and all DNs registered .
+    // Not expecting safe mode .
+    when(dn.getNumLiveDataNodes()).thenReturn(DATANODE_NUM);
+    setDatanodeThreshold(1);
+    bmSafeMode.checkSafeMode();
+    waitForExtensionPeriod();
+    assertFalse(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 0 but not all DNs registered .
+    // Not Expecting safe mode .
+    bmSafeMode.activate(BLOCK_TOTAL);
+    setBlockSafe(BLOCK_THRESHOLD);
+    when(dn.getNumLiveDataNodes()).thenReturn(1);
+    setDatanodeThreshold(0);
+    bmSafeMode.checkSafeMode();
+    assertFalse(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 0 and all DNs registered .
+    // Not Expecting safe mode .
+    bmSafeMode.activate(BLOCK_TOTAL);
+    setBlockSafe(BLOCK_THRESHOLD);
+    when(dn.getNumLiveDataNodes()).thenReturn(DATANODE_NUM);
+    setDatanodeThreshold(0);
+    bmSafeMode.checkSafeMode();
+    assertFalse(bmSafeMode.isInSafeMode());
+
+    //Blocks received set to below threshold and all combinations
+    //of datanodeThreshold should result in safe mode.
+
+
+    //datanodeThreshold is configured to 1 but not all DNs registered .
+    // Expecting safe mode .
+    bmSafeMode.activate(BLOCK_TOTAL);
+    setBlockSafe(BLOCK_THRESHOLD-1);
+    setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
+    when(dn.getNumLiveDataNodes()).thenReturn(1);
+    setDatanodeThreshold(1);
+    bmSafeMode.checkSafeMode();
+    assertTrue(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 1 and all DNs registered .
+    // Expecting safe mode .
+    when(dn.getNumLiveDataNodes()).thenReturn(DATANODE_NUM);
+    setDatanodeThreshold(1);
+    bmSafeMode.checkSafeMode();
+    assertTrue(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 0 but not all DNs registered .
+    // Expecting safe mode .
+    when(dn.getNumLiveDataNodes()).thenReturn(1);
+    setDatanodeThreshold(0);
+    bmSafeMode.checkSafeMode();
+    assertTrue(bmSafeMode.isInSafeMode());
+
+    //datanodeThreshold is configured to 0 and all DNs registered .
+    // Expecting safe mode .
+    when(dn.getNumLiveDataNodes()).thenReturn(DATANODE_NUM);
+    setDatanodeThreshold(0);
+    bmSafeMode.checkSafeMode();
+    assertTrue(bmSafeMode.isInSafeMode());
+  }
+
+  /**
    * Test block manager won't leave safe mode if there are blocks with
    * generation stamp (GS) in future.
    */
@@ -602,6 +683,11 @@ public class TestBlockManagerSafeMode {
 
   private void setBlockSafe(long blockSafe) {
     Whitebox.setInternalState(bmSafeMode, "blockSafe", blockSafe);
+  }
+
+  private void setDatanodeThreshold(int dnSafeModeThreshold) {
+    Whitebox.setInternalState(bmSafeMode, "datanodeThreshold",
+            dnSafeModeThreshold);
   }
 
   private long getblockSafe() {
