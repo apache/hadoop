@@ -513,6 +513,20 @@ public class MockRM extends ResourceManager {
     return submitApp(masterMemory, false);
   }
 
+  public RMApp submitApp(int masterMemory, String queue,
+      boolean isAppIdProvided, ApplicationId appId, Priority priority,
+      Set<String> appTags) throws Exception {
+    Resource resource = Resource.newInstance(masterMemory, 0);
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY, resource, 1);
+    return submitApp(Collections.singletonList(amResourceRequest), "",
+        UserGroupInformation.getCurrentUser().getShortUserName(), null, false,
+        queue, super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, isAppIdProvided, appId, 0, null, true, priority, null,
+        null, null, appTags);
+  }
+
   public RMApp submitApp(int masterMemory, Priority priority) throws Exception {
     Resource resource = Resource.newInstance(masterMemory, 0);
     return submitApp(resource, "", UserGroupInformation.getCurrentUser()
@@ -715,7 +729,7 @@ public class MockRM extends ResourceManager {
             YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
         false, false, null, 0, null, true,
         amResourceRequests.get(0).getPriority(),
-        amResourceRequests.get(0).getNodeLabelExpression(), null, null,
+        amResourceRequests.get(0).getNodeLabelExpression(), null, null, null,
         appNodeLabel);
   }
 
@@ -751,7 +765,24 @@ public class MockRM extends ResourceManager {
       LogAggregationContext logAggregationContext,
       boolean cancelTokensWhenComplete, Priority priority, String amLabel,
       Map<ApplicationTimeoutType, Long> applicationTimeouts,
-      ByteBuffer tokensConf, String appNodeLabel) throws Exception {
+      ByteBuffer tokensConf, Set<String> applicationTags) throws Exception {
+    return submitApp(amResourceRequests, name, user, acls, unmanaged, queue,
+        maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
+        isAppIdProvided, applicationId, attemptFailuresValidityInterval,
+        logAggregationContext, cancelTokensWhenComplete, priority, amLabel,
+        applicationTimeouts, tokensConf, applicationTags, null);
+  }
+
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests, String name,
+      String user, Map<ApplicationAccessType, String> acls, boolean unmanaged,
+      String queue, int maxAppAttempts, Credentials ts, String appType,
+      boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
+      ApplicationId applicationId, long attemptFailuresValidityInterval,
+      LogAggregationContext logAggregationContext,
+      boolean cancelTokensWhenComplete, Priority priority, String amLabel,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts,
+      ByteBuffer tokensConf, Set<String> applicationTags, String appNodeLabel)
+      throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
     if (! isAppIdProvided) {
@@ -767,6 +798,9 @@ public class MockRM extends ResourceManager {
     sub.setApplicationId(appId);
     sub.setApplicationName(name);
     sub.setMaxAppAttempts(maxAppAttempts);
+    if (applicationTags != null) {
+      sub.setApplicationTags(applicationTags);
+    }
     if (applicationTimeouts != null && applicationTimeouts.size() > 0) {
       sub.setApplicationTimeouts(applicationTimeouts);
     }
