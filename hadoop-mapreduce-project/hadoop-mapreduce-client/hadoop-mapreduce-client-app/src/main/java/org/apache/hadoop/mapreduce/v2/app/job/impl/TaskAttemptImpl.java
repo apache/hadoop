@@ -340,12 +340,6 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCEEDED,
          TaskAttemptEventType.TA_CONTAINER_COMPLETED,
          new ExitFinishingOnContainerCompletedTransition())
-     // Transitions from SUCCESS_FINISHING_CONTAINER state to FAILED stat
-     // When the event TA_TOO_MANY_FETCH_FAILURE received
-      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-         TaskAttemptStateInternal.FAILED,
-         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
-         new TooManyFetchFailureTransition())
      // Given TA notifies task T_ATTEMPT_SUCCEEDED when it transitions to
      // SUCCESS_FINISHING_CONTAINER, it is possible to receive the event
      // TA_CONTAINER_CLEANED in the following scenario.
