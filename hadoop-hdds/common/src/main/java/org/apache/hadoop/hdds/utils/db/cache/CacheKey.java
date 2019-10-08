@@ -59,12 +59,7 @@ public class CacheKey<KEY> implements Comparable<KEY> {
     if(Objects.equals(key, ((CacheKey<?>)o).key)) {
       return 0;
     } else {
-      if (key instanceof String) {
-        return ((String) key).compareTo((String) ((CacheKey<?>)o).key);
-      } else {
-        // If not type string, convert to string and compare.
-        return key.toString().compareTo((((CacheKey<?>) o).key).toString());
-      }
+      return key.toString().compareTo((((CacheKey<?>) o).key).toString());
     }
   }
 }
