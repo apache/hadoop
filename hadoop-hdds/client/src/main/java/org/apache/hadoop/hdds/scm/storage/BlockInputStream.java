@@ -155,8 +155,10 @@ public class BlockInputStream extends InputStream implements Seekable {
     boolean success = false;
     List<ChunkInfo> chunks;
     try {
-      LOG.debug("Initializing BlockInputStream for get key to access {}",
-          blockID.getContainerID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initializing BlockInputStream for get key to access {}",
+            blockID.getContainerID());
+      }
 
       if (token != null) {
         UserGroupInformation.getCurrentUser().addToken(token);

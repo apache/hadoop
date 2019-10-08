@@ -206,8 +206,10 @@ public class KeyValueHandler extends Handler {
   ContainerCommandResponseProto handleCreateContainer(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
     if (!request.hasCreateContainer()) {
-      LOG.debug("Malformed Create Container request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Create Container request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
     // Create Container request should be passed a null container as the
@@ -269,8 +271,10 @@ public class KeyValueHandler extends Handler {
   ContainerCommandResponseProto handleReadContainer(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
     if (!request.hasReadContainer()) {
-      LOG.debug("Malformed Read Container request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Read Container request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -296,8 +300,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasUpdateContainer()) {
-      LOG.debug("Malformed Update Container request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Update Container request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -330,8 +336,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasDeleteContainer()) {
-      LOG.debug("Malformed Delete container request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Delete container request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -352,8 +360,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasCloseContainer()) {
-      LOG.debug("Malformed Update Container request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Update Container request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
     try {
@@ -379,8 +389,10 @@ public class KeyValueHandler extends Handler {
 
     long blockLength;
     if (!request.hasPutBlock()) {
-      LOG.debug("Malformed Put Key request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Put Key request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -415,8 +427,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasGetBlock()) {
-      LOG.debug("Malformed Get Key request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Get Key request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -454,8 +468,10 @@ public class KeyValueHandler extends Handler {
   ContainerCommandResponseProto handleGetCommittedBlockLength(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
     if (!request.hasGetCommittedBlockLength()) {
-      LOG.debug("Malformed Get Key request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Get Key request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -490,8 +506,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasDeleteBlock()) {
-      LOG.debug("Malformed Delete Key request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Delete Key request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -521,8 +539,10 @@ public class KeyValueHandler extends Handler {
       DispatcherContext dispatcherContext) {
 
     if (!request.hasReadChunk()) {
-      LOG.debug("Malformed Read Chunk request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Read Chunk request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -589,8 +609,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasDeleteChunk()) {
-      LOG.debug("Malformed Delete Chunk request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Delete Chunk request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -632,8 +654,10 @@ public class KeyValueHandler extends Handler {
       DispatcherContext dispatcherContext) {
 
     if (!request.hasWriteChunk()) {
-      LOG.debug("Malformed Write Chunk request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Write Chunk request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 
@@ -687,8 +711,10 @@ public class KeyValueHandler extends Handler {
       DispatcherContext dispatcherContext) {
 
     if (!request.hasPutSmallFile()) {
-      LOG.debug("Malformed Put Small File request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Put Small File request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
     PutSmallFileRequestProto putSmallFileReq =
@@ -745,8 +771,10 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     if (!request.hasGetSmallFile()) {
-      LOG.debug("Malformed Get Small File request. trace ID: {}",
-          request.getTraceID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Malformed Get Small File request. trace ID: {}",
+            request.getTraceID());
+      }
       return ContainerUtils.malformedRequest(request);
     }
 

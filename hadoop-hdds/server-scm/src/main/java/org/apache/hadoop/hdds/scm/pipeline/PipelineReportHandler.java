@@ -74,7 +74,9 @@ public class PipelineReportHandler implements
         pipelineReportFromDatanode.getReport();
     Preconditions.checkNotNull(dn, "Pipeline Report is "
         + "missing DatanodeDetails.");
-    LOGGER.trace("Processing pipeline report for dn: {}", dn);
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Processing pipeline report for dn: {}", dn);
+    }
     for (PipelineReport report : pipelineReport.getPipelineReportList()) {
       try {
         processPipelineReport(report, dn);

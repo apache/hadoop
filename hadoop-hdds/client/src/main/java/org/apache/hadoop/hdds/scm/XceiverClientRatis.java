@@ -170,8 +170,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
-        RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
+          RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    }
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
@@ -223,10 +225,14 @@ public final class XceiverClientRatis extends XceiverClientSpi {
           = ContainerCommandRequestMessage.toMessage(
               request, TracingUtil.exportCurrentSpan());
       if (HddsUtils.isReadOnly(request)) {
-        LOG.debug("sendCommandAsync ReadOnly {}", message);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync ReadOnly {}", message);
+        }
         return getClient().sendReadOnlyAsync(message);
       } else {
-        LOG.debug("sendCommandAsync {}", message);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync {}", message);
+        }
         return getClient().sendAsync(message);
       }
     }
@@ -258,7 +264,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       clientReply.setLogIndex(commitIndex);
       return clientReply;
     }
-    LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    }
     RaftClientReply reply;
     try {
       CompletableFuture<RaftClientReply> replyFuture = getClient()
@@ -310,10 +318,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     metrics.incrPendingContainerOpsMetrics(request.getCmdType());
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> {
-          LOG.debug("received reply {} for request: cmdType={} containerID={}"
-                  + " pipelineID={} traceID={} exception: {}", reply,
-              request.getCmdType(), request.getContainerID(),
-              request.getPipelineID(), request.getTraceID(), e);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("received reply {} for request: cmdType={} containerID={}"
+                    + " pipelineID={} traceID={} exception: {}", reply,
+                request.getCmdType(), request.getContainerID(),
+                request.getPipelineID(), request.getTraceID(), e);
+          }
           metrics.decrPendingContainerOpsMetrics(request.getCmdType());
           metrics.addContainerOpsLatency(request.getCmdType(),
               Time.monotonicNowNanos() - requestTime);

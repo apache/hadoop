@@ -190,7 +190,9 @@ public class RatisPipelineProvider implements PipelineProvider {
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
+    }
     callRatisRpc(pipeline.getNodes(),
         (raftClient, peer) -> {
           RaftClientReply reply = raftClient.groupAdd(group, peer.getId());

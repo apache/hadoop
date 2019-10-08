@@ -47,7 +47,9 @@ public class OzoneBlockTokenSelector implements
     for (Token<? extends TokenIdentifier> token : tokens) {
       if (OzoneBlockTokenIdentifier.KIND_NAME.equals(token.getKind())
           && token.getService().equals(service)) {
-        LOG.trace("Getting token for service:{}", service);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Getting token for service:{}", service);
+        }
         return (Token<OzoneBlockTokenIdentifier>) token;
       }
     }
@@ -66,7 +68,9 @@ public class OzoneBlockTokenSelector implements
     for (Token<? extends TokenIdentifier> token : tokens) {
       if (OzoneBlockTokenIdentifier.KIND_NAME.equals(token.getKind())
           && token.getService().equals(service)) {
-        LOG.trace("Getting token for service:{}", service);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Getting token for service:{}", service);
+        }
         return (Token<OzoneBlockTokenIdentifier>) token;
       }
     }
