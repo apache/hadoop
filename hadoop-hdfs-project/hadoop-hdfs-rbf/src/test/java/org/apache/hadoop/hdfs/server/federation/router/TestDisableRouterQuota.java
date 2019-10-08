@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import java.io.IOException;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -92,4 +93,13 @@ public class TestDisableRouterQuota {
     }
   }
 
+  @Test
+  public void testGetGlobalQuota() throws Exception {
+    LambdaTestUtils.intercept(IOException.class,
+        "The quota system is disabled in Router.",
+        "The getGlobalQuota call should fail.", () -> {
+          Quota quotaModule = router.getRpcServer().getQuotaModule();
+          quotaModule.getGlobalQuota("/test");
+        });
+  }
 }
