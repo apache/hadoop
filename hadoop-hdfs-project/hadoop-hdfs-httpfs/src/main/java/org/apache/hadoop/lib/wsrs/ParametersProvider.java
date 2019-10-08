@@ -26,9 +26,7 @@ import org.glassfish.hk2.api.Factory;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.xml.ws.spi.http.HttpContext;
-import java.lang.reflect.Type;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.List;
@@ -60,8 +58,7 @@ public class ParametersProvider implements Factory<Parameters> {
     Map<String, List<Param<?>>> map = new HashMap<String, List<Param<?>>>();
     
     Map<String, String[]> queryString = request.getParameterMap();
-    String str = ((MultivaluedMap<String, String>) queryString).
-        getFirst(driverParam);
+    String str = queryString.get(driverParam)[0];
     if (str == null) {
       throw new IllegalArgumentException(
         MessageFormat.format("Missing Operation parameter [{0}]",
@@ -81,7 +78,7 @@ public class ParametersProvider implements Factory<Parameters> {
     for (Class<Param<?>> paramClass : paramsDef.get(op)) {
       Param<?> param = newParam(paramClass);
       List<Param<?>> paramList = Lists.newArrayList();
-      List<String> ps = queryString.get(param.getName());
+      String[] ps = queryString.get(param.getName());
       if (ps != null) {
         for (String p : ps) {
           try {
@@ -102,6 +99,10 @@ public class ParametersProvider implements Factory<Parameters> {
     return new Parameters(map);
   }
 
+  @Override
+  public void dispose(Parameters parameters) {
+  }
+
   private Param<?> newParam(Class<Param<?>> paramClass) {
     try {
       return paramClass.newInstance();
@@ -111,15 +112,5 @@ public class ParametersProvider implements Factory<Parameters> {
           "Param class [{0}] does not have default constructor",
           paramClass.getName()));
     }
-  }
-
-  @Override
-  public ComponentScope getScope() {
-    return ComponentScope.PerRequest;
-  }
-
-  @Override
-  public Injectable getInjectable(ComponentContext componentContext, Context context, Type type) {
-    return (type.equals(Parameters.class)) ? this : null;
   }
 }
