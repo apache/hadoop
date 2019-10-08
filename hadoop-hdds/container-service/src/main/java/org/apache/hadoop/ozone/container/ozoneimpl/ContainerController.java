@@ -174,4 +174,10 @@ public class ContainerController {
     return containerSet.getContainerIterator(volume);
   }
 
+  void updateDataScanTimestamp(long containerId, long timestamp)
+      throws IOException {
+    Container container = containerSet.getContainer(containerId);
+    container.updateDataScanTimestamp(timestamp);
+  }
+
 }

@@ -53,6 +53,7 @@ import org.yaml.snakeyaml.introspector.Property;
 import org.yaml.snakeyaml.introspector.PropertyUtils;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.NodeTuple;
 import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
@@ -217,6 +218,17 @@ public final class ContainerDataYaml {
       }
       return filtered;
     }
+
+    /**
+     * Omit properties with null value.
+     */
+    @Override
+    protected NodeTuple representJavaBeanProperty(
+        Object bean, Property property, Object value, Tag tag) {
+      return value == null
+          ? null
+          : super.representJavaBeanProperty(bean, property, value, tag);
+    }
   }
 
   /**
@@ -260,6 +272,10 @@ public final class ContainerDataYaml {
         Map<String, String> meta = (Map) nodes.get(OzoneConsts.METADATA);
         kvData.setMetadata(meta);
         kvData.setChecksum((String) nodes.get(OzoneConsts.CHECKSUM));
+        Long timestamp = (Long) nodes.get(OzoneConsts.DATA_SCAN_TIMESTAMP);
+        if (timestamp != null) {
+          kvData.setDataScanTimestamp(timestamp);
+        }
         String state = (String) nodes.get(OzoneConsts.STATE);
         kvData
             .setState(ContainerProtos.ContainerDataProto.State.valueOf(state));

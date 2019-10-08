@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Comparator;
 import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -40,6 +41,10 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
  * Interface for Container Operations.
  */
 public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
+
+  Comparator<Container<?>> DATA_SCAN_ORDER = Comparator.<Container<?>>
+      comparingLong(c -> c.getContainerData().getDataScanTimestamp())
+          .thenComparingLong(c -> c.getContainerData().getContainerID());
 
   /**
    * Creates a container.
@@ -64,6 +69,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * @throws StorageContainerException
    */
   void update(Map<String, String> metaData, boolean forceUpdate)
+      throws StorageContainerException;
+
+  void updateDataScanTimestamp(long timestamp)
       throws StorageContainerException;
 
   /**

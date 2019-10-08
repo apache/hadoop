@@ -37,8 +37,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
+import java.util.function.Function;
 
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -176,6 +180,41 @@ public class TestContainerSet {
       count2++;
     }
     assertEquals(5, count2);
+  }
+
+  @Test
+  public void iteratorIsOrderedByScanTime() throws StorageContainerException {
+    HddsVolume vol = Mockito.mock(HddsVolume.class);
+    Mockito.when(vol.getStorageID()).thenReturn("uuid-1");
+    Random random = new Random();
+    ContainerSet containerSet = new ContainerSet();
+    for (int i=0; i<10; i++) {
+      KeyValueContainerData kvData = new KeyValueContainerData(i,
+          (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+          UUID.randomUUID().toString());
+      kvData.setDataScanTimestamp(Math.abs(random.nextLong()));
+      kvData.setVolume(vol);
+      kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
+      KeyValueContainer kv = new KeyValueContainer(kvData, new
+          OzoneConfiguration());
+      containerSet.addContainer(kv);
+    }
+    List<Container<?>> expectedOrder =
+        new ArrayList<>(containerSet.getContainerMap().values());
+    expectedOrder.sort(Container.DATA_SCAN_ORDER);
+
+    List<Container<?>> containers = new ArrayList<>();
+    containerSet.getContainerIterator(vol).forEachRemaining(containers::add);
+
+    if (!Objects.equals(expectedOrder, containers)) {
+      Function<Container, ?> debug = c ->
+          c.getContainerData().getContainerID()
+              + " " + c.getContainerData().getDataScanTimestamp();
+      assertEquals(
+          expectedOrder.stream().map(debug).collect(toList()),
+          containers.stream().map(debug).collect(toList())
+      );
+    }
   }
 
   @Test

@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
@@ -39,6 +40,7 @@ import org.yaml.snakeyaml.Yaml;
 import static org.apache.hadoop.ozone.OzoneConsts.CHECKSUM;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
+import static org.apache.hadoop.ozone.OzoneConsts.DATA_SCAN_TIMESTAMP;
 import static org.apache.hadoop.ozone.OzoneConsts.LAYOUTVERSION;
 import static org.apache.hadoop.ozone.OzoneConsts.MAX_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA;
@@ -89,7 +91,9 @@ public abstract class ContainerData {
   private HddsVolume volume;
 
   private String checksum;
-  public static final Charset CHARSET_ENCODING = Charset.forName("UTF-8");
+  private Long dataScanTimestamp;
+
+  public static final Charset CHARSET_ENCODING = StandardCharsets.UTF_8;
   private static final String DUMMY_CHECKSUM = new String(new byte[64],
       CHARSET_ENCODING);
 
@@ -103,6 +107,7 @@ public abstract class ContainerData {
       METADATA,
       MAX_SIZE,
       CHECKSUM,
+      DATA_SCAN_TIMESTAMP,
       ORIGIN_PIPELINE_ID,
       ORIGIN_NODE_ID));
 
@@ -506,6 +511,13 @@ public abstract class ContainerData {
     return this.checksum;
   }
 
+  public long getDataScanTimestamp() {
+    return dataScanTimestamp != null ? dataScanTimestamp : 0;
+  }
+
+  public void setDataScanTimestamp(long timestamp) {
+    this.dataScanTimestamp = timestamp;
+  }
 
   /**
    * Returns the origin pipeline Id of this container.

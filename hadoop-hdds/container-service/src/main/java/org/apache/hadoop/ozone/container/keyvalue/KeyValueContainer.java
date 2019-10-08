@@ -337,6 +337,17 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         containerData.getBlockCommitSequenceId());
   }
 
+  @Override
+  public void updateDataScanTimestamp(long timestamp)
+      throws StorageContainerException {
+    writeLock();
+    try {
+      updateContainerData(() -> containerData.setDataScanTimestamp(timestamp));
+    } finally {
+      writeUnlock();
+    }
+  }
+
   /**
    *
    * Must be invoked with the writeLock held.

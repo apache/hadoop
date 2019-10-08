@@ -23,88 +23,106 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
-import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This test verifies the container scrubber metrics functionality.
  */
+@RunWith(MockitoJUnitRunner.class)
 public class TestContainerScrubberMetrics {
+
+  private final AtomicLong containerIdSeq = new AtomicLong(100);
+
+  @Mock
+  private Container<ContainerData> healthy;
+
+  @Mock
+  private Container<ContainerData> corruptMetadata;
+
+  @Mock
+  private Container<ContainerData> corruptData;
+
+  @Mock
+  private HddsVolume vol;
+
+  private ContainerScrubberConfiguration conf;
+  private ContainerController controller;
+
+  @Before
+  public void setup() {
+    conf = new OzoneConfiguration()
+        .getObject(ContainerScrubberConfiguration.class);
+    conf.setMetadataScanInterval(0);
+    conf.setDataScanInterval(0);
+    controller = mockContainerController();
+  }
+
   @Test
   public void testContainerMetaDataScrubberMetrics() {
-    OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerScrubberConfiguration c = conf.getObject(
-        ContainerScrubberConfiguration.class);
-    c.setMetadataScanInterval(0);
-    HddsVolume vol = Mockito.mock(HddsVolume.class);
-    ContainerController cntrl = mockContainerController(vol);
+    ContainerMetadataScanner subject =
+        new ContainerMetadataScanner(conf, controller);
+    subject.runIteration();
 
-    ContainerMetadataScanner mc = new ContainerMetadataScanner(c, cntrl);
-    mc.runIteration();
-
-    Assert.assertEquals(1, mc.getMetrics().getNumScanIterations());
-    Assert.assertEquals(3, mc.getMetrics().getNumContainersScanned());
-    Assert.assertEquals(1, mc.getMetrics().getNumUnHealthyContainers());
+    ContainerMetadataScrubberMetrics metrics = subject.getMetrics();
+    assertEquals(1, metrics.getNumScanIterations());
+    assertEquals(3, metrics.getNumContainersScanned());
+    assertEquals(1, metrics.getNumUnHealthyContainers());
   }
 
   @Test
   public void testContainerDataScrubberMetrics() {
-    OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerScrubberConfiguration c = conf.getObject(
-        ContainerScrubberConfiguration.class);
-    c.setDataScanInterval(0);
-    HddsVolume vol = Mockito.mock(HddsVolume.class);
-    ContainerController cntrl = mockContainerController(vol);
+    ContainerDataScanner subject =
+        new ContainerDataScanner(conf, controller, vol);
+    subject.runIteration();
 
-    ContainerDataScanner sc = new ContainerDataScanner(c, cntrl, vol);
-    sc.runIteration();
-
-    ContainerDataScrubberMetrics m = sc.getMetrics();
-    Assert.assertEquals(1, m.getNumScanIterations());
-    Assert.assertEquals(2, m.getNumContainersScanned());
-    Assert.assertEquals(1, m.getNumUnHealthyContainers());
+    ContainerDataScrubberMetrics metrics = subject.getMetrics();
+    assertEquals(1, metrics.getNumScanIterations());
+    assertEquals(2, metrics.getNumContainersScanned());
+    assertEquals(1, metrics.getNumUnHealthyContainers());
   }
 
-  private ContainerController mockContainerController(HddsVolume vol) {
+  private ContainerController mockContainerController() {
     // healthy container
-    Container<ContainerData> c1 = Mockito.mock(Container.class);
-    Mockito.when(c1.shouldScanData()).thenReturn(true);
-    Mockito.when(c1.scanMetaData()).thenReturn(true);
-    Mockito.when(c1.scanData(
-        Mockito.any(DataTransferThrottler.class),
-        Mockito.any(Canceler.class))).thenReturn(true);
+    setupMockContainer(healthy, true, true, true);
 
     // unhealthy container (corrupt data)
-    ContainerData c2d = Mockito.mock(ContainerData.class);
-    Mockito.when(c2d.getContainerID()).thenReturn(101L);
-    Container<ContainerData> c2 = Mockito.mock(Container.class);
-    Mockito.when(c2.scanMetaData()).thenReturn(true);
-    Mockito.when(c2.shouldScanData()).thenReturn(true);
-    Mockito.when(c2.scanData(
-        Mockito.any(DataTransferThrottler.class),
-        Mockito.any(Canceler.class))).thenReturn(false);
-    Mockito.when(c2.getContainerData()).thenReturn(c2d);
+    setupMockContainer(corruptData, true, true, false);
 
     // unhealthy container (corrupt metadata)
-    ContainerData c3d = Mockito.mock(ContainerData.class);
-    Mockito.when(c3d.getContainerID()).thenReturn(102L);
-    Container<ContainerData> c3 = Mockito.mock(Container.class);
-    Mockito.when(c3.shouldScanData()).thenReturn(false);
-    Mockito.when(c3.scanMetaData()).thenReturn(false);
-    Mockito.when(c3.getContainerData()).thenReturn(c3d);
+    setupMockContainer(corruptMetadata, false, false, false);
 
-    Collection<Container<?>> containers = Arrays.asList(c1, c2, c3);
-    ContainerController cntrl = Mockito.mock(ContainerController.class);
-    Mockito.when(cntrl.getContainers(vol))
-        .thenReturn(containers.iterator());
-    Mockito.when(cntrl.getContainers())
-        .thenReturn(containers.iterator());
+    Collection<Container<?>> containers = Arrays.asList(
+        healthy, corruptData, corruptMetadata);
+    ContainerController mock = mock(ContainerController.class);
+    when(mock.getContainers(vol)).thenReturn(containers.iterator());
+    when(mock.getContainers()).thenReturn(containers.iterator());
 
-    return cntrl;
+    return mock;
+  }
+
+  private void setupMockContainer(
+      Container<ContainerData> c, boolean shouldScanData,
+      boolean scanMetaDataSuccess, boolean scanDataSuccess) {
+    ContainerData data = mock(ContainerData.class);
+    when(data.getContainerID()).thenReturn(containerIdSeq.getAndIncrement());
+    when(c.getContainerData()).thenReturn(data);
+    when(c.shouldScanData()).thenReturn(shouldScanData);
+    when(c.scanMetaData()).thenReturn(scanMetaDataSuccess);
+    when(c.scanData(any(DataTransferThrottler.class), any(Canceler.class)))
+        .thenReturn(scanDataSuccess);
   }
 
 }

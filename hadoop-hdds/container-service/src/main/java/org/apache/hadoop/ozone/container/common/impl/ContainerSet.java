@@ -132,6 +132,7 @@ public class ContainerSet {
 
   /**
    * Return an iterator of containers associated with the specified volume.
+   * The iterator is sorted by last data scan timestamp in increasing order.
    *
    * @param  volume the HDDS volume which should be used to filter containers
    * @return {@literal Iterator<Container<?>>}
@@ -143,6 +144,7 @@ public class ContainerSet {
     return containerMap.values().stream()
         .filter(x -> volumeUuid.equals(x.getContainerData().getVolume()
             .getStorageID()))
+        .sorted(Container.DATA_SCAN_ORDER)
         .iterator();
   }
 
