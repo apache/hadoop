@@ -4310,4 +4310,15 @@
     <name>yarn.node-labels.exclusive-enforced-partitions</name>
     <value></value>
   </property>
+
+  <property>
+    <description>
+      Prefix used to identify the YARN tag which contains workflow ID. If a tag coming in application
+      submission context has this prefix, whatever follows the prefix will be considered as workflow ID
+      associated with the application. This configuration is used by features such as workflow priority
+      for identifying the workflow associated with an application.
+    </description>
+    <name>yarn.workflow-id.tag-prefix</name>
+    <value>workflowid:</value>
+  </property>
 </configuration>
