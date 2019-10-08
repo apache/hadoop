@@ -135,10 +135,10 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
       UserVolumeInfo volumeList = null;
 
       // acquire lock.
-      acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
-          volume);
+      acquiredVolumeLock = omMetadataManager.getLock().acquireWriteLock(
+          VOLUME_LOCK, volume);
 
-      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+      acquiredUserLock = omMetadataManager.getLock().acquireWriteLock(USER_LOCK,
           owner);
 
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
@@ -176,10 +176,10 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquiredUserLock) {
-        omMetadataManager.getLock().releaseLock(USER_LOCK, owner);
+        omMetadataManager.getLock().releaseWriteLock(USER_LOCK, owner);
       }
       if (acquiredVolumeLock) {
-        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+        omMetadataManager.getLock().releaseWriteLock(VOLUME_LOCK, volume);
       }
     }
 

@@ -102,7 +102,7 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     IOException exception = null;
-    boolean acquiredLock = false;
+    boolean acquiredBucketLock = false;
     OMClientResponse omClientResponse = null;
     try {
       // check Acl
@@ -112,10 +112,9 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
             volumeName, bucketName, null);
       }
 
-
-      // acquire lock
-      acquiredLock =  omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
-          volumeName, bucketName);
+      // acquire lock.
+      acquiredBucketLock =  omMetadataManager.getLock().acquireWriteLock(
+          BUCKET_LOCK, volumeName, bucketName);
 
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
@@ -181,8 +180,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
             ozoneManagerDoubleBufferHelper.add(omClientResponse,
                 transactionLogIndex));
       }
-      if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+      if (acquiredBucketLock) {
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }
