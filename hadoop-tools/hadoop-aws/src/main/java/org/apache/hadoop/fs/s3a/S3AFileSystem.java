@@ -715,6 +715,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Get the region of a bucket.
    * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
    * @throws IOException on any failure.
    */
   @Retries.RetryTranslated
@@ -724,9 +725,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Get the region of a bucket.
+   * Requires the caller to have the AWS role permission
+   * {@code s3:GetBucketLocation}.
    * Retry policy: retrying, translated.
    * @param bucketName the name of the bucket
    * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
    * @throws IOException on any failure.
    */
   @VisibleForTesting

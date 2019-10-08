@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AccessDeniedException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,6 +53,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
@@ -1147,7 +1149,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Get info about a bucket and its S3Guard integration status.
    */
-  static class BucketInfo extends S3GuardTool {
+  public static class BucketInfo extends S3GuardTool {
     public static final String NAME = "bucket-info";
     public static final String GUARDED_FLAG = "guarded";
     public static final String UNGUARDED_FLAG = "unguarded";
@@ -1158,6 +1160,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
+
     private static final String USAGE = NAME + " [OPTIONS] s3a://BUCKET\n"
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"
@@ -1169,7 +1172,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
         + "  -" + ENCRYPTION_FLAG
         + " -require {none, sse-s3, sse-kms} - Require encryption policy";
 
-    BucketInfo(Configuration conf) {
+    /**
+     * Output when the client cannot get the location of a bucket.
+     */
+    @VisibleForTesting
+    public static final String LOCATION_UNKNOWN =
+        "Location unknown -caller lacks "
+            + RolePolicies.S3_GET_BUCKET_LOCATION + " permission";
+
+    public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
       format.addOptionWithValue(ENCRYPTION_FLAG);
@@ -1212,7 +1223,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
       URI fsUri = fs.getUri();
       MetadataStore store = fs.getMetadataStore();
       println(out, "Filesystem %s", fsUri);
-      println(out, "Location: %s", fs.getBucketLocation());
+      try {
+        println(out, "Location: %s", fs.getBucketLocation());
+      } catch (AccessDeniedException e) {
+        // Caller cannot get the location of this bucket due to permissions
+        // in their role or the bucket itself.
+        // Note and continue.
+        LOG.debug("failed to get bucket location", e);
+        println(out, LOCATION_UNKNOWN);
+      }
       boolean usingS3Guard = !(store instanceof NullMetadataStore);
       boolean authMode = false;
       if (usingS3Guard) {
