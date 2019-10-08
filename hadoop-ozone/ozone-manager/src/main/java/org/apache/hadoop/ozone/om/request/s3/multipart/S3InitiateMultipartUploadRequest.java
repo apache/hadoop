@@ -114,7 +114,7 @@ public class S3InitiateMultipartUploadRequest extends OMKeyRequest {
     try {
       // TODO to support S3 ACL later.
       acquiredBucketLock =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
               bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -189,7 +189,7 @@ public class S3InitiateMultipartUploadRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

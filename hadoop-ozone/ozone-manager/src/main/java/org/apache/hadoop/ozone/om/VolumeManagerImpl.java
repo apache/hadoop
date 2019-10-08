@@ -319,7 +319,7 @@ public class VolumeManagerImpl implements VolumeManager {
   @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
     Preconditions.checkNotNull(volume);
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -337,7 +337,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 
@@ -423,7 +423,7 @@ public class VolumeManagerImpl implements VolumeManager {
       throws IOException {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(userAcl);
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -443,7 +443,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 
@@ -634,7 +634,7 @@ public class VolumeManagerImpl implements VolumeManager {
           "VolumeManager. OzoneObj type:" + obj.getResourceType());
     }
     String volume = obj.getVolumeName();
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -653,7 +653,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 

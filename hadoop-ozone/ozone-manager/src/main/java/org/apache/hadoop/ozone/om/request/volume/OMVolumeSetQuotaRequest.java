@@ -114,8 +114,8 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
 
       OmVolumeArgs omVolumeArgs = null;
 
-      acquireVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
-          volume);
+      acquireVolumeLock = omMetadataManager.getLock().acquireWriteLock(
+          VOLUME_LOCK, volume);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -146,7 +146,7 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquireVolumeLock) {
-        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+        omMetadataManager.getLock().releaseWriteLock(VOLUME_LOCK, volume);
       }
     }
 

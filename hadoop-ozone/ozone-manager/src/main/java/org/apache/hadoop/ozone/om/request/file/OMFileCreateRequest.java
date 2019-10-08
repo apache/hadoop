@@ -180,7 +180,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
       checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
       // acquire lock
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       OmBucketInfo bucketInfo =
@@ -280,7 +280,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

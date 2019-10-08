@@ -148,10 +148,10 @@ public class OMBucketCreateRequest extends OMClientRequest {
             volumeName, bucketName, null);
       }
 
-      acquiredVolumeLock = metadataManager.getLock().acquireLock(VOLUME_LOCK,
-          volumeName);
-      acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
-          volumeName, bucketName);
+      acquiredVolumeLock =
+          metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volumeName);
+      acquiredBucketLock = metadataManager.getLock().acquireWriteLock(
+          BUCKET_LOCK, volumeName, bucketName);
 
       OmVolumeArgs omVolumeArgs =
           metadataManager.getVolumeTable().get(volumeKey);
@@ -191,11 +191,11 @@ public class OMBucketCreateRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        metadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
       if (acquiredVolumeLock) {
-        metadataManager.getLock().releaseLock(VOLUME_LOCK, volumeName);
+        metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volumeName);
       }
     }
 

@@ -91,7 +91,8 @@ public abstract class OMBucketAclRequest extends OMClientRequest {
             volume, null, null);
       }
       lockAcquired =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volume,
+              bucket);
 
       String dbBucketKey = omMetadataManager.getBucketKey(volume, bucket);
       omBucketInfo = omMetadataManager.getBucketTable().get(dbBucketKey);
@@ -120,7 +121,8 @@ public abstract class OMBucketAclRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (lockAcquired) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volume,
+            bucket);
       }
     }
 
