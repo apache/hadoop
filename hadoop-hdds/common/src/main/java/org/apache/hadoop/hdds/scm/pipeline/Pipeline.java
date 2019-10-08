@@ -192,8 +192,10 @@ public final class Pipeline {
           }
         }
       }
-      LOG.debug("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
-          nodes);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
+            nodes);
+      }
     }
     return builder.build();
   }
@@ -339,8 +341,10 @@ public final class Pipeline {
             nodeIndex--;
           }
         }
-        LOG.debug("Deserialize nodesInOrder {} in pipeline {}", nodesWithOrder,
-            id.toString());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Deserialize nodesInOrder {} in pipeline {}",
+              nodesWithOrder, id.toString());
+        }
         pipeline.setNodesInOrder(nodesWithOrder);
       } else if (nodesInOrder != null){
         // This branch is for pipeline clone

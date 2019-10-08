@@ -183,7 +183,10 @@ public interface RatisHelper {
   static RaftClient newRaftClient(RpcType rpcType, RaftPeerId leader,
       RaftGroup group, RetryPolicy retryPolicy, int maxOutStandingRequest,
       GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
-    LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("newRaftClient: {}, leader={}, group={}",
+          rpcType, leader, group);
+    }
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
     RaftClientConfigKeys.Rpc

@@ -391,9 +391,11 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   private ContainerCommandResponseProto dispatchCommand(
       ContainerCommandRequestProto requestProto, DispatcherContext context) {
-    LOG.trace("{}: dispatch {} containerID={} pipelineID={} traceID={}", gid,
-        requestProto.getCmdType(), requestProto.getContainerID(),
-        requestProto.getPipelineID(), requestProto.getTraceID());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{}: dispatch {} containerID={} pipelineID={} traceID={}", gid,
+          requestProto.getCmdType(), requestProto.getContainerID(),
+          requestProto.getPipelineID(), requestProto.getTraceID());
+    }
     if (isBlockTokenEnabled) {
       try {
         // ServerInterceptors intercepts incoming request and creates ugi.
@@ -409,7 +411,9 @@ public class ContainerStateMachine extends BaseStateMachine {
     }
     ContainerCommandResponseProto response =
         dispatcher.dispatch(requestProto, context);
-    LOG.trace("{}: response {}", gid, response);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{}: response {}", gid, response);
+    }
     return response;
   }
 
@@ -462,9 +466,11 @@ public class ContainerStateMachine extends BaseStateMachine {
         }, chunkExecutor);
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
-    LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +
-        write.getBlockID() + " logIndex " + entryIndex + " chunkName "
-        + write.getChunkData().getChunkName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +
+          write.getBlockID() + " logIndex " + entryIndex + " chunkName "
+          + write.getChunkData().getChunkName());
+    }
     // Remove the future once it finishes execution from the
     // writeChunkFutureMap.
     writeChunkFuture.thenApply(r -> {
@@ -480,10 +486,12 @@ public class ContainerStateMachine extends BaseStateMachine {
       } else {
         metrics.incNumBytesWrittenCount(
             requestProto.getWriteChunk().getChunkData().getLen());
-        LOG.debug(gid +
-            ": writeChunk writeStateMachineData  completed: blockId" +
-            write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
-            write.getChunkData().getChunkName());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(gid +
+              ": writeChunk writeStateMachineData  completed: blockId" +
+              write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
+              write.getChunkData().getChunkName());
+        }
         raftFuture.complete(r::toByteString);
         metrics.recordWriteStateMachineCompletion(
             Time.monotonicNowNanos() - startTime);
@@ -761,10 +769,12 @@ public class ContainerStateMachine extends BaseStateMachine {
           stateMachineHealthy.compareAndSet(true, false);
           ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
         } else {
-          LOG.debug(
-              "gid {} : ApplyTransaction completed. cmd {} logIndex {} msg : "
-                  + "{} Container Result: {}", gid, r.getCmdType(), index,
-              r.getMessage(), r.getResult());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "gid {} : ApplyTransaction completed. cmd {} logIndex {} msg : "
+                    + "{} Container Result: {}", gid, r.getCmdType(), index,
+                r.getMessage(), r.getResult());
+          }
           applyTransactionFuture.complete(r::toByteString);
           if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
             metrics.incNumBytesCommittedCount(

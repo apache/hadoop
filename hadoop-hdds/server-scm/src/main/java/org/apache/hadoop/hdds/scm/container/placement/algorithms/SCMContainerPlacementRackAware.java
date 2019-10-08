@@ -272,8 +272,10 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.debug("Datanode {} is chosen for container. Required size is {}",
-            node.toString(), sizeRequired);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Datanode {} is chosen for container. Required size is {}",
+              node.toString(), sizeRequired);
+        }
         metrics.incrDatanodeChooseSuccessCount();
         if (isFallbacked) {
           metrics.incrDatanodeChooseFallbackCount();

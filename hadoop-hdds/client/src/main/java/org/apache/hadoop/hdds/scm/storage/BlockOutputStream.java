@@ -392,22 +392,26 @@ public class BlockOutputStream extends OutputStream {
               .equals(responseBlockID.getContainerBlockID()));
           // updates the bcsId of the block
           blockID = responseBlockID;
-          LOG.debug(
-              "Adding index " + asyncReply.getLogIndex() + " commitMap size "
-                  + commitWatcher.getCommitInfoMapSize() + " flushLength "
-                  + flushPos + " numBuffers " + byteBufferList.size()
-                  + " blockID " + blockID + " bufferPool size" + bufferPool
-                  .getSize() + " currentBufferIndex " + bufferPool
-                  .getCurrentBufferIndex());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Adding index " + asyncReply.getLogIndex() + " commitMap size "
+                    + commitWatcher.getCommitInfoMapSize() + " flushLength "
+                    + flushPos + " numBuffers " + byteBufferList.size()
+                    + " blockID " + blockID + " bufferPool size" + bufferPool
+                    .getSize() + " currentBufferIndex " + bufferPool
+                    .getCurrentBufferIndex());
+          }
           // for standalone protocol, logIndex will always be 0.
           commitWatcher
               .updateCommitInfoMap(asyncReply.getLogIndex(), byteBufferList);
         }
         return e;
       }, responseExecutor).exceptionally(e -> {
-        LOG.debug(
-            "putBlock failed for blockID " + blockID + " with exception " + e
-                .getLocalizedMessage());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "putBlock failed for blockID " + blockID + " with exception " + e
+                  .getLocalizedMessage());
+        }
         CompletionException ce =  new CompletionException(e);
         setIoException(ce);
         throw ce;
@@ -609,9 +613,11 @@ public class BlockOutputStream extends OutputStream {
         }
         return e;
       }, responseExecutor).exceptionally(e -> {
-        LOG.debug(
-            "writing chunk failed " + chunkInfo.getChunkName() + " blockID "
-                + blockID + " with exception " + e.getLocalizedMessage());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "writing chunk failed " + chunkInfo.getChunkName() + " blockID "
+                  + blockID + " with exception " + e.getLocalizedMessage());
+        }
         CompletionException ce = new CompletionException(e);
         setIoException(ce);
         throw ce;
@@ -620,9 +626,11 @@ public class BlockOutputStream extends OutputStream {
       throw new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);
     }
-    LOG.debug(
-        "writing chunk " + chunkInfo.getChunkName() + " blockID " + blockID
-            + " length " + effectiveChunkSize);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "writing chunk " + chunkInfo.getChunkName() + " blockID " + blockID
+              + " length " + effectiveChunkSize);
+    }
     containerBlockData.addChunks(chunkInfo);
   }
 
