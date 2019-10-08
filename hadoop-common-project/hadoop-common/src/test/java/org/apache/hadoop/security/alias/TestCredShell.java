@@ -174,10 +174,19 @@ public class TestCredShell {
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
         "created."));
-    
-    String[] args2 = {"delete", "credential1", "-f", "-provider",
-        jceksProvider};
+
+    String[] args2 = {"check", "credential1", "-provider",
+      jceksProvider};
+    ArrayList<String> password = new ArrayList<String>();
+    password.add("p@ssw0rd");
+    shell.setPasswordReader(new MockPasswordReader(password));
     rc = shell.run(args2);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString().contains("Password match success for credential1."));
+
+    String[] args3 = {"delete", "credential1", "-f", "-provider",
+        jceksProvider};
+    rc = shell.run(args3);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
         "deleted."));
