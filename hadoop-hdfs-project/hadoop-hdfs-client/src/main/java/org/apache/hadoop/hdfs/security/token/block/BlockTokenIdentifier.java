@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -142,6 +143,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   }
 
   public void setHandshakeMsg(byte[] bytes) {
+    cache = null; // invalidate the cache
     handshakeMsg = bytes;
   }
 
@@ -214,6 +216,15 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if (!dis.markSupported()) {
       throw new IOException("Could not peek first byte.");
     }
+
+    // this.cache should be assigned the raw bytes from the input data for
+    // upgrading compatibility. If we won't mutate fields and call getBytes()
+    // for something (e.g retrieve password), we should return the raw bytes
+    // instead of serializing the instance self fields to bytes, because we may
+    // lose newly added fields which we can't recognize
+    this.cache = IOUtils.readFullyToByteArray(dis);
+    dis.reset();
+
     dis.mark(1);
     final byte firstByte = dis.readByte();
     dis.reset();
