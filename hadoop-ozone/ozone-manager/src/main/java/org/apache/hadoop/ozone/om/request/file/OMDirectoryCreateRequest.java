@@ -63,9 +63,8 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
+import static  org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.DIRECTORY_EXISTS_IN_GIVENPATH;
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.FILE_EXISTS_IN_GIVENPATH;
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.NONE;
@@ -140,14 +139,12 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
       acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
-      // Check volume exist.
-      if (omMetadataManager.getVolumeTable().isExist(volumeName)) {
-        throw new OMException("Volume not found " + volumeName,
-            VOLUME_NOT_FOUND);
-      }
+      // TODO: Not checking volume exist here, once we have full cache we can
+      //  add volume exist check also.
 
       OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
               omMetadataManager.getBucketKey(volumeName, bucketName));
+
       if (omBucketInfo == null) {
         throw new OMException("Bucket not found " + bucketName,
             BUCKET_NOT_FOUND);
