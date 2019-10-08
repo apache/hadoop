@@ -17,58 +17,82 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.net.URI;
-import java.util.List;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 
-import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.ext.Provider;
-
-import org.apache.hadoop.util.StringUtils;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 
 /**
  * A filter to change parameter names to lower cases
  * so that parameter names are considered as case insensitive.
  */
-@Provider
-public class ParamFilter implements ContainerRequestFilter {
+public class ParamFilter implements Filter {
+
   @Override
-  public void filter(ContainerRequestContext requestContext) {
-    final MultivaluedMap<String, String> parameters =
-        requestContext.getHeaders();
-    if (containsUpperCase(parameters.keySet())) {
-      final UriInfo uriInfo = requestContext.getUriInfo();
-      final URI lower = rebuildQuery(uriInfo.getRequestUri(), parameters);
-      requestContext.setRequestUri(uriInfo.getBaseUri(), lower);
+  public void init(FilterConfig filterConfig) throws ServletException {
+  }
+
+  @Override
+  public void destroy() {
+  }
+
+  @Override
+  public void doFilter(ServletRequest request, ServletResponse response,
+                       FilterChain chain)
+      throws IOException, ServletException {
+    if (request instanceof HttpServletRequest) {
+      chain.doFilter(new CustomHttpServletRequestWrapper(
+          (HttpServletRequest) request), response);
+    } else {
+      chain.doFilter(request, response);
     }
   }
 
-  /** Do the strings contain upper case letters? */
-  static boolean containsUpperCase(final Iterable<String> strings) {
-    for(String s : strings) {
-      for(int i = 0; i < s.length(); i++) {
-        if (Character.isUpperCase(s.charAt(i))) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
+  private static class CustomHttpServletRequestWrapper
+      extends HttpServletRequestWrapper {
 
-  /** Rebuild the URI query with lower case parameter names. */
-  private static URI rebuildQuery(final URI uri,
-      final MultivaluedMap<String, String> parameters) {
-    UriBuilder b = UriBuilder.fromUri(uri).replaceQuery("");
-    for(Map.Entry<String, List<String>> e : parameters.entrySet()) {
-      final String key = StringUtils.toLowerCase(e.getKey());
-      for(String v : e.getValue()) {
-        b = b.queryParam(key, v);
+    private Map<String, String[]> lowerCaseParams = new HashMap<>();
+
+    private CustomHttpServletRequestWrapper(HttpServletRequest request) {
+      super(request);
+      Map<String, String[]> originalParams = request.getParameterMap();
+      for (Map.Entry<String, String[]> entry : originalParams.entrySet()) {
+        lowerCaseParams.put(entry.getKey().toLowerCase(), entry.getValue());
       }
     }
-    return b.build();
+
+    public String getParameter(String name) {
+      String[] values = getParameterValues(name);
+      if (values != null && values.length > 0) {
+        return values[0];
+      } else {
+        return null;
+      }
+    }
+
+    @Override
+    public Map<String, String[]> getParameterMap() {
+      return Collections.unmodifiableMap(lowerCaseParams);
+    }
+
+    @Override
+    public Enumeration<String> getParameterNames() {
+      return Collections.enumeration(lowerCaseParams.keySet());
+    }
+
+    @Override
+    public String[] getParameterValues(String name) {
+      return lowerCaseParams.get(name);
+    }
   }
 }
