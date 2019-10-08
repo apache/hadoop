@@ -67,6 +67,7 @@ public class CredentialShell extends CommandShell {
    * <pre>
    * % hadoop credential create alias [-provider providerPath]
    * % hadoop credential list [-provider providerPath]
+   * % hadoop credential check alias [-provider providerPath]
    * % hadoop credential delete alias [-provider providerPath] [-f]
    * </pre>
    * @param args
