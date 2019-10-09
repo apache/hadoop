@@ -1080,3 +1080,24 @@ YARN service framework automatically populates cluster information
 to /hadoop/yarn/sysfs/app.json.  For more information about
 YARN service, see: [YARN Service](./yarn-service/Overview.html).
 
+Docker Container Service Mode
+-----------------------------
+
+Docker Container Service Mode runs the container as defined by the image
+but does not set the user(--user and --group-add). This mode is disabled
+by default. The administrator sets docker.service-mode.enabled to true
+in container-executor.cfg under docker section to enable.
+
+Part of a container-executor.cfg which allows docker service mode is below:
+
+```
+yarn.nodemanager.linux-container-executor.group=yarn
+[docker]
+  module.enabled=true
+  docker.privileged-containers.enabled=true
+  docker.service-mode.enabled=true
+```
+
+Application User can enable or disable service mode at job level by exporting
+environment variable YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE in the application's
+environment with value true or false respectively.
