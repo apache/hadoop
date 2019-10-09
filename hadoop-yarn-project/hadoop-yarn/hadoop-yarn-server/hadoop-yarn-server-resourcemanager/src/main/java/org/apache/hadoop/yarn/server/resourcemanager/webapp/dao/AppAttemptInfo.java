@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @XmlRootElement(name = "appAttempt")
@@ -37,6 +38,7 @@ public class AppAttemptInfo {
   protected int id;
   protected long startTime;
   protected long finishedTime;
+  protected long elapsedTime;
   protected String containerId;
   protected String nodeHttpAddress;
   protected String nodeId;
@@ -62,6 +64,8 @@ public class AppAttemptInfo {
       this.id = attempt.getAppAttemptId().getAttemptId();
       this.startTime = attempt.getStartTime();
       this.finishedTime = attempt.getFinishTime();
+      this.elapsedTime =
+          Times.elapsed(attempt.getStartTime(), attempt.getFinishTime());
       Container masterContainer = attempt.getMasterContainer();
       if (masterContainer != null) {
         this.containerId = masterContainer.getId().toString();
@@ -102,6 +106,10 @@ public class AppAttemptInfo {
 
   public long getFinishedTime() {
     return this.finishedTime;
+  }
+
+  public long getElapsedTime() {
+    return this.elapsedTime;
   }
 
   public String getNodeHttpAddress() {

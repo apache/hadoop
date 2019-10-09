@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.util.Times;
 
 @Public
 @Evolving
@@ -44,6 +45,7 @@ public class AppAttemptInfo {
   protected String amContainerId;
   protected long startedTime;
   protected long finishedTime;
+  protected long elapsedTime;
 
   public AppAttemptInfo() {
     // JAXB needs this
@@ -62,6 +64,7 @@ public class AppAttemptInfo {
     }
     startedTime = appAttempt.getStartTime();
     finishedTime = appAttempt.getFinishTime();
+    elapsedTime = Times.elapsed(startedTime, finishedTime);
   }
 
   public String getAppAttemptId() {
@@ -102,6 +105,10 @@ public class AppAttemptInfo {
 
   public long getFinishedTime() {
     return finishedTime;
+  }
+
+  public long getElapsedTime() {
+    return elapsedTime;
   }
 
 }
