@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.lock.LockManager;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK;
 
 /**
@@ -93,7 +93,7 @@ public class OzoneManagerLock {
    */
   public OzoneManagerLock(Configuration conf) {
     boolean fair = conf.getBoolean(OZONE_MANAGER_FAIR_LOCK,
-        OZONE_MANAGER_FAIR_DEFAULT);
+        OZONE_MANAGER_FAIR_LOCK_DEFAULT);
     manager = new LockManager<>(conf, fair);
   }
 

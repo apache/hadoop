@@ -28,7 +28,7 @@ public class PooledLockFactory extends BasePooledObjectFactory<ActiveLock> {
 
   private boolean fairness;
 
-  public PooledLockFactory(boolean fair) {
+  PooledLockFactory(boolean fair) {
     this.fairness = fair;
   }
   @Override
