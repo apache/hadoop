@@ -78,10 +78,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableHandler.E_INCOMPATIBLE_ITEM_VERSION;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableHandler.E_INCOMPATIBLE_TAG_VERSION;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableHandler.E_NO_VERSION_MARKER_AND_NOT_EMPTY;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableHandler.getVersionMarkerFromTags;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_INCOMPATIBLE_ITEM_VERSION;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_INCOMPATIBLE_TAG_VERSION;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_NO_VERSION_MARKER_AND_NOT_EMPTY;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.getVersionMarkerFromTags;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -122,7 +122,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private S3AFileSystem fileSystem;
   private S3AContract s3AContract;
-  private DynamoDBMetadataStoreTableHandler tableHandler;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   private URI fsUri;
 
@@ -652,7 +652,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
-      DynamoDBMetadataStoreTableHandler localTableHandler =
+      DynamoDBMetadataStoreTableManager localTableHandler =
           ddbms.getTableHandler();
 
       Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
@@ -668,7 +668,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   private void checkVerifyVersionMarkerCompatibility(
-      DynamoDBMetadataStoreTableHandler localTableHandler, Table table)
+      DynamoDBMetadataStoreTableManager localTableHandler, Table table)
       throws Exception {
     final AmazonDynamoDB addb
         = getDynamoMetadataStore().getAmazonDynamoDB();

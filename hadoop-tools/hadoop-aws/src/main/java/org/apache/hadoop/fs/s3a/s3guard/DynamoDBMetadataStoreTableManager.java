@@ -84,13 +84,13 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.k
  * Table handling for dynamo tables, factored out from DynamoDBMetadataStore
  * Mainly
  */
-public class DynamoDBMetadataStoreTableHandler {
+public class DynamoDBMetadataStoreTableManager {
   public static final Logger LOG = LoggerFactory.getLogger(
-      DynamoDBMetadataStoreTableHandler.class);
+      DynamoDBMetadataStoreTableManager.class);
 
   /** Error: version marker not found in table but the table is not empty. */
   public static final String E_NO_VERSION_MARKER_AND_NOT_EMPTY
-      = "S3Guard table lacks version marker, and not empty.";
+      = "S3Guard table lacks version marker, and it is not empty.";
 
   /** Error: version mismatch. */
   public static final String E_INCOMPATIBLE_TAG_VERSION
@@ -116,7 +116,7 @@ public class DynamoDBMetadataStoreTableHandler {
   private Table table;
   private String tableArn;
 
-  public DynamoDBMetadataStoreTableHandler(DynamoDB dynamoDB,
+  public DynamoDBMetadataStoreTableManager(DynamoDB dynamoDB,
       String tableName,
       String region,
       AmazonDynamoDB amazonDynamoDB,
@@ -249,7 +249,7 @@ public class DynamoDBMetadataStoreTableHandler {
               .withResourceArn(description.getTableArn());
       tags = addb.listTagsOfResource(listTagsOfResourceRequest).getTags();
     } catch (ResourceNotFoundException e) {
-      LOG.error("Table: {} not found.");
+      LOG.error("Table: {} not found.", table.getTableName());
       throw e;
     } catch (AmazonDynamoDBException e) {
       LOG.warn("Exception while getting tags from the dynamo table: {}",
@@ -286,7 +286,7 @@ public class DynamoDBMetadataStoreTableHandler {
    * @throws IOException on any failure.
    * @throws InterruptedIOException if the wait was interrupted
    */
-  @Retries.OnceRaw
+  @Retries.OnceMixed
   private void createTable(ProvisionedThroughput capacity) throws IOException {
     try {
       String mode;
@@ -432,7 +432,7 @@ public class DynamoDBMetadataStoreTableHandler {
       throwExceptionOnVersionMismatch(itemVersionMarker, tableName,
           E_INCOMPATIBLE_ITEM_VERSION);
 
-      LOG.info("Table {} contains correct version marker TAG and ITEM.",
+      LOG.debug("Table {} contains correct version marker TAG and ITEM.",
           tableName);
     }
   }

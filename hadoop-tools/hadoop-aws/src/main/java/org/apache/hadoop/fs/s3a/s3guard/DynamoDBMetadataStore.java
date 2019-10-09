@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
@@ -295,7 +294,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * This policy is mostly for batched writes, not for processing
    * exceptions in invoke() calls.
    * It also has a role purpose in
-   * {@link DynamoDBMetadataStoreTableHandler#getVersionMarkerItem()};
+   * {@link DynamoDBMetadataStoreTableManager#getVersionMarkerItem()};
    * look at that method for the details.
    */
   private RetryPolicy batchWriteRetryPolicy;
@@ -342,7 +341,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private ITtlTimeProvider ttlTimeProvider;
 
-  private DynamoDBMetadataStoreTableHandler tableHandler;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -423,7 +422,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     this.ttlTimeProvider = ttlTp;
 
-    tableHandler = new DynamoDBMetadataStoreTableHandler(
+    tableHandler = new DynamoDBMetadataStoreTableManager(
         dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
         batchWriteRetryPolicy);
     this.table = tableHandler.initTable();
@@ -509,7 +508,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     initDataAccessRetries(conf);
     this.ttlTimeProvider = ttlTp;
 
-    tableHandler = new DynamoDBMetadataStoreTableHandler(
+    tableHandler = new DynamoDBMetadataStoreTableManager(
         dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
         batchWriteRetryPolicy);
     this.table = tableHandler.initTable();
@@ -2300,7 +2299,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
   }
 
-  protected DynamoDBMetadataStoreTableHandler getTableHandler() {
+  protected DynamoDBMetadataStoreTableManager getTableHandler() {
     Preconditions.checkNotNull(tableHandler, "Not initialized");
     return tableHandler;
   }

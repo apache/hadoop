@@ -91,7 +91,7 @@ public class ITestDynamoDBMetadataStoreScale
   private static final long MAXIMUM_WRITE_CAPACITY = 15;
 
   private DynamoDBMetadataStore ddbms;
-  private DynamoDBMetadataStoreTableHandler tableHandler;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   private DynamoDB ddb;
 
