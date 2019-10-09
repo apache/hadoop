@@ -18,19 +18,6 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
-import com.google.common.base.Preconditions;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.ratis.protocol.RaftPeerId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -38,6 +25,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 
 /**
  * Represents a group of datanodes which store a container.
@@ -54,7 +53,7 @@ public final class Pipeline {
   // nodes with ordered distance to client
   private ThreadLocal<List<DatanodeDetails>> nodesInOrder = new ThreadLocal<>();
   // Current reported Leader for the pipeline
-  private RaftPeerId leaderId;
+  private ByteString leaderId = ByteString.EMPTY;
 
   /**
    * The immutable properties of pipeline object is used in
@@ -107,14 +106,14 @@ public final class Pipeline {
     return state;
   }
 
-  public RaftPeerId getLeaderId() {
+  public ByteString getLeaderId() {
     return leaderId;
   }
 
   /**
    * Pipeline object, outside of letting leader id to be set, is immutable.
    */
-  void setLeaderId(RaftPeerId leaderId) {
+  void setLeaderId(ByteString leaderId) {
     this.leaderId = leaderId;
   }
 
@@ -190,7 +189,7 @@ public final class Pipeline {
         .setType(type)
         .setFactor(factor)
         .setState(PipelineState.getProtobuf(state))
-        .setLeaderID(leaderId != null ? leaderId.toString() : "")
+        .setLeaderID(leaderId)
         .addAllMembers(nodeStatus.keySet().stream()
             .map(DatanodeDetails::getProtoBufMessage)
             .collect(Collectors.toList()));
@@ -222,8 +221,7 @@ public final class Pipeline {
         .setFactor(pipeline.getFactor())
         .setType(pipeline.getType())
         .setState(PipelineState.fromProtobuf(pipeline.getState()))
-        .setLeaderId(StringUtils.isNotEmpty(pipeline.getLeaderID()) ?
-            RaftPeerId.valueOf(pipeline.getLeaderID()) : null)
+        .setLeaderId(pipeline.getLeaderID())
         .setNodes(pipeline.getMembersList().stream()
             .map(DatanodeDetails::getFromProtoBuf).collect(Collectors.toList()))
         .setNodesInOrder(pipeline.getMemberOrdersList())
@@ -292,7 +290,7 @@ public final class Pipeline {
     private Map<DatanodeDetails, Long> nodeStatus = null;
     private List<Integer> nodeOrder = null;
     private List<DatanodeDetails> nodesInOrder = null;
-    private RaftPeerId leaderId = null;
+    private ByteString leaderId = ByteString.EMPTY;
 
     public Builder() {}
 
@@ -325,7 +323,7 @@ public final class Pipeline {
       return this;
     }
 
-    public Builder setLeaderId(RaftPeerId leaderId1) {
+    public Builder setLeaderId(ByteString leaderId1) {
       this.leaderId = leaderId1;
       return this;
     }

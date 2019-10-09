@@ -113,8 +113,7 @@ public class PipelineReportHandler implements
           reportedLeadersForPipeline.computeIfAbsent(pipelineID,
               k -> new HashMap<>());
       ids.put(dn.getUuid(), report.getLeaderID());
-      pipeline.setLeaderId(
-          RaftPeerId.valueOf(report.getLeaderID().toString()));
+      pipeline.setLeaderId(pipeline.getLeaderId());
     }
 
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
