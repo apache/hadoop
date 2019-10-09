@@ -387,7 +387,6 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer,
       DispatcherContext dispatcherContext) {
 
-    long blockLength;
     if (!request.hasPutBlock()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Malformed Put Key request. trace ID: {}",
@@ -406,7 +405,7 @@ public class KeyValueHandler extends Handler {
       long bcsId =
           dispatcherContext == null ? 0 : dispatcherContext.getLogIndex();
       blockData.setBlockCommitSequenceId(bcsId);
-      long numBytes = blockData.getProtoBufMessage().toByteArray().length;
+      final long numBytes = blockData.getSerializedSize();
       blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutBlock, numBytes);
     } catch (StorageContainerException ex) {
@@ -447,7 +446,7 @@ public class KeyValueHandler extends Handler {
       BlockID blockID = BlockID.getFromProtobuf(
           request.getGetBlock().getBlockID());
       responseData = blockManager.getBlock(kvContainer, blockID);
-      long numBytes = responseData.getProtoBufMessage().toByteArray().length;
+      final long numBytes = responseData.getSerializedSize();
       metrics.incContainerBytesStats(Type.GetBlock, numBytes);
 
     } catch (StorageContainerException ex) {
@@ -818,8 +817,8 @@ public class KeyValueHandler extends Handler {
         chunkInfo = chunk;
       }
       metrics.incContainerBytesStats(Type.GetSmallFile, dataBuf.size());
-      return SmallFileUtils.getGetSmallFileResponseSuccess(request, dataBuf
-          .toByteArray(), ChunkInfo.getFromProtoBuf(chunkInfo));
+      return SmallFileUtils.getGetSmallFileResponseSuccess(request, dataBuf,
+          ChunkInfo.getFromProtoBuf(chunkInfo));
     } catch (StorageContainerException e) {
       return ContainerUtils.logAndReturnError(LOG, e, request);
     } catch (IOException ex) {

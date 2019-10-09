@@ -117,6 +117,11 @@ public class BlockData {
     return builder.build();
   }
 
+  public int getSerializedSize() {
+    //TODO: the serialized size may be computed without creating the proto.
+    return getProtoBufMessage().getSerializedSize();
+  }
+
   /**
    * Adds metadata.
    *

@@ -69,13 +69,13 @@ public final class SmallFileUtils {
    * @return    Response.
    */
   public static ContainerCommandResponseProto getGetSmallFileResponseSuccess(
-      ContainerCommandRequestProto msg, byte[] data, ChunkInfo info) {
+      ContainerCommandRequestProto msg, ByteString data, ChunkInfo info) {
     Preconditions.checkNotNull(msg);
 
     ContainerProtos.ReadChunkResponseProto.Builder readChunkresponse =
         ContainerProtos.ReadChunkResponseProto.newBuilder();
     readChunkresponse.setChunkData(info.getProtoBufMessage());
-    readChunkresponse.setData(ByteString.copyFrom(data));
+    readChunkresponse.setData((data));
     readChunkresponse.setBlockID(msg.getGetSmallFile().getBlock().getBlockID());
 
     ContainerProtos.GetSmallFileResponseProto.Builder getSmallFile =

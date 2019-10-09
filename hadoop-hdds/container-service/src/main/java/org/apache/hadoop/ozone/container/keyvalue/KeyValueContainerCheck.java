@@ -267,8 +267,7 @@ public class KeyValueContainerCheck {
                 ByteString expected = cData.getChecksums().get(i);
                 ByteString actual = cal.computeChecksum(buffer, 0, v)
                     .getChecksums().get(0);
-                if (!Arrays.equals(expected.toByteArray(),
-                    actual.toByteArray())) {
+                if (!expected.equals(actual)) {
                   throw new OzoneChecksumException(String
                       .format("Inconsistent read for chunk=%s len=%d expected" +
                               " checksum %s actual checksum %s for block %s",
