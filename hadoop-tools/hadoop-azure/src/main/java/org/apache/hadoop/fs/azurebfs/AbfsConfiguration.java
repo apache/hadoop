@@ -146,6 +146,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH,
+      DefaultValue = DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH)
+  private boolean disableOutputStreamFlush;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
@@ -427,6 +431,10 @@ public class AbfsConfiguration{
     return this.enableFlush;
   }
 
+  public boolean isOutputStreamFlushDisabled() {
+    return this.disableOutputStreamFlush;
+  }
+
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
   }
@@ -635,4 +643,10 @@ public class AbfsConfiguration{
   void setEnableFlush(boolean enableFlush) {
     this.enableFlush = enableFlush;
   }
+
+  @VisibleForTesting
+  void setDisableOutputStreamFlush(boolean disableOutputStreamFlush) {
+    this.disableOutputStreamFlush = disableOutputStreamFlush;
+  }
+
 }

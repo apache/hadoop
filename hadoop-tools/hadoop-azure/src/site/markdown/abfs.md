@@ -72,6 +72,24 @@ or you can configure an identity to be used only for a specific storage account 
 
 Note that it doesn't make sense to do this with some properties, like shared keys that are inherently account-specific.
 
+### <a name="flushconfigoptions"></a> Flush Options
+
+#### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
+Config `fs.azure.enable.flush` provides an option to render ABFS flush APIs -
+ HFlush() and HSync() to be no-op. By default, this
+config will be set to true.
+
+Both the APIs will ensure that data is persisted.
+
+#### <a name="outputstreamflushconfigoptions"></a> 2. OutputStream Flush Options
+Config `fs.azure.disable.outputstream.flush` provides an option to render
+OutputStream Flush() API to be a no-op in AbfsOutputStream. By default, this
+config will be set to true.
+
+Hflush() being the only documented API that can provide persistent data
+transfer, Flush() also attempting to persist buffered data will lead to
+performance issues.
+
 ## Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).
