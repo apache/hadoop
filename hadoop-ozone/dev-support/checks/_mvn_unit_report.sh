@@ -45,11 +45,6 @@ grep -A1 'Crashed tests' "${REPORT_DIR}/output.log" \
   | cut -f2- -d' ' \
   | sort -u >> "${REPORT_DIR}/summary.txt"
 
-## Check if Maven was killed
-if grep -q 'Killed.* mvn .* test ' "${REPORT_DIR}/output.log"; then
-  echo 'Maven test run was killed' >> "${REPORT_DIR}/summary.txt"
-fi
-
 #Collect of all of the report failes of FAILED tests
 while IFS= read -r -d '' dir; do
    while IFS=$'\n' read -r file; do
