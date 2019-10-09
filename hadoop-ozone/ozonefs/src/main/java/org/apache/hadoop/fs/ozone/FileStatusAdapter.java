@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.ozone;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 
 /**
  * Class to hold the internal information of a FileStatus.
@@ -42,12 +43,13 @@ public final class FileStatusAdapter {
   private final String owner;
   private final String group;
   private final Path symlink;
+  private final OmKeyInfo keyInfo;
 
   @SuppressWarnings("checkstyle:ParameterNumber")
   public FileStatusAdapter(long length, Path path, boolean isdir,
       short blockReplication, long blocksize, long modificationTime,
       long accessTime, short permission, String owner,
-      String group, Path symlink) {
+      String group, Path symlink, OmKeyInfo keyInfo) {
     this.length = length;
     this.path = path;
     this.isdir = isdir;
@@ -59,6 +61,7 @@ public final class FileStatusAdapter {
     this.owner = owner;
     this.group = group;
     this.symlink = symlink;
+    this.keyInfo = keyInfo;
   }
 
   public Path getPath() {
@@ -103,6 +106,10 @@ public final class FileStatusAdapter {
 
   public long getLength() {
     return length;
+  }
+
+  public OmKeyInfo getKeyInfo() {
+    return keyInfo;
   }
 
 }

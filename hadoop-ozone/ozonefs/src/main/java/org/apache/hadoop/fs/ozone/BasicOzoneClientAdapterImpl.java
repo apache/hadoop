@@ -440,7 +440,8 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         status.getPermission().toShort(),
         status.getOwner(),
         status.getGroup(),
-        status.getPath()
+        status.getPath(),
+        status.getKeyInfo()
     );
   }
 }

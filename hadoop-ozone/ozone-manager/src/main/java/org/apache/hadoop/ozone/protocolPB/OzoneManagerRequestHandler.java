@@ -1045,6 +1045,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setRefreshPipeline(keyArgs.getRefreshPipeline())
         .build();
 
     GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();

@@ -44,6 +44,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
@@ -53,9 +54,12 @@ import org.apache.hadoop.hdds.scm.net.NodeSchema;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneTestUtils;
@@ -103,6 +107,11 @@ import static org.apache.hadoop.hdds.scm.net.NetConstants.RACK_SCHEMA;
 import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
 
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test class for @{@link KeyManagerImpl}.
@@ -131,7 +140,7 @@ public class TestKeyManagerImpl {
     dir = GenericTestUtils.getRandomizedTestDir();
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, dir.toString());
     conf.set(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY, "true");
-    mockScmBlockLocationProtocol = Mockito.mock(ScmBlockLocationProtocol.class);
+    mockScmBlockLocationProtocol = mock(ScmBlockLocationProtocol.class);
     metadataManager = new OmMetadataManagerImpl(conf);
     nodeManager = new MockNodeManager(true, 10);
     NodeSchema[] schemas = new NodeSchema[]
@@ -329,7 +338,10 @@ public class TestKeyManagerImpl {
         .setKeyName(keyName)
         .build();
     keyManager.createDirectory(keyArgs);
-    Assert.assertTrue(keyManager.getFileStatus(keyArgs).isDirectory());
+    OzoneFileStatus fileStatus = keyManager.getFileStatus(keyArgs);
+    Assert.assertTrue(fileStatus.isDirectory());
+    Assert.assertTrue(fileStatus.getKeyInfo().getKeyLocationVersions().get(0)
+        .getLocationList().isEmpty());
   }
 
   @Test
@@ -851,6 +863,77 @@ public class TestKeyManagerImpl {
     }
   }
 
+  @Test
+  public void testRefreshPipeline() throws Exception {
+
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
+    OzoneManager ozoneManager = cluster.getOzoneManager();
+
+    StorageContainerLocationProtocol sclProtocolMock = mock(
+        StorageContainerLocationProtocol.class);
+    ContainerWithPipeline containerWithPipelineMock =
+        mock(ContainerWithPipeline.class);
+    when(containerWithPipelineMock.getPipeline())
+        .thenReturn(getRandomPipeline());
+    when(sclProtocolMock.getContainerWithPipeline(anyLong()))
+        .thenReturn(containerWithPipelineMock);
+
+    ScmClient scmClientMock = mock(ScmClient.class);
+    when(scmClientMock.getContainerClient()).thenReturn(sclProtocolMock);
+
+    OmKeyInfo omKeyInfo = TestOMRequestUtils.createOmKeyInfo("v1",
+        "b1", "k1", ReplicationType.RATIS,
+        ReplicationFactor.THREE);
+
+    // Add block to key.
+    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
+    Pipeline pipeline = getRandomPipeline();
+
+    OmKeyLocationInfo omKeyLocationInfo =
+        new OmKeyLocationInfo.Builder().setBlockID(
+            new BlockID(100L, 1000L))
+            .setOffset(0).setLength(100L).setPipeline(pipeline).build();
+
+    omKeyLocationInfoList.add(omKeyLocationInfo);
+
+    OmKeyLocationInfo omKeyLocationInfo2 =
+        new OmKeyLocationInfo.Builder().setBlockID(
+            new BlockID(200L, 1000L))
+            .setOffset(0).setLength(100L).setPipeline(pipeline).build();
+    omKeyLocationInfoList.add(omKeyLocationInfo2);
+
+    OmKeyLocationInfo omKeyLocationInfo3 =
+        new OmKeyLocationInfo.Builder().setBlockID(
+            new BlockID(100L, 2000L))
+            .setOffset(0).setLength(100L).setPipeline(pipeline).build();
+    omKeyLocationInfoList.add(omKeyLocationInfo3);
+
+    omKeyInfo.appendNewBlocks(omKeyLocationInfoList, false);
+
+    KeyManagerImpl keyManagerImpl =
+        new KeyManagerImpl(ozoneManager, scmClientMock, conf, "om1");
+
+    keyManagerImpl.refreshPipeline(omKeyInfo);
+
+    verify(sclProtocolMock, times(2)).getContainerWithPipeline(anyLong());
+    verify(sclProtocolMock, times(1)).getContainerWithPipeline(100L);
+    verify(sclProtocolMock, times(1)).getContainerWithPipeline(200L);
+  }
+
+  /**
+   * Get Random pipeline.
+   * @return pipeline
+   */
+  private Pipeline getRandomPipeline() {
+    return Pipeline.newBuilder()
+        .setState(Pipeline.PipelineState.OPEN)
+        .setId(PipelineID.randomId())
+        .setType(ReplicationType.RATIS)
+        .setFactor(ReplicationFactor.THREE)
+        .setNodes(new ArrayList<>())
+        .build();
+  }
   /**
    * Creates a depth two directory.
    *

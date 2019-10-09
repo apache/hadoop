@@ -25,12 +25,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -310,6 +312,25 @@ public class TestOzoneFileInterfaces {
     assertEquals(0, omStatus.getLen());
     assertTrue(omStatus.getModificationTime() >= currentTime);
     assertEquals(omStatus.getPath().getName(), o3fs.pathToKey(path));
+  }
+
+  @Test
+  public void testOzoneManagerLocatedFileStatus() throws IOException {
+    String data = RandomStringUtils.randomAlphanumeric(20);
+    String filePath = RandomStringUtils.randomAlphanumeric(5);
+    Path path = createPath("/" + filePath);
+    try (FSDataOutputStream stream = fs.create(path)) {
+      stream.writeBytes(data);
+    }
+    FileStatus status = fs.getFileStatus(path);
+    assertTrue(status instanceof LocatedFileStatus);
+    LocatedFileStatus locatedFileStatus = (LocatedFileStatus) status;
+    assertTrue(locatedFileStatus.getBlockLocations().length >= 1);
+
+    for (BlockLocation blockLocation : locatedFileStatus.getBlockLocations()) {
+      assertTrue(blockLocation.getNames().length >= 1);
+      assertTrue(blockLocation.getHosts().length >= 1);
+    }
   }
 
   @Test

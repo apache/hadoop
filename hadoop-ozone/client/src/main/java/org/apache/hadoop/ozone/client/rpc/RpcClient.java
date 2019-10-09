@@ -957,6 +957,7 @@ public class RpcClient implements ClientProtocol {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
     return ozoneManagerClient.getFileStatus(keyArgs);
   }

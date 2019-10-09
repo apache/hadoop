@@ -650,6 +650,7 @@ message KeyArgs {
     // request type.
     optional uint64 modificationTime = 13;
     optional bool sortDatanodes = 14;
+    optional bool refreshPipeline = 15;
 }
 
 message KeyLocation {
@@ -696,6 +697,7 @@ message RepeatedKeyInfo {
 
 message OzoneFileStatusProto {
     required hadoop.fs.FileStatusProto status = 1;
+    optional KeyInfo keyInfo = 2;
 }
 
 message GetFileStatusRequest {

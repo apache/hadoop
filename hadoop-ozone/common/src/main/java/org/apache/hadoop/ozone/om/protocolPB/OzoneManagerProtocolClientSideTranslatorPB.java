@@ -1338,6 +1338,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setRefreshPipeline(args.getRefreshPipeline())
         .build();
     GetFileStatusRequest req =
         GetFileStatusRequest.newBuilder()
