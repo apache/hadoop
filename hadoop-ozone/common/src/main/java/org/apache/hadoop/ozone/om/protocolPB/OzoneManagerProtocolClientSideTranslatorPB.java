@@ -340,7 +340,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       if (omResponse.hasLeaderOMNodeId() && omFailoverProxyProvider != null) {
         String leaderOmId = omResponse.getLeaderOMNodeId();
 
-        // Failover to the OM node returned by OMReponse leaderOMNodeId if
+        // Failover to the OM node returned by OMResponse leaderOMNodeId if
         // current proxy is not pointing to that node.
         omFailoverProxyProvider.performFailoverIfRequired(leaderOmId);
       }

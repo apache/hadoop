@@ -25,6 +25,8 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.util.Time;
@@ -170,7 +172,15 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
     OmKeyInfo omKeyInfo = null;
     try {
       // check Acl
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
+      // Native authorizer requires client id as part of keyname to check
+      // write ACL on key. Add client id to key name if ozone native
+      // authorizer is configured.
+      Configuration config = ozoneManager.getConfiguration();
+      String keyNameForAclCheck = keyName;
+      if (OmUtils.isNativeAuthorizerEnabled(config)) {
+        keyNameForAclCheck = keyName + "/" + allocateBlockRequest.getClientID();
+      }
+      checkKeyAcls(ozoneManager, volumeName, bucketName, keyNameForAclCheck,
           IAccessAuthorizer.ACLType.WRITE);
 
       OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
