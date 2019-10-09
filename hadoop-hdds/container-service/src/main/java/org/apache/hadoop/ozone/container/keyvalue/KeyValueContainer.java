@@ -520,11 +520,16 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   @Override
   public void exportContainerData(OutputStream destination,
       ContainerPacker<KeyValueContainerData> packer) throws IOException {
-    if (getContainerData().getState() !=
-        ContainerProtos.ContainerDataProto.State.CLOSED) {
+    // Closed/ Quasi closed containers are considered for replication by
+    // replication manager if they are under-replicated.
+    ContainerProtos.ContainerDataProto.State state =
+        getContainerData().getState();
+    if (!(state == ContainerProtos.ContainerDataProto.State.CLOSED ||
+        state == ContainerDataProto.State.QUASI_CLOSED)) {
       throw new IllegalStateException(
-          "Only closed containers could be exported: ContainerId="
-              + getContainerData().getContainerID());
+          "Only closed/quasi closed containers could be exported: " +
+              "Where as ContainerId="
+              + getContainerData().getContainerID() + "is in state" + state);
     }
     compactDB();
     packer.pack(this, destination);
