@@ -3420,9 +3420,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           activeState = stateToClose;
         }
         S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
-        S3AFileStatus status = createUploadFileStatus(p,
-            S3AUtils.objectRepresentsDirectory(key, length), length,
-            getDefaultBlockSize(p), username, eTag, versionId);
+        boolean isDir = objectRepresentsDirectory(key, length);
+        S3AFileStatus status = null;
+        status = createUploadFileStatus(p,
+            isDir, length,
+            getDefaultBlockSize(p), username, , versionId);
+        // do a HEAD to pick up the real timestamp. This is a PITA but
+        // it is the only way to defend against clock drift and timestamp
+        // inconsistencies, which can cause surprises later.
+        S3AFileStatus remoteStatus = null;
+        if (!isDir && eTag != null) {
+          // we need to pass down the version ID/etag so on an update we
+          // can discard previous results
+          try {
+            remoteStatus = innerGetFileStatus(p, false,
+                StatusProbeEnum.HEAD_ONLY);
+            if (eTag.equals(remoteStatus.getETag())) {
+              status = new S3AFileStatus(status.getLen(),
+                  remoteStatus.getModificationTime(),
+                  status.getPath(), status.getBlockSize(), status.getOwner(),
+                  eTag, status.getVersionId());
+            }
+          } catch (IOException ignored) {
+            // we don't worry if the file isn't visible or some other
+            // failure occurs.
+          }
+        }
         S3Guard.putAndReturn(metadataStore, status,
             instrumentation,
             ttlTimeProvider,
