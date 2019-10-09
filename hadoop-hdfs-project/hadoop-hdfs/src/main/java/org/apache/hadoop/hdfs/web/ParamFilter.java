@@ -58,7 +58,7 @@ public class ParamFilter implements Filter {
     }
   }
 
-  private static class CustomHttpServletRequestWrapper
+  private static final class CustomHttpServletRequestWrapper
       extends HttpServletRequestWrapper {
 
     private Map<String, String[]> lowerCaseParams = new HashMap<>();
