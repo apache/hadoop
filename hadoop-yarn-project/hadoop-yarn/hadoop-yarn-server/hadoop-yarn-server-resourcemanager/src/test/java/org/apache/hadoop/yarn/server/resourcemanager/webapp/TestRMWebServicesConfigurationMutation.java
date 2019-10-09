@@ -202,6 +202,25 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(3, orgConf.getQueues("root").length);
   }
 
+  private long getConfigVersion() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .queryParam("user.name", userName)
+        .path(RMWSConsts.SCHEDULER_CONF_VERSION)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    return Long.parseLong(json.get("versionID").toString());
+  }
+
+  @Test
+  public void testSchedulerConfigVersion() throws Exception {
+    assertEquals(1, getConfigVersion());
+    testAddNestedQueue();
+    assertEquals(2, getConfigVersion());
+  }
+
   @Test
   public void testAddNestedQueue() throws Exception {
     CapacitySchedulerConfiguration orgConf = getSchedulerConf();
