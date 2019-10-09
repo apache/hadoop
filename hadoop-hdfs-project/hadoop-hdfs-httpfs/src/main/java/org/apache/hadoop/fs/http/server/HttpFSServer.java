@@ -147,6 +147,8 @@ public class HttpFSServer {
     return PARAMETERS_PROVIDER.get(request);
   }
 
+  private static final Object[] NULL = new Object[0];
+
   /**
    * Executes a {@link FileSystemAccess.FileSystemExecutor} using a filesystem for the effective
    * user.
@@ -714,10 +716,11 @@ public class HttpFSServer {
    */
   protected URI createUploadRedirectionURL(UriInfo uriInfo, Enum<?> uploadOperation) {
     UriBuilder uriBuilder = uriInfo.getRequestUriBuilder();
-    uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation).
-            queryParam(DataParam.NAME, Boolean.TRUE)
-            .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
-    return uriBuilder.build(null);
+    uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation)
+        .queryParam(DataParam.NAME, Boolean.TRUE)
+        .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
+    // Workaround: NPE occurs when using null in Jersey 2.29
+    return uriBuilder.build(NULL);
   }
 
   /**
