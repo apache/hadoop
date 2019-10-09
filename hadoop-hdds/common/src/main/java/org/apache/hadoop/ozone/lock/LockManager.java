@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK;
+
 /**
  * Manages the locks on a given resource. A new lock is created for each
  * and every unique resource. Uniqueness of resource depends on the
@@ -37,18 +40,31 @@ public class LockManager<R> {
   private static final Logger LOG = LoggerFactory.getLogger(LockManager.class);
 
   private final Map<R, ActiveLock> activeLocks = new ConcurrentHashMap<>();
-  private final GenericObjectPool<ActiveLock> lockPool =
-      new GenericObjectPool<>(new PooledLockFactory());
+  private final GenericObjectPool<ActiveLock> lockPool;
+
+  /**
+   * Creates new LockManager instance with the given Configuration.and uses
+   * non-fair mode for locks.
+   *
+   * @param conf Configuration object
+   */
+  public LockManager(final Configuration conf) {
+    this(conf, false);
+  }
+
 
   /**
    * Creates new LockManager instance with the given Configuration.
    *
    * @param conf Configuration object
+   * @param fair - true to use fair lock ordering, else non-fair lock ordering.
    */
-  public LockManager(final Configuration conf) {
+  public LockManager(final Configuration conf, boolean fair) {
     final int maxPoolSize = conf.getInt(
         HddsConfigKeys.HDDS_LOCK_MAX_CONCURRENCY,
         HddsConfigKeys.HDDS_LOCK_MAX_CONCURRENCY_DEFAULT);
+    lockPool =
+        new GenericObjectPool<>(new PooledLockFactory(fair));
     lockPool.setMaxTotal(maxPoolSize);
   }
 
