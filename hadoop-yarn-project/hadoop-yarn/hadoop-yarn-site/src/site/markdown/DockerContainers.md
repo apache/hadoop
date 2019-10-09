@@ -1084,7 +1084,7 @@ Docker Container Service Mode
 -----------------------------
 
 Docker Container Service Mode runs the container as defined by the image
-but does not set the user(--user and --group-add). This mode is disabled
+but does not set the user (--user and --group-add). This mode is disabled
 by default. The administrator sets docker.service-mode.enabled to true
 in container-executor.cfg under docker section to enable.
 
