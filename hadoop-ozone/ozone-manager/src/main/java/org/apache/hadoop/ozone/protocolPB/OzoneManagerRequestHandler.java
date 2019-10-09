@@ -149,7 +149,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   @SuppressWarnings("methodlength")
   @Override
   public OMResponse handle(OMRequest request) {
-    LOG.debug("Received OMRequest: {}, ", request);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Received OMRequest: {}, ", request);
+    }
     Type cmdType = request.getCmdType();
     OMResponse.Builder responseBuilder = OMResponse.newBuilder()
         .setCmdType(cmdType)

@@ -89,7 +89,7 @@ public class OzoneBlockTokenSecretManager extends
     if (LOG.isTraceEnabled()) {
       long expiryTime = tokenIdentifier.getExpiryDate();
       String tokenId = tokenIdentifier.toString();
-      LOG.trace("Issued delegation token -> expiryTime:{},tokenId:{}",
+      LOG.trace("Issued delegation token -> expiryTime:{}, tokenId:{}",
           expiryTime, tokenId);
     }
     // Pass blockId as service.
