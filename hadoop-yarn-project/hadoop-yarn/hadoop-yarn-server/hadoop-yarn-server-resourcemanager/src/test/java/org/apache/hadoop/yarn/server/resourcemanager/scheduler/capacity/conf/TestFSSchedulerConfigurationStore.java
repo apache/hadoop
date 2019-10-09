@@ -37,7 +37,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 
 /**
@@ -140,7 +139,6 @@ public class TestFSSchedulerConfigurationStore {
 
   @Test
   public void testFormatConfiguration() throws Exception {
-    assertTrue(testSchedulerConfigurationDir.exists());
     Configuration schedulerConf = new Configuration();
     schedulerConf.set("a", "a");
     writeConf(schedulerConf);
@@ -148,7 +146,15 @@ public class TestFSSchedulerConfigurationStore {
     Configuration storedConfig = configurationStore.retrieve();
     assertEquals("a", storedConfig.get("a"));
     configurationStore.format();
-    assertFalse(testSchedulerConfigurationDir.exists());
+    boolean exceptionCaught = false;
+    try {
+      storedConfig = configurationStore.retrieve();
+    } catch (IOException e) {
+      if (e.getMessage().contains("no capacity scheduler file in")) {
+        exceptionCaught = true;
+      }
+    }
+    assertTrue(exceptionCaught);
   }
 
   @Test
