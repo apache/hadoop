@@ -41,7 +41,6 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -65,7 +64,7 @@ public class TestChunkManagerImpl {
   private BlockID blockID;
   private ChunkManagerImpl chunkManager;
   private ChunkInfo chunkInfo;
-  private byte[] data;
+  private ByteBuffer data;
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -92,11 +91,11 @@ public class TestChunkManagerImpl {
 
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
-    data = "testing write chunks".getBytes(UTF_8);
+    data = ByteBuffer.wrap("testing write chunks".getBytes(UTF_8));
     // Creating BlockData
     blockID = new BlockID(1L, 1L);
     chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-        .getLocalID(), 0), 0, data.length);
+        .getLocalID(), 0), 0, data.capacity());
 
     // Create a ChunkManager object.
     chunkManager = new ChunkManagerImpl(true);
@@ -118,8 +117,8 @@ public class TestChunkManagerImpl {
 
     // As no chunks are written to the volume writeBytes should be 0
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-        ByteBuffer.wrap(data), new DispatcherContext.Builder()
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+        new DispatcherContext.Builder()
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA).build());
     // Now a chunk file is being written with Stage WRITE_DATA, so it should
     // create a temporary chunk file.
@@ -137,13 +136,13 @@ public class TestChunkManagerImpl {
     // As chunk write stage is WRITE_DATA, temp chunk file will be created.
     assertTrue(tempChunkFile.exists());
 
-    checkWriteIOStats(data.length, 1);
+    checkWriteIOStats(data.capacity(), 1);
 
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-        ByteBuffer.wrap(data), new DispatcherContext.Builder()
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+        new DispatcherContext.Builder()
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA).build());
 
-    checkWriteIOStats(data.length, 1);
+    checkWriteIOStats(data.capacity(), 1);
 
     // Old temp file should have been renamed to chunk file.
     assertTrue(chunksPath.listFiles().length == 1);
@@ -160,8 +159,8 @@ public class TestChunkManagerImpl {
       long randomLength = 200L;
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), 0), 0, randomLength);
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-          ByteBuffer.wrap(data), getDispatcherContext());
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+          getDispatcherContext());
       fail("testWriteChunkIncorrectLength failed");
     } catch (StorageContainerException ex) {
       // As we got an exception, writeBytes should be 0.
@@ -181,35 +180,36 @@ public class TestChunkManagerImpl {
     // Initially chunks folder should be empty.
     assertTrue(chunksPath.listFiles().length == 0);
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-        ByteBuffer.wrap(data), getDispatcherContext());
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+        getDispatcherContext());
     // Now a chunk file is being written with Stage COMBINED_DATA, so it should
     // create a chunk file.
     assertTrue(chunksPath.listFiles().length == 1);
     File chunkFile = ChunkUtils.getChunkFile(keyValueContainerData, chunkInfo);
     assertTrue(chunkFile.exists());
-    checkWriteIOStats(data.length, 1);
+    checkWriteIOStats(data.capacity(), 1);
   }
 
   @Test
   public void testReadChunk() throws Exception {
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-        ByteBuffer.wrap(data), getDispatcherContext());
-    checkWriteIOStats(data.length, 1);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+        getDispatcherContext());
+    checkWriteIOStats(data.capacity(), 1);
     checkReadIOStats(0, 0);
-    byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
+    ByteBuffer expectedData = chunkManager.readChunk(keyValueContainer, blockID,
         chunkInfo, getDispatcherContext());
-    assertEquals(expectedData.length, data.length);
-    assertTrue(Arrays.equals(expectedData, data));
-    checkReadIOStats(data.length, 1);
+    assertEquals(expectedData.limit()-expectedData.position(),
+        chunkInfo.getLen());
+    assertTrue(expectedData.rewind().equals(data.rewind()));
+    checkReadIOStats(expectedData.capacity(), 1);
   }
 
   @Test
   public void testDeleteChunk() throws Exception {
     File chunksPath = new File(keyValueContainerData.getChunksPath());
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-        ByteBuffer.wrap(data), getDispatcherContext());
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+        getDispatcherContext());
     assertTrue(chunksPath.listFiles().length == 1);
     chunkManager.deleteChunk(keyValueContainer, blockID, chunkInfo);
     assertTrue(chunksPath.listFiles().length == 0);
@@ -218,8 +218,8 @@ public class TestChunkManagerImpl {
   @Test
   public void testDeleteChunkUnsupportedRequest() throws Exception {
     try {
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-          ByteBuffer.wrap(data), getDispatcherContext());
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+          getDispatcherContext());
       long randomLength = 200L;
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), 0), 0, randomLength);
@@ -235,8 +235,8 @@ public class TestChunkManagerImpl {
   public void testReadChunkFileNotExists() throws Exception {
     try {
       // trying to read a chunk, where chunk file does not exist
-      byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
-          chunkInfo, getDispatcherContext());
+      ByteBuffer expectedData = chunkManager.readChunk(keyValueContainer,
+          blockID, chunkInfo, getDispatcherContext());
       fail("testReadChunkFileNotExists failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Unable to find the chunk " +
@@ -249,20 +249,21 @@ public class TestChunkManagerImpl {
   public void testWriteAndReadChunkMultipleTimes() throws Exception {
     for (int i=0; i<100; i++) {
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), i), 0, data.length);
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-          ByteBuffer.wrap(data), getDispatcherContext());
+          .getLocalID(), i), 0, data.capacity());
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
+          getDispatcherContext());
+      data.rewind();
     }
-    checkWriteIOStats(data.length*100, 100);
+    checkWriteIOStats(data.capacity()*100, 100);
     assertTrue(hddsVolume.getVolumeIOStats().getWriteTime() > 0);
 
     for (int i=0; i<100; i++) {
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), i), 0, data.length);
+          .getLocalID(), i), 0, data.capacity());
       chunkManager.readChunk(keyValueContainer, blockID, chunkInfo,
           getDispatcherContext());
     }
-    checkReadIOStats(data.length*100, 100);
+    checkReadIOStats(data.capacity()*100, 100);
     assertTrue(hddsVolume.getVolumeIOStats().getReadTime() > 0);
   }
 
