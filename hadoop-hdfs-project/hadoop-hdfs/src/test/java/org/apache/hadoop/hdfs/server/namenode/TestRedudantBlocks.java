@@ -58,7 +58,7 @@ public class TestRedudantBlocks {
   private final int cellSize = ecPolicy.getCellSize();
   private final int stripesPerBlock = 4;
   private final int blockSize = stripesPerBlock * cellSize;
-  private final int numDNs = groupSize + 1;
+  private final int numDNs = groupSize;
 
   @Before
   public void setup() throws IOException {
@@ -110,12 +110,16 @@ public class TestRedudantBlocks {
 
     // update blocksMap
     cluster.triggerBlockReports();
-    // add to invalidates
+    // delete redundant block
     cluster.triggerHeartbeats();
-    // datanode delete block
+    //wait for IBR
+    Thread.sleep(1100);
+
+    // trigger reconstruction
     cluster.triggerHeartbeats();
-    // update blocksMap
-    cluster.triggerBlockReports();
+
+    //wait for IBR
+    Thread.sleep(1100);
 
     HashSet<Long> blockIdsSet = new HashSet<Long>();
 
