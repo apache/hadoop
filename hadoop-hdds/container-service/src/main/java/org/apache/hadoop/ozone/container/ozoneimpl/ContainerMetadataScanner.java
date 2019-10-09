@@ -94,10 +94,11 @@ public class ContainerMetadataScanner extends Thread {
           metrics.getNumScanIterations(),
           metrics.getNumContainersScanned(),
           metrics.getNumUnHealthyContainers());
-      // ensure to delay next metadata scan with respect to user config.
-      if (interval < metadataScanInterval) {
+      long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(interval);
+      long remainingSleep = metadataScanInterval - elapsedMillis;
+      if (remainingSleep > 0) {
         try {
-          Thread.sleep(metadataScanInterval - interval);
+          Thread.sleep(remainingSleep);
         } catch (InterruptedException e) {
           LOG.info("Background ContainerMetadataScanner interrupted." +
               " Going to exit");
