@@ -44,10 +44,14 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.UserProvider;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.server.ResourceConfig;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -107,9 +111,17 @@ public class NameNodeHttpServer {
 
     // add webhdfs packages
     final Map<String, String> params = new HashMap<>();
-    httpServer2.addJerseyResourcePackage(
-        jerseyResourcePackage + ";" + Param.class.getPackage().getName(),
-        pathSpec, params);
+    ResourceConfig config = new ResourceConfig();
+    config.packages(jerseyResourcePackage, Param.class.getPackage().getName());
+    config.register(new AbstractBinder() {
+      // add a factory to generate UserGroupInformation
+      @Override
+      protected void configure() {
+        bindFactory(UserProvider.class)
+          .to(UserGroupInformation.class);
+      }
+    });
+    httpServer2.addJerseyResourceConfig(config, pathSpec, params);
   }
 
   /**

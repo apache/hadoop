@@ -21,22 +21,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.glassfish.hk2.api.Factory;
 
+import javax.inject.Inject;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.util.function.Supplier;
 
-@Provider
-public class UserProvider implements Factory<UserGroupInformation> {
+public class UserProvider implements Supplier<UserGroupInformation> {
 
-  @Context HttpServletRequest request;
-  @Context ServletContext servletcontext;
+  private final HttpServletRequest request;
+  private final ServletContext servletcontext;
+
+  @Inject
+  public UserProvider(HttpServletRequest request) {
+    this.request = request;
+    this.servletcontext = request.getServletContext();
+  }
 
   @Override
-  public UserGroupInformation provide() {
+  public UserGroupInformation get() {
     final Configuration conf = (Configuration) servletcontext
         .getAttribute(JspHelper.CURRENT_CONF);
     try {
@@ -46,9 +50,5 @@ public class UserProvider implements Factory<UserGroupInformation> {
       throw new SecurityException(
           SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER + " " + e, e);
     }
-  }
-
-  @Override
-  public void dispose(UserGroupInformation userGroupInformation) {
   }
 }

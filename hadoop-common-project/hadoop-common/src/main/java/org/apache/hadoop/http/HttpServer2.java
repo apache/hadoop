@@ -895,6 +895,22 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
+   * Add a Jersey resource config.
+   * @param config The Jersey ResourceConfig to be registered.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourceConfig(final ResourceConfig config,
+                                      final String pathSpec, Map<String, String> params) {
+    LOG.info("addJerseryResourceConfig: pathSpec={}", pathSpec);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(config));
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
+    webAppContext.addServlet(sh, pathSpec);
+  }
+
+  /**
    * Add a servlet in the server.
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
