@@ -33,7 +33,6 @@ import org.apache.hadoop.lib.wsrs.ParametersProvider;
 import org.apache.hadoop.lib.wsrs.ShortParam;
 import org.apache.hadoop.lib.wsrs.StringParam;
 import org.apache.hadoop.util.StringUtils;
-import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -41,7 +40,6 @@ import java.util.regex.Pattern;
 /**
  * HttpFS ParametersProvider.
  */
-@Provider
 @InterfaceAudience.Private
 @SuppressWarnings("unchecked")
 public class HttpFSParametersProvider extends ParametersProvider {
@@ -125,7 +123,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.SATISFYSTORAGEPOLICY, new Class[] {});
   }
 
-  public HttpFSParametersProvider() {
+  HttpFSParametersProvider() {
     super(HttpFSFileSystem.OP_PARAM, HttpFSFileSystem.Operation.class,
           PARAMS_DEF);
   }
