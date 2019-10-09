@@ -123,6 +123,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
+import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.OPEN_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1656,8 +1657,13 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       OmKeyInfo keyInfo = null;
       try {
-        OzoneFileStatus fileStatus = getFileStatus(args);
-        keyInfo = fileStatus.getKeyInfo();
+        if (ozObject.getResourceType() == OPEN_KEY) {
+          keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
+        } else {
+          OzoneFileStatus fileStatus = getFileStatus(args);
+          keyInfo = fileStatus.getKeyInfo();
+        }
+
         if (keyInfo == null) {
           // the key does not exist, but it is a parent "dir" of some key
           // let access be determined based on volume/bucket/prefix ACL

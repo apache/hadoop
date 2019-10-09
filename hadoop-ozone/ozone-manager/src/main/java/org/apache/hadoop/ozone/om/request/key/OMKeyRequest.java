@@ -526,11 +526,11 @@ public abstract class OMKeyRequest extends OMClientRequest {
    * @throws IOException
    */
   protected void checkKeyAcls(OzoneManager ozoneManager, String volume,
-      String bucket, String key, IAccessAuthorizer.ACLType aclType)
+      String bucket, String key, IAccessAuthorizer.ACLType aclType,
+      OzoneObj.ResourceType resourceType)
       throws IOException {
     if (ozoneManager.getAclsEnabled()) {
-      checkAcls(ozoneManager, OzoneObj.ResourceType.KEY,
-          OzoneObj.StoreType.OZONE, aclType,
+      checkAcls(ozoneManager, resourceType, OzoneObj.StoreType.OZONE, aclType,
           volume, bucket, key);
     }
   }

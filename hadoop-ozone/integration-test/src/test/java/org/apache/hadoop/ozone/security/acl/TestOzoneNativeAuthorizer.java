@@ -69,6 +69,7 @@ import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentity
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.WORLD;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.CREATE;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.NONE;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.BUCKET;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
@@ -362,6 +363,7 @@ public class TestOzoneNativeAuthorizer {
 
       aclsToBeAdded.remove(NONE);
       aclsToBeAdded.remove(ALL);
+      aclsToBeAdded.remove(CREATE);
 
       // Fetch acls again.
       for (ACLType a2 : aclsToBeAdded) {
@@ -410,7 +412,7 @@ public class TestOzoneNativeAuthorizer {
                   builder.setAclRights(a2).build()));
           aclsToBeValidated.remove(a2);
           for (ACLType a3 : aclsToBeValidated) {
-            if (!a3.equals(a1) && !a3.equals(a2)) {
+            if (!a3.equals(a1) && !a3.equals(a2) && !a3.equals(CREATE)) {
               assertFalse("User shouldn't have right " + a3 + ". " +
                       "Current acl rights for user:" + a1 + "," + a2,
                   nativeAuthorizer.checkAccess(obj,
@@ -462,6 +464,7 @@ public class TestOzoneNativeAuthorizer {
       builder) throws OMException {
     List<ACLType> allAcls = new ArrayList<>(Arrays.asList(ACLType.values()));
     allAcls.remove(NONE);
+    allAcls.remove(CREATE);
     for (ACLType a : allAcls) {
       assertFalse("User shouldn't have right " + a + ".", 
           nativeAuthorizer.checkAccess(obj, builder.setAclRights(a).build()));

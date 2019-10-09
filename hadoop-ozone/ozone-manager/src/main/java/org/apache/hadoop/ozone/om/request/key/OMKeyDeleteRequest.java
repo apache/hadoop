@@ -24,6 +24,7 @@ import java.util.Map;
 import com.google.common.base.Optional;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +112,7 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
     try {
       // check Acl
       checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
-          IAccessAuthorizer.ACLType.DELETE);
+          IAccessAuthorizer.ACLType.DELETE, OzoneObj.ResourceType.KEY);
 
       String objectKey = omMetadataManager.getOzoneKey(
           volumeName, bucketName, keyName);

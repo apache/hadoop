@@ -95,6 +95,7 @@ public abstract class OzoneObj implements IOzoneObj {
     VOLUME(OzoneConsts.VOLUME),
     BUCKET(OzoneConsts.BUCKET),
     KEY(OzoneConsts.KEY),
+    OPEN_KEY(OzoneConsts.OPEN_KEY),
     PREFIX(OzoneConsts.PREFIX);
 
     /**

@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,12 +177,18 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
       // write ACL on key. Add client id to key name if ozone native
       // authorizer is configured.
       Configuration config = ozoneManager.getConfiguration();
-      String keyNameForAclCheck = keyName;
       if (OmUtils.isNativeAuthorizerEnabled(config)) {
-        keyNameForAclCheck = keyName + "/" + allocateBlockRequest.getClientID();
+        String keyNameForAclCheck =
+            keyName + "/" + allocateBlockRequest.getClientID();
+        // During allocate block request, it is possible that key is
+        // not present in the key table and hence setting the resource type
+        // to OPEN_KEY to check the openKeyTable.
+        checkKeyAcls(ozoneManager, volumeName, bucketName, keyNameForAclCheck,
+            IAccessAuthorizer.ACLType.WRITE, OzoneObj.ResourceType.OPEN_KEY);
+      } else {
+        checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
+            IAccessAuthorizer.ACLType.WRITE, OzoneObj.ResourceType.KEY);
       }
-      checkKeyAcls(ozoneManager, volumeName, bucketName, keyNameForAclCheck,
-          IAccessAuthorizer.ACLType.WRITE);
 
       OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
       validateBucketAndVolume(omMetadataManager, volumeName,
