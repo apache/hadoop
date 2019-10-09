@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -516,8 +517,8 @@ public final class XceiverServerRatis extends XceiverServer {
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
         RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
-        nextCallId(), Message.valueOf(request.toByteString()), type,
-        null);
+        nextCallId(), ContainerCommandRequestMessage.toMessage(request, null),
+        type, null);
   }
 
   private GroupInfoRequest createGroupInfoRequest(

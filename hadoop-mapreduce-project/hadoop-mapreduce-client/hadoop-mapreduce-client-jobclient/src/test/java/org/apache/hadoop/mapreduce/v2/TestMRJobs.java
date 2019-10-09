@@ -91,10 +91,14 @@ import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -446,6 +450,53 @@ public class TestMRJobs {
     job.setPriorityAsInteger(89); // Verify the priority from job itself
     waitForPriorityToUpdate(job, JobPriority.UNDEFINED_PRIORITY);
     assertThat(job.getPriority()).isEqualTo(JobPriority.UNDEFINED_PRIORITY);
+
+    boolean succeeded = job.waitForCompletion(true);
+    Assert.assertTrue(succeeded);
+    Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+  }
+
+  @Test(timeout = 300000)
+  public void testJobWithWorkflowPriority() throws Exception {
+    Configuration sleepConf = new Configuration(mrCluster.getConfig());
+    if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
+      LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
+          + " not found. Not running test.");
+      return;
+    }
+    CapacityScheduler scheduler = (CapacityScheduler) mrCluster
+        .getResourceManager().getResourceScheduler();
+    CapacitySchedulerConfiguration csConf = scheduler.getConfiguration();
+    csConf.set(CapacitySchedulerConfiguration.WORKFLOW_PRIORITY_MAPPINGS,
+        WorkflowPriorityMappingsManager.getWorkflowPriorityMappingStr(
+        Arrays.asList(new WorkflowPriorityMapping(
+            "wf1", "root.default", Priority.newInstance(1)))));
+    csConf.setBoolean(CapacitySchedulerConfiguration.
+        ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE, true);
+    scheduler.reinitialize(csConf, scheduler.getRMContext());
+
+    // set master address to local to test that local mode applied if framework
+    // equals local
+    sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
+    sleepConf
+        .setInt("yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms", 5);
+    sleepConf.set(MRJobConfig.JOB_TAGS,
+        YarnConfiguration.DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX + "wf1");
+
+    SleepJob sleepJob = new SleepJob();
+    sleepJob.setConf(sleepConf);
+    Job job = sleepJob.createJob(1, 1, 1000, 20, 50, 1);
+
+    job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+    job.setJarByClass(SleepJob.class);
+    job.setMaxMapAttempts(1); // speed up failures
+    // VERY_HIGH priority should get overwritten by workflow priority mapping
+    job.setPriority(JobPriority.VERY_HIGH);
+    job.submit();
+
+    waitForPriorityToUpdate(job, JobPriority.VERY_LOW);
+    // Verify the priority from job itself
+    Assert.assertEquals(JobPriority.VERY_LOW, job.getPriority());
 
     boolean succeeded = job.waitForCompletion(true);
     Assert.assertTrue(succeeded);

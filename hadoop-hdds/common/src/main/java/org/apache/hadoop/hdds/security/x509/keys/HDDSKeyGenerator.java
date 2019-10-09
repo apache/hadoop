@@ -108,8 +108,10 @@ public class HDDSKeyGenerator {
    */
   public KeyPair generateKey(int size, String algorithm, String provider)
       throws NoSuchProviderException, NoSuchAlgorithmException {
-    LOG.debug("Generating key pair using size:{}, Algorithm:{}, Provider:{}",
-        size, algorithm, provider);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Generating key pair using size:{}, Algorithm:{}, Provider:{}",
+          size, algorithm, provider);
+    }
     KeyPairGenerator generator = KeyPairGenerator
         .getInstance(algorithm, provider);
     generator.initialize(size);

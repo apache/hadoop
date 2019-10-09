@@ -27,7 +27,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Iterator;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * This test verifies the container scrubber metrics functionality.
@@ -42,8 +43,7 @@ public class TestContainerScrubberMetrics {
     HddsVolume vol = Mockito.mock(HddsVolume.class);
     ContainerController cntrl = mockContainerController(vol);
 
-    ContainerMetadataScanner mc = new ContainerMetadataScanner(conf,
-        cntrl, c.getMetadataScanInterval());
+    ContainerMetadataScanner mc = new ContainerMetadataScanner(c, cntrl);
     mc.runIteration();
 
     Assert.assertEquals(1, mc.getMetrics().getNumScanIterations());
@@ -56,11 +56,11 @@ public class TestContainerScrubberMetrics {
     OzoneConfiguration conf = new OzoneConfiguration();
     ContainerScrubberConfiguration c = conf.getObject(
         ContainerScrubberConfiguration.class);
+    c.setDataScanInterval(0);
     HddsVolume vol = Mockito.mock(HddsVolume.class);
     ContainerController cntrl = mockContainerController(vol);
 
-    ContainerDataScanner sc = new ContainerDataScanner(conf, cntrl,
-        vol, c.getBandwidthPerVolume());
+    ContainerDataScanner sc = new ContainerDataScanner(c, cntrl, vol);
     sc.runIteration();
 
     ContainerDataScrubberMetrics m = sc.getMetrics();
@@ -71,7 +71,7 @@ public class TestContainerScrubberMetrics {
 
   private ContainerController mockContainerController(HddsVolume vol) {
     // healthy container
-    Container c1 = Mockito.mock(Container.class);
+    Container<ContainerData> c1 = Mockito.mock(Container.class);
     Mockito.when(c1.shouldScanData()).thenReturn(true);
     Mockito.when(c1.scanMetaData()).thenReturn(true);
     Mockito.when(c1.scanData(
@@ -81,7 +81,7 @@ public class TestContainerScrubberMetrics {
     // unhealthy container (corrupt data)
     ContainerData c2d = Mockito.mock(ContainerData.class);
     Mockito.when(c2d.getContainerID()).thenReturn(101L);
-    Container c2 = Mockito.mock(Container.class);
+    Container<ContainerData> c2 = Mockito.mock(Container.class);
     Mockito.when(c2.scanMetaData()).thenReturn(true);
     Mockito.when(c2.shouldScanData()).thenReturn(true);
     Mockito.when(c2.scanData(
@@ -92,20 +92,17 @@ public class TestContainerScrubberMetrics {
     // unhealthy container (corrupt metadata)
     ContainerData c3d = Mockito.mock(ContainerData.class);
     Mockito.when(c3d.getContainerID()).thenReturn(102L);
-    Container c3 = Mockito.mock(Container.class);
+    Container<ContainerData> c3 = Mockito.mock(Container.class);
     Mockito.when(c3.shouldScanData()).thenReturn(false);
     Mockito.when(c3.scanMetaData()).thenReturn(false);
     Mockito.when(c3.getContainerData()).thenReturn(c3d);
 
-    Iterator<Container> iter = Mockito.mock(Iterator.class);
-    Mockito.when(iter.hasNext()).thenReturn(true, true, true, false);
-    Mockito.when(iter.next()).thenReturn(c1, c2, c3);
-
+    Collection<Container<?>> containers = Arrays.asList(c1, c2, c3);
     ContainerController cntrl = Mockito.mock(ContainerController.class);
     Mockito.when(cntrl.getContainers(vol))
-        .thenReturn(iter);
+        .thenReturn(containers.iterator());
     Mockito.when(cntrl.getContainers())
-        .thenReturn(iter);
+        .thenReturn(containers.iterator());
 
     return cntrl;
   }

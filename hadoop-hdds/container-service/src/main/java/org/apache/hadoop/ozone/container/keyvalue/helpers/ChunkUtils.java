@@ -80,7 +80,7 @@ public final class ChunkUtils {
       ByteBuffer data, VolumeIOStats volumeIOStats, boolean sync)
       throws StorageContainerException, ExecutionException,
       InterruptedException, NoSuchAlgorithmException {
-    int bufferSize = data.capacity();
+    final int bufferSize = data.remaining();
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
     if (bufferSize != chunkInfo.getLen()) {
       String err = String.format("data array does not match the length " +
@@ -127,8 +127,10 @@ public final class ChunkUtils {
       return null;
     });
 
-    log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
-        bufferSize);
+    if (log.isDebugEnabled()) {
+      log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
+          bufferSize);
+    }
   }
 
   /**

@@ -219,7 +219,8 @@ public class BucketManagerImpl implements BucketManager {
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(bucketName);
-    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
+    metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volumeName,
+        bucketName);
     try {
       String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo value = metadataManager.getBucketTable().get(bucketKey);
@@ -237,7 +238,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+      metadataManager.getLock().releaseReadLock(BUCKET_LOCK, volumeName,
           bucketName);
     }
   }
@@ -520,7 +521,7 @@ public class BucketManagerImpl implements BucketManager {
     }
     String volume = obj.getVolumeName();
     String bucket = obj.getBucketName();
-    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
+    metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volume, bucket);
     try {
       String dbBucketKey = metadataManager.getBucketKey(volume, bucket);
       OmBucketInfo bucketInfo =
@@ -538,7 +539,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
+      metadataManager.getLock().releaseReadLock(BUCKET_LOCK, volume, bucket);
     }
   }
 
@@ -557,7 +558,7 @@ public class BucketManagerImpl implements BucketManager {
 
     String volume = ozObject.getVolumeName();
     String bucket = ozObject.getBucketName();
-    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
+    metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volume, bucket);
     try {
       String dbBucketKey = metadataManager.getBucketKey(volume, bucket);
       OmBucketInfo bucketInfo =
@@ -581,7 +582,7 @@ public class BucketManagerImpl implements BucketManager {
       throw new OMException("Check access operation failed for " +
           "bucket:" + bucket, ex, INTERNAL_ERROR);
     } finally {
-      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket); 
+      metadataManager.getLock().releaseReadLock(BUCKET_LOCK, volume, bucket);
     }
   }
 }

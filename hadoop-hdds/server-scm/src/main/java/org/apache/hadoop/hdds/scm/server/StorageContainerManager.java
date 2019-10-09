@@ -494,10 +494,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   private void loginAsSCMUser(Configuration conf)
       throws IOException, AuthenticationException {
-    LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
-            + "Principal: {}, keytab: {}",
-        conf.get(HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
-        conf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
+              + "Principal: {}, keytab: {}",
+          conf.get(HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
+          conf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
+    }
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals(
         AuthenticationMethod.KERBEROS)) {
@@ -697,10 +699,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
                       ContainerStat stat = removalNotification.getValue();
                       // remove invalid container report
                       metrics.decrContainerStat(stat);
-                      LOG.debug(
-                          "Remove expired container stat entry for datanode: " +
-                              "{}.",
-                          removalNotification.getKey());
+                      if (LOG.isDebugEnabled()) {
+                        LOG.debug("Remove expired container stat entry for " +
+                            "datanode: {}.", removalNotification.getKey());
+                      }
                     }
                   }
                 })

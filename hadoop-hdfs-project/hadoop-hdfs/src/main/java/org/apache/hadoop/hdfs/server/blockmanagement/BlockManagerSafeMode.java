@@ -572,12 +572,18 @@ class BlockManagerSafeMode {
     assert namesystem.hasWriteLock();
     // Calculating the number of live datanodes is time-consuming
     // in large clusters. Skip it when datanodeThreshold is zero.
-    int datanodeNum = 0;
-    if (datanodeThreshold > 0) {
-      datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
-    }
+    // We need to evaluate getNumLiveDataNodes only when
+    // (blockSafe >= blockThreshold) is true and hence moving evaluation
+    // of datanodeNum conditional to isBlockThresholdMet as well
     synchronized (this) {
-      return blockSafe >= blockThreshold && datanodeNum >= datanodeThreshold;
+      boolean isBlockThresholdMet = (blockSafe >= blockThreshold);
+      boolean isDatanodeThresholdMet = true;
+      if (isBlockThresholdMet && datanodeThreshold > 0) {
+        int datanodeNum = blockManager.getDatanodeManager().
+                getNumLiveDataNodes();
+        isDatanodeThresholdMet = (datanodeNum >= datanodeThreshold);
+      }
+      return isBlockThresholdMet && isDatanodeThresholdMet;
     }
   }
 

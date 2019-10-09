@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.Set;
 
 import org.apache.hadoop.fs.QuotaUsage;
@@ -70,13 +72,30 @@ public class Quota {
    */
   public void setQuota(String path, long namespaceQuota,
       long storagespaceQuota, StorageType type) throws IOException {
+    setQuotaInternal(path, null, namespaceQuota, storagespaceQuota, type);
+  }
+
+  /**
+   * Set quota for the federation path.
+   * @param path Federation path.
+   * @param locations Locations of the Federation path.
+   * @param namespaceQuota Name space quota.
+   * @param storagespaceQuota Storage space quota.
+   * @param type StorageType that the space quota is intended to be set on.
+   * @throws IOException If the quota system is disabled.
+   */
+  void setQuotaInternal(String path, List<RemoteLocation> locations,
+      long namespaceQuota, long storagespaceQuota, StorageType type)
+      throws IOException {
     rpcServer.checkOperation(OperationCategory.WRITE);
     if (!router.isQuotaEnabled()) {
       throw new IOException("The quota system is disabled in Router.");
     }
 
     // Set quota for current path and its children mount table path.
-    final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
+    if (locations == null) {
+      locations = getQuotaRemoteLocations(path);
+    }
     if (LOG.isDebugEnabled()) {
       for (RemoteLocation loc : locations) {
         LOG.debug("Set quota for path: nsId: {}, dest: {}.",
@@ -92,12 +111,23 @@ public class Quota {
   }
 
   /**
-   * Get quota usage for the federation path.
+   * Get aggregated quota usage for the federation path.
    * @param path Federation path.
    * @return Aggregated quota.
    * @throws IOException If the quota system is disabled.
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
+    return aggregateQuota(getEachQuotaUsage(path));
+  }
+
+  /**
+   * Get quota usage for the federation path.
+   * @param path Federation path.
+   * @return quota usage for each remote location.
+   * @throws IOException If the quota system is disabled.
+   */
+  Map<RemoteLocation, QuotaUsage> getEachQuotaUsage(String path)
+      throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
     if (!router.isQuotaEnabled()) {
       throw new IOException("The quota system is disabled in Router.");
@@ -109,7 +139,39 @@ public class Quota {
     Map<RemoteLocation, QuotaUsage> results = rpcClient.invokeConcurrent(
         quotaLocs, method, true, false, QuotaUsage.class);
 
-    return aggregateQuota(results);
+    return results;
+  }
+
+  /**
+   * Get global quota for the federation path.
+   * @param path Federation path.
+   * @return global quota for path.
+   * @throws IOException If the quota system is disabled.
+   */
+  QuotaUsage getGlobalQuota(String path) throws IOException {
+    if (!router.isQuotaEnabled()) {
+      throw new IOException("The quota system is disabled in Router.");
+    }
+
+    long nQuota = HdfsConstants.QUOTA_RESET;
+    long sQuota = HdfsConstants.QUOTA_RESET;
+    RouterQuotaManager manager = this.router.getQuotaManager();
+    TreeMap<String, RouterQuotaUsage> pts =
+        manager.getParentsContainingQuota(path);
+    Entry<String, RouterQuotaUsage> entry = pts.lastEntry();
+    while (entry != null && (nQuota == HdfsConstants.QUOTA_RESET
+        || sQuota == HdfsConstants.QUOTA_RESET)) {
+      String ppath = entry.getKey();
+      QuotaUsage quota = entry.getValue();
+      if (nQuota == HdfsConstants.QUOTA_RESET) {
+        nQuota = quota.getQuota();
+      }
+      if (sQuota == HdfsConstants.QUOTA_RESET) {
+        sQuota = quota.getSpaceQuota();
+      }
+      entry = pts.lowerEntry(ppath);
+    }
+    return new QuotaUsage.Builder().quota(nQuota).spaceQuota(sQuota).build();
   }
 
   /**
@@ -157,7 +219,7 @@ public class Quota {
    * @param results Quota query result.
    * @return Aggregated Quota.
    */
-  private QuotaUsage aggregateQuota(Map<RemoteLocation, QuotaUsage> results) {
+  QuotaUsage aggregateQuota(Map<RemoteLocation, QuotaUsage> results) {
     long nsCount = 0;
     long ssCount = 0;
     long nsQuota = HdfsConstants.QUOTA_RESET;

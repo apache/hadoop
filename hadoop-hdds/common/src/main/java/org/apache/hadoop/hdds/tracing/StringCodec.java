@@ -45,7 +45,9 @@ public class StringCodec implements Codec<StringBuilder> {
     if (value != null && !value.equals("")) {
       String[] parts = value.split(":");
       if (parts.length != 4) {
-        LOG.debug("MalformedTracerStateString: {}", value);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("MalformedTracerStateString: {}", value);
+        }
         throw new MalformedTracerStateStringException(value);
       } else {
         String traceId = parts[0];

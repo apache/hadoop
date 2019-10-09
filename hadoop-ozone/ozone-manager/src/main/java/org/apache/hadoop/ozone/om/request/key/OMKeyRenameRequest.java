@@ -125,7 +125,7 @@ public class OMKeyRenameRequest extends OMKeyRequest {
       checkKeyAcls(ozoneManager, volumeName, bucketName, toKeyName,
           IAccessAuthorizer.ACLType.CREATE);
 
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       // Not doing bucket/volume checks here. In this way we can avoid db
@@ -181,7 +181,7 @@ public class OMKeyRenameRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

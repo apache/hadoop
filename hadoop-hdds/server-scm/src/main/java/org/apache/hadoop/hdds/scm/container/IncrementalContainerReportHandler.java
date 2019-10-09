@@ -54,8 +54,10 @@ public class IncrementalContainerReportHandler extends
   @Override
   public void onMessage(final IncrementalContainerReportFromDatanode report,
                         final EventPublisher publisher) {
-    LOG.debug("Processing incremental container report from data node {}",
-            report.getDatanodeDetails().getUuid());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing incremental container report from data node {}",
+          report.getDatanodeDetails().getUuid());
+    }
 
     boolean success = true;
     for (ContainerReplicaProto replicaProto :

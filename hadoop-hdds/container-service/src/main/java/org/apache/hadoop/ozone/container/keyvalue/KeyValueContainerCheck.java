@@ -110,7 +110,7 @@ public class KeyValueContainerCheck {
    * @return true : integrity checks pass, false : otherwise.
    */
   public boolean fullCheck(DataTransferThrottler throttler, Canceler canceler) {
-    boolean valid = false;
+    boolean valid;
 
     try {
       valid = fastCheck();
@@ -141,7 +141,7 @@ public class KeyValueContainerCheck {
   private void checkDirPath(String path) throws IOException {
 
     File dirPath = new File(path);
-    String errStr = null;
+    String errStr;
 
     try {
       if (!dirPath.isDirectory()) {
@@ -162,7 +162,7 @@ public class KeyValueContainerCheck {
   }
 
   private void checkContainerFile() throws IOException {
-    /**
+    /*
      * compare the values in the container file loaded from disk,
      * with the values we are expecting
      */
@@ -193,10 +193,10 @@ public class KeyValueContainerCheck {
     }
 
     KeyValueContainerData kvData = onDiskContainerData;
-    if (!metadataPath.toString().equals(kvData.getMetadataPath())) {
+    if (!metadataPath.equals(kvData.getMetadataPath())) {
       String errStr =
           "Bad metadata path in Containerdata for " + containerID + "Expected ["
-              + metadataPath.toString() + "] Got [" + kvData.getMetadataPath()
+              + metadataPath + "] Got [" + kvData.getMetadataPath()
               + "]";
       throw new IOException(errStr);
     }
@@ -204,15 +204,12 @@ public class KeyValueContainerCheck {
 
   private void scanData(DataTransferThrottler throttler, Canceler canceler)
       throws IOException {
-    /**
+    /*
      * Check the integrity of the DB inside each container.
-     * In Scope:
      * 1. iterate over each key (Block) and locate the chunks for the block
-     * 2. garbage detection : chunks which exist in the filesystem,
-     *    but not in the DB. This function is implemented as HDDS-1202
-     * Not in scope:
-     * 1. chunk checksum verification. this is left to a separate
-     * slow chunk scanner
+     * 2. garbage detection (TBD): chunks which exist in the filesystem,
+     *    but not in the DB. This function will be implemented in HDDS-1202
+     * 3. chunk checksum verification.
      */
     Preconditions.checkState(onDiskContainerData != null,
         "invoke loadContainerData prior to calling this function");
@@ -255,21 +252,20 @@ public class KeyValueContainerCheck {
                 chunk.getChecksumData().getType(),
                 chunk.getChecksumData().getBytesPerChecksum(),
                 chunk.getChecksumData().getChecksumsList());
+            Checksum cal = new Checksum(cData.getChecksumType(),
+                cData.getBytesPerChecksum());
             long bytesRead = 0;
             byte[] buffer = new byte[cData.getBytesPerChecksum()];
             try (InputStream fs = new FileInputStream(chunkFile)) {
-              int i = 0, v = 0;
-              for (; i < length; i++) {
-                v = fs.read(buffer);
+              for (int i = 0; i < length; i++) {
+                int v = fs.read(buffer);
                 if (v == -1) {
                   break;
                 }
                 bytesRead += v;
                 throttler.throttle(v, canceler);
-                Checksum cal = new Checksum(cData.getChecksumType(),
-                    cData.getBytesPerChecksum());
                 ByteString expected = cData.getChecksums().get(i);
-                ByteString actual = cal.computeChecksum(buffer)
+                ByteString actual = cal.computeChecksum(buffer, 0, v)
                     .getChecksums().get(0);
                 if (!Arrays.equals(expected.toByteArray(),
                     actual.toByteArray())) {
@@ -283,7 +279,7 @@ public class KeyValueContainerCheck {
                 }
 
               }
-              if (v == -1 && i < length) {
+              if (bytesRead != chunk.getLen()) {
                 throw new OzoneChecksumException(String
                     .format("Inconsistent read for chunk=%s expected length=%d"
                             + " actual length=%d for block %s",

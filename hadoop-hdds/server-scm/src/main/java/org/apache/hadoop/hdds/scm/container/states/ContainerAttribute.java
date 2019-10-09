@@ -167,7 +167,9 @@ public class ContainerAttribute<T> {
     if (attributeMap.containsKey(key)) {
       attributeMap.get(key).clear();
     } else {
-      LOG.debug("key: {} does not exist in the attributeMap", key);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("key: {} does not exist in the attributeMap", key);
+      }
     }
   }
 
@@ -183,13 +185,17 @@ public class ContainerAttribute<T> {
 
     if (attributeMap.containsKey(key)) {
       if (!attributeMap.get(key).remove(value)) {
-        LOG.debug("ContainerID: {} does not exist in the set pointed by " +
-            "key:{}", value, key);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("ContainerID: {} does not exist in the set pointed by " +
+              "key:{}", value, key);
+        }
         return false;
       }
       return true;
     } else {
-      LOG.debug("key: {} does not exist in the attributeMap", key);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("key: {} does not exist in the attributeMap", key);
+      }
       return false;
     }
   }
@@ -206,7 +212,9 @@ public class ContainerAttribute<T> {
     if (this.attributeMap.containsKey(key)) {
       return Collections.unmodifiableNavigableSet(this.attributeMap.get(key));
     }
-    LOG.debug("No such Key. Key {}", key);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("No such Key. Key {}", key);
+    }
     return EMPTY_SET;
   }
 
@@ -237,7 +245,9 @@ public class ContainerAttribute<T> {
       LOG.error("error in update.", ex);
       if (removed) {
         insert(currentKey, value);
-        LOG.trace("reinserted the removed key. {}", currentKey);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("reinserted the removed key. {}", currentKey);
+        }
       }
       throw ex;
     }

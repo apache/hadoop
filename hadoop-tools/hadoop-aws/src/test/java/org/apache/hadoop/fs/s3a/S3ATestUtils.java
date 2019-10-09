@@ -443,8 +443,7 @@ public final class S3ATestUtils {
    */
   public static void assumeS3GuardState(boolean shouldBeEnabled,
       Configuration originalConf) throws URISyntaxException {
-    boolean isEnabled = getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
-        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false));
+    boolean isEnabled = isS3GuardTestPropertySet(originalConf);
     Assume.assumeThat("Unexpected S3Guard test state:"
             + " shouldBeEnabled=" + shouldBeEnabled
             + " and isEnabled=" + isEnabled,
@@ -463,12 +462,21 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Is the test option for S3Guard set?
+   * @param conf configuration to examine.
+   * @return true if the config or system property turns s3guard tests on
+   */
+  public static boolean isS3GuardTestPropertySet(final Configuration conf) {
+    return getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
+        conf.getBoolean(TEST_S3GUARD_ENABLED, false));
+  }
+
+  /**
    * Conditionally set the S3Guard options from test properties.
    * @param conf configuration
    */
   public static void maybeEnableS3Guard(Configuration conf) {
-    if (getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
-        conf.getBoolean(TEST_S3GUARD_ENABLED, false))) {
+    if (isS3GuardTestPropertySet(conf)) {
       // S3Guard is enabled.
       boolean authoritative = getTestPropertyBool(conf,
           TEST_S3GUARD_AUTHORITATIVE,
@@ -758,8 +766,9 @@ public final class S3ATestUtils {
     for (String option : options) {
       final String stripped = option.substring("fs.s3a.".length());
       String target = bucketPrefix + stripped;
-      if (conf.get(target) != null) {
-        LOG.debug("Removing option {}", target);
+      String v = conf.get(target);
+      if (v != null) {
+        LOG.debug("Removing option {}; was {}", target, v);
         conf.unset(target);
       }
     }
@@ -1272,6 +1281,16 @@ public final class S3ATestUtils {
     }
     return Boolean.valueOf(persists);
   }
+
+  /**
+   * Set the metadata store of a filesystem instance to the given
+   * store, via a package-private setter method.
+   * @param fs filesystem.
+   * @param ms metastore
+   */
+  public static void setMetadataStore(S3AFileSystem fs, MetadataStore ms) {
+    fs.setMetadataStore(ms);
+}
 
   public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
       throws IOException {

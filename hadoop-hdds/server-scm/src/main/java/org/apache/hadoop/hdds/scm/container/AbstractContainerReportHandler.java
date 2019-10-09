@@ -76,8 +76,10 @@ public class AbstractContainerReportHandler {
         .setSequenceId(replicaProto.getBlockCommitSequenceId())
         .build();
 
-    logger.debug("Processing replica of container {} from datanode {}",
-        containerId, datanodeDetails);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Processing replica of container {} from datanode {}",
+          containerId, datanodeDetails);
+    }
     // Synchronized block should be replaced by container lock,
     // once we have introduced lock inside ContainerInfo.
     synchronized (containerManager.getContainer(containerId)) {

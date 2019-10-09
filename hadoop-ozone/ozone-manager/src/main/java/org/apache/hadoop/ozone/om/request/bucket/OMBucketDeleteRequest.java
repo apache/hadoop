@@ -50,6 +50,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 
 /**
  * Handles DeleteBucket Request.
@@ -87,7 +88,8 @@ public class OMBucketDeleteRequest extends OMClientRequest {
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     IOException exception = null;
 
-    boolean acquiredLock = false;
+    boolean acquiredBucketLock = false;
+    boolean acquiredVolumeLock = false;
     OMClientResponse omClientResponse = null;
     try {
       // check Acl
@@ -99,7 +101,10 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
 
       // acquire lock
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredVolumeLock =
+          omMetadataManager.getLock().acquireReadLock(VOLUME_LOCK, volumeName);
+      acquiredBucketLock =
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       // No need to check volume exists here, as bucket cannot be created
@@ -142,9 +147,12 @@ public class OMBucketDeleteRequest extends OMClientRequest {
             ozoneManagerDoubleBufferHelper.add(omClientResponse,
                 transactionLogIndex));
       }
-      if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+      if (acquiredBucketLock) {
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
+      }
+      if (acquiredVolumeLock) {
+        omMetadataManager.getLock().releaseReadLock(VOLUME_LOCK, volumeName);
       }
     }
 

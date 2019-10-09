@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.conf.ConfigType;
 public class ContainerScrubberConfiguration {
   private boolean enabled;
   private long metadataScanInterval;
+  private long dataScanInterval;
   private long bandwidthPerVolume;
 
   @Config(key = "enabled",
@@ -56,6 +57,22 @@ public class ContainerScrubberConfiguration {
 
   public long getMetadataScanInterval() {
     return metadataScanInterval;
+  }
+
+  @Config(key = "data.scan.interval",
+      type = ConfigType.TIME,
+      defaultValue = "1m",
+      tags = { ConfigTag.STORAGE },
+      description = "Minimum time interval between two iterations of container"
+          + " data scanning.  If an iteration takes less time than this, the"
+          + " scanner will wait before starting the next iteration."
+  )
+  public void setDataScanInterval(long dataScanInterval) {
+    this.dataScanInterval = dataScanInterval;
+  }
+
+  public long getDataScanInterval() {
+    return dataScanInterval;
   }
 
   @Config(key = "volume.bytes.per.second",

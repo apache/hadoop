@@ -124,7 +124,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
 
       multipartUploadList = new OmMultipartUploadCompleteList(partsMap);
 
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -270,7 +270,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

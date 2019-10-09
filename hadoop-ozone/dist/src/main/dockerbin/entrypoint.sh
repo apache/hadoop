@@ -63,7 +63,7 @@ if [ -n "$KERBEROS_ENABLED" ]; then
   echo "KDC ISSUER_SERVER => $ISSUER_SERVER"
 
   if [ -n "$SLEEP_SECONDS" ]; then
-    echo "Sleeping for $(SLEEP_SECONDS) seconds"
+    echo "Sleeping for ${SLEEP_SECONDS} seconds"
     sleep "$SLEEP_SECONDS"
   fi
 

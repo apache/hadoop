@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.primitives.Longs;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -47,7 +48,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
@@ -63,6 +63,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
@@ -74,7 +75,6 @@ import static org.junit.Assert.assertFalse;
   private final String storeImpl;
   private KeyValueContainer container;
   private KeyValueContainerData containerData;
-  private ChunkManagerImpl chunkManager;
   private VolumeSet volumeSet;
   private OzoneConfiguration conf;
   private File testRoot;
@@ -103,7 +103,6 @@ import static org.junit.Assert.assertFalse;
 
   /**
    * Sanity test, when there are no corruptions induced.
-   * @throws Exception
    */
   @Test
   public void testKeyValueContainerCheckNoCorruption() throws Exception {
@@ -111,23 +110,19 @@ import static org.junit.Assert.assertFalse;
     int deletedBlocks = 1;
     int normalBlocks = 3;
     int chunksPerBlock = 4;
-    boolean valid = false;
     ContainerScrubberConfiguration c = conf.getObject(
         ContainerScrubberConfiguration.class);
 
     // test Closed Container
-    createContainerWithBlocks(containerID, normalBlocks, deletedBlocks, 65536,
+    createContainerWithBlocks(containerID, normalBlocks, deletedBlocks,
         chunksPerBlock);
-    File chunksPath = new File(containerData.getChunksPath());
-    assertTrue(chunksPath.listFiles().length
-        == (deletedBlocks + normalBlocks) * chunksPerBlock);
 
     KeyValueContainerCheck kvCheck =
         new KeyValueContainerCheck(containerData.getMetadataPath(), conf,
             containerID);
 
     // first run checks on a Open Container
-    valid = kvCheck.fastCheck();
+    boolean valid = kvCheck.fastCheck();
     assertTrue(valid);
 
     container.close();
@@ -140,7 +135,6 @@ import static org.junit.Assert.assertFalse;
 
   /**
    * Sanity test, when there are corruptions induced.
-   * @throws Exception
    */
   @Test
   public void testKeyValueContainerCheckCorruption() throws Exception {
@@ -148,16 +142,12 @@ import static org.junit.Assert.assertFalse;
     int deletedBlocks = 1;
     int normalBlocks = 3;
     int chunksPerBlock = 4;
-    boolean valid = false;
     ContainerScrubberConfiguration sc = conf.getObject(
         ContainerScrubberConfiguration.class);
 
     // test Closed Container
-    createContainerWithBlocks(containerID, normalBlocks, deletedBlocks, 65536,
+    createContainerWithBlocks(containerID, normalBlocks, deletedBlocks,
         chunksPerBlock);
-    File chunksPath = new File(containerData.getChunksPath());
-    assertTrue(chunksPath.listFiles().length
-        == (deletedBlocks + normalBlocks) * chunksPerBlock);
 
     container.close();
 
@@ -169,12 +159,12 @@ import static org.junit.Assert.assertFalse;
     File dbFile = KeyValueContainerLocationUtil
         .getContainerDBFile(metaDir, containerID);
     containerData.setDbFile(dbFile);
-    try(ReferenceCountedDB db =
+    try (ReferenceCountedDB ignored =
             BlockUtils.getDB(containerData, conf);
         KeyValueBlockIterator kvIter = new KeyValueBlockIterator(containerID,
             new File(containerData.getContainerPath()))) {
       BlockData block = kvIter.nextBlock();
-      assertTrue(!block.getChunks().isEmpty());
+      assertFalse(block.getChunks().isEmpty());
       ContainerProtos.ChunkInfo c = block.getChunks().get(0);
       File chunkFile = ChunkUtils.getChunkFile(containerData,
           ChunkInfo.getFromProtoBuf(c));
@@ -188,7 +178,7 @@ import static org.junit.Assert.assertFalse;
     }
 
     // metadata check should pass.
-    valid = kvCheck.fastCheck();
+    boolean valid = kvCheck.fastCheck();
     assertTrue(valid);
 
     // checksum validation should fail.
@@ -201,46 +191,46 @@ import static org.junit.Assert.assertFalse;
    * Creates a container with normal and deleted blocks.
    * First it will insert normal blocks, and then it will insert
    * deleted blocks.
-   * @param containerId
-   * @param normalBlocks
-   * @param deletedBlocks
-   * @throws Exception
    */
   private void createContainerWithBlocks(long containerId, int normalBlocks,
-      int deletedBlocks, int chunkLen, int chunksPerBlock) throws Exception {
-    long chunkCount;
+      int deletedBlocks, int chunksPerBlock) throws Exception {
     String strBlock = "block";
     String strChunk = "-chunkFile";
-    long totalBlks = normalBlocks + deletedBlocks;
+    long totalBlocks = normalBlocks + deletedBlocks;
+    int unitLen = 1024;
+    int chunkLen = 3 * unitLen;
+    int bytesPerChecksum = 2 * unitLen;
     Checksum checksum = new Checksum(ContainerProtos.ChecksumType.SHA256,
-        chunkLen);
-    byte[] chunkData = generateRandomData(chunkLen);
+        bytesPerChecksum);
+    byte[] chunkData = RandomStringUtils.randomAscii(chunkLen).getBytes();
     ChecksumData checksumData = checksum.computeChecksum(chunkData);
 
     containerData = new KeyValueContainerData(containerId,
         (long) StorageUnit.BYTES.toBytes(
-            chunksPerBlock * chunkLen * totalBlks),
+            chunksPerBlock * chunkLen * totalBlocks),
         UUID.randomUUID().toString(), UUID.randomUUID().toString());
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
         UUID.randomUUID().toString());
     try (ReferenceCountedDB metadataStore = BlockUtils.getDB(containerData,
         conf)) {
-      chunkManager = new ChunkManagerImpl(true);
+      ChunkManagerImpl chunkManager = new ChunkManagerImpl(true);
 
-      assertTrue(containerData.getChunksPath() != null);
+      assertNotNull(containerData.getChunksPath());
       File chunksPath = new File(containerData.getChunksPath());
       assertTrue(chunksPath.exists());
       // Initially chunks folder should be empty.
-      assertTrue(chunksPath.listFiles().length == 0);
+      File[] chunkFilesBefore = chunksPath.listFiles();
+      assertNotNull(chunkFilesBefore);
+      assertEquals(0, chunkFilesBefore.length);
 
       List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
-      for (int i = 0; i < (totalBlks); i++) {
+      for (int i = 0; i < totalBlocks; i++) {
         BlockID blockID = new BlockID(containerId, i);
         BlockData blockData = new BlockData(blockID);
 
         chunkList.clear();
-        for (chunkCount = 0; chunkCount < chunksPerBlock; chunkCount++) {
+        for (long chunkCount = 0; chunkCount < chunksPerBlock; chunkCount++) {
           String chunkName = strBlock + i + strChunk + chunkCount;
           ChunkInfo info = new ChunkInfo(chunkName, 0, chunkLen);
           info.setChecksumData(checksumData);
@@ -269,15 +259,12 @@ import static org.junit.Assert.assertFalse;
               blockData.getProtoBufMessage().toByteArray());
         }
       }
+
+      File[] chunkFilesAfter = chunksPath.listFiles();
+      assertNotNull(chunkFilesAfter);
+      assertEquals((deletedBlocks + normalBlocks) * chunksPerBlock,
+          chunkFilesAfter.length);
     }
   }
 
-  private static byte[] generateRandomData(int length) {
-    assertTrue(length % 2 == 0);
-    ByteArrayOutputStream os = new ByteArrayOutputStream(length);
-    for (int i = 0; i < length; i++) {
-      os.write(i % 10);
-    }
-    return os.toByteArray();
-  }
 }
