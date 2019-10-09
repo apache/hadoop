@@ -195,44 +195,34 @@ public class ChunkManagerImpl implements ChunkManager {
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
-      DispatcherContext dispatcherContext) throws StorageContainerException {
-    try {
-      KeyValueContainerData containerData = (KeyValueContainerData) container
-          .getContainerData();
-      ByteBuffer data;
-      HddsVolume volume = containerData.getVolume();
-      VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
+  public ByteBuffer readChunk(Container container, BlockID blockID,
+      ChunkInfo info, DispatcherContext dispatcherContext)
+      throws StorageContainerException {
+    KeyValueContainerData containerData = (KeyValueContainerData) container
+        .getContainerData();
+    ByteBuffer data;
+    HddsVolume volume = containerData.getVolume();
+    VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
-      // Checking here, which layout version the container is, and reading
-      // the chunk file in that format.
-      // In version1, we verify checksum if it is available and return data
-      // of the chunk file.
-      if (containerData.getLayOutVersion() == ChunkLayOutVersion
-          .getLatestVersion().getVersion()) {
-        File chunkFile = ChunkUtils.getChunkFile(containerData, info);
+    // Checking here, which layout version the container is, and reading
+    // the chunk file in that format.
+    // In version1, we verify checksum if it is available and return data
+    // of the chunk file.
+    if (containerData.getLayOutVersion() == ChunkLayOutVersion
+        .getLatestVersion().getVersion()) {
+      File chunkFile = ChunkUtils.getChunkFile(containerData, info);
 
-        // In case the chunk file does not exist but tmp chunk file exist,
-        // read from tmp chunk file if readFromTmpFile is set to true
-        if (!chunkFile.exists() && dispatcherContext != null
-            && dispatcherContext.isReadFromTmpFile()) {
-          chunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
-        }
-        data = ChunkUtils.readData(chunkFile, info, volumeIOStats);
-        containerData.incrReadCount();
-        long length = chunkFile.length();
-        containerData.incrReadBytes(length);
-        return data.array();
+      // In case the chunk file does not exist but tmp chunk file exist,
+      // read from tmp chunk file if readFromTmpFile is set to true
+      if (!chunkFile.exists() && dispatcherContext != null
+          && dispatcherContext.isReadFromTmpFile()) {
+        chunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
       }
-    } catch (ExecutionException ex) {
-      LOG.error("read data failed. error: {}", ex);
-      throw new StorageContainerException("Internal error: ",
-          ex, CONTAINER_INTERNAL_ERROR);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      LOG.error("read data failed. error: {}", e);
-      throw new StorageContainerException("Internal error: ",
-          e, CONTAINER_INTERNAL_ERROR);
+      data = ChunkUtils.readData(chunkFile, info, volumeIOStats);
+      containerData.incrReadCount();
+      long length = chunkFile.length();
+      containerData.incrReadBytes(length);
+      return data;
     }
     return null;
   }

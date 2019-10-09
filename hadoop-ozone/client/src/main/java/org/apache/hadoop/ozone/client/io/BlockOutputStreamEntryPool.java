@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.ozone.client.io;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -100,10 +101,17 @@ public class BlockOutputStreamEntryPool {
     Preconditions.checkState(streamBufferMaxSize % streamBufferFlushSize == 0);
     Preconditions.checkState(blockSize % streamBufferMaxSize == 0);
     this.bufferPool =
-        new BufferPool(chunkSize, (int) streamBufferMaxSize / chunkSize);
+        new BufferPool(chunkSize, (int) streamBufferMaxSize / chunkSize,
+            xceiverClientManager.byteBufferToByteStringConversion());
   }
 
-  public BlockOutputStreamEntryPool() {
+  /**
+   * A constructor for testing purpose only.
+   *
+   * @see KeyOutputStream#KeyOutputStream()
+   */
+  @VisibleForTesting
+  BlockOutputStreamEntryPool() {
     streamEntries = new ArrayList<>();
     omClient = null;
     keyArgs = null;

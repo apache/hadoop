@@ -30,7 +30,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
-import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -219,10 +218,6 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL,
         OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_DEFAULT);
     dtService = getOMProxyProvider().getCurrentProxyDelegationToken();
-    boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
-        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
-        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
-    ByteStringHelper.init(isUnsafeByteOperationsEnabled);
     topologyAwareReadEnabled = conf.getBoolean(
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
