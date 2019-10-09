@@ -119,7 +119,7 @@ public class FullCredentialsTokenBinding extends
         "Full Credentials Token Binding",
         new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             awsCredentials,
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
@@ -156,9 +156,10 @@ public class FullCredentialsTokenBinding extends
         convertTokenIdentifier(retrievedIdentifier,
             FullCredentialsTokenIdentifier.class);
     return new AWSCredentialProviderList(
-        "", new MarshalledCredentialProvider(
+        "Full Credentials Token Binding",
+        new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             tokenIdentifier.getMarshalledCredentials(),
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
