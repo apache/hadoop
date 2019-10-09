@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -193,10 +194,10 @@ public final class ContainerTestHelper {
    * @param len - Number of bytes.
    * @return byte array with valid data.
    */
-  public static byte[] getData(int len) {
+  public static ByteBuffer getData(int len) {
     byte[] data = new byte[len];
     r.nextBytes(data);
-    return data;
+    return ByteBuffer.wrap(data);
   }
 
   /**
@@ -206,7 +207,7 @@ public final class ContainerTestHelper {
    * @param data - data array
    * @throws NoSuchAlgorithmException
    */
-  public static void setDataChecksum(ChunkInfo info, byte[] data)
+  public static void setDataChecksum(ChunkInfo info, ByteBuffer data)
       throws OzoneChecksumException {
     Checksum checksum = new Checksum();
     info.setChecksumData(checksum.computeChecksum(data));
@@ -232,7 +233,7 @@ public final class ContainerTestHelper {
 
     writeRequest.setBlockID(blockID.getDatanodeBlockIDProtobuf());
 
-    byte[] data = getData(datalen);
+    ByteBuffer data = getData(datalen);
     ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     setDataChecksum(info, data);
 
@@ -262,7 +263,7 @@ public final class ContainerTestHelper {
       throws Exception {
     ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.PutSmallFileRequestProto.newBuilder();
-    byte[] data = getData(dataLen);
+    ByteBuffer data = getData(dataLen);
     ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, dataLen);
     setDataChecksum(info, data);
 
