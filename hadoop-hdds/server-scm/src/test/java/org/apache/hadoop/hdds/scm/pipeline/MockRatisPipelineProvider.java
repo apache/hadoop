@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -48,7 +47,8 @@ public class MockRatisPipelineProvider extends RatisPipelineProvider {
   }
 
   @Override
-  public Pipeline create(HddsProtos.ReplicationFactor factor, List<DatanodeDetails> nodes) {
+  public Pipeline create(HddsProtos.ReplicationFactor factor,
+                         List<DatanodeDetails> nodes) {
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
         .setState(Pipeline.PipelineState.OPEN)

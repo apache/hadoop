@@ -872,7 +872,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   @Override
-  public void notifyLeaderChanged(RaftGroupMemberId groupMemberId, RaftPeerId raftPeerId) {
+  public void notifyLeaderChanged(RaftGroupMemberId groupMemberId,
+                                  RaftPeerId raftPeerId) {
     ratisServer.handleLeaderChangedNotification(groupMemberId, raftPeerId);
   }
 }

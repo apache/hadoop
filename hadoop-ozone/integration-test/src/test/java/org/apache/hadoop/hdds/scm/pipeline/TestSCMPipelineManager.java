@@ -355,7 +355,7 @@ public class TestSCMPipelineManager {
     List<DatanodeDetails> nodes = pipeline.getNodes();
     Assert.assertEquals(3, nodes.size());
     // Send leader for only first 2 dns
-    nodes.subList(0 ,2).forEach(dn ->
+    nodes.subList(0, 2).forEach(dn ->
         sendPipelineReport(dn, pipeline, pipelineReportHandler, true));
     sendPipelineReport(nodes.get(2), pipeline, pipelineReportHandler, false);
 

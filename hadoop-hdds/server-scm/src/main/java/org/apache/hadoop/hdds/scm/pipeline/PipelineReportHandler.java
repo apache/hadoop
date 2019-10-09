@@ -34,7 +34,6 @@ import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
