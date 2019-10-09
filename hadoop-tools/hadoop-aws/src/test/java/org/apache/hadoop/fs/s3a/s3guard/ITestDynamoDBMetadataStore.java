@@ -675,7 +675,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Item originalVersionMarker = table.getItem(VERSION_MARKER_PRIMARY_KEY);
 
     LOG.info("1/6: remove version marker and tags from table " +
-      "the table is empty, so it should be initialized after the call");
+        "the table is empty, so it should be initialized after the call");
     deleteVersionMarkerItem(table);
     removeVersionMarkerTag(table, addb);
     localTableHandler.initTable();
@@ -760,8 +760,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private void deleteVersionMarkerItem(Table table) {
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
-    assertNull("Version marker should be null after deleting it from the table.",
-        table.getItem(VERSION_MARKER_PRIMARY_KEY));
+    assertNull("Version marker should be null after deleting it " +
+            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY));
   }
 
   /**

@@ -81,8 +81,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.e
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.keySchema;
 
 /**
- * Table handling for dynamo tables, factored out from DynamoDBMetadataStore
- * Mainly
+ * Managing dynamo tables for S3Guard dynamodb based metadatastore.
+ * Factored out from DynamoDBMetadataStore.
  */
 public class DynamoDBMetadataStoreTableManager {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -265,7 +265,7 @@ public class DynamoDBMetadataStoreTableManager {
     if (first.isPresent()) {
       final Tag vmTag = first.get();
       return createVersionMarker(
-          vmTag.getKey(), Integer.valueOf(vmTag.getValue()), 0
+          vmTag.getKey(), Integer.parseInt(vmTag.getValue()), 0
       );
     } else {
       return null;
@@ -320,7 +320,7 @@ public class DynamoDBMetadataStoreTableManager {
 
   /**
    *  Return tags from configuration and the version marker for adding to
-   *  dynamo table during creation
+   *  dynamo table during creation.
    */
   @Retries.OnceRaw
   public List<Tag> getTableTagsFromConfig() {
@@ -340,7 +340,7 @@ public class DynamoDBMetadataStoreTableManager {
   }
 
   /**
-   * Create a new version marker tag
+   * Create a new version marker tag.
    * @return a new version marker tag
    */
   private static Tag newVersionMarkerTag() {
@@ -456,7 +456,7 @@ public class DynamoDBMetadataStoreTableManager {
   }
 
   /**
-   * Add version marker to the dynamo table
+   * Add version marker to the dynamo table.
    */
   @Retries.OnceRaw
   private void putVersionMarkerItemToTable() {
