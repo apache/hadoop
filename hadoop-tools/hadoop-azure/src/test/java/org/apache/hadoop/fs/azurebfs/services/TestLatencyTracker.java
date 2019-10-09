@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.*;
+import java.util.regex.Pattern;
 
 /**
  * Test the latency tracker for abfs
@@ -45,8 +44,7 @@ public final class TestLatencyTracker {
   private final String accountName = "bogusAccountName";
   private final URL url;
 
-  public TestLatencyTracker() throws Exception
-  {
+  public TestLatencyTracker() throws Exception {
     this.url = new URL("http", "www.microsoft.com", "/bogusFile");
   }
 
@@ -78,7 +76,7 @@ public final class TestLatencyTracker {
     List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
     AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Integer> c = new Callable<Integer>() {
         @Override
         public Integer call() throws Exception {
@@ -89,15 +87,16 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Integer> fr: executorService.invokeAll(tasks)) {
+    for (Future<Integer> fr: executorService.invokeAll(tasks)) {
       fr.get();
     }
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       latencyDetails = latencyTracker.getClientLatency();
       Assert.assertNotNull("LatencyTracker should return non-null record", latencyDetails);
       Assert.assertTrue ("Latency record should be in the correct format", Pattern.matches(
-              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+ s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
+              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
+                      + " s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
     }
   }
 
@@ -114,27 +113,28 @@ public final class TestLatencyTracker {
     List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
     AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Integer> c = new Callable<Integer>() {
         @Override
         public Integer call() throws Exception {
           // test latency tracking when aggregate latency numbers are also passed
-          latencyTracker.recordClientLatency(Instant.now(), "oneOperationCaller", "oneOperationCallee", true, Instant.now(), 42, httpOperation);
+          latencyTracker.recordClientLatency(Instant.now(), "oneOperationCaller", "oneOperationCallee", true, Instant.now(), 123, httpOperation);
           return 0;
         }
       };
       tasks.add(c);
     }
 
-    for(Future<Integer> fr: executorService.invokeAll(tasks)) {
+    for (Future<Integer> fr: executorService.invokeAll(tasks)) {
       fr.get();
     }
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       latencyDetails = latencyTracker.getClientLatency();
       Assert.assertNotNull("LatencyTracker should return non-null record", latencyDetails);
-      Assert.assertTrue ("Latency record should be in the correct format", Pattern.matches(
-              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+ ls=[0-9]+ lc=42 s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
+      Assert.assertTrue("Latency record should be in the correct format", Pattern.matches(
+              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
+                      + " ls=[0-9]+ lc=123 s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
     }
   }
 
@@ -151,14 +151,13 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
           Instant startRecord = Instant.now();
 
           try{
-            ; // placeholder try block
           } finally {
             latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, httpOperation);
           }
@@ -171,12 +170,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -193,7 +193,7 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
@@ -202,7 +202,7 @@ public final class TestLatencyTracker {
           try {
             // placeholder try block
           } finally {
-            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 42, httpOperation);
+            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 123, httpOperation);
           }
 
           long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -213,12 +213,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -235,7 +236,7 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
@@ -249,12 +250,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for getting latency records, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for getting latency records, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -270,7 +272,7 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
@@ -290,12 +292,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -311,7 +314,7 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
@@ -320,7 +323,7 @@ public final class TestLatencyTracker {
           try {
             // placeholder try block
           } finally {
-            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 42, httpOperation);
+            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 123, httpOperation);
           }
 
           long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -331,12 +334,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -352,7 +356,7 @@ public final class TestLatencyTracker {
     List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>());
 
-    for(int i=0; i < numTasks; i++) {
+    for (int i=0; i < numTasks; i++) {
       Callable<Long> c = new Callable<Long>() {
         @Override
         public Long call() throws Exception {
@@ -366,12 +370,13 @@ public final class TestLatencyTracker {
       tasks.add(c);
     }
 
-    for(Future<Long> fr: executorService.invokeAll(tasks)) {
+    for (Future<Long> fr: executorService.invokeAll(tasks)) {
       aggregateLatency += fr.get();
     }
 
     double averageRecordLatency = aggregateLatency/numTasks;
-    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).", averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
+    Assert.assertTrue(String.format("Average time for recording singleton latencies, %s ms should be in the range [%s, %s).",
+            averageRecordLatency, minLatencyWhenDisabledMs, maxLatencyWhenDisabledMs),
             averageRecordLatency < maxLatencyWhenDisabledMs && averageRecordLatency >= minLatencyWhenDisabledMs);
   }
 
@@ -399,20 +404,20 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.MAX, Instant.now(), null, null, false, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.MIN, null, null, false, null);
 
-      latencyTracker.recordClientLatency(null, null, null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), null, null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 42, httpOperation);
+      latencyTracker.recordClientLatency(null, null, null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), null, null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), "test", null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
 
-      latencyTracker.recordClientLatency(null, null, null, null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), null, null, null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), null, null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", null, false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, null, 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 0,null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 42, httpOperation);
+      latencyTracker.recordClientLatency(null, null, null, null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), null, null, null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), null, null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", null, false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, null, 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 0, null);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
 
       latencyTracker.recordClientLatency(testInstant, Instant.now(), null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.MAX, Instant.now(), null, null, false, null, 0, null);
@@ -453,7 +458,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 42, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
 
       latencyTracker.recordClientLatency(null, null, null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), null, null, null, false, null, 0, null);
@@ -461,7 +466,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 42, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
 
       latencyTracker.recordClientLatency(testInstant, Instant.now(), null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.MAX, Instant.now(), null, null, false, null, 0, null);

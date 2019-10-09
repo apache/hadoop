@@ -227,7 +227,7 @@ public class AbfsInputStream extends FSInputStream {
       throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
     }
     final AbfsRestOperation op;
-    final Instant start = client.latencyTracker.getLatencyInstant();
+    final Instant start = client.getLatencyTracker().getLatencyInstant();
     boolean success = false;
     AbfsHttpOperation res = null;
     try {
@@ -243,7 +243,7 @@ public class AbfsInputStream extends FSInputStream {
       }
       throw new IOException(ex);
     } finally {
-      client.latencyTracker.recordClientLatency(start, "readRemote", "read", success, res);
+      client.getLatencyTracker().recordClientLatency(start, "readRemote", "read", success, res);
     }
     long bytesRead = op.getResult().getBytesReceived();
     if (bytesRead > Integer.MAX_VALUE) {

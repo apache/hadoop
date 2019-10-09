@@ -290,7 +290,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        final Instant start = client.latencyTracker.getLatencyInstant();
+        final Instant start = client.getLatencyTracker().getLatencyInstant();
         boolean success = false;
         AbfsHttpOperation res = null;
         try {
@@ -300,7 +300,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
           success = true;
           return null;
         } finally {
-          client.latencyTracker.recordClientLatency(start, "writeCurrentBufferToService", "append", success, res);
+          client.getLatencyTracker().recordClientLatency(start, "writeCurrentBufferToService", "append", success, res);
         }
       }
     });
@@ -343,7 +343,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
-    final Instant start = client.latencyTracker.getLatencyInstant();
+    final Instant start = client.getLatencyTracker().getLatencyInstant();
     boolean success = false;
     AbfsHttpOperation res = null;
 
@@ -358,7 +358,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       }
       throw new IOException(ex);
     } finally {
-      client.latencyTracker.recordClientLatency(start, "flushWrittenBytesToServiceInternal", "flush", success, res);
+      client.getLatencyTracker().recordClientLatency(start, "flushWrittenBytesToServiceInternal", "flush", success, res);
     }
     this.lastFlushOffset = offset;
   }

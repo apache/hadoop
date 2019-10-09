@@ -593,7 +593,7 @@ public class AzureBlobFileSystemStore implements Closeable {
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
       } finally {
-        if(shouldContinue) {
+        if (shouldContinue) {
           latencyTracker.recordClientLatency(start, "rename", "renamePath", success, res);
         } else {
           latencyTracker.recordClientLatency(start, "rename", "renamePath", success, startAggregate, countAggregate, res);

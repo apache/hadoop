@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
@@ -42,7 +41,7 @@ public class LatencyTracker {
   private static final Logger LOG = LoggerFactory.getLogger(LatencyTracker.class);
 
   // the queue to hold latency information
-  private final ConcurrentLinkedQueue<String> Q = new ConcurrentLinkedQueue<String>();
+  private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
 
   // whether the latency tracker has been enabled
   private boolean enabled = false;
@@ -73,7 +72,7 @@ public class LatencyTracker {
 
     LOG.debug("LatencyTracker configuration: {}", enabled);
 
-    if(enabled) {
+    if (enabled) {
       try {
         hostName = InetAddress.getLocalHost().getHostName();
       } catch (UnknownHostException e) {
@@ -91,7 +90,9 @@ public class LatencyTracker {
           String calleeName,
           boolean success,
           AbfsHttpOperation res) {
-    if(!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     Instant operationStop = getLatencyInstant();
 
@@ -105,11 +106,13 @@ public class LatencyTracker {
           String calleeName,
           boolean success,
           AbfsHttpOperation res) {
-    if(!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     Instant trackerStart = Instant.now();
-    long latency = isValidInstant(operationStart) && isValidInstant(operationStop) ?
-            Duration.between(operationStart, operationStop).toMillis() : -1;
+    long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
+            ? Duration.between(operationStart, operationStop).toMillis() : -1;
 
     String latencyDetails = String.format(singletonLatencyReportingFormat,
             Instant.now(),
@@ -130,7 +133,9 @@ public class LatencyTracker {
           Instant aggregateStart,
           long aggregateCount,
           AbfsHttpOperation res) {
-    if(!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     Instant operationStop = getLatencyInstant();
 
@@ -146,13 +151,15 @@ public class LatencyTracker {
           Instant aggregateStart,
           long aggregateCount,
           AbfsHttpOperation res){
-    if(!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     Instant trackerStart = Instant.now();
-    long latency = isValidInstant(operationStart) && isValidInstant(operationStop) ?
-            Duration.between(operationStart, operationStop).toMillis() : -1;
-    long aggregateLatency = isValidInstant(aggregateStart) && isValidInstant(operationStop) ?
-            Duration.between(aggregateStart, operationStop).toMillis() : -1;
+    long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
+            ? Duration.between(operationStart, operationStop).toMillis() : -1;
+    long aggregateLatency = isValidInstant(aggregateStart) && isValidInstant(operationStop)
+            ? Duration.between(aggregateStart, operationStop).toMillis() : -1;
 
     String latencyDetails = String.format(aggregateLatencyReportingFormat,
             Instant.now(),
@@ -168,12 +175,14 @@ public class LatencyTracker {
   }
 
   public String getClientLatency() {
-    if (!enabled) return null;
+    if (!enabled) {
+      return null;
+    }
 
     Instant trackerStart = Instant.now();
-    String latencyDetails = Q.poll(); // non-blocking pop
+    String latencyDetails = queue.poll(); // non-blocking pop
 
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       Instant stop = Instant.now();
       long elapsed = Duration.between(trackerStart, stop).toMillis();
       LOG.debug(String.format("Dequeued latency info [%s ms]: %s", elapsed, latencyDetails));
@@ -183,14 +192,17 @@ public class LatencyTracker {
   }
 
   public Instant getLatencyInstant() {
-    if (!enabled) return null;
+    if (!enabled) {
+      return null;
+    }
+
     return Instant.now();
   }
 
   private void offerToQueue(Instant trackerStart, String latencyDetails) {
-    Q.offer(latencyDetails); // non-blocking append
+    queue.offer(latencyDetails); // non-blocking append
 
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       Instant trackerStop = Instant.now();
       long elapsed = Duration.between(trackerStart, trackerStop).toMillis();
       LOG.debug(String.format("Queued latency info [%s ms]: %s", elapsed, latencyDetails));

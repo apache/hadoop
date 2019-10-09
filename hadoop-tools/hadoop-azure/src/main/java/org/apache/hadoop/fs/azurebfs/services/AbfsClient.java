@@ -60,7 +60,7 @@ public class AbfsClient implements Closeable {
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
-  protected final LatencyTracker latencyTracker;
+  private final LatencyTracker latencyTracker;
 
   private final AccessTokenProvider tokenProvider;
 
@@ -102,6 +102,10 @@ public class AbfsClient implements Closeable {
 
   public String getFileSystem() {
     return filesystem;
+  }
+
+  protected LatencyTracker getLatencyTracker() {
+    return latencyTracker;
   }
 
   ExponentialRetryPolicy getRetryPolicy() {
