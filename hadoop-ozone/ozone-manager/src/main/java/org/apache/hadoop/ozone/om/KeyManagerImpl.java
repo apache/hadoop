@@ -1655,31 +1655,21 @@ public class KeyManagerImpl implements KeyManager {
     metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
-      OmKeyInfo keyInfo = null;
-      try {
-        if (ozObject.getResourceType() == OPEN_KEY) {
-          keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        } else {
-          OzoneFileStatus fileStatus = getFileStatus(args);
-          keyInfo = fileStatus.getKeyInfo();
-        }
+      OmKeyInfo keyInfo;
 
-        if (keyInfo == null) {
-          // the key does not exist, but it is a parent "dir" of some key
-          // let access be determined based on volume/bucket/prefix ACL
-          LOG.debug("key:{} is non-existent parent, permit access to user:{}",
-              keyName, context.getClientUgi());
-          return true;
-        }
-      } catch (OMException e) {
-        if (e.getResult() == FILE_NOT_FOUND) {
-          keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        }
+      if (ozObject.getResourceType() == OPEN_KEY) {
+        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
+      } else {
+        OzoneFileStatus fileStatus = getFileStatus(args);
+        keyInfo = fileStatus.getKeyInfo();
       }
 
       if (keyInfo == null) {
-        throw new OMException("Key not found, checkAccess failed. Key:" +
-            objectKey, KEY_NOT_FOUND);
+        // the key does not exist, but it is a parent "dir" of some key
+        // let access be determined based on volume/bucket/prefix ACL
+        LOG.debug("key:{} is non-existent parent, permit access to user:{}",
+            keyName, context.getClientUgi());
+        return true;
       }
 
       boolean hasAccess = OzoneAclUtil.checkAclRight(

@@ -57,8 +57,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS_NATIVE;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_BIND_HOST_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY;
@@ -526,17 +524,5 @@ public final class OmUtils {
     }
 
     return repeatedOmKeyInfo;
-  }
-
-  /**
-   * Returns true if OzoneNativeAuthorizer is configured in the configuration.
-   * @param configuration ozone configuration
-   * @return true if OzoneNativeAuthorizer is configured in the configuration;
-   * else false.
-   */
-  public static boolean isNativeAuthorizerEnabled(Configuration configuration) {
-    String authorizer = configuration.get(OZONE_ACL_AUTHORIZER_CLASS);
-    return authorizer != null &&
-        authorizer.equals(OZONE_ACL_AUTHORIZER_CLASS_NATIVE);
   }
 }

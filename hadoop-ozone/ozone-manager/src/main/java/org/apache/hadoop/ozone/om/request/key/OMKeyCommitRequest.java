@@ -25,11 +25,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,22 +117,9 @@ public class OMKeyCommitRequest extends OMKeyRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     try {
       // check Acl
-      // Native authorizer requires client id as part of keyname to check
-      // write ACL on key. Add client id to key name if ozone native
-      // authorizer is configured.
-      Configuration config = ozoneManager.getConfiguration();
-      if (OmUtils.isNativeAuthorizerEnabled(config)) {
-        String keyNameForAclCheck =
-            keyName + "/" + commitKeyRequest.getClientID();
-        // During key commit request, it is possible that key is
-        // not present in the key table and hence setting the resource type
-        // to OPEN_KEY to check the openKeyTable.
-        checkKeyAcls(ozoneManager, volumeName, bucketName, keyNameForAclCheck,
-            IAccessAuthorizer.ACLType.WRITE, OzoneObj.ResourceType.OPEN_KEY);
-      } else {
-        checkKeyAcls(ozoneManager, volumeName, bucketName, keyName,
-            IAccessAuthorizer.ACLType.WRITE, OzoneObj.ResourceType.KEY);
-      }
+      checkKeyAclsInOpenKeyTable(ozoneManager, volumeName, bucketName,
+          keyName, IAccessAuthorizer.ACLType.WRITE,
+          commitKeyRequest.getClientID());
 
       List<OmKeyLocationInfo> locationInfoList = commitKeyArgs
           .getKeyLocationsList().stream()

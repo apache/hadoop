@@ -301,6 +301,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final boolean grpcBlockTokenEnabled;
   private final boolean useRatisForReplication;
 
+  private boolean isNativeAuthorizerEnabled;
+
   private OzoneManager(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
@@ -473,6 +475,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
         OzoneNativeAuthorizer authorizer =
             (OzoneNativeAuthorizer) accessAuthorizer;
+        isNativeAuthorizerEnabled = true;
         authorizer.setVolumeManager(volumeManager);
         authorizer.setBucketManager(bucketManager);
         authorizer.setKeyManager(keyManager);
@@ -3290,4 +3293,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return ozAdmins;
   }
 
+  /**
+   * Returns true if OzoneNativeAuthorizer is enabled and false if otherwise.
+   * @return if native authorizer is enabled.
+   */
+  public boolean isNativeAuthorizerEnabled() {
+    return isNativeAuthorizerEnabled;
+  }
 }
