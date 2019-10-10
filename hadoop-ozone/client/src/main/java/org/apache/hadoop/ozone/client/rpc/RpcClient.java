@@ -439,10 +439,14 @@ public class RpcClient implements ClientProtocol {
         ozoneManagerClient.getDelegationToken(renewer);
     if (token != null) {
       token.setService(dtService);
-      LOG.debug("Created token {} for dtService {}", token, dtService);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Created token {} for dtService {}", token, dtService);
+      }
     } else {
-      LOG.debug("Cannot get ozone delegation token for renewer {} to access " +
-          "service {}", renewer, dtService);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Cannot get ozone delegation token for renewer {} to " +
+            "access service {}", renewer, dtService);
+      }
     }
     return token;
   }

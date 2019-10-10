@@ -42,7 +42,9 @@ public class OS3ExceptionMapper implements ExceptionMapper<OS3Exception> {
 
   @Override
   public Response toResponse(OS3Exception exception) {
-    LOG.debug("Returning exception. ex: {}", exception.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Returning exception. ex: {}", exception.toString());
+    }
     exception.setRequestId(requestIdentifier.getRequestId());
     return Response.status(exception.getHttpCode())
         .entity(exception.toXml()).build();

@@ -75,7 +75,9 @@ public class S3SecretManagerImpl implements S3SecretManager {
     } finally {
       omMetadataManager.getLock().releaseLock(S3_SECRET_LOCK, kerberosID);
     }
-    LOG.trace("Secret for accessKey:{}, proto:{}", kerberosID, result);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Secret for accessKey:{}, proto:{}", kerberosID, result);
+    }
     return result;
   }
 

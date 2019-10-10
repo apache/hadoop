@@ -110,8 +110,10 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
 
   @Override
   public byte[] createPassword(T identifier) {
-    logger.debug("Creating password for identifier: {}, currentKey: {}",
-        formatTokenId(identifier), currentKey.getKeyId());
+    if (logger.isDebugEnabled()) {
+      logger.debug("Creating password for identifier: {}, currentKey: {}",
+          formatTokenId(identifier), currentKey.getKeyId());
+    }
     byte[] password = null;
     try {
       password = createPassword(identifier.getBytes(),

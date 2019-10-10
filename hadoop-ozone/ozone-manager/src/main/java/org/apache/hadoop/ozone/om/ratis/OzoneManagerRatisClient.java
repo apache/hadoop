@@ -99,8 +99,10 @@ public final class OzoneManagerRatisClient implements Closeable {
   }
 
   public void connect() {
-    LOG.debug("Connecting to OM Ratis Server GroupId:{} OM:{}",
-        raftGroup.getGroupId().getUuid().toString(), omNodeID);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to OM Ratis Server GroupId:{} OM:{}",
+          raftGroup.getGroupId().getUuid().toString(), omNodeID);
+    }
 
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async
@@ -147,8 +149,7 @@ public final class OzoneManagerRatisClient implements Closeable {
     if (message.contains(STATUS_CODE)) {
       String errorCode = message.substring(message.indexOf(STATUS_CODE) +
           STATUS_CODE.length());
-      LOG.debug("Parsing error message for error code " +
-          errorCode);
+      LOG.debug("Parsing error message for error code {}", errorCode);
       return OzoneManagerProtocolProtos.Status.valueOf(errorCode.trim());
     } else {
       return OzoneManagerProtocolProtos.Status.INTERNAL_ERROR;
@@ -166,25 +167,27 @@ public final class OzoneManagerRatisClient implements Closeable {
     CompletableFuture<RaftClientReply> raftClientReply =
         sendRequestAsync(request);
 
-    return raftClientReply.whenComplete((reply, e) -> LOG.debug(
-        "received reply {} for request: cmdType={} traceID={} " +
-            "exception: {}", reply, request.getCmdType(),
-        request.getTraceID(), e))
-        .thenApply(reply -> {
-          try {
-            Preconditions.checkNotNull(reply);
-            if (!reply.isSuccess()) {
-              RaftException exception = reply.getException();
-              Preconditions.checkNotNull(exception, "Raft reply failure " +
-                  "but no exception propagated.");
-              throw new CompletionException(exception);
-            }
-            return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
+    return raftClientReply.whenComplete((reply, e) -> {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("received reply {} for request: cmdType={} traceID={} " +
+                "exception: {}", reply, request.getCmdType(),
+            request.getTraceID(), e);
+      }
+    }).thenApply(reply -> {
+      try {
+        Preconditions.checkNotNull(reply);
+        if (!reply.isSuccess()) {
+          RaftException exception = reply.getException();
+          Preconditions.checkNotNull(exception, "Raft reply failure " +
+              "but no exception propagated.");
+          throw new CompletionException(exception);
+        }
+        return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
 
-          } catch (InvalidProtocolBufferException e) {
-            throw new CompletionException(e);
-          }
-        });
+      } catch (InvalidProtocolBufferException e) {
+        throw new CompletionException(e);
+      }
+    });
   }
 
   /**
@@ -198,7 +201,9 @@ public final class OzoneManagerRatisClient implements Closeable {
       OMRequest request) {
     boolean isReadOnlyRequest = OmUtils.isReadOnly(request);
     ByteString byteString = OMRatisHelper.convertRequestToByteString(request);
-    LOG.debug("sendOMRequestAsync {} {}", isReadOnlyRequest, request);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("sendOMRequestAsync {} {}", isReadOnlyRequest, request);
+    }
     return isReadOnlyRequest ? raftClient.sendReadOnlyAsync(() -> byteString) :
         raftClient.sendAsync(() -> byteString);
   }
