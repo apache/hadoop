@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.security.token.block;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -30,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.DataOutput;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.Set;
@@ -76,6 +78,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -434,5 +437,52 @@ public class TestBlockToken {
         sm.updateKeys();
       }
     }
+  }
+
+  @Test
+  public void testRetrievePasswordWithUnknownFields() throws IOException {
+    BlockTokenIdentifier id = new BlockTokenIdentifier();
+    BlockTokenIdentifier spyId = Mockito.spy(id);
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        DataOutput out = (DataOutput) invocation.getArguments()[0];
+        invocation.callRealMethod();
+        // write something at the end that BlockTokenIdentifier#readFields()
+        // will ignore, but which is still a part of the password
+        out.write(7);
+        return null;
+      }
+    }).when(spyId).write((DataOutput) Mockito.any());
+
+    BlockTokenSecretManager sm =
+        new BlockTokenSecretManager(blockKeyUpdateInterval, blockTokenLifetime,
+            0, 1, "fake-pool", null, false);
+    // master create password
+    byte[] password = sm.createPassword(spyId);
+
+    BlockTokenIdentifier slaveId = new BlockTokenIdentifier();
+    slaveId.readFields(
+        new DataInputStream(new ByteArrayInputStream(spyId.getBytes())));
+
+    // slave retrieve password
+    assertArrayEquals(password, sm.retrievePassword(slaveId));
+  }
+
+  @Test
+  public void testRetrievePasswordWithRecognizableFieldsOnly()
+      throws IOException {
+    BlockTokenSecretManager sm =
+        new BlockTokenSecretManager(blockKeyUpdateInterval, blockTokenLifetime,
+            0, 1, "fake-pool", null, false);
+    // master create password
+    BlockTokenIdentifier masterId = new BlockTokenIdentifier();
+    byte[] password = sm.createPassword(masterId);
+    // set cache to null, so that master getBytes() were only recognizable bytes
+    masterId.setExpiryDate(masterId.getExpiryDate());
+    BlockTokenIdentifier slaveId = new BlockTokenIdentifier();
+    slaveId.readFields(
+        new DataInputStream(new ByteArrayInputStream(masterId.getBytes())));
+    assertArrayEquals(password, sm.retrievePassword(slaveId));
   }
 }
