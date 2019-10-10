@@ -658,7 +658,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       String startKey, String keyPrefix, int maxKeys) throws IOException {
 
     List<OmKeyInfo> result = new ArrayList<>();
-    if (maxKeys == 0) {
+    if (maxKeys <= 0) {
       return result;
     }
 
