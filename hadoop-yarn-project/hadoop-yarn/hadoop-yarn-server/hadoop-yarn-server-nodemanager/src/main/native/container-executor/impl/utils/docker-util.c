@@ -28,6 +28,7 @@
 #include "docker-util.h"
 #include "string-utils.h"
 #include "util.h"
+#include "container-executor.h"
 #include <grp.h>
 #include <pwd.h>
 #include <errno.h>
@@ -374,6 +375,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Invalid docker tmpfs mount";
     case INVALID_DOCKER_RUNTIME:
       return "Invalid docker runtime";
+    case SERVICE_MODE_DISABLED:
+      return "Service mode disabled";
     default:
       return "Unknown error";
   }
@@ -987,6 +990,22 @@ static int set_runtime(const struct configuration *command_config,
   return ret;
 }
 
+int is_service_mode_enabled(const struct configuration *command_config,
+                            const struct configuration *executor_cfg, args *args) {
+    int ret = 0;
+    struct section *section = get_configuration_section(CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, executor_cfg);
+    char *value = get_configuration_value("service-mode", DOCKER_COMMAND_FILE_SECTION, command_config);
+    if (value != NULL && strcasecmp(value, "true") == 0) {
+      if (is_feature_enabled(DOCKER_SERVICE_MODE_ENABLED_KEY, ret, section)) {
+        ret = 1;
+      } else {
+        ret = SERVICE_MODE_DISABLED;
+      }
+     }
+    free(value);
+    return ret;
+}
+
 static int add_ports_mapping_to_command(const struct configuration *command_config, args *args) {
   int i = 0, ret = 0;
   char *network_type = (char*) malloc(128);
@@ -1595,9 +1614,16 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   char *privileged = NULL;
   char *no_new_privileges_enabled = NULL;
   char *use_entry_point = NULL;
+  int service_mode_enabled = 0;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  service_mode_enabled = is_service_mode_enabled(&command_config, conf, args);
+  if (service_mode_enabled == SERVICE_MODE_DISABLED) {
+    ret = SERVICE_MODE_DISABLED;
     goto free_and_exit;
   }
 
@@ -1612,10 +1638,13 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     ret = INVALID_DOCKER_CONTAINER_NAME;
     goto free_and_exit;
   }
-  user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (user == NULL) {
-    ret = INVALID_DOCKER_USER_NAME;
-    goto free_and_exit;
+
+  if (!service_mode_enabled) {
+    user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, &command_config);
+    if (user == NULL) {
+      ret = INVALID_DOCKER_USER_NAME;
+      goto free_and_exit;
+    }
   }
   image = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (image == NULL || validate_docker_image_name(image) != 0) {
@@ -1640,12 +1669,14 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, &command_config);
 
   if (privileged == NULL || strcmp(privileged, "false") == 0) {
-    char *user_buffer = make_string("--user=%s", user);
-    ret = add_to_args(args, user_buffer);
-    free(user_buffer);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-      goto free_and_exit;
+    if (!service_mode_enabled) {
+      char *user_buffer = make_string("--user=%s", user);
+      ret = add_to_args(args, user_buffer);
+      free(user_buffer);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
     }
     no_new_privileges_enabled =
         get_configuration_value("docker.no-new-privileges.enabled",
@@ -1725,9 +1756,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
-  ret = set_group_add(&command_config, args);
-  if (ret != 0) {
-    goto free_and_exit;
+  if (!service_mode_enabled) {
+    ret = set_group_add(&command_config, args);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
   }
 
   ret = set_devices(&command_config, conf, args);
