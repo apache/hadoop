@@ -1396,13 +1396,17 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Get a set containing the names of all active threads.
+   * Get a set containing the names of all active threads,
+   * stripping out all test runner threads.
    * @return the current set of threads.
    */
   public static Set<String> getCurrentThreadNames() {
-    return Thread.getAllStackTraces().keySet()
+    TreeSet<String> threads = Thread.getAllStackTraces().keySet()
         .stream()
         .map(Thread::getName)
+        .filter(n -> n.startsWith("JUnit"))
+        .filter(n -> n.startsWith("surefire"))
         .collect(Collectors.toCollection(TreeSet::new));
+    return threads;
   }
 }
