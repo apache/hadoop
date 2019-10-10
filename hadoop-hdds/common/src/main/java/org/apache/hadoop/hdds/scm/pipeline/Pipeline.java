@@ -41,8 +41,7 @@ import java.util.stream.Collectors;
  */
 public final class Pipeline {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(Pipeline.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Pipeline.class);
   private final PipelineID id;
   private final ReplicationType type;
   private final ReplicationFactor factor;

@@ -193,10 +193,12 @@ public class BlockOutputStreamEntryPool {
                 .setPipeline(streamEntry.getPipeline()).build();
         locationInfoList.add(info);
       }
-      LOG.debug(
-          "block written " + streamEntry.getBlockID() + ", length " + length
-              + " bcsID " + streamEntry.getBlockID()
-              .getBlockCommitSequenceId());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "block written " + streamEntry.getBlockID() + ", length " + length
+                + " bcsID " + streamEntry.getBlockID()
+                .getBlockCommitSequenceId());
+      }
     }
     return locationInfoList;
   }

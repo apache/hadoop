@@ -61,7 +61,9 @@ public final class OMRatisHelper {
    */
   public static RaftClient newRaftClient(RpcType rpcType, String omId, RaftGroup
       group, RetryPolicy retryPolicy, Configuration conf) {
-    LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, omId, group);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, omId, group);
+    }
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
 

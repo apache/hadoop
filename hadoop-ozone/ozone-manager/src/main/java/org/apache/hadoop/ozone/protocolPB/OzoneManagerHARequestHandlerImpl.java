@@ -48,7 +48,9 @@ public class OzoneManagerHARequestHandlerImpl
   @Override
   public OMResponse handleApplyTransaction(OMRequest omRequest,
       long transactionLogIndex) {
-    LOG.debug("Received OMRequest: {}, ", omRequest);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Received OMRequest: {}, ", omRequest);
+    }
     Type cmdType = omRequest.getCmdType();
     switch (cmdType) {
     case CreateVolume:

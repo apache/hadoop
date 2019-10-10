@@ -88,7 +88,9 @@ public class OpenKeyCleanupService extends BackgroundService {
             if (result.isSuccess()) {
               try {
                 keyManager.deleteExpiredOpenKey(result.getObjectKey());
-                LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
+                }
                 deletedSize += 1;
               } catch (IOException e) {
                 LOG.warn("Failed to delete hanging-open key {}",

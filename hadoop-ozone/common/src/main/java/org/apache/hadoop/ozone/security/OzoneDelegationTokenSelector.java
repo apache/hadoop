@@ -43,9 +43,13 @@ public class OzoneDelegationTokenSelector
   @Override
   public Token<OzoneTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
-    LOG.trace("Getting token for service {}", service);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Getting token for service {}", service);
+    }
     Token token = getSelectedTokens(service, tokens);
-    LOG.debug("Got tokens: {} for service {}", token, service);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Got tokens: {} for service {}", token, service);
+    }
     return token;
   }
 

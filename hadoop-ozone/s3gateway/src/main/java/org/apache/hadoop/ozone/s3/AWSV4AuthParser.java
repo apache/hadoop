@@ -110,10 +110,14 @@ public class AWSV4AuthParser implements AWSAuthParser {
 
     canonicalRequest = buildCanonicalRequest();
     strToSign.append(hash(canonicalRequest));
-    LOG.debug("canonicalRequest:[{}]", canonicalRequest);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("canonicalRequest:[{}]", canonicalRequest);
+    }
 
-    headerMap.keySet().forEach(k -> LOG.trace("Header:{},value:{}", k,
-        headerMap.get(k)));
+    if (LOG.isTraceEnabled()) {
+      headerMap.keySet().forEach(k -> LOG.trace("Header:{},value:{}", k,
+          headerMap.get(k)));
+    }
 
     LOG.debug("StringToSign:[{}]", strToSign);
     stringToSign = strToSign.toString();

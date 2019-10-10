@@ -214,8 +214,10 @@ public class OMFailoverProxyProvider implements
   @Override
   public void performFailover(OzoneManagerProtocolPB currentProxy) {
     int newProxyIndex = incrementProxyIndex();
-    LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
-        newProxyIndex, omNodeIDList.get(newProxyIndex));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
+          newProxyIndex, omNodeIDList.get(newProxyIndex));
+    }
   }
 
   /**
