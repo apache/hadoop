@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 
+import javax.annotation.Nullable;
+
 /**
  * The input stream for the COS blob store.
  * Optimized sequential read flow based on a forward read-ahead queue
@@ -83,8 +85,15 @@ public class CosNInputStream extends FSInputStream {
       readyCondition.signalAll();
     }
 
+    @Nullable
     public byte[] getBuffer() {
-      return this.buffer;
+      if (this.buffer.length == 0) return null;
+
+      byte[] tempBuffer = new byte[this.buffer.length];
+      for (int index = 0; index < this.buffer.length; index++) {
+        tempBuffer[index] = this.buffer[index];
+      }
+      return tempBuffer;
     }
 
     public int getStatus() {

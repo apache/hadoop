@@ -63,7 +63,6 @@ public final class BufferPool {
 
   private File createDir(String dirPath) throws IOException {
     File dir = new File(dirPath);
-    if (null != dir) {
       if (!dir.exists()) {
         LOG.debug("Buffer dir: [{}] does not exists. create it first.",
             dirPath);
@@ -86,10 +85,6 @@ public final class BufferPool {
       } else {
         LOG.debug("buffer dir: {} already exists.", dirPath);
       }
-    } else {
-      throw new IOException("creating buffer dir: " + dir.getAbsolutePath()
-          + "unsuccessfully.");
-    }
 
     return dir;
   }
