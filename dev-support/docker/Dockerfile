@@ -106,6 +106,23 @@ ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
+# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
+######
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/protobuf-src \
+    && curl -L -s -S \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+      -o /opt/protobuf.tar.gz \
+    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
+    && cd /opt/protobuf-src \
+    && ./configure --prefix=/opt/protobuf \
+    && make install \
+    && cd /root \
+    && rm -rf /opt/protobuf-src
+ENV PROTOBUF_HOME /opt/protobuf
+ENV PATH "${PATH}:/opt/protobuf/bin"
+
+######
 # Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
 ######
 # hadolint ignore=DL3008
