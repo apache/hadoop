@@ -1642,6 +1642,20 @@
   </property>
 
   <property>
+    <name>ozone.om.exception.stacktrace.propagate</name>
+    <value>true</value>
+    <tag>OZONE, OM, DEBUG</tag>
+    <description>
+      If true, propagate full stacktrace for system exceptions to the client.
+      If false, propagate summary message only and log stacktrace on server.
+      Full stacktrace on the client is useful for developers to debug
+      unexpected system errors encountered on the server while handling a
+      request.
+      This setting is not applicable for business exceptions.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.om.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
