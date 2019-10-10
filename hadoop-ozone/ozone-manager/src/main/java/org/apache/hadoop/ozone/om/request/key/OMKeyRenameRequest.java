@@ -123,10 +123,8 @@ public class OMKeyRenameRequest extends OMKeyRequest {
       acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
-      // Not doing bucket/volume checks here. In this way we can avoid db
-      // checks for them.
-      // TODO: Once we have volume/bucket full cache, we can add
-      // them back, as these checks will be inexpensive at that time.
+      // Validate bucket and volume exists or not.
+      validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
 
       // fromKeyName should exist
       String fromKey = omMetadataManager.getOzoneKey(
