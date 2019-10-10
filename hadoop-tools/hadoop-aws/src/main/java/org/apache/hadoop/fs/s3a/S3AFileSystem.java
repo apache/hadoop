@@ -2719,7 +2719,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Raw {@code getFileStatus} that talks direct to S3.
-   * Used to implement {@link #innerGetFileStatus(Path, boolean)},
+   * Used to implement {@link #innerGetFileStatus(Path, boolean, Set)},
    * and for direct management of empty directory blobs.
    * Retry policy: retry translated.
    * @param path Qualified path
@@ -2730,30 +2730,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
+  @VisibleForTesting
   @Retries.RetryTranslated
-  private S3AFileStatus s3GetFileStatus(final Path path,
-      String key,
+  S3AFileStatus s3GetFileStatus(final Path path,
+      final String key,
       final Set<StatusProbeEnum> probes,
       final Set<Path> tombstones) throws IOException {
     if (!key.isEmpty()) {
-      if (probes.contains(StatusProbeEnum.Head)) {
+      if (probes.contains(StatusProbeEnum.Head) && !key.endsWith("/")) {
         try {
+          // look for the simple file
           ObjectMetadata meta = getObjectMetadata(key);
-
-          if (objectRepresentsDirectory(key, meta.getContentLength())) {
-            LOG.debug("Found exact file: fake directory");
-            return new S3AFileStatus(Tristate.TRUE, path, username);
-          } else {
-            LOG.debug("Found exact file: normal file");
-            return new S3AFileStatus(meta.getContentLength(),
-                dateToLong(meta.getLastModified()),
-                path,
-                getDefaultBlockSize(path),
-                username,
-                meta.getETag(),
-                meta.getVersionId());
-          }
+          LOG.debug("Found exact file: normal file {}", key);
+          return new S3AFileStatus(meta.getContentLength(),
+              dateToLong(meta.getLastModified()),
+              path,
+              getDefaultBlockSize(path),
+              username,
+              meta.getETag(),
+              meta.getVersionId());
         } catch (AmazonServiceException e) {
+          // if the response is a 404 error, it just means that there is
+          // no file at that path...the remaining checks will be needed.
           if (e.getStatusCode() != SC_404) {
             throw translateException("getFileStatus", path, e);
           }
@@ -2762,9 +2760,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
       }
 
+      // Either a normal file was not found or the probe was skipped.
+      // because the key ended in "/" or it was not in the set of probes.
       // Look for the dir marker
-      if (!key.endsWith("/") && probes.contains(StatusProbeEnum.DirMarker)) {
-        String newKey = key + "/";
+      if (probes.contains(StatusProbeEnum.DirMarker)) {
+        String newKey = maybeAddTrailingSlash(key);
         try {
           ObjectMetadata meta = getObjectMetadata(newKey);
 
@@ -2796,8 +2796,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // execute the list
     if (probes.contains(StatusProbeEnum.List)) {
       try {
-        key = maybeAddTrailingSlash(key);
-        S3ListRequest request = createListObjectsRequest(key, "/", 1);
+        String dirKey = maybeAddTrailingSlash(key);
+        S3ListRequest request = createListObjectsRequest(dirKey, "/", 1);
 
         S3ListResult objects = listObjects(request);
 

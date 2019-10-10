@@ -19,12 +19,14 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -125,6 +127,19 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
   private void resetMetricDiffs() {
     reset(metadataRequests, listRequests);
+  }
+
+  /**
+   * Verify that the head and list calls match expectations,
+   * then reset the counters ready for the next operation.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   */
+  private void verifyOperationCount(int head, int list) {
+    metadataRequests.assertDiffEquals(head);
+    listRequests.assertDiffEquals(list);
+    metadataRequests.reset();
+    listRequests.reset();
   }
 
   @Test
@@ -251,12 +266,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "In S3, rename deletes any fake directories as a part of "
         + "clean up activity");
     S3AFileSystem fs = getFileSystem();
-
-    // As this test uses the s3 metrics to count the number of fake directory
-    // operations, it depends on side effects happening internally. With
-    // metadata store enabled, it is brittle to change. We disable this test
-    // before the internal behavior w/ or w/o metadata store.
-//    assumeFalse(fs.hasMetadataStore());
 
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
@@ -435,5 +444,69 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       fs.delete(src, false);
       fs.delete(dest, false);
     }
+  }
+
+  @Test
+  public void testDirProbes() throws Throwable {
+    describe("Test directory probe cost -raw only");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+    String dir = "testEmptyDirHeadProbe";
+    Path emptydir = path(dir);
+    // Create the empty directory.
+    fs.mkdirs(emptydir);
+
+    // metrics and assertions.
+    resetMetricDiffs();
+
+    intercept(FileNotFoundException.class, () ->
+        fs.innerGetFileStatus(emptydir, false,
+            StatusProbeEnum.HEAD_ONLY));
+    verifyOperationCount(1, 0);
+
+    // a LIST will find it -but it doesn't consider it an empty dir.
+    S3AFileStatus status = fs.innerGetFileStatus(emptydir, true,
+        StatusProbeEnum.LIST_ONLY);
+    verifyOperationCount(0, 1);
+    Assertions.assertThat(status)
+        .describedAs("LIST output is not considered empty")
+        .matches(s -> !s.isEmptyDirectory().equals(Tristate.TRUE),  "is empty");
+
+    // now add a trailing slash to the key and use the
+    // deep internal s3GetFileStatus method call.
+    String emptyDirTrailingSlash = fs.pathToKey(emptydir.getParent())
+        + "/" + dir +  "/";
+    // A HEAD request does not probe for keys with a trailing /
+    intercept(FileNotFoundException.class, () ->
+        fs.s3GetFileStatus(emptydir, emptyDirTrailingSlash,
+            StatusProbeEnum.HEAD_ONLY, null));
+    verifyOperationCount(0, 0);
+
+    // but ask for a directory marker and you get the entry
+    status = fs.s3GetFileStatus(emptydir,
+        emptyDirTrailingSlash,
+        StatusProbeEnum.DIR_MARKER_ONLY, null);
+    verifyOperationCount(1, 0);
+    assertEquals(emptydir, status.getPath());
+  }
+
+  @Test
+  public void testCreateCost() throws Throwable {
+    describe("Test file creation cost -raw only");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+    resetMetricDiffs();
+    Path testFile = path("testCreateCost");
+
+    // when overwrite is false, the path is checked for existence.
+    try (FSDataOutputStream out = fs.create(testFile, false)) {
+      verifyOperationCount(2, 1);
+    }
+
+    // but when true: only the directory checks take place.
+    try (FSDataOutputStream out = fs.create(testFile, true)) {
+      verifyOperationCount(1, 1);
+    }
+
   }
 }
