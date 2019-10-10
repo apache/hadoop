@@ -120,8 +120,8 @@ public final class TestOMRequestUtils {
       OMMetadataManager omMetadataManager) throws Exception {
 
 
-     OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
-         replicationType, replicationFactor);
+    OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
+        replicationType, replicationFactor);
 
     if (openKeyTable) {
       omMetadataManager.getOpenKeyTable().put(
