@@ -619,23 +619,31 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     }
     int currentCount = 0;
 
-    try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
-        bucketIter = bucketTable.iterator()) {
-      KeyValue<String, OmBucketInfo> kv = bucketIter.seek(startKey);
-      while (currentCount < maxNumOfBuckets && bucketIter.hasNext()) {
-        kv = bucketIter.next();
-        // Skip the Start Bucket if needed.
-        if (kv != null && skipStartKey &&
-            kv.getKey().equals(startKey)) {
+
+    // For Bucket it is full cache, so we can just iterate in-memory table
+    // cache.
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>>> iterator =
+        bucketTable.cacheIterator();
+
+
+    while (currentCount < maxNumOfBuckets && iterator.hasNext()) {
+      Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>> entry =
+          iterator.next();
+
+      String key = entry.getKey().getCacheKey();
+      OmBucketInfo omBucketInfo = entry.getValue().getCacheValue();
+      // Making sure that entry in cache is not for delete bucket request.
+
+      if (omBucketInfo != null) {
+        if (key.equals(startKey) && skipStartKey) {
           continue;
         }
-        if (kv != null && kv.getKey().startsWith(seekPrefix)) {
-          result.add(kv.getValue());
+
+        // We should return only the keys, whose keys match with prefix and
+        // the keys after the startBucket.
+        if (key.startsWith(seekPrefix) && key.compareTo(startKey) > 0) {
+          result.add(omBucketInfo);
           currentCount++;
-        } else {
-          // The SeekPrefix does not match any more, we can break out of the
-          // loop.
-          break;
         }
       }
     }
