@@ -209,6 +209,14 @@ public abstract class HATestUtil {
   public static MiniQJMHACluster setUpObserverCluster(
       Configuration conf, int numObservers, int numDataNodes,
       boolean fastTailing) throws IOException {
+    return setUpObserverCluster(conf, numObservers, numDataNodes,
+        fastTailing, null, null);
+  }
+
+  public static MiniQJMHACluster setUpObserverCluster(
+      Configuration conf, int numObservers, int numDataNodes,
+      boolean fastTailing, long[] simulatedCapacities,
+      String[] racks) throws IOException {
     // disable block scanner
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
 
@@ -227,7 +235,9 @@ public abstract class HATestUtil {
 
     MiniQJMHACluster.Builder qjmBuilder = new MiniQJMHACluster.Builder(conf)
         .setNumNameNodes(2 + numObservers);
-    qjmBuilder.getDfsBuilder().numDataNodes(numDataNodes);
+    qjmBuilder.getDfsBuilder().numDataNodes(numDataNodes)
+        .simulatedCapacities(simulatedCapacities)
+        .racks(racks);
     MiniQJMHACluster qjmhaCluster = qjmBuilder.build();
     MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
 
