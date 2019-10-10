@@ -148,9 +148,11 @@ public class OzoneManagerDoubleBuffer {
           flushedTransactionCount.addAndGet(flushedTransactionsSize);
           flushIterations.incrementAndGet();
 
-          LOG.debug("Sync Iteration {} flushed transactions in this " +
-                  "iteration{}", flushIterations.get(),
-              flushedTransactionsSize);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Sync Iteration {} flushed transactions in this " +
+                    "iteration{}", flushIterations.get(),
+                flushedTransactionsSize);
+          }
 
           long lastRatisTransactionIndex =
               readyBuffer.stream().map(DoubleBufferEntry::getTrxLogIndex)

@@ -96,8 +96,10 @@ public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
   @Override
   void onComplete(IOException ex) {
     if (ex == null) {
-      LOG.debug("Set acls: {} to volume: {} success!",
-          getAcls(), getVolumeName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Set acls: {} to volume: {} success!",
+            getAcls(), getVolumeName());
+      }
     } else {
       LOG.error("Set acls {} to volume {} failed!",
           getAcls(), getVolumeName(), ex);

@@ -1661,8 +1661,10 @@ public class KeyManagerImpl implements KeyManager {
         if (keyInfo == null) {
           // the key does not exist, but it is a parent "dir" of some key
           // let access be determined based on volume/bucket/prefix ACL
-          LOG.debug("key:{} is non-existent parent, permit access to user:{}",
-              keyName, context.getClientUgi());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("key:{} is non-existent parent, permit access to user:{}",
+                keyName, context.getClientUgi());
+          }
           return true;
         }
       } catch (OMException e) {
@@ -1678,8 +1680,10 @@ public class KeyManagerImpl implements KeyManager {
 
       boolean hasAccess = OzoneAclUtil.checkAclRight(
           keyInfo.getAcls(), context);
-      LOG.debug("user:{} has access rights for key:{} :{} ",
-          context.getClientUgi(), ozObject.getKeyName(), hasAccess);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("user:{} has access rights for key:{} :{} ",
+            context.getClientUgi(), ozObject.getKeyName(), hasAccess);
+      }
       return hasAccess;
     } catch (IOException ex) {
       if(ex instanceof OMException) {
@@ -1766,10 +1770,11 @@ public class KeyManagerImpl implements KeyManager {
       if (keys.iterator().hasNext()) {
         return new OzoneFileStatus(keyName);
       }
-
-      LOG.debug("Unable to get file status for the key: volume:" + volumeName +
-          " bucket:" + bucketName + " key:" + keyName + " with error no " +
-          "such file exists:");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Unable to get file status for the key: volume: {}, bucket:" +
+                " {}, key: {}, with error: No such file exists.", volumeName,
+            bucketName, keyName);
+      }
       throw new OMException("Unable to get file status: volume: " +
           volumeName + " bucket: " + bucketName + " key: " + keyName,
           FILE_NOT_FOUND);
@@ -2132,8 +2137,10 @@ public class KeyManagerImpl implements KeyManager {
             List<DatanodeDetails> sortedNodes = scmClient.getBlockClient()
                 .sortDatanodes(nodeList, clientMachine);
             k.getPipeline().setNodesInOrder(sortedNodes);
-            LOG.debug("Sort datanodes {} for client {}, return {}", nodes,
-                clientMachine, sortedNodes);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Sort datanodes {} for client {}, return {}", nodes,
+                  clientMachine, sortedNodes);
+            }
           } catch (IOException e) {
             LOG.warn("Unable to sort datanodes based on distance to " +
                 "client, volume=" + keyInfo.getVolumeName() +

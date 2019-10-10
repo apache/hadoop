@@ -97,8 +97,10 @@ public class KeyInputStream extends InputStream implements Seekable {
     long keyLength = 0;
     for (int i = 0; i < blockInfos.size(); i++) {
       OmKeyLocationInfo omKeyLocationInfo = blockInfos.get(i);
-      LOG.debug("Adding stream for accessing {}. The stream will be " +
-          "initialized later.", omKeyLocationInfo);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding stream for accessing {}. The stream will be " +
+            "initialized later.", omKeyLocationInfo);
+      }
 
       addStream(omKeyLocationInfo, xceiverClientManager,
           verifyChecksum);

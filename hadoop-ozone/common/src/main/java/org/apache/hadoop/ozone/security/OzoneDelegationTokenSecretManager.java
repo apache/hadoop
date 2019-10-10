@@ -289,8 +289,10 @@ public class OzoneDelegationTokenSecretManager
       String canceller) throws IOException {
     OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(
         token.getIdentifier());
-    LOG.debug("Token cancellation requested for identifier: {}",
-        formatTokenId(id));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Token cancellation requested for identifier: {}",
+          formatTokenId(id));
+    }
 
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner " + formatTokenId(id));
