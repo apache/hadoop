@@ -1530,6 +1530,17 @@
   </property>
 
   <property>
+    <name>ozone.om.lock.fair</name>
+    <value>false</value>
+    <description>If this is true, the Ozone Manager lock will be used in Fair
+      mode, which will schedule threads in the order received/queued. If this is
+      false, uses non-fair ordering. See
+      java.util.concurrent.locks.ReentrantReadWriteLock
+      for more information on fair/non-fair locks.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.om.ratis.enable</name>
     <value>false</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>

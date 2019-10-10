@@ -29,6 +29,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.lock.LockManager;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK;
+
 /**
  * Provides different locks to handle concurrency in OzoneMaster.
  * We also maintain lock hierarchy, based on the weight.
@@ -89,7 +92,9 @@ public class OzoneManagerLock {
    * @param conf Configuration object
    */
   public OzoneManagerLock(Configuration conf) {
-    manager = new LockManager<>(conf);
+    boolean fair = conf.getBoolean(OZONE_MANAGER_FAIR_LOCK,
+        OZONE_MANAGER_FAIR_LOCK_DEFAULT);
+    manager = new LockManager<>(conf, fair);
   }
 
   /**
