@@ -19,9 +19,11 @@ package org.apache.hadoop.ozone.om;
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -186,6 +188,230 @@ public class TestOmMetadataManager {
     omMetadataManager.getBucketTable().addCacheEntry(
         new CacheKey<>(omMetadataManager.getBucketKey(volumeName, bucketName)),
         new CacheValue<>(Optional.of(omBucketInfo), 1));
+  }
+
+  @Test
+  public void testListKeys() throws Exception {
+
+    String volumeNameA = "volumeA";
+    String volumeNameB = "volumeB";
+    String ozoneBucket = "ozoneBucket";
+    String hadoopBucket = "hadoopBucket";
+
+
+    // Create volumes and buckets.
+    TestOMRequestUtils.addVolumeToDB(volumeNameA, omMetadataManager);
+    TestOMRequestUtils.addVolumeToDB(volumeNameB, omMetadataManager);
+    addBucketsToCache(volumeNameA, ozoneBucket);
+    addBucketsToCache(volumeNameB, hadoopBucket);
+
+
+    String prefixKeyA = "key-a";
+    String prefixKeyB = "key-b";
+    TreeSet<String> keysASet = new TreeSet<>();
+    TreeSet<String> keysBSet = new TreeSet<>();
+    for (int i=1; i<= 100; i++) {
+      if (i % 2 == 0) {
+        keysASet.add(
+            prefixKeyA + i);
+        addKeysToOM(volumeNameA, ozoneBucket, prefixKeyA + i, i);
+      } else {
+        keysBSet.add(
+            prefixKeyB + i);
+        addKeysToOM(volumeNameA, hadoopBucket, prefixKeyB + i, i);
+      }
+    }
+
+
+    TreeSet<String> keysAVolumeBSet = new TreeSet<>();
+    TreeSet<String> keysBVolumeBSet = new TreeSet<>();
+    for (int i=1; i<= 100; i++) {
+      if (i % 2 == 0) {
+        keysAVolumeBSet.add(
+            prefixKeyA + i);
+        addKeysToOM(volumeNameB, ozoneBucket, prefixKeyA + i, i);
+      } else {
+        keysBVolumeBSet.add(
+            prefixKeyB + i);
+        addKeysToOM(volumeNameB, hadoopBucket, prefixKeyB + i, i);
+      }
+    }
+
+
+    // List all keys which have prefix "key-a"
+    List<OmKeyInfo> omKeyInfoList =
+        omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+            null, prefixKeyA, 100);
+
+    Assert.assertEquals(omKeyInfoList.size(),  50);
+
+    for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+      Assert.assertTrue(omKeyInfo.getKeyName().startsWith(
+          prefixKeyA));
+    }
+
+
+    String startKey = prefixKeyA + 10;
+    omKeyInfoList =
+        omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+            startKey, prefixKeyA, 100);
+
+    Assert.assertEquals(keysASet.tailSet(
+        startKey).size() - 1, omKeyInfoList.size());
+
+    startKey = prefixKeyA + 38;
+    omKeyInfoList =
+        omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+            startKey, prefixKeyA, 100);
+
+    Assert.assertEquals(keysASet.tailSet(
+        startKey).size() - 1, omKeyInfoList.size());
+
+    for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+      Assert.assertTrue(omKeyInfo.getKeyName().startsWith(
+          prefixKeyA));
+      Assert.assertFalse(omKeyInfo.getBucketName().equals(
+          prefixKeyA + 38));
+    }
+
+
+
+    omKeyInfoList = omMetadataManager.listKeys(volumeNameB, hadoopBucket,
+        null, prefixKeyB, 100);
+
+    Assert.assertEquals(omKeyInfoList.size(),  50);
+
+    for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+      Assert.assertTrue(omKeyInfo.getKeyName().startsWith(
+          prefixKeyB));
+    }
+
+    // Try to get keys by count 10, like that get all keys in the
+    // volumeB/ozoneBucket with "key-a".
+    startKey = null;
+    TreeSet<String> expectedKeys = new TreeSet<>();
+    for (int i=0; i<5; i++) {
+
+      omKeyInfoList = omMetadataManager.listKeys(volumeNameB, hadoopBucket,
+          startKey, prefixKeyB, 10);
+
+      Assert.assertEquals(10, omKeyInfoList.size());
+
+      for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+        expectedKeys.add(omKeyInfo.getKeyName());
+        Assert.assertTrue(omKeyInfo.getKeyName().startsWith(
+            prefixKeyB));
+        startKey =  omKeyInfo.getKeyName();
+      }
+    }
+
+    Assert.assertEquals(expectedKeys, keysBVolumeBSet);
+
+
+    // As now we have iterated all 50 buckets, calling next time should
+    // return empty list.
+    omKeyInfoList = omMetadataManager.listKeys(volumeNameB, hadoopBucket,
+        startKey, prefixKeyB, 10);
+
+    Assert.assertEquals(omKeyInfoList.size(), 0);
+
+  }
+
+  @Test
+  public void testListKeysWithFewDeleteEntriesInCache() throws Exception {
+    String volumeNameA = "volumeA";
+    String ozoneBucket = "ozoneBucket";
+
+    // Create volumes and bucket.
+    TestOMRequestUtils.addVolumeToDB(volumeNameA, omMetadataManager);
+
+    addBucketsToCache(volumeNameA, ozoneBucket);
+
+    String prefixKeyA = "key-a";
+    TreeSet<String> keysASet = new TreeSet<>();
+    TreeSet<String> deleteKeySet = new TreeSet<>();
+
+
+    for (int i=1; i<= 100; i++) {
+      if (i % 2 == 0) {
+        keysASet.add(
+            prefixKeyA + i);
+        addKeysToOM(volumeNameA, ozoneBucket, prefixKeyA + i, i);
+      } else {
+        addKeysToOM(volumeNameA, ozoneBucket, prefixKeyA + i, i);
+        String key = omMetadataManager.getOzoneKey(volumeNameA,
+            ozoneBucket, prefixKeyA + i);
+        // Mark as deleted in cache.
+        omMetadataManager.getKeyTable().addCacheEntry(
+            new CacheKey<>(key),
+            new CacheValue<>(Optional.absent(), 100L));
+        deleteKeySet.add(key);
+      }
+    }
+
+    // Now list keys which match with prefixKeyA.
+    List<OmKeyInfo> omKeyInfoList =
+        omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+            null, prefixKeyA, 100);
+
+    // As in total 100, 50 are marked for delete. It should list only 50 keys.
+    Assert.assertEquals(50, omKeyInfoList.size());
+
+    TreeSet<String> expectedKeys = new TreeSet<>();
+
+    for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+      expectedKeys.add(omKeyInfo.getKeyName());
+      Assert.assertTrue(omKeyInfo.getKeyName().startsWith(prefixKeyA));
+    }
+
+    Assert.assertEquals(expectedKeys, keysASet);
+
+
+    // Now get key count by 10.
+    String startKey = null;
+    expectedKeys = new TreeSet<>();
+    for (int i=0; i<5; i++) {
+
+      omKeyInfoList = omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+          startKey, prefixKeyA, 10);
+
+      System.out.println(i);
+      Assert.assertEquals(10, omKeyInfoList.size());
+
+      for (OmKeyInfo omKeyInfo : omKeyInfoList) {
+        expectedKeys.add(omKeyInfo.getKeyName());
+        Assert.assertTrue(omKeyInfo.getKeyName().startsWith(
+            prefixKeyA));
+        startKey =  omKeyInfo.getKeyName();
+      }
+    }
+
+    Assert.assertEquals(keysASet, expectedKeys);
+
+
+    // As now we have iterated all 50 buckets, calling next time should
+    // return empty list.
+    omKeyInfoList = omMetadataManager.listKeys(volumeNameA, ozoneBucket,
+        startKey, prefixKeyA, 10);
+
+    Assert.assertEquals(omKeyInfoList.size(), 0);
+
+
+
+  }
+
+  private void addKeysToOM(String volumeName, String bucketName,
+      String keyName, int i) throws Exception {
+
+    if (i%2== 0) {
+      TestOMRequestUtils.addKeyToTable(false, volumeName, bucketName, keyName,
+          1000L, HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.ONE, omMetadataManager);
+    } else {
+      TestOMRequestUtils.addKeyToTableCache(volumeName, bucketName, keyName,
+          HddsProtos.ReplicationType.RATIS, HddsProtos.ReplicationFactor.ONE,
+          omMetadataManager);
+    }
   }
 
 }
