@@ -306,7 +306,7 @@ public final class HddsClientUtils {
 
   public static Throwable checkForException(Exception e) {
     Throwable t = e;
-    while (t != null) {
+    while (t != null && t.getCause() != null) {
       for (Class<? extends Exception> cls : getExceptionList()) {
         if (cls.isInstance(t)) {
           return t;
