@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 
 public class SchedulerAppUtils {
 
   public static boolean isPlaceBlacklisted(
-      SchedulerApplicationAttempt application, SchedulerNode node, Log log) {
+      SchedulerApplicationAttempt application, SchedulerNode node,
+      Logger log) {
     if (application.isPlaceBlacklisted(node.getNodeName())) {
       if (log.isDebugEnabled()) {
         log.debug("Skipping 'host' " + node.getNodeName() +

@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.Time;
@@ -58,7 +58,8 @@ import com.google.common.collect.ImmutableSet;
 @Unstable
 public abstract class SchedulerNode {
 
-  private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SchedulerNode.class);
 
   private Resource unallocatedResource = Resource.newInstance(0, 0);
   private Resource allocatedResource = Resource.newInstance(0, 0);

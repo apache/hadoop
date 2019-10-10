@@ -24,8 +24,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.DateUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.AccessControlException;
@@ -81,7 +82,8 @@ import com.google.common.collect.Sets;
 @Private
 @Unstable
 public class LeafQueue extends AbstractCSQueue {
-  private static final Log LOG = LogFactory.getLog(LeafQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LeafQueue.class);
 
   private float absoluteUsedCapacity = 0.0f;
 

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * It records an activity operation in allocation,
@@ -34,7 +34,8 @@ public class AllocationActivity {
   private ActivityState state;
   private String diagnostic = null;
 
-  private static final Log LOG = LogFactory.getLog(AllocationActivity.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AllocationActivity.class);
 
   public AllocationActivity(String parentName, String queueName,
       String priority, ActivityState state, String diagnostic, String type) {

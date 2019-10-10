@@ -36,8 +36,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configurable;
@@ -176,7 +178,10 @@ public class CapacityScheduler extends
     PreemptableResourceScheduler, CapacitySchedulerContext, Configurable,
     ResourceAllocationCommitter, MutableConfScheduler {
 
-  private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CapacityScheduler.class);
 
   private CapacitySchedulerQueueManager queueManager;
 
@@ -666,7 +671,7 @@ public class CapacityScheduler extends
           }
 
         } catch (InterruptedException e) {
-          LOG.error(e);
+          LOG.error(e.toString());
           Thread.currentThread().interrupt();
         }
       }
@@ -824,7 +829,7 @@ public class CapacityScheduler extends
               + "supported by the capacity scheduler, please "
               + "restart with all queues configured"
               + " which were present before shutdown/restart.";
-          LOG.fatal(queueErrorMsg);
+          LOG.error(FATAL, queueErrorMsg);
           throw new QueueInvalidException(queueErrorMsg);
         }
       }
@@ -845,7 +850,7 @@ public class CapacityScheduler extends
               + " not presently supported by the capacity scheduler. Please"
               + " restart with leaf queues before shutdown/restart continuing"
               + " as leaf queues.";
-          LOG.fatal(queueErrorMsg);
+          LOG.error(FATAL, queueErrorMsg);
           throw new QueueInvalidException(queueErrorMsg);
         }
       }
@@ -902,7 +907,7 @@ public class CapacityScheduler extends
               String queueErrorMsg =
                   "Queue named " + queueName + " could not be "
                       + "auto-created during application recovery.";
-              LOG.fatal(queueErrorMsg, e);
+              LOG.error(FATAL, queueErrorMsg, e);
               throw new QueueInvalidException(queueErrorMsg);
             }
           } else{

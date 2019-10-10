@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -62,7 +62,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestUtils {
-  private static final Log LOG = LogFactory.getLog(TestUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestUtils.class);
 
   /**
    * Get a mock {@link RMContext} for use in test cases.

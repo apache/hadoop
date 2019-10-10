@@ -44,8 +44,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegati
 import org.junit.AfterClass;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -84,7 +84,8 @@ import org.junit.Test;
 
 public class TestClientRMTokens {
 
-  private static final Log LOG = LogFactory.getLog(TestClientRMTokens.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClientRMTokens.class);
   
   // Note : Any test case in ResourceManager package that creates a proxy has
   // to be run with enabling hadoop.security.token.service.use_ip. And reset

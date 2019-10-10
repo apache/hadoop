@@ -21,8 +21,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 /**
@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
  * the return of method contains(DeSelectType)
  */
 public class DeSelectFields {
-  private static final Log LOG =
-      LogFactory.getLog(DeSelectFields.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DeSelectFields.class.getName());
 
   private final Set<DeSelectType> types;
 

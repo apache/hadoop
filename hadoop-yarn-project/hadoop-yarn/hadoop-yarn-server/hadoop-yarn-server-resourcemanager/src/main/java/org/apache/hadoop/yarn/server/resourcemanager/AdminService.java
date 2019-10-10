@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -110,7 +110,8 @@ import com.google.protobuf.BlockingService;
 public class AdminService extends CompositeService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
 
-  private static final Log LOG = LogFactory.getLog(AdminService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AdminService.class);
 
   private final ResourceManager rm;
   private String rmId;

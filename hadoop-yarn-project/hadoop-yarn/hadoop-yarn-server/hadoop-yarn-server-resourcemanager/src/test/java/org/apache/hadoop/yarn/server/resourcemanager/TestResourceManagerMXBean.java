@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,8 +33,8 @@ import java.lang.management.ManagementFactory;
  * Class for testing {@link ResourceManagerMXBean} implementation.
  */
 public class TestResourceManagerMXBean {
-  public static final Log LOG = LogFactory.getLog(
-          TestResourceManagerMXBean.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      TestResourceManagerMXBean.class);
 
   @Test
   public void testResourceManagerMXBean() throws Exception {

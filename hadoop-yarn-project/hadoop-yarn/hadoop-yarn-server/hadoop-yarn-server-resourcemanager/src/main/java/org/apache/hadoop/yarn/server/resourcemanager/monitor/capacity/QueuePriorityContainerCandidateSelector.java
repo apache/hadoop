@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -45,8 +45,8 @@ import java.util.Set;
 
 public class QueuePriorityContainerCandidateSelector
     extends PreemptionCandidatesSelector {
-  private static final Log LOG =
-      LogFactory.getLog(QueuePriorityContainerCandidateSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueuePriorityContainerCandidateSelector.class);
 
   // Configured timeout before doing reserved container preemption
   private long minTimeout;

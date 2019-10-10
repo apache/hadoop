@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -45,8 +45,8 @@ import static org.junit.Assert.assertNull;
  */
 public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestLeveldbConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLeveldbConfigurationStore.class);
   private static final File TEST_DIR = new File(
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),

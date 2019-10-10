@@ -22,8 +22,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.utils.Lock;
@@ -38,7 +38,8 @@ import org.apache.hadoop.yarn.server.utils.Lock;
 @Private
 public class ActiveUsersManager implements AbstractUsersManager {
 
-  private static final Log LOG = LogFactory.getLog(ActiveUsersManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ActiveUsersManager.class);
   
   private final QueueMetrics metrics;
   

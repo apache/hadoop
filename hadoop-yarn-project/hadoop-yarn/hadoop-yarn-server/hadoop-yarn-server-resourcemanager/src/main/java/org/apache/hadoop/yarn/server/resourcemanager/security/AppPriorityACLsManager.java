@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -39,8 +39,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class AppPriorityACLsManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(AppPriorityACLsManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AppPriorityACLsManager.class);
 
   /*
    * An internal class to store ACLs specific to each priority. This will be

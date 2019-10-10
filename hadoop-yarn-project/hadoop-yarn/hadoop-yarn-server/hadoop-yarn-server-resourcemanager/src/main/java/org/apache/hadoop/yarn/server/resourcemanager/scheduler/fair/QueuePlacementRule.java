@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.Groups;
@@ -40,8 +40,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Unstable
 public abstract class QueuePlacementRule {
   protected boolean create;
-  public static final Log LOG =
-      LogFactory.getLog(QueuePlacementRule.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(QueuePlacementRule.class.getName());
 
   /**
    * Initializes the rule with any arguments.

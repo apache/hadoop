@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -83,7 +83,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 public class ApplicationMasterService extends AbstractService implements
     ApplicationMasterProtocol {
-  private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(ApplicationMasterService.class);
 
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;

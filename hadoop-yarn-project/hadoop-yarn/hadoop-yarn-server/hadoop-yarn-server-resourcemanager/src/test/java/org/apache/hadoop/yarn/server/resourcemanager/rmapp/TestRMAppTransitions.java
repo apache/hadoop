@@ -41,8 +41,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -116,7 +116,8 @@ import org.mockito.Matchers;
 
 @RunWith(value = Parameterized.class)
 public class TestRMAppTransitions {
-  static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestRMAppTransitions.class);
 
   private boolean isSecurityEnabled;
   private Configuration conf;

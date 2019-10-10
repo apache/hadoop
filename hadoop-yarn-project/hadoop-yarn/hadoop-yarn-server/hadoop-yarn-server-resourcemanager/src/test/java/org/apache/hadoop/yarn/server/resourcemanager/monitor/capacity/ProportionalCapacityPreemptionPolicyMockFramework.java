@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -90,8 +90,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ProportionalCapacityPreemptionPolicyMockFramework {
-  static final Log LOG =
-      LogFactory.getLog(TestProportionalCapacityPreemptionPolicyForNodePartitions.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      TestProportionalCapacityPreemptionPolicyForNodePartitions.class);
   final String ROOT = CapacitySchedulerConfiguration.ROOT;
 
   Map<String, CSQueue> nameToCSQueues = null;

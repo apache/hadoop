@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -44,7 +44,8 @@ import java.util.ArrayList;
  * It mainly contains operations for allocation start, add, update and finish.
  */
 public class ActivitiesManager extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(ActivitiesManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ActivitiesManager.class);
   private ConcurrentMap<NodeId, List<NodeAllocation>> recordingNodesAllocation;
   private ConcurrentMap<NodeId, List<NodeAllocation>> completedNodeAllocations;
   private Set<NodeId> activeRecordedNodes;

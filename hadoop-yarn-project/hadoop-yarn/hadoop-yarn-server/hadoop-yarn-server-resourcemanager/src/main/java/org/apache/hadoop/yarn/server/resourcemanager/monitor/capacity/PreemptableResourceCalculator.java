@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class PreemptableResourceCalculator
     extends
       AbstractPreemptableResourceCalculator {
-  private static final Log LOG =
-      LogFactory.getLog(PreemptableResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PreemptableResourceCalculator.class);
 
   /**
    * PreemptableResourceCalculator constructor
@@ -217,10 +217,7 @@ public class PreemptableResourceCalculator
         } else {
           qT.setActuallyToBePreempted(Resources.none());
         }
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(qT);
-        }
+        LOG.debug("{}", qT);
       }
     }
   }
