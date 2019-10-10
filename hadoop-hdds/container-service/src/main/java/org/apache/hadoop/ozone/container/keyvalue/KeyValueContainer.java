@@ -529,7 +529,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       throw new IllegalStateException(
           "Only closed/quasi closed containers could be exported: " +
               "Where as ContainerId="
-              + getContainerData().getContainerID() + "is in state" + state);
+              + getContainerData().getContainerID() + " is in state " + state);
     }
     compactDB();
     packer.pack(this, destination);
