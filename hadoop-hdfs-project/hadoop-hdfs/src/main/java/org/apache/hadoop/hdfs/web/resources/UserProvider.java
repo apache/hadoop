@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.SecurityUtil;
@@ -28,6 +29,11 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.function.Supplier;
 
+/**
+ * Jersey provider to acquire {@link UserGroupInformation}
+ * from {@link HttpServletRequest}.
+ */
+@InterfaceAudience.Private
 public class UserProvider implements Supplier<UserGroupInformation> {
 
   private final HttpServletRequest request;

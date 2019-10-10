@@ -901,7 +901,7 @@ public final class HttpServer2 implements FilterContainer {
    * @param params properties and features for ResourceConfig
    */
   public void addJerseyResourceConfig(final ResourceConfig config,
-                                      final String pathSpec, Map<String, String> params) {
+      final String pathSpec, Map<String, String> params) {
     LOG.info("addJerseryResourceConfig: pathSpec={}", pathSpec);
     final ServletHolder sh = new ServletHolder(new ServletContainer(config));
     for (Map.Entry<String, String> entry : params.entrySet()) {
