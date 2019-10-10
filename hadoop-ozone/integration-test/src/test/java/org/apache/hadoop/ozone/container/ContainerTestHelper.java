@@ -227,6 +227,23 @@ public final class ContainerTestHelper {
       Pipeline pipeline, BlockID blockID, int datalen) throws IOException {
     LOG.trace("writeChunk {} (blockID={}) to pipeline=",
         datalen, blockID, pipeline);
+    return getWriteChunkRequest(pipeline, blockID, datalen, 0);
+  }
+
+  /**
+   * Returns a writeChunk Request.
+   *
+   * @param pipeline - A set of machines where this container lives.
+   * @param blockID - Block ID of the chunk.
+   * @param datalen - Length of data.
+   * @return ContainerCommandRequestProto
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  public static ContainerCommandRequestProto getWriteChunkRequest(
+      Pipeline pipeline, BlockID blockID, int datalen, int seq) throws IOException {
+    LOG.trace("writeChunk {} (blockID={}) to pipeline=",
+        datalen, blockID, pipeline);
     ContainerProtos.WriteChunkRequestProto.Builder writeRequest =
         ContainerProtos.WriteChunkRequestProto
             .newBuilder();
@@ -234,7 +251,7 @@ public final class ContainerTestHelper {
     writeRequest.setBlockID(blockID.getDatanodeBlockIDProtobuf());
 
     ByteBuffer data = getData(datalen);
-    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
+    ChunkInfo info = getChunk(blockID.getLocalID(), seq, 0, datalen);
     setDataChecksum(info, data);
 
     writeRequest.setChunkData(info.getProtoBufMessage());

@@ -460,6 +460,10 @@ public class ContainerStateMachine extends BaseStateMachine {
             LOG.error(gid + ": writeChunk writeStateMachineData failed: blockId"
                 + write.getBlockID() + " logIndex " + entryIndex + " chunkName "
                 + write.getChunkData().getChunkName() + e);
+            metrics.incNumWriteDataFails();
+            // write chunks go in parallel. It's possible that one write chunk
+            // see the stateMachine is marked unhealthy by other parallel thread.
+            stateMachineHealthy.set(false);
             raftFuture.completeExceptionally(e);
             throw e;
           }
@@ -474,7 +478,9 @@ public class ContainerStateMachine extends BaseStateMachine {
     // Remove the future once it finishes execution from the
     // writeChunkFutureMap.
     writeChunkFuture.thenApply(r -> {
-      if (r.getResult() != ContainerProtos.Result.SUCCESS) {
+      if (r.getResult() != ContainerProtos.Result.SUCCESS
+          && r.getResult() != ContainerProtos.Result.CONTAINER_NOT_OPEN
+          && r.getResult() != ContainerProtos.Result.CLOSED_CONTAINER_IO) {
         StorageContainerException sce =
             new StorageContainerException(r.getMessage(), r.getResult());
         LOG.error(gid + ": writeChunk writeStateMachineData failed: blockId" +
@@ -482,6 +488,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             write.getChunkData().getChunkName() + " Error message: " +
             r.getMessage() + " Container Result: " + r.getResult());
         metrics.incNumWriteDataFails();
+        stateMachineHealthy.set(false);
         raftFuture.completeExceptionally(sce);
       } else {
         metrics.incNumBytesWrittenCount(
@@ -584,6 +591,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       LOG.error("gid {} : ReadStateMachine failed. cmd {} logIndex {} msg : "
               + "{} Container Result: {}", gid, response.getCmdType(), index,
           response.getMessage(), response.getResult());
+      stateMachineHealthy.set(false);
       throw sce;
     }
 
@@ -739,6 +747,8 @@ public class ContainerStateMachine extends BaseStateMachine {
               LOG.error("gid {} : ApplyTransaction failed. cmd {} logIndex "
                       + "{} exception {}", gid, requestProto.getCmdType(),
                   index, e);
+              stateMachineHealthy.compareAndSet(true, false);
+              metrics.incNumApplyTransactionsFails();
               applyTransactionFuture.completeExceptionally(e);
               throw e;
             }
