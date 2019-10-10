@@ -235,6 +235,9 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_DOCKER_RUNTIME =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUNTIME";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_DOCKER_SERVICE_MODE =
+      "YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE";
 
   @InterfaceAudience.Private
   private static final String RUNTIME_TYPE = "DOCKER";
@@ -588,7 +591,9 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
     String runtime = environment.get(ENV_DOCKER_CONTAINER_DOCKER_RUNTIME);
-    boolean useEntryPoint = checkUseEntryPoint(environment);
+    boolean serviceMode = Boolean.parseBoolean(environment.get(
+        ENV_DOCKER_CONTAINER_DOCKER_SERVICE_MODE));
+    boolean useEntryPoint = serviceMode || checkUseEntryPoint(environment);
 
     if (imageName == null || imageName.isEmpty()) {
       imageName = defaultImageName;
@@ -679,10 +684,12 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       runCommand.addRuntime(runtime);
     }
 
-    runCommand.addAllReadWriteMountLocations(containerLogDirs);
-    runCommand.addAllReadWriteMountLocations(applicationLocalDirs);
-    runCommand.addAllReadOnlyMountLocations(filecacheDirs);
-    runCommand.addAllReadOnlyMountLocations(userFilecacheDirs);
+    if (!serviceMode) {
+      runCommand.addAllReadWriteMountLocations(containerLogDirs);
+      runCommand.addAllReadWriteMountLocations(applicationLocalDirs);
+      runCommand.addAllReadOnlyMountLocations(filecacheDirs);
+      runCommand.addAllReadOnlyMountLocations(userFilecacheDirs);
+    }
 
     if (environment.containsKey(ENV_DOCKER_CONTAINER_MOUNTS)) {
       Matcher parsedMounts = USER_MOUNT_PATTERN.matcher(
@@ -800,11 +807,20 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       runCommand.setYarnSysFS(true);
     }
 
+    // In service mode, the YARN log dirs are not mounted into the container.
+    // As a result, the container fails to start due to stdout and stderr output
+    // being sent to a file in a directory that does not exist. In service mode,
+    // only supply the command with no stdout or stderr redirection.
+    List<String> commands = container.getLaunchContext().getCommands();
+    if (serviceMode) {
+      commands = Arrays.asList(
+          String.join(" ", commands).split("1>")[0].split(" "));
+    }
+
     if (useEntryPoint) {
       runCommand.setOverrideDisabled(true);
       runCommand.addEnv(environment);
-      runCommand.setOverrideCommandWithArgs(container.getLaunchContext()
-          .getCommands());
+      runCommand.setOverrideCommandWithArgs(commands);
       runCommand.disableDetach();
       runCommand.setLogDir(container.getLogDir());
     } else {
@@ -816,6 +832,10 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       runCommand.setContainerWorkDir(containerWorkDir.toString());
       runCommand.setOverrideCommandWithArgs(overrideCommands);
       runCommand.detachOnRun();
+    }
+
+    if (serviceMode) {
+      runCommand.setServiceMode(serviceMode);
     }
 
     if(enableUserReMapping) {
@@ -1279,11 +1299,14 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       throw new ContainerExecutionException(e);
     }
 
+    boolean serviceMode = Boolean.parseBoolean(env.get(
+        ENV_DOCKER_CONTAINER_DOCKER_SERVICE_MODE));
+
     // Only need to check whether the container was asked to be privileged.
     // If the container had failed the permissions checks upon launch, it
     // would have never been launched and thus we wouldn't be here
     // attempting to signal it.
-    if (isContainerRequestedAsPrivileged(container)) {
+    if (isContainerRequestedAsPrivileged(container) || serviceMode) {
       String containerId = container.getContainerId().toString();
       DockerCommandExecutor.DockerContainerStatus containerStatus =
           DockerCommandExecutor.getContainerStatus(containerId,
