@@ -172,22 +172,22 @@ public final class OzoneManagerRatisClient implements Closeable {
         LOG.debug("received reply {} for request: cmdType={} traceID={} " +
                 "exception: {}", reply, request.getCmdType(),
             request.getTraceID(), e);
-      }})
-        .thenApply(reply -> {
-          try {
-            Preconditions.checkNotNull(reply);
-            if (!reply.isSuccess()) {
-              RaftException exception = reply.getException();
-              Preconditions.checkNotNull(exception, "Raft reply failure " +
-                  "but no exception propagated.");
-              throw new CompletionException(exception);
-            }
-            return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
+      }
+    }).thenApply(reply -> {
+      try {
+        Preconditions.checkNotNull(reply);
+        if (!reply.isSuccess()) {
+          RaftException exception = reply.getException();
+          Preconditions.checkNotNull(exception, "Raft reply failure " +
+              "but no exception propagated.");
+          throw new CompletionException(exception);
+        }
+        return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
 
-          } catch (InvalidProtocolBufferException e) {
-            throw new CompletionException(e);
-          }
-        });
+      } catch (InvalidProtocolBufferException e) {
+        throw new CompletionException(e);
+      }
+    });
   }
 
   /**
