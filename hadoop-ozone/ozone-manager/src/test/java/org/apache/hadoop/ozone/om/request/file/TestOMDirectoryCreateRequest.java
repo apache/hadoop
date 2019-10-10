@@ -152,9 +152,8 @@ public class TestOMDirectoryCreateRequest {
 
   }
 
-
   @Test
-  public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {
+  public void testValidateAndUpdateCacheWithVolumeNotFound() throws Exception {
     String volumeName = "vol1";
     String bucketName = "bucket1";
     String keyName = RandomStringUtils.randomAlphabetic(5);
@@ -177,13 +176,46 @@ public class TestOMDirectoryCreateRequest {
             ozoneManagerDoubleBufferHelper);
 
     Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
-        == OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND);
+        == OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND);
 
     // Key should not exist in DB
     Assert.assertTrue(omMetadataManager.getKeyTable().get(
         omMetadataManager.getOzoneDirKey(
             volumeName, bucketName, keyName)) == null);
 
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {
+    String volumeName = "vol1";
+    String bucketName = "bucket1";
+    String keyName = RandomStringUtils.randomAlphabetic(5);
+    for (int i =0; i< 3; i++) {
+      keyName += "/" + RandomStringUtils.randomAlphabetic(5);
+    }
+
+    OMRequest omRequest = createDirectoryRequest(volumeName, bucketName,
+        keyName);
+    OMDirectoryCreateRequest omDirectoryCreateRequest =
+        new OMDirectoryCreateRequest(omRequest);
+
+    OMRequest modifiedOmRequest =
+        omDirectoryCreateRequest.preExecute(ozoneManager);
+
+    omDirectoryCreateRequest = new OMDirectoryCreateRequest(modifiedOmRequest);
+    TestOMRequestUtils.addVolumeToDB(volumeName, omMetadataManager);
+
+    OMClientResponse omClientResponse =
+        omDirectoryCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
+
+    Assert.assertTrue(omClientResponse.getOMResponse().getStatus()
+        == OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND);
+
+    // Key should not exist in DB
+    Assert.assertTrue(omMetadataManager.getKeyTable().get(
+        omMetadataManager.getOzoneDirKey(
+            volumeName, bucketName, keyName)) == null);
   }
 
   @Test

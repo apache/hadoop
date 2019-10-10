@@ -107,26 +107,40 @@ public class TestOMKeyDeleteRequest extends TestOMKeyRequest {
         omClientResponse.getOMResponse().getStatus());
   }
 
+
   @Test
-  public void testValidateAndUpdateCacheWithOutVolumeAndBucket()
-      throws Exception {
+  public void testValidateAndUpdateCacheWithVolumeNotFound() throws Exception {
     OMRequest modifiedOmRequest =
         doPreExecute(createDeleteKeyRequest());
 
     OMKeyDeleteRequest omKeyDeleteRequest =
         new OMKeyDeleteRequest(modifiedOmRequest);
 
-    // In actual implementation we don't check for bucket/volume exists
-    // during delete key. So it should still return error KEY_NOT_FOUND
+    OMClientResponse omClientResponse =
+        omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
+            100L, ozoneManagerDoubleBufferHelper);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND,
+        omClientResponse.getOMResponse().getStatus());
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {
+    OMRequest modifiedOmRequest =
+        doPreExecute(createDeleteKeyRequest());
+
+    OMKeyDeleteRequest omKeyDeleteRequest =
+        new OMKeyDeleteRequest(modifiedOmRequest);
+
+    TestOMRequestUtils.addVolumeToDB(volumeName, omMetadataManager);
 
     OMClientResponse omClientResponse =
         omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
             100L, ozoneManagerDoubleBufferHelper);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
-        omClientResponse.getOMResponse().getStatus());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND,
+            omClientResponse.getOMResponse().getStatus());
   }
-
 
   /**
    * This method calls preExecute and verify the modified request.

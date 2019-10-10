@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.NOT_A_FILE;
@@ -177,6 +178,26 @@ public class TestOMFileCreateRequest extends TestOMKeyRequest {
 
   }
 
+  @Test
+  public void testValidateAndUpdateCacheWithVolumeNotFound() throws Exception {
+    OMRequest omRequest = createFileRequest(volumeName, bucketName, keyName,
+        HddsProtos.ReplicationFactor.ONE, HddsProtos.ReplicationType.RATIS,
+            false, true);
+
+    OMFileCreateRequest omFileCreateRequest = new OMFileCreateRequest(
+        omRequest);
+
+    OMRequest modifiedOmRequest = omFileCreateRequest.preExecute(ozoneManager);
+
+    omFileCreateRequest = new OMFileCreateRequest(modifiedOmRequest);
+
+    OMClientResponse omFileCreateResponse =
+        omFileCreateRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
+    Assert.assertEquals(VOLUME_NOT_FOUND,
+        omFileCreateResponse.getOMResponse().getStatus());
+
+  }
 
   @Test
   public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {

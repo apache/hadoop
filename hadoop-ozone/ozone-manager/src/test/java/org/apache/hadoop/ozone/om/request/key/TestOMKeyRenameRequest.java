@@ -49,6 +49,8 @@ public class TestOMKeyRenameRequest extends TestOMKeyRequest {
     OMRequest modifiedOmRequest =
         doPreExecute(createRenameKeyRequest(toKeyName));
 
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
     TestOMRequestUtils.addKeyToTable(false, volumeName, bucketName, keyName,
         clientID, replicationType, replicationFactor, omMetadataManager);
 
@@ -112,16 +114,11 @@ public class TestOMKeyRenameRequest extends TestOMKeyRequest {
 
   }
 
-
   @Test
-  public void testValidateAndUpdateCacheWithOutVolumeAndBucket()
-      throws Exception {
+  public void testValidateAndUpdateCacheWithVolumeNotFound() throws Exception {
     String toKeyName = UUID.randomUUID().toString();
     OMRequest modifiedOmRequest =
         doPreExecute(createRenameKeyRequest(toKeyName));
-
-    // In actual implementation we don't check for bucket/volume exists
-    // during delete key. So it should still return error KEY_NOT_FOUND
 
     OMKeyRenameRequest omKeyRenameRequest =
         new OMKeyRenameRequest(modifiedOmRequest);
@@ -130,7 +127,28 @@ public class TestOMKeyRenameRequest extends TestOMKeyRequest {
         omKeyRenameRequest.validateAndUpdateCache(ozoneManager, 100L,
             ozoneManagerDoubleBufferHelper);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND,
+        omKeyRenameResponse.getOMResponse().getStatus());
+
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {
+    String toKeyName = UUID.randomUUID().toString();
+    OMRequest modifiedOmRequest =
+        doPreExecute(createRenameKeyRequest(toKeyName));
+
+    // Add only volume entry to DB.
+    TestOMRequestUtils.addVolumeToDB(volumeName, omMetadataManager);
+
+    OMKeyRenameRequest omKeyRenameRequest =
+        new OMKeyRenameRequest(modifiedOmRequest);
+
+    OMClientResponse omKeyRenameResponse =
+        omKeyRenameRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND,
         omKeyRenameResponse.getOMResponse().getStatus());
 
   }
