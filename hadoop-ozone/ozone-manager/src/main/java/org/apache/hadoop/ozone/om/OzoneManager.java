@@ -734,10 +734,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals(
         AuthenticationMethod.KERBEROS)) {
-      LOG.debug("Ozone security is enabled. Attempting login for OM user. "
-              + "Principal: {},keytab: {}", conf.get(
-          OZONE_OM_KERBEROS_PRINCIPAL_KEY),
-          conf.get(OZONE_OM_KERBEROS_KEYTAB_FILE_KEY));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Ozone security is enabled. Attempting login for OM user. "
+                + "Principal: {}, keytab: {}", conf.get(
+            OZONE_OM_KERBEROS_PRINCIPAL_KEY),
+            conf.get(OZONE_OM_KERBEROS_KEYTAB_FILE_KEY));
+      }
 
       UserGroupInformation.setConfiguration(conf);
 

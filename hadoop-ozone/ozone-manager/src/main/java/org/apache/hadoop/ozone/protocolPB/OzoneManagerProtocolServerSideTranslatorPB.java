@@ -225,7 +225,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
     try {
       omClientResponse.getFlushFuture().get();
-      LOG.trace("Future for {} is completed", request);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Future for {} is completed", request);
+      }
     } catch (ExecutionException | InterruptedException ex) {
       // terminate OM. As if we are in this stage means, while getting
       // response from flush future, we got an exception.

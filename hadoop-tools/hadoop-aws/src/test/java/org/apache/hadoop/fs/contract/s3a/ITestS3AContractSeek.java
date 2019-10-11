@@ -80,7 +80,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * which S3A Supports.
    * @return a list of seek policies to test.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}-{1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {INPUT_FADV_SEQUENTIAL, Default_JSSE},

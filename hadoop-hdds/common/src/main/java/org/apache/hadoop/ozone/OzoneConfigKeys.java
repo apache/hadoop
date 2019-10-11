@@ -453,6 +453,9 @@ public final class OzoneConfigKeys {
       "ozone.network.topology.aware.read";
   public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
 
+  public static final String OZONE_MANAGER_FAIR_LOCK = "ozone.om.lock.fair";
+  public static final boolean OZONE_MANAGER_FAIR_LOCK_DEFAULT = false;
+
   /**
    * There is no need to instantiate this class.
    */

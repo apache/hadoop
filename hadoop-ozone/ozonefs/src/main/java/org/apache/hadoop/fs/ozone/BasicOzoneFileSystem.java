@@ -425,7 +425,9 @@ public class BasicOzoneFileSystem extends FileSystem {
       DeleteIterator iterator = new DeleteIterator(f, recursive);
       return iterator.iterate();
     } catch (FileNotFoundException e) {
-      LOG.debug("Couldn't delete {} - does not exist", f);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't delete {} - does not exist", f);
+      }
       return false;
     }
   }

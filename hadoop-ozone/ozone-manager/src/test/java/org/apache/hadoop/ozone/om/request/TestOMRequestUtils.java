@@ -120,7 +120,52 @@ public final class TestOMRequestUtils {
       OMMetadataManager omMetadataManager) throws Exception {
 
 
-    OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
+    OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
+        replicationType, replicationFactor);
+
+    if (openKeyTable) {
+      omMetadataManager.getOpenKeyTable().put(
+          omMetadataManager.getOpenKey(volumeName, bucketName, keyName,
+              clientID), omKeyInfo);
+    } else {
+      omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
+          volumeName, bucketName, keyName), omKeyInfo);
+    }
+
+  }
+
+  /**
+   * Add key entry to key table cache.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param replicationType
+   * @param replicationFactor
+   * @param omMetadataManager
+   */
+  @SuppressWarnings("parameterNumber")
+  public static void addKeyToTableCache(String volumeName,
+      String bucketName,
+      String keyName,
+      HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor,
+      OMMetadataManager omMetadataManager) {
+
+
+    OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
+        replicationType, replicationFactor);
+
+    omMetadataManager.getKeyTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getOzoneKey(volumeName, bucketName,
+            keyName)), new CacheValue<>(Optional.of(omKeyInfo),
+            1L));
+
+  }
+
+  private OmKeyInfo createKeyInfo(String volumeName, String bucketName,
+      String keyName, HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor) {
+    return new OmKeyInfo.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -130,18 +175,9 @@ public final class TestOMRequestUtils {
         .setModificationTime(Time.now())
         .setDataSize(1000L)
         .setReplicationType(replicationType)
-        .setReplicationFactor(replicationFactor);
-
-    if (openKeyTable) {
-      omMetadataManager.getOpenKeyTable().put(
-          omMetadataManager.getOpenKey(volumeName, bucketName, keyName,
-              clientID), builder.build());
-    } else {
-      omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
-          volumeName, bucketName, keyName), builder.build());
-    }
-
+        .setReplicationFactor(replicationFactor).build();
   }
+
 
   /**
    * Create OmKeyInfo.

@@ -36,6 +36,7 @@
 #define DOCKER_START_COMMAND "start"
 #define DOCKER_EXEC_COMMAND "exec"
 #define DOCKER_IMAGES_COMMAND "images"
+#define DOCKER_SERVICE_MODE_ENABLED_KEY "docker.service-mode.enabled"
 #define DOCKER_ARG_MAX 1024
 #define ARGS_INITIAL_VALUE { 0 };
 
@@ -71,7 +72,8 @@ enum docker_error_codes {
     INVALID_PID_NAMESPACE,
     INVALID_DOCKER_IMAGE_TRUST,
     INVALID_DOCKER_TMPFS_MOUNT,
-    INVALID_DOCKER_RUNTIME
+    INVALID_DOCKER_RUNTIME,
+    SERVICE_MODE_DISABLED
 };
 
 /**
