@@ -478,7 +478,7 @@ public interface ClientProtocol {
    *
    * A call to complete() will not return true until all the file's
    * blocks have been replicated the minimum number of times.  Thus,
-   * DataNode failures may cause a client to call complete() several
+   * DataNode metaFailures may cause a client to call complete() several
    * times before succeeding.
    *
    * @param src the file being created
@@ -1826,4 +1826,26 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   void satisfyStoragePolicy(String path) throws IOException;
+
+  @AtMostOnce
+  String createSync(String name, String localBackupPath,
+      String remoteBackupPath) throws IOException;
+
+  @AtMostOnce
+  void removeSync(String name, DisconnectPolicy policy) throws IOException;
+
+  @Idempotent
+  String getStatus(String syncMountName) throws IOException;
+
+  @Idempotent
+  List<SyncMount> getSyncMounts() throws IOException;
+
+  @Idempotent
+  void pauseSync(String name) throws IOException;
+
+  @Idempotent
+  void resumeSync(String name) throws IOException;
+
+  @Idempotent
+  boolean fullResync(String name) throws IOException;
 }

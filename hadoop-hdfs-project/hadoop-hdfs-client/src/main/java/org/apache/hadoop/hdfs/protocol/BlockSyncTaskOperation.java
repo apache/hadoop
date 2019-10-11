@@ -14,28 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocol;
 
-import java.util.Collection;
-import java.util.Collections;
-
-/**
- * Feedback for a collection of {@link BlockSyncTask}s.
- */
-public class BulkSyncTaskExecutionFeedback {
-
-  private Collection<BlockSyncTaskExecutionFeedback> feedbacks;
-
-  public static BulkSyncTaskExecutionFeedback empty() {
-    return new BulkSyncTaskExecutionFeedback(Collections.emptyList());
-  }
-
-  public BulkSyncTaskExecutionFeedback(
-      Collection<BlockSyncTaskExecutionFeedback> feedbacks) {
-    this.feedbacks = feedbacks;
-  }
-
-  public Collection<BlockSyncTaskExecutionFeedback> getFeedbacks() {
-    return feedbacks;
-  }
+public enum BlockSyncTaskOperation {
+  MULTIPART_PUT_PART
 }

@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1549,6 +1551,45 @@ public class RouterClientProtocol implements ClientProtocol {
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
+  }
+
+  @Override
+  public String createSync(String name, String localBackupPath, String remoteBackupPath) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    return null;
+  }
+
+  @Override
+  public void removeSync(String name, DisconnectPolicy policy) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+  }
+
+  @Override
+  public String getStatus(String syncMountName) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    return null;
+  }
+
+  @Override
+  public List<SyncMount> getSyncMounts() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    return null;
+  }
+
+  @Override
+  public void pauseSync(String name) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+  }
+
+  @Override
+  public void resumeSync(String name) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+  }
+
+  @Override
+  public boolean fullResync(String name) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    return false;
   }
 
   /**

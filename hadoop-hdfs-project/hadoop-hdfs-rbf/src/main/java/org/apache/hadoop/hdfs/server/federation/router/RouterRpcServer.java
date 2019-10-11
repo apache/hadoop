@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -94,6 +95,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1285,6 +1287,48 @@ public class RouterRpcServer extends AbstractService
   @Override // NamenodeProtocol
   public Long getNextSPSPath() throws IOException {
     return nnProto.getNextSPSPath();
+  }
+
+  @Override
+  public String createSync(String name, String localBackupPath,
+      String remoteBackupPath) throws IOException {
+    // Probably want an administrative OperationCategory check here.
+    throw new UnsupportedOperationException("createSync is not supported");
+  }
+
+  @Override
+  public void removeSync(String name, DisconnectPolicy policy)
+      throws IOException {
+    // Probably want an administrative OperationCategory check here.
+    throw new UnsupportedOperationException("removeSync is not supported");
+  }
+
+  @Override
+  public String getStatus(String syncMountName) throws IOException {
+    throw new UnsupportedOperationException("getStatus is not supported");
+  }
+
+  @Override
+  public List<SyncMount> getSyncMounts() throws IOException {
+    throw new UnsupportedOperationException("getSyncMounts is not supported");
+  }
+
+  @Override
+  public void pauseSync(String name) throws IOException {
+    // Probably want an administrative OperationCategory check here.
+    throw new UnsupportedOperationException("pauseSync is not supported");
+  }
+
+  @Override
+  public void resumeSync(String name) throws IOException {
+    // Probably want an administrative OperationCategory check here.
+    throw new UnsupportedOperationException("resumeSync is not supported");
+  }
+
+  @Override
+  public boolean fullResync(String name) throws IOException {
+    // Probably want an administrative OperationCategory check here.
+    throw new UnsupportedOperationException("fullResyncis not supported");
   }
 
   /**

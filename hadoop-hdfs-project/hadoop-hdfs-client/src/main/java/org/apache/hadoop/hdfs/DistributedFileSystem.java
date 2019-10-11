@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.InvalidPathHandleException;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
@@ -71,6 +73,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -79,6 +82,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -556,7 +560,7 @@ public class DistributedFileSystem extends FileSystem
    * honored at the creation time only. And with favored nodes, blocks will be
    * pinned on the datanodes to prevent balancing move the block. HDFS could
    * move the blocks during replication, to move the blocks from favored nodes.
-   * A value of null means no favored nodes for this create.
+!   * A value of null means no favored nodes for this create.
    * The second addition is ecPolicyName. A non-null ecPolicyName specifies an
    * explicit erasure coding policy for this file, overriding the inherited
    * policy. A null ecPolicyName means the file will inherit its EC policy or
@@ -3401,5 +3405,37 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public HdfsDataOutputStreamBuilder appendFile(Path path) {
     return new HdfsDataOutputStreamBuilder(this, path).append();
+  }
+
+  public String createSync(String name, String localPath,
+      String remoteLocation) throws IOException {
+    LocalFileSystem lfs = FileSystem.getLocal(getConf());
+
+    return dfs.createSync(name, localPath, remoteLocation);
+  }
+
+  public void removeSync(String name, DisconnectPolicy policy)
+      throws IOException {
+    dfs.removeSync(name, policy);
+  }
+
+  public List<SyncMount> getSyncMounts() throws IOException {
+    return dfs.getSyncMounts();
+  }
+
+  public void pauseSync(String name) throws IOException {
+    dfs.pauseSync(name);
+  }
+
+  public void resumeSync(String name) throws IOException {
+    dfs.resumeSync(name);
+  }
+
+  public String getStatus(String syncMountName) throws IOException {
+    return dfs.getStatus(syncMountName);
+  }
+
+  public void fullResync(String name) throws IOException {
+    dfs.fullResync(name);
   }
 }

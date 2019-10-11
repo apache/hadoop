@@ -120,6 +120,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
@@ -211,7 +212,7 @@ public class DFSTestUtil {
   private static final String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
-  
+
   private final int maxLevels;
   private final int maxSize;
   private final int minSize;
@@ -469,7 +470,7 @@ public class DFSTestUtil {
       }
     }
   }
-  
+
   public static byte[] calculateFileContentsFromSeed(long seed, int length) {
     Random rb = new Random(seed);
     byte val[] = new byte[length];
@@ -1569,11 +1570,16 @@ public class DFSTestUtil {
       out.write("replicated".getBytes());
     }
 
+    Path localDir = new Path("/localPath");
+    filesystem.mkdirs(localDir);
+
     try (FSDataOutputStream out = filesystem
         .createFile(new Path(ecDir, "RS-3-2"))
         .ecPolicyName(ecPolicyRS32.getName()).blockSize(1024 * 1024).build()) {
       out.write("RS-3-2".getBytes());
     }
+    filesystem.createSync("name", localDir.toString(), "/remoteLocation");
+    filesystem.removeSync("name", DisconnectPolicy.GRACEFULLY);
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

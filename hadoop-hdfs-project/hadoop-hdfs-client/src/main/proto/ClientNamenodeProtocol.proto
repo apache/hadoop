@@ -853,6 +853,92 @@ message HAServiceStateResponseProto {
   required hadoop.common.HAServiceStateProto state = 1;
 }
 
+message CreateSyncRequestProto {
+  optional string name = 1;
+  optional string localPath = 2;
+  optional string remoteLocation = 3;
+}
+
+message CreateSyncResponseProto { // no parameters
+  optional string name = 1;
+}
+
+message GetStatisticsRequestProto {
+  required string syncMountName = 1;
+}
+
+message GetStatisticsResponseProto {
+  required string statistics = 1;
+
+}
+
+enum DisconnectPolicyProto {
+  DISCONNECT_POLICY_GRACEFULLY = 1;
+  DISCONNECT_POLICY_FORCE = 2;
+  DISCONNECT_POLICY_FLUSH = 3;
+}
+
+message RemoveSyncRequestProto {
+  optional string name = 1;
+  optional DisconnectPolicyProto disconnectPolicy = 2;
+}
+
+message RemoveSyncResponseProto { // no parameters
+}
+
+message GetSyncStatusRequestProto {
+  optional string name = 1;
+}
+
+message SyncMountProto {
+  optional string name = 1;
+  optional string localPath = 2;
+  optional string remoteLocation = 3;
+}
+
+message SyncMountStatusProto {
+  optional string status = 1;
+  repeated string datanodes = 2;
+}
+
+message SyncMountAndStatusProto {
+  optional SyncMountProto syncMount = 1;
+  optional SyncMountStatusProto status = 2;
+}
+
+message GetSyncStatusResponseProto {
+  optional SyncMountAndStatusProto syncMountAndStatus = 1;
+}
+
+message GetSyncMountsRequestProto { // no parameters
+}
+
+message GetSyncMountsResponseProto {
+  repeated SyncMountProto syncMounts = 1;
+}
+
+message PauseSyncRequestProto {
+  required string name = 1;
+}
+
+message PauseSyncResponseProto { // no parameters
+}
+
+message ResumeSyncRequestProto {
+  required string name = 1;
+}
+
+message FullResyncRequestProto {
+  required string name = 1;
+}
+
+message FullResyncResponseProto {
+  required bool success = 1;
+}
+
+message ResumeSyncResponseProto { // no parameters
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -1043,6 +1129,20 @@ service ClientNamenodeProtocol {
       returns(MsyncResponseProto);
   rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
       returns(SatisfyStoragePolicyResponseProto);
+  rpc createSync(CreateSyncRequestProto)
+      returns(CreateSyncResponseProto);
+  rpc removeSync(RemoveSyncRequestProto)
+      returns(RemoveSyncResponseProto);
+  rpc getSyncMounts(GetSyncMountsRequestProto)
+      returns(GetSyncMountsResponseProto);
+  rpc pauseSync(PauseSyncRequestProto)
+      returns(PauseSyncResponseProto);
+  rpc resumeSync(ResumeSyncRequestProto)
+      returns(ResumeSyncResponseProto);
+  rpc getStatus(GetStatisticsRequestProto)
+      returns(GetStatisticsResponseProto);
+  rpc fullResync(FullResyncRequestProto)
+      returns(FullResyncResponseProto);
   rpc getHAServiceState(HAServiceStateRequestProto)
       returns(HAServiceStateResponseProto);
 }

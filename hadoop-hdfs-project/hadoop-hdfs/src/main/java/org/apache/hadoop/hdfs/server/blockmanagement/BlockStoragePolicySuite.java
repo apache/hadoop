@@ -84,10 +84,28 @@ public class BlockStoragePolicySuite {
         StorageType.EMPTY_ARRAY);
     final byte providedId = HdfsConstants.PROVIDED_STORAGE_POLICY_ID;
     policies[providedId] = new BlockStoragePolicy(providedId,
-      HdfsConstants.PROVIDED_STORAGE_POLICY_NAME,
-      new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
-      new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
-      new StorageType[]{StorageType.PROVIDED, StorageType.DISK});
+        HdfsConstants.PROVIDED_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
+        new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
+        new StorageType[]{StorageType.PROVIDED, StorageType.DISK});
+    final byte diskProvidedId = HdfsConstants.DISK_PROVIDED_STORAGE_POLICY_ID;
+    policies[diskProvidedId] = new BlockStoragePolicy(diskProvidedId,
+      HdfsConstants.DISK_PROVIDED_STORAGE_POLICY_NAME,
+      new StorageType[]{StorageType.DISK, StorageType.PROVIDED},
+      new StorageType[]{StorageType.DISK, StorageType.PROVIDED},
+      new StorageType[]{StorageType.DISK, StorageType.PROVIDED});
+    final byte providedOnlyId = HdfsConstants.PROVIDED_STORAGE_ONLY_POLICY_ID;
+    final byte ssdProvidedId = HdfsConstants.SSD_PROVIDED_STORAGE_POLICY_ID;
+    policies[ssdProvidedId] = new BlockStoragePolicy(ssdProvidedId,
+        HdfsConstants.SSD_PROVIDED_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.PROVIDED, StorageType.SSD},
+        new StorageType[]{StorageType.PROVIDED, StorageType.SSD},
+        new StorageType[]{StorageType.PROVIDED, StorageType.SSD});
+    policies[providedOnlyId] = new BlockStoragePolicy(providedOnlyId,
+        HdfsConstants.PROVIDED_STORAGE_ONLY_POLICY_NAME,
+        new StorageType[]{StorageType.PROVIDED},
+        new StorageType[]{StorageType.DISK},
+        new StorageType[]{StorageType.PROVIDED});
     return new BlockStoragePolicySuite(hotId, policies);
   }
 

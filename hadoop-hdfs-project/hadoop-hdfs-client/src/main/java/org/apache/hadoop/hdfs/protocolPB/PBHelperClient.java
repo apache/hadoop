@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -83,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -112,6 +115,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
+import org.apache.hadoop.hdfs.protocol.SyncMountAndStatus;
+import org.apache.hadoop.hdfs.protocol.SyncMountStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
@@ -121,6 +127,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionPro
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.FsPermissionProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
@@ -133,6 +140,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisconnectPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsResponseProto;
@@ -142,6 +150,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFi
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SyncMountAndStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SyncMountProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SyncMountStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
@@ -3416,4 +3427,88 @@ public class PBHelperClient {
     }
     return typeProtos;
   }
+
+  public static DisconnectPolicy convert(DisconnectPolicyProto policy) {
+    switch (policy) {
+    case DISCONNECT_POLICY_GRACEFULLY:
+      return DisconnectPolicy.GRACEFULLY;
+    case DISCONNECT_POLICY_FORCE:
+      return DisconnectPolicy.FORCE;
+    case DISCONNECT_POLICY_FLUSH:
+      return DisconnectPolicy.FLUSH;
+    default:
+      throw new IllegalArgumentException(
+          "Unexpected disconnectPolicy: " + policy);
+    }
+  }
+
+  public static DisconnectPolicyProto convert(DisconnectPolicy policy) {
+    switch (policy) {
+    case GRACEFULLY:
+      return DisconnectPolicyProto.DISCONNECT_POLICY_GRACEFULLY;
+    case FORCE:
+      return DisconnectPolicyProto.DISCONNECT_POLICY_FORCE;
+    case FLUSH:
+      return DisconnectPolicyProto.DISCONNECT_POLICY_FLUSH;
+    default:
+      throw new IllegalArgumentException(
+          "Unexpected disconnectPolicy: " + policy);
+    }
+  }
+
+  public static SyncMount convert(SyncMountProto backupMountProto) {
+    try {
+      return new SyncMount(backupMountProto.getName(),
+          new Path(backupMountProto.getLocalPath()),
+          new URI(backupMountProto.getRemoteLocation()));
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException("Could not parse remote backup location: "
+          + backupMountProto.getRemoteLocation());
+    }
+  }
+
+  public static SyncMountProto convert(SyncMount syncMount) {
+    return SyncMountProto.newBuilder()
+        .setName(syncMount.getName())
+        .setLocalPath(syncMount.getLocalPath().toString())
+        .setRemoteLocation(syncMount.getRemoteLocation().toString())
+        .build();
+  }
+  public static SyncMountStatus convert(
+      SyncMountStatusProto syncMountStatusProto) {
+    List<String> datanodes = Lists.newArrayList();
+    for (String dn : syncMountStatusProto.getDatanodesList()) {
+      datanodes.add(dn);
+    }
+    return new SyncMountStatus(syncMountStatusProto.getStatus(), datanodes);
+  }
+
+  public static SyncMountStatusProto convert(SyncMountStatus backupStatus) {
+    return SyncMountStatusProto.newBuilder()
+        .setStatus(backupStatus.getStatus())
+        .addAllDatanodes(backupStatus.getDatanodes())
+        .build();
+  }
+
+  public static SyncMountAndStatusProto convert(
+      SyncMountAndStatus syncMountAndStatus) {
+    SyncMountProto syncMountProto = PBHelperClient.convert(
+        syncMountAndStatus.getBackupMount());
+    SyncMountStatusProto syncMountStatusProto = PBHelperClient.convert(
+        syncMountAndStatus.getBackupMountStatus());
+    return SyncMountAndStatusProto.newBuilder()
+        .setSyncMount(syncMountProto)
+        .setStatus(syncMountStatusProto)
+        .build();
+  }
+
+  public static SyncMountAndStatus convert(SyncMountAndStatusProto
+      syncMountAndStatusProto) {
+    SyncMount syncMount = PBHelperClient.convert(
+        syncMountAndStatusProto.getSyncMount());
+    SyncMountStatus status = PBHelperClient.convert(
+        syncMountAndStatusProto.getStatus());
+    return new SyncMountAndStatus(syncMount, status);
+  }
+
 }

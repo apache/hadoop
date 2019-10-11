@@ -515,7 +515,7 @@ public class PBHelper {
           PBHelperClient.convertLocatedBlocks(
               syncTaskProto.getLocatedBlocksList()),
           syncTaskProto.getPartNumber(),
-          syncTaskProto.getUploadHandle().toByteArray(),
+          ByteBuffer.wrap(syncTaskProto.getUploadHandle().toByteArray()),
           syncTaskProto.getOffset(),
           syncTaskProto.getLength(),
           syncTaskIdProto.getSyncMountId());
@@ -1196,7 +1196,7 @@ public class PBHelper {
 
     List<BlockSyncTaskProto> syncTaskProtos = syncCommand.getSyncTasks()
         .stream()
-        .map(syncTask -> convert(syncTask))
+        .map(PBHelper::convert)
         .collect(Collectors.toList());
 
     builder.addAllSyncTasks(syncTaskProtos);
@@ -1206,6 +1206,8 @@ public class PBHelper {
 
   private static BlockSyncTaskProto convert(BlockSyncTask blockSyncTask) {
     BlockSyncTaskProto.Builder builder = BlockSyncTaskProto.newBuilder();
+    builder.setSyncTaskId(convert(blockSyncTask.getSyncTaskId(),
+        blockSyncTask.getSyncMountId()));
     builder.addAllLocatedBlocks(
         PBHelperClient.convertLocatedBlocks2(blockSyncTask.getLocatedBlocks()));
     builder.setUploadHandle(

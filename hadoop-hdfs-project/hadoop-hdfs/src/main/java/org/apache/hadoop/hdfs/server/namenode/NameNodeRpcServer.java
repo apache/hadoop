@@ -102,6 +102,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -126,6 +127,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -2650,5 +2652,49 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     Token<BlockTokenIdentifier> token = locatedBlock.getBlockToken();
     byte[] secret = btsm.secretGen(qop.getBytes(Charsets.UTF_8));
     token.setDNHandshakeSecret(secret);
+  }
+
+  @Override
+  public String createSync(String name, String localBackupPath,
+      String remoteBackupPath) throws IOException {
+    checkNNStartup();
+    return namesystem.createBackup(name, localBackupPath, remoteBackupPath);
+  }
+
+  @Override
+  public boolean fullResync(String name) throws IOException {
+    checkNNStartup();
+    return namesystem.fullResync(name);
+  }
+
+  @Override
+  public String getStatus(String syncMountName) throws IOException {
+    checkNNStartup();
+    return namesystem.getStatus(syncMountName);
+  }
+
+  @Override
+  public void removeSync(String name, DisconnectPolicy policy)
+      throws IOException {
+    checkNNStartup();
+    namesystem.removeBackup(name, policy);
+  }
+
+  @Override
+  public List<SyncMount> getSyncMounts() throws IOException {
+    checkNNStartup();
+    return namesystem.getSyncList();
+  }
+
+  @Override
+  public void pauseSync(String name) throws IOException {
+    checkNNStartup();
+    namesystem.pauseSync(name);
+  }
+
+  @Override
+  public void resumeSync(String name) throws IOException {
+    checkNNStartup();
+    namesystem.resumeSync(name);
   }
 }

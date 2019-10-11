@@ -85,6 +85,7 @@ public class TestBlockStoragePolicy {
   static final byte ALLSSD  = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
   static final byte LAZY_PERSIST  = HdfsConstants.MEMORY_STORAGE_POLICY_ID;
   static final byte PROVIDED  = HdfsConstants.PROVIDED_STORAGE_POLICY_ID;
+  static final byte DISK_PROVIDED  = HdfsConstants.DISK_PROVIDED_STORAGE_POLICY_ID;
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {

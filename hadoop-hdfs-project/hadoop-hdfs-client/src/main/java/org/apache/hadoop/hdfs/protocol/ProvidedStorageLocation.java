@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 import javax.annotation.Nonnull;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -43,6 +44,24 @@ public class ProvidedStorageLocation {
     this.nonce = Arrays.copyOf(nonce, nonce.length);
   }
 
+  /**
+   * Create a ProvidedStorageLocation where the nonce is a ByteBuffer
+   * @param path
+   * @param offset
+   * @param length
+   * @param nonce ByteBuffer with the nonce. This will be consumed by the
+   *              construction of the PSL.
+   */
+  public ProvidedStorageLocation(Path path, long offset, long length,
+      ByteBuffer nonce) {
+    this.path = path;
+    this.offset = offset;
+    this.length = length;
+    this.nonce = new byte[nonce.remaining()];
+    nonce.get(this.nonce);
+  }
+
+
   public @Nonnull Path getPath() {
     return path;
   }
@@ -58,6 +77,15 @@ public class ProvidedStorageLocation {
   public @Nonnull byte[] getNonce() {
     // create a copy of the nonce and return it.
     return Arrays.copyOf(nonce, nonce.length);
+  }
+
+  @Override
+  public String toString() {
+    return "ProvidedStorageLocation{" +
+        "path=" + path +
+        ", offset=" + offset +
+        ", length=" + length +
+        '}';
   }
 
   @Override
