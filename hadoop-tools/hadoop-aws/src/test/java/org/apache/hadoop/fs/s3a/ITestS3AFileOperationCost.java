@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -471,6 +472,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Assertions.assertThat(status)
         .describedAs("LIST output is not considered empty")
         .matches(s -> !s.isEmptyDirectory().equals(Tristate.TRUE),  "is empty");
+
+    // finally, skip all probes and expect no operations toThere are
+    // take place
+    intercept(FileNotFoundException.class, () ->
+        fs.innerGetFileStatus(emptydir, false,
+            EnumSet.noneOf(StatusProbeEnum.class)));
+    verifyOperationCount(0, 0);
 
     // now add a trailing slash to the key and use the
     // deep internal s3GetFileStatus method call.

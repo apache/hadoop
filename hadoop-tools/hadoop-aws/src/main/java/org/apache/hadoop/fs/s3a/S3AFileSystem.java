@@ -2610,7 +2610,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param f The path we want information from
    * @param needEmptyDirectoryFlag if true, implementation will calculate
    *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
-   * @param probes probes to make
+   * @param probes probes to make.
    * @return a S3AFileStatus object
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
@@ -2721,13 +2721,54 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Raw {@code getFileStatus} that talks direct to S3.
    * Used to implement {@link #innerGetFileStatus(Path, boolean, Set)},
    * and for direct management of empty directory blobs.
+   *
+   * Checks made, in order:
+   * <ol>
+   *   <li>
+   *     Head: look for an object at the given key, provided that
+   *     the key doesn't end in "/"
+   *   </li>
+   *   <li>
+   *     DirMarker: look for the directory marker -the key with a trailing /
+   *     if not passed in.
+   *     If an object was found with size 0 bytes, a directory status entry
+   *     is returned which declares that the directory is empty.
+   *   </li>
+   *    <li>
+   *     List: issue a LIST on the key (with / if needed), require one
+   *     entry to be found for the path to be considered a non-empty directory.
+   *   </li>
+   * </ol>
+   *
+   * Notes:
+   * <ul>
+   *   <li>
+   *     Objects ending in / which are not 0-bytes long are not treated as
+   *     directory markers, but instead as files.
+   *   </li>
+   *   <li>
+   *     There's ongoing discussions about whether a dir marker
+   *     should be interpreted as an empty dir.
+   *   </li>
+   *   <li>
+   *     The HEAD requests require the permissions to read an object,
+   *     including (we believe) the ability to decrypt the file.
+   *     At the very least, for SSE-C markers, you need the same key on
+   *     the client for the HEAD to work.
+   *   </li>
+   *   <li>
+   *     The List probe needs list permission; it is also more prone to
+   *     inconsistency, even on newly created files.
+   *   </li>
+   * </ul>
+   *
    * Retry policy: retry translated.
    * @param path Qualified path
    * @param key  Key string for the path
    * @param probes probes to make
    * @param tombstones tombstones to filter
    * @return Status
-   * @throws FileNotFoundException when the path does not exist
+   * @throws FileNotFoundException the supplied probes failed.
    * @throws IOException on other problems.
    */
   @VisibleForTesting
