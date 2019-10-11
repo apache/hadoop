@@ -433,7 +433,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * Run the tool, capturing the output (if the tool supports that).
    *
    * As well as returning an exit code, the implementations can choose to
-   * throw an instance of {@link ExitUtil.ExitException} with their exit
+   * throw an instance of {@code ExitUtil.ExitException} with their exit
    * code set to the desired exit value. The exit code of such an exception
    * is used for the tool's exit code, and the stack trace only logged at
    * debug.
