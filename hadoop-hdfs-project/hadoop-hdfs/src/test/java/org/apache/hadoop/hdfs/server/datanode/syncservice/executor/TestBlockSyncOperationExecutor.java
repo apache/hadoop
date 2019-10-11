@@ -41,8 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -62,10 +60,9 @@ public class TestBlockSyncOperationExecutor {
         new BlockSyncOperationExecutor(conf,
             (locatedBlock, config) -> blockReaderMock,
             fs -> multipartUploaderMock);
-    String uploadHandleStr = "uploadHandle";
-    byte[] uploadHandle = uploadHandleStr.getBytes();
-    ByteBuffer byteBuffer = ByteBuffer.wrap(uploadHandle);
-    PartHandle partHandle = BBPartHandle.from(byteBuffer);
+    ByteBuffer uploadHandle = ByteBuffer.wrap("uploadHandle".getBytes());
+    PartHandle partHandle = BBPartHandle.from(
+        ByteBuffer.wrap("partHandle".getBytes()));
     when(multipartUploaderMock.putPart(any(), any(), anyInt(), any(),
         anyLong())).thenReturn(partHandle);
     UUID syncTaskId = UUID.randomUUID();

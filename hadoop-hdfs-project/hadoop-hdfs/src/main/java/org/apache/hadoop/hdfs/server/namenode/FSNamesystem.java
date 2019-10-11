@@ -90,6 +90,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
@@ -97,10 +98,12 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.MountException;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -361,6 +364,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public static final org.slf4j.Logger LOG = LoggerFactory
       .getLogger(FSNamesystem.class.getName());
+  public static final String SYNC_SERVICE_NOT_ENABLED_MESSAGE = "Sync service not enabled, backup will never happen";
+
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -6498,7 +6503,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /** Allow snapshot on a directory. */
-  void allowSnapshot(String path) throws IOException {
+  public void allowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "allowSnapshot";
     boolean success = false;
@@ -6517,7 +6522,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /** Disallow snapshot on a directory. */
-  void disallowSnapshot(String path) throws IOException {
+  public void disallowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "disallowSnapshot";
     checkSuperuserPrivilege(operationName);
@@ -6540,8 +6545,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
    */
-  String createSnapshot(String snapshotRoot, String snapshotName,
-                        boolean logRetryCache) throws IOException {
+  public String createSnapshot(String snapshotRoot, String snapshotName,
+      boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "createSnapshot";
     String snapshotPath = null;
@@ -6648,7 +6653,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         and labeled as M/-/+/R respectively.
    * @throws IOException
    */
-  SnapshotDiffReport getSnapshotDiffReport(String path,
+  public SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     long begTime = Time.monotonicNow();
     final String operationName = "computeSnapshotDiff";
@@ -6761,7 +6766,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws SafeModeException
    * @throws IOException
    */
-  void deleteSnapshot(String snapshotRoot, String snapshotName,
+  public void deleteSnapshot(String snapshotRoot, String snapshotName,
       boolean logRetryCache) throws IOException {
     final String operationName = "deleteSnapshot";
     boolean success = false;
@@ -7832,9 +7837,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
-                boolean logRetryCache)
-      throws IOException {
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+      boolean logRetryCache) throws IOException {
     final String operationName = "setXAttr";
     FileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
@@ -7855,7 +7859,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, src, null, auditStat);
   }
 
-  List<XAttr> getXAttrs(final String src, List<XAttr> xAttrs)
+  public List<XAttr> getXAttrs(final String src, List<XAttr> xAttrs)
       throws IOException {
     final String operationName = "getXAttrs";
     checkOperation(OperationCategory.READ);
@@ -7894,7 +7898,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return fsXattrs;
   }
 
-  void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
+  public void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
       throws IOException {
     final String operationName = "removeXAttr";
     FileStatus auditStat = null;
@@ -8244,6 +8248,36 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } else {
       return "disableRestoreFailedStorage";
     }
+  }
+
+  public String getStatus(String syncMountName) throws MountException {
+    throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
+  }
+
+  public String createBackup(String name, String localBackupPathAsString,
+      String remoteBackupURIAsString) throws MountException {
+      throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
+  }
+
+  public boolean fullResync(String name) {
+    return false;
+  }
+
+  public void removeBackup(String name, DisconnectPolicy policy)
+      throws MountException {
+    throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
+  }
+
+  public List<SyncMount> getSyncList() throws MountException {
+    throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
+  }
+
+  public void pauseSync(String name) throws MountException {
+    throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
+  }
+
+  public void resumeSync(String name) throws MountException {
+    throw new MountException(SYNC_SERVICE_NOT_ENABLED_MESSAGE);
   }
 }
 

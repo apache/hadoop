@@ -14,28 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocol;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.io.IOException;
 
 /**
- * Feedback for a collection of {@link BlockSyncTask}s.
+ * Exception thrown by the MountManager.
  */
-public class BulkSyncTaskExecutionFeedback {
+public class MountException extends IOException {
+  public static final String BACKUP_NAME_ALREADY_EXISTS =
+      "Backup name already exists: ";
+  public static final String BACKUP_NAME_DOES_NOT_EXIST =
+      "Backup name not found: ";
 
-  private Collection<BlockSyncTaskExecutionFeedback> feedbacks;
-
-  public static BulkSyncTaskExecutionFeedback empty() {
-    return new BulkSyncTaskExecutionFeedback(Collections.emptyList());
+  public static MountException nameAlreadyExistsException(String name) {
+    return new MountException(BACKUP_NAME_ALREADY_EXISTS + name);
   }
 
-  public BulkSyncTaskExecutionFeedback(
-      Collection<BlockSyncTaskExecutionFeedback> feedbacks) {
-    this.feedbacks = feedbacks;
+  public static MountException nameDoesNotExistException(String name) {
+    return new MountException(BACKUP_NAME_DOES_NOT_EXIST + name);
   }
 
-  public Collection<BlockSyncTaskExecutionFeedback> getFeedbacks() {
-    return feedbacks;
+  public MountException(String message) {
+    super(message);
+  }
+
+  public MountException(String message, Throwable cause) {
+    super(message, cause);
   }
 }

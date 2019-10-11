@@ -16,7 +16,9 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,13 +34,13 @@ public class BlockSyncTask {
   private final List<LocatedBlock> locatedBlocks;
   private String syncMountId;
   private final int partNumber;
-  private byte[] uploadHandle;
+  private ByteBuffer uploadHandle;
   private final int offset;
   private final long length;
 
   public BlockSyncTask(UUID syncTaskId, URI remoteURI,
-      List<LocatedBlock> locatedBlocks, Integer partNumber, byte[] uploadHandle,
-      int offset, long length, String syncMountId) {
+      List<LocatedBlock> locatedBlocks, Integer partNumber,
+      ByteBuffer uploadHandle, int offset, long length, String syncMountId) {
     this.syncTaskId = syncTaskId;
     this.remoteURI = remoteURI;
     this.locatedBlocks = locatedBlocks;
@@ -53,7 +55,7 @@ public class BlockSyncTask {
     return partNumber;
   }
 
-  public byte[] getUploadHandle() {
+  public ByteBuffer getUploadHandle() {
     return uploadHandle;
   }
 

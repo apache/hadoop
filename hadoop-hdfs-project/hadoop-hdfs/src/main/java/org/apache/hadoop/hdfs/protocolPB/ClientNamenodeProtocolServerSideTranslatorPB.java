@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -74,6 +75,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclRequestPr
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -98,6 +100,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSyncRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSyncResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteResponseProto;
@@ -109,6 +113,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Finali
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FullResyncResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
@@ -154,14 +159,24 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStatisticsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStatisticsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSyncMountsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSyncMountsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PauseSyncRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PauseSyncResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveSyncRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveSyncResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ResumeSyncRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ResumeSyncResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
@@ -419,6 +434,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final SatisfyStoragePolicyResponseProto
       VOID_SATISFYSTORAGEPOLICY_RESPONSE = SatisfyStoragePolicyResponseProto
       .getDefaultInstance();
+
+  private static final RemoveSyncResponseProto VOID_REMOVESYNC_RESPONSE =
+      RemoveSyncResponseProto.getDefaultInstance();
+
+  private static final PauseSyncResponseProto VOID_PAUSESYNC_RESPONSE =
+      PauseSyncResponseProto.getDefaultInstance();
+
+  private static final ResumeSyncResponseProto VOID_RESUMESYNC_RESPONSE =
+      ResumeSyncResponseProto.getDefaultInstance();
 
   /**
    * Constructor
@@ -1949,6 +1973,133 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           HAServiceStateResponseProto.newBuilder();
       builder.setState(retState);
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  public CreateSyncResponseProto createSync(RpcController controller,
+      CreateSyncRequestProto request) throws ServiceException {
+    try {
+      if (!request.hasLocalPath()) {
+        throw new IOException("localPath not specified in " +
+            "CreateSyncRequest");
+      }
+      if (!request.hasRemoteLocation()) {
+        throw new IOException("remoteLocation not specified in " +
+            "CreateSyncRequest");
+      }
+
+      String name = server.createSync(request.getName(),
+          request.getLocalPath(), request.getRemoteLocation());
+
+      CreateSyncResponseProto response =
+          CreateSyncResponseProto.newBuilder().setName(name).build();
+      return response;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  public RemoveSyncResponseProto removeSync(RpcController controller,
+      RemoveSyncRequestProto request) throws ServiceException {
+    try {
+      if (!request.hasName()) {
+        throw new IOException("Name not specified in RemoveBackupRequest");
+      }
+      if (!request.hasDisconnectPolicy()) {
+        throw new IOException("DisconnectPolicy not specified in " +
+            "RemoveBackupRequest");
+      }
+
+      server.removeSync(request.getName(),
+          PBHelperClient.convert(request.getDisconnectPolicy()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    return VOID_REMOVESYNC_RESPONSE;
+  }
+
+  @Override
+  public GetSyncMountsResponseProto getSyncMounts(RpcController controller,
+      GetSyncMountsRequestProto request) throws ServiceException {
+    try {
+      List<SyncMount> list = server.getSyncMounts();
+      GetSyncMountsResponseProto.Builder listBuilder =
+          GetSyncMountsResponseProto.newBuilder();
+
+      for (SyncMount mount: list) {
+        listBuilder.addSyncMounts(PBHelperClient.convert(mount));
+      }
+
+      GetSyncMountsResponseProto response = listBuilder.build();
+
+      return response;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  public PauseSyncResponseProto pauseSync(RpcController controller,
+      PauseSyncRequestProto request) throws ServiceException {
+    try {
+      if (!request.hasName()) {
+        throw new IOException("Name not specified in PauseSyncRequest");
+      }
+
+      server.pauseSync(request.getName());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    return VOID_PAUSESYNC_RESPONSE;
+  }
+
+  public ResumeSyncResponseProto resumeSync(RpcController controller,
+      ResumeSyncRequestProto request) throws ServiceException {
+    try {
+      if (!request.hasName()) {
+        throw new IOException("Name not specified in ResumeSyncRequest");
+      }
+
+      server.resumeSync(request.getName());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    return VOID_RESUMESYNC_RESPONSE;
+  }
+
+  @Override
+  public GetStatisticsResponseProto getStatus(RpcController controller,
+      GetStatisticsRequestProto request) throws ServiceException {
+    String syncMountName = request.getSyncMountName();
+    try {
+      String statistics = server.getStatus( syncMountName);
+      GetStatisticsResponseProto.Builder builder =
+          GetStatisticsResponseProto.newBuilder();
+
+      builder.setStatistics(statistics);
+
+      return builder.build();
+
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public FullResyncResponseProto fullResync(
+      RpcController controller,
+      ClientNamenodeProtocolProtos.FullResyncRequestProto request) throws ServiceException {
+    try {
+
+      boolean success = server.fullResync(request.getName());
+
+      FullResyncResponseProto response =
+          FullResyncResponseProto.newBuilder().setSuccess(success).build();
+      return response;
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -103,6 +103,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.SyncMount;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -116,6 +117,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -132,6 +134,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.MountException;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -3141,6 +3144,65 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           FileNotFoundException.class,
           SafeModeException.class,
           UnresolvedPathException.class);
+    }
+  }
+
+  public String createSync(String name, String localBackupPath,
+      String remoteBackupPath) throws IOException {
+    try (TraceScope ignored = tracer.newScope("createSync")) {
+      return namenode.createSync(name, localBackupPath, remoteBackupPath);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public void removeSync(String name, DisconnectPolicy policy)
+      throws IOException {
+    try (TraceScope ignored = tracer.newScope("removeSync")) {
+      namenode.removeSync(name, policy);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public List<SyncMount> getSyncMounts()
+      throws IOException {
+    try (TraceScope ignored = tracer.newScope("getSyncMounts")) {
+      return namenode.getSyncMounts();
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public void pauseSync(String name) throws IOException {
+    try (TraceScope ignored = tracer.newScope("pauseBackup")) {
+      namenode.pauseSync(name);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public void resumeSync(String name) throws IOException {
+    try (TraceScope ignored = tracer.newScope("resumeBackup")) {
+      namenode.resumeSync(name);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public void fullResync(String name) throws IOException {
+    try (TraceScope ignored = tracer.newScope("fullResync")) {
+      namenode.fullResync(name);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
+    }
+  }
+
+  public String getStatus(String syncMountName) throws IOException {
+    try (TraceScope ignored = tracer.newScope("getStatus")) {
+      return namenode.getStatus(syncMountName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(MountException.class);
     }
   }
 

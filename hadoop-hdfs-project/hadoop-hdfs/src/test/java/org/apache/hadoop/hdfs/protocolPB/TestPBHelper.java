@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import com.google.protobuf.UninitializedMessageException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.DisconnectPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
@@ -32,6 +33,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -56,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisconnectPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
@@ -1032,6 +1035,17 @@ public class TestPBHelper {
               .build());
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("Missing", e);
+    }
+  }
+
+  @Test
+  public void testConvertDisconnectPolicy() throws Exception {
+    // Will fail if a new DisconnectPolicy is added to the enum without adding
+    // it to the PBHelperClient
+    for (DisconnectPolicy policy : EnumSet.allOf(DisconnectPolicy.class)) {
+      DisconnectPolicyProto policyProto = PBHelperClient.convert(policy);
+      DisconnectPolicy policy2 = PBHelperClient.convert(policyProto);
+      assertEquals("Error while converting disconnectPolicy", policy, policy2);
     }
   }
 }

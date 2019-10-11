@@ -26,14 +26,12 @@ import org.apache.hadoop.fs.PartHandle;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockInputStream;
 import org.apache.hadoop.hdfs.BlockReader;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockSyncTask;
 import org.apache.hadoop.hdfs.server.protocol.SyncTaskExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -96,7 +94,7 @@ public class BlockSyncOperationExecutor  {
   }
 
   private SyncTaskExecutionResult doMultiPartPart(URI uri,
-      List<LocatedBlock> locatedBlocks, int partNumber, byte[] uploadHandle,
+      List<LocatedBlock> locatedBlocks, int partNumber, ByteBuffer uploadHandle,
       int offset, long length) throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
     Path filePath = new Path(uri);
@@ -115,7 +113,7 @@ public class BlockSyncOperationExecutor  {
         new SequenceInputStream(streamEnumeration);
     MultipartUploader mpu = multipartUploaderSupplier.apply(fs);
     PartHandle partHandle = mpu.putPart(filePath, inputStream,
-        partNumber, BBUploadHandle.from(ByteBuffer.wrap(uploadHandle)), length);
+        partNumber, BBUploadHandle.from(uploadHandle), length);
     return new SyncTaskExecutionResult(partHandle.bytes(), length);
   }
 }

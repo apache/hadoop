@@ -14,28 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocol;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 /**
- * Feedback for a collection of {@link BlockSyncTask}s.
+ * SyncMountStatus represents changing information about a binding. e.g.
+ * status, which datanodes are handling it.
  */
-public class BulkSyncTaskExecutionFeedback {
+public class SyncMountStatus {
 
-  private Collection<BlockSyncTaskExecutionFeedback> feedbacks;
+  private String status;
 
-  public static BulkSyncTaskExecutionFeedback empty() {
-    return new BulkSyncTaskExecutionFeedback(Collections.emptyList());
+  private List<String> datanodes;
+
+  public SyncMountStatus(String status, List<String> datanodes) {
+    this.status = status;
+    this.datanodes = datanodes;
   }
 
-  public BulkSyncTaskExecutionFeedback(
-      Collection<BlockSyncTaskExecutionFeedback> feedbacks) {
-    this.feedbacks = feedbacks;
+  public String getStatus() {
+    return status;
   }
 
-  public Collection<BlockSyncTaskExecutionFeedback> getFeedbacks() {
-    return feedbacks;
+  public List<String> getDatanodes() {
+    return datanodes;
   }
 }
