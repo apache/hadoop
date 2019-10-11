@@ -80,6 +80,10 @@ public class TestFSTreeWalk {
     assertEquals(0, expectedChildren.size());
   }
 
+  /**
+   * Verify ACL enabled TreeWalk iterator throws an error if the external file
+   * system does not support ACLs.
+   */
   @Test(expected = UnsupportedOperationException.class)
   public void testACLNotSupported() throws Exception {
     Configuration conf = new Configuration();
@@ -93,8 +97,24 @@ public class TestFSTreeWalk {
     when(fs.getFileStatus(root)).thenReturn(rootFileStatus);
 
     FSTreeWalk fsTreeWalk = new FSTreeWalk(root, conf);
-    for (TreePath treePath : fsTreeWalk) {
-      fail("Unexpected successful traversal of remote FS: " + treePath);
-    }
+    TreeWalk.TreeIterator iter = fsTreeWalk.iterator();
+    fail("Unexpected successful creation of iter: " + iter);
+  }
+
+  /**
+   * Verify creation of INode for ACL enabled TreePath throws an error.
+   */
+  @Test(expected = UnsupportedOperationException.class)
+  public void testToINodeACLNotSupported() throws Exception {
+    BlockResolver blockResolver = new FixedBlockResolver();
+    Path root = new Path("/");
+    FileStatus rootFileStatus = new FileStatus(0, false, 0, 0, 1, root);
+
+    AclStatus acls = mock(AclStatus.class);
+    TreePath treePath = new TreePath(rootFileStatus, 1, null, null, acls);
+
+    UGIResolver ugiResolver = mock(UGIResolver.class);
+    when(ugiResolver.getPermissionsProto(null, acls)).thenReturn(1l);
+    treePath.toINode(ugiResolver, blockResolver, null);
   }
 }
