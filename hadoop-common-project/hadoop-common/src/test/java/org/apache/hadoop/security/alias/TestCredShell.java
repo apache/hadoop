@@ -183,6 +183,12 @@ public class TestCredShell {
     rc = shell.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("Password match success for credential1."));
+    ArrayList<String> passwordError = new ArrayList<String>();
+    passwordError.add("p@ssw0rderr");
+    shell.setPasswordReader(new MockPasswordReader(password));
+    rc = shell.run(args2);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString().contains("Password match failed for credential1."));
 
     String[] args3 = {"delete", "credential1", "-f", "-provider",
         jceksProvider};
