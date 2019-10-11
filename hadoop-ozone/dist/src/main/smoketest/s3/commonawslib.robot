@@ -50,21 +50,22 @@ Setup v2 headers
 
 Setup v4 headers
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user    testuser    testuser.keytab
+    Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Setup secure v4 headers
+    Run Keyword if      '${SECURITY_ENABLED}' == 'false'    Setup dummy credentials for S3
+
+Setup secure v4 headers
     ${result} =         Execute                    ozone s3 getsecret
     ${accessKey} =      Get Regexp Matches         ${result}     (?<=awsAccessKey=).*
     ${accessKey} =      Get Variable Value         ${accessKey}  sdsdasaasdasd
     ${secret} =         Get Regexp Matches         ${result}     (?<=awsSecret=).*
-
-    ${len}=             Get Length  ${accessKey}
-    ${accessKey}=       Set Variable If   ${len} > 0  ${accessKey[0]}    kljdfslff
-    ${len}=             Get Length  ${secret}
-    ${secret}=          Set Variable If    ${len} > 0  ${secret[0]}      dhafldhlf
+    ${accessKey} =      Set Variable               ${accessKey[0]}
+    ${secret} =         Set Variable               ${secret[0]}
                         Execute                    aws configure set default.s3.signature_version s3v4
                         Execute                    aws configure set aws_access_key_id ${accessKey}
                         Execute                    aws configure set aws_secret_access_key ${secret}
                         Execute                    aws configure set region us-west-1
 
-Setup incorrect credentials for S3
+Setup dummy credentials for S3
                         Execute                    aws configure set default.s3.signature_version s3v4
                         Execute                    aws configure set aws_access_key_id dlfknslnfslf
                         Execute                    aws configure set aws_secret_access_key dlfknslnfslf

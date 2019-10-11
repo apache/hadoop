@@ -38,7 +38,7 @@ Secure S3 test Success
                         Should contain   ${output}         bucket-test123
 
 Secure S3 test Failure
-    Run Keyword         Setup incorrect credentials for S3
+    Run Keyword         Setup dummy credentials for S3
     ${rc}  ${result} =  Run And Return Rc And Output  aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
     Should Be True	${rc} > 0
 
