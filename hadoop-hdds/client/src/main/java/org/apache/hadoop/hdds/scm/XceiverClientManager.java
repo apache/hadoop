@@ -78,7 +78,9 @@ public class XceiverClientManager implements Closeable {
   private boolean isSecurityEnabled;
   private final boolean topologyAwareRead;
   /**
-   * Creates a new XceiverClientManager.
+   * Creates a new XceiverClientManager for non secured ozone cluster.
+   * For security enabled ozone cluster, client should use the other constructor
+   * with a valid ca certificate in pem string format.
    *
    * @param conf configuration
    */
