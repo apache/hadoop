@@ -1663,7 +1663,7 @@ public class KeyManagerImpl implements KeyManager {
         try {
           OzoneFileStatus fileStatus = getFileStatus(args);
           keyInfo = fileStatus.getKeyInfo();
-        } catch (Exception e) {
+        } catch (IOException e) {
           throw new OMException("Key not found, checkAccess failed. Key:" +
               objectKey, KEY_NOT_FOUND);
         }
