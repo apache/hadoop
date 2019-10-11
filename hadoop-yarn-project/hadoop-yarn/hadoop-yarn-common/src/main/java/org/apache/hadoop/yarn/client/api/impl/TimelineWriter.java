@@ -24,8 +24,13 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
+import org.glassfish.jersey.client.ClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -41,9 +46,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 
 /**
  * Base writer class to write the Timeline data.
@@ -90,7 +92,7 @@ public abstract class TimelineWriter implements Flushable {
       entitiesContainer.addEntity(entity);
     }
     ClientResponse resp = doPosting(entitiesContainer, null);
-    return resp.getEntity(TimelinePutResponse.class);
+    return resp.readEntity(TimelinePutResponse.class);
   }
 
   public void putDomain(TimelineDomain domain) throws IOException,
@@ -127,14 +129,14 @@ public abstract class TimelineWriter implements Flushable {
     }
     if (resp == null ||
         resp.getStatusInfo().getStatusCode()
-            != ClientResponse.Status.OK.getStatusCode()) {
+            != Response.Status.OK.getStatusCode()) {
       String msg =
           "Failed to get the response from the timeline server.";
       LOG.error(msg);
       if (resp != null) {
         msg += " HTTP error code: " + resp.getStatus();
         LOG.debug("HTTP error code: {} Server response : \n{}",
-            resp.getStatus(), resp.getEntity(String.class));
+            resp.getStatus(), resp.readEntity(String.class));
       }
       throw new YarnException(msg);
     }
@@ -144,19 +146,17 @@ public abstract class TimelineWriter implements Flushable {
   @Private
   @VisibleForTesting
   public ClientResponse doPostingObject(Object object, String path) {
-    WebResource webResource = client.resource(resURI);
+    WebTarget webTarget = client.target(resURI);
     if (path == null) {
       LOG.debug("POST to {}", resURI);
-      ClientResponse r = webResource.accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .post(ClientResponse.class, object);
+      ClientResponse r = webTarget.request(MediaType.APPLICATION_JSON)
+          .post(Entity.json(object), ClientResponse.class);
       r.bufferEntity();
       return r;
     } else if (path.equals("domain")) {
       LOG.debug("PUT to {}/{}", resURI, path);
-      ClientResponse r = webResource.path(path).accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class, object);
+      ClientResponse r = webTarget.path(path).request(MediaType.APPLICATION_JSON)
+          .post(Entity.json(object), ClientResponse.class);
       r.bufferEntity();
       return r;
     } else {

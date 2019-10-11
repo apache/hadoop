@@ -67,7 +67,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
-import com.sun.jersey.api.client.Client;
+
+import javax.ws.rs.client.Client;
 
 /**
  * A simple writer class for storing Timeline data in any storage that

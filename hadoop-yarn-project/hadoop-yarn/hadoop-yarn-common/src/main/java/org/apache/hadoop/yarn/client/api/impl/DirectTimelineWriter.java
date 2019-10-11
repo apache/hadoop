@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 
 /**
  * A simple writer class for storing Timeline data into Leveldb store.
@@ -46,7 +46,7 @@ public class DirectTimelineWriter extends TimelineWriter{
       .getLogger(DirectTimelineWriter.class);
 
   public DirectTimelineWriter(UserGroupInformation authUgi,
-      Client client, URI resURI) {
+                              Client client, URI resURI) {
     super(authUgi, client, resURI);
   }
 
