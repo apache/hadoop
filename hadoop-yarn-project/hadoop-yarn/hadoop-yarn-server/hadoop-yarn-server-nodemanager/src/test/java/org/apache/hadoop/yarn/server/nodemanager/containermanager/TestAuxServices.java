@@ -256,6 +256,11 @@ public class TestAuxServices {
     conf.set(YarnConfiguration.NM_AUX_SERVICES_MANIFEST, manifest
         .getAbsolutePath());
     mapper.writeValue(manifest, services);
+    manifest.setReadable(false,false);
+    manifest.setWritable(false,false);
+    manifest.setExecutable(false,false);
+    manifest.setWritable(true);
+    manifest.setReadable(true);
   }
 
   @SuppressWarnings("resource")

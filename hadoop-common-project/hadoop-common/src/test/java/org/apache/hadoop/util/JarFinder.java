@@ -179,6 +179,11 @@ public class JarFinder {
     File jarFile = new File(rootDir, jarName);
     JarOutputStream jstream =
         new JarOutputStream(new FileOutputStream(jarFile));
+    jarFile.setReadable(false,false);
+    jarFile.setWritable(false,false);
+    jarFile.setExecutable(false,false);
+    jarFile.setWritable(true);
+    jarFile.setReadable(true);
     for (String clsName: clsNames) {
       String name = clsName.replace('.', '/') + ".class";
       InputStream entryInputStream = target.getResourceAsStream(
