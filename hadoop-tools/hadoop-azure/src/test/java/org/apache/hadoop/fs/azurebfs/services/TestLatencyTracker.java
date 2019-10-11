@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
  */
 public final class TestLatencyTracker {
   private static final Logger LOG = LoggerFactory.getLogger(TestLatencyTracker.class);
+  private static final int TEST_AGGREGATE_LATENCY = 42;
   private final String filesystemName = "bogusFilesystemName";
   private final String accountName = "bogusAccountName";
   private final URL url;
@@ -94,7 +95,7 @@ public final class TestLatencyTracker {
     for (int i=0; i < numTasks; i++) {
       latencyDetails = latencyTracker.getClientLatency();
       Assert.assertNotNull("LatencyTracker should return non-null record", latencyDetails);
-      Assert.assertTrue ("Latency record should be in the correct format", Pattern.matches(
+      Assert.assertTrue("Latency record should be in the correct format", Pattern.matches(
               "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
                       + " s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
     }
@@ -118,7 +119,7 @@ public final class TestLatencyTracker {
         @Override
         public Integer call() throws Exception {
           // test latency tracking when aggregate latency numbers are also passed
-          latencyTracker.recordClientLatency(Instant.now(), "oneOperationCaller", "oneOperationCallee", true, Instant.now(), 123, httpOperation);
+          latencyTracker.recordClientLatency(Instant.now(), "oneOperationCaller", "oneOperationCallee", true, Instant.now(), TEST_AGGREGATE_LATENCY, httpOperation);
           return 0;
         }
       };
@@ -134,7 +135,7 @@ public final class TestLatencyTracker {
       Assert.assertNotNull("LatencyTracker should return non-null record", latencyDetails);
       Assert.assertTrue("Latency record should be in the correct format", Pattern.matches(
               "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
-                      + " ls=[0-9]+ lc=123 s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
+                      + " ls=[0-9]+ lc=" + TEST_AGGREGATE_LATENCY + " s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails));
     }
   }
 
@@ -202,7 +203,7 @@ public final class TestLatencyTracker {
           try {
             // placeholder try block
           } finally {
-            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 123, httpOperation);
+            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, TEST_AGGREGATE_LATENCY, httpOperation);
           }
 
           long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -323,7 +324,7 @@ public final class TestLatencyTracker {
           try {
             // placeholder try block
           } finally {
-            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, 123, httpOperation);
+            latencyTracker.recordClientLatency(startRecord, "oneOperationCaller", "oneOperationCallee", true, startRecord, TEST_AGGREGATE_LATENCY, httpOperation);
           }
 
           long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -409,7 +410,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), TEST_AGGREGATE_LATENCY, httpOperation);
 
       latencyTracker.recordClientLatency(null, null, null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), null, null, null, false, null, 0, null);
@@ -417,7 +418,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), TEST_AGGREGATE_LATENCY, httpOperation);
 
       latencyTracker.recordClientLatency(testInstant, Instant.now(), null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.MAX, Instant.now(), null, null, false, null, 0, null);
@@ -458,7 +459,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), "test", "test", false, Instant.now(), TEST_AGGREGATE_LATENCY, httpOperation);
 
       latencyTracker.recordClientLatency(null, null, null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), null, null, null, false, null, 0, null);
@@ -466,7 +467,7 @@ public final class TestLatencyTracker {
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 0, null);
-      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), 123, httpOperation);
+      latencyTracker.recordClientLatency(Instant.now(), Instant.now(), "test", "test", false, Instant.now(), TEST_AGGREGATE_LATENCY, httpOperation);
 
       latencyTracker.recordClientLatency(testInstant, Instant.now(), null, null, false, null, 0, null);
       latencyTracker.recordClientLatency(Instant.MAX, Instant.now(), null, null, false, null, 0, null);
