@@ -63,7 +63,7 @@ public class OzoneFileSystem extends BasicOzoneFileSystem
     try {
       keyProvider = getKeyProvider();
     } catch (IOException ioe) {
-      LOG.error("Error retrieving KeyProvider.", ioe);
+      LOG.debug("Error retrieving KeyProvider.", ioe);
       return null;
     }
     if (keyProvider instanceof DelegationTokenIssuer) {
