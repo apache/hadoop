@@ -97,10 +97,10 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
 
     switch (objInfo.getResourceType()) {
     case VOLUME:
-      LOG.trace("Checking access for volume:" + objInfo);
+      LOG.trace("Checking access for volume: {}", objInfo);
       return volumeManager.checkAccess(objInfo, context);
     case BUCKET:
-      LOG.trace("Checking access for bucket:" + objInfo);
+      LOG.trace("Checking access for bucket: {}", objInfo);
       // Skip bucket access check for CREATE acl since
       // bucket will not exist at the time of creation
       boolean bucketAccess = isACLTypeCreate
@@ -109,7 +109,7 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
           && volumeManager.checkAccess(objInfo, parentContext));
     case KEY:
     case OPEN_KEY:
-      LOG.trace("Checking access for Key:" + objInfo);
+      LOG.trace("Checking access for Key: {}", objInfo);
       // Skip key access check for CREATE acl since
       // key will not exist at the time of creation
       boolean keyAccess = isACLTypeCreate
@@ -119,7 +119,7 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
           && bucketManager.checkAccess(objInfo, parentContext)
           && volumeManager.checkAccess(objInfo, parentContext));
     case PREFIX:
-      LOG.trace("Checking access for Prefix:" + objInfo);
+      LOG.trace("Checking access for Prefix: {}", objInfo);
       // Skip prefix access check for CREATE acl since
       // prefix will not exist at the time of creation
       boolean prefixAccess = isACLTypeCreate

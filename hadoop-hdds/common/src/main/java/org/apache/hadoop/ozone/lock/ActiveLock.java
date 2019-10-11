@@ -31,9 +31,12 @@ public final class ActiveLock {
 
   /**
    * Use ActiveLock#newInstance to create instance.
+   *
+   * @param fairness - if true the lock uses a fair ordering policy, else
+   * non-fair ordering.
    */
-  private ActiveLock() {
-    this.lock = new ReentrantReadWriteLock();
+  private ActiveLock(boolean fairness) {
+    this.lock = new ReentrantReadWriteLock(fairness);
     this.count = new AtomicInteger(0);
   }
 
@@ -42,8 +45,8 @@ public final class ActiveLock {
    *
    * @return new ActiveLock
    */
-  public static ActiveLock newInstance() {
-    return new ActiveLock();
+  public static ActiveLock newInstance(boolean fairness) {
+    return new ActiveLock(fairness);
   }
 
   /**

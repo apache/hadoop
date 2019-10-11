@@ -570,8 +570,10 @@ public class BucketManagerImpl implements BucketManager {
       }
       boolean hasAccess = OzoneAclUtil.checkAclRights(bucketInfo.getAcls(),
           context);
-      LOG.debug("user:{} has access rights for bucket:{} :{} ",
-          context.getClientUgi(), ozObject.getBucketName(), hasAccess);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("user:{} has access rights for bucket:{} :{} ",
+            context.getClientUgi(), ozObject.getBucketName(), hasAccess);
+      }
       return hasAccess;
     } catch (IOException ex) {
       if(ex instanceof OMException) {

@@ -29,6 +29,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.lock.LockManager;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_MANAGER_FAIR_LOCK;
+
 /**
  * Provides different locks to handle concurrency in OzoneMaster.
  * We also maintain lock hierarchy, based on the weight.
@@ -89,7 +92,9 @@ public class OzoneManagerLock {
    * @param conf Configuration object
    */
   public OzoneManagerLock(Configuration conf) {
-    manager = new LockManager<>(conf);
+    boolean fair = conf.getBoolean(OZONE_MANAGER_FAIR_LOCK,
+        OZONE_MANAGER_FAIR_LOCK_DEFAULT);
+    manager = new LockManager<>(conf, fair);
   }
 
   /**
@@ -168,8 +173,10 @@ public class OzoneManagerLock {
       throw new RuntimeException(errorMessage);
     } else {
       lockFn.accept(resourceName);
-      LOG.debug("Acquired {} {} lock on resource {}", lockType, resource.name,
-          resourceName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Acquired {} {} lock on resource {}", lockType, resource.name,
+            resourceName);
+      }
       lockSet.set(resource.setLock(lockSet.get()));
       return true;
     }
@@ -264,8 +271,10 @@ public class OzoneManagerLock {
           throw ex;
         }
       }
-      LOG.debug("Acquired Write {} lock on resource {} and {}", resource.name,
-          firstUser, secondUser);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Acquired Write {} lock on resource {} and {}", resource.name,
+            firstUser, secondUser);
+      }
       lockSet.set(resource.setLock(lockSet.get()));
       return true;
     }
@@ -300,8 +309,10 @@ public class OzoneManagerLock {
       manager.writeUnlock(firstUser);
       manager.writeUnlock(secondUser);
     }
-    LOG.debug("Release Write {} lock on resource {} and {}", resource.name,
-        firstUser, secondUser);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Release Write {} lock on resource {} and {}", resource.name,
+          firstUser, secondUser);
+    }
     lockSet.set(resource.clearLock(lockSet.get()));
   }
 
@@ -352,8 +363,10 @@ public class OzoneManagerLock {
     // locks, as some locks support acquiring lock again.
     lockFn.accept(resourceName);
     // clear lock
-    LOG.debug("Release {} {}, lock on resource {}", lockType, resource.name,
-        resourceName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Release {} {}, lock on resource {}", lockType, resource.name,
+          resourceName);
+    }
     lockSet.set(resource.clearLock(lockSet.get()));
   }
 

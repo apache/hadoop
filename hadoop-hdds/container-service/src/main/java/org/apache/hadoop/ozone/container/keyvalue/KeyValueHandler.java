@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
@@ -46,7 +47,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .PutSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
-import org.apache.hadoop.hdds.scm.ByteStringHelper;
+import org.apache.hadoop.hdds.scm.ByteStringConversion;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
@@ -102,6 +103,7 @@ public class KeyValueHandler extends Handler {
   private final ChunkManager chunkManager;
   private final VolumeChoosingPolicy volumeChoosingPolicy;
   private final long maxContainerSize;
+  private final Function<ByteBuffer, ByteString> byteBufferToByteString;
 
   // A lock that is held during container creation.
   private final AutoCloseableLock containerCreationLock;
@@ -125,10 +127,8 @@ public class KeyValueHandler extends Handler {
     // this handler lock is used for synchronizing createContainer Requests,
     // so using a fair lock here.
     containerCreationLock = new AutoCloseableLock(new ReentrantLock(true));
-    boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
-        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
-        OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
-    ByteStringHelper.init(isUnsafeByteOperationsEnabled);
+    byteBufferToByteString =
+        ByteStringConversion.createByteBufferConversion(conf);
   }
 
   @VisibleForTesting
@@ -547,7 +547,7 @@ public class KeyValueHandler extends Handler {
     }
 
     // The container can become unhealthy after the lock is released.
-    // The operation will likely fail/timeout in that happens.
+    // The operation will likely fail/timeout if that happens.
     try {
       checkContainerIsHealthy(kvContainer);
     } catch (StorageContainerException sce) {
@@ -555,7 +555,7 @@ public class KeyValueHandler extends Handler {
     }
 
     ChunkInfo chunkInfo;
-    byte[] data;
+    ByteBuffer data;
     try {
       BlockID blockID = BlockID.getFromProtobuf(
           request.getReadChunk().getBlockID());
@@ -569,7 +569,7 @@ public class KeyValueHandler extends Handler {
 
       data = chunkManager
           .readChunk(kvContainer, blockID, chunkInfo, dispatcherContext);
-      metrics.incContainerBytesStats(Type.ReadChunk, data.length);
+      metrics.incContainerBytesStats(Type.ReadChunk, chunkInfo.getLen());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -578,7 +578,18 @@ public class KeyValueHandler extends Handler {
           request);
     }
 
-    return ChunkUtils.getReadChunkResponse(request, data, chunkInfo);
+    Preconditions.checkNotNull(data, "Chunk data is null");
+
+    ContainerProtos.ReadChunkResponseProto.Builder response =
+        ContainerProtos.ReadChunkResponseProto.newBuilder();
+    response.setChunkData(chunkInfo.getProtoBufMessage());
+    response.setData(byteBufferToByteString.apply(data));
+    response.setBlockID(request.getReadChunk().getBlockID());
+
+    ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(request);
+    builder.setReadChunk(response);
+    return builder.build();
   }
 
   /**
@@ -800,9 +811,9 @@ public class KeyValueHandler extends Handler {
       for (ContainerProtos.ChunkInfo chunk : responseData.getChunks()) {
         // if the block is committed, all chunks must have been committed.
         // Tmp chunk files won't exist here.
-        byte[] data = chunkManager.readChunk(kvContainer, blockID,
+        ByteBuffer data = chunkManager.readChunk(kvContainer, blockID,
             ChunkInfo.getFromProtoBuf(chunk), dispatcherContext);
-        ByteString current = ByteString.copyFrom(data);
+        ByteString current = byteBufferToByteString.apply(data);
         dataBuf = dataBuf.concat(current);
         chunkInfo = chunk;
       }
