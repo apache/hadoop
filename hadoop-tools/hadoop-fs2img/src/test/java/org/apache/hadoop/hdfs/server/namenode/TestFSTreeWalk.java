@@ -114,7 +114,7 @@ public class TestFSTreeWalk {
     TreePath treePath = new TreePath(rootFileStatus, 1, null, null, acls);
 
     UGIResolver ugiResolver = mock(UGIResolver.class);
-    when(ugiResolver.getPermissionsProto(null, acls)).thenReturn(1l);
+    when(ugiResolver.getPermissionsProto(null, acls)).thenReturn(1L);
     treePath.toINode(ugiResolver, blockResolver, null);
   }
 }
