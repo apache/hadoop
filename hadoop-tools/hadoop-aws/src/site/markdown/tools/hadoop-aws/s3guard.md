@@ -1001,8 +1001,6 @@ in an incompatible manner. The version marker in tables exists to support
 such an option if it ever becomes necessary, by ensuring that all S3Guard
 client can recognise any version mismatch.
 
-* Table versionin
-
 ## Security
 
 All users of the DynamoDB table must have write access to it. This
