@@ -176,7 +176,7 @@ public final class Constants {
 
   // number of times we should retry errors
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 20;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
