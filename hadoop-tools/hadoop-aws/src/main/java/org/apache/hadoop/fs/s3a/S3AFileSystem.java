@@ -926,7 +926,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param path path to qualify
    * @return a qualified path.
    */
-  private Path qualify(Path path) {
+  public Path qualify(Path path) {
     return makeQualified(path);
   }
 

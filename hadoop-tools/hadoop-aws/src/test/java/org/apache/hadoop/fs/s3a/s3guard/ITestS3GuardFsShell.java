@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * Test FS shell and S3Guard (and of course, the rest of S3)
+ * Test FS shell and S3Guard (and of course, the rest of S3).
  */
 public class ITestS3GuardFsShell extends AbstractS3ATestBase {
 
@@ -70,7 +70,7 @@ public class ITestS3GuardFsShell extends AbstractS3ATestBase {
   }
 
   /**
-   * Issue a mkdir without a trailing /
+   * Issue a mkdir without a trailing /.
    */
   @Test
   public void testMkdirNoTrailing() throws Throwable {
@@ -87,7 +87,7 @@ public class ITestS3GuardFsShell extends AbstractS3ATestBase {
   }
 
   /**
-   * Issue a mkdir with a trailing /
+   * Issue a mkdir with a trailing /.
    */
   @Test
   public void testMkdirTrailing() throws Throwable {
