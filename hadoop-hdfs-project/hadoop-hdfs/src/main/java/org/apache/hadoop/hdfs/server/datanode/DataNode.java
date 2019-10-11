@@ -2192,6 +2192,7 @@ public class DataNode extends ReconfigurableBase
       notifyAll();
     }
     tracer.close();
+
   }
 
   /**

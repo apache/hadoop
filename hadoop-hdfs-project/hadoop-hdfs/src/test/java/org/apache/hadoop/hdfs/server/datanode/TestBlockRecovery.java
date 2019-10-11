@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.BulkSyncTaskExecutionFeedback;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -227,6 +228,7 @@ public class TestBlockRecovery {
             Mockito.anyInt(),
             Mockito.any(),
             Mockito.anyBoolean(),
+            Mockito.any(),
             Mockito.any(),
             Mockito.any()))
         .thenReturn(new HeartbeatResponse(

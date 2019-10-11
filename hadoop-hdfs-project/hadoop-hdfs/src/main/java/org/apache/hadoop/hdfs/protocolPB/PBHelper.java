@@ -17,20 +17,14 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockSyncTaskOperation;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -43,38 +37,47 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommand
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockSyncTaskOperationProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockSyncTaskProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BulkSyncTaskExecutionFeedbackProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.MultiPartPutSyncTaskProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.PutFileSyncTaskProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos
-    .SlowDiskReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowDiskReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionFeedbackProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionOutcomeProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionResultProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedStorageLocationProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedStorageLocationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.CheckpointSignatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.ExportedBlockKeysProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamespaceInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogProto;
@@ -89,18 +92,23 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTask;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTaskExecutionFeedback;
+import org.apache.hadoop.hdfs.server.protocol.SyncTaskExecutionOutcome;
+import org.apache.hadoop.hdfs.server.protocol.SyncTaskExecutionResult;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BulkSyncTaskExecutionFeedback;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -119,7 +127,28 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
+import org.apache.hadoop.hdfs.server.protocol.SyncCommand;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockSyncTaskOperationProto.MULTIPART_PUT_PART;
+import static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockSyncTaskOperationProto.PUT_FILE;
+import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.convertLocatedBlockProto;
+import static org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol.DNA_BACKUP;
+import static org.apache.hadoop.ipc.ClientId.getLsb;
+import static org.apache.hadoop.ipc.ClientId.getMsb;
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes
@@ -384,7 +413,7 @@ public class PBHelper {
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
-    LocatedBlock lb = PBHelperClient.convertLocatedBlockProto(b.getBlock());
+    LocatedBlock lb = convertLocatedBlockProto(b.getBlock());
     RecoveringBlock rBlock;
     if (b.hasTruncateBlock()) {
       rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
@@ -469,11 +498,63 @@ public class PBHelper {
       return PBHelper.convert(proto.getBlkIdCmd());
     case BlockECReconstructionCommand:
       return PBHelper.convert(proto.getBlkECReconstructionCmd());
+    case SyncCommand:
+      return PBHelper.convert(proto.getSyncCommand());
     default:
       return null;
     }
   }
-  
+
+  private static SyncCommand convert(SyncCommandProto backupCommand) {
+    List<BlockSyncTaskProto> syncTasksProtoList = backupCommand.getSyncTasksList();
+    List<BlockSyncTask> syncTasksList = Lists.newArrayListWithCapacity(syncTasksProtoList.size());
+    for (BlockSyncTaskProto syncTaskProto: syncTasksProtoList) {
+      syncTasksList.add(convertSyncTask(syncTaskProto));
+    }
+
+    return new SyncCommand(DNA_BACKUP, syncTasksList);
+  }
+
+  private static BlockSyncTask convertSyncTask(BlockSyncTaskProto syncTaskProto) {
+    switch(syncTaskProto.getOperation()) {
+      case MULTIPART_PUT_PART:
+        return convert(syncTaskProto.getMultiPartPutSyncTask(),
+            syncTaskProto.getSyncTaskId());
+      case PUT_FILE:
+        return convert(syncTaskProto.getPutFileSyncTask(),
+            syncTaskProto.getSyncTaskId());
+      }
+      throw new IllegalArgumentException("Unknown operation in sync command %s"+syncTaskProto.getOperation());
+  }
+
+  private static BlockSyncTask convert(PutFileSyncTaskProto putFileSyncTask, SyncTaskIdProto syncTaskId) {
+    return null;
+  }
+
+  private static BlockSyncTask convert(MultiPartPutSyncTaskProto multiPartPutSyncTaskProto,
+                                       SyncTaskIdProto syncTaskIdProto){
+    UUID syncTaskId = convert(syncTaskIdProto);
+    try {
+      return new BlockSyncTask.MultipartPutPartSyncTask(syncTaskId,
+          new URI(multiPartPutSyncTaskProto.getUri()),
+          convertLocatedBlockProto(multiPartPutSyncTaskProto
+              .getLocatedBlock()),
+          multiPartPutSyncTaskProto.getPartNumber(),
+          multiPartPutSyncTaskProto.getUploadHandle().toByteArray(),
+          syncTaskIdProto.getSyncMountId());
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException();
+    }
+  }
+
+  public static UUID convert(SyncTaskIdProto syncTaskIdProto) {
+    byte[] clientId = syncTaskIdProto.getSyncTaskId().toByteArray();
+    long syncTaskIdMsb = getMsb(clientId);
+    long syncTaskIdLsb = getLsb(clientId);
+    return new UUID(syncTaskIdMsb, syncTaskIdLsb);
+  }
+
+
   public static BalancerBandwidthCommandProto convert(
       BalancerBandwidthCommand bbCmd) {
     return BalancerBandwidthCommandProto.newBuilder()
@@ -602,6 +683,10 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockECReconstructionCommand)
           .setBlkECReconstructionCmd(
               convert((BlockECReconstructionCommand) datanodeCommand));
+      break;
+    case DNA_BACKUP:
+      builder.setCmdType(DatanodeCommandProto.Type.SyncCommand)
+          .setSyncCommand(convert((SyncCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
@@ -1128,4 +1213,170 @@ public class PBHelper {
 
     return new FileRegion(block, providedStorageLocation);
   }
+
+  private static SyncCommandProto convert(SyncCommand syncCommand) {
+    SyncCommandProto.Builder builder = SyncCommandProto.newBuilder();
+
+    List<BlockSyncTaskProto> syncTaskProtos = syncCommand.getSyncTasks()
+        .stream()
+        .map(syncTask -> convert(syncTask))
+        .collect(Collectors.toList());
+
+    builder.addAllSyncTasks(syncTaskProtos);
+
+    return builder.build();
+  }
+
+  private static BlockSyncTaskProto convert(BlockSyncTask blockSyncTask) {
+
+    switch(blockSyncTask.getOperation()){
+
+      case MULTIPART_PUT_PART:
+        BlockSyncTask.MultipartPutPartSyncTask multipartPutPartSyncTask =
+            (BlockSyncTask.MultipartPutPartSyncTask) blockSyncTask;
+        MultiPartPutSyncTaskProto.Builder mppBuilder =
+            MultiPartPutSyncTaskProto.newBuilder();
+        mppBuilder.setLocatedBlock(
+            PBHelperClient.convertLocatedBlock(multipartPutPartSyncTask.getLocatedBlock()));
+        mppBuilder.setUploadHandle(
+            ByteString.copyFrom(multipartPutPartSyncTask.getUploadHandle()));
+        mppBuilder.setPartNumber(multipartPutPartSyncTask.getPartNumber());
+        mppBuilder.setUri(multipartPutPartSyncTask.getRemoteURI().toString());
+
+        return BlockSyncTaskProto.newBuilder()
+            .setOperation(MULTIPART_PUT_PART)
+            .setSyncTaskId(convert(multipartPutPartSyncTask.getSyncTaskId(),
+                multipartPutPartSyncTask.getSyncMountId()))
+            .setMultiPartPutSyncTask(mppBuilder.build())
+            .build();
+
+      case PUT_FILE:
+        PutFileSyncTaskProto.Builder pfBuilder =
+            PutFileSyncTaskProto.newBuilder();
+        pfBuilder.setLocatedBlock(
+            PBHelperClient.convertLocatedBlock(blockSyncTask.getLocatedBlock()));
+        pfBuilder.setUri(blockSyncTask.getRemoteURI().toString());
+
+        return BlockSyncTaskProto.newBuilder()
+            .setOperation(PUT_FILE)
+            .setSyncTaskId(convert(blockSyncTask.getSyncTaskId(),
+                blockSyncTask.getSyncMountId()))
+            .setPutFileSyncTask(pfBuilder.build())
+            .build();
+
+    }
+    throw new IllegalArgumentException();
+  }
+
+  public static SyncTaskIdProto convert(UUID syncTaskId, String syncMountId) {
+    SyncTaskIdProto.Builder builder = SyncTaskIdProto.newBuilder();
+    ByteBuffer syncTaskIdBytes = ByteBuffer.wrap(new byte[16]);
+    syncTaskIdBytes.putLong(syncTaskId.getMostSignificantBits());
+    syncTaskIdBytes.putLong(syncTaskId.getLeastSignificantBits());
+    builder.setSyncTaskId(ByteString.copyFrom(syncTaskIdBytes.array()));
+    builder.setSyncMountId(syncMountId);
+    SyncTaskIdProto build = builder.build();
+    return build;
+  }
+
+
+  public static BulkSyncTaskExecutionFeedbackProto convert(BulkSyncTaskExecutionFeedback bulkFeedback) {
+    return BulkSyncTaskExecutionFeedbackProto.newBuilder()
+        .addAllFeedbacks(bulkFeedback.getFeedbacks().stream()
+          .map(f -> convert(f))
+            .collect(Collectors.toList()))
+        .build();
+  }
+
+  public static SyncTaskExecutionFeedbackProto convert(BlockSyncTaskExecutionFeedback feedback) {
+    SyncTaskExecutionFeedbackProto.Builder builder = SyncTaskExecutionFeedbackProto.newBuilder()
+        .setSyncTaskId(convert(feedback.getSyncTaskId(), feedback.getSyncMountId()))
+        .setOutcome(convert(feedback.getOutcome()))
+        .setOperation(PBHelper.convert(feedback.getOperation()));
+    if (feedback.getResult() != null) {
+      builder.setResult(convert(feedback.getResult()));
+    }
+    return builder.build();
+  }
+
+
+  public static SyncTaskExecutionOutcomeProto convert(SyncTaskExecutionOutcome outcome) {
+    switch (outcome) {
+      case FINISHED_SUCCESSFULLY:
+        return SyncTaskExecutionOutcomeProto.FINISHED_SUCCESSFULLY;
+      case EXCEPTION:
+        return SyncTaskExecutionOutcomeProto.EXCEPTION;
+      default:
+        throw new IllegalArgumentException("Unknown SyncTaskExecutionOutcome: " + outcome);
+    }
+  }
+
+  public static SyncTaskExecutionResultProto convert(SyncTaskExecutionResult result) {
+    SyncTaskExecutionResultProto.Builder builder = SyncTaskExecutionResultProto.newBuilder();
+    if (result.getResult() != null) {
+      builder.setResult(ByteString.copyFrom(result.getResult()));
+    }
+    if (result.getNumberOfBytes() != null){
+      builder.setNumberOfBytes(result.getNumberOfBytes());
+    }
+    return builder.build();
+  }
+
+  public static BulkSyncTaskExecutionFeedback convertBulkSyncTaskExecutionFeedback(
+      BulkSyncTaskExecutionFeedbackProto bulkSyncTaskExecutionFeedback) {
+    return new BulkSyncTaskExecutionFeedback(bulkSyncTaskExecutionFeedback.getFeedbacksList()
+        .stream()
+        .map(feedback -> convert(feedback))
+        .collect(Collectors.toList()));
+  }
+
+  public static BlockSyncTaskExecutionFeedback convert(SyncTaskExecutionFeedbackProto feedback) {
+    return new BlockSyncTaskExecutionFeedback(convert(feedback.getSyncTaskId()),
+        convert(feedback.getOutcome()),
+        feedback.hasResult() ? convert(feedback.getResult()) : null,
+        feedback.getSyncTaskId().getSyncMountId(),
+        PBHelper.convert(feedback.getOperation()));
+  }
+
+  private static BlockSyncTaskOperation convert(BlockSyncTaskOperationProto blockSyncTaskOperationProto){
+    switch(blockSyncTaskOperationProto){
+      case MULTIPART_PUT_PART:
+        return BlockSyncTaskOperation.MULTIPART_PUT_PART;
+      case PUT_FILE:
+        return BlockSyncTaskOperation.PUT_FILE;
+    }
+    throw new IllegalArgumentException("Unknown operation");
+  }
+
+  private static BlockSyncTaskOperationProto convert(BlockSyncTaskOperation blockSyncTaskOperation){
+    switch(blockSyncTaskOperation){
+      case MULTIPART_PUT_PART:
+        return BlockSyncTaskOperationProto.MULTIPART_PUT_PART;
+      case PUT_FILE:
+        return BlockSyncTaskOperationProto.PUT_FILE;
+    }
+    throw new IllegalArgumentException("Unknown operation");
+  }
+
+
+  public static SyncTaskExecutionOutcome convert(SyncTaskExecutionOutcomeProto outcome) {
+    switch (outcome) {
+      case FINISHED_SUCCESSFULLY:
+        return SyncTaskExecutionOutcome.FINISHED_SUCCESSFULLY;
+      case EXCEPTION:
+        return SyncTaskExecutionOutcome.EXCEPTION;
+      default:
+        throw new IllegalArgumentException("Unknown SyncTaskExecutionOutcomeProto: " + outcome);
+    }
+  }
+
+  public static SyncTaskExecutionResult convert(SyncTaskExecutionResultProto result) {
+    byte [] bytes = null;
+    if (result.getResult() != null) {
+      bytes = result.getResult().toByteArray();
+    }
+
+    return new SyncTaskExecutionResult(Pair.of(bytes, result.getNumberOfBytes()));
+  }
+
 }
