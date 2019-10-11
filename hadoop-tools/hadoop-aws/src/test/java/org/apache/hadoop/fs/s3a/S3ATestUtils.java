@@ -31,8 +31,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
@@ -666,7 +666,7 @@ public final class S3ATestUtils {
    * @return the credentials
    * @throws IOException on a failure
    */
-  public static MarshalledCredentials requestSessionCredentials(
+  public static MarshaledCredentials requestSessionCredentials(
       final Configuration conf,
       final String bucket)
       throws IOException {
@@ -682,13 +682,13 @@ public final class S3ATestUtils {
    * @return the credentials
    * @throws IOException on a failure
    */
-  public static MarshalledCredentials requestSessionCredentials(
+  public static MarshaledCredentials requestSessionCredentials(
       final Configuration conf,
       final String bucket,
       final int duration)
       throws IOException {
     assumeSessionTestsEnabled(conf);
-    MarshalledCredentials sc = MarshalledCredentialBinding
+    MarshaledCredentials sc = MarshaledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
           S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
@@ -699,7 +699,7 @@ public final class S3ATestUtils {
           duration,
           new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT));
     sc.validate("requested session credentials: ",
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly);
+        MarshaledCredentials.CredentialTypeRequired.SessionOnly);
     return sc;
   }
 
@@ -708,7 +708,7 @@ public final class S3ATestUtils {
    * @param source source object
    * @param conf configuration
    * @param <T> type
-   * @return an unmarshalled instance of the type
+   * @return an unmarshaled instance of the type
    * @throws Exception on any failure.
    */
   @SuppressWarnings("unchecked")

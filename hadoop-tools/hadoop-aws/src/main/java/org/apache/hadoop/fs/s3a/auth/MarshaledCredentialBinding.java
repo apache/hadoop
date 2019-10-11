@@ -50,16 +50,16 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 
 /**
  * Class to bridge from the serializable/marshallabled
- * {@link MarshalledCredentialBinding} class to/from AWS classes.
+ * {@link MarshaledCredentialBinding} class to/from AWS classes.
  * This is to keep that class isolated and not dependent on aws-sdk JARs
  * to load.
  */
-public final class MarshalledCredentialBinding {
+public final class MarshaledCredentialBinding {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(MarshalledCredentialBinding.class);
+      LoggerFactory.getLogger(MarshaledCredentialBinding.class);
 
-  private MarshalledCredentialBinding() {
+  private MarshaledCredentialBinding() {
   }
 
   /**
@@ -69,30 +69,30 @@ public final class MarshalledCredentialBinding {
   public static final String NO_AWS_CREDENTIALS = "No AWS credentials";
 
   /**
-   * Create a set of marshalled credentials from a set of credentials
+   * Create a set of marshaled credentials from a set of credentials
    * issued by an STS call.
    * @param credentials AWS-provided session credentials
-   * @return a set of marshalled credentials.
+   * @return a set of marshaled credentials.
    */
-  public static MarshalledCredentials fromSTSCredentials(
+  public static MarshaledCredentials fromSTSCredentials(
       final Credentials credentials) {
-    MarshalledCredentials marshalled = new MarshalledCredentials(
+    MarshaledCredentials marshaled = new MarshaledCredentials(
         credentials.getAccessKeyId(),
         credentials.getSecretAccessKey(),
         credentials.getSessionToken());
     Date date = credentials.getExpiration();
-    marshalled.setExpiration(date != null ? date.getTime() : 0);
-    return marshalled;
+    marshaled.setExpiration(date != null ? date.getTime() : 0);
+    return marshaled;
   }
 
   /**
    * Create from a set of AWS credentials.
    * @param credentials source credential.
-   * @return a set of marshalled credentials.
+   * @return a set of marshaled credentials.
    */
-  public static MarshalledCredentials fromAWSCredentials(
+  public static MarshaledCredentials fromAWSCredentials(
       final AWSSessionCredentials credentials) {
-    return new MarshalledCredentials(
+    return new MarshaledCredentials(
         credentials.getAWSAccessKeyId(),
         credentials.getAWSSecretKey(),
         credentials.getSessionToken());
@@ -103,9 +103,9 @@ public final class MarshalledCredentialBinding {
    * @param env environment.
    * @return a possibly incomplete/invalid set of credentials.
    */
-  public static MarshalledCredentials fromEnvironment(
+  public static MarshaledCredentials fromEnvironment(
       final Map<String, String> env) {
-    return new MarshalledCredentials(
+    return new MarshaledCredentials(
       nullToEmptyString(env.get("AWS_ACCESS_KEY")),
       nullToEmptyString(env.get("AWS_SECRET_KEY")),
       nullToEmptyString(env.get("AWS_SESSION_TOKEN")));
@@ -129,7 +129,7 @@ public final class MarshalledCredentialBinding {
    * @return the component
    * @throws IOException on any load failure
    */
-  public static MarshalledCredentials fromFileSystem(
+  public static MarshaledCredentials fromFileSystem(
       final URI uri,
       final Configuration conf) throws IOException {
     // determine the bucket
@@ -137,19 +137,19 @@ public final class MarshalledCredentialBinding {
     final Configuration leanConf =
         ProviderUtils.excludeIncompatibleCredentialProviders(
             conf, S3AFileSystem.class);
-    return new MarshalledCredentials(
+    return new MarshaledCredentials(
         lookupPassword(bucket, leanConf, ACCESS_KEY),
         lookupPassword(bucket, leanConf, SECRET_KEY),
         lookupPassword(bucket, leanConf, SESSION_TOKEN));
   }
 
   /**
-   * Create an AWS credential set from a set of marshalled credentials.
+   * Create an AWS credential set from a set of marshaled credentials.
    *
-   * This code would seem to fit into (@link MarshalledCredentials}, and
+   * This code would seem to fit into (@link MarshaledCredentials}, and
    * while it would from a code-hygiene perspective, to keep all AWS
    * SDK references out of that class, the logic is implemented here instead,
-   * @param marshalled marshalled credentials
+   * @param marshaled marshaled credentials
    * @param typeRequired type of credentials required
    * @param component component name for exception messages.
    * @return a new set of credentials
@@ -157,24 +157,24 @@ public final class MarshalledCredentialBinding {
    * @throws NoAwsCredentialsException the credentials are actually empty.
    */
   public static AWSCredentials toAWSCredentials(
-      final MarshalledCredentials marshalled,
-      final MarshalledCredentials.CredentialTypeRequired typeRequired,
+      final MarshaledCredentials marshaled,
+      final MarshaledCredentials.CredentialTypeRequired typeRequired,
       final String component)
       throws NoAuthWithAWSException, NoAwsCredentialsException {
 
-    if (marshalled.isEmpty()) {
+    if (marshaled.isEmpty()) {
       throw new NoAwsCredentialsException(component, NO_AWS_CREDENTIALS);
     }
-    if (!marshalled.isValid(typeRequired)) {
+    if (!marshaled.isValid(typeRequired)) {
       throw new NoAuthWithAWSException(component + ":" +
-          marshalled.buildInvalidCredentialsError(typeRequired));
+          marshaled.buildInvalidCredentialsError(typeRequired));
     }
-    final String accessKey = marshalled.getAccessKey();
-    final String secretKey = marshalled.getSecretKey();
-    if (marshalled.hasSessionToken()) {
+    final String accessKey = marshaled.getAccessKey();
+    final String secretKey = marshaled.getSecretKey();
+    if (marshaled.hasSessionToken()) {
       // a session token was supplied, so return session credentials
       return new BasicSessionCredentials(accessKey, secretKey,
-          marshalled.getSessionToken());
+          marshaled.getSessionToken());
     } else {
       // these are full credentials
       return new BasicAWSCredentials(accessKey, secretKey);
@@ -193,7 +193,7 @@ public final class MarshalledCredentialBinding {
    * @throws IOException on a failure of the request
    */
   @Retries.RetryTranslated
-  public static MarshalledCredentials requestSessionCredentials(
+  public static MarshaledCredentials requestSessionCredentials(
       final AWSCredentialsProvider parentCredentials,
       final ClientConfiguration awsConf,
       final String stsEndpoint,

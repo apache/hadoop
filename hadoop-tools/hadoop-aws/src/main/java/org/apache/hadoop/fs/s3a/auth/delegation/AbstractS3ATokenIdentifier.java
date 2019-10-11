@@ -94,7 +94,7 @@ public abstract class AbstractS3ATokenIdentifier
   private String origin = "";
 
   /**
-   * This marshalled UUID can be used in testing to verify transmission,
+   * This marshaled UUID can be used in testing to verify transmission,
    * and reuse; as it is printed you can see what is happending too.
    */
   private String uuid = UUID.randomUUID().toString();

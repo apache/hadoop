@@ -41,8 +41,8 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -52,8 +52,8 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.fs.s3a.S3AUtils.STANDARD_AWS_PROVIDERS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
-import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromAWSCredentials;
-import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromSTSCredentials;
+import static org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding.fromAWSCredentials;
+import static org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding.fromSTSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 
 /**
@@ -207,7 +207,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    * Sets the field {@link #tokenIdentifier} to the extracted/cast
    * session token identifier, and {@link #expirationDateTime} to
    * any expiration passed in.
-   * @param retrievedIdentifier the unmarshalled data
+   * @param retrievedIdentifier the unmarshaled data
    * @return the provider list
    * @throws IOException failure
    */
@@ -219,17 +219,17 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
         retrievedIdentifier,
         SessionTokenIdentifier.class);
     setTokenIdentifier(Optional.of(identifier));
-    MarshalledCredentials marshalledCredentials
-        = identifier.getMarshalledCredentials();
-    setExpirationDateTime(marshalledCredentials.getExpirationDateTime());
+    MarshaledCredentials marshaledCredentials
+        = identifier.getMarshaledCredentials();
+    setExpirationDateTime(marshaledCredentials.getExpirationDateTime());
     return new AWSCredentialProviderList(
         "Session Token Binding",
-        new MarshalledCredentialProvider(
+        new MarshaledCredentialProvider(
             SESSION_TOKEN,
             getStoreContext().getFsURI(),
             getConfig(),
-            marshalledCredentials,
-            MarshalledCredentials.CredentialTypeRequired.SessionOnly));
+            marshaledCredentials,
+            MarshaledCredentials.CredentialTypeRequired.SessionOnly));
   }
 
   @Override
@@ -356,13 +356,13 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
       final EncryptionSecrets encryptionSecrets) throws IOException {
     requireServiceStarted();
 
-    final MarshalledCredentials marshalledCredentials;
+    final MarshaledCredentials marshaledCredentials;
     String origin = AbstractS3ATokenIdentifier.createDefaultOriginMessage();
     final Optional<STSClientFactory.STSClient> client = prepareSTSClient();
 
     if (client.isPresent()) {
       // this is the normal route: ask for a new STS token
-      marshalledCredentials = fromSTSCredentials(
+      marshaledCredentials = fromSTSCredentials(
           client.get()
               .requestSessionCredentials(duration, TimeUnit.SECONDS));
     } else {
@@ -376,7 +376,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
       final AWSCredentials awsCredentials
           = parentAuthChain.getCredentials();
       if (awsCredentials instanceof AWSSessionCredentials) {
-        marshalledCredentials = fromAWSCredentials(
+        marshaledCredentials = fromAWSCredentials(
             (AWSSessionCredentials) awsCredentials);
       } else {
         throw new DelegationTokenIOException(
@@ -386,7 +386,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
     return new SessionTokenIdentifier(getKind(),
         getOwnerText(),
         getCanonicalUri(),
-        marshalledCredentials,
+        marshaledCredentials,
         encryptionSecrets,
         origin);
   }

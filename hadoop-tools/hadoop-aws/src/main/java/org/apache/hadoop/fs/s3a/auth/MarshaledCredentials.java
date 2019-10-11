@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SESSION_TOKEN;
 
 /**
  * Stores the credentials for a session or for a full login.
- * This structure is {@link Writable}, so can be marshalled inside a
+ * This structure is {@link Writable}, so can be marshaled inside a
  * delegation token.
  *
  * The class is designed so that keys inside are kept non-null; to be
@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SESSION_TOKEN;
  * identifier of a token type declared in this JAR is examined.</i>
  */
 @InterfaceAudience.Private
-public final class MarshalledCredentials implements Writable, Serializable {
+public final class MarshaledCredentials implements Writable, Serializable {
 
   /**
    * Error text on invalid non-empty credentials: {@value}.
@@ -106,7 +106,7 @@ public final class MarshalledCredentials implements Writable, Serializable {
   /**
    * Constructor.
    */
-  public MarshalledCredentials() {
+  public MarshaledCredentials() {
   }
 
   /**
@@ -116,7 +116,7 @@ public final class MarshalledCredentials implements Writable, Serializable {
    * @param secretKey secret key
    * @param sessionToken session token
    */
-  public MarshalledCredentials(
+  public MarshaledCredentials(
       final String accessKey,
       final String secretKey,
       final String sessionToken) {
@@ -193,7 +193,7 @@ public final class MarshalledCredentials implements Writable, Serializable {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    MarshalledCredentials that = (MarshalledCredentials) o;
+    MarshaledCredentials that = (MarshaledCredentials) o;
     return expiration == that.expiration &&
         Objects.equals(accessKey, that.accessKey) &&
         Objects.equals(secretKey, that.secretKey) &&
@@ -346,7 +346,7 @@ public final class MarshalledCredentials implements Writable, Serializable {
   public String buildInvalidCredentialsError(
       final CredentialTypeRequired typeRequired) {
     if (isEmpty()) {
-      return " " + MarshalledCredentialBinding.NO_AWS_CREDENTIALS;
+      return " " + MarshaledCredentialBinding.NO_AWS_CREDENTIALS;
     } else {
       return " " + INVALID_CREDENTIALS
           + " in " + toString() + " required: " + typeRequired;
@@ -369,11 +369,11 @@ public final class MarshalledCredentials implements Writable, Serializable {
 
   /**
    * Return a set of empty credentials.
-   * These can be marshalled, but not used for login.
+   * These can be marshaled, but not used for login.
    * @return a new set of credentials.
    */
-  public static MarshalledCredentials empty() {
-    return new MarshalledCredentials("", "", "");
+  public static MarshaledCredentials empty() {
+    return new MarshaledCredentials("", "", "");
   }
 
   /**

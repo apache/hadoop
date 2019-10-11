@@ -216,8 +216,8 @@ public final class RoleTestUtils {
    * @param actual actual credentials.
    */
   public static void assertCredentialsEqual(final String message,
-      final MarshalledCredentials expected,
-      final MarshalledCredentials actual) {
+      final MarshaledCredentials expected,
+      final MarshaledCredentials actual) {
     // DO NOT use assertEquals() here, as that could print a secret to
     // the test report.
     assertEquals(message + ": access key",

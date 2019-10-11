@@ -189,7 +189,7 @@ public class S3AMultipartUploader extends MultipartUploader {
   }
 
   /**
-   * Parse the payload marshalled as a part handle.
+   * Parse the payload marshaled as a part handle.
    * @param data handle data
    * @return the length and etag
    * @throws IOException error reading the payload

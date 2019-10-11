@@ -29,10 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCredentials;
+import static org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding.toAWSCredentials;
 
 /**
- * AWS credential provider driven from marshalled session/full credentials
+ * AWS credential provider driven from marshaled session/full credentials
  * (full, simple session or role).
  * This is <i>not</i> intended for explicit use in job/app configurations,
  * instead it is returned by Delegation Token Bindings, as needed.
@@ -40,16 +40,16 @@ import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCre
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class MarshalledCredentialProvider extends
+public class MarshaledCredentialProvider extends
     AbstractSessionCredentialsProvider {
 
   /** Name: {@value}. */
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider";
+      = "org.apache.hadoop.fs.s3a.auth.MarshaledCredentialProvider";
 
-  private final MarshalledCredentials credentials;
+  private final MarshaledCredentials credentials;
 
-  private final MarshalledCredentials.CredentialTypeRequired typeRequired;
+  private final MarshaledCredentials.CredentialTypeRequired typeRequired;
 
   private final String component;
 
@@ -59,17 +59,17 @@ public class MarshalledCredentialProvider extends
    * @param component component name for exception messages.
    * @param uri filesystem URI: must not be null.
    * @param conf configuration.
-   * @param credentials marshalled credentials.
+   * @param credentials marshaled credentials.
    * @param typeRequired credential type required.
    * @throws CredentialInitializationException validation failure
    * @throws IOException failure
    */
-  public MarshalledCredentialProvider(
+  public MarshaledCredentialProvider(
       final String component,
       final URI uri,
       final Configuration conf,
-      final MarshalledCredentials credentials,
-      final MarshalledCredentials.CredentialTypeRequired typeRequired)
+      final MarshaledCredentials credentials,
+      final MarshaledCredentials.CredentialTypeRequired typeRequired)
       throws IOException {
     super(checkNotNull(uri, "No filesystem URI"), conf);
     this.component = component;

@@ -23,7 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSI
  * credentials which will be valid until they expire.
  *
  * <b>Note 1:</b>
- * There's a risk here that the reference to {@link MarshalledCredentials}
+ * There's a risk here that the reference to {@link MarshaledCredentials}
  * may trigger a transitive load of AWS classes, a load which will
  * fail if the aws SDK isn't on the classpath.
  *
@@ -48,8 +48,8 @@ public class SessionTokenIdentifier extends
   /**
    * Session credentials: initially empty but non-null.
    */
-  private MarshalledCredentials marshalledCredentials
-      = new MarshalledCredentials();
+  private MarshaledCredentials marshaledCredentials
+      = new MarshaledCredentials();
 
   /**
    * Constructor for service loader use.
@@ -75,7 +75,7 @@ public class SessionTokenIdentifier extends
    * @param kind token kind.
    * @param owner token owner
    * @param uri filesystem URI.
-   * @param marshalledCredentials credentials to marshall
+   * @param marshaledCredentials credentials to marshall
    * @param encryptionSecrets encryption secrets
    * @param origin origin text for diagnostics.
    */
@@ -83,11 +83,11 @@ public class SessionTokenIdentifier extends
       final Text kind,
       final Text owner,
       final URI uri,
-      final MarshalledCredentials marshalledCredentials,
+      final MarshaledCredentials marshaledCredentials,
       final EncryptionSecrets encryptionSecrets,
       final String origin) {
     super(kind, uri, owner, origin, encryptionSecrets);
-    this.marshalledCredentials = marshalledCredentials;
+    this.marshaledCredentials = marshaledCredentials;
   }
 
   /**
@@ -109,14 +109,14 @@ public class SessionTokenIdentifier extends
   @Override
   public void write(final DataOutput out) throws IOException {
     super.write(out);
-    marshalledCredentials.write(out);
+    marshaledCredentials.write(out);
   }
 
   @Override
   public void readFields(final DataInput in)
       throws IOException {
     super.readFields(in);
-    marshalledCredentials.readFields(in);
+    marshaledCredentials.readFields(in);
   }
 
   /**
@@ -125,24 +125,24 @@ public class SessionTokenIdentifier extends
    */
   @Override
   public long getExpiryTime() {
-    return marshalledCredentials.getExpiration();
+    return marshaledCredentials.getExpiration();
   }
 
   /**
-   * Get the marshalled credentials.
-   * @return marshalled AWS credentials.
+   * Get the marshaled credentials.
+   * @return marshaled AWS credentials.
    */
-  public MarshalledCredentials getMarshalledCredentials() {
-    return marshalledCredentials;
+  public MarshaledCredentials getMarshaledCredentials() {
+    return marshaledCredentials;
   }
 
   /**
-   * Add the (sanitized) marshalled credentials to the string value.
+   * Add the (sanitized) marshaled credentials to the string value.
    * @return a string value for test assertions and debugging.
    */
   @Override
   public String toString() {
     return super.toString()
-        + "; " + marshalledCredentials.toString();
+        + "; " + marshaledCredentials.toString();
   }
 }

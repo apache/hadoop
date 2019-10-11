@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 
@@ -67,7 +67,7 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
    * so the superclass's method will fail.
    * This subclass intercepts the exception which is expected.
    * @param fs base FS to bond to.
-   * @param marshalledCredentials session credentials from first DT.
+   * @param marshaledCredentials session credentials from first DT.
    * @param conf config to use
    * @return null
    * @throws Exception failure
@@ -75,12 +75,12 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
   @Override
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
-      final MarshalledCredentials marshalledCredentials,
+      final MarshaledCredentials marshaledCredentials,
       final Configuration conf) throws Exception {
     intercept(DelegationTokenIOException.class,
         E_NO_SESSION_TOKENS_FOR_ROLE_BINDING,
         () -> super.verifyCredentialPropagation(fs,
-            marshalledCredentials, conf));
+            marshaledCredentials, conf));
     return null;
   }
 

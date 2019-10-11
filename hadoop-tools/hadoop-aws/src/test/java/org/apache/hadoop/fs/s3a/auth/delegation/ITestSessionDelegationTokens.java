@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.roundTrip;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
-import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromAWSCredentials;
+import static org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding.fromAWSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_SESSION_BINDING;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
@@ -150,7 +150,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
    * the same as the original.
    *
    * That is different from DT propagation, as here the propagation
-   * is by setting the fs.s3a session/secret/id keys from the marshalled
+   * is by setting the fs.s3a session/secret/id keys from the marshaled
    * values, and using session token auth.
    * This verifies that session token authentication can be used
    * for DT credential auth, and that new tokens aren't created.
@@ -183,7 +183,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
             () -> "no identifier in " + originalDT);
     issued.validate();
 
-    final MarshalledCredentials creds;
+    final MarshaledCredentials creds;
     try(S3ADelegationTokens dt2 = instantiateDTSupport(getConfiguration())) {
       dt2.start();
 
@@ -191,7 +191,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
       final AWSSessionCredentials awsSessionCreds
           = verifySessionCredentials(
           dt2.getCredentialProviders().getCredentials());
-      final MarshalledCredentials origCreds = fromAWSCredentials(
+      final MarshaledCredentials origCreds = fromAWSCredentials(
           awsSessionCreds);
 
       Token<AbstractS3ATokenIdentifier> boundDT =
@@ -227,7 +227,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
   @SuppressWarnings("OptionalGetWithoutIsPresent")
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
-      final MarshalledCredentials session,
+      final MarshaledCredentials session,
       final Configuration conf)
       throws Exception {
     describe("Verify Token Propagation");
@@ -252,7 +252,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
           = delegationTokens2.getDecodedIdentifier().get();
 
       LOG.info("Regenerated DT is {}", newDT);
-      final MarshalledCredentials creds2 = fromAWSCredentials(
+      final MarshaledCredentials creds2 = fromAWSCredentials(
           verifySessionCredentials(
               delegationTokens2.getCredentialProviders().getCredentials()));
       assertEquals("Credentials", session, creds2);

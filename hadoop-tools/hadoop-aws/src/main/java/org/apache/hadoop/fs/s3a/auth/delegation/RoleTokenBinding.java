@@ -32,12 +32,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 
-import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromSTSCredentials;
+import static org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding.fromSTSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.E_NO_SESSION_TOKENS_FOR_ROLE_BINDING;
@@ -89,8 +89,8 @@ public class RoleTokenBinding extends SessionTokenBinding {
   }
 
   /**
-   * Returns a (wrapped) {@link MarshalledCredentialProvider} which
-   * requires the marshalled credentials to contain session secrets.
+   * Returns a (wrapped) {@link MarshaledCredentialProvider} which
+   * requires the marshaled credentials to contain session secrets.
    * @param retrievedIdentifier the incoming identifier.
    * @return the provider chain.
    * @throws IOException on failure
@@ -103,17 +103,17 @@ public class RoleTokenBinding extends SessionTokenBinding {
         convertTokenIdentifier(retrievedIdentifier,
             RoleTokenIdentifier.class);
     setTokenIdentifier(Optional.of(tokenIdentifier));
-    MarshalledCredentials marshalledCredentials
-        = tokenIdentifier.getMarshalledCredentials();
-    setExpirationDateTime(marshalledCredentials.getExpirationDateTime());
+    MarshaledCredentials marshaledCredentials
+        = tokenIdentifier.getMarshaledCredentials();
+    setExpirationDateTime(marshaledCredentials.getExpirationDateTime());
     return new AWSCredentialProviderList(
         "Role Token Binding",
-        new MarshalledCredentialProvider(
+        new MarshaledCredentialProvider(
             COMPONENT,
             getStoreContext().getFsURI(),
             getConfig(),
-            marshalledCredentials,
-            MarshalledCredentials.CredentialTypeRequired.SessionOnly));
+            marshaledCredentials,
+            MarshaledCredentials.CredentialTypeRequired.SessionOnly));
   }
 
   /**

@@ -128,7 +128,7 @@ A Session Delegation Token is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
 to issue an AWS session password and identifier for a limited duration.
 These AWS session credentials are valid until the end of that time period.
-They are marshalled into the S3A Delegation Token.
+They are marshaled into the S3A Delegation Token.
 
 Other S3A connectors can extract these credentials and use them to
 talk to S3 and related services.
@@ -145,7 +145,7 @@ A Role Delegation Tokens is created by asking the AWS
 for set of "Assumed Role" credentials, with a AWS account specific role for a limited duration..
 This role is restricted to only grant access the S3 bucket, the S3Guard table
 and all KMS keys,
-They are marshalled into the S3A Delegation Token.
+They are marshaled into the S3A Delegation Token.
 
 Other S3A connectors can extract these credentials and use them to
 talk to S3 and related services.
@@ -644,8 +644,8 @@ the role of the current session (if any) is unknown.
 Concepts:
 
 1. The S3A FileSystem can create delegation tokens when requested.
-1. These can be marshalled as per other Hadoop Delegation Tokens.
-1. At the far end, they can be retrieved, unmarshalled and used to authenticate callers.
+1. These can be marshaled as per other Hadoop Delegation Tokens.
+1. At the far end, they can be retrieved, unmarshaled and used to authenticate callers.
 1. DT binding plugins can then use these directly, or, somehow,
 manage authentication and token issue through other services
 (for example: Kerberos)
@@ -666,7 +666,7 @@ authenticate the caller with AWS services used by the S3A client: AWS S3 and
 potentially AWS KMS (for SSE-KMS) and AWS DynamoDB (for S3Guard).
 
 It must have its own unique *Token Kind*, to ensure that it can be distinguished
-from the other token identifiers when tokens are being unmarshalled.
+from the other token identifiers when tokens are being unmarshaled.
 
 | Kind |  Token class |
 |------|--------------|
@@ -696,7 +696,7 @@ is needed to keep them out of logs.
   may perform to those needed to access data in the S3 bucket. This potentially
   includes a DynamoDB table, KMS access, etc.
 * Implementations need to be resistant to attacks which pass in invalid data as
-their token identifier: validate the types of the unmarshalled data; set limits
+their token identifier: validate the types of the unmarshaled data; set limits
 on the size of all strings and other arrays to read in, etc.
 
 ### <a name="resilience"></a> Resilience
@@ -742,7 +742,7 @@ Kerberos support —S3A Delegation tokens should support it.
 
 1. Come up with a token "Kind"; a unique name for the delegation token identifier.
 1. Implement a subclass of `AbstractS3ATokenIdentifier` which adds all information which
-is marshalled from client to remote services. This must subclass the `Writable` methods to read
+is marshaled from client to remote services. This must subclass the `Writable` methods to read
 and write the data to a data stream: these subclasses must call the superclass methods first.
 1. Add a resource `META-INF/services/org.apache.hadoop.security.token.TokenIdentifier`
 1. And list in it, the classname of your new identifier.
@@ -773,8 +773,8 @@ needed, failing at this point is overkill. As an example, `RoleTokenBinding` can
 DTs if it only has a set of session credentials, but it will deploy without them, so allowing
 `hadoop fs` commands to work on an EC2 VM with IAM role credentials.
 
-**Tip**: The class `org.apache.hadoop.fs.s3a.auth.MarshalledCredentials` holds a set of
-marshalled credentials and so can be used within your own Token Identifier if you want
+**Tip**: The class `org.apache.hadoop.fs.s3a.auth.MarshaledCredentials` holds a set of
+marshaled credentials and so can be used within your own Token Identifier if you want
 to include a set of full/session AWS credentials in your token identifier.
 
 ### `AWSCredentialProviderList bindToTokenIdentifier(AbstractS3ATokenIdentifier id)`

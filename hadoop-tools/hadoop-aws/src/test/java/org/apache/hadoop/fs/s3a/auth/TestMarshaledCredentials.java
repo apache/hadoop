@@ -34,11 +34,11 @@ import org.apache.hadoop.test.HadoopTestBase;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Unit test of marshalled credential support.
+ * Unit test of marshaled credential support.
  */
-public class TestMarshalledCredentials extends HadoopTestBase {
+public class TestMarshaledCredentials extends HadoopTestBase {
 
-  private MarshalledCredentials credentials;
+  private MarshaledCredentials credentials;
 
   private int expiration;
 
@@ -47,7 +47,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
   @Before
   public void createSessionToken() throws URISyntaxException {
     bucketURI = new URI("s3a://bucket1");
-    credentials = new MarshalledCredentials("accessKey",
+    credentials = new MarshaledCredentials("accessKey",
         "secretKey", "sessionToken");
     credentials.setRoleARN("roleARN");
     expiration = 1970;
@@ -56,7 +56,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   @Test
   public void testRoundTrip() throws Throwable {
-    MarshalledCredentials c2 = S3ATestUtils.roundTrip(this.credentials,
+    MarshaledCredentials c2 = S3ATestUtils.roundTrip(this.credentials,
         new Configuration());
     assertEquals(credentials, c2);
     assertEquals("accessKey", c2.getAccessKey());
@@ -68,10 +68,10 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   @Test
   public void testRoundTripNoSessionData() throws Throwable {
-    MarshalledCredentials c = new MarshalledCredentials();
+    MarshaledCredentials c = new MarshaledCredentials();
     c.setAccessKey("A");
     c.setSecretKey("K");
-    MarshalledCredentials c2 = S3ATestUtils.roundTrip(c,
+    MarshaledCredentials c2 = S3ATestUtils.roundTrip(c,
         new Configuration());
     assertEquals(c, c2);
   }
@@ -87,13 +87,13 @@ public class TestMarshalledCredentials extends HadoopTestBase {
   }
 
   @Test
-  public void testMarshalledCredentialProviderSession() throws Throwable {
-    MarshalledCredentialProvider provider
-        = new MarshalledCredentialProvider("test",
+  public void testMarshaledCredentialProviderSession() throws Throwable {
+    MarshaledCredentialProvider provider
+        = new MarshaledCredentialProvider("test",
         bucketURI,
         new Configuration(false),
         credentials,
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly);
+        MarshaledCredentials.CredentialTypeRequired.SessionOnly);
     AWSCredentials aws = provider.getCredentials();
     assertEquals(credentials.toString(),
         credentials.getAccessKey(),
@@ -111,12 +111,12 @@ public class TestMarshalledCredentials extends HadoopTestBase {
    */
   @Test
   public void testCredentialTypeMismatch() throws Throwable {
-    MarshalledCredentialProvider provider
-        = new MarshalledCredentialProvider("test",
+    MarshaledCredentialProvider provider
+        = new MarshaledCredentialProvider("test",
         bucketURI,
         new Configuration(false),
         credentials,
-        MarshalledCredentials.CredentialTypeRequired.FullOnly);
+        MarshaledCredentials.CredentialTypeRequired.FullOnly);
     // because the credentials are set to full only, creation will fail
     intercept(NoAuthWithAWSException.class, "test",
         () ->  provider.getCredentials());
@@ -129,10 +129,10 @@ public class TestMarshalledCredentials extends HadoopTestBase {
   public void testCredentialProviderNullURI() throws Throwable {
     intercept(NullPointerException.class, "",
         () ->
-            new MarshalledCredentialProvider("test",
+            new MarshaledCredentialProvider("test",
             null,
             new Configuration(false),
             credentials,
-            MarshalledCredentials.CredentialTypeRequired.FullOnly));
+            MarshaledCredentials.CredentialTypeRequired.FullOnly));
   }
 }

@@ -29,8 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 
@@ -91,15 +91,15 @@ public class TemporaryAWSCredentialsProvider extends
   @Override
   protected AWSCredentials createCredentials(Configuration config)
       throws IOException {
-    MarshalledCredentials creds = MarshalledCredentialBinding.fromFileSystem(
+    MarshaledCredentials creds = MarshaledCredentialBinding.fromFileSystem(
         getUri(), config);
-    MarshalledCredentials.CredentialTypeRequired sessionOnly
-        = MarshalledCredentials.CredentialTypeRequired.SessionOnly;
+    MarshaledCredentials.CredentialTypeRequired sessionOnly
+        = MarshaledCredentials.CredentialTypeRequired.SessionOnly;
     // treat only having non-session creds as empty.
     if (!creds.isValid(sessionOnly)) {
       throw new NoAwsCredentialsException(COMPONENT);
     }
-    return MarshalledCredentialBinding.toAWSCredentials(creds,
+    return MarshaledCredentialBinding.toAWSCredentials(creds,
         sessionOnly, COMPONENT);
   }
 

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.net.URI;
 
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -37,13 +37,13 @@ public class FullCredentialsTokenIdentifier extends SessionTokenIdentifier {
 
   public FullCredentialsTokenIdentifier(final URI uri,
       final Text owner,
-      final MarshalledCredentials marshalledCredentials,
+      final MarshaledCredentials marshaledCredentials,
       final EncryptionSecrets encryptionSecrets,
       String origin) {
     super(DelegationConstants.FULL_TOKEN_KIND,
         owner,
         uri,
-        marshalledCredentials,
+        marshaledCredentials,
         encryptionSecrets,
         origin);
   }

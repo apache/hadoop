@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Encryption options in a form which can serialized or marshalled as a hadoop
+ * Encryption options in a form which can serialized or marshaled as a hadoop
  * Writeable.
  *
  * Maintainers: For security reasons, don't print any of this.
@@ -47,7 +47,7 @@ import org.apache.hadoop.io.Writable;
  *
  * <i>Important</i>
  * Do not import any AWS SDK classes, directly or indirectly.
- * This is to ensure that S3A Token identifiers can be unmarshalled even
+ * This is to ensure that S3A Token identifiers can be unmarshaled even
  * without that SDK.
  */
 public class EncryptionSecrets implements Writable, Serializable {
@@ -68,7 +68,7 @@ public class EncryptionSecrets implements Writable, Serializable {
   private String encryptionKey = "";
 
   /**
-   * This field isn't serialized/marshalled; it is rebuilt from the
+   * This field isn't serialized/marshaled; it is rebuilt from the
    * encryptionAlgorithm field.
    */
   private transient S3AEncryptionMethods encryptionMethod =

@@ -25,9 +25,9 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialBinding;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.MarshaledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 
@@ -53,7 +53,7 @@ public class FullCredentialsTokenBinding extends
   /**
    * Long-lived AWS credentials.
    */
-  private MarshalledCredentials awsCredentials;
+  private MarshaledCredentials awsCredentials;
 
   /**
    * Origin of credentials.
@@ -86,15 +86,15 @@ public class FullCredentialsTokenBinding extends
     // look for access keys to FS
     S3xLoginHelper.Login secrets = S3AUtils.getAWSAccessKeys(uri, conf);
     if (secrets.hasLogin()) {
-      awsCredentials = new MarshalledCredentials(
+      awsCredentials = new MarshaledCredentials(
           secrets.getUser(), secrets.getPassword(), "");
       credentialOrigin += "; source = Hadoop configuration data";
     } else {
       // if there are none, look for the environment variables.
-      awsCredentials = MarshalledCredentialBinding.fromEnvironment(
+      awsCredentials = MarshaledCredentialBinding.fromEnvironment(
           System.getenv());
       if (awsCredentials.isValid(
-          MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty)) {
+          MarshaledCredentials.CredentialTypeRequired.AnyNonEmpty)) {
         // valid tokens, so mark as origin
         credentialOrigin += "; source = Environment variables";
       } else {
@@ -103,7 +103,7 @@ public class FullCredentialsTokenBinding extends
       }
     }
     awsCredentials.validate(credentialOrigin +": ",
-        MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty);
+        MarshaledCredentials.CredentialTypeRequired.AnyNonEmpty);
   }
 
   /**
@@ -117,12 +117,12 @@ public class FullCredentialsTokenBinding extends
     requireServiceStarted();
     return new AWSCredentialProviderList(
         "Full Credentials Token Binding",
-        new MarshalledCredentialProvider(
+        new MarshaledCredentialProvider(
             FULL_TOKEN,
             getStoreContext().getFsURI(),
             getConfig(),
             awsCredentials,
-            MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
+            MarshaledCredentials.CredentialTypeRequired.AnyNonEmpty));
   }
 
   /**
@@ -157,12 +157,12 @@ public class FullCredentialsTokenBinding extends
             FullCredentialsTokenIdentifier.class);
     return new AWSCredentialProviderList(
         "Full Credentials Token Binding",
-        new MarshalledCredentialProvider(
+        new MarshaledCredentialProvider(
             FULL_TOKEN,
             getStoreContext().getFsURI(),
             getConfig(),
-            tokenIdentifier.getMarshalledCredentials(),
-            MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
+            tokenIdentifier.getMarshaledCredentials(),
+            MarshaledCredentials.CredentialTypeRequired.AnyNonEmpty));
   }
 
   @Override

@@ -207,7 +207,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
   /**
    * Bind to the token identifier, returning the credential providers to use
    * for the owner to talk to S3, DDB and related AWS Services.
-   * @param retrievedIdentifier the unmarshalled data
+   * @param retrievedIdentifier the unmarshaled data
    * @return non-empty list of AWS credential providers to use for
    * authenticating this client with AWS services.
    * @throws IOException any failure.

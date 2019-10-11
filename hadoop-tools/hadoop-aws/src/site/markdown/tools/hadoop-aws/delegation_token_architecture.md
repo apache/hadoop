@@ -36,7 +36,7 @@ As an example, an HDFS DT can be requested by a user, included in the
 launch context of a YARN application -say DistCp, and that launched application
 can then talk to HDFS as if they were that user.
 
-### Tokens are marshalled
+### Tokens are marshaled
 
 Tokens are opaque byte arrays. They are contained within a `Token<T extends TokenIdentifier>`
  class which includes an expiry time, the service identifier, and some other details.
@@ -45,10 +45,10 @@ Tokens are opaque byte arrays. They are contained within a `Token<T extends Toke
 format. This is how they are included in YARN application and container requests,
 and elsewhere. They can even be saved to files through the `hadoop dt` command.
 
-### Tokens can be unmarshalled
+### Tokens can be unmarshaled
 
 
-At the far end, tokens can be unmarshalled and converted into instances of
+At the far end, tokens can be unmarshaled and converted into instances of
 the java classes. This assumes that all the dependent classes are on the
 classpath, obviously.
 
@@ -72,7 +72,7 @@ and data on behalf of a user.
 
 When tokens are no longer needed, the service can be told to revoke a token.
 Continuing the YARN example, after an application finishes the YARN RM
-can revoke every token marshalled into the application launch request.
+can revoke every token marshaled into the application launch request.
 At which point there's no risk associated with that token being
 compromised.
 
@@ -82,7 +82,7 @@ compromised.
 The S3A Delegation Tokens are subtly different.
 
 The S3A DTs actually include the AWS credentials within the token
-data marshalled and shared across the cluster. The credentials can be one
+data marshaled and shared across the cluster. The credentials can be one
 of:
 
 * The Full AWS (`fs.s3a.access.key`, `fs.s3a.secret.key`) login.
@@ -99,13 +99,13 @@ Again, these credentials are requested when the token is issued.
 
 When an S3A Filesystem instance is asked to issue a token it can simply package
 up the login secrets (The "Full" tokens), or talk to the AWS STS service
-to get a set of session/assumed role credentials. These are marshalled within
+to get a set of session/assumed role credentials. These are marshaled within
 the overall token, and then onwards to applications.
 
-*Tokens can be marshalled*
+*Tokens can be marshaled*
 
 The AWS secrets are held in a subclass of `org.apache.hadoop.security.token.TokenIdentifier`.
-This class gets serialized to a byte array when the whole token is marshalled, and deserialized
+This class gets serialized to a byte array when the whole token is marshaled, and deserialized
 when the token is loaded.
 
 *Tokens can be used to authenticate callers*
@@ -170,7 +170,7 @@ token binding, the "DT Binding", a class declared in the option `fs.s3a.delegati
 (the list in `fs.s3a.aws.credentials.provider` are only used if the DT binding wishes to).
 1. The DT binding scans for the current principal (`UGI.getCurrentUser()`/"the Owner") to see if they
 have any token in their credential cache whose service name matches the URI of the filesystem.
-1. If one is found, it is unmarshalled and then used to authenticate the caller via
+1. If one is found, it is unmarshaled and then used to authenticate the caller via
 some AWS Credential provider returned to the S3A FileSystem instance.
 1. If none is found, the Filesystem is considered to have been deployed "Unbonded".
 The DT binding has to return a list of the AWS credential providers to use.
@@ -179,7 +179,7 @@ When requests are made of AWS services, the created credential provider(s) are
 used to sign requests.
 
 When the filesystem is asked for a delegation token, the
-DT binding will generate a token identifier containing the marshalled tokens.
+DT binding will generate a token identifier containing the marshaled tokens.
 
 If the Filesystem was deployed with a DT, that is, it was deployed "bonded", that existing
 DT is returned.
@@ -190,7 +190,7 @@ It is up to the binding what it includes in the token identifier, and how it obt
 This new token identifier is included in a token which has a "canonical service name" of
 the URI of the filesystem (e.g "s3a://landsat-pds").
 
-The issued/reissued token identifier can be marshalled and reused.
+The issued/reissued token identifier can be marshaled and reused.
 
 
 ### class `org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens`
@@ -258,7 +258,7 @@ This class contains the following fields:
   private String origin = "";
 
   /**
-   * This marshalled UUID can be used in testing to verify transmission,
+   * This marshaled UUID can be used in testing to verify transmission,
    * and reuse; as it is printed you can see what is happending too.
    */
   private String uuid = UUID.randomUUID().toString();
@@ -280,7 +280,7 @@ are included in the DT, so can be used to encrypt/decrypt data in the cluster.*
 This holds session tokens, and it also gets used as a superclass of
 the other token identifiers.
 
-It adds a set of `MarshalledCredentials` containing the session secrets.
+It adds a set of `MarshaledCredentials` containing the session secrets.
 
 Every token/token identifier must have a unique *Kind*; this is how token
 identifier deserializers are looked up. For Session Credentials, it is
@@ -310,12 +310,12 @@ token and failing meaningfully here.
 
 
 
-### class `MarshalledCredentials`
+### class `MarshaledCredentials`
 
 Can marshall a set of AWS credentials (access key, secret key, session token)
 as a Hadoop Writable.
 
-These can be given to an instance of class `MarshalledCredentialProvider`
+These can be given to an instance of class `MarshaledCredentialProvider`
 and used to sign AWS RPC/REST API calls.
 
 ## DT Binding: `AbstractDelegationTokenBinding`
@@ -371,7 +371,7 @@ the role policy.
 
 If the client is only logged in with session credentials: fail.
 
-Else: take the AWS access/secret key, store them in the MarshalledCredentials
+Else: take the AWS access/secret key, store them in the `MarshaledCredentials`
 in a new `FullCredentialsTokenIdentifier`, and return.
 
 
