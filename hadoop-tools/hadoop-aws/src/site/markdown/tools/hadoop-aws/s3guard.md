@@ -951,9 +951,36 @@ logged.
 
 ### Versioning
 
-S3Guard tables are created with a version marker, an entry with the primary
-key and child entry of `../VERSION`; the use of a relative path guarantees
-that it will not be resolved.
+S3Guard tables are created with a version marker entry and table tag.
+The entry is created with the primary key and child entry of `../VERSION`; 
+the use of a relative path guarantees that it will not be resolved.
+Table tag key is named `s3guard_version`.
+
+When the table is initialized by S3Guard, the table will be tagged during the 
+creating and the version marker entry will be created in the table.
+If the table lacks the version marker entry or tag, S3Guard will try to create
+it according to the following rules:
+
+1. If the table lacks both version markers AND it's empty, both markers will be added. 
+If the table is not empty the check throws IOException
+1. If there's no version marker ITEM, the compatibility with the TAG
+will be checked, and the version marker ITEM will be added if the
+TAG version is compatible.
+If the TAG version is not compatible, the check throws OException
+1. If there's no version marker TAG, the compatibility with the ITEM
+version marker will be checked, and the version marker ITEM will be
+added if the ITEM version is compatible.
+If the ITEM version is not compatible, the check throws IOException
+1. If the TAG and ITEM versions are both present then both will be checked
+for compatibility. If the ITEM or TAG version marker is not compatible,
+the check throws IOException
+
+*Note*: If the user does not have sufficient rights to tag the table the 
+initialization of S3Guard will not fail, but there will be no version marker tag
+on the dynamo table and the following message will be logged on WARN level:
+```
+Exception during tagging table: {AmazonDynamoDBException exception message}
+```
 
 *Versioning policy*
 
