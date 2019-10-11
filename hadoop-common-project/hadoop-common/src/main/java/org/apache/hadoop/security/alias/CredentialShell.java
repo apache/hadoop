@@ -301,7 +301,7 @@ public class CredentialShell extends CommandShell {
   }
 
   private class CheckCommand extends Command {
-    public static final String USAGE = "check <alias> [-value alias-value] " +
+    public static final String USAGE = "check <alias> " +
       "[-provider provider-path] [-strict]";
     public static final String DESC =
       "The check subcommand check a password for the name\n" +
