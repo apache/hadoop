@@ -1660,8 +1660,13 @@ public class KeyManagerImpl implements KeyManager {
       if (ozObject.getResourceType() == OPEN_KEY) {
         keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
       } else {
-        OzoneFileStatus fileStatus = getFileStatus(args);
-        keyInfo = fileStatus.getKeyInfo();
+        try {
+          OzoneFileStatus fileStatus = getFileStatus(args);
+          keyInfo = fileStatus.getKeyInfo();
+        } catch (Exception e) {
+          throw new OMException("Key not found, checkAccess failed. Key:" +
+              objectKey, KEY_NOT_FOUND);
+        }
       }
 
       if (keyInfo == null) {

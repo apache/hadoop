@@ -108,6 +108,7 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
       return (bucketAccess
           && volumeManager.checkAccess(objInfo, parentContext));
     case KEY:
+    case OPEN_KEY:
       LOG.trace("Checking access for Key:" + objInfo);
       // Skip key access check for CREATE acl since
       // key will not exist at the time of creation
