@@ -301,7 +301,7 @@ public class CredentialShell extends CommandShell {
   }
 
   private class CheckCommand extends Command {
-    public static final String USAGE = "check <alias> " +
+    public static final String USAGE = "check <alias> [-value alias-value] " +
       "[-provider provider-path] [-strict]";
     public static final String DESC =
       "The check subcommand check a password for the name\n" +
@@ -358,7 +358,13 @@ public class CredentialShell extends CommandShell {
           throw new IOException("No console available for checking user.");
         }
 
-        char[] password = c.readPassword("Enter alias password: ");
+        char[] password = null;
+        if (value != null) {
+          // testing only
+          password = value.toCharArray();
+        } else {
+          password = c.readPassword("Enter alias password: ");
+        }
         char[] storePassword = provider.getCredentialEntry(alias).getCredential();
         String beMatch = Arrays.equals(storePassword, password) ? "success" : "failed";
 
