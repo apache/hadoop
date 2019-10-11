@@ -89,7 +89,7 @@ public class CredentialShell extends CommandShell {
         }
         setSubCommand(new CreateCommand(args[++i]));
       } else if (args[i].equals("check")) {
-        if (i == args.length -1) {
+        if (i == args.length - 1) {
           return 1;
         }
         setSubCommand(new CheckCommand(args[++i]));
