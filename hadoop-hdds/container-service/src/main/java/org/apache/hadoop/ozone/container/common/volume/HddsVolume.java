@@ -452,4 +452,12 @@ public class HddsVolume
       volumeInfo.setScmUsageForTesting(scmUsageForTest);
     }
   }
+
+  /**
+   * Override toSting() to show the path of HddsVolume.
+   */
+  @Override
+  public String toString() {
+    return getHddsRootDir().toString();
+  }
 }
