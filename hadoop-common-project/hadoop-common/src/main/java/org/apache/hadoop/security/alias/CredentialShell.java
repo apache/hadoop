@@ -302,9 +302,9 @@ public class CredentialShell extends CommandShell {
 
   private class CheckCommand extends Command {
     public static final String USAGE = "check <alias> [-value alias-value] " +
-      "[-provider provider-path] [-strict]";
+        "[-provider provider-path] [-strict]";
     public static final String DESC =
-      "The check subcommand check a password for the name\n" +
+        "The check subcommand check a password for the name\n" +
         "specified as the <alias> argument within the provider indicated\n" +
         "through the -provider argument. If -strict is supplied, fail\n" +
         "immediately if the provider requires a password and none is given.\n" +
@@ -320,7 +320,7 @@ public class CredentialShell extends CommandShell {
     public boolean validate() {
       if (alias == null) {
         getOut().println("There is no alias specified. Please provide the" +
-          "mandatory <alias>. See the usage description with -help.");
+            "mandatory <alias>. See the usage description with -help.");
         return false;
       }
       if (alias.equals("-help")) {
@@ -351,7 +351,7 @@ public class CredentialShell extends CommandShell {
       }
       warnIfTransientProvider();
       getOut().println("Checking aliases for CredentialProvider: " +
-        provider.toString());
+          provider.toString());
       try {
         PasswordReader c = getPasswordReader();
         if (c == null) {
@@ -365,14 +365,16 @@ public class CredentialShell extends CommandShell {
         } else {
           password = c.readPassword("Enter alias password: ");
         }
-        char[] storePassword = provider.getCredentialEntry(alias).getCredential();
-        String beMatch = Arrays.equals(storePassword, password) ? "success" : "failed";
+        char[] storePassword =
+            provider.getCredentialEntry(alias).getCredential();
+        String beMatch =
+            Arrays.equals(storePassword, password) ? "success" : "failed";
 
         getOut().println("Password match " + beMatch + " for " +  alias + ".");
       } catch (IOException e) {
         getOut().println("Cannot check aliases for CredentialProvider: " +
-          provider.toString()
-          + ": " + e.getMessage());
+            provider.toString()
+            + ": " + e.getMessage());
         throw e;
       }
     }
