@@ -176,19 +176,21 @@ public class TestCredShell {
         "created."));
 
     String[] args2 = {"check", "credential1", "-provider",
-      jceksProvider};
+        jceksProvider};
     ArrayList<String> password = new ArrayList<String>();
     password.add("p@ssw0rd");
     shell.setPasswordReader(new MockPasswordReader(password));
     rc = shell.run(args2);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("Password match success for credential1."));
+    assertTrue(outContent.toString().contains("Password match success " +
+        "for credential1."));
     ArrayList<String> passwordError = new ArrayList<String>();
     passwordError.add("p@ssw0rderr");
     shell.setPasswordReader(new MockPasswordReader(password));
     rc = shell.run(args2);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("Password match failed for credential1."));
+    assertTrue(outContent.toString().contains("Password match failed " +
+        "for credential1."));
 
     String[] args3 = {"delete", "credential1", "-f", "-provider",
         jceksProvider};
