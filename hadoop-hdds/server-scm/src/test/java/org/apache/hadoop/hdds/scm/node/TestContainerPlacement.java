@@ -107,7 +107,7 @@ public class TestContainerPlacement {
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
     PipelineManager pipelineManager =
-        new SCMPipelineManager(config, scmNodeManager, eventQueue, null);
+        new SCMPipelineManager(config, scmNodeManager, eventQueue);
     return new SCMContainerManager(config, scmNodeManager, pipelineManager,
         eventQueue);
 

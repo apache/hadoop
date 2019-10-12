@@ -249,18 +249,19 @@ public class ContainerStateManager {
       throws IOException {
 
     Pipeline pipeline;
-    try {
-      // TODO: #CLUTIL remove creation logic when all replication types and
-      // factors are handled by pipeline creator job.
-      pipeline = pipelineManager.createPipeline(type, replicationFactor);
-    } catch (IOException e) {
-      final List<Pipeline> pipelines = pipelineManager
-          .getPipelines(type, replicationFactor, Pipeline.PipelineState.OPEN);
-      if (pipelines.isEmpty()) {
+    final List<Pipeline> pipelines = pipelineManager
+        .getPipelines(type, replicationFactor, Pipeline.PipelineState.OPEN);
+    if (pipelines.isEmpty()) {
+      try {
+        pipeline = pipelineManager.createPipeline(type, replicationFactor);
+        pipelineManager.waitPipelineReady(pipeline.getId(), 0);
+      } catch (IOException e) {
+        LOG.error("Fail to create pipeline for " + e.getMessage());
         throw new IOException("Could not allocate container. Cannot get any" +
             " matching pipeline for Type:" + type +
             ", Factor:" + replicationFactor + ", State:PipelineState.OPEN");
       }
+    } else {
       pipeline = pipelines.get((int) containerCount.get() % pipelines.size());
     }
     synchronized (pipeline) {

@@ -131,9 +131,9 @@ class PipelineStateManager {
       throw new IOException("Closed pipeline can not be opened");
     }
     if (pipeline.getPipelineState() == PipelineState.ALLOCATED) {
+      LOG.info("Pipeline {} moved to OPEN state", pipeline.toString());
       pipeline = pipelineStateMap
           .updatePipelineState(pipelineId, PipelineState.OPEN);
-      LOG.info("Pipeline {} moved to OPEN state", pipeline.toString());
     }
     return pipeline;
   }

@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -59,17 +60,17 @@ import org.slf4j.LoggerFactory;
  * number of datanode registered is met or not.
  *
  * 3. HealthyPipelineSafeModeRule:
- * Once the pipelineReportHandler processes the
- * {@link SCMEvents#PIPELINE_REPORT}, it fires
- * {@link SCMEvents#PROCESSED_PIPELINE_REPORT}. This rule handles this
+ * Once the SCMPipelineManager processes the
+ * {@link SCMEvents#CREATE_PIPELINE_STATUS}, it fires
+ * {@link SCMEvents#OPEN_PIPELINE}. This rule handles this
  * event. This rule processes this report, and check if pipeline is healthy
  * and increments current healthy pipeline count. Then validate it cutoff
  * threshold for healthy pipeline is met or not.
  *
  * 4. OneReplicaPipelineSafeModeRule:
- * Once the pipelineReportHandler processes the
- * {@link SCMEvents#PIPELINE_REPORT}, it fires
- * {@link SCMEvents#PROCESSED_PIPELINE_REPORT}. This rule handles this
+ * Once the SCMPipelineManager processes the
+ * {@link SCMEvents#CREATE_PIPELINE_STATUS}, it fires
+ * {@link SCMEvents#OPEN_PIPELINE}. This rule handles this
  * event. This rule processes this report, and add the reported pipeline to
  * reported pipeline set. Then validate it cutoff threshold for one replica
  * per pipeline is met or not.
@@ -97,6 +98,7 @@ public class SCMSafeModeManager {
   private final PipelineManager pipelineManager;
 
   private final SafeModeMetrics safeModeMetrics;
+  private boolean createPipelineInSafeMode = false;
 
   public SCMSafeModeManager(Configuration conf,
       List<ContainerInfo> allContainers, PipelineManager pipelineManager,
@@ -134,6 +136,9 @@ public class SCMSafeModeManager {
         exitRules.put(ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE,
             oneReplicaPipelineSafeModeRule);
       }
+      createPipelineInSafeMode = conf.getBoolean(
+          HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION,
+          HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION_DEFAULT);
       emitSafeModeStatus();
     } else {
       this.safeModeMetrics = null;
@@ -166,6 +171,7 @@ public class SCMSafeModeManager {
 
     if (exitRules.get(ruleName) != null) {
       validatedRules.add(ruleName);
+      LOG.info("{} rule is successfully validated", ruleName);
     } else {
       // This should never happen
       LOG.error("No Such Exit rule {}", ruleName);
@@ -190,6 +196,18 @@ public class SCMSafeModeManager {
    */
   @VisibleForTesting
   public void exitSafeMode(EventPublisher eventQueue) {
+    // Wait a while for as many as new pipelines to be ready
+    if (createPipelineInSafeMode) {
+      long sleepTime = config.getTimeDuration(
+          HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
+          HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      try {
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException e) {
+      }
+    }
+
     LOG.info("SCM exiting safe mode.");
     setInSafeMode(false);
 

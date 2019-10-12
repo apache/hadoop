@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReport;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /** A server endpoint that acts as the communication layer for Ozone
@@ -59,6 +61,22 @@ public interface XceiverServerSpi {
    * @return true if pipeline present, else false
    */
   boolean isExist(HddsProtos.PipelineID pipelineId);
+
+
+  /**
+   * Join a new pipeline.
+   */
+  default void addGroup(HddsProtos.PipelineID pipelineId,
+      Collection<DatanodeDetails> peers) throws IOException {
+  }
+
+
+  /**
+   * Exit a pipeline.
+   */
+  default void removeGroup(HddsProtos.PipelineID pipelineId)
+      throws IOException {
+  }
 
   /**
    * Get pipeline report for the XceiverServer instance.

@@ -50,6 +50,7 @@ public final class Pipeline {
   private Map<DatanodeDetails, Long> nodeStatus;
   // nodes with ordered distance to client
   private ThreadLocal<List<DatanodeDetails>> nodesInOrder = new ThreadLocal<>();
+  private final long creationTime;
 
   /**
    * The immutable properties of pipeline object is used in
@@ -64,6 +65,7 @@ public final class Pipeline {
     this.factor = factor;
     this.state = state;
     this.nodeStatus = nodeStatus;
+    this.creationTime = System.currentTimeMillis();
   }
 
   /**
@@ -132,6 +134,11 @@ public final class Pipeline {
 
   public boolean isOpen() {
     return state == PipelineState.OPEN;
+  }
+
+  public boolean isAllocationTimeout() {
+    //TODO: define a system property to control the timeout value
+    return false;
   }
 
   public void setNodesInOrder(List<DatanodeDetails> nodes) {
