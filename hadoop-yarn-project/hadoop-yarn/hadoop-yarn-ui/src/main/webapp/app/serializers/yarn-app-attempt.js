@@ -33,6 +33,7 @@ export default DS.JSONAPISerializer.extend({
           startTime: Converter.timeStampToDate(payload.startTime),
           startedTime: Converter.timeStampToDate(payload.startedTime),
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
+          elapsedTimeMs: payload.elapsedTime,
           containerId: payload.containerId,
           amContainerId: payload.amContainerId,
           nodeHttpAddress: payload.nodeHttpAddress,
