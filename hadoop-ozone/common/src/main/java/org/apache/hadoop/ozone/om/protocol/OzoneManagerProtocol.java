@@ -41,7 +41,8 @@ import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.Closeable;
@@ -291,6 +292,8 @@ public interface OzoneManagerProtocol
 
   ServiceInfoEx getServiceInfo() throws IOException;
 
+  List<OMRoleInfo> getOMServerRoles() throws IOException;
+
   /*
    * S3 Specific functionality that is supported by Ozone Manager.
    */
@@ -523,8 +526,7 @@ public interface OzoneManagerProtocol
    * @return Wrapper containing the updates.
    * @throws SequenceNumberNotFoundException if db is unable to read the data.
    */
-  DBUpdatesWrapper getDBUpdates(
-      OzoneManagerProtocolProtos.DBUpdatesRequest dbUpdatesRequest)
+  DBUpdatesWrapper getDBUpdates(DBUpdatesRequest dbUpdatesRequest)
       throws IOException;
 
 }

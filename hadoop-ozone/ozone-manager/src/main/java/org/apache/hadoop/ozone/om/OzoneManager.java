@@ -86,6 +86,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
@@ -154,6 +155,7 @@ import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 
+import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.FileUtils;
 import org.apache.ratis.util.LifeCycle;
@@ -2428,6 +2430,47 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public ServiceInfoEx getServiceInfo() throws IOException {
     return new ServiceInfoEx(getServiceList(), caCertPem);
+  }
+
+  @Override
+  public List<OMRoleInfo> getOMServerRoles() throws IOException {
+    List<OMRoleInfo> roleInfos = new ArrayList<>();
+    if (isRatisEnabled) {
+      Map<String, String> serverRoles = omRatisServer.getServerRoles();
+
+      String nodeId = getOMNodeId();
+      String serverRole = serverRoles.get(nodeId);
+      if (serverRole == null) {
+        serverRole = RaftPeerRole.UNRECOGNIZED.name();
+      }
+      OMRoleInfo selfOMRoleInfo = OMRoleInfo.newBuilder()
+          .setNodeId(nodeId)
+          .setServerRole(serverRole)
+          .build();
+      roleInfos.add(selfOMRoleInfo);
+
+      for (OMNodeDetails peerNode : peerNodes) {
+
+        String peerNodeId = peerNode.getOMNodeId();
+        String peerServerRole = serverRoles.get(peerNodeId);
+        if (peerServerRole == null) {
+          peerServerRole = RaftPeerRole.UNRECOGNIZED.name();
+        }
+        OMRoleInfo peerOMRoleInfo = OMRoleInfo.newBuilder()
+            .setNodeId(peerNodeId)
+            .setServerRole(peerServerRole)
+            .build();
+        roleInfos.add(peerOMRoleInfo);
+      }
+    } else {
+      // There is only OM in the service. It can be assumed to be Leader.
+      OMRoleInfo selfOMRoleInfo = OMRoleInfo.newBuilder()
+          .setNodeId(getOMNodeId())
+          .setServerRole(RaftPeerRole.LEADER.name())
+          .build();
+      roleInfos.add(selfOMRoleInfo);
+    }
+    return roleInfos;
   }
 
   @Override

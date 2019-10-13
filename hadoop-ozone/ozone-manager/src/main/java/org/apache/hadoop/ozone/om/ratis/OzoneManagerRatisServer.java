@@ -25,7 +25,9 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -55,6 +57,7 @@ import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.netty.NettyConfigKeys;
 import org.apache.ratis.proto.RaftProtos.RoleInfoProto;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
+import org.apache.ratis.proto.RaftProtos.ServerRpcProto;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.GroupInfoReply;
 import org.apache.ratis.protocol.GroupInfoRequest;
@@ -617,11 +620,43 @@ public final class OzoneManagerRatisServer {
     }
   }
 
-  private GroupInfoReply getGroupInfo() throws IOException {
+  public GroupInfoReply getGroupInfo() throws IOException {
     GroupInfoRequest groupInfoRequest = new GroupInfoRequest(clientId,
         raftPeerId, raftGroupId, nextCallId());
     GroupInfoReply groupInfo = server.getGroupInfo(groupInfoRequest);
     return groupInfo;
+  }
+
+  public Map<String, String> getServerRoles() throws IOException {
+    GroupInfoReply groupInfo = getGroupInfo();
+    if (groupInfo == null) {
+      throw new IOException(ozoneManager.getOMNodeId() +
+          ": Failed to get GroupInfo.");
+    } else {
+      Map<String, String> serverRoles = new HashMap<>();
+
+      RoleInfoProto roleInfoProto = groupInfo.getRoleInfoProto();
+      String selfNodeId = new String(
+          roleInfoProto.getSelf().getId().toByteArray());
+      String selfRole = roleInfoProto.getRole().name();
+      serverRoles.put(selfNodeId, selfRole);
+
+      if (roleInfoProto.hasLeaderInfo()) {
+        for (ServerRpcProto followerInfo :
+            roleInfoProto.getLeaderInfo().getFollowerInfoList()) {
+          String nodeId = new String(
+              followerInfo.getId().getId().toByteArray());
+          serverRoles.put(nodeId, RaftPeerRole.FOLLOWER.name());
+        }
+      }
+      if (roleInfoProto.hasFollowerInfo()) {
+        String nodeId = new String(
+            roleInfoProto.getFollowerInfo().getLeaderInfo().getId().getId()
+                .toByteArray());
+        serverRoles.put(nodeId, RaftPeerRole.FOLLOWER.name());
+      }
+      return serverRoles;
+    }
   }
 
   public int getServerPort() {

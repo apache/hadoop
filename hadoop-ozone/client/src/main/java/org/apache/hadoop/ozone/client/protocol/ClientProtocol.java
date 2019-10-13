@@ -42,6 +42,7 @@ import java.util.Map;
 
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.KerberosInfo;
@@ -644,5 +645,13 @@ public interface ClientProtocol {
    * @throws IOException if there is error.
    * */
   List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
+
+  /**
+   * Get a list of all OMs and their Ratis server roles.
+   *
+   * @return list of OM server roles
+   * @throws IOException
+   */
+  List<OMRoleInfo> getOMServerRoles() throws IOException;
 
 }

@@ -310,6 +310,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
             request.getServiceListRequest());
         responseBuilder.setServiceListResponse(serviceListResponse);
         break;
+      case OMServerRoles:
+        OMServerRolesResponse omServerRolesResponse = getOMServerRoles(
+            request.getOmServerRolesRequest());
+        responseBuilder.setOmServerRolesResponse(omServerRolesResponse);
+        break;
       case DBUpdates:
         DBUpdatesResponse dbUpdatesResponse = getOMDBUpdates(
             request.getDbUpdatesRequest());
@@ -770,6 +775,14 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       resp.setCaCertificate(impl.getServiceInfo().getCaCertificate());
     }
     return resp.build();
+  }
+
+  private OMServerRolesResponse getOMServerRoles(OMServerRolesRequest request)
+    throws IOException {
+    OMServerRolesResponse resp = OMServerRolesResponse.newBuilder()
+        .addAllRoleInfos(impl.getOMServerRoles())
+        .build();
+    return resp;
   }
 
   private S3CreateBucketResponse createS3Bucket(S3CreateBucketRequest request)

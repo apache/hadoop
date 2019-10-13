@@ -227,6 +227,7 @@ public final class OmUtils {
     case InfoS3Bucket:
     case ListS3Buckets:
     case ServiceList:
+    case OMServerRoles:
     case ListMultiPartUploadParts:
     case GetFileStatus:
     case LookupFile:

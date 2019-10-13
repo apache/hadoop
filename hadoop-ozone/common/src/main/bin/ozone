@@ -55,6 +55,7 @@ function hadoop_usage
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
   hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
+  hadoop_add_subcommand "admin" client "Ozone admin tool"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -206,6 +207,10 @@ function ozonecmd_case
     upgrade)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.upgrade.InPlaceUpgrade
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-upgrade"
+    ;;
+    admin)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.admin.OzoneAdmin
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

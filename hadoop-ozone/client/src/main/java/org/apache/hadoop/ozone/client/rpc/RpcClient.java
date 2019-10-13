@@ -72,6 +72,7 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.security.GDPRSymmetricKey;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
@@ -1069,6 +1070,11 @@ public class RpcClient implements ClientProtocol {
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     return ozoneManagerClient.getAcl(obj);
+  }
+
+  @Override
+  public List<OMRoleInfo> getOMServerRoles() throws IOException {
+    return ozoneManagerClient.getOMServerRoles();
   }
 
   private OzoneInputStream createInputStream(OmKeyInfo keyInfo)

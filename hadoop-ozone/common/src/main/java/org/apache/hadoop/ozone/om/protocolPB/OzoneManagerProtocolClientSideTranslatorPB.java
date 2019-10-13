@@ -79,6 +79,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclR
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMServerRolesResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMServerRolesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
@@ -120,6 +122,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclResponse;
@@ -1228,6 +1231,20 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             .map(ServiceInfo::getFromProtobuf)
             .collect(Collectors.toList()),
         resp.getCaCertificate());
+  }
+
+  @Override
+  public List<OMRoleInfo> getOMServerRoles() throws IOException {
+    OMServerRolesRequest req = OMServerRolesRequest.newBuilder().build();
+
+    OMRequest omRequest = createOMRequest(Type.OMServerRoles)
+        .setOmServerRolesRequest(req)
+        .build();
+
+    final OMServerRolesResponse resp = handleError(submitRequest(omRequest))
+        .getOmServerRolesResponse();
+
+    return resp.getRoleInfosList();
   }
 
   /**
