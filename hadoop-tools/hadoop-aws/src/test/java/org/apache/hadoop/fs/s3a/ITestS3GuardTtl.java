@@ -96,6 +96,12 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
     return configuration;
   }
 
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeTrue(getFileSystem().hasMetadataStore());
+  }
+
   @Test
   public void testDirectoryListingAuthoritativeTtl() throws Exception {
     LOG.info("Authoritative mode: {}", authoritative);
