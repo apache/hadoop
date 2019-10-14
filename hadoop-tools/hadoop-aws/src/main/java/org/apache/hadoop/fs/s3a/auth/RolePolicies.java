@@ -331,6 +331,16 @@ public final class RolePolicies {
   public static final String DDB_BATCH_WRITE_ITEM = "dynamodb:BatchWriteItem";
 
   /**
+   * Read tags of a table: {@value}.
+   */
+  public static final String DDB_TAGS_LIST = "dynamodb:ListTagsOfResource";
+
+  /**
+   * Write- tags of a table: {@value}.
+   */
+  public static final String DDB_TAGS_WRITE = "dynamodb:TagResource";
+
+  /**
    * All DynamoDB tables: {@value}.
    */
   public static final String ALL_DDB_TABLES = "arn:aws:dynamodb:*";
