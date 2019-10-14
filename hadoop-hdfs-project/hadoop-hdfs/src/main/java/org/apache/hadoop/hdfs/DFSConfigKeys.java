@@ -379,6 +379,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR_DEFAULT = "file:///tmp/";
 
   public static final String DFS_PROVIDED_ALIASMAP_LEVELDB_PATH = "dfs.provided.aliasmap.leveldb.path";
+  public static final String DFS_PROVIDED_ACLS_IMPORT_ENABLED =
+      "dfs.provided.acls.import.enabled";
+  public static final boolean DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT = false;
 
   public static final String  DFS_LIST_LIMIT = "dfs.ls.limit";
   public static final int     DFS_LIST_LIMIT_DEFAULT = 1000;
