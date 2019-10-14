@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler.CliOption;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverter;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -136,7 +140,6 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
@@ -226,6 +229,13 @@ public class ResourceManager extends CompositeService
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
+  private static FSConfigToCSConfigArgumentHandler
+      fsConfigConversionArgumentHandler;
+
+  static {
+    FSConfigToCSConfigConverter converter = initFSConfigConverter();
+    initFSArgumentHandler(converter);
+  }
 
   public ResourceManager() {
     super("ResourceManager");
@@ -1556,6 +1566,22 @@ public class ResourceManager extends CompositeService
         } else if (argv[0].equals("-remove-application-from-state-store")
             && argv.length == 2) {
           removeApplication(conf, argv[1]);
+        } else if (argv[0].equals("-convert-fs-configuration")) {
+          String[] args = Arrays.copyOfRange(argv, 1, argv.length);
+          try {
+            int exitCode =
+                fsConfigConversionArgumentHandler.parseAndConvert(args);
+            if (exitCode != 0) {
+              LOG.error(FATAL,
+                  "Error while starting FS configuration conversion, " +
+                      "see previous error messages for details!");
+              System.exit(exitCode);
+            }
+          } catch (Throwable t) {
+            LOG.error(FATAL,
+                "Error while starting FS configuration conversion!", t);
+            System.exit(-1);
+          }
         } else {
           printUsage(System.err);
         }
@@ -1666,6 +1692,13 @@ public class ResourceManager extends CompositeService
     out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
         + "[-remove-application-from-state-store <appId>]" + "\n");
+
+    out.println("[-convert-fs-configuration ");
+    out.println(FSConfigToCSConfigConverter.WARNING_TEXT);
+    for (CliOption cliOption : CliOption.values()) {
+      out.println("   " + cliOption.getAsArgumentString());
+    }
+    out.println("]");
   }
 
   protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {
@@ -1683,4 +1716,17 @@ public class ResourceManager extends CompositeService
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
   }
+
+  @VisibleForTesting
+  static void initFSArgumentHandler(FSConfigToCSConfigConverter converter) {
+    ResourceManager.fsConfigConversionArgumentHandler =
+        new FSConfigToCSConfigArgumentHandler(converter);
+  }
+
+  private static FSConfigToCSConfigConverter initFSConfigConverter() {
+    FSConfigToCSConfigRuleHandler ruleHandler =
+        new FSConfigToCSConfigRuleHandler();
+    return new FSConfigToCSConfigConverter(ruleHandler);
+  }
+
 }
