@@ -119,59 +119,6 @@ Return the data at the current position.
     else
         result = -1
 
-### <a name="InputStream.available"></a> `InputStream.available()`
-
-Returns the number of bytes "estimated" to be readable on a stream before `read()`
-blocks on any IO (i.e. the thread is potentially suspended for some time).
-
-That is: for all values `v` returned by `available()`, `read(buffer, 0, v)`
-is should not block.
-
-#### Postconditions
-
-```python
-if len(data) == 0:
-  result = 0
-
-elif pos >= len(data):
-  result = 0
-
-else:
-  d = "the amount of data known to be already buffered/cached locally"
-  result = min(1, d)  # optional but recommended: see below.
-```
-
-As `0` is a number which is always meets this condition, it is nominally
-possible for an implementation to simply return `0`. However, this is not
-considered useful, and some applications/libraries expect a positive number.
-
-#### The GZip problem.
-
-[JDK-7036144](http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144),
-"GZIPInputStream readTrailer uses faulty available() test for end-of-stream"
-discusses how the JDK's GZip code it uses `available()` to detect an EOF,
-in a loop similar to the the following
-
-```java
-while(instream.available()) {
-  process(instream.read());
-}
-```
-
-The correct loop would have been:
-
-```java
-int r;
-while((r=instream.read()) >= 0) {
-  process(r);
-}
-```
-
-If `available()` ever returns 0, then the gzip loop halts prematurely.
-
-For this reason, implementations *should* return a value &gt;=1, even
-if it breaks that requirement of `available()` returning the amount guaranteed
-not to block on reads.
 
 ### <a name="InputStream.read.buffer[]"></a> `InputStream.read(buffer[], offset, length)`
 
