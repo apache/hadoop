@@ -127,4 +127,9 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.supports-native-copy</name>
+    <value>true</value>
+  </property>
+
 </configuration>

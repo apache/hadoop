@@ -53,6 +53,8 @@ public enum Statistic {
       "Calls of copyFromLocalFile()"),
   INVOCATION_CREATE(CommonStatisticNames.OP_CREATE,
       "Calls of create()"),
+  INVOCATION_COPY(CommonStatisticNames.OP_COPY,
+      "Calls of copy()"),
   INVOCATION_CREATE_NON_RECURSIVE(CommonStatisticNames.OP_CREATE_NON_RECURSIVE,
       "Calls of createNonRecursive()"),
   INVOCATION_DELETE(CommonStatisticNames.OP_DELETE,

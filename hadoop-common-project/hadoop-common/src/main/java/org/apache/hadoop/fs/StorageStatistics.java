@@ -50,6 +50,7 @@ public abstract class StorageStatistics {
     String OP_APPEND = "op_append";
     String OP_COPY_FROM_LOCAL_FILE = "op_copy_from_local_file";
     String OP_CREATE = "op_create";
+    String OP_COPY = "op_copy";
     String OP_CREATE_NON_RECURSIVE = "op_create_non_recursive";
     String OP_DELETE = "op_delete";
     String OP_EXISTS = "op_exists";
