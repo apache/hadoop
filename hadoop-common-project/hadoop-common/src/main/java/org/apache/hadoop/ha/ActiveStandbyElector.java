@@ -137,7 +137,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * classes
    */
   protected static final String LOCK_FILENAME = "ActiveStandbyElectorLock";
-  protected static final String BREADCRUMB_FILENAME = "ActiveBreadCrumb";
+  public static final String BREADCRUMB_FILENAME = "ActiveBreadCrumb";
 
   public static final Logger LOG =
       LoggerFactory.getLogger(ActiveStandbyElector.class);
