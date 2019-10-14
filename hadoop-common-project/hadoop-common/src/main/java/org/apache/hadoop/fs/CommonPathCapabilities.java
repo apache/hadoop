@@ -55,7 +55,7 @@ public final class CommonPathCapabilities {
 
   /**
    * Does the store support native file copy.
-   * {@code FileSystem.copyFile(URI, URI)}
+   * {@code FileSystem.copy(URI, URI)}
    * Value: {@value}.
    */
   public static final String FS_NATIVE_COPY = "fs.capability.paths.native.copy";
