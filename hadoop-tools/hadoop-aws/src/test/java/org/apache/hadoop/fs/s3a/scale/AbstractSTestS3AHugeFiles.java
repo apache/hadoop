@@ -485,6 +485,31 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     bandwidth(timer2, size);
   }
 
+  @Test
+  public void test_200_copyHugeFile() throws Throwable {
+    assumeHugeFileExists();
+    describe("copying %s to %s", hugefile, hugefileRenamed);
+    S3AFileSystem fs = getFileSystem();
+    FileStatus status = fs.getFileStatus(hugefile);
+    long size = status.getLen();
+    Path hugeFileCopy = fs.makeQualified(
+        new Path(scaleTestDir, "hugeFileCopy"));
+    fs.delete(hugeFileCopy, false);
+    ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
+    fs.copyFile(hugefile.toUri(), hugeFileCopy.toUri()).get();
+    long mb = Math.max(size / _1MB, 1);
+    timer.end("time to native copy file of %d MB", mb);
+    LOG.info("Time per MB to copy = {} nS",
+        toHuman(timer.nanosPerOperation(mb)));
+    bandwidth(timer, size);
+    logFSState();
+    FileStatus destFileStatus = fs.getFileStatus(hugeFileCopy);
+    assertEquals(size, destFileStatus.getLen());
+
+    // delete hugeFileCopy
+    fs.delete(hugefileRenamed, false);
+  }
+
   /**
    * Cleanup: delete the files.
    */
