@@ -218,7 +218,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   @Override
-  public synchronized long getPos() {
+  public synchronized long getPos() throws IOException {
     return (nextReadPos < 0) ? 0 : nextReadPos;
   }
 
@@ -620,26 +620,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     return isObjectStreamOpen();
   }
 
-  /**
-   * Return the number of bytes available.
-   * If the inner stream is closed, the value is 1 for consistency
-   * with S3ObjectStream -and so address the GZip bug
-   * http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144 .
-   * If the stream is open, then it is the amount returned by the
-   * wrapped stream.
-   * @return a value greater than or equal to zero.
-   * @throws IOException IO failure.
-   */
   @Override
   public synchronized int available() throws IOException {
     checkNotClosed();
-    if (contentLength == 0 || (nextReadPos >= contentLength)) {
-      return 0;
-    }
 
-    return wrappedStream == null
-        ? 1
-        : wrappedStream.available();
+    long remaining = remainingInFile();
+    if (remaining > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return (int)remaining;
   }
 
   /**
@@ -648,8 +637,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public synchronized long remainingInFile() throws IOException {
-    return contentLength - getPos();
+  public synchronized long remainingInFile() {
+    return this.contentLength - this.pos;
   }
 
   /**
@@ -660,7 +649,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public synchronized long remainingInCurrentRequest() {
-    return contentRangeFinish - getPos();
+    return this.contentRangeFinish - this.pos;
   }
 
   @InterfaceAudience.Private
