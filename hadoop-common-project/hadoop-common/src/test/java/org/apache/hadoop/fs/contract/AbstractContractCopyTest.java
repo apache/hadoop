@@ -136,10 +136,8 @@ public abstract class AbstractContractCopyTest extends
         Long.toString(System.currentTimeMillis()));
     Path dFile = new Path(nonExistingFolder, "testfile");
 
-    Exception fae =
-        interceptFuture(Exception.class, "",
-            fs.copyFile(zeroByteFile.toUri(), dFile.toUri()));
-    handleExpectedException(fae);
+    handleExpectedException(interceptFuture(Exception.class, "",
+        fs.copyFile(zeroByteFile.toUri(), dFile.toUri())));
   }
 
   @Test
