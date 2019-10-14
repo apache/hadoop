@@ -41,4 +41,20 @@ public enum StatusProbeEnum {
   public static final Set<StatusProbeEnum> DIRECTORIES =
       EnumSet.of(DirMarker, List);
 
+  /** We only want the HEAD or dir marker. */
+  public static final Set<StatusProbeEnum> HEAD_OR_DIR_MARKER =
+      EnumSet.of(Head, DirMarker);
+
+  /** We only want the HEAD. */
+  public static final Set<StatusProbeEnum> HEAD_ONLY =
+      EnumSet.of(Head);
+
+  /** We only want the dir marker. */
+  public static final Set<StatusProbeEnum> DIR_MARKER_ONLY =
+      EnumSet.of(DirMarker);
+
+  /** We only want the dir marker. */
+  public static final Set<StatusProbeEnum> LIST_ONLY =
+      EnumSet.of(List);
+
 }
