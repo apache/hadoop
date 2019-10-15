@@ -492,12 +492,4 @@ public class DatanodeStateMachine implements Closeable {
   public ReplicationSupervisor getSupervisor() {
     return supervisor;
   }
-
-  public Configuration getConf() {
-    return conf;
-  }
-
-  public CertificateClient getCertificateClient() {
-    return dnCertClient;
-  }
 }

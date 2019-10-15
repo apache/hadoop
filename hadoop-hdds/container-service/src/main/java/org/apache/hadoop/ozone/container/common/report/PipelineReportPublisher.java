@@ -68,7 +68,6 @@ public class PipelineReportPublisher extends
 
   @Override
   protected PipelineReportsProto getReport() {
-    System.out.println("Pipeline Report Generate");
     return getContext().getParent().getContainer().getPipelineReport();
   }
 }

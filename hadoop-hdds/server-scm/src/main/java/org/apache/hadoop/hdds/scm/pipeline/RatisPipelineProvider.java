@@ -200,7 +200,6 @@ public class RatisPipelineProvider implements PipelineProvider {
    * @throws IOException
    */
   public void close(Pipeline pipeline) {
-    LOG.debug("Destroy pipeline:{}", pipeline.getId());
     final ClosePipelineCommand closeCommand =
         new ClosePipelineCommand(pipeline.getId());
     pipeline.getNodes().stream().forEach(node -> {
