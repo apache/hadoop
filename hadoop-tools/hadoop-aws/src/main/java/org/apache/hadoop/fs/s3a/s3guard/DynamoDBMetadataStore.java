@@ -400,7 +400,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         // access denied here == can't call getBucket. Report meaningfully
         URI uri = owner.getUri();
         String message =
-            "Failed to get bucket location as S3 client role lacks permission "
+            "Failed to get bucket location as client lacks permission "
                 + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri;
         LOG.error(message);
         throw (IOException)new AccessDeniedException(message).initCause(e);

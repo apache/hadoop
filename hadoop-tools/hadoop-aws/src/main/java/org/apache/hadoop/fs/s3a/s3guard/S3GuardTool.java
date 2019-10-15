@@ -1160,7 +1160,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
-
     private static final String USAGE = NAME + " [OPTIONS] s3a://BUCKET\n"
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"

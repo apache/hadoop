@@ -115,13 +115,14 @@ public class NetworkBinding {
    * Given an S3 bucket region as returned by a bucket location query,
    * fix it into a form which can be used by other AWS commands.
    * https://forums.aws.amazon.com/thread.jspa?messageID=796829&tstart=0
+   * See also {@code com.amazonaws.services.s3.model.Region.fromValue()}
+   * for its conversion logic.
    * @param region region from S3 call.
    * @return the region to use in DDB etc.
    */
-  public static String fixBucketRegion(String region) {
-    if (region.equals("US")) {
-      region = "us-east-1";
-    }
-    return region;
+  public static String fixBucketRegion(final String region) {
+    return region == null || region.equals("US")
+        ? "us-east-1"
+        : region;
   }
 }

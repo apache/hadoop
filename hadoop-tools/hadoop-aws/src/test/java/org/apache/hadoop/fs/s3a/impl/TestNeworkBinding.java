@@ -30,19 +30,27 @@ import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
  */
 public class TestNeworkBinding extends HadoopTestBase {
 
+  private static final String US_EAST_1 = "us-east-1";
+  private static final String US_WEST_2 = "us-west-2";
+
   @Test
-  public void testUSEast() throws Throwable {
-    assertRegionFixup("us-east-1", "us-east-1");
+  public void testUSEast() {
+    assertRegionFixup(US_EAST_1, US_EAST_1);
   }
 
   @Test
-  public void testUSWest() throws Throwable {
-    assertRegionFixup("us-west-2", "us-west-2");
+  public void testUSWest() {
+    assertRegionFixup(US_WEST_2, US_WEST_2);
   }
 
   @Test
-  public void testRegionUStoUSEast() throws Throwable {
-    assertRegionFixup("US", "us-east-1");
+  public void testRegionUStoUSEast() {
+    assertRegionFixup("US", US_EAST_1);
+  }
+
+  @Test
+  public void testRegionNullToUSEast() {
+    assertRegionFixup(null, US_EAST_1);
   }
 
   private static void assertRegionFixup(String region, String expected) {
