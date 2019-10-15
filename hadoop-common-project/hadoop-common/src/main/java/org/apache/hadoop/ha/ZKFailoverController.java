@@ -442,14 +442,15 @@ public abstract class ZKFailoverController {
    * </ul>
    * 
    * @param timeoutMillis number of millis to wait
-   * @param onlyAfterNanoTime accept attempt records only after a given timestamp. Use this
-   * parameter to ignore the old attempt records from a previous fail-over attempt.
+   * @param onlyAfterNanoTime accept attempt records only after a given
+   * timestamp. Use this parameter to ignore the old attempt records from a
+   * previous fail-over attempt.
    * @return the published record, or null if the timeout elapses or the
    * service becomes unhealthy 
    * @throws InterruptedException if the thread is interrupted.
    */
-  private ActiveAttemptRecord waitForActiveAttempt(int timeoutMillis, long onlyAfterNanoTime)
-      throws InterruptedException {
+  private ActiveAttemptRecord waitForActiveAttempt(int timeoutMillis,
+      long onlyAfterNanoTime) throws InterruptedException {
     long waitUntil = onlyAfterNanoTime + TimeUnit.NANOSECONDS.convert(
         timeoutMillis, TimeUnit.MILLISECONDS);
     
