@@ -649,19 +649,23 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     URI defaultUri = new URI("wasbs", authority, null, null, null);
     conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
 
-    final FileSystem fs0 =  FileSystem.get(conf);
-    // Default getCanonicalServiceName() will try to resolve the host to IP,
-    // because the mock container does not exist, this call is expected to fail.
-    intercept(IllegalArgumentException.class,
-            "java.net.UnknownHostException",
-            ()-> {
-              fs0.getCanonicalServiceName();
-            });
+    try {
+      FileSystem fs0 =  FileSystem.get(conf);
+      // Default getCanonicalServiceName() will try to resolve the host to IP,
+      // because the mock container does not exist, this call is expected to fail.
+      intercept(IllegalArgumentException.class,
+              "java.net.UnknownHostException",
+              () -> {
+                fs0.getCanonicalServiceName();
+              });
 
-    // clear fs cache
-    FileSystem.closeAll();
-    conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
-    FileSystem fs1 = FileSystem.get(conf);
-    Assert.assertEquals("getCanonicalServiceName() should return URI", fs1.getUri().toString(), fs1.getCanonicalServiceName());
+      conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
+      FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
+      Assert.assertEquals("getCanonicalServiceName() should return URI",
+              fs1.getUri().toString(), fs1.getCanonicalServiceName());
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
   }
 }
