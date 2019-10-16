@@ -313,7 +313,7 @@ public class CredentialShell extends CommandShell {
 
     private String alias = null;
 
-    public CheckCommand(String alias) {
+    CheckCommand(String alias) {
       this.alias = alias;
     }
 
