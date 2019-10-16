@@ -423,8 +423,8 @@ public class MountTableResolver
     } else {
       // Not found, use default location
       if (!defaultNSEnable) {
-        throw new IOException("Cannot find locations for " + path + ", " +
-            "because the default nameservice is disabled to read or write");
+        throw new RouterResolveException("Cannot find locations for " + path
+            + ", because the default nameservice is disabled to read or write");
       }
       RemoteLocation remoteLocation =
           new RemoteLocation(defaultNameService, path, path);
