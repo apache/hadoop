@@ -399,12 +399,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
       } catch (AccessDeniedException e) {
         // access denied here == can't call getBucket. Report meaningfully
         URI uri = owner.getUri();
-        LOG.error("Failed to get bucket location from S3 bucket {}",
-            uri);
-        throw (IOException)new AccessDeniedException(
-            "S3 client role lacks permission "
-                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri)
-            .initCause(e);
+        String message =
+            "Failed to get bucket location as client lacks permission "
+                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri;
+        LOG.error(message);
+        throw (IOException)new AccessDeniedException(message).initCause(e);
       }
       LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
     }
