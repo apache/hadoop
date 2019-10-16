@@ -717,9 +717,9 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
         }
         runCommand.addMountLocation(src, dst, mode);
       }
-      long commaCount = environment.get(ENV_DOCKER_CONTAINER_MOUNTS).chars()
-          .filter(c -> c == ',').count();
-      if (mountCount != commaCount + 1) {
+      long semicolonCount = environment.get(ENV_DOCKER_CONTAINER_MOUNTS).chars()
+          .filter(c -> c == ';').count();
+      if (mountCount != semicolonCount + 1) {
         // this means the matcher skipped an improperly formatted mount
         throw new ContainerExecutionException(
             "Unable to parse some mounts in user supplied mount list: "
