@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
@@ -44,7 +45,6 @@ import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -635,6 +635,34 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
       assertEquals(-1, afs.getUri().getPort());
       assertEquals("wasbs", afs.getUri().getScheme());
 
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+  }
+
+  @Test
+  public void testCanonicalServiceName() throws Exception {
+    AzureBlobStorageTestAccount testAccount = AzureBlobStorageTestAccount.createMock();
+    Configuration conf = testAccount.getFileSystem().getConf();
+    String authority = testAccount.getFileSystem().getUri().getAuthority();
+    URI defaultUri = new URI("wasbs", authority, null, null, null);
+    conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+
+    try {
+      FileSystem fs0 =  FileSystem.get(conf);
+      // Default getCanonicalServiceName() will try to resolve the host to IP,
+      // because the mock container does not exist, this call is expected to fail.
+      intercept(IllegalArgumentException.class,
+              "java.net.UnknownHostException",
+              () -> {
+                fs0.getCanonicalServiceName();
+              });
+
+      conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
+      FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
+      Assert.assertEquals("getCanonicalServiceName() should return URI",
+              fs1.getUri().toString(), fs1.getCanonicalServiceName());
     } finally {
       testAccount.cleanup();
       FileSystem.closeAll();
