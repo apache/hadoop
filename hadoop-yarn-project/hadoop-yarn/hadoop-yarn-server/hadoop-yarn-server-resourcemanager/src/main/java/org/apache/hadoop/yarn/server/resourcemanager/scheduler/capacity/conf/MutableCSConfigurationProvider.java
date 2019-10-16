@@ -166,6 +166,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     formatLock.writeLock().lock();
     try {
       confStore.format();
+      oldConf = new Configuration(schedConf);
       Configuration initialSchedConf = new Configuration(false);
       initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
       this.schedConf = new Configuration(false);
@@ -176,6 +177,21 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
         schedConf.set(kv.getKey(), kv.getValue());
       }
       confStore.initialize(config, schedConf, rmContext);
+      confStore.checkVersion();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      formatLock.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public void revertToOldConfig(Configuration config) throws Exception {
+    formatLock.writeLock().lock();
+    try {
+      schedConf = oldConf;
+      confStore.format();
+      confStore.initialize(config, oldConf, rmContext);
       confStore.checkVersion();
     } catch (Exception e) {
       throw new IOException(e);
