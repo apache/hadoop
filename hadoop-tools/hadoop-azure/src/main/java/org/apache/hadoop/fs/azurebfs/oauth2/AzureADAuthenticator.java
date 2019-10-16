@@ -100,6 +100,9 @@ public final class AzureADAuthenticator {
    * an Azure VM with MSI extension
    * enabled.
    *
+   * @param authEndpoint the OAuth 2.0 token endpoint associated
+   *                     with the user's directory (obtain from
+   *                     Active Directory configuration)
    * @param tenantGuid  (optional) The guid of the AAD tenant. Can be {@code null}.
    * @param clientId    (optional) The clientId guid of the MSI service
    *                    principal to use. Can be {@code null}.
@@ -108,17 +111,16 @@ public final class AzureADAuthenticator {
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in obtaining the token
    */
-  public static AzureADToken getTokenFromMsi(String tenantGuid, String clientId,
-                                             boolean bypassCache) throws IOException {
-    String authEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token";
-
+  public static AzureADToken getTokenFromMsi(final String authEndpoint,
+      final String tenantGuid, final String clientId, String authority,
+      boolean bypassCache) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("api-version", "2018-02-01");
     qp.add("resource", RESOURCE_NAME);
 
-
     if (tenantGuid != null && tenantGuid.length() > 0) {
-      String authority = "https://login.microsoftonline.com/" + tenantGuid;
+      authority = authority + tenantGuid;
+      LOG.debug("MSI authority : {}", authority);
       qp.add("authority", authority);
     }
 
@@ -140,14 +142,17 @@ public final class AzureADAuthenticator {
   /**
    * Gets Azure Active Directory token using refresh token.
    *
+   * @param authEndpoint the OAuth 2.0 token endpoint associated
+   *                     with the user's directory (obtain from
+   *                     Active Directory configuration)
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
    * @return {@link AzureADToken} obtained using the refresh token
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
-  public static AzureADToken getTokenUsingRefreshToken(String clientId,
-                                                       String refreshToken) throws IOException {
-    String authEndpoint = "https://login.microsoftonline.com/Common/oauth2/token";
+  public static AzureADToken getTokenUsingRefreshToken(
+      final String authEndpoint, final String clientId,
+      final String refreshToken) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);
