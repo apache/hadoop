@@ -193,7 +193,7 @@ Usage: `yarn resourcemanager [-format-state-store]`
 |:---- |:---- |
 | -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
 | -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
-
+| -format-conf-store | Formats the YarnConfigurationStore. This will clear the persisted scheduler configuration under YarnConfigurationStore. This should be run only when the ResourceManager is not running. |
 Start the ResourceManager
 
 ### `rmadmin`
