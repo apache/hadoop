@@ -168,6 +168,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -715,6 +716,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Get the region of a bucket.
    * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
    * @throws IOException on any failure.
    */
   @Retries.RetryTranslated
@@ -723,17 +725,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the region of a bucket.
+   * Get the region of a bucket; fixing up the region so it can be used
+   * in the builders of other AWS clients.
+   * Requires the caller to have the AWS role permission
+   * {@code s3:GetBucketLocation}.
    * Retry policy: retrying, translated.
    * @param bucketName the name of the bucket
    * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
    * @throws IOException on any failure.
    */
   @VisibleForTesting
   @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
-    return invoker.retry("getBucketLocation()", bucketName, true,
-        ()-> s3.getBucketLocation(bucketName));
+    final String region = invoker.retry("getBucketLocation()", bucketName, true,
+        () -> s3.getBucketLocation(bucketName));
+    return fixBucketRegion(region);
   }
 
   /**
