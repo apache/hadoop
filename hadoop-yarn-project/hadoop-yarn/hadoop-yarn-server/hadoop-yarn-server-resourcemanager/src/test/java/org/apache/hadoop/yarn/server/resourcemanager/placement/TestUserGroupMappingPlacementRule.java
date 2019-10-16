@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.Arrays;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -28,6 +31,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
@@ -54,6 +60,10 @@ public class TestUserGroupMappingPlacementRule {
     Groups groups = new Groups(conf);
     UserGroupMappingPlacementRule rule = new UserGroupMappingPlacementRule(
         overwrite, Arrays.asList(queueMapping), groups);
+    CapacitySchedulerQueueManager queueManager =
+        mock(CapacitySchedulerQueueManager.class);
+    when(queueManager.getQueue("asubgroup2")).thenReturn(mock(CSQueue.class));
+    rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
@@ -63,8 +73,23 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
+  public void testSecondaryGroupMapping() throws YarnException {
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%secondary_group"), "a",
+        "asubgroup2");
+
+    // PrimaryGroupMapping.class returns only primary group, no secondary groups
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        PrimaryGroupMapping.class, GroupMappingServiceProvider.class);
+
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%secondary_group"), "a",
+        "default");
+  }
+
+  @Test
   public void testMapping() throws YarnException {
-    // simple base case for mapping user to queue
+
     verifyQueueMapping(new QueueMapping(MappingType.USER, "a", "q1"), "a", "q1");
     verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup", "q1"),
         "a", "q1");

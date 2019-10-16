@@ -2610,7 +2610,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param f The path we want information from
    * @param needEmptyDirectoryFlag if true, implementation will calculate
    *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
-   * @param probes probes to make
+   * @param probes probes to make.
    * @return a S3AFileStatus object
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
@@ -2711,7 +2711,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, StatusProbeEnum.ALL, tombstones),
+          s3GetFileStatus(path, key, probes, tombstones),
           instrumentation,
           ttlTimeProvider);
     }
@@ -2719,31 +2719,70 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Raw {@code getFileStatus} that talks direct to S3.
-   * Used to implement {@link #innerGetFileStatus(Path, boolean)},
+   * Used to implement {@link #innerGetFileStatus(Path, boolean, Set)},
    * and for direct management of empty directory blobs.
+   *
+   * Checks made, in order:
+   * <ol>
+   *   <li>
+   *     Head: look for an object at the given key, provided that
+   *     the key doesn't end in "/"
+   *   </li>
+   *   <li>
+   *     DirMarker: look for the directory marker -the key with a trailing /
+   *     if not passed in.
+   *     If an object was found with size 0 bytes, a directory status entry
+   *     is returned which declares that the directory is empty.
+   *   </li>
+   *    <li>
+   *     List: issue a LIST on the key (with / if needed), require one
+   *     entry to be found for the path to be considered a non-empty directory.
+   *   </li>
+   * </ol>
+   *
+   * Notes:
+   * <ul>
+   *   <li>
+   *     Objects ending in / which are not 0-bytes long are not treated as
+   *     directory markers, but instead as files.
+   *   </li>
+   *   <li>
+   *     There's ongoing discussions about whether a dir marker
+   *     should be interpreted as an empty dir.
+   *   </li>
+   *   <li>
+   *     The HEAD requests require the permissions to read an object,
+   *     including (we believe) the ability to decrypt the file.
+   *     At the very least, for SSE-C markers, you need the same key on
+   *     the client for the HEAD to work.
+   *   </li>
+   *   <li>
+   *     The List probe needs list permission; it is also more prone to
+   *     inconsistency, even on newly created files.
+   *   </li>
+   * </ul>
+   *
    * Retry policy: retry translated.
    * @param path Qualified path
    * @param key  Key string for the path
    * @param probes probes to make
    * @param tombstones tombstones to filter
    * @return Status
-   * @throws FileNotFoundException when the path does not exist
+   * @throws FileNotFoundException the supplied probes failed.
    * @throws IOException on other problems.
    */
+  @VisibleForTesting
   @Retries.RetryTranslated
-  private S3AFileStatus s3GetFileStatus(final Path path,
-      String key,
+  S3AFileStatus s3GetFileStatus(final Path path,
+      final String key,
       final Set<StatusProbeEnum> probes,
       final Set<Path> tombstones) throws IOException {
-    if (!key.isEmpty() && probes.contains(StatusProbeEnum.Head)) {
-      try {
-        ObjectMetadata meta = getObjectMetadata(key);
-
-        if (objectRepresentsDirectory(key, meta.getContentLength())) {
-          LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(Tristate.TRUE, path, username);
-        } else {
-          LOG.debug("Found exact file: normal file");
+    if (!key.isEmpty()) {
+      if (probes.contains(StatusProbeEnum.Head) && !key.endsWith("/")) {
+        try {
+          // look for the simple file
+          ObjectMetadata meta = getObjectMetadata(key);
+          LOG.debug("Found exact file: normal file {}", key);
           return new S3AFileStatus(meta.getContentLength(),
               dateToLong(meta.getLastModified()),
               path,
@@ -2751,18 +2790,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               username,
               meta.getETag(),
               meta.getVersionId());
-        }
-      } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404) {
+        } catch (AmazonServiceException e) {
+          // if the response is a 404 error, it just means that there is
+          // no file at that path...the remaining checks will be needed.
+          if (e.getStatusCode() != SC_404) {
+            throw translateException("getFileStatus", path, e);
+          }
+        } catch (AmazonClientException e) {
           throw translateException("getFileStatus", path, e);
         }
-      } catch (AmazonClientException e) {
-        throw translateException("getFileStatus", path, e);
       }
 
+      // Either a normal file was not found or the probe was skipped.
+      // because the key ended in "/" or it was not in the set of probes.
       // Look for the dir marker
-      if (!key.endsWith("/") && probes.contains(StatusProbeEnum.DirMarker)) {
-        String newKey = key + "/";
+      if (probes.contains(StatusProbeEnum.DirMarker)) {
+        String newKey = maybeAddTrailingSlash(key);
         try {
           ObjectMetadata meta = getObjectMetadata(newKey);
 
@@ -2794,8 +2837,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // execute the list
     if (probes.contains(StatusProbeEnum.List)) {
       try {
-        key = maybeAddTrailingSlash(key);
-        S3ListRequest request = createListObjectsRequest(key, "/", 1);
+        String dirKey = maybeAddTrailingSlash(key);
+        S3ListRequest request = createListObjectsRequest(dirKey, "/", 1);
 
         S3ListResult objects = listObjects(request);
 

@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -73,12 +72,12 @@ public class SingleUGIResolver extends UGIResolver implements Configurable {
   }
 
   @Override
-  public String user(FileStatus s) {
+  public String user(String s) {
     return user;
   }
 
   @Override
-  public String group(FileStatus s) {
+  public String group(String s) {
     return group;
   }
 
