@@ -758,6 +758,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
   /**
    * Turn off access to dynamo DB Tags and see how DDB table init copes.
+   * There's no testing of the codepath other than checking the logs
+   * - this test does make sure that no regression stops the tag permission
+   * failures from halting the client
    */
   @Test
   public void testRestrictDDBTagAccess() throws Throwable {
