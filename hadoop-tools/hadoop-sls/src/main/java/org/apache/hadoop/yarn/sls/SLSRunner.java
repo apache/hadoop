@@ -97,7 +97,6 @@ import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -371,7 +370,7 @@ public class SLSRunner extends Configured implements Tool {
 
     // create NM simulators
     Random random = new Random();
-    Set<String> rackSet = new ConcurrentHashSet<>();
+    Set<String> rackSet = ConcurrentHashMap.newKeySet();
     int threadPoolSize = Math.max(poolSize,
         SLSConfiguration.RUNNER_POOL_SIZE_DEFAULT);
     ExecutorService executorService = Executors.
