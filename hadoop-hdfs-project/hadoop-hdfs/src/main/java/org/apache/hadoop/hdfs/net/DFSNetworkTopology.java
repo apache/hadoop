@@ -212,6 +212,10 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
+        if (excludeRoot != null
+            && excludedNode.getNetworkLocation().startsWith(excludedScope)) {
+          continue;
+        }
         if (excludedNode instanceof DatanodeDescriptor) {
           availableCount -= ((DatanodeDescriptor) excludedNode)
               .hasStorageType(type) ? 1 : 0;
