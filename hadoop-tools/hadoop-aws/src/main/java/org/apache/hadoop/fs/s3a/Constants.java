@@ -640,6 +640,14 @@ public final class Constants {
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
 
   /**
+   * The warn level if S3Guard is disabled.
+   */
+  public static final String S3GUARD_DISABLED_WARN_LEVEL
+      = "org.apache.hadoop.fs.s3a.s3guard.disabled_warn_level";
+  public static final String DEFAULT_S3GUARD_DISABLED_WARN_LEVEL =
+      "INFORM";
+
+  /**
    * Inconsistency (visibility delay) injection settings.
    */
   @InterfaceStability.Unstable
