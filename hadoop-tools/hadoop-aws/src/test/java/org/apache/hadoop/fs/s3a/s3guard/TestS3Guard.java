@@ -279,7 +279,7 @@ public class TestS3Guard extends Assert {
         S3Guard.DISABLED_LOG_MSG, () -> S3Guard.logS3GuardDisabled(
             localLogger, S3Guard.DisabledWarnLevel.FAIL.toString(), "bucket"));
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        "No enum constant", () -> S3Guard.logS3GuardDisabled(
+        S3Guard.UNKNOWN_WARN_LEVEL, () -> S3Guard.logS3GuardDisabled(
             localLogger, "FOO_BAR_LEVEL", "bucket"));
   }
 

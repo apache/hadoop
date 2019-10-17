@@ -833,7 +833,12 @@ public final class S3Guard {
   public static void logS3GuardDisabled(Logger logger, String warnLevelStr,
       String bucket)
       throws UnsupportedOperationException, IllegalArgumentException {
-    final DisabledWarnLevel warnLevel = DisabledWarnLevel.valueOf(warnLevelStr);
+    final DisabledWarnLevel warnLevel;
+    try {
+      warnLevel = DisabledWarnLevel.valueOf(warnLevelStr);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr, e);
+    }
 
     switch (warnLevel) {
     case SILENT:
