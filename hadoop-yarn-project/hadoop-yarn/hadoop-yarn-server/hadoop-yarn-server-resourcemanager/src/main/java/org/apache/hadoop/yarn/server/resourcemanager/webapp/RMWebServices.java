@@ -2582,6 +2582,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         MutableConfigurationProvider mutableConfigurationProvider =
             ((MutableConfScheduler) scheduler).getMutableConfProvider();
         mutableConfigurationProvider.formatConfigurationInStore(conf);
+        try {
+          rm.getRMContext().getRMAdminService().refreshQueues();
+        } catch (IOException | YarnException e) {
+          LOG.error("Exception thrown when formatting configuration.", e);
+          mutableConfigurationProvider.revertToOldConfig(conf);
+          throw e;
+        }
         return Response.status(Status.OK).entity("Configuration under " +
             "store successfully formatted.").build();
       } catch (Exception e) {
