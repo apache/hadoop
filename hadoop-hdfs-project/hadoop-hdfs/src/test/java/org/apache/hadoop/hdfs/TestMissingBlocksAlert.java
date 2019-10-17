@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.junit.Assert;
 import org.junit.Test;
@@ -143,6 +144,35 @@ public class TestMissingBlocksAlert {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testMissReplicatedBlockwithTwoRack() throws Exception {
+    Configuration conf = new Configuration();
+    //Start cluster with rack /default/rack1
+    String[] hosts = new String[] {"host0", "host1", "host2", "host3"};
+    String[] racks = new String[] {"/default/rack1", "/default/rack1",
+        "/default/rack1", "/default/rack1"};
+    conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        AvailableSpaceBlockPlacementPolicy.class.getName());
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4)
+        .hosts(hosts).racks(racks).build();
+    Path file = new Path("/file2");
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      DFSTestUtil.createFile(dfs, file, 1024, (short) 2, 0);
+      dfs.getFileStatus(file);
+      //Add one more rack /default/rack2
+      cluster.startDataNodes(conf, 2, true, null,
+          new String[] {"/default/rack2", "/default/rack2"},
+          new String[] {"host4", "host5"}, null);
+      dfs.setReplication(file, (short) 3);
+      // wait for block replication
+      DFSTestUtil.waitForReplication(dfs, file, (short) 3, 60000);
+    } finally {
+      cluster.shutdown();
     }
   }
 }
