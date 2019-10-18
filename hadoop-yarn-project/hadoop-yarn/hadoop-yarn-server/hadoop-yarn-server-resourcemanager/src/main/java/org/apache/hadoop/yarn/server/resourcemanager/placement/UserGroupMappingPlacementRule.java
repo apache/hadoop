@@ -162,7 +162,14 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     for (QueueMapping mapping : mappings) {
       if (mapping.type == MappingType.USER) {
         if (mapping.source.equals(CURRENT_USER_MAPPING)) {
-          if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+          if (mapping.getParentQueue() != null
+              && mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
+              && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
+            return getPlacementContext(
+                new QueueMapping(mapping.getType(), mapping.getSource(),
+                    CURRENT_USER_MAPPING, groups.getGroups(user).get(0)),
+                user);
+          } else if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
             return getPlacementContext(mapping, user);
           } else if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
             return getPlacementContext(mapping, groups.getGroups(user).get(0));
@@ -375,7 +382,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private static QueueMapping validateAndGetAutoCreatedQueueMapping(
       CapacitySchedulerQueueManager queueManager, QueueMapping mapping,
       QueuePath queuePath) throws IOException {
-    if (queuePath.hasParentQueue()) {
+    if (queuePath.hasParentQueue()
+        && queuePath.getParentQueue().equals(PRIMARY_GROUP_MAPPING)) {
+      // dynamic parent queue
+      return new QueueMapping(mapping.getType(), mapping.getSource(),
+          queuePath.getLeafQueue(), queuePath.getParentQueue());
+    } else if (queuePath.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
       validateParentQueue(queueManager.getQueue(queuePath.getParentQueue()),
