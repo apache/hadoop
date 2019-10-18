@@ -455,7 +455,7 @@ export default Ember.Component.extend({
     }, {
       id: 'elapsedTime',
       headerTitle: 'Elapsed Time',
-      contentPath: 'elapsedTime'
+      contentPath: 'formattedElapsedTime'
     }, {
       id: 'priority',
       headerTitle: 'Priority',

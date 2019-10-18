@@ -26,6 +26,7 @@ export default DS.Model.extend({
   priority: DS.attr('number'),
   startedTime: DS.attr('number'),
   finishedTime: DS.attr('number'),
+  elapsedTime: DS.attr('number'),
   logUrl: DS.attr('string'),
   containerExitStatus: DS.attr('number'),
   containerState: DS.attr('string'),
@@ -49,18 +50,14 @@ export default DS.Model.extend({
     return this.get("finishedTime");
   }.property("finishedTime"),
 
-  elapsedTime: function() {
-    var elapsedMs = this.get("finishedTs") - this.get("startTs");
-    if (elapsedMs <= 0) {
-      elapsedMs = Date.now() - this.get("startTs");
-    }
-    return Converter.msToElapsedTimeUnit(elapsedMs);
-  }.property(),
+  formattedElapsedTime: function() {
+    return Converter.msToElapsedTimeUnit(this.get("elapsedTime"));
+  }.property("elapsedTime"),
 
   tooltipLabel: function() {
     return "<p>Id:" + this.get("id") +
            "</p><p>ElapsedTime:" +
-           String(this.get("elapsedTime")) + "</p>";
+           String(this.get("formattedElapsedTime")) + "</p>";
   }.property(),
 
   masterNodeURL: function() {
