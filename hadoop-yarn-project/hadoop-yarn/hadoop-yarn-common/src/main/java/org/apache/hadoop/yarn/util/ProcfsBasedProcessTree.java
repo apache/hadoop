@@ -112,7 +112,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   private static final Pattern ADDRESS_PATTERN = Pattern
     .compile("([[a-f]|(0-9)]*)-([[a-f]|(0-9)]*)(\\s)*([rxwps\\-]*)");
   private static final Pattern MEM_INFO_PATTERN = Pattern
-    .compile("(^[A-Z].*):[\\s ]*(.*)");
+    .compile("(^[A-Z].*):[\\s ]*([0-9]*)[\\s ]*kB.*");
 
   private boolean smapsEnabled;
 
@@ -787,7 +787,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
           Matcher memInfo = MEM_INFO_PATTERN.matcher(line);
           if (memInfo.find()) {
             String key = memInfo.group(1).trim();
-            String value = memInfo.group(2).replace(KB, "").trim();
+            String value = memInfo.group(2).trim();
             LOG.debug("MemInfo : {} : Value  : {}", key, value);
 
             if (memoryMappingInfo != null) {
