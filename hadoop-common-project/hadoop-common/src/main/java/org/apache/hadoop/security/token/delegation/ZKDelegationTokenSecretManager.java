@@ -59,7 +59,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Perms;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.slf4j.Logger;
@@ -173,8 +173,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
           LOG.info("Connecting to ZooKeeper with SASL/Kerberos"
               + "and using 'sasl' ACLs");
           String principal = setJaasConfiguration(conf);
-          System.setProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-              JAAS_LOGIN_ENTRY_NAME);
+          System.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
+                             JAAS_LOGIN_ENTRY_NAME);
           System.setProperty("zookeeper.authProvider.1",
               "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
           aclProvider = new SASLOwnerACLProvider(principal);
