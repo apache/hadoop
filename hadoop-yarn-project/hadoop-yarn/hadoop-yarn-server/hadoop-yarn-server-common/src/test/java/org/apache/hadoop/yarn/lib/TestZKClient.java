@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Assert;
 
 import org.apache.hadoop.yarn.lib.ZKClient;
@@ -39,11 +40,14 @@ import org.junit.Test;
 
 public class TestZKClient  {
 
-  public static int CONNECTION_TIMEOUT = 30000;
+  private static int CONNECTION_TIMEOUT = 30000;
+  private static int DEFAULT_PORT = 20384;
   static final File BASETEST =
     new File(System.getProperty("build.test.dir", "target/zookeeper-build"));
 
-  protected String hostPort = "127.0.0.1:2000";
+  protected String hostPort = "127.0.0.1:" + getOpenPort();
+
+
   protected int maxCnxns = 0;
   protected NIOServerCnxnFactory factory = null;
   protected ZooKeeperServer zks;
@@ -140,6 +144,7 @@ public class TestZKClient  {
   @Before
   public void setUp() throws IOException, InterruptedException {
     System.setProperty("zookeeper.preAllocSize", "100");
+    System.setProperty("zookeeper.4lw.commands.whitelist", "*");
     FileTxnLog.setPreallocSize(100 * 1024);
     if (!BASETEST.exists()) {
       BASETEST.mkdirs();
@@ -184,6 +189,14 @@ public class TestZKClient  {
     ZKClient client = new ZKClient(hostPort);
     client.registerService("/nodemanager", "hostPort");
     client.unregisterService("/nodemanager");
+  }
+
+  private int getOpenPort() {
+    try {
+      return ServerSocketUtil.getPorts(1)[0];
+    } catch (IOException e) {
+      return DEFAULT_PORT;
+    }
   }
 
 }
