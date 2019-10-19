@@ -146,10 +146,8 @@ public class NetworkTopology {
         if (rack == null) {
           incrementRacks();
         }
-        if (!(node instanceof InnerNode)) {
-          if (depthOfAllLeaves == -1) {
-            depthOfAllLeaves = node.getLevel();
-          }
+        if (depthOfAllLeaves == -1) {
+          depthOfAllLeaves = node.getLevel();
         }
       }
       LOG.debug("NetworkTopology became:\n{}", this);
