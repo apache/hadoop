@@ -123,6 +123,9 @@
           } else if (n.state === "ACTIVE") {
             n.title = capitalise(n.state);
             n.iconState = "active";
+          } else if (nodes[i].state === "OBSERVER") {
+            n.title = capitalise(n.state);
+            n.iconState = "observer";
           } else if (nodes[i].state === "STANDBY") {
             n.title = capitalise(n.state);
             n.iconState = "standby";
