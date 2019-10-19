@@ -38,6 +38,11 @@
     content: "\e013";
 }
 
+.federationhealth-namenode-observer:before {
+    color: #CCCC00;
+    content: "\e013";
+}
+
 .federationhealth-namenode-unavailable:before {
     color: #c7254e;
     content: "\e101";
