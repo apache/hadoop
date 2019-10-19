@@ -66,7 +66,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   private Path configVersionFile;
 
   @Override
-  public void initialize(Configuration conf, Configuration vSchedConf,
+  public void initialize(Configuration fsConf, Configuration vSchedConf,
       RMContext rmContext) throws Exception {
     this.configFilePathFilter = new PathFilter() {
       @Override
@@ -80,6 +80,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
       }
     };
 
+    Configuration conf = new Configuration(fsConf);
     String schedulerConfPathStr = conf.get(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH);
     if (schedulerConfPathStr == null || schedulerConfPathStr.isEmpty()) {
@@ -88,6 +89,15 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
               + " must be set");
     }
     this.schedulerConfDir = new Path(schedulerConfPathStr);
+    String scheme = schedulerConfDir.toUri().getScheme();
+    if (scheme == null) {
+      scheme = FileSystem.getDefaultUri(conf).getScheme();
+    }
+    if (scheme != null) {
+      String disableCacheName = String.format("fs.%s.impl.disable.cache",
+          scheme);
+      conf.setBoolean(disableCacheName, true);
+    }
     this.fileSystem = this.schedulerConfDir.getFileSystem(conf);
     this.maxVersion = conf.getInt(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_MAX_VERSION,
