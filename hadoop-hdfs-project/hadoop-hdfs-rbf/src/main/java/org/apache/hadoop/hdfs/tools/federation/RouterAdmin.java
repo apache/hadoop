@@ -788,9 +788,10 @@ public class RouterAdmin extends Configured implements Tool {
         System.out.print(
             String.format(" %-10s", entry.isReadOnly() ? "Read-Only" : ""));
 
-        System.out.println(String.format(" %-15s",
+        System.out.print(String.format(" %-15s",
             entry.isFaultTolerant() ? "Fault-Tolerant" : ""));
       }
+      System.out.println();
     }
   }
 
