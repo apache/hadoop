@@ -45,8 +45,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOCK;
@@ -95,12 +95,12 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
       }
 
       OmVolumeArgs omVolumeArgs = null;
-      OzoneManagerProtocolProtos.VolumeList newVolumeList = null;
+      OzoneManagerProtocolProtos.UserVolumeInfo newVolumeList = null;
 
-      acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
-          volume);
+      acquiredVolumeLock = omMetadataManager.getLock().acquireWriteLock(
+          VOLUME_LOCK, volume);
       owner = getVolumeInfo(omMetadataManager, volume).getOwnerName();
-      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+      acquiredUserLock = omMetadataManager.getLock().acquireWriteLock(USER_LOCK,
           owner);
 
       String dbUserKey = omMetadataManager.getUserKey(owner);
@@ -115,7 +115,8 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
 
       // delete the volume from the owner list
       // as well as delete the volume entry
-      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner);
+      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner,
+          transactionLogIndex);
 
       omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
           new CacheValue<>(Optional.of(newVolumeList), transactionLogIndex));
@@ -140,10 +141,10 @@ public class OMVolumeDeleteRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquiredUserLock) {
-        omMetadataManager.getLock().releaseLock(USER_LOCK, owner);
+        omMetadataManager.getLock().releaseWriteLock(USER_LOCK, owner);
       }
       if (acquiredVolumeLock) {
-        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+        omMetadataManager.getLock().releaseWriteLock(VOLUME_LOCK, volume);
       }
     }
 

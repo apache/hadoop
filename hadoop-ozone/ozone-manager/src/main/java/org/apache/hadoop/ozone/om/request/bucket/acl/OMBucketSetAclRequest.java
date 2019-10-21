@@ -103,7 +103,9 @@ public class OMBucketSetAclRequest extends OMBucketAclRequest {
   void onComplete(boolean operationResult, IOException exception,
       OMMetrics omMetrics) {
     if (operationResult) {
-      LOG.debug("Set acl: {} for path: {} success!", getAcls(), getPath());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Set acl: {} for path: {} success!", getAcls(), getPath());
+      }
     } else {
       omMetrics.incNumBucketUpdateFails();
       if (exception == null) {

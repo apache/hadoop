@@ -419,6 +419,28 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 The caller does not have the permissions to access
 the key with which the data was encrypted.
 
+### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
+
+Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+```
+com.amazonaws.SdkClientException: Unable to find a region via the region provider
+chain. Must provide an explicit region in the builder or setup environment to supply a region.
+```
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
+S3 sts endpoint and region like the following:
+
+```xml
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint</name>
+    <value>${sts.endpoint}</value>
+</property>
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+    <value>${sts.region}</value>
+</property>
+```
+
+
 ## <a name="connectivity"></a> Connectivity Problems
 
 ### <a name="bad_endpoint"></a> Error message "The bucket you are attempting to access must be addressed using the specified endpoint"

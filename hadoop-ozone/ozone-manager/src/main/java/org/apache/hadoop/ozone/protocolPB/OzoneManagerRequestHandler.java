@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
@@ -124,8 +125,8 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
 
-import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
+import org.apache.hadoop.hdds.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +149,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   @SuppressWarnings("methodlength")
   @Override
   public OMResponse handle(OMRequest request) {
-    LOG.debug("Received OMRequest: {}, ", request);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Received OMRequest: {}, ", request);
+    }
     Type cmdType = request.getCmdType();
     OMResponse.Builder responseBuilder = OMResponse.newBuilder()
         .setCmdType(cmdType)
@@ -296,6 +299,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         MultipartUploadListPartsResponse listPartsResponse =
             listParts(request.getListMultipartUploadPartsRequest());
         responseBuilder.setListMultipartUploadPartsResponse(listPartsResponse);
+        break;
+      case ListMultipartUploads:
+        ListMultipartUploadsResponse response =
+            listMultipartUploads(request.getListMultipartUploadsRequest());
+        responseBuilder.setListMultipartUploadsResponse(response);
         break;
       case ServiceList:
         ServiceListResponse serviceListResponse = getServiceList(
@@ -755,10 +763,12 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       throws IOException {
     ServiceListResponse.Builder resp = ServiceListResponse.newBuilder();
 
-    resp.addAllServiceInfo(impl.getServiceList().stream()
+    resp.addAllServiceInfo(impl.getServiceInfo().getServiceInfoList().stream()
         .map(ServiceInfo::getProtobuf)
         .collect(Collectors.toList()));
-
+    if (impl.getServiceInfo().getCaCertificate() != null) {
+      resp.setCaCertificate(impl.getServiceInfo().getCaCertificate());
+    }
     return resp.build();
   }
 
@@ -816,9 +826,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setType(keyArgs.getType())
+        .setFactor(keyArgs.getFactor())
         .setAcls(keyArgs.getAclsList().stream().map(a ->
             OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
-        .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
     resp.setVolumeName(multipartInfo.getVolumeName());
@@ -867,8 +877,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       partsMap.put(part.getPartNumber(), part.getPartName());
     }
 
-    OmMultipartUploadList omMultipartUploadList =
-        new OmMultipartUploadList(partsMap);
+    OmMultipartUploadCompleteList omMultipartUploadCompleteList =
+        new OmMultipartUploadCompleteList(partsMap);
 
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
@@ -879,7 +889,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setMultipartUploadID(keyArgs.getMultipartUploadID())
         .build();
     OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo = impl
-        .completeMultipartUpload(omKeyArgs, omMultipartUploadList);
+        .completeMultipartUpload(omKeyArgs, omMultipartUploadCompleteList);
 
     response.setVolume(omMultipartUploadCompleteInfo.getVolume())
         .setBucket(omMultipartUploadCompleteInfo.getBucket())
@@ -931,6 +941,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     omPartInfoList.forEach(partInfo -> partInfoList.add(partInfo.getProto()));
 
     response.setType(omMultipartUploadListParts.getReplicationType());
+    response.setFactor(omMultipartUploadListParts.getReplicationFactor());
     response.setNextPartNumberMarker(
         omMultipartUploadListParts.getNextPartNumberMarker());
     response.setIsTruncated(omMultipartUploadListParts.isTruncated());
@@ -938,6 +949,36 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return response.addAllPartsList(partInfoList).build();
 
 
+  }
+
+  private ListMultipartUploadsResponse listMultipartUploads(
+      ListMultipartUploadsRequest request)
+      throws IOException {
+
+    OmMultipartUploadList omMultipartUploadList =
+        impl.listMultipartUploads(request.getVolume(), request.getBucket(),
+            request.getPrefix());
+
+    List<MultipartUploadInfo> info = omMultipartUploadList
+        .getUploads()
+        .stream()
+        .map(upload -> MultipartUploadInfo.newBuilder()
+            .setVolumeName(upload.getVolumeName())
+            .setBucketName(upload.getBucketName())
+            .setKeyName(upload.getKeyName())
+            .setUploadId(upload.getUploadId())
+            .setType(upload.getReplicationType())
+            .setFactor(upload.getReplicationFactor())
+            .setCreationTime(upload.getCreationTime().toEpochMilli())
+            .build())
+        .collect(Collectors.toList());
+
+    ListMultipartUploadsResponse response =
+        ListMultipartUploadsResponse.newBuilder()
+            .addAllUploadsList(info)
+            .build();
+
+    return response;
   }
 
   private GetDelegationTokenResponseProto getDelegationToken(

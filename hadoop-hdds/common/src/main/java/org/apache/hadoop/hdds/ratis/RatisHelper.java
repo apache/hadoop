@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hdds.ratis;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,7 +34,11 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 
@@ -176,7 +183,10 @@ public interface RatisHelper {
   static RaftClient newRaftClient(RpcType rpcType, RaftPeerId leader,
       RaftGroup group, RetryPolicy retryPolicy, int maxOutStandingRequest,
       GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
-    LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("newRaftClient: {}, leader={}, group={}",
+          rpcType, leader, group);
+    }
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
     RaftClientConfigKeys.Rpc
@@ -200,29 +210,47 @@ public interface RatisHelper {
     return builder.build();
   }
 
-  static GrpcTlsConfig createTlsClientConfig(SecurityConfig conf) {
-    if (conf.isGrpcTlsEnabled()) {
-      if (conf.isGrpcMutualTlsRequired()) {
-        return new GrpcTlsConfig(conf.getClientPrivateKeyFile(),
-            conf.getClientCertChainFile(), conf.getTrustStoreFile(), true);
-      } else {
-        return new GrpcTlsConfig(
-            null, null, conf.getTrustStoreFile(), false);
+  // For External gRPC client to server with gRPC TLS.
+  // No mTLS for external client as SCM CA does not issued certificates for them
+  static GrpcTlsConfig createTlsClientConfig(SecurityConfig conf,
+      X509Certificate caCert) {
+    GrpcTlsConfig tlsConfig = null;
+    if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
+      tlsConfig = new GrpcTlsConfig(null, null,
+          caCert, false);
+    }
+    return tlsConfig;
+  }
+
+  // For Internal gRPC client from SCM to DN with gRPC TLS
+  static GrpcTlsConfig createTlsClientConfigForSCM(SecurityConfig conf,
+      CertificateServer certificateServer) throws IOException {
+    if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
+      try {
+        X509Certificate caCert =
+            CertificateCodec.getX509Certificate(
+                certificateServer.getCACertificate());
+        return new GrpcTlsConfig(null, null,
+            caCert, false);
+      } catch (CertificateException ex) {
+        throw new SCMSecurityException("Fail to find SCM CA certificate.", ex);
       }
     }
     return null;
   }
 
-  static GrpcTlsConfig createTlsServerConfig(SecurityConfig conf) {
-    if (conf.isGrpcTlsEnabled()) {
-      if (conf.isGrpcMutualTlsRequired()) {
-        return new GrpcTlsConfig(
-            conf.getServerPrivateKeyFile(), conf.getServerCertChainFile(), null,
-            false);
-      } else {
-        return new GrpcTlsConfig(conf.getServerPrivateKeyFile(),
-            conf.getServerCertChainFile(), conf.getClientCertChainFile(), true);
-      }
+  // For gRPC server running DN container service with gPRC TLS
+  // No mTLS as the channel is shared for for external client, which
+  // does not have SCM CA issued certificates.
+  // In summary:
+  // authenticate from server to client is via TLS.
+  // authenticate from client to server is via block token (or container token).
+  static GrpcTlsConfig createTlsServerConfigForDN(SecurityConfig conf,
+      CertificateClient caClient)  {
+    if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
+      return new GrpcTlsConfig(
+          caClient.getPrivateKey(), caClient.getCertificate(),
+          null, false);
     }
     return null;
   }
@@ -247,5 +275,16 @@ public interface RatisHelper {
       Collection<RaftProtos.CommitInfoProto> commitInfos) {
     return commitInfos.stream().map(RaftProtos.CommitInfoProto::getCommitIndex)
         .min(Long::compareTo).orElse(null);
+  }
+
+  static ByteString int2ByteString(int n) {
+    final ByteString.Output out = ByteString.newOutput();
+    try(DataOutputStream dataOut = new DataOutputStream(out)) {
+      dataOut.writeInt(n);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "Failed to write integer n = " + n + " to a ByteString.", e);
+    }
+    return out.toByteString();
   }
 }

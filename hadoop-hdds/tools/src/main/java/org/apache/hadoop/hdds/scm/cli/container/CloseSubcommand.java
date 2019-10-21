@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.scm.cli.container;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 
 import picocli.CommandLine.Command;
@@ -38,15 +37,15 @@ import picocli.CommandLine.ParentCommand;
 public class CloseSubcommand implements Callable<Void> {
 
   @ParentCommand
-  private SCMCLI parent;
+  private ContainerCommands parent;
 
   @Parameters(description = "Id of the container to close")
   private long containerId;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
-      parent.checkContainerExists(scmClient, containerId);
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
+      parent.getParent().checkContainerExists(scmClient, containerId);
       scmClient.closeContainer(containerId);
       return null;
     }

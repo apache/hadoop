@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.safemode;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,19 +64,18 @@ public class ContainerSafeModeRule extends
             " value should be >= 0.0 and <= 1.0");
 
     containerMap = new ConcurrentHashMap<>();
-    if(containers != null) {
-      containers.forEach(c -> {
-        // TODO: There can be containers in OPEN state which were never
-        // created by the client. We are not considering these containers for
-        // now. These containers can be handled by tracking pipelines.
-        if (c != null && c.getState() != null &&
-            !c.getState().equals(HddsProtos.LifeCycleState.OPEN)) {
-          containerMap.put(c.getContainerID(), c);
-        }
-      });
-      maxContainer = containerMap.size();
-    }
+    containers.forEach(container -> {
+      // There can be containers in OPEN/CLOSING state which were never
+      // created by the client. We are not considering these containers for
+      // now. These containers can be handled by tracking pipelines.
 
+      Optional.ofNullable(container.getState())
+          .filter(state -> state != HddsProtos.LifeCycleState.OPEN)
+          .filter(state -> state != HddsProtos.LifeCycleState.CLOSING)
+          .ifPresent(s -> containerMap.put(container.getContainerID(),
+              container));
+    });
+    maxContainer = containerMap.size();
     long cutOff = (long) Math.ceil(maxContainer * safeModeCutoff);
     getSafeModeMetrics().setNumContainerWithOneReplicaReportedThreshold(cutOff);
   }

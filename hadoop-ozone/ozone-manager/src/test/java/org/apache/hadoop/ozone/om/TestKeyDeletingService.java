@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.db.DBConfigFromFile;
+import org.apache.hadoop.hdds.utils.db.DBConfigFromFile;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
@@ -95,6 +95,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -117,6 +118,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -144,6 +146,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 0);
     KeyDeletingService keyDeletingService =

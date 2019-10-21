@@ -162,11 +162,23 @@ class ErasureCodingWork extends BlockReconstructionWork {
   }
 
   private List<Integer> findLeavingServiceSources() {
+    // Mark the block in normal node.
+    BlockInfoStriped block = (BlockInfoStriped)getBlock();
+    BitSet bitSet = new BitSet(block.getRealTotalBlockNum());
+    for (int i = 0; i < getSrcNodes().length; i++) {
+      if (getSrcNodes()[i].isInService()) {
+        bitSet.set(liveBlockIndicies[i]);
+      }
+    }
+    // If the block is on the node which is decommissioning or
+    // entering_maintenance, and it doesn't exist on other normal nodes,
+    // we just add the node into source list.
     List<Integer> srcIndices = new ArrayList<>();
     for (int i = 0; i < getSrcNodes().length; i++) {
-      if (getSrcNodes()[i].isDecommissionInProgress() ||
+      if ((getSrcNodes()[i].isDecommissionInProgress() ||
           (getSrcNodes()[i].isEnteringMaintenance() &&
-          getSrcNodes()[i].isAlive())) {
+          getSrcNodes()[i].isAlive())) &&
+          !bitSet.get(liveBlockIndicies[i])) {
         srcIndices.add(i);
       }
     }

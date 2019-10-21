@@ -59,7 +59,7 @@ public interface ChunkManager {
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
+  ByteBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
       DispatcherContext dispatcherContext) throws StorageContainerException;
 
   /**

@@ -23,7 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+
+import javax.annotation.Nonnull;
 
 /**
  * Response for DeleteBucket request.
@@ -35,7 +37,7 @@ public final class OMBucketDeleteResponse extends OMClientResponse {
 
   public OMBucketDeleteResponse(
       String volumeName, String bucketName,
-      OzoneManagerProtocolProtos.OMResponse omResponse) {
+      @Nonnull OzoneManagerProtocolProtos.OMResponse omResponse) {
     super(omResponse);
     this.volumeName = volumeName;
     this.bucketName = bucketName;

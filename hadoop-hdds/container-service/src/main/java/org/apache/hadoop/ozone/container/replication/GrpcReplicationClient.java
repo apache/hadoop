@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .CopyContainerRequestProto;
@@ -92,6 +93,11 @@ public class GrpcReplicationClient {
 
   public void shutdown() {
     channel.shutdown();
+    try {
+      channel.awaitTermination(5, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      LOG.error("failed to shutdown replication channel", e);
+    }
   }
 
   /**

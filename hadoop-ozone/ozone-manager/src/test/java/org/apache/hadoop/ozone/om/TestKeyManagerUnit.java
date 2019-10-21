@@ -16,10 +16,13 @@
  * limitations under the License.
  *
  */
+
 package org.apache.hadoop.ozone.om;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -31,6 +34,8 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs.Builder;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
@@ -49,6 +54,8 @@ public class TestKeyManagerUnit {
   private OmMetadataManagerImpl metadataManager;
   private KeyManagerImpl keyManager;
 
+  private Instant startDate;
+
   @Before
   public void setup() throws IOException {
     OzoneConfiguration configuration = new OzoneConfiguration();
@@ -62,6 +69,8 @@ public class TestKeyManagerUnit {
         "omtest",
         Mockito.mock(OzoneBlockTokenSecretManager.class)
     );
+
+    startDate = Instant.now();
   }
 
   @Test
@@ -80,6 +89,66 @@ public class TestKeyManagerUnit {
     Assert.assertEquals(0,
         omMultipartUploadListParts.getPartInfoList().size());
 
+    this.startDate = Instant.now();
+  }
+
+  @Test
+  public void listMultipartUploads() throws IOException {
+
+    //GIVEN
+    createBucket(metadataManager, "vol1", "bucket1");
+    createBucket(metadataManager, "vol1", "bucket2");
+
+    OmMultipartInfo upload1 =
+        initMultipartUpload(keyManager, "vol1", "bucket1", "dir/key1");
+
+    OmMultipartInfo upload2 =
+        initMultipartUpload(keyManager, "vol1", "bucket1", "dir/key2");
+
+    OmMultipartInfo upload3 =
+        initMultipartUpload(keyManager, "vol1", "bucket2", "dir/key1");
+
+    //WHEN
+    OmMultipartUploadList omMultipartUploadList =
+        keyManager.listMultipartUploads("vol1", "bucket1", "");
+
+    //THEN
+    List<OmMultipartUpload> uploads = omMultipartUploadList.getUploads();
+    Assert.assertEquals(2, uploads.size());
+    Assert.assertEquals("dir/key1", uploads.get(0).getKeyName());
+    Assert.assertEquals("dir/key2", uploads.get(1).getKeyName());
+
+    Assert.assertNotNull(uploads.get(1));
+    Assert.assertNotNull(uploads.get(1).getCreationTime());
+    Assert.assertTrue("Creation date is too old",
+        uploads.get(1).getCreationTime().compareTo(startDate) > 0);
+  }
+
+  @Test
+  public void listMultipartUploadsWithPrefix() throws IOException {
+
+    //GIVEN
+    createBucket(metadataManager, "vol1", "bucket1");
+    createBucket(metadataManager, "vol1", "bucket2");
+
+    OmMultipartInfo upload1 =
+        initMultipartUpload(keyManager, "vol1", "bucket1", "dip/key1");
+
+    initMultipartUpload(keyManager, "vol1", "bucket1", "dir/key1");
+    initMultipartUpload(keyManager, "vol1", "bucket1", "dir/key2");
+    initMultipartUpload(keyManager, "vol1", "bucket1", "key3");
+
+    initMultipartUpload(keyManager, "vol1", "bucket2", "dir/key1");
+
+    //WHEN
+    OmMultipartUploadList omMultipartUploadList =
+        keyManager.listMultipartUploads("vol1", "bucket1", "dir");
+
+    //THEN
+    List<OmMultipartUpload> uploads = omMultipartUploadList.getUploads();
+    Assert.assertEquals(2, uploads.size());
+    Assert.assertEquals("dir/key1", uploads.get(0).getKeyName());
+    Assert.assertEquals("dir/key2", uploads.get(1).getKeyName());
   }
 
   private void createBucket(OmMetadataManagerImpl omMetadataManager,

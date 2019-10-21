@@ -212,6 +212,10 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
+        if (excludeRoot != null
+            && excludedNode.getNetworkLocation().startsWith(excludedScope)) {
+          continue;
+        }
         if (excludedNode instanceof DatanodeDescriptor) {
           availableCount -= ((DatanodeDescriptor) excludedNode)
               .hasStorageType(type) ? 1 : 0;
@@ -226,6 +230,9 @@ public class DFSNetworkTopology extends NetworkTopology {
           String nodeLocation = excludedNode.getNetworkLocation()
               + "/" + excludedNode.getName();
           DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+          if (dn == null) {
+            continue;
+          }
           availableCount -= dn.hasStorageType(type)? 1 : 0;
         } else {
           LOG.error("Unexpected node type: {}.", excludedNode.getClass());

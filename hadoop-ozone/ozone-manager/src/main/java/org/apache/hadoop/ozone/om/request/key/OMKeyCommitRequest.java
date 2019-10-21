@@ -49,8 +49,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
@@ -127,7 +127,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
           keyName, commitKeyRequest.getClientID());
 
-      omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+      omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
           bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -166,7 +166,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
             ozoneManagerDoubleBufferHelper.add(omClientResponse,
                 transactionLogIndex));
       }
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+      omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
           bucketName);
     }
 

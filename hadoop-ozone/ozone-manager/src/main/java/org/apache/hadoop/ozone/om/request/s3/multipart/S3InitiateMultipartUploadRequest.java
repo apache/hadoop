@@ -37,9 +37,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.UniqueId;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +114,7 @@ public class S3InitiateMultipartUploadRequest extends OMKeyRequest {
     try {
       // TODO to support S3 ACL later.
       acquiredBucketLock =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
               bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -189,7 +189,7 @@ public class S3InitiateMultipartUploadRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

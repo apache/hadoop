@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -745,16 +746,8 @@ public class RouterClientProtocol implements ClientProtocol {
       boolean needLocation) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
-    // Locate the dir and fetch the listing
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false, false);
-    RemoteMethod method = new RemoteMethod("getListing",
-        new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
-        new RemoteParam(), startAfter, needLocation);
-    final List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
-        rpcClient.invokeConcurrent(
-            locations, method, false, -1, DirectoryListing.class);
-
+    List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
+        getListingInt(src, startAfter, needLocation);
     Map<String, HdfsFileStatus> nnListing = new TreeMap<>();
     int totalRemainingEntries = 0;
     int remainingEntries = 0;
@@ -818,7 +811,9 @@ public class RouterClientProtocol implements ClientProtocol {
         if (dates != null && dates.containsKey(child)) {
           date = dates.get(child);
         }
-        HdfsFileStatus dirStatus = getMountPointStatus(child, 0, date);
+        Path childPath = new Path(src, child);
+        HdfsFileStatus dirStatus =
+            getMountPointStatus(childPath.toString(), 0, date);
 
         // This may overwrite existing listing entries with the mount point
         // TODO don't add if already there?
@@ -2040,6 +2035,31 @@ public class RouterClientProtocol implements ClientProtocol {
       LOG.error("Cannot get mount point", e);
     }
     return modTime;
+  }
+
+  /**
+   * Get listing on remote locations.
+   */
+  private List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
+      String src, byte[] startAfter, boolean needLocation) throws IOException {
+    try {
+      List<RemoteLocation> locations =
+          rpcServer.getLocationsForPath(src, false, false);
+      // Locate the dir and fetch the listing.
+      if (locations.isEmpty()) {
+        return new ArrayList<>();
+      }
+      RemoteMethod method = new RemoteMethod("getListing",
+          new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
+          new RemoteParam(), startAfter, needLocation);
+      List<RemoteResult<RemoteLocation, DirectoryListing>> listings = rpcClient
+          .invokeConcurrent(locations, method, false, -1,
+              DirectoryListing.class);
+      return listings;
+    } catch (RouterResolveException e) {
+      LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
+      return new ArrayList<>();
+    }
   }
 
   /**

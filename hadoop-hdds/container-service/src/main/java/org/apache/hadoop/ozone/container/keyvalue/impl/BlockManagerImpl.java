@@ -33,8 +33,8 @@ import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
-import org.apache.hadoop.utils.BatchOperation;
-import org.apache.hadoop.utils.MetadataKeyFilters;
+import org.apache.hadoop.hdds.utils.BatchOperation;
+import org.apache.hadoop.hdds.utils.MetadataKeyFilters;
 import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,9 +120,11 @@ public class BlockManagerImpl implements BlockManager {
       container.updateBlockCommitSequenceId(bcsId);
       // Increment keycount here
       container.getContainerData().incrKeyCount();
-      LOG.debug(
-          "Block " + data.getBlockID() + " successfully committed with bcsId "
-              + bcsId + " chunk size " + data.getChunks().size());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Block " + data.getBlockID() + " successfully committed with bcsId "
+                + bcsId + " chunk size " + data.getChunks().size());
+      }
       return data.getSize();
     }
   }

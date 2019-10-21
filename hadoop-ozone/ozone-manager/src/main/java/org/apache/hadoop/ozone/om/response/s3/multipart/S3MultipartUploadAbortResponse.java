@@ -22,17 +22,20 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for Multipart Abort Request.
@@ -40,16 +43,13 @@ import java.util.TreeMap;
 public class S3MultipartUploadAbortResponse extends OMClientResponse {
 
   private String multipartKey;
-  private long timeStamp;
   private OmMultipartKeyInfo omMultipartKeyInfo;
 
   public S3MultipartUploadAbortResponse(String multipartKey,
-      long timeStamp,
-      OmMultipartKeyInfo omMultipartKeyInfo,
-      OMResponse omResponse) {
+      @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
-    this.timeStamp = timeStamp;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
   }
 
@@ -73,9 +73,16 @@ public class S3MultipartUploadAbortResponse extends OMClientResponse {
         PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
         OmKeyInfo currentKeyPartInfo =
             OmKeyInfo.getFromProtobuf(partKeyInfo.getPartKeyInfo());
+
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            omMetadataManager.getDeletedTable().get(partKeyInfo.getPartName());
+
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+            currentKeyPartInfo, repeatedOmKeyInfo);
+
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            OmUtils.getDeletedKeyName(partKeyInfo.getPartName(), timeStamp),
-            currentKeyPartInfo);
+            partKeyInfo.getPartName(),
+            repeatedOmKeyInfo);
       }
 
     }

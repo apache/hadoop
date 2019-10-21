@@ -27,12 +27,14 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -225,6 +227,11 @@ public final class XceiverServerRatis extends XceiverServer {
       setAutoTriggerEnabled(properties, true);
     RaftServerConfigKeys.Snapshot.
       setAutoTriggerThreshold(properties, snapshotThreshold);
+    int maxPendingRequets = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT
+    );
+    RaftServerConfigKeys.Write.setElementLimit(properties, maxPendingRequets);
     int logQueueNumElements =
         conf.getInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS_DEFAULT);
@@ -260,7 +267,7 @@ public final class XceiverServerRatis extends XceiverServer {
         conf.getObject(RatisServerConfiguration.class);
     int numSnapshotsRetained =
         ratisServerConfiguration.getNumSnapshotsRetained();
-    RaftServerConfigKeys.Snapshot.setSnapshotRetentionPolicy(properties,
+    RaftServerConfigKeys.Snapshot.setRetentionFileNum(properties,
         numSnapshotsRetained);
     return properties;
   }
@@ -398,8 +405,8 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
       localPort = 0;
     }
-    GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfig(
-          new SecurityConfig(ozoneConf));
+    GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfigForDN(
+          new SecurityConfig(ozoneConf), caClient);
 
     return new XceiverServerRatis(datanodeDetails, localPort, dispatcher,
         containerController, context, tlsConfig, caClient, ozoneConf);
@@ -510,8 +517,8 @@ public final class XceiverServerRatis extends XceiverServer {
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
         RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
-        nextCallId(), Message.valueOf(request.toByteString()), type,
-        null);
+        nextCallId(), ContainerCommandRequestMessage.toMessage(request, null),
+        type, null);
   }
 
   private GroupInfoRequest createGroupInfoRequest(

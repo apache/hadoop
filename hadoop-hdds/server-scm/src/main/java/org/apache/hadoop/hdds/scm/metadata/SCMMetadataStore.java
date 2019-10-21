@@ -23,11 +23,11 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 
 /**
  * Generic interface for data stores for SCM.

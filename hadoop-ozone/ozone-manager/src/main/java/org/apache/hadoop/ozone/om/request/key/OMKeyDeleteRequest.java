@@ -44,8 +44,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .KEY_NOT_FOUND;
@@ -114,7 +114,7 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
       String objectKey = omMetadataManager.getOzoneKey(
           volumeName, bucketName, keyName);
 
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       // Not doing bucket/volume checks here. In this way we can avoid db
@@ -139,13 +139,12 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
       // TODO: Revisit if we need it later.
 
       omClientResponse = new OMKeyDeleteResponse(omKeyInfo,
-          deleteKeyArgs.getModificationTime(),
           omResponse.setDeleteKeyResponse(
               DeleteKeyResponse.newBuilder()).build());
 
     } catch (IOException ex) {
       exception = ex;
-      omClientResponse = new OMKeyDeleteResponse(null, 0,
+      omClientResponse = new OMKeyDeleteResponse(null,
           createErrorOMResponse(omResponse, exception));
     } finally {
       if (omClientResponse != null) {
@@ -154,7 +153,7 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

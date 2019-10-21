@@ -62,8 +62,8 @@ import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
@@ -148,10 +148,10 @@ public class OMBucketCreateRequest extends OMClientRequest {
             volumeName, bucketName, null);
       }
 
-      acquiredVolumeLock = metadataManager.getLock().acquireLock(VOLUME_LOCK,
-          volumeName);
-      acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
-          volumeName, bucketName);
+      acquiredVolumeLock =
+          metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volumeName);
+      acquiredBucketLock = metadataManager.getLock().acquireWriteLock(
+          BUCKET_LOCK, volumeName, bucketName);
 
       OmVolumeArgs omVolumeArgs =
           metadataManager.getVolumeTable().get(volumeKey);
@@ -191,11 +191,11 @@ public class OMBucketCreateRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        metadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
       if (acquiredVolumeLock) {
-        metadataManager.getLock().releaseLock(VOLUME_LOCK, volumeName);
+        metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volumeName);
       }
     }
 

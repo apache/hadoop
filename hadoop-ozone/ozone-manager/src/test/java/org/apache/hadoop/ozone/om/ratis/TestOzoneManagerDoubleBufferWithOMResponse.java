@@ -84,8 +84,9 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Before
-  public void setup() throws IOException  {
-    ozoneManager = Mockito.mock(OzoneManager.class);
+  public void setup() throws IOException {
+    ozoneManager = Mockito.mock(OzoneManager.class,
+        Mockito.withSettings().stubOnly());
     omMetrics = OMMetrics.create();
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
     ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
@@ -119,13 +120,13 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
    * transactions or not.
    * @throws Exception
    */
-  @Test(timeout = 300_000)
+  @Test(timeout = 500_000)
   public void testDoubleBuffer() throws Exception {
     // This test checks whether count in tables are correct or not.
     testDoubleBuffer(1, 10);
     testDoubleBuffer(10, 100);
     testDoubleBuffer(100, 100);
-    testDoubleBuffer(1000, 100);
+    testDoubleBuffer(1000, 500);
   }
 
   /**
@@ -373,14 +374,15 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
       setup();
       for (int i = 0; i < iterations; i++) {
         Daemon d1 = new Daemon(() ->
-            doTransactions(RandomStringUtils.randomAlphabetic(5), bucketCount));
+            doTransactions(RandomStringUtils.randomAlphabetic(5),
+                bucketCount));
         d1.start();
       }
 
       // We are doing +1 for volume transaction.
       long expectedTransactions = (bucketCount + 1) * iterations;
       GenericTestUtils.waitFor(() -> lastAppliedIndex == expectedTransactions,
-          100, 120000);
+          100, 500000);
 
       Assert.assertEquals(expectedTransactions,
           doubleBuffer.getFlushedTransactionCount()
@@ -397,7 +399,7 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
         }
         return count == iterations;
 
-      }, 300, 40000);
+      }, 300, 300000);
 
 
       GenericTestUtils.waitFor(() -> {
@@ -409,7 +411,7 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
           fail("testDoubleBuffer failed");
         }
         return count == bucketCount * iterations;
-      }, 300, 40000);
+      }, 300, 300000);
 
       Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
     } finally {
@@ -428,15 +430,6 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
     for (int i=0; i< bucketCount; i++) {
       createBucket(volumeName, UUID.randomUUID().toString(),
           trxId.incrementAndGet());
-      // For every 100 buckets creation adding 100ms delay
-
-      if (i % 100 == 0) {
-        try {
-          Thread.sleep(100);
-        } catch (Exception ex) {
-
-        }
-      }
     }
   }
 

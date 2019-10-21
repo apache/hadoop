@@ -98,6 +98,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       + "TLS_DHE_RSA_WITH_AES_128_CBC_SHA,\t\n "
       + "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
 
+  private static final String INCLUDED_PROTOCOLS = "SSLv2Hello,TLSv1.1";
+
   @BeforeClass
   public static void setup() throws Exception {
     turnOnSSLDebugLogging();
@@ -128,6 +130,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static void setupServer(Configuration conf, Configuration sslConf)
       throws IOException, URISyntaxException {
+    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
+    sslConf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
     server = new HttpServer2.Builder().setName("test")
         .addEndpoint(new URI("https://localhost")).setConf(conf)
         .keyPassword(
@@ -214,6 +218,22 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     return conn;
   }
 
+  private HttpsURLConnection
+      getConnectionWithPreferredProtocolSSLSocketFactory(URL url,
+      String protocols) throws IOException, GeneralSecurityException {
+    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+    SSLSocketFactory sslSocketFactory = clientSslFactory
+        .createSSLSocketFactory();
+    LOG.info("Creating " +
+        PreferredProtocolSSLSocketFactory.class.getCanonicalName() +
+        " with protocols: " + protocols);
+    PreferredProtocolSSLSocketFactory cipherSSLSocketFactory
+        = new PreferredProtocolSSLSocketFactory(sslSocketFactory,
+        StringUtils.getTrimmedStrings(protocols));
+    conn.setSSLSocketFactory(cipherSSLSocketFactory);
+    return conn;
+  }
+
   @Test
   public void testEcho() throws Exception {
     assertEquals("a:b\nc:d\n",
@@ -267,6 +287,18 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     } catch (SSLHandshakeException ex) {
       LOG.info("No Ciphers in common, expected successful test result.", ex);
     }
+  }
+
+  @Test
+  public void testIncludedProtocols() throws Exception {
+    URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
+    HttpsURLConnection conn =
+        getConnectionWithPreferredProtocolSSLSocketFactory(url,
+        INCLUDED_PROTOCOLS);
+    assertFalse("included protocol list is empty",
+        INCLUDED_PROTOCOLS.isEmpty());
+
+    readFromConnection(conn);
   }
 
   /** Test that verified that additionally included cipher
@@ -367,6 +399,80 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     private void setEnabledCipherSuites(SSLSocket sslSocket) {
       if (null != enabledCipherSuites) {
         sslSocket.setEnabledCipherSuites(enabledCipherSuites);
+      }
+    }
+  }
+
+  private class PreferredProtocolSSLSocketFactory extends SSLSocketFactory {
+    private final SSLSocketFactory delegateSocketFactory;
+    private final String[] enabledProtocols;
+
+    PreferredProtocolSSLSocketFactory(SSLSocketFactory sslSocketFactory,
+        String[] enabledProtocols) {
+      delegateSocketFactory = sslSocketFactory;
+      if (null != enabledProtocols && enabledProtocols.length > 0) {
+        this.enabledProtocols = enabledProtocols;
+      } else {
+        this.enabledProtocols = null;
+      }
+    }
+
+    @Override
+    public String[] getDefaultCipherSuites() {
+      return delegateSocketFactory.getDefaultCipherSuites();
+    }
+
+    @Override
+    public String[] getSupportedCipherSuites() {
+      return delegateSocketFactory.getSupportedCipherSuites();
+    }
+
+    @Override
+    public Socket createSocket(Socket socket, String string, int i, boolean bln)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          socket, string, i, bln);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(String string, int i) throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          string, i);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(String string, int i, InetAddress ia, int i1)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
+          string, i, ia, i1);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress ia, int i) throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+          i);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress ia, int i, InetAddress ia1, int i1)
+        throws IOException {
+      SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
+          i, ia1, i1);
+      setEnabledProtocols(sslSocket);
+      return sslSocket;
+    }
+
+    private void setEnabledProtocols(SSLSocket sslSocket) {
+      if (null != enabledProtocols) {
+        sslSocket.setEnabledProtocols(enabledProtocols);
       }
     }
   }

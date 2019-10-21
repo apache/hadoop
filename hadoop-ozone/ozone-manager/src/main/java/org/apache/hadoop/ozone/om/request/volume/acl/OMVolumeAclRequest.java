@@ -33,8 +33,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import java.io.IOException;
 import java.util.List;
@@ -81,7 +81,7 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
             volume, null, null);
       }
       lockAcquired =
-          omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+          omMetadataManager.getLock().acquireWriteLock(VOLUME_LOCK, volume);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
       if (omVolumeArgs == null) {
@@ -115,7 +115,7 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (lockAcquired) {
-        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+        omMetadataManager.getLock().releaseWriteLock(VOLUME_LOCK, volume);
       }
     }
 

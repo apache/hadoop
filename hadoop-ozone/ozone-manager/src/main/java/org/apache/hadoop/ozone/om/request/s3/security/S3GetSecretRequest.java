@@ -47,8 +47,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.UpdateGetS3SecretRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3Secret;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.S3_SECRET_LOCK;
 
@@ -127,7 +127,8 @@ public class S3GetSecretRequest extends OMClientRequest {
     try {
       String awsSecret = updateGetS3SecretRequest.getAwsSecret();
       acquiredLock =
-         omMetadataManager.getLock().acquireLock(S3_SECRET_LOCK, kerberosID);
+         omMetadataManager.getLock().acquireWriteLock(S3_SECRET_LOCK,
+             kerberosID);
 
       S3SecretValue s3SecretValue =
           omMetadataManager.getS3SecretTable().get(kerberosID);
@@ -168,7 +169,8 @@ public class S3GetSecretRequest extends OMClientRequest {
             omClientResponse, transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(S3_SECRET_LOCK, kerberosID);
+        omMetadataManager.getLock().releaseWriteLock(S3_SECRET_LOCK,
+            kerberosID);
       }
     }
 

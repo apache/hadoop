@@ -24,6 +24,9 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMDatanodeRequest;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMDatanodeRequest.Builder;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMDatanodeResponse;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -38,6 +41,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -45,6 +49,7 @@ import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -97,6 +102,25 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   }
 
   /**
+   * Helper method to wrap the request and send the message.
+   */
+  private SCMDatanodeResponse submitRequest(Type type,
+      Consumer<SCMDatanodeRequest.Builder> builderConsumer) throws IOException {
+    final SCMDatanodeResponse response;
+    try {
+      Builder builder = SCMDatanodeRequest.newBuilder()
+          .setCmdType(type);
+      builderConsumer.accept(builder);
+      SCMDatanodeRequest wrapper = builder.build();
+
+      response = rpcProxy.submitRequest(NULL_RPC_CONTROLLER, wrapper);
+    } catch (ServiceException ex) {
+      throw ProtobufHelper.getRemoteException(ex);
+    }
+    return response;
+  }
+
+  /**
    * Returns SCM version.
    *
    * @param unused - set to null and unused.
@@ -104,16 +128,11 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    */
   @Override
   public SCMVersionResponseProto getVersion(SCMVersionRequestProto
-      unused) throws IOException {
-    SCMVersionRequestProto request =
-        SCMVersionRequestProto.newBuilder().build();
-    final SCMVersionResponseProto response;
-    try {
-      response = rpcProxy.getVersion(NULL_RPC_CONTROLLER, request);
-    } catch (ServiceException ex) {
-      throw ProtobufHelper.getRemoteException(ex);
-    }
-    return response;
+      request) throws IOException {
+    return submitRequest(Type.GetVersion,
+        (builder) -> builder
+            .setGetVersionRequest(SCMVersionRequestProto.newBuilder().build()))
+        .getGetVersionResponse();
   }
 
   /**
@@ -126,13 +145,9 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
       SCMHeartbeatRequestProto heartbeat) throws IOException {
-    final SCMHeartbeatResponseProto resp;
-    try {
-      resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, heartbeat);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-    return resp;
+    return submitRequest(Type.SendHeartbeat,
+        (builder) -> builder.setSendHeartbeatRequest(heartbeat))
+        .getSendHeartbeatResponse();
   }
 
   /**
@@ -155,13 +170,8 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
     req.setContainerReport(containerReportsRequestProto);
     req.setPipelineReports(pipelineReportsProto);
     req.setNodeReport(nodeReport);
-    final SCMRegisteredResponseProto response;
-    try {
-      response = rpcProxy.register(NULL_RPC_CONTROLLER, req.build());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-    return response;
+    return submitRequest(Type.Register,
+        (builder) -> builder.setRegisterRequest(req))
+        .getRegisterResponse();
   }
-
 }

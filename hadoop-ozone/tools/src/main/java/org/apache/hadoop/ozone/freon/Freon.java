@@ -34,7 +34,16 @@ import picocli.CommandLine.Option;
 @Command(
     name = "ozone freon",
     description = "Load generator and tester tool for ozone",
-    subcommands = RandomKeyGenerator.class,
+    subcommands = {
+        RandomKeyGenerator.class,
+        OzoneClientKeyGenerator.class,
+        OzoneClientKeyValidator.class,
+        OmKeyGenerator.class,
+        OmBucketGenerator.class,
+        HadoopFsGenerator.class,
+        HadoopFsValidator.class,
+        SameKeyReader.class,
+        S3KeyGenerator.class},
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true)
 public class Freon extends GenericCli {

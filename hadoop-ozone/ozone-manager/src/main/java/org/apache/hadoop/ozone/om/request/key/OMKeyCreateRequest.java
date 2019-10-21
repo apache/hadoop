@@ -48,7 +48,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.UniqueId;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 /**
@@ -164,7 +164,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
       // check Acl
       checkBucketAcls(ozoneManager, volumeName, bucketName, keyName);
 
-      acquireLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquireLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       //TODO: We can optimize this get here, if getKmsProvider is null, then
@@ -198,7 +198,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquireLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

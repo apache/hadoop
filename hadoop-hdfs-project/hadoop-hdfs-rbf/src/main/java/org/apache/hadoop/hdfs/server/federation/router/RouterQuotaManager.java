@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
 
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -108,6 +109,32 @@ public class RouterQuotaManager {
         }
       }
       return validPaths;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Get parent paths (including itself) and quotas of the specified federation
+   * path. Only parents containing quota are returned.
+   * @param childPath Federated path.
+   * @return TreeMap of parent paths and quotas.
+   */
+  TreeMap<String, RouterQuotaUsage> getParentsContainingQuota(
+      String childPath) {
+    TreeMap<String, RouterQuotaUsage> res = new TreeMap<>();
+    readLock.lock();
+    try {
+      Entry<String, RouterQuotaUsage> entry = this.cache.floorEntry(childPath);
+      while (entry != null) {
+        String mountPath = entry.getKey();
+        RouterQuotaUsage quota = entry.getValue();
+        if (isQuotaSet(quota) && isParentEntry(childPath, mountPath)) {
+          res.put(mountPath, quota);
+        }
+        entry = this.cache.lowerEntry(mountPath);
+      }
+      return res;
     } finally {
       readLock.unlock();
     }

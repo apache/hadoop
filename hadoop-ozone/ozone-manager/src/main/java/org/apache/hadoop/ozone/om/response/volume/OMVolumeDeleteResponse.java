@@ -26,8 +26,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
-import org.apache.hadoop.utils.db.BatchOperation;
+    .UserVolumeInfo;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+
+import javax.annotation.Nonnull;
 
 /**
  * Response for CreateVolume request.
@@ -35,10 +37,10 @@ import org.apache.hadoop.utils.db.BatchOperation;
 public class OMVolumeDeleteResponse extends OMClientResponse {
   private String volume;
   private String owner;
-  private VolumeList updatedVolumeList;
+  private UserVolumeInfo updatedVolumeList;
 
   public OMVolumeDeleteResponse(String volume, String owner,
-      VolumeList updatedVolumeList, OMResponse omResponse) {
+      UserVolumeInfo updatedVolumeList, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.volume = volume;
     this.owner = owner;
@@ -53,7 +55,7 @@ public class OMVolumeDeleteResponse extends OMClientResponse {
     // not called in failure scenario in OM code.
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
       String dbUserKey = omMetadataManager.getUserKey(owner);
-      VolumeList volumeList = updatedVolumeList;
+      UserVolumeInfo volumeList = updatedVolumeList;
       if (updatedVolumeList.getVolumeNamesList().size() == 0) {
         omMetadataManager.getUserTable().deleteWithBatch(batchOperation,
             dbUserKey);

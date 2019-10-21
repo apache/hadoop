@@ -65,7 +65,7 @@ run cd "ozone-${HDDS_VERSION}"
 run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/NOTICE.txt" "NOTICE.txt"
 run cp -p "${ROOT}/hadoop-ozone/dist/src/main/license/bin/LICENSE.txt" "LICENSE.txt"
 run cp -pr "${ROOT}/hadoop-ozone/dist/src/main/license/bin/licenses" "licenses"
-run cp -p "${ROOT}/hadoop-ozone/ozone-recon/src/main/resources/webapps/recon/ozone-recon-web/LICENSE" "licenses/LICENSE-ozone-recon.txt"
+run cp -p "${ROOT}/hadoop-ozone/recon/src/main/resources/webapps/recon/ozone-recon-web/LICENSE" "licenses/LICENSE-ozone-recon.txt"
 run cp -p "${ROOT}/README.txt" .
 
 run mkdir -p ./share/hadoop/mapreduce

@@ -34,7 +34,7 @@ import org.apache.hadoop.ozone.om.ratis.helpers.DoubleBufferEntry;
 import org.apache.hadoop.ozone.om.ratis.metrics.OzoneManagerDoubleBufferMetrics;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.ratis.util.ExitUtils;
 
 /**
@@ -148,9 +148,11 @@ public class OzoneManagerDoubleBuffer {
           flushedTransactionCount.addAndGet(flushedTransactionsSize);
           flushIterations.incrementAndGet();
 
-          LOG.debug("Sync Iteration {} flushed transactions in this " +
-                  "iteration{}", flushIterations.get(),
-              flushedTransactionsSize);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Sync Iteration {} flushed transactions in this " +
+                    "iteration{}", flushIterations.get(),
+                flushedTransactionsSize);
+          }
 
           long lastRatisTransactionIndex =
               readyBuffer.stream().map(DoubleBufferEntry::getTrxLogIndex)

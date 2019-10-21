@@ -98,7 +98,7 @@ public class TestOpportunisticContainerAllocator {
             return new byte[]{1, 2};
           }
         };
-    allocator = new OpportunisticContainerAllocator(secMan);
+    allocator = new DistributedOpportunisticContainerAllocator(secMan);
     oppCntxt = new OpportunisticContainerContext();
     oppCntxt.getAppParams().setMinResource(Resource.newInstance(1024, 1));
     oppCntxt.getAppParams().setIncrementResource(Resource.newInstance(512, 1));

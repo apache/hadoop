@@ -161,6 +161,9 @@
                       <exclude>org.eclipse.jetty.websocket:*</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <exclude>org.eclipse.jetty:jetty-client</exclude>
+                      <exclude>org.eclipse.jetty:jetty-http</exclude>
+                      <exclude>org.eclipse.jetty:jetty-xml</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -227,6 +230,13 @@
                         <exclude>jnamed*</exclude>
                         <exclude>lookup*</exclude>
                         <exclude>update*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>com.google.protobuf:protobuf-java</artifact>
+                      <excludes>
+                        <exclude>google/protobuf/*.proto</exclude>
+                        <exclude>google/protobuf/**/*.proto</exclude>
                       </excludes>
                     </filter>
                   </filters>

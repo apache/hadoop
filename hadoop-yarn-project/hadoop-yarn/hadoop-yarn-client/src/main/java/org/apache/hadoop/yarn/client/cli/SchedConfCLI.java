@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.client.cli;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
+import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
@@ -30,6 +33,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
@@ -39,6 +45,9 @@ import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -56,6 +65,7 @@ public class SchedConfCLI extends Configured implements Tool {
   private static final String REMOVE_QUEUES_OPTION = "removeQueues";
   private static final String UPDATE_QUEUES_OPTION = "updateQueues";
   private static final String GLOBAL_OPTIONS = "globalUpdates";
+  private static final String FORMAT_CONF = "formatConfig";
   private static final String HELP_CMD = "help";
 
   private static final String CONF_ERR_MSG = "Specify configuration key " +
@@ -83,6 +93,9 @@ public class SchedConfCLI extends Configured implements Tool {
         "Update queue configurations");
     opts.addOption("global", GLOBAL_OPTIONS, true,
         "Update global scheduler configurations");
+    opts.addOption("format", FORMAT_CONF, false,
+        "Format Scheduler Configuration and reload from" +
+        " capacity-scheduler.xml");
     opts.addOption("h", HELP_CMD, false, "Displays help for all commands.");
 
     int exitCode = -1;
@@ -101,6 +114,7 @@ public class SchedConfCLI extends Configured implements Tool {
     }
 
     boolean hasOption = false;
+    boolean format = false;
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     try {
       if (parsedCli.hasOption(ADD_QUEUES_OPTION)) {
@@ -121,6 +135,11 @@ public class SchedConfCLI extends Configured implements Tool {
         hasOption = true;
         globalUpdates(parsedCli.getOptionValue(GLOBAL_OPTIONS), updateInfo);
       }
+      if (parsedCli.hasOption((FORMAT_CONF))) {
+        hasOption = true;
+        format = true;
+      }
+
     } catch (IllegalArgumentException e) {
       System.err.println(e.getMessage());
       return -1;
@@ -133,18 +152,93 @@ public class SchedConfCLI extends Configured implements Tool {
     }
 
     Configuration conf = getConf();
-    return WebAppUtils.execOnActiveRM(conf,
-        this::updateSchedulerConfOnRMNode, updateInfo);
+    if (format) {
+      return WebAppUtils.execOnActiveRM(conf, this::formatSchedulerConf, null);
+    } else {
+      return WebAppUtils.execOnActiveRM(conf,
+          this::updateSchedulerConfOnRMNode, updateInfo);
+    }
   }
 
-  private int updateSchedulerConfOnRMNode(String webAppAddress,
-      SchedConfUpdateInfo updateInfo) throws Exception {
-    Client webServiceClient = Client.create();
+  @VisibleForTesting
+  int formatSchedulerConf(String webAppAddress, WebResource resource)
+      throws Exception {
+    Configuration conf = getConf();
+    SSLFactory clientSslFactory = null;
+    if (YarnConfiguration.useHttps(conf)) {
+      clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    }
+    Client webServiceClient = createWebServiceClient(clientSslFactory);
     ClientResponse response = null;
+    resource = (resource != null) ? resource :
+        webServiceClient.resource(webAppAddress);
+
     try {
-      Builder builder = webServiceClient.resource(webAppAddress)
-          .path("ws").path("v1").path("cluster")
-          .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+      Builder builder = null;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        builder = resource
+            .path("ws").path("v1").path("cluster")
+            .path("/scheduler-conf/format")
+            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+      } else {
+        builder = resource
+            .path("ws").path("v1").path("cluster")
+            .path("/scheduler-conf/format").queryParam("user.name",
+            UserGroupInformation.getCurrentUser().getShortUserName())
+            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+      }
+
+      response = builder.get(ClientResponse.class);
+      if (response != null) {
+        if (response.getStatus() == Status.OK.getStatusCode()) {
+          System.out.println(response.getEntity(String.class));
+          return 0;
+        } else {
+          System.err.println("Failed to format scheduler configuration: " +
+              response.getEntity(String.class));
+        }
+      } else {
+        System.err.println("Failed to format scheduler configuration: " +
+            "null response");
+      }
+      return -1;
+    } finally {
+      if (response != null) {
+        response.close();
+      }
+      if (webServiceClient != null) {
+        webServiceClient.destroy();
+      }
+      if (clientSslFactory != null) {
+        clientSslFactory.destroy();
+      }
+    }
+  }
+
+  @VisibleForTesting
+  int updateSchedulerConfOnRMNode(String webAppAddress,
+      SchedConfUpdateInfo updateInfo) throws Exception {
+    Configuration conf = getConf();
+    SSLFactory clientSslFactory = null;
+    if (YarnConfiguration.useHttps(conf)) {
+      clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    }
+    Client webServiceClient = createWebServiceClient(clientSslFactory);
+    ClientResponse response = null;
+    WebResource resource = webServiceClient.resource(webAppAddress);
+
+    try {
+      Builder builder = null;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        builder = resource.path("ws").path("v1").path("cluster")
+            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+      } else {
+        builder = resource.path("ws").path("v1").path("cluster")
+            .queryParam("user.name",
+            UserGroupInformation.getCurrentUser().getShortUserName())
+            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+      }
+
       builder.entity(YarnWebServiceUtils.toJson(updateInfo,
           SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON);
       response = builder.put(ClientResponse.class);
@@ -164,8 +258,40 @@ public class SchedConfCLI extends Configured implements Tool {
       if (response != null) {
         response.close();
       }
-      webServiceClient.destroy();
+      if (webServiceClient != null) {
+        webServiceClient.destroy();
+      }
+      if (clientSslFactory != null) {
+        clientSslFactory.destroy();
+      }
     }
+  }
+
+  private Client createWebServiceClient(SSLFactory clientSslFactory) {
+    Client webServiceClient = new Client(new URLConnectionClientHandler(
+        new HttpURLConnectionFactory() {
+        @Override
+        public HttpURLConnection getHttpURLConnection(URL url)
+            throws IOException {
+          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+          AuthenticatedURL aUrl;
+          HttpURLConnection conn = null;
+          try {
+            if (clientSslFactory != null) {
+              clientSslFactory.init();
+              aUrl = new AuthenticatedURL(null, clientSslFactory);
+            } else {
+              aUrl = new AuthenticatedURL();
+            }
+            conn = aUrl.openConnection(url, token);
+          } catch (Exception e) {
+            throw new IOException(e);
+          }
+          return conn;
+        }
+      }));
+    webServiceClient.setChunkedEncodingSize(null);
+    return webServiceClient;
   }
 
 
@@ -253,7 +379,8 @@ public class SchedConfCLI extends Configured implements Tool {
         + "[-remove \"queueRemovePath1;queueRemovePath2\"] "
         + "[-update \"queueUpdatePath1:confKey1=confVal1\"] "
         + "[-global globalConfKey1=globalConfVal1,"
-        + "globalConfKey2=globalConfVal2]\n"
+        + "globalConfKey2=globalConfVal2] "
+        + "[-format]\n"
         + "Example (adding queues): yarn schedulerconf -add "
         + "\"root.a.a1:capacity=100,maximum-capacity=100;root.a.a2:capacity=0,"
         + "maximum-capacity=0\"\n"
@@ -264,6 +391,8 @@ public class SchedConfCLI extends Configured implements Tool {
         + "maximum-capacity=75\"\n"
         + "Example (global scheduler update): yarn schedulerconf "
         + "-global yarn.scheduler.capacity.maximum-applications=10000\n"
+        + "Example (format scheduler configuration): yarn schedulerconf "
+        + "-format\n"
         + "Note: This is an alpha feature, the syntax/options are subject to "
         + "change, please run at your own risk.");
   }

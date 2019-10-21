@@ -26,8 +26,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.util.RadixNode;
 import org.apache.hadoop.ozone.util.RadixTree;
-import org.apache.hadoop.utils.db.Table.KeyValue;
-import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,7 +139,10 @@ public class PrefixManagerImpl implements PrefixManager {
       OMPrefixAclOpResult omPrefixAclOpResult = removeAcl(obj, acl, prefixInfo);
 
       if (!omPrefixAclOpResult.isOperationsResult()) {
-        LOG.debug("acl {} does not exist for prefix path {} ", acl, prefixPath);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("acl {} does not exist for prefix path {} ",
+              acl, prefixPath);
+        }
         return false;
       }
 
@@ -236,8 +239,10 @@ public class PrefixManagerImpl implements PrefixManager {
         if (lastNode != null && lastNode.getValue() != null) {
           boolean hasAccess = OzoneAclUtil.checkAclRights(lastNode.getValue().
               getAcls(), context);
-          LOG.debug("user:{} has access rights for ozObj:{} ::{} ",
-              context.getClientUgi(), ozObject, hasAccess);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("user:{} has access rights for ozObj:{} ::{} ",
+                context.getClientUgi(), ozObject, hasAccess);
+          }
           return hasAccess;
         } else {
           return true;

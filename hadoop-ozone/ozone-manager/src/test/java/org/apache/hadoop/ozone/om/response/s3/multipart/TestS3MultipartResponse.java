@@ -46,7 +46,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 /**
  * Base test class for S3 MPU response.
@@ -113,8 +113,7 @@ public class TestS3MultipartResponse {
         .setAbortMultiPartUploadResponse(
             MultipartUploadAbortResponse.newBuilder().build()).build();
 
-    return new S3MultipartUploadAbortResponse(multipartKey, timeStamp,
-            omMultipartKeyInfo,
+    return new S3MultipartUploadAbortResponse(multipartKey, omMultipartKeyInfo,
             omResponse);
   }
 

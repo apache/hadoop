@@ -52,13 +52,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Perms;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.slf4j.Logger;
@@ -172,8 +173,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
           LOG.info("Connecting to ZooKeeper with SASL/Kerberos"
               + "and using 'sasl' ACLs");
           String principal = setJaasConfiguration(conf);
-          System.setProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-              JAAS_LOGIN_ENTRY_NAME);
+          System.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
+                             JAAS_LOGIN_ENTRY_NAME);
           System.setProperty("zookeeper.authProvider.1",
               "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
           aclProvider = new SASLOwnerACLProvider(principal);
@@ -221,6 +222,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     String principal =
         config.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL, "").trim();
+    principal = SecurityUtil.getServerPrincipal(principal, "");
     if (principal == null || principal.length() == 0) {
       throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_PRINCIPAL
           + " must be specified");

@@ -181,10 +181,12 @@ public class HddsVolumeChecker {
     final long gap = timer.monotonicNow() - lastAllVolumesCheck;
     if (gap < minDiskCheckGapMs) {
       numSkippedChecks.incrementAndGet();
-      LOG.trace(
-          "Skipped checking all volumes, time since last check {} is less " +
-              "than the minimum gap between checks ({} ms).",
-          gap, minDiskCheckGapMs);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(
+            "Skipped checking all volumes, time since last check {} is less " +
+                "than the minimum gap between checks ({} ms).",
+            gap, minDiskCheckGapMs);
+      }
       return Collections.emptySet();
     }
 
@@ -314,7 +316,9 @@ public class HddsVolumeChecker {
       switch (result) {
       case HEALTHY:
       case DEGRADED:
-        LOG.debug("Volume {} is {}.", volume, result);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Volume {} is {}.", volume, result);
+        }
         markHealthy();
         break;
       case FAILED:

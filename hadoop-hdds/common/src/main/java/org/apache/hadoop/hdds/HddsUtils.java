@@ -423,8 +423,10 @@ public final class HddsUtils {
         InvocationTargetException e) {
 
       // Fallback
-      LOG.trace("Registering MBean {} without additional properties {}",
-          mBeanName, jmxProperties);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Registering MBean {} without additional properties {}",
+            mBeanName, jmxProperties);
+      }
       return MBeans.register(serviceName, mBeanName, mBean);
     }
   }

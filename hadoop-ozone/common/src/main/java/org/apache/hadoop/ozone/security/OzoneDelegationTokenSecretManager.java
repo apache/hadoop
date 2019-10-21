@@ -84,13 +84,16 @@ public class OzoneDelegationTokenSecretManager
    * milliseconds
    * @param dtRemoverScanInterval how often the tokens are scanned for expired
    * tokens in milliseconds
+   * @param certClient certificate client to SCM CA
    */
   public OzoneDelegationTokenSecretManager(OzoneConfiguration conf,
       long tokenMaxLifetime, long tokenRenewInterval,
       long dtRemoverScanInterval, Text service,
-      S3SecretManager s3SecretManager) throws IOException {
+      S3SecretManager s3SecretManager, CertificateClient certClient)
+      throws IOException {
     super(new SecurityConfig(conf), tokenMaxLifetime, tokenRenewInterval,
         service, LOG);
+    setCertClient(certClient);
     currentTokens = new ConcurrentHashMap();
     this.tokenRemoverScanInterval = dtRemoverScanInterval;
     this.s3SecretManager = (S3SecretManagerImpl) s3SecretManager;
@@ -286,8 +289,10 @@ public class OzoneDelegationTokenSecretManager
       String canceller) throws IOException {
     OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(
         token.getIdentifier());
-    LOG.debug("Token cancellation requested for identifier: {}",
-        formatTokenId(id));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Token cancellation requested for identifier: {}",
+          formatTokenId(id));
+    }
 
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner " + formatTokenId(id));

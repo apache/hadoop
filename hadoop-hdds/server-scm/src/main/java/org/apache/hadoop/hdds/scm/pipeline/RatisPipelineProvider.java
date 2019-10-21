@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacem
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
@@ -84,13 +83,15 @@ public class RatisPipelineProvider implements PipelineProvider {
 
   private final ForkJoinPool forkJoinPool = new ForkJoinPool(
       parallelismForPool, factory, null, false);
-
+  private final GrpcTlsConfig tlsConfig;
 
   RatisPipelineProvider(NodeManager nodeManager,
-      PipelineStateManager stateManager, Configuration conf) {
+      PipelineStateManager stateManager, Configuration conf,
+      GrpcTlsConfig tlsConfig) {
     this.nodeManager = nodeManager;
     this.stateManager = stateManager;
     this.conf = conf;
+    this.tlsConfig = tlsConfig;
   }
 
 
@@ -189,7 +190,9 @@ public class RatisPipelineProvider implements PipelineProvider {
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
+    }
     callRatisRpc(pipeline.getNodes(),
         (raftClient, peer) -> {
           RaftClientReply reply = raftClient.groupAdd(group, peer.getId());
@@ -217,8 +220,6 @@ public class RatisPipelineProvider implements PipelineProvider {
         Collections.synchronizedList(new ArrayList<>());
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(conf);
-    final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
-        SecurityConfig(conf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(conf);
     try {

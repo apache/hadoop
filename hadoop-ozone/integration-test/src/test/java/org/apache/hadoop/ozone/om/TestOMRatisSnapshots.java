@@ -26,7 +26,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

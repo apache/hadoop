@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.scm.cli.container;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 
 import picocli.CommandLine.Command;
@@ -47,12 +46,12 @@ public class DeleteSubcommand implements Callable<Void> {
   private boolean force;
 
   @ParentCommand
-  private SCMCLI parent;
+  private ContainerCommands parent;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
-      parent.checkContainerExists(scmClient, containerId);
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
+      parent.getParent().checkContainerExists(scmClient, containerId);
       scmClient.deleteContainer(containerId, force);
       return null;
     }

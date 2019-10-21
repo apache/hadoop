@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -68,7 +67,7 @@ public class RemoveAclBucketHandler extends Handler {
    */
   @Override
   public Void call() throws Exception {
-    Objects.requireNonNull(acl, "New acl to be added not specified.");
+    Objects.requireNonNull(acl, "ACL to be removed not specified.");
     OzoneAddress address = new OzoneAddress(uri);
     address.ensureBucketAddress();
     OzoneClient client = address.createClient(createOzoneConfiguration());
@@ -92,8 +91,8 @@ public class RemoveAclBucketHandler extends Handler {
     boolean result = client.getObjectStore().removeAcl(obj,
         OzoneAcl.parseAcl(acl));
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString("Acl removed successfully: " + result)));
+    System.out.printf("%s%n", "Acl removed successfully: " + result);
+
     client.close();
     return null;
   }

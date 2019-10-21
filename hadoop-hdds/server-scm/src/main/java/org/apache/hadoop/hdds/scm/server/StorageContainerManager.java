@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
@@ -99,7 +100,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.hdds.utils.HddsVersionInfo;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -186,6 +188,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   private SCMSafeModeManager scmSafeModeManager;
   private CertificateServer certificateServer;
+  private GrpcTlsConfig grpcTlsConfig;
 
   private JvmPauseMonitor jvmPauseMonitor;
   private final OzoneConfiguration configuration;
@@ -399,7 +402,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       pipelineManager = configurator.getPipelineManager();
     } else {
       pipelineManager =
-          new SCMPipelineManager(conf, scmNodeManager, eventQueue);
+          new SCMPipelineManager(conf, scmNodeManager, eventQueue,
+              grpcTlsConfig);
     }
 
     if (configurator.getContainerManager() != null) {
@@ -443,8 +447,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @throws AuthenticationException - on Failure
    */
   private void initializeCAnSecurityProtocol(OzoneConfiguration conf,
-                                             SCMConfigurator configurator)
-      throws IOException {
+      SCMConfigurator configurator) throws IOException {
     if(configurator.getCertificateServer() != null) {
       this.certificateServer = configurator.getCertificateServer();
     } else {
@@ -458,6 +461,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         CertificateServer.CAType.SELF_SIGNED_CA);
     securityProtocolServer = new SCMSecurityProtocolServer(conf,
         certificateServer);
+
+    grpcTlsConfig = RatisHelper
+        .createTlsClientConfigForSCM(new SecurityConfig(conf),
+            certificateServer);
   }
 
   /**
@@ -487,10 +494,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   private void loginAsSCMUser(Configuration conf)
       throws IOException, AuthenticationException {
-    LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
-            + "Principal: {}, keytab: {}",
-        conf.get(HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
-        conf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
+              + "Principal: {}, keytab: {}",
+          conf.get(HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
+          conf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
+    }
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals(
         AuthenticationMethod.KERBEROS)) {
@@ -690,10 +699,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
                       ContainerStat stat = removalNotification.getValue();
                       // remove invalid container report
                       metrics.decrContainerStat(stat);
-                      LOG.debug(
-                          "Remove expired container stat entry for datanode: " +
-                              "{}.",
-                          removalNotification.getKey());
+                      if (LOG.isDebugEnabled()) {
+                        LOG.debug("Remove expired container stat entry for " +
+                            "datanode: {}.", removalNotification.getKey());
+                      }
                     }
                   }
                 })

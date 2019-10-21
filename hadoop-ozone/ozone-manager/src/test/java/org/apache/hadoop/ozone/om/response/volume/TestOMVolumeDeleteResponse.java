@@ -27,11 +27,11 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .UserVolumeInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,7 +68,9 @@ public class TestOMVolumeDeleteResponse {
 
     String volumeName = UUID.randomUUID().toString();
     String userName = "user1";
-    VolumeList volumeList = VolumeList.newBuilder()
+    UserVolumeInfo volumeList = UserVolumeInfo.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
@@ -85,7 +87,8 @@ public class TestOMVolumeDeleteResponse {
         new OMVolumeCreateResponse(omVolumeArgs, volumeList, omResponse);
 
     // As we are deleting updated volume list should be empty.
-    VolumeList updatedVolumeList = VolumeList.newBuilder().build();
+    UserVolumeInfo updatedVolumeList = UserVolumeInfo.newBuilder()
+        .setObjectID(1).setUpdateID(1).build();
     OMVolumeDeleteResponse omVolumeDeleteResponse =
         new OMVolumeDeleteResponse(volumeName, userName, updatedVolumeList,
             omResponse);

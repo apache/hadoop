@@ -194,7 +194,8 @@ public class OMFailoverProxyProvider implements
         omProxyInfos.entrySet()) {
       count++;
       rpcAddress =
-          rpcAddress.append(omProxyInfoSet.getValue().toString());
+          rpcAddress.append(
+              omProxyInfoSet.getValue().getDelegationTokenService());
 
       if (omProxyInfos.size() != count) {
         rpcAddress.append(",");
@@ -213,8 +214,10 @@ public class OMFailoverProxyProvider implements
   @Override
   public void performFailover(OzoneManagerProtocolPB currentProxy) {
     int newProxyIndex = incrementProxyIndex();
-    LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
-        newProxyIndex, omNodeIDList.get(newProxyIndex));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
+          newProxyIndex, omNodeIDList.get(newProxyIndex));
+    }
   }
 
   /**

@@ -48,13 +48,17 @@ public class CommandStatusReportHandler implements
     Preconditions.checkNotNull(report);
     List<CommandStatus> cmdStatusList = report.getReport().getCmdStatusList();
     Preconditions.checkNotNull(cmdStatusList);
-    LOGGER.trace("Processing command status report for dn: {}", report
-        .getDatanodeDetails());
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Processing command status report for dn: {}", report
+          .getDatanodeDetails());
+    }
 
     // Route command status to its watchers.
     cmdStatusList.forEach(cmdStatus -> {
-      LOGGER.trace("Emitting command status for id:{} type: {}", cmdStatus
-          .getCmdId(), cmdStatus.getType());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Emitting command status for id:{} type: {}", cmdStatus
+            .getCmdId(), cmdStatus.getType());
+      }
       if (cmdStatus.getType() == SCMCommandProto.Type.deleteBlocksCommand) {
         if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
           publisher.fireEvent(SCMEvents.DELETE_BLOCK_STATUS,

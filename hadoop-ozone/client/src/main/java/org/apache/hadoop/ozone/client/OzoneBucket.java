@@ -556,6 +556,16 @@ public class OzoneBucket extends WithMetadata {
   }
 
   /**
+   * Return with the list of the in-flight multipart uploads.
+   *
+   * @param prefix Optional string to filter for the selected keys.
+   */
+  public OzoneMultipartUploadList listMultipartUploads(String prefix)
+      throws IOException {
+    return proxy.listMultipartUploads(volumeName, getName(), prefix);
+  }
+
+  /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */
   private class KeyIterator implements Iterator<OzoneKey> {

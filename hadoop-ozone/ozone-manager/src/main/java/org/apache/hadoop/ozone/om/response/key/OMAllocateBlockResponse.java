@@ -24,9 +24,11 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for AllocateBlock request.
@@ -36,8 +38,8 @@ public class OMAllocateBlockResponse extends OMClientResponse {
   private final OmKeyInfo omKeyInfo;
   private final long clientID;
 
-  public OMAllocateBlockResponse(OmKeyInfo omKeyInfo,
-      long clientID, OMResponse omResponse) {
+  public OMAllocateBlockResponse(@Nullable OmKeyInfo omKeyInfo,
+      long clientID, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
     this.clientID = clientID;

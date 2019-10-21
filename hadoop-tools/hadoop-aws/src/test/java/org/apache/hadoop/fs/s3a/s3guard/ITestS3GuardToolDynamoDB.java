@@ -160,8 +160,13 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       List<Tag> tags = ddbms.getAmazonDynamoDB().listTagsOfResource(listTagsOfResourceRequest).getTags();
 
       // assert
-      assertEquals(tagMap.size(), tags.size());
+      // table version is always there as a plus one tag.
+      assertEquals(tagMap.size() + 1, tags.size());
       for (Tag tag : tags) {
+        // skip the version marker tag
+        if (tag.getKey().equals(VERSION_MARKER_TAG_NAME)) {
+          continue;
+        }
         Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
       }
       // be sure to clean up - delete table

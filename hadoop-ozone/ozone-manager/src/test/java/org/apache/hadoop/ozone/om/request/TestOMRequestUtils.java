@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -63,8 +64,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
 
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 /**
  * Helper class to test OMClientRequest classes.
@@ -119,7 +120,52 @@ public final class TestOMRequestUtils {
       OMMetadataManager omMetadataManager) throws Exception {
 
 
-    OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
+    OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
+        replicationType, replicationFactor);
+
+    if (openKeyTable) {
+      omMetadataManager.getOpenKeyTable().put(
+          omMetadataManager.getOpenKey(volumeName, bucketName, keyName,
+              clientID), omKeyInfo);
+    } else {
+      omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
+          volumeName, bucketName, keyName), omKeyInfo);
+    }
+
+  }
+
+  /**
+   * Add key entry to key table cache.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param replicationType
+   * @param replicationFactor
+   * @param omMetadataManager
+   */
+  @SuppressWarnings("parameterNumber")
+  public static void addKeyToTableCache(String volumeName,
+      String bucketName,
+      String keyName,
+      HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor,
+      OMMetadataManager omMetadataManager) {
+
+
+    OmKeyInfo omKeyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
+        replicationType, replicationFactor);
+
+    omMetadataManager.getKeyTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getOzoneKey(volumeName, bucketName,
+            keyName)), new CacheValue<>(Optional.of(omKeyInfo),
+            1L));
+
+  }
+
+  private OmKeyInfo createKeyInfo(String volumeName, String bucketName,
+      String keyName, HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor) {
+    return new OmKeyInfo.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -129,18 +175,9 @@ public final class TestOMRequestUtils {
         .setModificationTime(Time.now())
         .setDataSize(1000L)
         .setReplicationType(replicationType)
-        .setReplicationFactor(replicationFactor);
-
-    if (openKeyTable) {
-      omMetadataManager.getOpenKeyTable().put(
-          omMetadataManager.getOpenKey(volumeName, bucketName, keyName,
-              clientID), builder.build());
-    } else {
-      omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
-          volumeName, bucketName, keyName), builder.build());
-    }
-
+        .setReplicationFactor(replicationFactor).build();
   }
+
 
   /**
    * Create OmKeyInfo.
@@ -265,11 +302,15 @@ public final class TestOMRequestUtils {
    */
   public static void addUserToDB(String volumeName, String ownerName,
       OMMetadataManager omMetadataManager) throws Exception {
-    OzoneManagerProtocolProtos.VolumeList volumeList =
-        OzoneManagerProtocolProtos.VolumeList.newBuilder()
-            .addVolumeNames(volumeName).build();
+    OzoneManagerProtocolProtos.UserVolumeInfo userVolumeInfo =
+        OzoneManagerProtocolProtos.UserVolumeInfo
+            .newBuilder()
+            .addVolumeNames(volumeName)
+            .setObjectID(1)
+            .setUpdateID(1)
+            .build();
     omMetadataManager.getUserTable().put(
-        omMetadataManager.getUserKey(ownerName), volumeList);
+        omMetadataManager.getUserKey(ownerName), userVolumeInfo);
   }
 
   /**
@@ -370,10 +411,16 @@ public final class TestOMRequestUtils {
 
     // Delete key from KeyTable and put in DeletedKeyTable
     omMetadataManager.getKeyTable().delete(ozoneKey);
-    String deletedKeyName = OmUtils.getDeletedKeyName(ozoneKey, Time.now());
-    omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
 
-    return deletedKeyName;
+    RepeatedOmKeyInfo repeatedOmKeyInfo =
+        omMetadataManager.getDeletedTable().get(ozoneKey);
+
+    repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(omKeyInfo,
+        repeatedOmKeyInfo);
+
+    omMetadataManager.getDeletedTable().put(ozoneKey, repeatedOmKeyInfo);
+
+    return ozoneKey;
   }
 
   /**

@@ -41,8 +41,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +111,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
     try {
       // TODO to support S3 ACL later.
       acquiredLock =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
               bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -188,13 +188,13 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       omResponse.setCommitMultiPartUploadResponse(
           MultipartCommitUploadPartResponse.newBuilder().setPartName(partName));
       omClientResponse = new S3MultipartUploadCommitPartResponse(multipartKey,
-        openKey, keyArgs.getModificationTime(), omKeyInfo, multipartKeyInfo,
+        openKey, omKeyInfo, multipartKeyInfo,
           oldPartKeyInfo, omResponse.build());
 
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new S3MultipartUploadCommitPartResponse(multipartKey,
-          openKey, keyArgs.getModificationTime(), omKeyInfo, multipartKeyInfo,
+          openKey, omKeyInfo, multipartKeyInfo,
           oldPartKeyInfo, createErrorOMResponse(omResponse, exception));
     } finally {
       if (omClientResponse != null) {
@@ -203,7 +203,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

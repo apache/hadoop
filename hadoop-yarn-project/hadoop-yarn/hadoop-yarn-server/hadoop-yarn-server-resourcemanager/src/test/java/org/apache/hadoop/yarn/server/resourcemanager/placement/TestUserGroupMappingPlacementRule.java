@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.Arrays;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -28,6 +31,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
@@ -51,20 +57,50 @@ public class TestUserGroupMappingPlacementRule {
 
   private void verifyQueueMapping(QueueMapping queueMapping, String inputUser,
       String inputQueue, String expectedQueue, boolean overwrite) throws YarnException {
+    verifyQueueMapping(queueMapping, inputUser, inputQueue, expectedQueue,
+        overwrite, null);
+  }
+
+  private void verifyQueueMapping(QueueMapping queueMapping, String inputUser,
+      String inputQueue, String expectedQueue, boolean overwrite,
+      String expectedParentQueue) throws YarnException {
     Groups groups = new Groups(conf);
     UserGroupMappingPlacementRule rule = new UserGroupMappingPlacementRule(
         overwrite, Arrays.asList(queueMapping), groups);
+    CapacitySchedulerQueueManager queueManager =
+        mock(CapacitySchedulerQueueManager.class);
+    when(queueManager.getQueue("asubgroup2")).thenReturn(mock(CSQueue.class));
+    rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
     ApplicationPlacementContext ctx = rule.getPlacementForApp(asc, inputUser);
-    Assert.assertEquals(expectedQueue,
+    Assert.assertEquals("Queue", expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
+    if (expectedParentQueue != null) {
+      Assert.assertEquals("Parent Queue", expectedParentQueue,
+          ctx.getParentQueue());
+    }
+  }
+
+  @Test
+  public void testSecondaryGroupMapping() throws YarnException {
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%secondary_group"), "a",
+        "asubgroup2");
+
+    // PrimaryGroupMapping.class returns only primary group, no secondary groups
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        PrimaryGroupMapping.class, GroupMappingServiceProvider.class);
+
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%secondary_group"), "a",
+        "default");
   }
 
   @Test
   public void testMapping() throws YarnException {
-    // simple base case for mapping user to queue
+
     verifyQueueMapping(new QueueMapping(MappingType.USER, "a", "q1"), "a", "q1");
     verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup", "q1"),
         "a", "q1");
@@ -72,35 +108,39 @@ public class TestUserGroupMappingPlacementRule {
         "q2");
     verifyQueueMapping(new QueueMapping(MappingType.USER, "%user", "%user"),
         "a", "a");
-    verifyQueueMapping(new QueueMapping(MappingType.USER, "%user",
-        "%primary_group"), "a", "agroup");
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%primary_group"), "a",
+        "agroup");
+    verifyQueueMapping(
+        new QueueMapping(MappingType.USER, "%user", "%user", "%primary_group"),
+        "a", YarnConfiguration.DEFAULT_QUEUE_NAME, "a", false, "agroup");
     verifyQueueMapping(new QueueMapping(MappingType.GROUP, "asubgroup1", "q1"),
         "a", "q1");
     
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
-    verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"),
-        "user", "q2", "q1", true);
+    verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"), "user",
+        "q2", "q1", true);
     
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"),
-        "user", "q2", "q2", false);
+    verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"), "user",
+        "q2", "q2", false);
 
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
-            "%user", "usergroup"),
+    verifyQueueMapping(
+        new QueueMapping(MappingType.GROUP, "usergroup", "%user", "usergroup"),
         "user", "default", "user", false);
 
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
-            "%user", "usergroup"),
+    verifyQueueMapping(
+        new QueueMapping(MappingType.GROUP, "usergroup", "%user", "usergroup"),
         "user", "agroup", "user", true);
 
     //If user specific queue is enabled for a specified group under a given
     // parent queue
-    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup",
-            "%user", "parent1"),
-        "a", "a");
+    verifyQueueMapping(
+        new QueueMapping(MappingType.GROUP, "agroup", "%user", "parent1"), "a",
+        "a");
 
     //If user specific queue is enabled for a specified group without parent
     // queue

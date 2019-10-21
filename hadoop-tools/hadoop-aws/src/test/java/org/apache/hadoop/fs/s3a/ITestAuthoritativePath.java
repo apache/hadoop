@@ -84,14 +84,18 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
 
   private void cleanUpFS(S3AFileSystem fs) {
     // detach from the (shared) metadata store.
-    fs.setMetadataStore(new NullMetadataStore());
+    if (fs != null) {
+      fs.setMetadataStore(new NullMetadataStore());
+    }
 
     IOUtils.cleanupWithLogger(LOG, fs);
   }
 
   @Override
   public void teardown() throws Exception {
-    fullyAuthFS.delete(testRoot, true);
+    if (fullyAuthFS != null) {
+      fullyAuthFS.delete(testRoot, true);
+    }
 
     cleanUpFS(fullyAuthFS);
     cleanUpFS(rawFS);

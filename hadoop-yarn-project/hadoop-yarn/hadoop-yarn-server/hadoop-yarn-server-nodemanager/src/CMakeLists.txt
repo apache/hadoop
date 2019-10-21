@@ -137,6 +137,7 @@ add_library(container
     main/native/container-executor/impl/modules/fpga/fpga-module.c
     main/native/container-executor/impl/modules/devices/devices-module.c
     main/native/container-executor/impl/utils/docker-util.c
+    main/native/container-executor/impl/utils/mount-utils.c
 )
 
 add_executable(container-executor

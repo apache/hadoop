@@ -305,7 +305,9 @@ public class ContainerStateManager {
     pipelineManager.addContainerToPipeline(pipeline.getId(),
         ContainerID.valueof(containerID));
     containerStateCount.incrementAndGet(containerInfo.getState());
-    LOG.trace("New container allocated: {}", containerInfo);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("New container allocated: {}", containerInfo);
+    }
     return containerInfo;
   }
 

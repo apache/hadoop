@@ -27,11 +27,11 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -148,12 +149,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       throws Exception {
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class,
-            new Callable<Integer>() {
-              @Override
-              public Integer call() throws Exception {
-                return run(args);
-              }
-            });
+            () -> run(args));
     if (ex.status != status) {
       throw ex;
     }
@@ -333,6 +329,39 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
         "-seconds", "0",
         testPath.toString());
+    assertNotNull("Command did not create a filesystem",
+        cmd.getFilesystem());
+  }
+
+  /**
+   * HADOOP-16457. In certain cases prune doesn't create an FS.
+   */
+  @Test
+  public void testMaybeInitFilesystem() throws Exception {
+    Path testPath = path("maybeInitFilesystem");
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.maybeInitFilesystem(Collections.singletonList(testPath.toString()));
+    assertNotNull("Command did not create a filesystem",
+        cmd.getFilesystem());
+  }
+
+  /**
+   * HADOOP-16457. In certain cases prune doesn't create an FS.
+   */
+  @Test
+  public void testMaybeInitFilesystemNoPath() throws Exception {
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.maybeInitFilesystem(Collections.emptyList());
+    assertNull("Command should not have created a filesystem",
+        cmd.getFilesystem());
+  }
+
+  @Test
+  public void testPruneCommandNoPath() throws Exception {
+    runToFailure(INVALID_ARGUMENT,
+        S3GuardTool.Prune.NAME,
+        "-" + S3GuardTool.Prune.TOMBSTONE,
+        "-seconds", "0");
   }
 
   @Test
@@ -476,7 +505,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     for (Class<? extends S3GuardTool> tool : tools) {
       S3GuardTool cmdR = makeBindedTool(tool);
       describe("Calling " + cmdR.getName() + " without any arguments.");
-      assertExitCode(S3GuardTool.INVALID_ARGUMENT,
+      assertExitCode(INVALID_ARGUMENT,
           intercept(ExitUtil.ExitException.class,
               () -> cmdR.run(new String[]{tool.getName()})));
     }
@@ -488,7 +517,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     String name = fs.getUri().toString();
     S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
         getConfiguration());
-    if (fs.hasCapability(
+    if (fs.hasPathCapability(fs.getWorkingDirectory(),
         CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER)) {
       // if the FS is magic, expect this to work
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);

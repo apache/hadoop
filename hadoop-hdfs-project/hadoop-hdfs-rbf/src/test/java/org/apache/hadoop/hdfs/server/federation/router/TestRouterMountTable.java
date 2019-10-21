@@ -269,11 +269,11 @@ public class TestRouterMountTable {
       assertTrue(addMountTable(addEntry));
       addEntry = MountTable.newInstance("/testA/testB",
           Collections.singletonMap("ns0", "/testA/testB"));
+      addEntry.setOwnerName("userB");
+      addEntry.setGroupName("groupB");
       assertTrue(addMountTable(addEntry));
       addEntry = MountTable.newInstance("/testB",
           Collections.singletonMap("ns0", "/test1/testB"));
-      addEntry.setOwnerName("userB");
-      addEntry.setGroupName("groupB");
       assertTrue(addMountTable(addEntry));
 
       assertTrue(nnFs0.mkdirs(new Path("/test1")));
@@ -311,6 +311,44 @@ public class TestRouterMountTable {
     assertEquals("groupB", currentGroup);
   }
 
+  @Test
+  public void testListNonExistPath() throws Exception {
+    mountTable.setDefaultNSEnable(false);
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "File /base does not exist.",
+        "Expect FileNotFoundException.",
+        () -> routerFs.listStatus(new Path("/base")));
+  }
+
+  @Test
+  public void testListWhenDisableDefaultMountTable() throws IOException {
+    mountTable.setDefaultNSEnable(false);
+    /**
+     * /base/dir1 -> ns0:/base/dir1
+     * /base/dir2 -> ns0:/base/dir2
+     */
+    assertTrue(addMountTable(createEntry("/base/dir1", "ns0", "/base/dir1",
+        "group2", "owner2", (short) 0750)));
+    assertTrue(addMountTable(createEntry("/base/dir2", "ns0", "/base/dir2",
+        "group3", "owner3", (short) 0755)));
+
+    FileStatus[] list = routerFs.listStatus(new Path("/base"));
+    assertEquals(2, list.length);
+    for (FileStatus status : list) {
+      if (status.getPath().toUri().getPath().equals("/base/dir1")) {
+        assertEquals("group2", status.getGroup());
+        assertEquals("owner2", status.getOwner());
+        assertEquals((short) 0750, status.getPermission().toShort());
+      } else if (status.getPath().toUri().getPath().equals("/base/dir2")) {
+        assertEquals("group3", status.getGroup());
+        assertEquals("owner3", status.getOwner());
+        assertEquals((short) 0755, status.getPermission().toShort());
+      } else {
+        fail("list result should be either /base/dir1 or /base/dir2.");
+      }
+    }
+  }
+
   /**
    * Verify permission for a mount point when the actual destination is not
    * present. It returns the permissions of the mount point.
@@ -328,6 +366,16 @@ public class TestRouterMountTable {
     assertEquals("group1", list[0].getGroup());
     assertEquals("owner1", list[0].getOwner());
     assertEquals((short) 0775, list[0].getPermission().toShort());
+  }
+
+  private MountTable createEntry(String mountPath, String ns, String remotePath,
+      String group, String owner, short permission) throws IOException {
+    MountTable entry = MountTable
+        .newInstance(mountPath, Collections.singletonMap(ns, remotePath));
+    entry.setGroupName(group);
+    entry.setOwnerName(owner);
+    entry.setMode(FsPermission.createImmutable(permission));
+    return entry;
   }
 
   /**

@@ -16,14 +16,28 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
+BASE_DIR="$(pwd -P)"
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/checkstyle"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
+
 mvn -B -fn checkstyle:check -f pom.ozone.xml
 
 #Print out the exact violations with parsing XML results with sed
-find "." -name checkstyle-errors.xml -print0  | xargs -0 sed  '$!N; /<file.*\n<\/file/d;P;D' | sed '/<\/.*/d;/<checkstyle.*/d;s/<error.*line="\([[:digit:]]*\)".*message="\([^"]\+\).*/ \1: \2/;s/<file name="\([^"]*\)".*/\1/;/<\?xml.*>/d'
+find "." -name checkstyle-errors.xml -print0 \
+  | xargs -0 sed '$!N; /<file.*\n<\/file/d;P;D' \
+  | sed \
+      -e '/<\?xml.*>/d' \
+      -e '/<checkstyle.*/d' \
+      -e '/<\/.*/d' \
+      -e 's/<file name="\([^"]*\)".*/\1/' \
+      -e 's/<error.*line="\([[:digit:]]*\)".*message="\([^"]*\)".*/ \1: \2/' \
+      -e "s!^${BASE_DIR}/!!" \
+  | tee "$REPORT_FILE"
 
-violations=$(grep -r error --include checkstyle-errors.xml .| wc -l)
-if [[ $violations -gt 0 ]]; then
-    echo "There are $violations checkstyle violations"
-    exit 1
+## generate counter
+grep -c ':' "$REPORT_FILE" > "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
+   exit 1
 fi
-exit 0

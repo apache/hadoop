@@ -22,17 +22,21 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Status.NO_SUCH_MULTIPART_UPLOAD_ERROR;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Status.OK;
+
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for S3MultipartUploadCommitPart request.
@@ -41,21 +45,19 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
 
   private String multipartKey;
   private String openKey;
-  private long deleteTimeStamp;
   private OmKeyInfo deletePartKeyInfo;
   private OmMultipartKeyInfo omMultipartKeyInfo;
   private OzoneManagerProtocolProtos.PartKeyInfo oldMultipartKeyInfo;
 
 
   public S3MultipartUploadCommitPartResponse(String multipartKey,
-      String openKey, long deleteTimeStamp,
-      OmKeyInfo deletePartKeyInfo, OmMultipartKeyInfo omMultipartKeyInfo,
-      OzoneManagerProtocolProtos.PartKeyInfo oldPartKeyInfo,
-      OMResponse omResponse) {
+      String openKey, @Nullable OmKeyInfo deletePartKeyInfo,
+      @Nullable OmMultipartKeyInfo omMultipartKeyInfo,
+      @Nullable OzoneManagerProtocolProtos.PartKeyInfo oldPartKeyInfo,
+      @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.multipartKey = multipartKey;
     this.openKey = openKey;
-    this.deleteTimeStamp = deleteTimeStamp;
     this.deletePartKeyInfo = deletePartKeyInfo;
     this.omMultipartKeyInfo = omMultipartKeyInfo;
     this.oldMultipartKeyInfo = oldPartKeyInfo;
@@ -65,19 +67,26 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
 
-
     if (getOMResponse().getStatus() == NO_SUCH_MULTIPART_UPLOAD_ERROR) {
       // Means by the time we try to commit part, some one has aborted this
       // multipart upload. So, delete this part information.
+      RepeatedOmKeyInfo repeatedOmKeyInfo =
+          omMetadataManager.getDeletedTable().get(openKey);
+
+      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+          deletePartKeyInfo, repeatedOmKeyInfo);
+
+
       omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-          OmUtils.getDeletedKeyName(openKey, deleteTimeStamp),
-          deletePartKeyInfo);
+          openKey,
+          repeatedOmKeyInfo);
     }
 
     if (getOMResponse().getStatus() == OK) {
 
       // If we have old part info:
       // Need to do 3 steps:
+      //   0. Strip GDPR related metadata from multipart info
       //   1. add old part to delete table
       //   2. Commit multipart info which has information about this new part.
       //   3. delete this new part entry from open key table.
@@ -85,12 +94,20 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       // This means for this multipart upload part upload, we have an old
       // part information, so delete it.
       if (oldMultipartKeyInfo != null) {
-        omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            OmUtils.getDeletedKeyName(oldMultipartKeyInfo.getPartName(),
-                deleteTimeStamp),
-            OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo()));
-      }
+        OmKeyInfo partKey =
+            OmKeyInfo.getFromProtobuf(oldMultipartKeyInfo.getPartKeyInfo());
 
+        RepeatedOmKeyInfo repeatedOmKeyInfo =
+            omMetadataManager.getDeletedTable()
+                .get(oldMultipartKeyInfo.getPartName());
+
+        repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(partKey,
+            repeatedOmKeyInfo);
+
+        omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
+            oldMultipartKeyInfo.getPartName(),
+            repeatedOmKeyInfo);
+      }
 
       omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
           multipartKey, omMultipartKeyInfo);
@@ -99,8 +116,6 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
       //  safely delete part key info from open key table.
       omMetadataManager.getOpenKeyTable().deleteWithBatch(batchOperation,
           openKey);
-
-
     }
   }
 

@@ -204,6 +204,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.leader.num.pending.requests</name>
+    <value>4096</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Maximum number of pending requests after which the leader
+      starts rejecting requests from client.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.replication.level</name>
     <value>MAJORITY</value>
     <tag>OZONE, RATIS</tag>
@@ -1061,39 +1069,6 @@
     </description>
   </property>
 
-  <!--Client Settings-->
-  <property>
-    <name>scm.container.client.idle.threshold</name>
-    <value>10s</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      In the standalone pipelines, the SCM clients use netty to
-      communicate with the container. It also uses connection pooling to
-      reduce client side overheads. This allows a connection to stay idle for
-      a while before the connection is closed.
-    </description>
-  </property>
-  <property>
-    <name>scm.container.client.max.size</name>
-    <value>256</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of connections that we cached via
-      clientconnection pooling. If the number of connection
-      exceed this count then the oldest idle connection is evicted.
-    </description>
-  </property>
-
-  <property>
-    <name>scm.container.client.max.outstanding.requests</name>
-    <value>100</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of outstanding async requests that can be
-      handled by the Standalone as well as Ratis client.
-    </description>
-  </property>
-
   <property>
     <name>ozone.scm.container.creation.lease.timeout</name>
     <value>60s</value>
@@ -1555,6 +1530,17 @@
   </property>
 
   <property>
+    <name>ozone.om.lock.fair</name>
+    <value>false</value>
+    <description>If this is true, the Ozone Manager lock will be used in Fair
+      mode, which will schedule threads in the order received/queued. If this is
+      false, uses non-fair ordering. See
+      java.util.concurrent.locks.ReentrantReadWriteLock
+      for more information on fair/non-fair locks.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.om.ratis.enable</name>
     <value>false</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
@@ -1871,37 +1857,10 @@
     <description>HDDS GRPC server TLS provider.</description>
   </property>
   <property>
-    <name>hdds.client.cert.chain.file.name</name>
-    <value>client.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Client certificate file name. It is an optional
-      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
-      is set to true .</description>
-  </property>
-  <property>
-    <name>hdds.grpc.mutual.tls.required</name>
-    <value>false</value>
-    <tag>OZONE, HDDS, SECURITY, TLS</tag>
-    <description>If mutual tls check is enabled for GRPC.
-    Considered only if hdds.grpc.tls.enabled is set to true.</description>
-  </property>
-  <property>
     <name>hdds.grpc.tls.enabled</name>
     <value>false</value>
     <tag>OZONE, HDDS, SECURITY, TLS</tag>
     <description>If HDDS GRPC server TLS is enabled.</description>
-  </property>
-  <property>
-    <name>hdds.server.cert.chain.file.name</name>
-    <value>server.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Hdds server certificate file name.</description>
-  </property>
-  <property>
-    <name>hdds.trust.cert.collection.file.name</name>
-    <value>ca.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>HDDS Certificate Authority trust store file name.</description>
   </property>
   <property>
     <name>hdds.x509.default.duration</name>

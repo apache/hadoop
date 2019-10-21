@@ -196,6 +196,7 @@
       <item name="Azure Data Lake Storage"
             href="hadoop-azure-datalake/index.html"/>
       <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
+      <item name="Tencent COS" href="hadoop-cos/index.html"/>
     </menu>
 
     <menu name="Auth" inherit="top">

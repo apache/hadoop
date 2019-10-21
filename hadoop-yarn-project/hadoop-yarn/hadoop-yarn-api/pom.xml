@@ -55,6 +55,7 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
     </dependency>
+
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
@@ -117,45 +118,22 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-                <param>${basedir}/src/main/proto/server</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>yarn_protos.proto</include>
-                  <include>yarn_service_protos.proto</include>
-                  <include>applicationmaster_protocol.proto</include>
-                  <include>applicationclient_protocol.proto</include>
-                  <include>containermanagement_protocol.proto</include>
-                  <include>server/yarn_server_resourcemanager_service_protos.proto</include>
-                  <include>server/resourcemanager_administration_protocol.proto</include>
-                  <include>application_history_client.proto</include>
-                  <include>server/application_history_server.proto</include>
-                  <include>client_SCM_protocol.proto</include>
-                  <include>server/SCM_Admin_protocol.proto</include>
-                  <include>yarn_csi_adaptor.proto</include>
-                  <include>YarnCsiAdaptor.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>

@@ -16,21 +16,25 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-FINDBUGS_ALL_FILE=./target/findbugs-all.txt
+if ! type unionBugs >/dev/null 2>&1 || ! type convertXmlToText >/dev/null 2>&1; then
+  mvn -B -fae compile spotbugs:check -f pom.ozone.xml
+  exit $?
+fi
 
-mkdir -p ./target
-rm "$FINDBUGS_ALL_FILE" || true
-touch "$FINDBUGS_ALL_FILE"
+mvn -B -fae compile spotbugs:spotbugs -f pom.ozone.xml
 
-mvn -B compile -fn findbugs:check -Dfindbugs.failOnError=false  -f pom.ozone.xml
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
 
-find hadoop-ozone -name findbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
-find hadoop-hdds -name findbugsXml.xml -print0  | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+touch "$REPORT_FILE"
 
-bugs=$(wc -l < "$FINDBUGS_ALL_FILE")
+find hadoop-hdds hadoop-ozone -name spotbugsXml.xml -print0 | xargs -0 unionBugs -output "${REPORT_DIR}"/summary.xml
+convertXmlToText "${REPORT_DIR}"/summary.xml | tee -a "${REPORT_FILE}"
+convertXmlToText -html:fancy-hist.xsl "${REPORT_DIR}"/summary.xml "${REPORT_DIR}"/summary.html
 
-if [[ ${bugs} -gt 0 ]]; then
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
    exit 1
-else
-   exit 0
 fi

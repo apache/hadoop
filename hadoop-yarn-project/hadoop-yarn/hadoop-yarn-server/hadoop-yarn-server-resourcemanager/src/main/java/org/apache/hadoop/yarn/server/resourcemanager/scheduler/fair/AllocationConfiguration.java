@@ -243,16 +243,32 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     return (maxApps == null) ? userMaxAppsDefault : maxApps;
   }
 
+  public Map<String, Integer> getUserMaxApps() {
+    return userMaxApps;
+  }
+
   @VisibleForTesting
   int getQueueMaxApps(String queue) {
     Integer maxApps = queueMaxApps.get(queue);
     return (maxApps == null) ? queueMaxAppsDefault : maxApps;
   }
 
+  public int getQueueMaxAppsDefault() {
+    return queueMaxAppsDefault;
+  }
+
+  public int getUserMaxAppsDefault() {
+    return userMaxAppsDefault;
+  }
+
   @VisibleForTesting
   float getQueueMaxAMShare(String queue) {
     Float maxAMShare = queueMaxAMShares.get(queue);
     return (maxAMShare == null) ? queueMaxAMShareDefault : maxAMShare;
+  }
+
+  public float getQueueMaxAMShareDefault() {
+    return queueMaxAMShareDefault;
   }
 
   /**

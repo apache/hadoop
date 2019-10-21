@@ -329,6 +329,11 @@ public final class OzoneConfigKeys {
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP;
   public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS;
+  public static final int
+      DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT;
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
   public static final TimeDuration
@@ -447,6 +452,9 @@ public final class OzoneConfigKeys {
   public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
       "ozone.network.topology.aware.read";
   public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
+
+  public static final String OZONE_MANAGER_FAIR_LOCK = "ozone.om.lock.fair";
+  public static final boolean OZONE_MANAGER_FAIR_LOCK_DEFAULT = false;
 
   /**
    * There is no need to instantiate this class.

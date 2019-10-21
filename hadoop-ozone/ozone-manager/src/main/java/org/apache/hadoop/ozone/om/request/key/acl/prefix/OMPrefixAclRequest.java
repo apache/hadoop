@@ -34,8 +34,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.PREFIX_LOCK;
 
@@ -81,7 +81,7 @@ public abstract class OMPrefixAclRequest extends OMClientRequest {
       }
 
       lockAcquired =
-          omMetadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
+          omMetadataManager.getLock().acquireWriteLock(PREFIX_LOCK, prefixPath);
 
       omPrefixInfo = omMetadataManager.getPrefixTable().get(prefixPath);
 
@@ -128,7 +128,7 @@ public abstract class OMPrefixAclRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (lockAcquired) {
-        omMetadataManager.getLock().releaseLock(PREFIX_LOCK,
+        omMetadataManager.getLock().releaseWriteLock(PREFIX_LOCK,
             getOzoneObj().getPath());
       }
     }

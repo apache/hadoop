@@ -292,10 +292,13 @@ static int loadPmdkLib(JNIEnv *env) {
   if (mid == 0) {
     return 0;
   }
+
   if (strlen(errMsg) > 0) {
+    // Set PMDK support state to 1 which represents PMDK_LIB_NOT_FOUND.
     (*env)->CallStaticVoidMethod(env, clazz, mid, 1);
     return 0;
   }
+  // Set PMDK support state to 0 which represents SUPPORTED.
   (*env)->CallStaticVoidMethod(env, clazz, mid, 0);
   return 1;
 }
@@ -1620,7 +1623,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_pm
     char msg[1000];
     succeed = pmdkLoader->pmem_msync(address, length);
     // succeed = -1 failure
-    if (succeed = -1) {
+    if (succeed == -1) {
       snprintf(msg, sizeof(msg), "Failed to msync region. address: %x, length: %x, error msg: %s", address, length, pmem_errormsg());
       THROW(env, "java/io/IOException", msg);
       return;
@@ -1631,6 +1634,15 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_pm
   #endif
   }
 
+JNIEXPORT jstring JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_getPmdkLibPath
+  (JNIEnv * env, jclass thisClass) {
+    jstring libpath = NULL;
+
+    #ifdef HADOOP_PMDK_LIBRARY
+      libpath = (*env)->NewStringUTF(env, HADOOP_PMDK_LIBRARY);
+    #endif
+    return libpath;
+  }
 
 #ifdef __cplusplus
 }

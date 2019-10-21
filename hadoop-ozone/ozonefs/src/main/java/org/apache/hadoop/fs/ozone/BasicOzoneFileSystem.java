@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -376,7 +375,11 @@ public class BasicOzoneFileSystem extends FileSystem {
       }
     }
     RenameIterator iterator = new RenameIterator(src, dst);
-    return iterator.iterate();
+    boolean result = iterator.iterate();
+    if (result) {
+      createFakeParentDirectory(src);
+    }
+    return result;
   }
 
   private class DeleteIterator extends OzoneListingIterator {
@@ -422,7 +425,9 @@ public class BasicOzoneFileSystem extends FileSystem {
       DeleteIterator iterator = new DeleteIterator(f, recursive);
       return iterator.iterate();
     } catch (FileNotFoundException e) {
-      LOG.debug("Couldn't delete {} - does not exist", f);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't delete {} - does not exist", f);
+      }
       return false;
     }
   }
@@ -461,10 +466,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     if (result) {
       // If this delete operation removes all files/directories from the
       // parent direcotry, then an empty parent directory must be created.
-      Path parent = f.getParent();
-      if (parent != null && !parent.isRoot()) {
-        createFakeDirectoryIfNecessary(parent);
-      }
+      createFakeParentDirectory(f);
     }
 
     return result;
@@ -475,6 +477,19 @@ public class BasicOzoneFileSystem extends FileSystem {
    * other child of this parent directory exists.
    *
    * @param f path to the fake parent directory
+   * @throws IOException
+   */
+  private void createFakeParentDirectory(Path f) throws IOException {
+    Path parent = f.getParent();
+    if (parent != null && !parent.isRoot()) {
+      createFakeDirectoryIfNecessary(parent);
+    }
+  }
+
+  /**
+   * Create a fake directory key if it does not already exist.
+   *
+   * @param f path to the fake directory
    * @throws IOException
    */
   private void createFakeDirectoryIfNecessary(Path f) throws IOException {
