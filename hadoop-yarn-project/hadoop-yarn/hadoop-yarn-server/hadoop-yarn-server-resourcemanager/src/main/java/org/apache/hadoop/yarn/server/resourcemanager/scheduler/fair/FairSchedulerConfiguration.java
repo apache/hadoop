@@ -86,7 +86,7 @@ public class FairSchedulerConfiguration extends Configuration {
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
   /**
-   * Used during FS->CS conversion. When enabled, background threads are
+   * Used during FS-&gt;CS conversion. When enabled, background threads are
    * not started. This property should NOT be used by end-users!
    */
   public static final String MIGRATION_MODE = CONF_PREFIX + "migration.mode";
