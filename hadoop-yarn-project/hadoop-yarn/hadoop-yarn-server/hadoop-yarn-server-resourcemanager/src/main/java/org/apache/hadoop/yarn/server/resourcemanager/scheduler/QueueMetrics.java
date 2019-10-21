@@ -465,7 +465,7 @@ public class QueueMetrics implements MetricsSource {
       2; i < resources.length; i++) {
       ResourceInformation resource =
         resources[i];
-      customResources.put(resource.getName(), new Long(0));
+      customResources.put(resource.getName(), Long.valueOf(0));
     }
 
     registerCustomResources(customResources, ALLOCATED_RESOURCE_METRIC_PREFIX,
