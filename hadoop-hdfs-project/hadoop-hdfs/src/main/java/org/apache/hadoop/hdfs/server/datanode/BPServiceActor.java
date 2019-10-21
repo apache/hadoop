@@ -776,11 +776,16 @@ class BPServiceActor implements Runnable {
       } catch(EOFException e) {  // namenode might have just restarted
         LOG.info("Problem connecting to server: " + nnAddr + " :"
             + e.getLocalizedMessage());
-        sleepAndLogInterrupts(1000, "connecting to server");
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
-        sleepAndLogInterrupts(1000, "connecting to server");
+      } catch(RemoteException e) {
+        LOG.warn("RemoteException in register", e);
+        throw e;
+      } catch(IOException e) {
+        LOG.warn("Problem connecting to server: " + nnAddr);
       }
+      // Try again in a second
+      sleepAndLogInterrupts(1000, "connecting to server");
     }
     
     LOG.info("Block pool " + this + " successfully registered with NN");
@@ -881,6 +886,15 @@ class BPServiceActor implements Runnable {
       for (DatanodeCommand cmd : cmds) {
         try {
           if (bpos.processCommandFromActor(cmd, this) == false) {
+            return false;
+          }
+        } catch (RemoteException re) {
+          String reClass = re.getClassName();
+          if (UnregisteredNodeException.class.getName().equals(reClass) ||
+              DisallowedDatanodeException.class.getName().equals(reClass) ||
+              IncorrectVersionException.class.getName().equals(reClass)) {
+            LOG.warn(this + " is shutting down", re);
+            shouldServiceRun = false;
             return false;
           }
         } catch (IOException ioe) {
