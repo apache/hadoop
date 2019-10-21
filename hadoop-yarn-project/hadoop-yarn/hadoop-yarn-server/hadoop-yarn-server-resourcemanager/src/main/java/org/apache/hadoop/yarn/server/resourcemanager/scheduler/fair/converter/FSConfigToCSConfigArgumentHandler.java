@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 
 /**
- * Parses arguments passed to the FS->CS converter.
+ * Parses arguments passed to the FS-&gt;CS converter.
  * If the arguments are valid, it calls the converter itself.
  *
  */
