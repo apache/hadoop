@@ -127,6 +127,7 @@ message OpWriteBlockProto {
   repeated bool targetPinnings = 15;
   optional string storageId = 16;
   repeated string targetStorageIds = 17;
+  optional bytes blockAlias = 18;
 }
   
 message OpTransferBlockProto {
@@ -134,6 +135,7 @@ message OpTransferBlockProto {
   repeated DatanodeInfoProto targets = 2;
   repeated StorageTypeProto targetStorageTypes = 3;
   repeated string targetStorageIds = 4;
+  optional bytes blockAlias = 5;
 }
 
 message OpReplaceBlockProto {

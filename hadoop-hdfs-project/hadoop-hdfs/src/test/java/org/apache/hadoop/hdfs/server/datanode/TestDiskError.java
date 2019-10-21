@@ -168,7 +168,7 @@ public class TestDiskError {
         new DatanodeInfo[0], new StorageType[0], null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
         checksum, CachingStrategy.newDefaultStrategy(), false, false,
-        null, null, new String[0]);
+        null, null, new String[0], null);
     out.flush();
 
     // close the connection before sending the content of the block

@@ -175,11 +175,12 @@ class DataStreamer extends Daemon {
     void sendTransferBlock(final DatanodeInfo[] targets,
         final StorageType[] targetStorageTypes,
         final String[] targetStorageIDs,
+        final byte[] blockAlias,
         final Token<BlockTokenIdentifier> blockToken) throws IOException {
       //send the TRANSFER_BLOCK request
       new Sender(out).transferBlock(block.getCurrentBlock(), blockToken,
           dfsClient.clientName, targets, targetStorageTypes,
-          targetStorageIDs);
+          targetStorageIDs, blockAlias);
       out.flush();
       //ack
       BlockOpResponseProto transferResponse = BlockOpResponseProto
@@ -478,6 +479,7 @@ class DataStreamer extends Daemon {
   private volatile DatanodeInfo[] nodes = null; // list of targets for current block
   private volatile StorageType[] storageTypes = null;
   private volatile String[] storageIDs = null;
+  private volatile byte[] blockAlias = null;
   private final ErrorState errorState;
 
   private volatile BlockConstructionStage stage;  // block construction stage
@@ -607,14 +609,16 @@ class DataStreamer extends Daemon {
   }
 
   private void setPipeline(LocatedBlock lb) {
-    setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
+    setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs(),
+        lb.getBlockAlias());
   }
 
   private void setPipeline(DatanodeInfo[] nodes, StorageType[] storageTypes,
-                           String[] storageIDs) {
+                           String[] storageIDs, byte[] blockAlias) {
     this.nodes = nodes;
     this.storageTypes = storageTypes;
     this.storageIDs = storageIDs;
+    this.blockAlias = blockAlias;
   }
 
   /**
@@ -639,7 +643,7 @@ class DataStreamer extends Daemon {
     this.setName("DataStreamer for file " + src);
     closeResponder();
     closeStream();
-    setPipeline(null, null, null);
+    setPipeline(null, null, null, null);
     stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
   }
 
@@ -1354,6 +1358,7 @@ class DataStreamer extends Daemon {
     final DatanodeInfo[] original = nodes;
     final StorageType[] originalTypes = storageTypes;
     final String[] originalIDs = storageIDs;
+    final byte[] originalBlockAlias = blockAlias;
     IOException caughtException = null;
     ArrayList<DatanodeInfo> exclude = new ArrayList<>(failed);
     while (tried < 3) {
@@ -1405,14 +1410,14 @@ class DataStreamer extends Daemon {
 
       try {
         transfer(src, targets, targetStorageTypes, targetStorageIDs,
-            lb.getBlockToken());
+            lb.getBlockAlias(), lb.getBlockToken());
       } catch (IOException ioe) {
         DFSClient.LOG.warn("Error transferring data from " + src + " to " +
             nodes[d] + ": " + ioe.getMessage());
         caughtException = ioe;
         // add the allocated node to the exclude list.
         exclude.add(nodes[d]);
-        setPipeline(original, originalTypes, originalIDs);
+        setPipeline(original, originalTypes, originalIDs, originalBlockAlias);
         tried++;
         continue;
       }
@@ -1437,6 +1442,7 @@ class DataStreamer extends Daemon {
   private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
                         final StorageType[] targetStorageTypes,
                         final String[] targetStorageIDs,
+                        final byte[] targetBlockAlias,
                         final Token<BlockTokenIdentifier> blockToken)
       throws IOException {
     //transfer replica to the new datanode
@@ -1450,7 +1456,7 @@ class DataStreamer extends Daemon {
         streams = new StreamerStreams(src, writeTimeout, readTimeout,
             blockToken);
         streams.sendTransferBlock(targets, targetStorageTypes,
-            targetStorageIDs, blockToken);
+            targetStorageIDs, targetBlockAlias, blockToken);
         return;
       } catch (InvalidEncryptionKeyException e) {
         policy.recordFailure(e);
@@ -1478,12 +1484,12 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return;
     }
-    setupPipelineInternal(nodes, storageTypes, storageIDs);
+    setupPipelineInternal(nodes, storageTypes, storageIDs, blockAlias);
   }
 
   protected void setupPipelineInternal(DatanodeInfo[] datanodes,
-      StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
-      throws IOException {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs,
+      byte[] nodeBlockAlias) throws IOException {
     boolean success = false;
     long newGS = 0L;
     while (!success && !streamerClosed && dfsClient.clientRunning) {
@@ -1504,8 +1510,8 @@ class DataStreamer extends Daemon {
       accessToken = lb.getBlockToken();
 
       // set up the pipeline again with the remaining nodes
-      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
-          isRecovery);
+      success = createBlockOutputStream(nodes, storageTypes, storageIDs,
+          blockAlias, newGS, isRecovery);
 
       failPacket4Testing();
 
@@ -1582,7 +1588,7 @@ class DataStreamer extends Daemon {
       final String[] newStorageIDs = new String[newnodes.length];
       arraycopy(storageIDs, newStorageIDs, badNodeIndex);
 
-      setPipeline(newnodes, newStorageTypes, newStorageIDs);
+      setPipeline(newnodes, newStorageTypes, newStorageIDs, blockAlias);
 
       errorState.adjustState4RestartingNode();
       lastException.clear();
@@ -1657,6 +1663,7 @@ class DataStreamer extends Daemon {
     DatanodeInfo[] nodes;
     StorageType[] nextStorageTypes;
     String[] nextStorageIDs;
+    byte[] nextBlockAlias;
     int count = dfsClient.getConf().getNumBlockWriteRetry();
     boolean success;
     final ExtendedBlock oldBlock = block.getCurrentBlock();
@@ -1674,10 +1681,11 @@ class DataStreamer extends Daemon {
       nodes = lb.getLocations();
       nextStorageTypes = lb.getStorageTypes();
       nextStorageIDs = lb.getStorageIDs();
+      nextBlockAlias = lb.getBlockAlias();
 
       // Connect to first DataNode in the list.
       success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs,
-          0L, false);
+          nextBlockAlias, 0L, false);
 
       if (!success) {
         LOG.warn("Abandoning " + block);
@@ -1701,7 +1709,7 @@ class DataStreamer extends Daemon {
   //
   boolean createBlockOutputStream(DatanodeInfo[] nodes,
       StorageType[] nodeStorageTypes, String[] nodeStorageIDs,
-      long newGS, boolean recoveryFlag) {
+      byte[] nodeBlockAlias, long newGS, boolean recoveryFlag) {
     if (nodes.length == 0) {
       LOG.info("nodes are empty for write pipeline of " + block);
       return false;
@@ -1755,7 +1763,7 @@ class DataStreamer extends Daemon {
             nodes.length, block.getNumBytes(), bytesSent, newGS,
             checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
             (targetPinnings != null && targetPinnings[0]), targetPinnings,
-            nodeStorageIDs[0], nodeStorageIDs);
+            nodeStorageIDs[0], nodeStorageIDs, nodeBlockAlias);
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(

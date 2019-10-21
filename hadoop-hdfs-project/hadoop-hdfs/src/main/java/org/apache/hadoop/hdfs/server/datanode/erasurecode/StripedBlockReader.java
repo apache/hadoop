@@ -112,7 +112,7 @@ class StripedBlockReader {
           stripedReader.getSocketAddress4Transfer(source);
       Token<BlockTokenIdentifier> blockToken = datanode.getBlockAccessToken(
           block, EnumSet.of(BlockTokenIdentifier.AccessMode.READ),
-          StorageType.EMPTY_ARRAY, new String[0]);
+          StorageType.EMPTY_ARRAY, new String[0], new byte[0]);
         /*
          * This can be further improved if the replica is local, then we can
          * read directly from DN and need to check the replica is FINALIZED

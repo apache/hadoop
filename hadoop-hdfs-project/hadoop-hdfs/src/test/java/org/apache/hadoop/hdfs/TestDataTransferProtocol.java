@@ -187,7 +187,7 @@ public class TestDataTransferProtocol {
       String description, Boolean eofExcepted) throws IOException {
     sendBuf.reset();
     recvBuf.reset();
-    writeBlock(block, stage, newGS, DEFAULT_CHECKSUM);
+    writeBlock(block, stage, newGS, DEFAULT_CHECKSUM, null);
     if (eofExcepted) {
       sendResponse(Status.ERROR, null, null, recvOut);
       sendRecvData(description, true);
@@ -330,7 +330,7 @@ public class TestDataTransferProtocol {
       cluster.shutdown();
     }
   }
-  
+
   @Test  
   public void testDataTransferProtocol() throws IOException {
     Random random = new Random();
@@ -378,14 +378,14 @@ public class TestDataTransferProtocol {
     DataChecksum badChecksum = Mockito.spy(DEFAULT_CHECKSUM);
     Mockito.doReturn(-1).when(badChecksum).getBytesPerChecksum();
 
-    writeBlock(poolId, newBlockId, badChecksum);
+    writeBlock(poolId, newBlockId, badChecksum, null);
     recvBuf.reset();
     sendResponse(Status.ERROR, null, null, recvOut);
     sendRecvData("wrong bytesPerChecksum while writing", true);
 
     sendBuf.reset();
     recvBuf.reset();
-    writeBlock(poolId, ++newBlockId, DEFAULT_CHECKSUM);
+    writeBlock(poolId, ++newBlockId, DEFAULT_CHECKSUM, null);
 
     PacketHeader hdr = new PacketHeader(
       4,     // size of packet
@@ -405,7 +405,7 @@ public class TestDataTransferProtocol {
     // test for writing a valid zero size block
     sendBuf.reset();
     recvBuf.reset();
-    writeBlock(poolId, ++newBlockId, DEFAULT_CHECKSUM);
+    writeBlock(poolId, ++newBlockId, DEFAULT_CHECKSUM, null);
 
     hdr = new PacketHeader(
       8,     // size of packet
@@ -548,18 +548,19 @@ public class TestDataTransferProtocol {
         .CHECKSUM_OK), newAck.getHeaderFlag(0));
   }
 
-  void writeBlock(String poolId, long blockId, DataChecksum checksum) throws IOException {
+  void writeBlock(String poolId, long blockId, DataChecksum checksum,
+      byte[] blockAlias) throws IOException {
     writeBlock(new ExtendedBlock(poolId, blockId),
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, checksum);
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, checksum, blockAlias);
   }
 
   void writeBlock(ExtendedBlock block, BlockConstructionStage stage,
-      long newGS, DataChecksum checksum) throws IOException {
+      long newGS, DataChecksum checksum, byte[] blockAlias) throws IOException {
     sender.writeBlock(block, StorageType.DEFAULT,
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], new StorageType[1], null, stage,
         0, block.getNumBytes(), block.getNumBytes(), newGS,
         checksum, CachingStrategy.newDefaultStrategy(), false, false,
-        null, null, new String[0]);
+        null, null, new String[0], blockAlias);
   }
 }

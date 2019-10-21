@@ -119,7 +119,7 @@ class StripedBlockWriter {
       Token<BlockTokenIdentifier> blockToken =
           datanode.getBlockAccessToken(block,
               EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
-              new StorageType[]{storageType}, new String[]{storageId});
+              new StorageType[]{storageType}, new String[]{storageId}, null);
 
       long writeTimeout = datanode.getDnConf().getSocketWriteTimeout();
       OutputStream unbufOut = NetUtils.getOutputStream(socket, writeTimeout);
@@ -136,6 +136,7 @@ class StripedBlockWriter {
           DFSUtilClient.getSmallBufferSize(conf)));
       in = new DataInputStream(unbufIn);
 
+      byte[] blockAlias = null; // Striped blocks don't support blockAlias (yet?).
       DatanodeInfo source = new DatanodeInfoBuilder()
           .setNodeID(datanode.getDatanodeId()).build();
       new Sender(out).writeBlock(block, storageType,
@@ -143,7 +144,7 @@ class StripedBlockWriter {
           new StorageType[]{storageType}, source,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0, 0, 0,
           stripedWriter.getChecksum(), stripedWriter.getCachingStrategy(),
-          false, false, null, storageId, new String[]{storageId});
+          false, false, null, storageId, new String[]{storageId}, blockAlias);
 
       targetSocket = socket;
       targetOutputStream = out;

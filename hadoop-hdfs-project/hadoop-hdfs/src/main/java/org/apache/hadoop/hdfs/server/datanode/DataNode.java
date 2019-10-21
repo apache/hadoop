@@ -109,6 +109,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.common.BlockAlias;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -1969,7 +1970,7 @@ public class DataNode extends ReconfigurableBase
       id.readFields(in);
       LOG.debug("Got: {}", id);
       blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode,
-          null, null);
+          null, null, null);
     }
   }
 
@@ -2514,12 +2515,18 @@ public class DataNode extends ReconfigurableBase
         sock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
         sock.setSoTimeout(targets.length * dnConf.socketTimeout);
 
+        // it is for a provided block. I think this will entail adding
+        // BlockAlias to transferBlock() and also to BlockCommand for the
+        // DatanodeProtocol.DNA_TRANSFER command. However, this will only be
+        // relevant for writing provided blocks (and in particular recovery).
+        byte[] blockAlias = null;
+
         //
         // Header info
         //
         Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b,
             EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
-            targetStorageTypes, targetStorageIds);
+            targetStorageTypes, targetStorageIds, blockAlias);
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
@@ -2546,7 +2553,8 @@ public class DataNode extends ReconfigurableBase
             clientname, targets, targetStorageTypes, srcNode,
             stage, 0, 0, 0, 0, blockSender.getChecksum(), cachingStrategy,
             false, false, null, storageId,
-            targetStorageIds);
+            targetStorageIds, blockAlias);
+
 
         // send data & checksum
         blockSender.sendBlock(out, unbufOut, null);
@@ -2599,12 +2607,13 @@ public class DataNode extends ReconfigurableBase
    */
   public Token<BlockTokenIdentifier> getBlockAccessToken(ExtendedBlock b,
       EnumSet<AccessMode> mode,
-      StorageType[] storageTypes, String[] storageIds) throws IOException {
+      StorageType[] storageTypes, String[] storageIds,
+      byte[] blockAlias) throws IOException {
     Token<BlockTokenIdentifier> accessToken = 
         BlockTokenSecretManager.DUMMY_TOKEN;
     if (isBlockTokenEnabled) {
       accessToken = blockPoolTokenSecretManager.generateToken(b, mode,
-          storageTypes, storageIds);
+          storageTypes, storageIds, blockAlias);
     }
     return accessToken;
   }
@@ -2972,7 +2981,7 @@ public class DataNode extends ReconfigurableBase
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
         LOG.debug("Got: {}", id);
         blockPoolTokenSecretManager.checkAccess(id, null, block,
-            BlockTokenIdentifier.AccessMode.READ, null, null);
+            BlockTokenIdentifier.AccessMode.READ, null, null, null);
       }
     }
   }

@@ -164,7 +164,7 @@ public class TestDataXceiverBackwardsCompat {
         anyString(), any(DatanodeInfo.class), any(DataNode.class),
         any(DataChecksum.class), any(CachingStrategy.class),
         ArgumentCaptor.forClass(Boolean.class).capture(),
-        anyBoolean(), any());
+        anyBoolean(), any(), any());
 
     Token<BlockTokenIdentifier> token = (Token<BlockTokenIdentifier>)mock(
         Token.class);
@@ -205,7 +205,7 @@ public class TestDataXceiverBackwardsCompat {
           checksum,
           CachingStrategy.newDefaultStrategy(),
           false,
-          false, new boolean[0], null, new String[0]);
+          false, new boolean[0], null, new String[0], new byte[0]);
     } catch (Exception e) {
       // Not enough things have been mocked for this to complete without
       // exceptions, but we want to make sure we can at least get as far as

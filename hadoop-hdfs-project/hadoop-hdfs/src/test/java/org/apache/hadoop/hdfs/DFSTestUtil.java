@@ -1086,7 +1086,7 @@ public class DFSTestUtil {
       new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
           dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
           new StorageType[]{StorageType.DEFAULT},
-          new String[0]);
+          new String[0], null);
       out.flush();
 
       return BlockOpResponseProto.parseDelimitedFrom(in);

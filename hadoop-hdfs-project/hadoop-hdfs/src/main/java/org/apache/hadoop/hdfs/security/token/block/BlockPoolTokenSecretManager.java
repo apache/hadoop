@@ -84,14 +84,14 @@ public class BlockPoolTokenSecretManager extends
   /**
    * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier,
    *                String, ExtendedBlock, BlockTokenIdentifier.AccessMode,
-   *                StorageType[], String[])}
+   *                StorageType[], String[], byte[])}
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
       ExtendedBlock block, AccessMode mode,
-      StorageType[] storageTypes, String[] storageIds)
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
       throws InvalidToken {
     get(block.getBlockPoolId()).checkAccess(id, userId, block, mode,
-        storageTypes, storageIds);
+        storageTypes, storageIds, blockAlias);
   }
 
   /**
@@ -129,14 +129,14 @@ public class BlockPoolTokenSecretManager extends
   /**
    * See {@link BlockTokenSecretManager#checkAccess(Token, String,
    *                ExtendedBlock, BlockTokenIdentifier.AccessMode,
-   *                StorageType[], String[])}
+   *                StorageType[], String[], byte[])}
    */
   public void checkAccess(Token<BlockTokenIdentifier> token,
       String userId, ExtendedBlock block, AccessMode mode,
-      StorageType[] storageTypes, String[] storageIds)
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
       throws InvalidToken {
     get(block.getBlockPoolId()).checkAccess(token, userId, block, mode,
-        storageTypes, storageIds);
+        storageTypes, storageIds, blockAlias);
   }
 
   /**
@@ -149,13 +149,13 @@ public class BlockPoolTokenSecretManager extends
 
   /**
    * See {@link BlockTokenSecretManager#generateToken(ExtendedBlock, EnumSet,
-   *  StorageType[], String[])}.
+   *  StorageType[], String[], byte[])}.
    */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock b,
-      EnumSet<AccessMode> of, StorageType[] storageTypes, String[] storageIds)
-      throws IOException {
+      EnumSet<AccessMode> of, StorageType[] storageTypes,
+      String[] storageIds, byte[] blockAlias) throws IOException {
     return get(b.getBlockPoolId()).generateToken(b, of, storageTypes,
-        storageIds);
+        storageIds, blockAlias);
   }
   
   @VisibleForTesting

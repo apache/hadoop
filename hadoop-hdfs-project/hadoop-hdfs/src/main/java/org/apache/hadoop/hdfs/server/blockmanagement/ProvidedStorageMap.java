@@ -35,16 +35,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockAliasProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockAliasType;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileRegionProto;
+import org.apache.hadoop.hdfs.server.common.BlockAlias;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
-import org.apache.hadoop.hdfs.server.common.BlockAlias;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.util.RwLock;
@@ -69,7 +67,7 @@ public class ProvidedStorageMap {
   // limit to a single provider for now
   private RwLock lock;
   private BlockManager bm;
-  private BlockAliasMap aliasMap;
+  private BlockAliasMap<BlockAlias> aliasMap;
 
   private final String storageId;
   private final ProvidedDescriptor providedDescriptor;
@@ -266,30 +264,52 @@ public class ProvidedStorageMap {
       }
 
       int numLocations = locs.size();
+      BlockAliasProto blockAliasProto = null;
       if (isProvidedBlock) {
         // add the first datanode here
         DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
         locs.add(
-            new DatanodeInfoWithStorage(dn, storageId, StorageType.PROVIDED));
+                new DatanodeInfoWithStorage(dn, storageId, StorageType.PROVIDED));
         excludedUUids.add(dn.getDatanodeUuid());
         numLocations++;
         // add more replicas until we reach the defaultReplication
         for (int count = numLocations + 1;
-            count <= defaultReplication && count <= providedDescriptor
-                .activeProvidedDatanodes(); count++) {
+             count <= defaultReplication && count <= providedDescriptor
+                     .activeProvidedDatanodes(); count++) {
           dn = chooseProvidedDatanode(excludedUUids);
           locs.add(new DatanodeInfoWithStorage(
-              dn, storageId, StorageType.PROVIDED));
+                  dn, storageId, StorageType.PROVIDED));
           sids.add(storageId);
           types.add(StorageType.PROVIDED);
           excludedUUids.add(dn.getDatanodeUuid());
         }
+
+        try {
+          BlockAliasMap.Reader<BlockAlias> reader = aliasMap.getReader(null, eb.getBlockPoolId());
+          blockAliasProto = reader.resolve(eb.getLocalBlock())
+                  .map(blockAlias -> {
+                    FileRegion fileRegion = (FileRegion) blockAlias;
+                    ProvidedStorageLocation psl = fileRegion.getProvidedStorageLocation();
+                    FileRegionProto fileRegionProto = FileRegionProto.newBuilder()
+                            .setUri(psl.getPath().toString())
+                            .setOffset(psl.getOffset())
+                            .setLength(psl.getLength())
+                            .setGenStamp(fileRegion.getBlock().getGenerationStamp())
+                            .build();
+                    return BlockAliasProto.newBuilder()
+                            .setFileRegion(fileRegionProto)
+                            .setType(BlockAliasType.FILE_REGION)
+                            .build();
+                  })
+                  .orElse(null);
+
+        } catch (IOException e) {
+          LOG.error("Could not resolve PROVIDED block: {}", e);
+        }
       }
-      return new LocatedBlock(eb,
-          locs.toArray(new DatanodeInfoWithStorage[locs.size()]),
-          sids.toArray(new String[sids.size()]),
-          types.toArray(new StorageType[types.size()]),
-          pos, isCorrupt, null);
+      return new LocatedBlock(eb, locs.toArray(new DatanodeInfoWithStorage[0]), sids.toArray(new String[0]),
+              types.toArray(StorageType.EMPTY_ARRAY), pos, isCorrupt, null,
+              blockAliasProto == null ? null : blockAliasProto.toByteArray());
     }
 
     @Override

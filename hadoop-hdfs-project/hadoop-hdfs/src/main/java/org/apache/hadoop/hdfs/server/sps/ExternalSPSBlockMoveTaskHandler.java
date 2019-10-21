@@ -198,7 +198,7 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
       try {
         accessToken = km.getAccessToken(eb,
             new StorageType[]{blkMovingInfo.getTargetStorageType()},
-            new String[0]);
+            new String[0], new byte[0]);
       } catch (IOException e) {
         // TODO: handle failure retries
         LOG.warn(

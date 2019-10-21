@@ -40,10 +40,7 @@ import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -135,7 +132,7 @@ public class TestDataXceiverLazyPersistHint {
         DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 0),
         CachingStrategy.newDefaultStrategy(),
         lazyPersist,
-        false, null, null, new String[0]);
+        false, null, null, new String[0], null);
   }
 
   // Helper functions to setup the mock objects.
@@ -155,7 +152,7 @@ public class TestDataXceiverLazyPersistHint {
         any(), any(), any(), anyString(), anyString(),
         any(), anyLong(), anyLong(), anyLong(),
         anyString(), any(), any(), any(), any(),
-        captor.capture(), anyBoolean(), any());
+        captor.capture(), anyBoolean(), any(), any());
     doReturn(mock(DataOutputStream.class)).when(xceiverSpy)
         .getBufferedOutputStream();
     return xceiverSpy;

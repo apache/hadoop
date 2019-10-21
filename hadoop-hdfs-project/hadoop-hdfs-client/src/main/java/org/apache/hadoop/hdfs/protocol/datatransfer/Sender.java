@@ -104,16 +104,15 @@ public class Sender implements DataTransferProtocol {
       final boolean sendChecksum,
       final CachingStrategy cachingStrategy) throws IOException {
 
-    OpReadBlockProto proto = OpReadBlockProto.newBuilder()
+    OpReadBlockProto.Builder proto = OpReadBlockProto.newBuilder()
         .setHeader(DataTransferProtoUtil.buildClientHeader(blk, clientName,
             blockToken))
         .setOffset(blockOffset)
         .setLen(length)
         .setSendChecksums(sendChecksum)
-        .setCachingStrategy(getCachingStrategy(cachingStrategy))
-        .build();
+        .setCachingStrategy(getCachingStrategy(cachingStrategy));
 
-    send(out, Op.READ_BLOCK, proto);
+    send(out, Op.READ_BLOCK, proto.build());
   }
 
 
@@ -136,7 +135,8 @@ public class Sender implements DataTransferProtocol {
       final boolean pinning,
       final boolean[] targetPinnings,
       final String storageId,
-      final String[] targetStorageIds) throws IOException {
+      final String[] targetStorageIds,
+      final byte[] blockAlias) throws IOException {
     ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(
         blk, clientName, blockToken);
 
@@ -167,6 +167,10 @@ public class Sender implements DataTransferProtocol {
       proto.setStorageId(storageId);
     }
 
+    if (blockAlias != null) {
+      proto.setBlockAlias(PBHelperClient.getByteString(blockAlias));
+    }
+
     send(out, Op.WRITE_BLOCK, proto.build());
   }
 
@@ -176,18 +180,22 @@ public class Sender implements DataTransferProtocol {
       final String clientName,
       final DatanodeInfo[] targets,
       final StorageType[] targetStorageTypes,
-      final String[] targetStorageIds) throws IOException {
+      final String[] targetStorageIds,
+      final byte[] blockAlias) throws IOException {
 
-    OpTransferBlockProto proto = OpTransferBlockProto.newBuilder()
+    OpTransferBlockProto.Builder proto = OpTransferBlockProto.newBuilder()
         .setHeader(DataTransferProtoUtil.buildClientHeader(
             blk, clientName, blockToken))
         .addAllTargets(PBHelperClient.convert(targets))
         .addAllTargetStorageTypes(
             PBHelperClient.convertStorageTypes(targetStorageTypes))
-        .addAllTargetStorageIds(Arrays.asList(targetStorageIds))
-        .build();
+        .addAllTargetStorageIds(Arrays.asList(targetStorageIds));
 
-    send(out, Op.TRANSFER_BLOCK, proto);
+    if (blockAlias != null) {
+      proto.setBlockAlias(PBHelperClient.getByteString(blockAlias));
+    }
+
+    send(out, Op.TRANSFER_BLOCK, proto.build());
   }
 
   @Override

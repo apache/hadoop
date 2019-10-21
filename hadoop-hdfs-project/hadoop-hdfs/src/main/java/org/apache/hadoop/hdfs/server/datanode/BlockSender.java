@@ -168,7 +168,7 @@ class BlockSender implements java.io.Closeable {
   
   private long lastCacheDropOffset;
   private final FileIoProvider fileIoProvider;
-  
+
   @VisibleForTesting
   static long CACHE_DROP_INTERVAL_BYTES = 1024 * 1024; // 1MB
   

@@ -681,6 +681,13 @@ public class PBHelperClient {
           .toArray(new String[storageIDsCount]);
     }
 
+    final byte[] blockAlias;
+    if (proto.hasBlockAlias() && !proto.getBlockAlias().isEmpty()) {
+      blockAlias = proto.getBlockAlias().toByteArray();
+    } else {
+      blockAlias = null;
+    }
+
     byte[] indices = null;
     if (proto.hasBlockIndices()) {
       indices = proto.getBlockIndices().toByteArray();
@@ -699,7 +706,7 @@ public class PBHelperClient {
     if (indices == null) {
       lb = new LocatedBlock(PBHelperClient.convert(proto.getB()), targets,
           storageIDs, storageTypes, proto.getOffset(), proto.getCorrupt(),
-          cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
+          cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]), blockAlias);
     } else {
       lb = new LocatedStripedBlock(PBHelperClient.convert(proto.getB()),
           targets, storageIDs, storageTypes, indices, proto.getOffset(),
@@ -779,6 +786,7 @@ public class PBHelperClient {
     for (String storageId : blockTokenSecret.getStorageIds()) {
       builder.addStorageIds(storageId);
     }
+    builder.setBlockAlias(getByteString(blockTokenSecret.getBlockAlias()));
     return builder.build();
   }
 
@@ -1069,9 +1077,15 @@ public class PBHelperClient {
       builder.addAllBlockTokens(convert(blockTokens));
     }
 
+    final byte[] blockAlias = b.getBlockAlias();
+    if (blockAlias != null) {
+      builder.setBlockAlias(getByteString(blockAlias));
+    }
+
     return builder.setB(PBHelperClient.convert(b.getBlock()))
         .setBlockToken(PBHelperClient.convert(b.getBlockToken()))
-        .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
+        .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset())
+        .build();
   }
 
   public static List<TokenProto> convert(

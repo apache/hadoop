@@ -252,6 +252,31 @@ message BlockStoragePolicyProto {
   optional StorageTypesProto replicationFallbackPolicy = 5;
 }
 
+/**
+ * The BlockAliasType defines the type of block alias in the LocatedBlock, if it
+ * exists.
+ */
+enum BlockAliasType {
+    FILE_REGION = 1;
+}
+
+/**
+ * A FileRegion gives information about how to retrieve a block from it's
+ * PROVIDED location.
+ */
+message FileRegionProto {
+    optional uint64 blockId = 1;
+    optional string uri = 2;
+    optional uint64 offset = 3;
+    optional uint64 length = 4;
+    optional uint64 genStamp = 5; // Generation Stamp
+    optional bytes nonce = 6;
+}
+
+message BlockAliasProto {
+    required BlockAliasType type = 1;
+    optional FileRegionProto fileRegion = 2;
+}
 
 /**
  * A LocatedBlock gives information about a block and its location.
@@ -272,6 +297,11 @@ message LocatedBlockProto {
   // striped block related fields
   optional bytes blockIndices = 9; // used for striped block to indicate block index for each storage
   repeated hadoop.common.TokenProto blockTokens = 10; // each internal block has a block token
+
+  optional bytes blockAlias = 11; // Block Alias information. This is proxied
+                                  // from the NN to the DN as bytes through the
+                                  // client to allow it to be  forward
+                                  // compatible
 }
 
 message DataEncryptionKeyProto {
@@ -671,4 +701,5 @@ message BlockTokenSecretProto {
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
+  optional bytes blockAlias = 9;
 }

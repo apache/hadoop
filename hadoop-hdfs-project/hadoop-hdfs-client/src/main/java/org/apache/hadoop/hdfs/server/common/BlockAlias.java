@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 
+
 /**
  * Interface used to load provided blocks.
  */
@@ -29,5 +30,4 @@ import org.apache.hadoop.hdfs.protocol.Block;
 public interface BlockAlias {
 
   Block getBlock();
-
 }

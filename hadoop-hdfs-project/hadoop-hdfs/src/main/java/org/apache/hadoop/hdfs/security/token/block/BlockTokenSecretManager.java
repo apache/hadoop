@@ -259,19 +259,22 @@ public class BlockTokenSecretManager extends
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<BlockTokenIdentifier.AccessMode> modes,
-      StorageType[] storageTypes, String[] storageIds) throws IOException {
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
+      throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, block, modes, storageTypes, storageIds);
+    return generateToken(userID, block, modes, storageTypes, storageIds,
+        blockAlias);
   }
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
       ExtendedBlock block, EnumSet<BlockTokenIdentifier.AccessMode> modes,
-      StorageType[] storageTypes, String[] storageIds) throws IOException {
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
+      throws IOException {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes, storageTypes,
-        storageIds, useProto);
+        storageIds, blockAlias, useProto);
     return new Token<BlockTokenIdentifier>(id, this);
   }
 
@@ -285,13 +288,17 @@ public class BlockTokenSecretManager extends
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
       ExtendedBlock block, BlockTokenIdentifier.AccessMode mode,
-      StorageType[] storageTypes, String[] storageIds) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
+      throws InvalidToken {
     checkAccess(id, userId, block, mode);
     if (ArrayUtils.isNotEmpty(storageTypes)) {
       checkAccess(id.getStorageTypes(), storageTypes, "StorageTypes");
     }
     if (ArrayUtils.isNotEmpty(storageIds)) {
       checkAccess(id.getStorageIds(), storageIds, "StorageIDs");
+    }
+    if (blockAlias != null && blockAlias.length > 0) {
+      checkAccessBlockAlias(id.getBlockAlias(), blockAlias);
     }
   }
 
@@ -370,10 +377,32 @@ public class BlockTokenSecretManager extends
     }
   }
 
+  /**
+   * Check if the requested BlockAlias can be satisfied with the value in the
+   * BlockToken. This is distinct from {@see checkAccess(Object[], Object[],
+   * String)}
+   * because
+   * the entire BlockAlias array must always be equal.
+   */
+  public static void checkAccessBlockAlias(byte[] candidate, byte[] requested)
+      throws InvalidToken{
+    if (requested.length == 0) {
+      throw new InvalidToken("The request has no BlockAlias. This is " +
+          "probably a configuration error.");
+    }
+    if (!Arrays.equals(candidate, requested)) {
+      throw new InvalidToken("Block token with BlockAlias "
+          + Arrays.toString(candidate)
+          + "not valid for access with BlockAlias "
+          + Arrays.toString(requested));
+    }
+  }
+
   /** Check if access should be allowed. userID is not checked if null */
   public void checkAccess(Token<BlockTokenIdentifier> token, String userId,
       ExtendedBlock block, BlockTokenIdentifier.AccessMode mode,
-      StorageType[] storageTypes, String[] storageIds) throws InvalidToken {
+      StorageType[] storageTypes, String[] storageIds, byte[] blockAlias)
+      throws InvalidToken {
     BlockTokenIdentifier id = new BlockTokenIdentifier();
     try {
       id.readFields(new DataInputStream(new ByteArrayInputStream(token
@@ -383,7 +412,7 @@ public class BlockTokenSecretManager extends
           "Unable to de-serialize block token identifier for user=" + userId
               + ", block=" + block + ", access mode=" + mode);
     }
-    checkAccess(id, userId, block, mode, storageTypes, storageIds);
+    checkAccess(id, userId, block, mode, storageTypes, storageIds, blockAlias);
     if (!Arrays.equals(retrievePassword(id), token.getPassword())) {
       throw new InvalidToken("Block token with " + id
           + " doesn't have the correct token password");

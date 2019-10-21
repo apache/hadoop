@@ -52,7 +52,8 @@ public class BlockSyncReaderFactory {
     Token<BlockTokenIdentifier> accessToken = dataNode.getBlockAccessToken(
         locatedBlock.getBlock(),
         EnumSet.of(BlockTokenIdentifier.AccessMode.READ),
-        locatedBlock.getStorageTypes(), locatedBlock.getStorageIDs());
+        locatedBlock.getStorageTypes(), locatedBlock.getStorageIDs(),
+        locatedBlock.getBlockAlias());
 
     DatanodeInfo datanodeInfo = locatedBlock.getLocations()[0];
 

@@ -1546,4 +1546,28 @@ public class TestBlockStoragePolicy {
       }
     }
   }
+
+  @Test
+  public void testBlockAliasCheckAccess() {
+    testBlockAliasCheckAccessResult(
+        "hello".getBytes(), "hello".getBytes(), true);
+  }
+  private void testBlockAliasCheckAccessResult(byte[] requested,
+      byte[] allowed, boolean expAccess) {
+    try {
+      BlockTokenSecretManager.checkAccessBlockAlias(requested, allowed);
+      if (!expAccess) {
+        fail("No expected access with allowed BlockAlias"
+            + Arrays.toString(allowed) + " and requested BlockAlias"
+            + Arrays.toString(requested));
+      }
+    } catch (SecretManager.InvalidToken e) {
+      if (expAccess) {
+        fail("Expected access with allowed BlockAlias"
+            + Arrays.toString(allowed) + " and requested BlockAlias"
+            + Arrays.toString(requested));
+      }
+    }
+  }
+
 }
