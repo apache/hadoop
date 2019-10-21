@@ -212,8 +212,7 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
-        if (excludeRoot != null
-            && excludedNode.getNetworkLocation().startsWith(excludedScope)) {
+        if (excludeRoot != null && isNodeInScope(excludedNode, excludedScope)) {
           continue;
         }
         if (excludedNode instanceof DatanodeDescriptor) {
@@ -257,6 +256,14 @@ public class DFSNetworkTopology extends NetworkTopology {
     } while (true);
     LOG.debug("chooseRandom returning {}", chosen);
     return chosen;
+  }
+
+  private boolean isNodeInScope(Node node, String scope) {
+    if (!scope.endsWith("/")) {
+      scope += "/";
+    }
+    String nodeLocation = node.getNetworkLocation() + "/";
+    return nodeLocation.startsWith(scope);
   }
 
   /**
