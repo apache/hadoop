@@ -422,6 +422,18 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testDisableAMPreemption() throws Exception {
+    takeAllResources("root.preemptable.child-1");
+    setNumAMContainersPerNode(2);
+    RMContainer container = greedyApp.getLiveContainers().stream()
+            .filter(rmContainer -> rmContainer.isAMContainer())
+            .findFirst()
+            .get();
+    greedyApp.setEnableAMPreemption(false);
+    assertFalse(greedyApp.canContainerBePreempted(container, null));
+  }
+
+  @Test
   public void testPreemptionBetweenSiblingQueuesWithParentAtFairShare()
       throws InterruptedException {
     // Run this test only for fairshare preemption

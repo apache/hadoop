@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -100,7 +101,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   private final List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
 
-  private boolean enableAMPreemption = false;
+  private boolean enableAMPreemption = FairSchedulerConfiguration.DEFAULT_AM_PREEMPTION;
 
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
@@ -124,7 +125,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
-    this.enableAMPreemption = scheduler.getConf().getAMPreemptionEnabled();
+    if (scheduler.getConf() != null) {
+      // For test
+      this.enableAMPreemption = scheduler.getConf().getAMPreemptionEnabled();
+    }
   }
 
   /**
@@ -1423,5 +1427,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public boolean isPreemptable() {
     return getQueue().isPreemptable();
+  }
+
+  @VisibleForTesting
+  public void setEnableAMPreemption(boolean enableAMPreemption) {
+    this.enableAMPreemption = enableAMPreemption;
   }
 }

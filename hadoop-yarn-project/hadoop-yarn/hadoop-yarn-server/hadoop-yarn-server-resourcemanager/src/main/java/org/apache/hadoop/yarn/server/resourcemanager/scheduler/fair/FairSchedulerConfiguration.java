@@ -158,7 +158,7 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final boolean DEFAULT_PREEMPTION = false;
 
   protected static final String  AM_PREEMPTION = CONF_PREFIX + "am.preemption";
-  protected static final boolean DEFAULT_AM_PREEMPTION = false;
+  protected static final boolean DEFAULT_AM_PREEMPTION = true;
 
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
