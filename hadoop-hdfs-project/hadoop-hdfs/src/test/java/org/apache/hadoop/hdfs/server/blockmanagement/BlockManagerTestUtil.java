@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
@@ -144,13 +143,6 @@ public class BlockManagerTestUtil {
       }
     }
     return domSet.size();
-  }
-
-  /**
-   * @return redundancy monitor thread instance from block manager.
-   */
-  public static Daemon getRedundancyThread(final BlockManager blockManager) {
-    return blockManager.getRedundancyThread();
   }
 
   /**
