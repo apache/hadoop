@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,10 +28,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Semaphore;
 
+import org.apache.hadoop.fs.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,6 +70,7 @@ import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Test race between delete and other operations.  For now only addBlock()
@@ -439,6 +444,73 @@ public class TestDeleteRace {
       }
       if (cluster != null) {
         cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testOpenRenameRace() throws Exception {
+    Configuration config = new Configuration();
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
+    MiniDFSCluster dfsCluster = null;
+    final String src = "/dir/src-file";
+    final String dst = "/dir/dst-file";
+    final DistributedFileSystem hdfs;
+    try {
+      dfsCluster = new MiniDFSCluster.Builder(config).build();
+      dfsCluster.waitActive();
+      final FSNamesystem fsn = dfsCluster.getNamesystem();
+      hdfs = dfsCluster.getFileSystem();
+      DFSTestUtil.createFile(hdfs, new Path(src), 5, (short) 1, 0xFEED);
+      FileStatus status = hdfs.getFileStatus(new Path(src));
+      long accessTime = status.getAccessTime();
+
+      Semaphore openSem = new Semaphore(0);
+      Semaphore renameSem = new Semaphore(0);
+      // 1.hold writeLock.
+      // 2.start open thread.
+      // 3.openSem & yield makes sure open thread wait on readLock.
+      // 4.start rename thread.
+      // 5.renameSem & yield makes sure rename thread wait on writeLock.
+      // 6.release writeLock, it's fair lock so open thread gets read lock.
+      // 7.open thread unlocks, rename gets write lock and does rename.
+      // 8.rename thread unlocks, open thread gets write lock and update time.
+      Thread open = new Thread(() -> {
+        try {
+          openSem.release();
+          fsn.getBlockLocations("foo", src, 0, 5);
+        } catch (IOException e) {
+        }
+      });
+      Thread rename = new Thread(() -> {
+        try {
+          openSem.acquire();
+          renameSem.release();
+          fsn.renameTo(src, dst, false, Options.Rename.NONE);
+        } catch (IOException e) {
+        } catch (InterruptedException e) {
+        }
+      });
+      fsn.writeLock();
+      open.start();
+      openSem.acquire();
+      Thread.yield();
+      openSem.release();
+      rename.start();
+      renameSem.acquire();
+      Thread.yield();
+      fsn.writeUnlock();
+
+      // wait open and rename threads finish.
+      open.join();
+      rename.join();
+
+      status = hdfs.getFileStatus(new Path(dst));
+      assertNotEquals(accessTime, status.getAccessTime());
+      dfsCluster.restartNameNode(0);
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
       }
     }
   }
