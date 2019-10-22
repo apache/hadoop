@@ -589,6 +589,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return DFSUtil.bytes2String(path);
   }
 
+  public boolean isDeleted() {
+    INode pInode = this;
+    while (pInode != null && !pInode.isRoot()) {
+      pInode = pInode.getParent();
+    }
+    if (pInode == null) {
+      return true;
+    } else {
+      return !pInode.isRoot();
+    }
+  }
+
   public byte[][] getPathComponents() {
     int n = 0;
     for (INode inode = this; inode != null; inode = inode.getParent()) {

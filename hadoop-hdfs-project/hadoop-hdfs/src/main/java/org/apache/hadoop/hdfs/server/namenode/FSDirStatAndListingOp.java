@@ -181,7 +181,7 @@ class FSDirStatAndListingOp {
       boolean updateAccessTime = fsd.isAccessTimeSupported()
           && !iip.isSnapshot()
           && now > inode.getAccessTime() + fsd.getAccessTimePrecision();
-      return new GetBlockLocationsResult(updateAccessTime, blocks);
+      return new GetBlockLocationsResult(updateAccessTime, blocks, iip);
     } finally {
       fsd.readUnlock();
     }
@@ -594,13 +594,18 @@ class FSDirStatAndListingOp {
   static class GetBlockLocationsResult {
     final boolean updateAccessTime;
     final LocatedBlocks blocks;
+    private final INodesInPath iip;
     boolean updateAccessTime() {
       return updateAccessTime;
     }
+    public INodesInPath getIIp() {
+      return iip;
+    }
     private GetBlockLocationsResult(
-        boolean updateAccessTime, LocatedBlocks blocks) {
+        boolean updateAccessTime, LocatedBlocks blocks, INodesInPath iip) {
       this.updateAccessTime = updateAccessTime;
       this.blocks = blocks;
+      this.iip = iip;
     }
   }
 }
