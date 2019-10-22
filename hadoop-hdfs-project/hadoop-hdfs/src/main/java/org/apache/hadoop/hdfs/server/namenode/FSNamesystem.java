@@ -1974,12 +1974,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.READ);
     GetBlockLocationsResult res = null;
     final FSPermissionChecker pc = getPermissionChecker();
+    final INode inode;
     try {
       readLock();
       try {
         checkOperation(OperationCategory.READ);
         res = FSDirStatAndListingOp.getBlockLocations(
             dir, pc, srcArg, offset, length, true);
+        inode = res.getIIp().getLastINode();
         if (isInSafeMode()) {
           for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
             // if safemode & no block locations yet then throw safemodeException
@@ -2022,34 +2024,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         final long now = now();
         try {
           checkOperation(OperationCategory.WRITE);
-          /**
-           * Resolve the path again and update the atime only when the file
-           * exists.
-           *
-           * XXX: Races can still occur even after resolving the path again.
-           * For example:
-           *
-           * <ul>
-           *   <li>Get the block location for "/a/b"</li>
-           *   <li>Rename "/a/b" to "/c/b"</li>
-           *   <li>The second resolution still points to "/a/b", which is
-           *   wrong.</li>
-           * </ul>
-           *
-           * The behavior is incorrect but consistent with the one before
-           * HDFS-7463. A better fix is to change the edit log of SetTime to
-           * use inode id instead of a path.
-           */
-          final INodesInPath iip = dir.resolvePath(pc, srcArg, DirOp.READ);
-          src = iip.getPath();
-
-          INode inode = iip.getLastINode();
-          boolean updateAccessTime = inode != null &&
+          boolean updateAccessTime =
               now > inode.getAccessTime() + dir.getAccessTimePrecision();
           if (!isInSafeMode() && updateAccessTime) {
-            boolean changed = FSDirAttrOp.setTimes(dir, iip, -1, now, false);
-            if (changed) {
-              getEditLog().logTimes(src, -1, now);
+            if (!inode.isDeleted()) {
+              src = inode.getFullPathName();
+              final INodesInPath iip = dir.resolvePath(pc, src, DirOp.READ);
+              boolean changed = FSDirAttrOp.setTimes(dir, iip, -1, now, false);
+              if (changed) {
+                getEditLog().logTimes(src, -1, now);
+              }
             }
           }
         } finally {
