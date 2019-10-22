@@ -42,8 +42,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.FileWriter;
-import java.io.File;
 import java.io.BufferedWriter;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -771,48 +771,32 @@ public class TestDistCpSync {
     dfs.rename(staging, prod);
   }
 
-  private void generateFilterFile(String directory, String fileName){
-    File theDir = new File(directory);
-    boolean threwException = false;
-    if (!theDir.exists()) {
-      theDir.mkdir();
-    }
+  private java.nio.file.Path generateFilterFile(String fileName) throws IOException {
+    java.nio.file.Path tmpFile = Files.createTempFile(fileName, "txt");
     String str = ".*\\.staging.*";
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(directory + "/" + fileName));
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tmpFile.toString()))) {
       writer.write(str);
-      writer.close();
-    } catch (IOException e) {
-      threwException = true;
     }
-    Assert.assertFalse(threwException);
+    return tmpFile;
   }
 
-  private void deleteFilterFile(String directory, String fileName) {
-    File theDir = new File(directory);
-    if (!theDir.exists()) {
-      return;
-    }
-    File file = new File(directory + "/" + fileName);
-    if (file.exists()) {
-      file.delete();
-    }
-    theDir.delete();
+  private void deleteFilterFile(java.nio.file.Path filePath) throws IOException {
+    Files.delete(filePath);
   }
 
   @Test
   public void testSync10() throws Exception {
+    java.nio.file.Path filterFile = null;
     try {
       Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
       initData10(sourcePath);
       dfs.allowSnapshot(sourcePath);
       dfs.createSnapshot(sourcePath, "s1");
-      generateFilterFile("/tmp", "filters.txt");
+      filterFile = generateFilterFile("filters");
       final DistCpOptions.Builder builder = new DistCpOptions.Builder(
               new ArrayList<>(Arrays.asList(sourcePath)),
               target)
-              .withFiltersFile("/tmp/filters.txt")
+              .withFiltersFile(filterFile.toString())
               .withSyncFolder(true);
       new DistCp(conf, builder.build()).execute();
 
@@ -825,13 +809,13 @@ public class TestDistCpSync {
               new ArrayList<>(Arrays.asList(sourcePath)),
               target)
               .withUseDiff("s1", "s2")
-              .withFiltersFile("/tmp/filters.txt")
+              .withFiltersFile(filterFile.toString())
               .withSyncFolder(true);
       new DistCp(conf, diffBuilder.build()).execute();
       verifyCopy(dfs.getFileStatus(sourcePath),
               dfs.getFileStatus(target), false);
     } finally {
-      deleteFilterFile("/tmp", "filters.txt");
+      deleteFilterFile(filterFile);
     }
   }
 }

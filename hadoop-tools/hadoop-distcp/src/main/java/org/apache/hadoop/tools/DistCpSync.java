@@ -220,8 +220,8 @@ class DistCpSync {
                 new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
         final Path relativeSource = new Path(Path.SEPARATOR + source);
         if (dt == SnapshotDiffReport.DiffType.MODIFY ||
-                dt == SnapshotDiffReport.DiffType.CREATE ||
-                dt == SnapshotDiffReport.DiffType.DELETE) {
+            dt == SnapshotDiffReport.DiffType.CREATE ||
+            dt == SnapshotDiffReport.DiffType.DELETE) {
           if (copyFilter.shouldCopy(relativeSource)) {
             list.add(new DiffInfo(source, null, dt));
           }
