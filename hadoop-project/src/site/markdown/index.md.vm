@@ -33,9 +33,12 @@ Here is a short overview of the major features and improvements.
         constraints for different types of traffic. See [HDFS-13541](https://issues.apache.org/jira/browse/HDFS-13541)
         for more details.
 
+    *   Cost-based fair call queue. This improves fairness and stability in a large, multi-tenant
+        HDFS cluster. See [HDFS-14403](https://issues.apache.org/jira/browse/HDFS-14403) for more details.
+
 *   YARN
 
-    *   Support for user-defined countable resource types beyond CPU and memory. This was 
+    *   Support for user-defined countable resource types beyond CPU and memory. This was
         ported from the 3.x.y release line. See [YARN-3926](https://issues.apache.org/jira/browse/YARN-3926),
         [YARN-8200](https://issues.apache.org/jira/browse/YARN-8200),
         and the [YARN resource model documentation](./hadoop-yarn/hadoop-yarn-site/ResourceProfiles.html) for
