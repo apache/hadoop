@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -470,6 +471,10 @@ class FSDirRenameOp {
   private static RenameResult renameTo(FSDirectory fsd, FSPermissionChecker pc,
       INodesInPath srcIIP, INodesInPath dstIIP, boolean logRetryCache)
           throws IOException {
+    if(fsd.isNonEmptyDirectory(srcIIP)) {
+      DFSUtil.checkProtectedDescendants(fsd, srcIIP);
+    }
+
     if (fsd.isPermissionEnabled()) {
       // Check write access to parent of src
       fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
