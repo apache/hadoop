@@ -69,6 +69,8 @@ import org.apache.hadoop.fs.cosn.auth.COSCredentialProviderList;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 
+import javax.annotation.Nullable;
+
 /**
  * The class actually performs access operation to the COS blob store.
  * It provides the bridging logic for the Hadoop's abstract filesystem and COS.
@@ -248,6 +250,7 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Nullable
   public PartETag uploadPart(File file, String key, String uploadId,
       int partNum) throws IOException {
     InputStream inputStream = null;
@@ -256,10 +259,10 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
     }
     finally {
       if (inputStream != null) {
-        inputStream.close();
+        return uploadPart(inputStream, key, uploadId, partNum, file.length());
       }
     }
-    return uploadPart(inputStream, key, uploadId, partNum, file.length());
+    return null;
   }
 
   @Override
