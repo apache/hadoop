@@ -62,6 +62,22 @@ with the S3A data, in which case the normal S3 consistency guarantees apply.
 
 ## Setting up S3Guard
 
+### S3A to warn or fail if S3Guard is disabled
+A seemingly recurrent problem with S3Guard is that people think S3Guard is
+turned on but it isn't.
+You can set `org.apache.hadoop.fs.s3a.s3guard.disabled_warn_level`
+to avoid this. The property sets what to do when an S3A FS is instantiated
+without S3Guard. The following values are available:
+
+* `SILENT`: Do nothing.
+* `INFORM`: Log at info level that FS is instantiated without S3Guard.
+* `WARN`: Warn that data may be at risk in workflows.
+* `FAIL`: S3AFileSystem instantiation will fail.
+
+The default setting is INFORM. The setting is case insensitive.
+The required level can be set in the `core-site.xml`.
+
+---
 The latest configuration parameters are defined in `core-default.xml`.  You
 should consult that file for full information, but a summary is provided here.
 

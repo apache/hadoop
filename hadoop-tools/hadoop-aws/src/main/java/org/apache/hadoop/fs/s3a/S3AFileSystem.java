@@ -428,7 +428,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // LOG if S3Guard is disabled on the warn level set in config
       if (!hasMetadataStore()) {
-        String warnLevel = conf.get(S3GUARD_DISABLED_WARN_LEVEL,
+        String warnLevel = conf.getTrimmed(S3GUARD_DISABLED_WARN_LEVEL,
             DEFAULT_S3GUARD_DISABLED_WARN_LEVEL);
         S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
       }

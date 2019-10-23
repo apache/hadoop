@@ -1554,19 +1554,6 @@
 </property>
 
 <property>
-  <name>org.apache.hadoop.fs.s3a.s3guard.disabled_warn_level</name>
-  <value>INFORM</value>
-  <description>
-    Property sets what to do when an S3A FS is instantiated without S3Guard
-
-    SILENT: Do nothing.
-    INFORM: Log FS is instantiated without s3guard
-    WARN: Warn that data may be at risk in workflows.
-    FAIL: S3AFileSystem instantiation will fail.
-  </description>
-</property>
-
-<property>
     <name>fs.s3a.s3guard.cli.prune.age</name>
     <value>86400000</value>
     <description>

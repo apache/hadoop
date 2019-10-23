@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -275,6 +276,12 @@ public class TestS3Guard extends Assert {
         S3Guard.DisabledWarnLevel.INFORM.toString(), "bucket");
     S3Guard.logS3GuardDisabled(localLogger,
         S3Guard.DisabledWarnLevel.WARN.toString(), "bucket");
+
+    // Test that lowercase setting is accepted
+    S3Guard.logS3GuardDisabled(localLogger,
+        S3Guard.DisabledWarnLevel.WARN.toString()
+            .toLowerCase(Locale.US), "bucket");
+
     LambdaTestUtils.intercept(UnsupportedOperationException.class,
         S3Guard.DISABLED_LOG_MSG, () -> S3Guard.logS3GuardDisabled(
             localLogger, S3Guard.DisabledWarnLevel.FAIL.toString(), "bucket"));
