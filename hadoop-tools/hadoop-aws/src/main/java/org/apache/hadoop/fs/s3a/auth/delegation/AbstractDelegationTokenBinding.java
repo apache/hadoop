@@ -129,15 +129,17 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * filesystem has been deployed unbonded.
    * @param policy minimum policy to use, if known.
    * @param encryptionSecrets encryption secrets for the token.
+   * @param renewer the principal permitted to renew the token.
    * @return the token or null if the back end does not want to issue one.
    * @throws IOException if one cannot be created
    */
   public Token<AbstractS3ATokenIdentifier> createDelegationToken(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
     final AbstractS3ATokenIdentifier tokenIdentifier =
-            createTokenIdentifier(policy, encryptionSecrets);
+            createTokenIdentifier(policy, encryptionSecrets, renewer);
     if (tokenIdentifier != null) {
       Token<AbstractS3ATokenIdentifier> token =
           new Token<>(tokenIdentifier, secretManager);
@@ -157,17 +159,19 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * This will only be called if a new DT is needed, that is: the
    * filesystem has been deployed unbonded.
    *
-   * If {@link #createDelegationToken(Optional, EncryptionSecrets)}
+   * If {@link #createDelegationToken(Optional, EncryptionSecrets, Text)}
    * is overridden, this method can be replaced with a stub.
    *
    * @param policy minimum policy to use, if known.
    * @param encryptionSecrets encryption secrets for the token.
+   * @param renewer the principal permitted to renew the token.
    * @return the token data to include in the token identifier.
    * @throws IOException failure creating the token data.
    */
   public abstract AbstractS3ATokenIdentifier createTokenIdentifier(
       Optional<RoleModel.Policy> policy,
-      EncryptionSecrets encryptionSecrets) throws IOException;
+      EncryptionSecrets encryptionSecrets,
+      Text renewer) throws IOException;
 
   /**
    * Verify that a token identifier is of a specific class.
