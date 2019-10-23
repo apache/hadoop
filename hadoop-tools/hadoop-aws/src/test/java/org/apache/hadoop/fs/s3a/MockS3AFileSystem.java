@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Relays FS calls to the mocked FS, allows for some extra logging with
@@ -146,6 +147,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
       throws IOException {
     conf = originalConf;
     writeHelper = new WriteOperationHelper(this, conf);
+  }
+
+  @Override
+  public void close() {
+    cleanupWithLogger(LOG, instrumentation);
   }
 
   @Override
