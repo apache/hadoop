@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.looku
  */
 public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
 
-  protected static final String YARN_RM = "yarn-rm@EXAMPLE";
+  protected static final String YARN_RM = "yarn-rm@EXAMPLE.COM";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractDelegationIT.class);
