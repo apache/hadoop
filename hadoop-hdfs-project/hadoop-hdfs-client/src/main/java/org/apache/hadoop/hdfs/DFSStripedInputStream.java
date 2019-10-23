@@ -560,12 +560,10 @@ public class DFSStripedInputStream extends DFSInputStream {
   public synchronized void unbuffer() {
     closeCurrentBlockReaders();
     if (curStripeBuf != null) {
-      curStripeBuf.clear();
       BUFFER_POOL.putBuffer(curStripeBuf);
       curStripeBuf = null;
     }
     if (parityBuf != null) {
-      parityBuf.clear();
       BUFFER_POOL.putBuffer(parityBuf);
       parityBuf = null;
     }
