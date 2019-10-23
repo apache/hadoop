@@ -101,7 +101,7 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
       intercept(IllegalStateException.class,
           E_NO_ARN,
           () -> delegationTokens2.createDelegationToken(
-              new EncryptionSecrets()));
+              new EncryptionSecrets(), null));
     }
   }
 

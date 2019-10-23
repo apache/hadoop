@@ -110,6 +110,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -3186,7 +3187,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(Statistic.INVOCATION_GET_DELEGATION_TOKEN);
     LOG.debug("Delegation token requested");
     if (delegationTokens.isPresent()) {
-      return delegationTokens.get().getBoundOrNewDT(encryptionSecrets);
+      return delegationTokens.get().getBoundOrNewDT(encryptionSecrets,
+          (renewer != null ? new Text(renewer) : new Text()));
     } else {
       // Delegation token support is not set up
       LOG.debug("Token support is not enabled");
