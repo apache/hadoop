@@ -66,6 +66,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
@@ -256,6 +257,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     assumedRoleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(assumedRoleConfig,
         STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -311,9 +313,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Configuration createAssumedRoleConfig(String roleARN) {
     Configuration conf = newAssumedRoleConfig(getContract().getConf(),
         roleARN);
-    String bucketName = getTestBucketName(conf);
-
-    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE);
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING,
+        ENABLE_MULTI_DELETE);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
     return conf;
   }

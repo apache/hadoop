@@ -53,7 +53,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
-    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+    removeBaseAndBucketOverrides(conf,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
