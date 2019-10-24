@@ -65,7 +65,7 @@ with the S3A data, in which case the normal S3 consistency guarantees apply.
 ### S3A to warn or fail if S3Guard is disabled
 A seemingly recurrent problem with S3Guard is that people think S3Guard is
 turned on but it isn't.
-You can set `org.apache.hadoop.fs.s3a.s3guard.disabled_warn_level`
+You can set `org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level`
 to avoid this. The property sets what to do when an S3A FS is instantiated
 without S3Guard. The following values are available:
 
