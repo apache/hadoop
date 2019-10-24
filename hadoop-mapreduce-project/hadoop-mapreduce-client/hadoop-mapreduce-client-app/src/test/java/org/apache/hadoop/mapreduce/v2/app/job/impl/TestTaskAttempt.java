@@ -1441,8 +1441,9 @@ public class TestTaskAttempt{
 
     taImpl.handle(new TaskAttemptTooManyFetchFailureEvent(taImpl.getID(),
         reduceTAId, "Host"));
-    assertEquals("Task attempt is not in FAILED state", taImpl.getState(),
-        TaskAttemptState.FAILED);
+    assertEquals("Task attempt is not in FAILED state",
+        TaskAttemptState.FAILED,
+        taImpl.getState());
     assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
