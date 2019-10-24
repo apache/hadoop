@@ -380,10 +380,10 @@ public abstract class TaskAttemptImpl implements
       
      // Transitions from SUCCESS_FINISHING_CONTAINER state to FAILED stat
      // When the event TA_TOO_MANY_FETCH_FAILURE received
-      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-         TaskAttemptStateInternal.FAILED,
-         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
-         new TooManyFetchFailureTransition())
+    .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        TaskAttemptStateInternal.FAILED,
+        TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+        new TooManyFetchFailureTransition())
      // Transitions from FAIL_FINISHING_CONTAINER state
      // When the container exits by itself, the notification of container
      // completed event will be routed via NM -> RM -> AM.
