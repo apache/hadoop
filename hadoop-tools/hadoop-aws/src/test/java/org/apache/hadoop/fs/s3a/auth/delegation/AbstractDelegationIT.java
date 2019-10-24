@@ -148,6 +148,8 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
    * @param binding binding to use
    */
   protected void enableDelegationTokens(Configuration conf, String binding) {
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING);
     LOG.info("Enabling delegation token support for {}", binding);
     conf.set(DELEGATION_TOKEN_BINDING, binding);
   }

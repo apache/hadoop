@@ -79,7 +79,6 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     IOUtils.closeStream(fsKeyB);
   }
 
-
   /**
    * This will create and write to a file using encryption key A, then attempt
    * to read from it again with encryption key B.  This will not work as it
