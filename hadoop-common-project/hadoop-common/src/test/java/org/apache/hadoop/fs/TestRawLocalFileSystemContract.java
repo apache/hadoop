@@ -26,6 +26,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.Shell;
 
+import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -145,7 +146,11 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsNIO =
         new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
             file, defaultBlockSize, rfs);
-    fsNIO.loadPermissionInfoByNativeIO();
+    try {
+      fsNIO.loadPermissionInfoByNativeIO();
+    } catch (UnsatisfiedLinkError e) {
+      throw new AssumptionViolatedException("No native library", e);
+    }
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsnonNIO =
         new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
             file, defaultBlockSize, rfs);
