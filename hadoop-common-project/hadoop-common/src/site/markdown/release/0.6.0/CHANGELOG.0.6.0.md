@@ -70,7 +70,7 @@
 | [HADOOP-419](https://issues.apache.org/jira/browse/HADOOP-419) | libdfs doesn't work with application threads |  Major | . | Christian Kunz | Owen O'Malley |
 | [HADOOP-460](https://issues.apache.org/jira/browse/HADOOP-460) | Small jobs benchmark fails with current Hadoop due to UTF8 -\> Text ClassCastException |  Major | . | Sanjay Dahiya |  |
 | [HADOOP-196](https://issues.apache.org/jira/browse/HADOOP-196) | Fix buggy uselessness of Configuration( Configuration other) constructor |  Major | conf | alan wootton |  |
-| [HADOOP-501](https://issues.apache.org/jira/browse/HADOOP-501) | toString(resources, sb) in Configuration.java throws a ClassCastException since resources can be loaded from an URL |  Minor | . | Thomas Friol |  |
+| [HADOOP-501](https://issues.apache.org/jira/browse/HADOOP-501) | toString(resources, sb) in Configuration.java throws a ClassCastException since resources can be loaded from a URL |  Minor | . | Thomas Friol |  |
 | [HADOOP-424](https://issues.apache.org/jira/browse/HADOOP-424) | mapreduce jobs fail when no split is returned via inputFormat.getSplits |  Major | . | Frédéric Bertin |  |
 | [HADOOP-507](https://issues.apache.org/jira/browse/HADOOP-507) | Runtime exception in org.apache.hadoop.io.WritableFactories.newInstance when trying to startup namenode/datanode |  Major | util | Arun C Murthy | Owen O'Malley |
 | [HADOOP-320](https://issues.apache.org/jira/browse/HADOOP-320) | bin/hadoop dfs -mv does not mv  source's checksum file if source is a file |  Major | . | Hairong Kuang | Hairong Kuang |

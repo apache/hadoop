@@ -94,7 +94,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 /**
  * HttpFSServer implementation of the FileSystemAccess FileSystem.
  * <p>
- * This implementation allows a user to access HDFS over HTTP via a HttpFSServer server.
+ * This implementation allows a user to access HDFS over HTTP via an HttpFSServer server.
  */
 @InterfaceAudience.Private
 public class HttpFSFileSystem extends FileSystem

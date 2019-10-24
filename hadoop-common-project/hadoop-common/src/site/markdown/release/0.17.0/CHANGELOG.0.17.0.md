@@ -223,7 +223,7 @@ A contrib package to update an index using Map/Reduce |  Major | . | Ning Li | D
 | [HADOOP-3204](https://issues.apache.org/jira/browse/HADOOP-3204) | LocalFSMerger needs to catch throwable |  Blocker | . | Koji Noguchi | Amar Kamat |
 | [HADOOP-3153](https://issues.apache.org/jira/browse/HADOOP-3153) | [HOD] Hod should deallocate cluster if there's a problem in writing information to the state file |  Major | contrib/hod | Hemanth Yamijala | Vinod Kumar Vavilapalli |
 | [HADOOP-3229](https://issues.apache.org/jira/browse/HADOOP-3229) | Map OutputCollector does not report progress on writes |  Major | . | Alejandro Abdelnur | Doug Cutting |
-| [HADOOP-3225](https://issues.apache.org/jira/browse/HADOOP-3225) | FsShell showing null instead of a error message |  Blocker | . | Tsz Wo Nicholas Sze | Mahadev konar |
+| [HADOOP-3225](https://issues.apache.org/jira/browse/HADOOP-3225) | FsShell showing null instead of an error message |  Blocker | . | Tsz Wo Nicholas Sze | Mahadev konar |
 | [HADOOP-3247](https://issues.apache.org/jira/browse/HADOOP-3247) | gridmix scripts have a few bugs |  Major | test | Runping Qi | Runping Qi |
 | [HADOOP-3242](https://issues.apache.org/jira/browse/HADOOP-3242) | SequenceFileAsBinaryRecordReader seems always to read from the start of a file, not the start of the split. |  Major | . | Runping Qi | Chris Douglas |
 | [HADOOP-3256](https://issues.apache.org/jira/browse/HADOOP-3256) | JobHistory file on HDFS should not use the 'job name' |  Blocker | . | Arun C Murthy | Arun C Murthy |

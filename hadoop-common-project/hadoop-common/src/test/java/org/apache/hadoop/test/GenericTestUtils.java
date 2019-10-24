@@ -222,7 +222,7 @@ public abstract class GenericTestUtils {
 
   /**
    * Generates a process-wide unique sequence number.
-   * @return an unique sequence number
+   * @return a unique sequence number
    */
   public static int uniqueSequenceId() {
     return sequence.incrementAndGet();

@@ -438,7 +438,7 @@ public class TestKMS {
   }
 
   /**
-   * Read in the content from an URL connection.
+   * Read in the content from a URL connection.
    * @param conn URLConnection To read
    * @return the text from the output
    * @throws IOException if something went wrong

@@ -212,9 +212,9 @@ public abstract class View implements Params {
   }
 
   /**
-   * Create an url from url components
+   * Create a url from url components
    * @param parts components to join
-   * @return an url string
+   * @return a url string
    */
   public String root_url(String... parts) {
     return ujoin(root(), parts);
@@ -222,9 +222,9 @@ public abstract class View implements Params {
 
   
   /**
-   * Create an url from url components
+   * Create a url from url components
    * @param parts components to join
-   * @return an url string
+   * @return a url string
    */
   public String url(String... parts) {
     return ujoin(prefix(), parts);

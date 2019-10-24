@@ -205,7 +205,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
   }
 
   /**
-   * Returns if delegation token is transmitted as a HTTP header.
+   * Returns if delegation token is transmitted as an HTTP header.
    *
    * @return <code>TRUE</code> if the token is transmitted in the URL query
    * string, <code>FALSE</code> if the delegation token is transmitted using the

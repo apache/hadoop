@@ -277,7 +277,7 @@ Usage:
 | `-setlevel` *host:port* *classname* *level* [-protocol (http|https)] | Sets the log level of the log identified by a qualified *classname*, in the daemon running at *host:port*.  The `-protocol` flag specifies the protocol for connection. |
 
 Get/Set the log level for a Log identified by a qualified class name in the daemon dynamically.
-By default, the command sends a HTTP request, but this can be overridden by using argument `-protocol https` to send a HTTPS request.
+By default, the command sends an HTTP request, but this can be overridden by using argument `-protocol https` to send an HTTPS request.
 
 Example:
 
@@ -285,7 +285,7 @@ Example:
     $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG -protocol https
 
 Note that the setting is not permanent and will be reset when the daemon is restarted.
-This command works by sending a HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:
+This command works by sending an HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:
 
 * Common
     * key management server

@@ -19,7 +19,7 @@ all the metrics are saved to a prometheus instance, and profiling and Jaeger
 tracing is turned on and set up.
 
 Prometheus follows a pull based approach where the metrics are published
- on a HTTP endpoint.
+ on an HTTP endpoint.
 
 Prometheus compatible metrics endpoint can be enabled by setting `hdds.prometheus.endpoint.enabled` property to `true`
 

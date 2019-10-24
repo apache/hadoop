@@ -119,7 +119,7 @@ public final class ServerUtils {
 
 
   /**
-   * Releases a http connection if the request is not null.
+   * Releases an http connection if the request is not null.
    * @param request
    */
   public static void releaseConnection(HttpRequestBase request) {

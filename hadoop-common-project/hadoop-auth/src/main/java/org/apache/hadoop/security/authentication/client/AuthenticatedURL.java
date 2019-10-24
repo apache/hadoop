@@ -340,7 +340,7 @@ public class AuthenticatedURL {
       throw new IllegalArgumentException("url cannot be NULL");
     }
     if (!url.getProtocol().equalsIgnoreCase("http") && !url.getProtocol().equalsIgnoreCase("https")) {
-      throw new IllegalArgumentException("url must be for a HTTP or HTTPS resource");
+      throw new IllegalArgumentException("url must be for an HTTP or HTTPS resource");
     }
     if (token == null) {
       throw new IllegalArgumentException("token cannot be NULL");

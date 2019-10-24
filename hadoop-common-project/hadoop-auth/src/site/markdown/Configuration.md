@@ -282,7 +282,7 @@ Directory) server. The authentication filter must be configured with the followi
 
 **IMPORTANT**: This configuration supports multiple authentication mechanisms (e.g. kerberos, ldap etc.) together. Please refer to the documentation for each individual scheme for configuration related details.
 
-The multi-scheme authentication mechanism supports multiple authentication mechanisms (e.g. kerberos, ldap etc.) by implementing a HTTP auth negotiation mechanism (Please refer to RFC-2616). For enabling each type of authentication mechanism (e.g. ldap) a corresponding authentication handler must be configured. Please refer to following configuration parameters:
+The multi-scheme authentication mechanism supports multiple authentication mechanisms (e.g. kerberos, ldap etc.) by implementing an HTTP auth negotiation mechanism (Please refer to RFC-2616). For enabling each type of authentication mechanism (e.g. ldap) a corresponding authentication handler must be configured. Please refer to following configuration parameters:
 
 *   `[PREFIX.]type`: The keyword `multi-scheme`.
 

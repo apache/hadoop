@@ -793,7 +793,7 @@ public class RMAdminCLI extends HAAdmin {
       printUsage(cmd, isHAEnabled);
     } catch (RemoteException e) {
       //
-      // This is a error returned by hadoop server. Print
+      // This is an error returned by hadoop server. Print
       // out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       try {

@@ -23,7 +23,7 @@ import org.apache.http.HttpResponse;
 import java.net.URI;
 
 /**
- * Exception raised if a Swift endpoint returned a HTTP response indicating
+ * Exception raised if a Swift endpoint returned an HTTP response indicating
  * the caller is being throttled.
  */
 public class SwiftThrottledRequestException extends

@@ -1604,7 +1604,7 @@ public class DFSUtil {
   }
 
   /**
-   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * Return an HttpServer.Builder that the journalnode / namenode / secondary
    * namenode can use to initialize their HTTP / HTTPS server.
    *
    */

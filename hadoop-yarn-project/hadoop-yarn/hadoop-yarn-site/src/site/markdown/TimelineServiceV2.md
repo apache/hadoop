@@ -659,7 +659,7 @@ predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -743,7 +743,7 @@ predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request or if an invalid field is specified in fields query param, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -813,7 +813,7 @@ while querying individual flow runs.
 
 #### Response Codes
 
-1. If successful, a HTTP 200(OK) response is returned.
+1. If successful, an HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow run for the given flow run id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
@@ -947,7 +947,7 @@ none of the apps match the predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -1066,7 +1066,7 @@ match the predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -1142,7 +1142,7 @@ and app id.
 
 #### Response Codes
 
-1. If successful, a HTTP 200(OK) response is returned.
+1. If successful, an HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or application for the given app id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
@@ -1287,7 +1287,7 @@ If none of the entities match the predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200(OK) response is returned.
+1. If successful, an HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
@@ -1423,7 +1423,7 @@ If none of the entities match the predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200(OK) response is returned.
+1. If successful, an HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -1504,7 +1504,7 @@ container ID. Similarly, application attempt can be queried by specifying entity
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or entity for the given entity id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
@@ -1581,7 +1581,7 @@ If none of the entities match the predicates, an empty list will be returned.
 
 #### Response Codes
 
-1. If successful, a HTTP 200(OK) response is returned.
+1. If successful, an HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
@@ -1618,7 +1618,7 @@ With this API, you can query set of available entity types for a given app id. I
 
 #### Response Codes
 
-1. If successful, a HTTP 200 (OK) response is returned.
+1. If successful, an HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or entity for the given entity id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.

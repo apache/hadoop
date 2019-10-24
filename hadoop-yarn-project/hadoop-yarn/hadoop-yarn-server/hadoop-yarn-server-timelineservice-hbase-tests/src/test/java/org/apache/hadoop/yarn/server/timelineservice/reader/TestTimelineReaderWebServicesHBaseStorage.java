@@ -606,7 +606,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
             (entity.getMetrics().size() == 1)));
       }
 
-      // fields as CONFIGS will lead to a HTTP 400 as it makes no sense for
+      // fields as CONFIGS will lead to an HTTP 400 as it makes no sense for
       // flow runs.
       uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +

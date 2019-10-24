@@ -158,7 +158,7 @@ public class SCMAdmin extends Configured implements Tool {
       printUsage(cmd);
     } catch (RemoteException e) {
       //
-      // This is a error returned by hadoop server. Print
+      // This is an error returned by hadoop server. Print
       // out the first line of the error message, ignore the stack trace.
       try {
         String[] content;

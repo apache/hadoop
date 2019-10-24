@@ -914,7 +914,7 @@ public class HistoryFileManager extends AbstractService {
    * directory.
    * 
    * @throws IOException
-   *           if there was a error while scanning
+   *           if there was an error while scanning
    */
   void scanIntermediateDirectory() throws IOException {
     // TODO it would be great to limit how often this happens, except in the

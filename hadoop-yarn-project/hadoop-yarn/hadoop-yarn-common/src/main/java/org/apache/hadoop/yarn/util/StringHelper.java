@@ -152,7 +152,7 @@ public final class StringHelper {
    * Join url components
    * @param pathPrefix for relative urls
    * @param args url components to join
-   * @return an url string
+   * @return a url string
    */
   public static String ujoin(String pathPrefix, String... args) {
     StringBuilder sb = new StringBuilder();

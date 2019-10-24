@@ -99,8 +99,8 @@ public class ApiServerWebApp extends AbstractService {
   }
 
   private void addFilters(org.apache.hadoop.conf.Configuration conf) {
-    // Always load pseudo authentication filter to parse "user.name" in an URL
-    // to identify a HTTP request's user.
+    // Always load pseudo authentication filter to parse "user.name" in a URL
+    // to identify an HTTP request's user.
     boolean hasHadoopAuthFilterInitializer = false;
     String filterInitializerConfKey = "hadoop.http.filter.initializers";
     Class<?>[] initializersClasses =

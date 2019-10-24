@@ -105,7 +105,7 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
     
-    //start a http server with CountingFilter
+    //start an http server with CountingFilter
     conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         RecordingFilter.Initializer.class.getName());
     HttpServer2 http = createTestServer(conf);

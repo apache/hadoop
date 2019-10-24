@@ -169,7 +169,7 @@ The following properties control OAuth2 authentication.
 SSL Configurations for SWebHDFS
 -------------------------------------------------------
 
-To use SWebHDFS FileSystem (i.e. using the swebhdfs protocol), a SSL configuration
+To use SWebHDFS FileSystem (i.e. using the swebhdfs protocol), an SSL configuration
 file needs to be specified on the client side. This must specify 3 parameters:
 
 | SSL property | Description |
@@ -300,7 +300,7 @@ File and Directory Operations
 
 ### Create and Write to a File
 
-* Step 1: Submit a HTTP PUT request without automatically following redirects and without sending the file data.
+* Step 1: Submit an HTTP PUT request without automatically following redirects and without sending the file data.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATE
                             [&overwrite=<true |false>][&blocksize=<LONG>][&replication=<SHORT>]
@@ -336,7 +336,7 @@ See also: [`overwrite`](#Overwrite), [`blocksize`](#Block_Size), [`replication`]
 
 ### Append to a File
 
-* Step 1: Submit a HTTP POST request without automatically following redirects and without sending the file data.
+* Step 1: Submit an HTTP POST request without automatically following redirects and without sending the file data.
 
         curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=APPEND[&buffersize=<INT>][&noredirect=<true|false>]"
 
@@ -368,7 +368,7 @@ See also: [`buffersize`](#Buffer_Size), [FileSystem](../../api/org/apache/hadoop
 
 ### Concat File(s)
 
-* Submit a HTTP POST request.
+* Submit an HTTP POST request.
 
         curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CONCAT&sources=<PATHS>"
 
@@ -381,7 +381,7 @@ See also: [`sources`](#Sources), [FileSystem](../../api/org/apache/hadoop/fs/Fil
 
 ### Open and Read a File
 
-* Submit a HTTP GET request with automatically following redirects.
+* Submit an HTTP GET request with automatically following redirects.
 
         curl -i -L "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=OPEN
                             [&offset=<LONG>][&length=<LONG>][&buffersize=<INT>][&noredirect=<true|false>]"
@@ -410,7 +410,7 @@ See also: [`offset`](#Offset), [`length`](#Length), [`buffersize`](#Buffer_Size)
 
 ### Make a Directory
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=MKDIRS[&permission=<OCTAL>]"
 
@@ -428,7 +428,7 @@ See also: [`permission`](#Permission), [FileSystem](../../api/org/apache/hadoop/
 
 ### Create a Symbolic Link
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATESYMLINK
                                       &destination=<PATH>[&createParent=<true |false>]"
@@ -442,7 +442,7 @@ See also: [`destination`](#Destination), [`createParent`](#Create_Parent), [File
 
 ### Rename a File/Directory
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "<HOST>:<PORT>/webhdfs/v1/<PATH>?op=RENAME&destination=<PATH>"
 
@@ -458,7 +458,7 @@ See also: [`destination`](#Destination), [FileSystem](../../api/org/apache/hadoo
 
 ### Delete a File/Directory
 
-* Submit a HTTP DELETE request.
+* Submit an HTTP DELETE request.
 
         curl -i -X DELETE "http://<host>:<port>/webhdfs/v1/<path>?op=DELETE
                                       [&recursive=<true |false>]"
@@ -475,7 +475,7 @@ See also: [`recursive`](#Recursive), [FileSystem](../../api/org/apache/hadoop/fs
 
 ### Truncate a File
 
-* Submit a HTTP POST request.
+* Submit an HTTP POST request.
 
         curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=TRUNCATE&newlength=<LONG>"
 
@@ -491,7 +491,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
 
 ### Status of a File/Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILESTATUS"
 
@@ -522,7 +522,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
 
 ### List a Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS"
 
@@ -576,7 +576,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatu
 
 ### List a File
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS"
 
@@ -615,7 +615,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatu
 
 ### Iteratively List a Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=<CHILD>"
 
@@ -747,7 +747,7 @@ Other File System Operations
 
 ### Get Content Summary of a Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETCONTENTSUMMARY"
 
@@ -792,7 +792,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getConten
 
 ### Get Quota Usage of a Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETQUOTAUSAGE"
 
@@ -834,7 +834,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getQuotaU
 
 ### Set Quota
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETQUOTA
                                       &namespacequota=<QUOTA>[&storagespacequota=<QUOTA>]"
@@ -848,7 +848,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setQuota
 
 ### Set Quota By Storage Type
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETQUOTABYSTORAGETYPE
                                       &storagetype=<STORAGETYPE>&storagespacequota=<QUOTA>"
@@ -862,7 +862,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setQuotaB
 
 ### Get File Checksum
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILECHECKSUM"
 
@@ -898,7 +898,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileCh
 
 ### Get Home Directory
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETHOMEDIRECTORY"
 
@@ -914,7 +914,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDi
 
 ### Get Trash Root
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETTRASHROOT"
 
@@ -940,7 +940,7 @@ For more details about trash root in an encrypted zone, please refer to [Transpa
 
 ### Set Permission
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETPERMISSION
                                       [&permission=<OCTAL>]"
@@ -954,7 +954,7 @@ See also: [`permission`](#Permission), [FileSystem](../../api/org/apache/hadoop/
 
 ### Set Owner
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETOWNER
                                       [&owner=<USER>][&group=<GROUP>]"
@@ -968,7 +968,7 @@ See also: [`owner`](#Owner), [`group`](#Group), [FileSystem](../../api/org/apach
 
 ### Set Replication Factor
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETREPLICATION
                                       [&replication=<SHORT>]"
@@ -985,7 +985,7 @@ See also: [`replication`](#Replication), [FileSystem](../../api/org/apache/hadoo
 
 ### Set Access or Modification Time
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETTIMES
                                       [&modificationtime=<TIME>][&accesstime=<TIME>]"
@@ -999,7 +999,7 @@ See also: [`modificationtime`](#Modification_Time), [`accesstime`](#Access_Time)
 
 ### Modify ACL Entries
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=MODIFYACLENTRIES
                                       &aclspec=<ACLSPEC>"
@@ -1013,7 +1013,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).modifyAcl
 
 ### Remove ACL Entries
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEACLENTRIES
                                       &aclspec=<ACLSPEC>"
@@ -1027,7 +1027,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeAcl
 
 ### Remove Default ACL
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEDEFAULTACL"
 
@@ -1040,7 +1040,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeDef
 
 ### Remove ACL
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEACL"
 
@@ -1053,7 +1053,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeAcl
 
 ### Set ACL
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETACL
                                       &aclspec=<ACLSPEC>"
@@ -1067,7 +1067,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setAcl
 
 ### Get ACL Status
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
 
@@ -1094,7 +1094,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAclSta
 
 ### Check access
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
                                       &fsaction=<FSACTION>
@@ -1111,7 +1111,7 @@ Storage Policy Operations
 
 ### Get all Storage Policies
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1?op=GETALLSTORAGEPOLICY"
 
@@ -1179,7 +1179,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAllSto
 
 ### Set Storage Policy
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETSTORAGEPOLICY
                                       &storagepolicy=<policy>"
@@ -1193,7 +1193,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setStorag
 
 ### Unset Storage Policy
 
-* Submit a HTTP POT request.
+* Submit an HTTP POT request.
 
         curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=UNSETSTORAGEPOLICY"
 
@@ -1206,7 +1206,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).unsetStor
 
 ### Get Storage Policy
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSTORAGEPOLICY"
 
@@ -1231,7 +1231,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStorag
 
 ### Satisfy Storage Policy
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SATISFYSTORAGEPOLICY"
 
@@ -1244,7 +1244,7 @@ See also: [ArchivalStorage](./ArchivalStorage.html#Satisfy_Storage_Policy).satis
 
 ### Get File Block Locations
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILEBLOCKLOCATIONS
 
@@ -1290,7 +1290,7 @@ Extended Attributes(XAttrs) Operations
 
 ### Set XAttr
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETXATTR
                                       &xattr.name=<XATTRNAME>&xattr.value=<XATTRVALUE>
@@ -1305,7 +1305,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setXAttr
 
 ### Remove XAttr
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEXATTR
                                       &xattr.name=<XATTRNAME>"
@@ -1319,7 +1319,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeXAt
 
 ### Get an XAttr
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &xattr.name=<XATTRNAME>&encoding=<ENCODING>"
@@ -1343,7 +1343,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttr
 
 ### Get multiple XAttrs
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &xattr.name=<XATTRNAME1>&xattr.name=<XATTRNAME2>
@@ -1372,7 +1372,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs
 
 ### Get all XAttrs
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &encoding=<ENCODING>"
@@ -1404,7 +1404,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs
 
 ### List all XAttrs
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
 
@@ -1425,7 +1425,7 @@ Erasure Coding Operations
 
 ### Enable EC Policy
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=ENABLEECPOLICY
                                       &ecpolicy=<policy>"
@@ -1439,7 +1439,7 @@ See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).
 
 ### Disable EC Policy
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=DISABLEECPOLICY
                                       &ecpolicy=<policy>"
@@ -1453,7 +1453,7 @@ See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).
 
 ### Set EC Policy
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETECPOLICY
                                       &ecpolicy=<policy>"
@@ -1467,7 +1467,7 @@ See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).
 
 ### Get EC Policy
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i -X GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETECPOLICY
                                      "
@@ -1500,7 +1500,7 @@ See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).
 
 ### Unset EC Policy
 
-* Submit a HTTP POST request.
+* Submit an HTTP POST request.
 
         curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=UNSETECPOLICY
                                      "
@@ -1517,7 +1517,7 @@ Snapshot Operations
 
 ### Allow Snapshot
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=ALLOWSNAPSHOT"
 
@@ -1528,7 +1528,7 @@ Snapshot Operations
 
 ### Disallow Snapshot
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DISALLOWSNAPSHOT"
 
@@ -1539,7 +1539,7 @@ Snapshot Operations
 
 ### Create Snapshot
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATESNAPSHOT[&snapshotname=<SNAPSHOTNAME>]"
 
@@ -1555,7 +1555,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).createSna
 
 ### Delete Snapshot
 
-* Submit a HTTP DELETE request.
+* Submit an HTTP DELETE request.
 
         curl -i -X DELETE "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DELETESNAPSHOT&snapshotname=<SNAPSHOTNAME>"
 
@@ -1568,7 +1568,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).deleteSna
 
 ### Rename Snapshot
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=RENAMESNAPSHOT
                            &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>"
@@ -1582,7 +1582,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
 
 ### Get Snapshot Diff
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSNAPSHOTDIFF
                            &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>"
@@ -1597,7 +1597,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
 
 ### Get Snapshottable Directory List
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i GET "http://<HOST>:<PORT>/webhdfs/v1/?user.name=<USER>&op=GETSNAPSHOTTABLEDIRECTORYLIST"
 
@@ -1639,7 +1639,7 @@ Delegation Token Operations
 
 ### Get Delegation Token
 
-* Submit a HTTP GET request.
+* Submit an HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKEN
                     [&renewer=<USER>][&service=<SERVICE>][&kind=<KIND>]"
@@ -1661,7 +1661,7 @@ See also: [`renewer`](#Renewer), [FileSystem](../../api/org/apache/hadoop/fs/Fil
 
 ### Renew Delegation Token
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=<TOKEN>"
 
@@ -1677,7 +1677,7 @@ See also: [`token`](#Token), [DelegationTokenAuthenticator](../../api/org/apache
 
 ### Cancel Delegation Token
 
-* Submit a HTTP PUT request.
+* Submit an HTTP PUT request.
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=CANCELDELEGATIONTOKEN&token=<TOKEN>"
 

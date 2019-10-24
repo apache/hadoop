@@ -3414,7 +3414,7 @@
     BlockPlacementPolicyWithUpgradeDomain. It defines the number of
     unique upgrade domains any block's replicas should have.
     When the number of replicas is less or equal to this value, the policy
-    ensures each replica has an unique upgrade domain. When the number of
+    ensures each replica has a unique upgrade domain. When the number of
     replicas is greater than this value, the policy ensures the number of
     unique domains is at least this value.
   </description>
@@ -5005,7 +5005,7 @@
   <name>dfs.qjournal.http.read.timeout.ms</name>
   <value>60000</value>
   <description>
-    Timeout in milliseconds when reading from a HTTP connection from remote
+    Timeout in milliseconds when reading from an HTTP connection from remote
     journals.
   </description>
 </property>
