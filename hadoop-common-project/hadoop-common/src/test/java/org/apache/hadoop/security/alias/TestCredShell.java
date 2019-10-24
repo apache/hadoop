@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,6 +43,11 @@ public class TestCredShell {
 
   /* The default JCEKS provider - for testing purposes */
   private String jceksProvider;
+
+  private void assertOutputContains(String expected) {
+    Assertions.assertThat(outContent.toString())
+      .contains(expected);
+  }
 
   @Before
   public void setup() throws Exception {
@@ -172,8 +178,7 @@ public class TestCredShell {
     shell.setPasswordReader(new MockPasswordReader(passwords));
     rc = shell.run(args1);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("credential1 has been successfully " +
-        "created."));
+    assertOutputContains("credential1 has been successfully created.");
 
     String[] args2 = {"check", "credential1", "-provider",
         jceksProvider};
@@ -182,22 +187,19 @@ public class TestCredShell {
     shell.setPasswordReader(new MockPasswordReader(password));
     rc = shell.run(args2);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("Password match success " +
-        "for credential1."));
+    assertOutputContains("Password match success for credential1.");
     ArrayList<String> passwordError = new ArrayList<String>();
     passwordError.add("p@ssw0rderr");
     shell.setPasswordReader(new MockPasswordReader(password));
     rc = shell.run(args2);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("Password match failed " +
-        "for credential1."));
+    assertOutputContains("Password match failed for credential1.");
 
     String[] args3 = {"delete", "credential1", "-f", "-provider",
         jceksProvider};
     rc = shell.run(args3);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("credential1 has been successfully " +
-        "deleted."));
+    assertOutputContains("credential1 has been successfully deleted.");
   }
   
   public class MockPasswordReader extends CredentialShell.PasswordReader {
