@@ -377,7 +377,7 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT))
-      
+
      // Transitions from SUCCESS_FINISHING_CONTAINER state to FAILED stat
      // When the event TA_TOO_MANY_FETCH_FAILURE received
     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
