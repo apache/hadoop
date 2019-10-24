@@ -116,6 +116,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
     <shell-executable>bash</shell-executable>
 
+    <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
   </properties>
 
   <modules>
@@ -758,6 +759,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <modules>
         <module>hadoop-submarine</module>
       </modules>
+    </profile>
+    <profile>
+      <id>aarch64</id>
+      <properties>
+        <leveldbjni.group>org.openlabtesting.leveldbjni</leveldbjni.group>
+      </properties>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
     </profile>
 
   </profiles>
