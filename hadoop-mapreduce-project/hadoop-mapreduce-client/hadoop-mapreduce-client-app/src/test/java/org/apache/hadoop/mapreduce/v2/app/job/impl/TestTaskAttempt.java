@@ -1436,8 +1436,8 @@ public class TestTaskAttempt{
 
     assertEquals("Task attempt's internal state is not " +
         "SUCCESS_FINISHING_CONTAINER", 
-	TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-	taImpl.getInternalState());
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptTooManyFetchFailureEvent(taImpl.getID(),
         reduceTAId, "Host"));
