@@ -104,8 +104,6 @@ Maven main modules:
          - hadoop-hdfs-project          (Hadoop HDFS)
          - hadoop-yarn-project          (Hadoop YARN)
          - hadoop-mapreduce-project     (Hadoop MapReduce)
-         - hadoop-ozone                 (Hadoop Ozone)
-         - hadoop-hdds                  (Hadoop Distributed Data Store)
          - hadoop-tools                 (Hadoop tools like Streaming, Distcp, etc.)
          - hadoop-dist                  (Hadoop distribution assembler)
          - hadoop-client-modules        (Hadoop client modules)
