@@ -73,14 +73,12 @@ class FSDirStatAndListingOp {
       }
     }
 
-    boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
       if (iip.getLastINode() != null && iip.getLastINode().isDirectory()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
       }
-      isSuperUser = pc.isSuperUser();
     }
-    return getListing(fsd, iip, startAfter, needLocation, isSuperUser);
+    return getListing(fsd, iip, startAfter, needLocation);
   }
 
   /**
@@ -210,11 +208,10 @@ class FSDirStatAndListingOp {
    *            path
    * @param startAfter the name to start listing after
    * @param needLocation if block locations are returned
-   * @param includeStoragePolicy if storage policy is returned
    * @return a partial listing starting after startAfter
    */
   private static DirectoryListing getListing(FSDirectory fsd, INodesInPath iip,
-      byte[] startAfter, boolean needLocation, boolean includeStoragePolicy)
+      byte[] startAfter, boolean needLocation)
       throws IOException {
     if (FSDirectory.isExactReservedName(iip.getPathComponents())) {
       return getReservedListing(fsd);
@@ -231,9 +228,7 @@ class FSDirStatAndListingOp {
         return null;
       }
 
-      byte parentStoragePolicy = includeStoragePolicy
-          ? targetNode.getStoragePolicyID()
-          : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+      byte parentStoragePolicy = targetNode.getStoragePolicyID();
 
       if (!targetNode.isDirectory()) {
         // return the file's status. note that the iip already includes the
@@ -255,9 +250,10 @@ class FSDirStatAndListingOp {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i = 0; i < numOfListing && locationBudget > 0; i++) {
         INode child = contents.get(startChild+i);
-        byte childStoragePolicy = (includeStoragePolicy && !child.isSymlink())
-            ? getStoragePolicyID(child.getLocalStoragePolicyID(),
-                                 parentStoragePolicy)
+        byte childStoragePolicy =
+            !child.isSymlink()
+                ? getStoragePolicyID(child.getLocalStoragePolicyID(),
+                    parentStoragePolicy)
             : parentStoragePolicy;
         listing[i] = createFileStatus(fsd, iip, child, childStoragePolicy,
             needLocation, false);
