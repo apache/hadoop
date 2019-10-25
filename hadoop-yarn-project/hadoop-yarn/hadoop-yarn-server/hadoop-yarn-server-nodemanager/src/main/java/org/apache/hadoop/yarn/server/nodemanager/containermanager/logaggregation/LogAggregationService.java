@@ -288,6 +288,11 @@ public class LogAggregationService extends AbstractService implements
     // TODO Get the user configuration for the list of containers that need log
     // aggregation.
 
+    // avoid submitting aggregator when app dir creation fail
+    if (appDirException != null) {
+      throw appDirException;
+    }
+
     // Schedule the aggregator.
     Runnable aggregatorWrapper = new Runnable() {
       public void run() {
@@ -300,10 +305,6 @@ public class LogAggregationService extends AbstractService implements
       }
     };
     this.threadPool.execute(aggregatorWrapper);
-
-    if (appDirException != null) {
-      throw appDirException;
-    }
   }
 
   protected void closeFileSystems(final UserGroupInformation userUgi) {
