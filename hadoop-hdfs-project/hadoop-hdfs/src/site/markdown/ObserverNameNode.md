@@ -177,7 +177,7 @@ few configurations to your **hdfs-site.xml**:
    between edit tailing attempts.
 
         <property>
-          <name>dfs.ha.tail-edits.period</name>
+          <name>dfs.ha.tail-edits.period.backoff-max</name>
           <value>10s</value>
         </property>
 
