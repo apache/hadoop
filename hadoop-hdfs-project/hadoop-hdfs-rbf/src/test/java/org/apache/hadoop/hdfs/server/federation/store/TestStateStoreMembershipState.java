@@ -104,6 +104,16 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
 
     MembershipState newState = getNamenodeRegistration(ns, nn);
     assertEquals(FederationNamenodeServiceState.ACTIVE, newState.getState());
+
+    // Override cache
+    UpdateNamenodeRegistrationRequest request1 =
+        UpdateNamenodeRegistrationRequest.newInstance(ns, nn,
+            FederationNamenodeServiceState.OBSERVER);
+    assertTrue(
+        membershipStore.updateNamenodeRegistration(request1).getResult());
+
+    MembershipState newState1 = getNamenodeRegistration(ns, nn);
+    assertEquals(FederationNamenodeServiceState.OBSERVER, newState1.getState());
   }
 
   @Test

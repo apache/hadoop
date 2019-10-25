@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.ratis;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -182,7 +183,10 @@ public interface RatisHelper {
   static RaftClient newRaftClient(RpcType rpcType, RaftPeerId leader,
       RaftGroup group, RetryPolicy retryPolicy, int maxOutStandingRequest,
       GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
-    LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("newRaftClient: {}, leader={}, group={}",
+          rpcType, leader, group);
+    }
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
     RaftClientConfigKeys.Rpc
@@ -271,5 +275,16 @@ public interface RatisHelper {
       Collection<RaftProtos.CommitInfoProto> commitInfos) {
     return commitInfos.stream().map(RaftProtos.CommitInfoProto::getCommitIndex)
         .min(Long::compareTo).orElse(null);
+  }
+
+  static ByteString int2ByteString(int n) {
+    final ByteString.Output out = ByteString.newOutput();
+    try(DataOutputStream dataOut = new DataOutputStream(out)) {
+      dataOut.writeInt(n);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "Failed to write integer n = " + n + " to a ByteString.", e);
+    }
+    return out.toByteString();
   }
 }

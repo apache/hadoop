@@ -127,7 +127,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
           keyName, commitKeyRequest.getClientID());
 
-      omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+      omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
           bucketName);
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
@@ -166,7 +166,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
             ozoneManagerDoubleBufferHelper.add(omClientResponse,
                 transactionLogIndex));
       }
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+      omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
           bucketName);
     }
 

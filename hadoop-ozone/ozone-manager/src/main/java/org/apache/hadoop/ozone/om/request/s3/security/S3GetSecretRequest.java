@@ -127,7 +127,8 @@ public class S3GetSecretRequest extends OMClientRequest {
     try {
       String awsSecret = updateGetS3SecretRequest.getAwsSecret();
       acquiredLock =
-         omMetadataManager.getLock().acquireLock(S3_SECRET_LOCK, kerberosID);
+         omMetadataManager.getLock().acquireWriteLock(S3_SECRET_LOCK,
+             kerberosID);
 
       S3SecretValue s3SecretValue =
           omMetadataManager.getS3SecretTable().get(kerberosID);
@@ -168,7 +169,8 @@ public class S3GetSecretRequest extends OMClientRequest {
             omClientResponse, transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(S3_SECRET_LOCK, kerberosID);
+        omMetadataManager.getLock().releaseWriteLock(S3_SECRET_LOCK,
+            kerberosID);
       }
     }
 

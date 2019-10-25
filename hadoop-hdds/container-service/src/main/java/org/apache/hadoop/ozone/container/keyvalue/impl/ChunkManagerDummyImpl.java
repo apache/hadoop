@@ -120,8 +120,8 @@ public class ChunkManagerDummyImpl extends ChunkManagerImpl {
    * TODO: Explore if we need to do that for ozone.
    */
   @Override
-  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
-      DispatcherContext dispatcherContext) {
+  public ByteBuffer readChunk(Container container, BlockID blockID,
+      ChunkInfo info, DispatcherContext dispatcherContext) {
 
     long readStartTime = Time.monotonicNow();
 
@@ -138,7 +138,7 @@ public class ChunkManagerDummyImpl extends ChunkManagerImpl {
     volumeIOStats.incReadOpCount();
     volumeIOStats.incReadBytes(info.getLen());
 
-    return data.array();
+    return data;
   }
 
   /**

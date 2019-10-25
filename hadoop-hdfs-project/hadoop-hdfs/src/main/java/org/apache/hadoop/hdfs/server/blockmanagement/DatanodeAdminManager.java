@@ -436,6 +436,11 @@ public class DatanodeAdminManager {
     return monitor.numNodesChecked;
   }
 
+  @VisibleForTesting
+  public Queue<DatanodeDescriptor> getPendingNodes() {
+    return pendingNodes;
+  }
+
   /**
    * Checks to see if datanodes have finished DECOMMISSION_INPROGRESS or
    * ENTERING_MAINTENANCE state.

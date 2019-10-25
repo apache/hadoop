@@ -19,10 +19,13 @@
 package org.apache.hadoop.hdds.scm.storage;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.scm.ByteStringConversion;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * This class creates and manages pool of n buffers.
@@ -33,12 +36,24 @@ public class BufferPool {
   private int currentBufferIndex;
   private final int bufferSize;
   private final int capacity;
+  private final Function<ByteBuffer, ByteString> byteStringConversion;
 
   public BufferPool(int bufferSize, int capacity) {
+    this(bufferSize, capacity,
+        ByteStringConversion.createByteBufferConversion(null));
+  }
+
+  public BufferPool(int bufferSize, int capacity,
+      Function<ByteBuffer, ByteString> byteStringConversion){
     this.capacity = capacity;
     this.bufferSize = bufferSize;
     bufferList = new ArrayList<>(capacity);
     currentBufferIndex = -1;
+    this.byteStringConversion = byteStringConversion;
+  }
+
+  public Function<ByteBuffer, ByteString> byteStringConversion(){
+    return byteStringConversion;
   }
 
   public ByteBuffer getCurrentBuffer() {

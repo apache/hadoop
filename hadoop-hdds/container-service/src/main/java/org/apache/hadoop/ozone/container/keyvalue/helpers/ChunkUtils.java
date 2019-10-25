@@ -24,9 +24,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ReadChunkResponseProto;
-import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
@@ -80,7 +77,7 @@ public final class ChunkUtils {
       ByteBuffer data, VolumeIOStats volumeIOStats, boolean sync)
       throws StorageContainerException, ExecutionException,
       InterruptedException, NoSuchAlgorithmException {
-    int bufferSize = data.capacity();
+    final int bufferSize = data.remaining();
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
     if (bufferSize != chunkInfo.getLen()) {
       String err = String.format("data array does not match the length " +
@@ -127,8 +124,10 @@ public final class ChunkUtils {
       return null;
     });
 
-    log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
-        bufferSize);
+    if (log.isDebugEnabled()) {
+      log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
+          bufferSize);
+    }
   }
 
   /**
@@ -140,8 +139,7 @@ public final class ChunkUtils {
    * @return ByteBuffer
    */
   public static ByteBuffer readData(File chunkFile, ChunkInfo data,
-      VolumeIOStats volumeIOStats) throws StorageContainerException,
-      ExecutionException, InterruptedException {
+      VolumeIOStats volumeIOStats) throws StorageContainerException {
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
     if (!chunkFile.exists()) {
@@ -166,6 +164,7 @@ public final class ChunkUtils {
 
         try (FileLock ignored = file.lock(offset, len, true)) {
           file.read(buf, offset);
+          buf.flip();
         }
 
         // Increment volumeIO stats here.
@@ -283,33 +282,6 @@ public final class ChunkUtils {
   public static ContainerCommandResponseProto getChunkResponseSuccess(
       ContainerCommandRequestProto msg) {
     return ContainerUtils.getSuccessResponse(msg);
-  }
-
-  /**
-   * Gets a response to the read chunk calls.
-   *
-   * @param msg - Msg
-   * @param data - Data
-   * @param info - Info
-   * @return Response.
-   */
-  public static ContainerCommandResponseProto getReadChunkResponse(
-      ContainerCommandRequestProto msg, byte[] data, ChunkInfo info) {
-    Preconditions.checkNotNull(msg);
-    Preconditions.checkNotNull(data, "Chunk data is null");
-    Preconditions.checkNotNull(info, "Chunk Info is null");
-
-    ReadChunkResponseProto.Builder response =
-        ReadChunkResponseProto.newBuilder();
-    response.setChunkData(info.getProtoBufMessage());
-    response.setData(
-        ByteStringHelper.getByteString(data));
-    response.setBlockID(msg.getReadChunk().getBlockID());
-
-    ContainerCommandResponseProto.Builder builder =
-        ContainerUtils.getSuccessResponseBuilder(msg);
-    builder.setReadChunk(response);
-    return builder.build();
   }
 
   @VisibleForTesting

@@ -24,6 +24,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlEnum;
@@ -73,6 +74,7 @@ public class ConfigFile implements Serializable {
   private TypeEnum type = null;
   private String destFile = null;
   private String srcFile = null;
+  private LocalResourceVisibility visibility = null;
   private Map<String, String> properties = new HashMap<>();
 
   public ConfigFile copy() {
@@ -80,6 +82,7 @@ public class ConfigFile implements Serializable {
     copy.setType(this.getType());
     copy.setSrcFile(this.getSrcFile());
     copy.setDestFile(this.getDestFile());
+    copy.setVisibility(this.visibility);
     if (this.getProperties() != null && !this.getProperties().isEmpty()) {
       copy.getProperties().putAll(this.getProperties());
     }
@@ -150,6 +153,26 @@ public class ConfigFile implements Serializable {
     this.srcFile = srcFile;
   }
 
+
+  /**
+   * Visibility of the Config file.
+   **/
+  public ConfigFile visibility(LocalResourceVisibility localrsrcVisibility) {
+    this.visibility = localrsrcVisibility;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "Visibility of the Config file")
+  @JsonProperty("visibility")
+  public LocalResourceVisibility getVisibility() {
+    return visibility;
+  }
+
+  @XmlElement(name = "visibility", defaultValue="APPLICATION")
+  public void setVisibility(LocalResourceVisibility localrsrcVisibility) {
+    this.visibility = localrsrcVisibility;
+  }
+
   /**
    A blob of key value pairs that will be dumped in the dest_file in the format
    as specified in type. If src_file is specified, src_file content are dumped
@@ -200,12 +223,13 @@ public class ConfigFile implements Serializable {
     return Objects.equals(this.type, configFile.type)
         && Objects.equals(this.destFile, configFile.destFile)
         && Objects.equals(this.srcFile, configFile.srcFile)
+        && Objects.equals(this.visibility, configFile.visibility)
         && Objects.equals(this.properties, configFile.properties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, destFile, srcFile, properties);
+    return Objects.hash(type, destFile, srcFile, visibility, properties);
   }
 
   @Override
@@ -217,6 +241,8 @@ public class ConfigFile implements Serializable {
         .append("    destFile: ").append(toIndentedString(destFile))
         .append("\n")
         .append("    srcFile: ").append(toIndentedString(srcFile)).append("\n")
+        .append("    visibility: ").append(toIndentedString(visibility))
+        .append("\n")
         .append("    properties: ").append(toIndentedString(properties))
         .append("\n")
         .append("}");

@@ -49,6 +49,7 @@ import org.junit.After;
 import org.junit.Assert;
 import static org.junit.Assert.*;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -400,7 +401,7 @@ public class TestHadoopArchives {
           readFileCount++;
         }
       }
-      assertEquals(fileList.size(), readFileCount);
+      assertThat(fileList.size()).isEqualTo(readFileCount);
     } finally {
       harFileSystem.close();
     }

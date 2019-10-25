@@ -106,8 +106,8 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
     OMClientResponse omClientResponse = null;
     try {
       // TODO to support S3 ACL later.
-      acquiredS3Lock = omMetadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
-          s3BucketName);
+      acquiredS3Lock = omMetadataManager.getLock().acquireWriteLock(
+          S3_BUCKET_LOCK, s3BucketName);
 
       String s3Mapping = omMetadataManager.getS3Table().get(s3BucketName);
 
@@ -118,8 +118,8 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
         volumeName = getOzoneVolumeName(s3Mapping);
 
         acquiredBucketLock =
-            omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-                s3BucketName);
+            omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
+                volumeName, s3BucketName);
 
         String bucketKey = omMetadataManager.getBucketKey(volumeName,
             s3BucketName);
@@ -149,11 +149,12 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             s3BucketName);
       }
       if (acquiredS3Lock) {
-        omMetadataManager.getLock().releaseLock(S3_BUCKET_LOCK, s3BucketName);
+        omMetadataManager.getLock().releaseWriteLock(S3_BUCKET_LOCK,
+            s3BucketName);
       }
     }
 

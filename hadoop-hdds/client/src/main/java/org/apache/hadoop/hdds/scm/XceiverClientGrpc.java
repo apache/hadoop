@@ -158,8 +158,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
     // Add credential context to the client call
     String userName = UserGroupInformation.getCurrentUser().getShortUserName();
-    LOG.debug("Nodes in pipeline : {}", pipeline.getNodes().toString());
-    LOG.debug("Connecting to server : {}", dn.getIpAddress());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Nodes in pipeline : {}", pipeline.getNodes().toString());
+      LOG.debug("Connecting to server : {}", dn.getIpAddress());
+    }
     NettyChannelBuilder channelBuilder =
         NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
@@ -283,7 +285,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     }
     for (DatanodeDetails dn : datanodeList) {
       try {
-        LOG.debug("Executing command " + request + " on datanode " + dn);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Executing command " + request + " on datanode " + dn);
+        }
         // In case the command gets retried on a 2nd datanode,
         // sendCommandAsyncCall will create a new channel and async stub
         // in case these don't exist for the specific datanode.
@@ -377,9 +381,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     if (!isConnected(channel)) {
       reconnect(dn, token);
     }
-
-    LOG.debug("Send command {} to datanode {}", request.getCmdType().toString(),
-        dn.getNetworkFullPath());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Send command {} to datanode {}",
+          request.getCmdType().toString(), dn.getNetworkFullPath());
+    }
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();
     semaphore.acquire();

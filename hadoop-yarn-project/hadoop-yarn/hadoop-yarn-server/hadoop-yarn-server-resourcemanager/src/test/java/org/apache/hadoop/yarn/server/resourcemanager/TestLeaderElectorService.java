@@ -169,8 +169,7 @@ public class TestLeaderElectorService {
         service.getCuratorClient().getZookeeperClient();
     // this will expire current curator client session. curator will re-establish
     // the session. RM will first relinquish leadership and re-acquire leadership
-    KillSession
-        .kill(client.getZooKeeper(), client.getCurrentConnectionString());
+    KillSession.kill(client.getZooKeeper());
 
     waitFor(rm1, HAServiceState.ACTIVE);
   }

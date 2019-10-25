@@ -109,7 +109,9 @@ public class NetworkTopologyImpl implements NetworkTopology{
 
     if (add) {
       LOG.info("Added a new node: " + node.getNetworkFullPath());
-      LOG.debug("NetworkTopology became:\n{}", this);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("NetworkTopology became:\n{}", this);
+      }
     }
   }
 
@@ -131,7 +133,9 @@ public class NetworkTopologyImpl implements NetworkTopology{
       netlock.writeLock().unlock();
     }
     LOG.info("Removed a node: " + node.getNetworkFullPath());
-    LOG.debug("NetworkTopology became:\n{}", this);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("NetworkTopology became:\n{}", this);
+    }
   }
 
   /**
@@ -558,11 +562,14 @@ public class NetworkTopologyImpl implements NetworkTopology{
       ret = ((InnerNode)scopeNode).getLeaf(nodeIndex, mutableExcludedScopes,
           mutableExNodes, ancestorGen);
     }
-    LOG.debug("Choosing node[index={},random={}] from \"{}\" available nodes" +
-            " scope=\"{}\", excludedScope=\"{}\", excludeNodes=\"{}\".",
-        nodeIndex, (leafIndex == -1 ? "true" : "false"), availableNodes,
-        scopeNode.getNetworkFullPath(), excludedScopes, excludedNodes);
-    LOG.debug("Chosen node = {}", (ret == null ? "not found" : ret.toString()));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Choosing node[index={},random={}] from \"{}\" available " +
+              "nodes, scope=\"{}\", excludedScope=\"{}\", excludeNodes=\"{}\".",
+          nodeIndex, (leafIndex == -1 ? "true" : "false"), availableNodes,
+          scopeNode.getNetworkFullPath(), excludedScopes, excludedNodes);
+      LOG.debug("Chosen node = {}", (ret == null ? "not found" :
+          ret.toString()));
+    }
     return ret;
   }
 
