@@ -134,17 +134,9 @@ public class HealthMonitor {
   public void addCallback(Callback cb) {
     this.callbacks.add(cb);
   }
-  
-  public void removeCallback(Callback cb) {
-    callbacks.remove(cb);
-  }
 
   public synchronized void addServiceStateCallback(ServiceStateCallback cb) {
     this.serviceStateCallbacks.add(cb);
-  }
-
-  public synchronized void removeServiceStateCallback(ServiceStateCallback cb) {
-    serviceStateCallbacks.remove(cb);
   }
 
   public void shutdown() {
@@ -258,11 +250,7 @@ public class HealthMonitor {
   synchronized State getHealthState() {
     return state;
   }
-  
-  synchronized HAServiceStatus getLastServiceStatus() {
-    return lastServiceState;
-  }
-  
+
   boolean isAlive() {
     return daemon.isAlive();
   }
