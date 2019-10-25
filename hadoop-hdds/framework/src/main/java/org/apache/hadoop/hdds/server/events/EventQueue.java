@@ -161,7 +161,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
 
         for (EventHandler handler : executorAndHandlers.getValue()) {
           queuedCount.incrementAndGet();
-          if (LOG.isTraceEnabled()) {
+          if (LOG.isDebugEnabled()) {
             LOG.debug(
                 "Delivering event {} to executor/handler {}: <json>{}</json>",
                 event.getName(),

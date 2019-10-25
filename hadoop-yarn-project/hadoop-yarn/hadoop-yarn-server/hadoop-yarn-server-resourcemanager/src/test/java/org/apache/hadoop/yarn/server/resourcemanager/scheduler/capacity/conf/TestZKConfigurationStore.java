@@ -138,6 +138,21 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
   }
 
   @Test
+  public void testGetConfigurationVersion() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+    long v1 = confStore.getConfigVersion();
+    assertEquals(1, v1);
+    Map<String, String> update = new HashMap<>();
+    update.put("keyver", "valver");
+    YarnConfigurationStore.LogMutation mutation =
+        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+    confStore.logMutation(mutation);
+    confStore.confirmMutation(true);
+    long v2 = confStore.getConfigVersion();
+    assertEquals(2, v2);
+  }
+
+  @Test
   public void testPersistUpdatedConfiguration() throws Exception {
     confStore.initialize(conf, schedConf, rmContext);
     assertNull(confStore.retrieve().get("key"));

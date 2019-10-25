@@ -86,8 +86,9 @@ public class OzoneClientProducer {
             identifier.setSignature(v4RequestParser.getSignature());
             identifier.setAwsAccessId(v4RequestParser.getAwsAccessId());
             identifier.setOwner(new Text(v4RequestParser.getAwsAccessId()));
-
-            LOG.trace("Adding token for service:{}", omService);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Adding token for service:{}", omService);
+            }
             Token<OzoneTokenIdentifier> token = new Token(identifier.getBytes(),
                 identifier.getSignature().getBytes(UTF_8),
                 identifier.getKind(),

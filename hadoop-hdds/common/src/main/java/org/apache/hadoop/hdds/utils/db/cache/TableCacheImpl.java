@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +48,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 public class TableCacheImpl<CACHEKEY extends CacheKey,
     CACHEVALUE extends CacheValue> implements TableCache<CACHEKEY, CACHEVALUE> {
 
-  private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
+  private final Map<CACHEKEY, CACHEVALUE> cache;
   private final NavigableSet<EpochEntry<CACHEKEY>> epochEntries;
   private ExecutorService executorService;
   private CacheCleanupPolicy cleanupPolicy;
@@ -55,7 +56,14 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
 
 
   public TableCacheImpl(CacheCleanupPolicy cleanupPolicy) {
-    cache = new ConcurrentHashMap<>();
+
+    // As for full table cache only we need elements to be inserted in sorted
+    // manner, so that list will be easy. For other we can go with Hash map.
+    if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+      cache = new ConcurrentSkipListMap<>();
+    } else {
+      cache = new ConcurrentHashMap<>();
+    }
     epochEntries = new ConcurrentSkipListSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
     // time.

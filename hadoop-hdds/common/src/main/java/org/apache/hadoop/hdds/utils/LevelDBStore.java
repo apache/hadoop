@@ -77,7 +77,9 @@ public class LevelDBStore implements MetadataStore {
 
   private void openDB(File dbPath, Options options) throws IOException {
     if (dbPath.getParentFile().mkdirs()) {
-      LOG.debug("Db path {} created.", dbPath.getParentFile());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Db path {} created.", dbPath.getParentFile());
+      }
     }
     db = JniDBFactory.factory.open(dbPath, options);
     if (LOG.isDebugEnabled()) {
@@ -370,17 +372,21 @@ public class LevelDBStore implements MetadataStore {
             int scanned = filter.getKeysScannedNum();
             int hinted = filter.getKeysHintedNum();
             if (scanned > 0 || hinted > 0) {
-              LOG.debug(
-                  "getRangeKVs ({}) numOfKeysScanned={}, numOfKeysHinted={}",
-                  filter.getClass().getSimpleName(), filter.getKeysScannedNum(),
-                  filter.getKeysHintedNum());
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                    "getRangeKVs ({}) numOfKeysScanned={}, numOfKeysHinted={}",
+                    filter.getClass().getSimpleName(),
+                    filter.getKeysScannedNum(), filter.getKeysHintedNum());
+              }
             }
           }
         }
         long end = System.currentTimeMillis();
         long timeConsumed = end - start;
-        LOG.debug("Time consumed for getRangeKVs() is {}ms,"
-            + " result length is {}.", timeConsumed, result.size());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Time consumed for getRangeKVs() is {}ms,"
+              + " result length is {}.", timeConsumed, result.size());
+        }
       }
     }
     return result;

@@ -49,7 +49,7 @@ public class LeaseCallbackExecutor<T> implements Runnable {
 
   @Override
   public void run() {
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Executing callbacks for lease on {}", resource);
     }
     for(Callable<Void> callback : callbacks) {

@@ -136,7 +136,7 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
                 CreateDirectoryResponse.newBuilder()).build());
       }
       // acquire lock
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+      acquiredLock = omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
           volumeName, bucketName);
 
       // TODO: Not checking volume exist here, once we have full cache we can
@@ -192,7 +192,7 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
                 transactionLogIndex));
       }
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }

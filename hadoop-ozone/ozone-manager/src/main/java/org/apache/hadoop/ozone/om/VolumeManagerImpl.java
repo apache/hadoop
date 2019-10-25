@@ -108,7 +108,7 @@ public class VolumeManagerImpl implements VolumeManager {
     if (volumeList != null) {
       prevVolList.addAll(volumeList.getVolumeNamesList());
     } else {
-      LOG.debug("volume:{} not found for user:{}");
+      LOG.debug("volume:{} not found for user:{}", volume, owner);
       throw new OMException(ResultCodes.USER_NOT_FOUND);
     }
 
@@ -319,7 +319,7 @@ public class VolumeManagerImpl implements VolumeManager {
   @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
     Preconditions.checkNotNull(volume);
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -337,7 +337,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 
@@ -423,7 +423,7 @@ public class VolumeManagerImpl implements VolumeManager {
       throws IOException {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(userAcl);
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -443,7 +443,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 
@@ -503,7 +503,9 @@ public class VolumeManagerImpl implements VolumeManager {
       try {
         volumeArgs.addAcl(acl);
       } catch (OMException ex) {
-        LOG.debug("Add acl failed.", ex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Add acl failed.", ex);
+        }
         return false;
       }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
@@ -553,7 +555,9 @@ public class VolumeManagerImpl implements VolumeManager {
       try {
         volumeArgs.removeAcl(acl);
       } catch (OMException ex) {
-        LOG.debug("Remove acl failed.", ex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Remove acl failed.", ex);
+        }
         return false;
       }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
@@ -634,7 +638,7 @@ public class VolumeManagerImpl implements VolumeManager {
           "VolumeManager. OzoneObj type:" + obj.getResourceType());
     }
     String volume = obj.getVolumeName();
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
@@ -653,7 +657,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      metadataManager.getLock().releaseReadLock(VOLUME_LOCK, volume);
     }
   }
 
@@ -685,8 +689,10 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
       boolean hasAccess = volumeArgs.getAclMap().hasAccess(
           context.getAclRights(), context.getClientUgi());
-      LOG.debug("user:{} has access rights for volume:{} :{} ",
-          context.getClientUgi(), ozObject.getVolumeName(), hasAccess);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("user:{} has access rights for volume:{} :{} ",
+            context.getClientUgi(), ozObject.getVolumeName(), hasAccess);
+      }
       return hasAccess;
     } catch (IOException ex) {
       LOG.error("Check access operation failed for volume:{}", volume, ex);

@@ -69,7 +69,9 @@ public class ContainerDataScanner extends Thread {
 
   @Override
   public void run() {
-    LOG.trace("{}: thread starting.", this);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{}: thread starting.", this);
+    }
     try {
       while (!stopping) {
         runIteration();

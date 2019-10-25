@@ -1367,7 +1367,7 @@ char **construct_docker_command(const char *command_file) {
   ret = get_docker_command(command_file, &CFG, &buffer);
   if (ret != 0) {
     fprintf(ERRORFILE, "Error constructing docker command, docker error code=%d, error message='%s'\n", ret,
-            get_docker_error_message(ret));
+            get_error_message(ret));
     exit(DOCKER_RUN_FAILED);
   }
 
@@ -1414,7 +1414,7 @@ int exec_container(const char *command_file) {
   if (ret != 0) {
     free_configuration(&command_config);
     free(docker_binary);
-    return INVALID_COMMAND_FILE;
+    return INVALID_DOCKER_COMMAND_FILE;
   }
 
   char *value = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);

@@ -131,7 +131,9 @@ public class CommitWatcher {
       long index =
           commitIndex2flushedDataMap.keySet().stream().mapToLong(v -> v).min()
               .getAsLong();
-      LOG.debug("waiting for first index " + index + " to catch up");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("waiting for first index " + index + " to catch up");
+      }
       return watchForCommit(index);
     } else {
       return null;
@@ -153,7 +155,9 @@ public class CommitWatcher {
       long index =
           commitIndex2flushedDataMap.keySet().stream().mapToLong(v -> v).max()
               .getAsLong();
-      LOG.debug("waiting for last flush Index " + index + " to catch up");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("waiting for last flush Index " + index + " to catch up");
+      }
       return watchForCommit(index);
     } else {
       return null;

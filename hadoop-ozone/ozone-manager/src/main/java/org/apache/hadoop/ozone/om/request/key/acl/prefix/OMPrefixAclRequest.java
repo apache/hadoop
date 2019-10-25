@@ -81,7 +81,7 @@ public abstract class OMPrefixAclRequest extends OMClientRequest {
       }
 
       lockAcquired =
-          omMetadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
+          omMetadataManager.getLock().acquireWriteLock(PREFIX_LOCK, prefixPath);
 
       omPrefixInfo = omMetadataManager.getPrefixTable().get(prefixPath);
 
@@ -128,7 +128,7 @@ public abstract class OMPrefixAclRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (lockAcquired) {
-        omMetadataManager.getLock().releaseLock(PREFIX_LOCK,
+        omMetadataManager.getLock().releaseWriteLock(PREFIX_LOCK,
             getOzoneObj().getPath());
       }
     }

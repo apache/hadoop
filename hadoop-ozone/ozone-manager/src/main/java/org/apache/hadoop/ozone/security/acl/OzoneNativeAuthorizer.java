@@ -79,20 +79,20 @@ public class OzoneNativeAuthorizer implements IAccessAuthorizer {
 
     switch (objInfo.getResourceType()) {
     case VOLUME:
-      LOG.trace("Checking access for volume:" + objInfo);
+      LOG.trace("Checking access for volume: {}", objInfo);
       return volumeManager.checkAccess(objInfo, context);
     case BUCKET:
-      LOG.trace("Checking access for bucket:" + objInfo);
+      LOG.trace("Checking access for bucket: {}", objInfo);
       return (bucketManager.checkAccess(objInfo, context)
           && volumeManager.checkAccess(objInfo, context));
     case KEY:
-      LOG.trace("Checking access for Key:" + objInfo);
+      LOG.trace("Checking access for Key: {}", objInfo);
       return (keyManager.checkAccess(objInfo, context)
           && prefixManager.checkAccess(objInfo, context)
           && bucketManager.checkAccess(objInfo, context)
           && volumeManager.checkAccess(objInfo, context));
     case PREFIX:
-      LOG.trace("Checking access for Prefix:" + objInfo);
+      LOG.trace("Checking access for Prefix: {]", objInfo);
       return (prefixManager.checkAccess(objInfo, context)
           && bucketManager.checkAccess(objInfo, context)
           && volumeManager.checkAccess(objInfo, context));

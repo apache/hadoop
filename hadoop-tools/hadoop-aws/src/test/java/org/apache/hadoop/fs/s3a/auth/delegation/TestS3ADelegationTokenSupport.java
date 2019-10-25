@@ -37,6 +37,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests related to S3A DT support.
@@ -60,9 +61,11 @@ public class TestS3ADelegationTokenSupport {
   @Test
   public void testSessionTokenDecode() throws Throwable {
     Text alice = new Text("alice");
+    Text renewer = new Text("yarn");
     AbstractS3ATokenIdentifier identifier
         = new SessionTokenIdentifier(SESSION_TOKEN_KIND,
         alice,
+        renewer,
         new URI("s3a://landsat-pds/"),
         new MarshalledCredentials("a", "b", ""),
         new EncryptionSecrets(S3AEncryptionMethods.SSE_S3, ""),
@@ -82,6 +85,7 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("name of " + decodedUser,
         "alice",
         decodedUser.getUserName());
+    assertEquals("renewer", renewer, decoded.getRenewer());
     assertEquals("Authentication method of " + decodedUser,
         UserGroupInformation.AuthenticationMethod.TOKEN,
         decodedUser.getAuthenticationMethod());
@@ -97,9 +101,11 @@ public class TestS3ADelegationTokenSupport {
 
   @Test
   public void testSessionTokenIdentifierRoundTrip() throws Throwable {
+    Text renewer = new Text("yarn");
     SessionTokenIdentifier id = new SessionTokenIdentifier(
         SESSION_TOKEN_KIND,
         new Text(),
+        renewer,
         landsatUri,
         new MarshalledCredentials("a", "b", "c"),
         new EncryptionSecrets(), "");
@@ -110,12 +116,33 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("credentials in " + ids,
         id.getMarshalledCredentials(),
         result.getMarshalledCredentials());
+    assertEquals("renewer in " + ids, renewer, id.getRenewer());
+  }
+
+  @Test
+  public void testSessionTokenIdentifierRoundTripNoRenewer() throws Throwable {
+    SessionTokenIdentifier id = new SessionTokenIdentifier(
+        SESSION_TOKEN_KIND,
+        new Text(),
+        null,
+        landsatUri,
+        new MarshalledCredentials("a", "b", "c"),
+        new EncryptionSecrets(), "");
+
+    SessionTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
+    String ids = id.toString();
+    assertEquals("URI in " + ids, id.getUri(), result.getUri());
+    assertEquals("credentials in " + ids,
+        id.getMarshalledCredentials(),
+        result.getMarshalledCredentials());
+    assertEquals("renewer in " + ids, new Text(), id.getRenewer());
   }
 
   @Test
   public void testRoleTokenIdentifierRoundTrip() throws Throwable {
     RoleTokenIdentifier id = new RoleTokenIdentifier(
         landsatUri,
+        new Text(),
         new Text(),
         new MarshalledCredentials("a", "b", "c"),
         new EncryptionSecrets(), "");
@@ -126,13 +153,16 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("credentials in " + ids,
         id.getMarshalledCredentials(),
         result.getMarshalledCredentials());
+    assertEquals("renewer in " + ids, new Text(), id.getRenewer());
   }
 
   @Test
   public void testFullTokenIdentifierRoundTrip() throws Throwable {
+    Text renewer = new Text("renewerName");
     FullCredentialsTokenIdentifier id = new FullCredentialsTokenIdentifier(
         landsatUri,
         new Text(),
+        renewer,
         new MarshalledCredentials("a", "b", ""),
         new EncryptionSecrets(), "");
 
@@ -142,6 +172,7 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("credentials in " + ids,
         id.getMarshalledCredentials(),
         result.getMarshalledCredentials());
+    assertEquals("renewer in " + ids, renewer, result.getRenewer());
   }
 
   /**

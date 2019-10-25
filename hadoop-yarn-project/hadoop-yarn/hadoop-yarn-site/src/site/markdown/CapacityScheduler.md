@@ -161,7 +161,7 @@ Configuration
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.queue-mappings` | This configuration specifies the mapping of user or group to a specific queue. You can map a single user or a list of users to queues. Syntax: `[u or g]:[name]:[queue_name][,next_mapping]*`. Here, *u or g* indicates whether the mapping is for a user or group. The value is *u* for user and *g* for group. *name* indicates the user name or group name. To specify the user who has submitted the application, %user can be used. *queue_name* indicates the queue name for which the application has to be mapped. To specify queue name same as user name, *%user* can be used. To specify queue name same as the name of the primary group for which the user belongs to, *%primary_group* can be used.|
+| `yarn.scheduler.capacity.queue-mappings` | This configuration specifies the mapping of user or group to a specific queue. You can map a single user or a list of users to queues. Syntax: `[u or g]:[name]:[queue_name][,next_mapping]*`. Here, *u or g* indicates whether the mapping is for a user or group. The value is *u* for user and *g* for group. *name* indicates the user name or group name. To specify the user who has submitted the application, %user can be used. *queue_name* indicates the queue name for which the application has to be mapped. To specify queue name same as user name, *%user* can be used. To specify queue name same as the name of the primary group for which the user belongs to, *%primary_group* can be used. Secondary group can be referenced as *%secondary_group* |
 | `yarn.scheduler.queue-placement-rules.app-name` | This configuration specifies the mapping of application_name to a specific queue. You can map a single application or a list of applications to queues. Syntax: `[app_name]:[queue_name][,next_mapping]*`. Here, *app_name* indicates the application name you want to do the mapping. *queue_name* indicates the queue name for which the application has to be mapped. To specify the current application's name as the app_name, %application can be used.|
 | `yarn.scheduler.capacity.queue-mappings-override.enable` | This function is used to specify whether the user specified queues can be overridden. This is a Boolean value and the default value is *false*. |
 
@@ -170,12 +170,14 @@ Example:
 ```
  <property>
    <name>yarn.scheduler.capacity.queue-mappings</name>
-   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group</value>
+   <value>u:user1:queue1,g:group1:queue2,u:%user:%user,u:user2:%primary_group,u:user3:%secondary_group,u:%user:%primary_group.%user</value>
    <description>
      Here, <user1> is mapped to <queue1>, <group1> is mapped to <queue2>, 
      maps users to queues with the same name as user, <user2> is mapped 
-     to queue name same as <primary group> respectively. The mappings will be 
-     evaluated from left to right, and the first valid mapping will be used.
+     to queue name same as <primary group>, maps users to queue with the
+     same name as user but parent queue name should be same as <primary group>
+     of the user respectively. The mappings will be evaluated from left to
+     right, and the first valid mapping will be used.
    </description>
  </property>
 

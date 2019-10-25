@@ -788,6 +788,11 @@ int main(int argc, char **argv) {
     break;
   }
 
+  if (exit_code) {
+    fprintf(ERRORFILE, "Nonzero exit code=%d, error message='%s'\n", exit_code,
+            get_error_message(exit_code));
+  }
+
   flush_and_close_log_files();
   return exit_code;
 }

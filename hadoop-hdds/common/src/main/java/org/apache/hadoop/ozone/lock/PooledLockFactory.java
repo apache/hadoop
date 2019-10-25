@@ -26,9 +26,14 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
  */
 public class PooledLockFactory extends BasePooledObjectFactory<ActiveLock> {
 
+  private boolean fairness;
+
+  PooledLockFactory(boolean fair) {
+    this.fairness = fair;
+  }
   @Override
   public ActiveLock create() throws Exception {
-    return ActiveLock.newInstance();
+    return ActiveLock.newInstance(fairness);
   }
 
   @Override

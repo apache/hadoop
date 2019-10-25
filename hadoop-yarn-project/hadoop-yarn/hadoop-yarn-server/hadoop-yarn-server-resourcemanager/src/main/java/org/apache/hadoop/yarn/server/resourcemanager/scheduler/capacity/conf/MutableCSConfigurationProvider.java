@@ -68,26 +68,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
 
   @Override
   public void init(Configuration config) throws IOException {
-    String store = config.get(
-        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    switch (store) {
-    case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
-      this.confStore = new InMemoryConfigurationStore();
-      break;
-    case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
-      this.confStore = new LeveldbConfigurationStore();
-      break;
-    case YarnConfiguration.ZK_CONFIGURATION_STORE:
-      this.confStore = new ZKConfigurationStore();
-      break;
-    case YarnConfiguration.FS_CONFIGURATION_STORE:
-      this.confStore = new FSSchedulerConfigurationStore();
-      break;
-    default:
-      this.confStore = YarnConfigurationStoreFactory.getStore(config);
-      break;
-    }
+    this.confStore = YarnConfigurationStoreFactory.getStore(config);
     Configuration initialSchedConf = new Configuration(false);
     initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
     this.schedConf = new Configuration(false);
@@ -135,6 +116,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
+  public long getConfigVersion() throws Exception {
+    return confStore.getConfigVersion();
+  }
+
+  @Override
   public ConfigurationMutationACLPolicy getAclMutationPolicy() {
     return aclMutationPolicy;
   }
@@ -161,6 +147,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     formatLock.writeLock().lock();
     try {
       confStore.format();
+      oldConf = new Configuration(schedConf);
       Configuration initialSchedConf = new Configuration(false);
       initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
       this.schedConf = new Configuration(false);
@@ -171,6 +158,21 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
         schedConf.set(kv.getKey(), kv.getValue());
       }
       confStore.initialize(config, schedConf, rmContext);
+      confStore.checkVersion();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      formatLock.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public void revertToOldConfig(Configuration config) throws Exception {
+    formatLock.writeLock().lock();
+    try {
+      schedConf = oldConf;
+      confStore.format();
+      confStore.initialize(config, oldConf, rmContext);
       confStore.checkVersion();
     } catch (Exception e) {
       throw new IOException(e);
