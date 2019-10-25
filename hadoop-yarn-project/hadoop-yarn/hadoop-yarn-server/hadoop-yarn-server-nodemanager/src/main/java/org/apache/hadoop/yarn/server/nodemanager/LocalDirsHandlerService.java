@@ -137,23 +137,38 @@ public class LocalDirsHandlerService extends AbstractService {
             " is not configured properly.");
         lowUsableSpacePercentagePerDisk = highUsableSpacePercentagePerDisk;
       }
-      long minFreeSpacePerDiskMB =
+      long lowMinFreeSpacePerDiskMB =
           conf.getLong(YarnConfiguration.NM_MIN_PER_DISK_FREE_SPACE_MB,
-            YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
+              YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
+      long highMinFreeSpacePerDiskMB =
+          conf.getLong(YarnConfiguration.NM_WM_HIGH_PER_DISK_FREE_SPACE_MB,
+              lowMinFreeSpacePerDiskMB);
+      if (highMinFreeSpacePerDiskMB < lowMinFreeSpacePerDiskMB) {
+        LOG.warn("Using " + YarnConfiguration.
+            NM_MIN_PER_DISK_FREE_SPACE_MB + " as " +
+            YarnConfiguration.NM_WM_HIGH_PER_DISK_FREE_SPACE_MB +
+            ", because " + YarnConfiguration.
+            NM_WM_HIGH_PER_DISK_FREE_SPACE_MB +
+            " is not configured properly.");
+        highMinFreeSpacePerDiskMB = lowMinFreeSpacePerDiskMB;
+      }
+
       localDirs =
           new DirectoryCollection(
               validatePaths(conf
                   .getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)),
               highUsableSpacePercentagePerDisk,
               lowUsableSpacePercentagePerDisk,
-              minFreeSpacePerDiskMB);
+              lowMinFreeSpacePerDiskMB,
+              highMinFreeSpacePerDiskMB);
       logDirs =
           new DirectoryCollection(
               validatePaths(conf
                   .getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
               highUsableSpacePercentagePerDisk,
               lowUsableSpacePercentagePerDisk,
-              minFreeSpacePerDiskMB);
+              lowMinFreeSpacePerDiskMB,
+              highMinFreeSpacePerDiskMB);
 
       String local = conf.get(YarnConfiguration.NM_LOCAL_DIRS);
       conf.set(NM_GOOD_LOCAL_DIRS,
