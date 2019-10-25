@@ -290,6 +290,10 @@ public class LogAggregationService extends AbstractService implements
 
     // avoid submitting aggregator when app dir creation fail
     if (appDirException != null) {
+      // cleanup resources
+      appLogAggregators.remove(appId);
+      closeFileSystems(userUgi);
+
       throw appDirException;
     }
 
