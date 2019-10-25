@@ -22,7 +22,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.time.Instant;
 
 import com.google.common.base.Preconditions;
 
@@ -227,13 +226,9 @@ public class AbfsInputStream extends FSInputStream {
       throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
     }
     final AbfsRestOperation op;
-    final Instant start = client.getLatencyTracker().getLatencyInstant();
-    boolean success = false;
-    AbfsHttpOperation res = null;
-    try {
+    try (AbfsPerfInfo tracker = new AbfsPerfInfo(client.getAbfsPerfTracker(), "readRemote", "read")) {
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
-      res = op.getResult();
-      success = true;
+      tracker.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
@@ -242,8 +237,6 @@ public class AbfsInputStream extends FSInputStream {
         }
       }
       throw new IOException(ex);
-    } finally {
-      client.getLatencyTracker().recordClientLatency(start, "readRemote", "read", success, res);
     }
     long bytesRead = op.getResult().getBytesReceived();
     if (bytesRead > Integer.MAX_VALUE) {

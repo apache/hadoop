@@ -18,27 +18,28 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
 /**
- * {@code LatencyTracker} keeps track of service latencies observed by {@code AbfsClient}. Every request adds
- * its information (success/failure, latency etc) to the {@code LatencyTracker}'s queue.
- * When a request is made, we check {@code LatencyTracker} to see if there are any latency numbers to be reported.
- * If there are any, the stats are added to an HTTP header ({@code x-ms-abfs-client-latency}) on the next request. *
+ * {@code AbfsPerfTracker} keeps track of service latencies observed by {@code AbfsClient}. Every request hands over
+ * its perf-related information as a {@code AbfsPerfInfo} object (contains success/failure, latency etc) to the
+ * {@code AbfsPerfTracker}'s queue. When a request is made, we check {@code AbfsPerfTracker} to see if there are
+ * any latency numbers to be reported. If there are any, the stats are added to an HTTP header
+ * ({@code x-ms-abfs-client-latency}) on the next request.
  */
-public class LatencyTracker {
+public final class AbfsPerfTracker {
 
   // the logger
-  private static final Logger LOG = LoggerFactory.getLogger(LatencyTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsPerfTracker.class);
 
   // the queue to hold latency information
   private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
@@ -49,28 +50,20 @@ public class LatencyTracker {
   // the host name
   private String hostName;
 
-  // the file system name
-  private String filesystemName;
-
-  // the account name
-  private String accountName;
-
   // singleton latency reporting format
   private String singletonLatencyReportingFormat;
 
   // aggregate latency reporting format
   private String aggregateLatencyReportingFormat;
 
-  public LatencyTracker(String filesystemName, String accountName, AbfsConfiguration configuration) {
+  public AbfsPerfTracker(String filesystemName, String accountName, AbfsConfiguration configuration) {
     this(filesystemName, accountName, configuration.shouldTrackLatency());
   }
 
-  protected LatencyTracker(String filesystemName, String accountName, boolean enabled) {
+  protected AbfsPerfTracker(String filesystemName, String accountName, boolean enabled) {
     this.enabled = enabled;
-    this.filesystemName = filesystemName;
-    this.accountName = accountName;
 
-    LOG.debug("LatencyTracker configuration: {}", enabled);
+    LOG.debug("AbfsPerfTracker configuration: {}", enabled);
 
     if (enabled) {
       try {
@@ -84,31 +77,48 @@ public class LatencyTracker {
     }
   }
 
-  public void recordClientLatency(
-          Instant operationStart,
-          String callerName,
-          String calleeName,
-          boolean success,
-          AbfsHttpOperation res) {
+  public void trackInfo(AbfsPerfInfo perfInfo)
+  {
     if (!enabled) {
       return;
     }
 
-    Instant operationStop = getLatencyInstant();
-
-    recordClientLatency(operationStart, operationStop, callerName, calleeName, success, res);
+    if (isValidInstant(perfInfo.getAggregateStart()) && perfInfo.getAggregateCount() > 0) {
+      recordClientLatency(
+              perfInfo.getTrackingStart(),
+              perfInfo.getTrackingEnd(),
+              perfInfo.getCallerName(),
+              perfInfo.getCalleeName(),
+              perfInfo.getSuccess(),
+              perfInfo.getAggregateStart(),
+              perfInfo.getAggregateCount(),
+              perfInfo.getResult());
+    } else {
+      recordClientLatency(
+              perfInfo.getTrackingStart(),
+              perfInfo.getTrackingEnd(),
+              perfInfo.getCallerName(),
+              perfInfo.getCalleeName(),
+              perfInfo.getSuccess(),
+              perfInfo.getResult());
+    }
   }
 
-  public void recordClientLatency(
+  public Instant getLatencyInstant() {
+    if (!enabled) {
+      return null;
+    }
+
+    return Instant.now();
+  }
+
+  private void recordClientLatency(
           Instant operationStart,
           Instant operationStop,
           String callerName,
           String calleeName,
           boolean success,
           AbfsHttpOperation res) {
-    if (!enabled) {
-      return;
-    }
 
     Instant trackerStart = Instant.now();
     long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
@@ -125,24 +135,7 @@ public class LatencyTracker {
     this.offerToQueue(trackerStart, latencyDetails);
   }
 
-  public void recordClientLatency(
-          Instant operationStart,
-          String callerName,
-          String calleeName,
-          boolean success,
-          Instant aggregateStart,
-          long aggregateCount,
-          AbfsHttpOperation res) {
-    if (!enabled) {
-      return;
-    }
-
-    Instant operationStop = getLatencyInstant();
-
-    recordClientLatency(operationStart, operationStop, callerName, calleeName, success, aggregateStart, aggregateCount, res);
-  }
-
-  public void recordClientLatency(
+  private void recordClientLatency(
           Instant operationStart,
           Instant operationStop,
           String callerName,
@@ -151,9 +144,6 @@ public class LatencyTracker {
           Instant aggregateStart,
           long aggregateCount,
           AbfsHttpOperation res){
-    if (!enabled) {
-      return;
-    }
 
     Instant trackerStart = Instant.now();
     long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
@@ -185,18 +175,10 @@ public class LatencyTracker {
     if (LOG.isDebugEnabled()) {
       Instant stop = Instant.now();
       long elapsed = Duration.between(trackerStart, stop).toMillis();
-      LOG.debug(String.format("Dequeued latency info [%s ms]: %s", elapsed, latencyDetails));
+      LOG.debug("Dequeued latency info [{} ms]: {}", elapsed, latencyDetails);
     }
 
     return latencyDetails;
-  }
-
-  public Instant getLatencyInstant() {
-    if (!enabled) {
-      return null;
-    }
-
-    return Instant.now();
   }
 
   private void offerToQueue(Instant trackerStart, String latencyDetails) {
@@ -205,7 +187,7 @@ public class LatencyTracker {
     if (LOG.isDebugEnabled()) {
       Instant trackerStop = Instant.now();
       long elapsed = Duration.between(trackerStart, trackerStop).toMillis();
-      LOG.debug(String.format("Queued latency info [%s ms]: %s", elapsed, latencyDetails));
+      LOG.debug("Queued latency info [{} ms]: {}", elapsed, latencyDetails);
     }
   }
 

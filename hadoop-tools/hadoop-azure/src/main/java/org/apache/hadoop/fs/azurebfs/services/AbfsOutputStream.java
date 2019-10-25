@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.time.Instant;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -290,17 +289,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        final Instant start = client.getLatencyTracker().getLatencyInstant();
-        boolean success = false;
-        AbfsHttpOperation res = null;
-        try {
-          res = client.append(path, offset, bytes, 0,
-                  bytesLength).getResult();
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(client.getAbfsPerfTracker(), "writeCurrentBufferToService", "append")) {
+          tracker.registerResult(client.append(path, offset, bytes, 0,
+                  bytesLength).getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-          success = true;
+          tracker.registerSuccess(true);
           return null;
-        } finally {
-          client.getLatencyTracker().recordClientLatency(start, "writeCurrentBufferToService", "append", success, res);
         }
       }
     });
@@ -343,13 +337,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
-    final Instant start = client.getLatencyTracker().getLatencyInstant();
-    boolean success = false;
-    AbfsHttpOperation res = null;
-
-    try {
-      res = client.flush(path, offset, retainUncommitedData, isClose).getResult();
-      success = true;
+    try (AbfsPerfInfo tracker = new AbfsPerfInfo(client.getAbfsPerfTracker(), "flushWrittenBytesToServiceInternal", "flush")) {
+      tracker.registerResult(client.flush(path, offset, retainUncommitedData, isClose).getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -357,8 +346,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         }
       }
       throw new IOException(ex);
-    } finally {
-      client.getLatencyTracker().recordClientLatency(start, "flushWrittenBytesToServiceInternal", "flush", success, res);
     }
     this.lastFlushOffset = offset;
   }

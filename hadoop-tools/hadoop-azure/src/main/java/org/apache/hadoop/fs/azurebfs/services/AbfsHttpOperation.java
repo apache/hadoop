@@ -173,32 +173,29 @@ public class AbfsHttpOperation {
       urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
     }
 
-    final StringBuilder sb = new StringBuilder();
-    sb.append("s=");
-    sb.append(statusCode);
-    sb.append(" e=");
-    sb.append(storageErrorCode);
-    sb.append(" ci=");
-    sb.append(clientRequestId);
-    sb.append(" ri=");
-    sb.append(requestId);
-    if (isTraceEnabled) {
-      sb.append(" ct=");
-      sb.append(connectionTimeMs);
-      sb.append(" st=");
-      sb.append(sendRequestTimeMs);
-      sb.append(" rt=");
-      sb.append(recvResponseTimeMs);
-    }
-    sb.append(" bs=");
-    sb.append(bytesSent);
-    sb.append(" br=");
-    sb.append(bytesReceived);
-    sb.append(" m=");
-    sb.append(method);
-    sb.append(" u=");
-    sb.append(urlStr);
-    return sb.toString();
+    return new StringBuilder()
+      .append("s=")
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(clientRequestId)
+      .append(" ri=")
+      .append(requestId)
+      .append(" ct=")
+      .append(connectionTimeMs)
+      .append(" st=")
+      .append(sendRequestTimeMs)
+      .append(" rt=")
+      .append(recvResponseTimeMs)
+      .append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(urlStr).toString();
   }
 
   /**
