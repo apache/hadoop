@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.impl;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -223,5 +224,30 @@ public final class FutureIOSupport {
         builder.opt(key, val);
       }
     }
+  }
+
+  /**
+   * Evaluate a CallableRaisingIOE in the current thread,
+   * converting IOEs to RTEs and propagating.
+   * @param callable callable to invoke
+   * @param <T> Return type.
+   * @return the evaluated result.
+   * @throws UnsupportedOperationException fail fast if unsupported
+   * @throws IllegalArgumentException invalid argument
+   */
+  public static <T> CompletableFuture<T> eval(
+      FunctionsRaisingIOE.CallableRaisingIOE<T> callable) {
+    CompletableFuture<T> result = new CompletableFuture<>();
+    try {
+      result.complete(callable.apply());
+    } catch (UnsupportedOperationException | IllegalArgumentException tx) {
+      // fail fast here
+      throw tx;
+    } catch (Throwable tx) {
+      // fail lazily here to ensure callers expect all File IO operations to
+      // surface later
+      result.completeExceptionally(tx);
+    }
+    return result;
   }
 }

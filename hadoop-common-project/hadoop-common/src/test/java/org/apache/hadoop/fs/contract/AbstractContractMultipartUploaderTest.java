@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Random;
 
 import com.google.common.base.Charsets;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,18 +36,18 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BBUploadHandle;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MultipartUploader;
-import org.apache.hadoop.fs.MultipartUploaderFactory;
 import org.apache.hadoop.fs.PartHandle;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.UploadHandle;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -76,14 +77,15 @@ public abstract class AbstractContractMultipartUploaderTest extends
   @Override
   public void setup() throws Exception {
     super.setup();
-    Configuration conf = getContract().getConf();
-    mpu = MultipartUploaderFactory.get(getFileSystem(), conf);
-    mpu2 = MultipartUploaderFactory.get(getFileSystem(), conf);
+
+    final FileSystem fs = getFileSystem();
+    mpu = fs.createMultipartUploader(getContract().getTestPath()).build();
+    mpu2 = fs.createMultipartUploader(getContract().getTestPath()).build();
   }
 
   @Override
   public void teardown() throws Exception {
-    if (mpu!= null && activeUpload != null) {
+    if (mpu != null && activeUpload != null) {
       try {
         mpu.abort(activeUploadPath, activeUpload);
       } catch (FileNotFoundException ignored) {
@@ -225,12 +227,21 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
     if (finalizeConsumesUploadIdImmediately()) {
       intercept(FileNotFoundException.class,
-          () -> mpu.complete(file, partHandles, uploadHandle));
+          () -> complete(mpu, file, uploadHandle, partHandles));
     } else {
-      PathHandle fd2 = mpu.complete(file, partHandles, uploadHandle);
+      PathHandle fd2 = complete(mpu, file, uploadHandle, partHandles);
       assertArrayEquals("Path handles differ", fd.toByteArray(),
           fd2.toByteArray());
     }
+  }
+
+  protected PathHandle complete(final MultipartUploader uploader,
+      final Path file,
+      final UploadHandle uploadHandle,
+      final Map<Integer, PartHandle> partHandles)
+      throws IOException {
+    return awaitFuture(
+        uploader.complete(file, partHandles, uploadHandle));
   }
 
   /**
@@ -243,7 +254,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
    */
   protected UploadHandle initializeUpload(final Path dest) throws IOException {
     activeUploadPath = dest;
-    activeUpload = randomMpu().initialize(dest);
+    activeUpload = awaitFuture(randomMpu().initialize(dest));
     return activeUpload;
   }
 
@@ -283,12 +294,12 @@ public abstract class AbstractContractMultipartUploaderTest extends
       final int index,
       final byte[] payload) throws IOException {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    PartHandle partHandle = mpu(index)
+    PartHandle partHandle = awaitFuture(mpu(index)
         .putPart(file,
             new ByteArrayInputStream(payload),
             index,
             uploadHandle,
-            payload.length);
+            payload.length));
     timer.end("Uploaded part %s", index);
     LOG.info("Upload bandwidth {} MB/s",
         timer.bandwidthDescription(payload.length));
@@ -354,7 +365,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
       final UploadHandle uploadHandle,
       final Map<Integer, PartHandle> partHandles) throws IOException {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    PathHandle fd = randomMpu().complete(file, partHandles, uploadHandle);
+    PathHandle fd = complete(randomMpu(), file, uploadHandle, partHandles);
     timer.end("Completed upload to %s", file);
     return fd;
   }
@@ -367,7 +378,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
    */
   private void abortUpload(final Path file, UploadHandle uploadHandle)
       throws IOException {
-    randomMpu().abort(file, uploadHandle);
+    awaitFuture(randomMpu().abort(file, uploadHandle));
   }
 
   /**
@@ -400,16 +411,16 @@ public abstract class AbstractContractMultipartUploaderTest extends
     FileSystem fs = getFileSystem();
     Path file = path("testMultipartUpload");
     try (MultipartUploader uploader =
-             MultipartUploaderFactory.get(fs, null)) {
-      UploadHandle uploadHandle = uploader.initialize(file);
+        fs.createMultipartUploader(file).build()) {
+      UploadHandle uploadHandle = uploader.initialize(file).get();
 
       Map<Integer, PartHandle> partHandles = new HashMap<>();
       MessageDigest origDigest = DigestUtils.getMd5Digest();
       byte[] payload = new byte[0];
       origDigest.update(payload);
       InputStream is = new ByteArrayInputStream(payload);
-      PartHandle partHandle = uploader.putPart(file, is, 1, uploadHandle,
-          payload.length);
+      PartHandle partHandle = awaitFuture(
+          uploader.putPart(file, is, 1, uploadHandle, payload.length));
       partHandles.put(1, partHandle);
       completeUpload(file, uploadHandle, partHandles, origDigest, 0);
     }
@@ -483,7 +494,6 @@ public abstract class AbstractContractMultipartUploaderTest extends
     describe("Upload and then abort it before completing");
     Path file = methodPath();
     UploadHandle uploadHandle = initializeUpload(file);
-    int end = 10;
     Map<Integer, PartHandle> partHandles = new HashMap<>();
     for (int i = 12; i > 10; i--) {
       partHandles.put(i, buildAndPutPart(file, uploadHandle, i, null));
@@ -495,9 +505,10 @@ public abstract class AbstractContractMultipartUploaderTest extends
     InputStream is = IOUtils.toInputStream(contents, "UTF-8");
 
     intercept(IOException.class,
-        () -> mpu.putPart(file, is, 49, uploadHandle, len));
+        () -> awaitFuture(
+            mpu.putPart(file, is, 49, uploadHandle, len)));
     intercept(IOException.class,
-        () -> mpu.complete(file, partHandles, uploadHandle));
+        () -> complete(mpu, file, uploadHandle, partHandles));
 
     assertPathDoesNotExist("Uploaded file should not exist", file);
 
@@ -555,7 +566,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
     Path dest = methodPath();
     UploadHandle handle = initializeUpload(dest);
     intercept(IllegalArgumentException.class,
-        () -> mpu.complete(dest, new HashMap<>(), handle));
+        () -> complete(mpu, dest, handle, new HashMap<>()));
     abortUpload(dest, handle);
   }
 
@@ -590,14 +601,14 @@ public abstract class AbstractContractMultipartUploaderTest extends
     partHandles.put(1, partHandle);
 
     intercept(IllegalArgumentException.class,
-        () -> mpu.complete(dest, partHandles, emptyHandle));
+        () -> complete(mpu, dest, emptyHandle, partHandles));
 
     // and, while things are setup, attempt to complete with
     // a part index of 0
     partHandles.clear();
     partHandles.put(0, partHandle);
     intercept(IllegalArgumentException.class,
-        () -> mpu.complete(dest, partHandles, realHandle));
+        () -> complete(mpu, dest, realHandle, partHandles));
   }
 
   /**
@@ -662,7 +673,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
     } catch (IOException e) {
       if (!concurrent) {
         // this is expected, so end the test
-        LOG.debug("Expected exception raised on concurrent uploads {}", e);
+        LOG.debug("Expected exception raised on concurrent uploads", e);
         return;
       } else {
         throw e;
@@ -694,5 +705,14 @@ public abstract class AbstractContractMultipartUploaderTest extends
         });
 
     verifyContents(file, digest2, size2);
+  }
+
+  @Test
+  public void testPathCapabilities() throws Throwable {
+    final FileSystem fs = getFileSystem();
+    Assertions.assertThat(fs.hasPathCapability(getContract().getTestPath(),
+        CommonPathCapabilities.FS_MULTIPART_UPLOADER))
+        .describedAs("fs %s, lacks multipart upload capability", fs)
+        .isTrue();
   }
 }

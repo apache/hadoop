@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 
 /**
@@ -350,5 +353,21 @@ public class StoreContext {
     return (stat.isDirectory() && !k.endsWith("/"))
         ? k + "/"
         : k;
+  }
+
+  /**
+   * Submit a closure for execution in the executor
+   * returned by {@link #getExecutor()}.
+   * @param <T> type of future
+   * @param future future for the result.
+   * @param call callable to invoke.
+   * @return the future passed in
+   */
+  public <T> CompletableFuture<T> submit(
+      final CompletableFuture<T> future,
+      final Callable<T> call) {
+    getExecutor().submit(() ->
+        LambdaUtils.eval(future, call));
+    return future;
   }
 }

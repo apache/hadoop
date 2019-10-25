@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -26,8 +26,8 @@ import org.junit.Test;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.S3AMultipartUploader.*;
-import static org.apache.hadoop.fs.s3a.S3AMultipartUploader.parsePartHandlePayload;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.*;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.parsePartHandlePayload;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**

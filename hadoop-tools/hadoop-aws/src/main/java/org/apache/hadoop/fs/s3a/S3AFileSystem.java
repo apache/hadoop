@@ -96,6 +96,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
@@ -108,6 +109,7 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
+import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -4473,6 +4475,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+      return true;
+
     default:
       return super.hasPathCapability(p, capability);
     }
@@ -4700,6 +4705,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               () -> select(path, sql, options, ost)));
     }
     return result;
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return new S3AMultipartUploaderBuilder(this,
+        getWriteOperationHelper(),
+        createStoreContext(),
+        basePath);
   }
 
   /**

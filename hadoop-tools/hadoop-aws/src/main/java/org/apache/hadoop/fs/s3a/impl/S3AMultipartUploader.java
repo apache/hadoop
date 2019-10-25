@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.s3a;
+
+package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -42,18 +44,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BBPartHandle;
 import org.apache.hadoop.fs.BBUploadHandle;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.MultipartUploader;
-import org.apache.hadoop.fs.MultipartUploaderFactory;
 import org.apache.hadoop.fs.PartHandle;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.UploadHandle;
-
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
+import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
+import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 
 /**
  * MultipartUploader for S3AFileSystem. This uses the S3 multipart
@@ -61,52 +59,66 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class S3AMultipartUploader extends MultipartUploader {
+public class S3AMultipartUploader extends AbstractMultipartUploader {
 
-  private final S3AFileSystem s3a;
+  private final S3AMultipartUploaderBuilder builder;
 
   /** Header for Parts: {@value}. */
 
   public static final String HEADER = "S3A-part01";
 
-  public S3AMultipartUploader(FileSystem fs, Configuration conf) {
-    Preconditions.checkArgument(fs instanceof S3AFileSystem,
-        "Wrong filesystem: expected S3A but got %s", fs);
-    s3a = (S3AFileSystem) fs;
+  private final WriteOperationHelper writeHelper;
+
+  private final StoreContext context;
+
+  public S3AMultipartUploader(final S3AMultipartUploaderBuilder builder,
+      final WriteOperationHelper writeHelper,
+      final StoreContext context) {
+    this.builder = builder;
+    this.writeHelper = writeHelper;
+
+    this.context = context;
   }
 
   @Override
-  public UploadHandle initialize(Path filePath) throws IOException {
-    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
-    String key = s3a.pathToKey(filePath);
-    String uploadId = writeHelper.initiateMultiPartUpload(key);
-    return BBUploadHandle.from(ByteBuffer.wrap(
-        uploadId.getBytes(Charsets.UTF_8)));
+  public CompletableFuture<UploadHandle> initialize(Path filePath)
+      throws IOException {
+    String key = context.pathToKey(filePath);
+    return context.submit(new CompletableFuture<>(),
+        () -> {
+          String uploadId = writeHelper.initiateMultiPartUpload(key);
+          return BBUploadHandle.from(ByteBuffer.wrap(
+              uploadId.getBytes(Charsets.UTF_8)));
+        });
   }
 
   @Override
-  public PartHandle putPart(Path filePath, InputStream inputStream,
+  public CompletableFuture<PartHandle> putPart(Path filePath,
+      InputStream inputStream,
       int partNumber, UploadHandle uploadId, long lengthInBytes)
       throws IOException {
     checkPutArguments(filePath, inputStream, partNumber, uploadId,
         lengthInBytes);
     byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
-    String key = s3a.pathToKey(filePath);
-    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
+    String key = context.pathToKey(filePath);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
-    UploadPartRequest request = writeHelper.newUploadPartRequest(key,
-        uploadIdString, partNumber, (int) lengthInBytes, inputStream, null, 0L);
-    UploadPartResult result = writeHelper.uploadPart(request);
-    String eTag = result.getETag();
-    return BBPartHandle.from(
-        ByteBuffer.wrap(
-            buildPartHandlePayload(eTag, lengthInBytes)));
+    return context.submit(new CompletableFuture<>(),
+        () -> {
+          UploadPartRequest request = writeHelper.newUploadPartRequest(key,
+              uploadIdString, partNumber, (int) lengthInBytes, inputStream,
+              null, 0L);
+          UploadPartResult result = writeHelper.uploadPart(request);
+          String eTag = result.getETag();
+          return BBPartHandle.from(
+              ByteBuffer.wrap(
+                  buildPartHandlePayload(eTag, lengthInBytes)));
+        });
   }
 
   @Override
-  public PathHandle complete(Path filePath,
+  public CompletableFuture<PathHandle> complete(Path filePath,
       Map<Integer, PartHandle> handleMap,
       UploadHandle uploadId)
       throws IOException {
@@ -117,8 +129,7 @@ public class S3AMultipartUploader extends MultipartUploader {
     List<Map.Entry<Integer, PartHandle>> handles =
         new ArrayList<>(handleMap.entrySet());
     handles.sort(Comparator.comparingInt(Map.Entry::getKey));
-    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
-    String key = s3a.pathToKey(filePath);
+    String key = context.pathToKey(filePath);
 
     String uploadIdStr = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
@@ -132,37 +143,33 @@ public class S3AMultipartUploader extends MultipartUploader {
       eTags.add(new PartETag(handle.getKey(), result.getRight()));
     }
     AtomicInteger errorCount = new AtomicInteger(0);
-    CompleteMultipartUploadResult result = writeHelper.completeMPUwithRetries(
-        key, uploadIdStr, eTags, totalLength, errorCount);
+    long finalLen = totalLength;
+    return context.submit(new CompletableFuture<>(),
+        () -> {
+          CompleteMultipartUploadResult result
+              = writeHelper.completeMPUwithRetries(
+              key, uploadIdStr, eTags, finalLen, errorCount);
 
-    byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
-    return (PathHandle) () -> ByteBuffer.wrap(eTag);
+          byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
+          return (PathHandle) () -> ByteBuffer.wrap(eTag);
+        });
   }
 
   @Override
-  public void abort(Path filePath, UploadHandle uploadId) throws IOException {
+  public CompletableFuture<Void> abort(Path filePath, UploadHandle uploadId)
+      throws IOException {
     final byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
-    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
-    String key = s3a.pathToKey(filePath);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
-    writeHelper.abortMultipartCommit(key, uploadIdString);
+    return context.submit(new CompletableFuture<>(),
+        () -> {
+          writeHelper.abortMultipartCommit(context.pathToKey(filePath),
+              uploadIdString);
+          return null;
+        });
   }
 
-  /**
-   * Factory for creating MultipartUploader objects for s3a:// FileSystems.
-   */
-  public static class Factory extends MultipartUploaderFactory {
-    @Override
-    protected MultipartUploader createMultipartUploader(FileSystem fs,
-        Configuration conf) {
-      if (FS_S3A.equals(fs.getScheme())) {
-        return new S3AMultipartUploader(fs, conf);
-      }
-      return null;
-    }
-  }
 
   /**
    * Build the payload for marshalling.
@@ -180,7 +187,7 @@ public class S3AMultipartUploader extends MultipartUploader {
         "Invalid length");
 
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    try(DataOutputStream output = new DataOutputStream(bytes)) {
+    try (DataOutputStream output = new DataOutputStream(bytes)) {
       output.writeUTF(HEADER);
       output.writeLong(len);
       output.writeUTF(eTag);
@@ -198,8 +205,8 @@ public class S3AMultipartUploader extends MultipartUploader {
   static Pair<Long, String> parsePartHandlePayload(byte[] data)
       throws IOException {
 
-    try(DataInputStream input =
-            new DataInputStream(new ByteArrayInputStream(data))) {
+    try (DataInputStream input =
+             new DataInputStream(new ByteArrayInputStream(data))) {
       final String header = input.readUTF();
       if (!HEADER.equals(header)) {
         throw new IOException("Wrong header string: \"" + header + "\"");

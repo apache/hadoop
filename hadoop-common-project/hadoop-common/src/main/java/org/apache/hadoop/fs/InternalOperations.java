@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemMultipartUploader;
-import org.apache.hadoop.fs.MultipartUploader;
-import org.apache.hadoop.fs.MultipartUploaderFactory;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+package org.apache.hadoop.fs;
+
+import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
 
 /**
- * Support for HDFS multipart uploads, built on
- * {@link FileSystem#concat(Path, Path[])}.
+ *   This method allows access to Package-scoped operations from classes
+ *   in org.apache.hadoop.fs.impl and other file system implementations
+ *   in the hadoop modules.
+ *   This is absolutely not for used by any other application or library.
  */
-public class DFSMultipartUploaderFactory extends MultipartUploaderFactory {
-  protected MultipartUploader createMultipartUploader(FileSystem fs,
-      Configuration conf) {
-    if (fs.getScheme().equals(HdfsConstants.HDFS_URI_SCHEME)) {
-      return new FileSystemMultipartUploader(fs);
-    }
-    return null;
+@InterfaceAudience.Private
+public class InternalOperations {
+
+  @SuppressWarnings("deprecation") // rename w/ OVERWRITE
+  public void rename(FileSystem fs, final Path src, final Path dst,
+    final Options.Rename...options) throws IOException {
+    fs.rename(src, dst, options);
   }
 }

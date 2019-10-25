@@ -131,4 +131,12 @@ public final class CommonPathCapabilities {
   @InterfaceStability.Unstable
   public static final String FS_EXPERIMENTAL_BATCH_LISTING =
       "fs.capability.batch.listing";
+
+  /**
+   * Does the store support multipart uploading?
+   * Value: {@value}.
+   */
+  public static final String FS_MULTIPART_UPLOADER =
+      "fs.capability.multipart.uploader";
+
 }
