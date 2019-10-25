@@ -1657,10 +1657,23 @@
   </property>
 
   <property>
-    <description>The minimum space that must be available on a disk for
-    it to be used. This applies to yarn.nodemanager.local-dirs and
+    <description>The minimum space in megabytes that must be available on a disk for
+    it to be used. If space on a disk falls below this threshold, it will be marked
+    as bad. This applies to yarn.nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>The minimum space in megabytes that must be available on a bad
+    disk for it to be marked as good.  This value should not be less
+    than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    If it is less than yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb,
+    or it is not set, it will be set to the
+    same value as yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb.
+    This applies to yarn.nodemanager.local-dirs and yarn.nodemanager.log-dirs.</description>
+    <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-watermark-high-mb</name>
     <value>0</value>
   </property>
 
