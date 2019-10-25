@@ -36,6 +36,38 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
  * {@code AbfsPerfTracker}'s queue. When a request is made, we check {@code AbfsPerfTracker} to see if there are
  * any latency numbers to be reported. If there are any, the stats are added to an HTTP header
  * ({@code x-ms-abfs-client-latency}) on the next request.
+ *
+ * A typical perf log line appears like:
+ *
+ * h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+ * c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath r=Succeeded l=32 ls=32 lc=1 s=200
+ * e= ci=95121dae-70a8-4187-b067-614091034558 ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+ * u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Fabfs-testcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+ *
+ * The fields have the following definitions:
+ *
+ * h: host name
+ * t: time when this request was logged
+ * a: Azure storage account name
+ * c: container name
+ * cr: name of the caller method
+ * ce: name of the callee method
+ * r: result (Succeeded/Failed)
+ * l: latency (time spend in callee)
+ * ls: latency sum (aggregate time spend in caller; logged when there are multiple callees)
+ * lc: latency count (number of callees; logged when there are multiple callees)
+ * s: HTTP Status code
+ * e: Error code
+ * ci: client request ID
+ * ri: server request ID
+ * ct: connection time in milliseconds
+ * st: sending time in milliseconds
+ * rt: receiving time in milliseconds
+ * bs: bytes sent
+ * br: bytes received
+ * m: HTTP method (GET, PUT etc)
+ * u: Encoded HTTP URL
+ *
  */
 public final class AbfsPerfTracker {
 

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 /**
  * {@code AbfsPerfInfo} holds information on ADLS Gen 2 API performance observed by {@code AbfsClient}. Every
  * Abfs request keeps adding its information (success/failure, latency etc) to its {@code AbfsPerfInfo}'s object
- * as and when it becomes available. When the request is over, the performance information is recorded as
+ * as and when it becomes available. When the request is over, the performance information is recorded while
  * the {@code AutoCloseable} {@code AbfsPerfInfo} object is "closed".
  */
 public final class AbfsPerfInfo implements AutoCloseable {
