@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
@@ -115,8 +116,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 
@@ -495,10 +494,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private void loginAsSCMUser(Configuration conf)
       throws IOException, AuthenticationException {
     if (LOG.isDebugEnabled()) {
+      ScmConfig scmConfig = configuration.getObject(ScmConfig.class);
       LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
               + "Principal: {}, keytab: {}",
-          conf.get(HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
-          conf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
+          scmConfig.getKerberosPrincipal(),
+          scmConfig.getKerberosKeytab());
     }
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals(
@@ -506,8 +506,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       UserGroupInformation.setConfiguration(conf);
       InetSocketAddress socAddr = HddsServerUtil
           .getScmBlockClientBindAddress(conf);
-      SecurityUtil.login(conf, HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
-          HDDS_SCM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
+      SecurityUtil.login(conf, ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
+        ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     } else {
       throw new AuthenticationException(SecurityUtil.getAuthenticationMethod(
           conf) + " authentication method not support. "

@@ -36,9 +36,11 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
+import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.server.SCMHTTPServerConfig;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -206,11 +208,12 @@ public final class TestSecureOzoneCluster {
 
   private void createCredentialsInKDC(Configuration configuration,
                                       MiniKdc kdc) throws Exception {
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration(configuration);
+    SCMHTTPServerConfig httpServerconfig = ozoneConfiguration.getObject(SCMHTTPServerConfig.class);
     createPrincipal(scmKeytab,
-        configuration.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
+        httpServerconfig.getKerberosPrincipal());
     createPrincipal(spnegoKeytab,
-        configuration.get(ScmConfigKeys
-            .HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY));
+        httpServerconfig.getKerberosKeytab());
     createPrincipal(testUserKeytab, testUserPrincipal);
     createPrincipal(omKeyTab,
         configuration.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
@@ -234,6 +237,8 @@ public final class TestSecureOzoneCluster {
   }
 
   private void setSecureConfig(Configuration configuration) throws IOException {
+    SCMHTTPServerConfig httpServerConfig = conf.getObject(SCMHTTPServerConfig.class);
+    ScmConfig scmConfig = conf.getObject(ScmConfig.class);
     configuration.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
     configuration.setBoolean(OZONE_ENABLED, true);
     host = InetAddress.getLocalHost().getCanonicalHostName()
@@ -246,9 +251,9 @@ public final class TestSecureOzoneCluster {
         "kerberos");
     configuration.set(OZONE_ADMINISTRATORS, curUser);
 
-    configuration.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/" + host + "@" + realm);
-    configuration.set(ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(SCMHTTPServerConfig.ConfigStrings.HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY,
         "HTTP_SCM/" + host + "@" + realm);
 
     configuration.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
@@ -262,10 +267,10 @@ public final class TestSecureOzoneCluster {
     testUserKeytab = new File(workDir, "testuser.keytab");
     testUserPrincipal = "test@" + realm;
 
-    configuration.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
+    configuration.set(ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
     configuration.set(
-        ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY,
+      SCMHTTPServerConfig.ConfigStrings.HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY,
         spnegoKeytab.getAbsolutePath());
     configuration.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
@@ -350,7 +355,7 @@ public final class TestSecureOzoneCluster {
   @Test
   public void testSecureScmStartupFailure() throws Exception {
     initSCM();
-    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY, "");
+    conf.set(ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY, "");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
 
@@ -360,9 +365,9 @@ public final class TestSecureOzoneCluster {
           StorageContainerManager.createSCM(conf);
         });
 
-    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
+    conf.set(ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/_HOST@EXAMPLE.com");
-    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
+    conf.set(ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         "/etc/security/keytabs/scm.keytab");
 
     testCommonKerberosFailures(

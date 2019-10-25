@@ -17,7 +17,7 @@
 package org.apache.hadoop.hdds.protocolPB;
 
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMSecurityProtocolService;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -28,7 +28,7 @@ import org.apache.hadoop.security.KerberosInfo;
 @ProtocolInfo(protocolName =
     "org.apache.hadoop.hdds.protocol.SCMSecurityProtocol",
     protocolVersion = 1)
-@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
+@KerberosInfo(serverPrincipal = ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface SCMSecurityProtocolPB extends
     SCMSecurityProtocolService.BlockingInterface {
 

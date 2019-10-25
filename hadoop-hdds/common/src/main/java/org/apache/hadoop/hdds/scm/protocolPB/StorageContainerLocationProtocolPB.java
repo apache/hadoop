@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos
     .StorageContainerLocationProtocolService;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.security.KerberosInfo;
     "org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol",
     protocolVersion = 1)
 @KerberosInfo(
-    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
+    serverPrincipal = ScmConfig.ConfigStrings.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface StorageContainerLocationProtocolPB
     extends StorageContainerLocationProtocolService.BlockingInterface {
