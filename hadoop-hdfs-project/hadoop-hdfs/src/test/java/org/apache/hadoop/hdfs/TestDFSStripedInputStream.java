@@ -627,4 +627,41 @@ public class TestDFSStripedInputStream {
       }
     }
   }
+
+  @Test
+  public void testUnbuffer() throws Exception {
+    final int numBlocks = 2;
+    final int fileSize = numBlocks * blockGroupSize;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+    LocatedBlocks lbs = fs.getClient().namenode.
+        getBlockLocations(filePath.toString(), 0, fileSize);
+
+    for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+      assert lb instanceof LocatedStripedBlock;
+      LocatedStripedBlock bg = (LocatedStripedBlock)(lb);
+      for (int i = 0; i < dataBlocks; i++) {
+        Block blk = new Block(bg.getBlock().getBlockId() + i,
+            stripesPerBlock * cellSize,
+            bg.getBlock().getGenerationStamp());
+        blk.setGenerationStamp(bg.getBlock().getGenerationStamp());
+        cluster.injectBlocks(i, Arrays.asList(blk),
+            bg.getBlock().getBlockPoolId());
+      }
+    }
+      DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
+          filePath.toString(), false, ecPolicy, null);
+      ByteBuffer readBuffer = ByteBuffer.allocate(fileSize);
+      int done = 0;
+      while (done < fileSize) {
+        int ret = in.read(readBuffer);
+        assertTrue(ret > 0);
+        done += ret;
+      }
+      in.unbuffer();
+      ByteBuffer curStripeBuf = (in.getCurStripeBuf());
+      assertNull(curStripeBuf);
+      assertNull(in.parityBuf);
+      in.close();
+  }
 }

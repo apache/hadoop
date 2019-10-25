@@ -69,7 +69,8 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final int groupSize;
   /** the buffer for a complete stripe. */
   private ByteBuffer curStripeBuf;
-  private ByteBuffer parityBuf;
+  @VisibleForTesting
+  protected ByteBuffer parityBuf;
   private final ErasureCodingPolicy ecPolicy;
   private RawErasureDecoder decoder;
 
@@ -127,7 +128,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     curStripeRange = new StripeRange(0, 0);
   }
 
-  protected ByteBuffer getParityBuffer() {
+  protected synchronized ByteBuffer getParityBuffer() {
     if (parityBuf == null) {
       parityBuf = BUFFER_POOL.getBuffer(useDirectBuffer(),
           cellSize * parityBlkNum);
@@ -549,5 +550,18 @@ public class DFSStripedInputStream extends DFSInputStream {
   public synchronized void releaseBuffer(ByteBuffer buffer) {
     throw new UnsupportedOperationException(
         "Not support enhanced byte buffer access.");
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    super.unbuffer();
+    if (curStripeBuf != null) {
+      BUFFER_POOL.putBuffer(curStripeBuf);
+      curStripeBuf = null;
+    }
+    if (parityBuf != null) {
+      BUFFER_POOL.putBuffer(parityBuf);
+      parityBuf = null;
+    }
   }
 }
