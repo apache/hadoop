@@ -558,7 +558,7 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   @Override
   public synchronized void unbuffer() {
-    closeCurrentBlockReaders();
+    super.unbuffer();
     if (curStripeBuf != null) {
       BUFFER_POOL.putBuffer(curStripeBuf);
       curStripeBuf = null;
