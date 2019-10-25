@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 
 /**
  * {@code AbfsPerfTracker} keeps track of service latencies observed by {@code AbfsClient}. Every request hands over
@@ -118,7 +119,7 @@ public final class AbfsPerfTracker {
           String callerName,
           String calleeName,
           boolean success,
-          AbfsHttpOperation res) {
+          AbfsPerfLoggable res) {
 
     Instant trackerStart = Instant.now();
     long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
@@ -130,7 +131,7 @@ public final class AbfsPerfTracker {
             calleeName,
             success ? "Succeeded" : "Failed",
             latency,
-            res == null ? "" : (" " + res.toKvpString()));
+            res == null ? "" : (" " + res.getLogString()));
 
     this.offerToQueue(trackerStart, latencyDetails);
   }
@@ -143,7 +144,7 @@ public final class AbfsPerfTracker {
           boolean success,
           Instant aggregateStart,
           long aggregateCount,
-          AbfsHttpOperation res){
+          AbfsPerfLoggable res){
 
     Instant trackerStart = Instant.now();
     long latency = isValidInstant(operationStart) && isValidInstant(operationStop)
@@ -159,7 +160,7 @@ public final class AbfsPerfTracker {
             latency,
             aggregateLatency,
             aggregateCount,
-            res == null ? "" : (" " + res.toKvpString()));
+            res == null ? "" : (" " + res.getLogString()));
 
     offerToQueue(trackerStart, latencyDetails);
   }

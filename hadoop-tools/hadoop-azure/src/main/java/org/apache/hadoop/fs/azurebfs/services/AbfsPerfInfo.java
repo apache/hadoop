@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.time.Instant;
 
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
+
 /**
  * {@code AbfsPerfInfo} holds information on ADLS Gen 2 API performance observed by {@code AbfsClient}. Every
  * Abfs request keeps adding its information (success/failure, latency etc) to its {@code AbfsPerfInfo}'s object
@@ -53,7 +55,7 @@ public final class AbfsPerfInfo implements AutoCloseable {
   private long aggregateCount;
 
   // result of the request
-  private AbfsHttpOperation res;
+  private AbfsPerfLoggable res;
 
   public AbfsPerfInfo(AbfsPerfTracker abfsPerfTracker, String callerName, String calleeName) {
     this.callerName = callerName;
@@ -68,7 +70,7 @@ public final class AbfsPerfInfo implements AutoCloseable {
     return this;
   }
 
-  public AbfsPerfInfo registerResult(AbfsHttpOperation res) {
+  public AbfsPerfInfo registerResult(AbfsPerfLoggable res) {
     this.res = res;
     return this;
   }
@@ -126,7 +128,7 @@ public final class AbfsPerfInfo implements AutoCloseable {
     return aggregateCount;
   }
 
-  public AbfsHttpOperation getResult() {
+  public AbfsPerfLoggable getResult() {
     return res;
   }
 }
