@@ -1976,6 +1976,10 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+       if (taskAttempt.getInternalState() ==
+          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER){
+      sendContainerCleanup(taskAttempt, event);
+      }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks
