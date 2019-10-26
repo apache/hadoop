@@ -191,7 +191,7 @@ class FSDirRenameOp {
       return null;
     }
 
-    validateNestSnapshot(fsd, dstParent.asDirectory(), snapshottableDirs);
+    validateNestSnapshot(fsd, src, dstParent.asDirectory(), snapshottableDirs);
 
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
     // Ensure dst has quota to accommodate rename
@@ -404,7 +404,7 @@ class FSDirRenameOp {
       throw new ParentNotDirectoryException(error);
     }
 
-    validateNestSnapshot(fsd, dstParent.asDirectory(), srcSnapshottableDirs);
+    validateNestSnapshot(fsd, src, dstParent.asDirectory(), srcSnapshottableDirs);
 
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -583,7 +583,7 @@ class FSDirRenameOp {
     FSDirSnapshotOp.checkSnapshot(fsd, srcIIP, snapshottableDirs);
   }
 
-  private static void validateNestSnapshot(FSDirectory fsd, INodeDirectory dstParent,
+  private static void validateNestSnapshot(FSDirectory fsd, String srcPath, INodeDirectory dstParent,
       List<INodeDirectory> snapshottableDirs) throws SnapshotException {
 
     if (fsd.getFSNamesystem().getSnapshotManager().isAllowNestedSnapshots()) {
@@ -593,13 +593,13 @@ class FSDirRenameOp {
     /*
      * snapshottableDirs is a list of snapshottable directory(child of rename src)
      * which do not have snapshots yet. If this list is not empty, that means rename
-     * src have snapshottable descendant directories.
+     * src has snapshottable descendant directories.
      */
     if (snapshottableDirs != null && snapshottableDirs.size() > 0) {
       if (fsd.getFSNamesystem().getSnapshotManager().isDescendantOfSnapshotRoot(dstParent)) {
-        String fullPath = dstParent.getFullPathName();
-        throw new SnapshotException("Failed to rename to " + fullPath +
-                " due to nested snapshottable directory");
+        String dstPath = dstParent.getFullPathName();
+        throw new SnapshotException("Unable to rename because " + srcPath + " has snapshottable descendant directories and " + dstPath +
+                " is a descent of a snapshottable directory, and HDFS does not support nested snapshottable directory.");
       }
     }
   }
