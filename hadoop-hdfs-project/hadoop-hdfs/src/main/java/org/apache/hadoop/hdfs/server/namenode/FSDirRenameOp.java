@@ -404,7 +404,8 @@ class FSDirRenameOp {
       throw new ParentNotDirectoryException(error);
     }
 
-    validateNestSnapshot(fsd, src, dstParent.asDirectory(), srcSnapshottableDirs);
+    validateNestSnapshot(fsd, src,
+            dstParent.asDirectory(), srcSnapshottableDirs);
 
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -562,7 +563,8 @@ class FSDirRenameOp {
   }
 
   private static void validateRenameSource(FSDirectory fsd,
-      INodesInPath srcIIP, List<INodeDirectory> snapshottableDirs) throws IOException {
+      INodesInPath srcIIP, List<INodeDirectory> snapshottableDirs)
+      throws IOException {
     String error;
     final INode srcInode = srcIIP.getLastINode();
     // validate source
@@ -583,23 +585,27 @@ class FSDirRenameOp {
     FSDirSnapshotOp.checkSnapshot(fsd, srcIIP, snapshottableDirs);
   }
 
-  private static void validateNestSnapshot(FSDirectory fsd, String srcPath, INodeDirectory dstParent,
-      List<INodeDirectory> snapshottableDirs) throws SnapshotException {
+  private static void validateNestSnapshot(FSDirectory fsd, String srcPath,
+      INodeDirectory dstParent, List<INodeDirectory> snapshottableDirs)
+      throws SnapshotException {
 
     if (fsd.getFSNamesystem().getSnapshotManager().isAllowNestedSnapshots()) {
       return;
     }
 
     /*
-     * snapshottableDirs is a list of snapshottable directory(child of rename src)
-     * which do not have snapshots yet. If this list is not empty, that means rename
-     * src has snapshottable descendant directories.
+     * snapshottableDirs is a list of snapshottable directory (child of rename
+     * src) which do not have snapshots yet. If this list is not empty, that
+     * means rename src has snapshottable descendant directories.
      */
     if (snapshottableDirs != null && snapshottableDirs.size() > 0) {
-      if (fsd.getFSNamesystem().getSnapshotManager().isDescendantOfSnapshotRoot(dstParent)) {
+      if (fsd.getFSNamesystem().getSnapshotManager()
+              .isDescendantOfSnapshotRoot(dstParent)) {
         String dstPath = dstParent.getFullPathName();
-        throw new SnapshotException("Unable to rename because " + srcPath + " has snapshottable descendant directories and " + dstPath +
-                " is a descent of a snapshottable directory, and HDFS does not support nested snapshottable directory.");
+        throw new SnapshotException("Unable to rename because " + srcPath
+                + " has snapshottable descendant directories and " + dstPath
+                + " is a descent of a snapshottable directory, and HDFS does"
+                + " not support nested snapshottable directory.");
       }
     }
   }

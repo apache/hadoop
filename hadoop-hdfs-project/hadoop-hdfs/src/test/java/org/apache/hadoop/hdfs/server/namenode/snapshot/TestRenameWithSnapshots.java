@@ -1137,9 +1137,10 @@ public class TestRenameWithSnapshots {
     try {
       hdfs.rename(foo, bar, Rename.OVERWRITE);
     } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("Unable to rename because " + foo.toString()
-              + " has snapshottable descendant directories and " + sdir2.toString()
-              + " is a descent of a snapshottable directory, and HDFS does not support nested snapshottable directory.", e);
+      GenericTestUtils.assertExceptionContains("Unable to rename because "
+            + foo.toString() + " has snapshottable descendant directories and "
+            + sdir2.toString() + " is a descent of a snapshottable directory, "
+            + "and HDFS does not support nested snapshottable directory.", e);
     }
 
     hdfs.disallowSnapshot(foo);
