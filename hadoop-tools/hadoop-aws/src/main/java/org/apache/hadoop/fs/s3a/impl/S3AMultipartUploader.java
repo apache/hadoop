@@ -30,7 +30,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
@@ -52,6 +51,7 @@ import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
  * MultipartUploader for S3AFileSystem. This uses the S3 multipart
@@ -71,13 +71,38 @@ public class S3AMultipartUploader extends AbstractMultipartUploader {
 
   private final StoreContext context;
 
+  private final Path path;
+
+  /**
+   * Bulk state -demand created during completion operations.
+   */
+  private BulkOperationState operationState;
+
   public S3AMultipartUploader(final S3AMultipartUploaderBuilder builder,
       final WriteOperationHelper writeHelper,
       final StoreContext context) {
     this.builder = builder;
     this.writeHelper = writeHelper;
+    path = builder.getPath();
 
     this.context = context;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (operationState != null) {
+      operationState.close();
+    }
+    super.close();
+  }
+
+  private synchronized BulkOperationState retrieveOperationState()
+      throws IOException {
+    if (operationState == null) {
+      operationState = writeHelper.initiateOperation(path,
+          BulkOperationState.OperationType.Upload);
+    }
+    return operationState;
   }
 
   @Override
@@ -142,13 +167,14 @@ public class S3AMultipartUploader extends AbstractMultipartUploader {
       totalLength += result.getLeft();
       eTags.add(new PartETag(handle.getKey(), result.getRight()));
     }
-    AtomicInteger errorCount = new AtomicInteger(0);
+    // retrieve/create operation state for scalability of completion.
+    final BulkOperationState state = retrieveOperationState();
     long finalLen = totalLength;
     return context.submit(new CompletableFuture<>(),
         () -> {
           CompleteMultipartUploadResult result
-              = writeHelper.completeMPUwithRetries(
-              key, uploadIdStr, eTags, finalLen, errorCount);
+              = writeHelper.commitUpload(
+              key, uploadIdStr, eTags, finalLen, state);
 
           byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
           return (PathHandle) () -> ByteBuffer.wrap(eTag);
@@ -169,7 +195,6 @@ public class S3AMultipartUploader extends AbstractMultipartUploader {
           return null;
         });
   }
-
 
   /**
    * Build the payload for marshalling.

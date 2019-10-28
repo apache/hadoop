@@ -258,7 +258,7 @@ public class WriteOperationHelper {
           "No upload parts in multipart upload to " + destKey);
     }
     CompleteMultipartUploadResult uploadResult =
-        invoker.retry("Completing multipart commit", destKey,
+        invoker.retry("Completing multipart upload", destKey,
             true,
             retrying,
             () -> {
@@ -560,8 +560,20 @@ public class WriteOperationHelper {
    */
   public BulkOperationState initiateCommitOperation(
       Path path) throws IOException {
+    return initiateOperation(path, BulkOperationState.OperationType.Commit);
+  }
+
+  /**
+   * Initiate a commit operation through any metastore.
+   * @param path path under which the writes will all take place.
+   * @param operationType operation to initiate
+   * @return an possibly null operation state from the metastore.
+   * @throws IOException failure to instantiate.
+   */
+  public BulkOperationState initiateOperation(final Path path,
+      final BulkOperationState.OperationType operationType) throws IOException {
     return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
-        BulkOperationState.OperationType.Commit, path);
+        operationType, path);
   }
 
   /**
