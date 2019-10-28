@@ -803,7 +803,7 @@ public class Client implements AutoCloseable {
           setupConnection(ticket);
           ipcStreams = new IpcStreams(socket, maxResponseLength);
           writeConnectionHeader(ipcStreams);
-          if (authProtocol == AuthProtocol.SASL) {
+          if (authProtocol == AuthProtocol.SASL && ticket != null) {
             try {
               authMethod = ticket
                   .doAs(new PrivilegedExceptionAction<AuthMethod>() {
