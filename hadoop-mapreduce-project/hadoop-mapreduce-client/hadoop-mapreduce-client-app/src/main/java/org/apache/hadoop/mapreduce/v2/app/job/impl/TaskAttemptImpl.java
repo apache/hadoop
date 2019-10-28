@@ -1976,7 +1976,7 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
-       if (taskAttempt.getInternalState() ==
+      if (taskAttempt.getInternalState() ==
           TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER){
       sendContainerCleanup(taskAttempt, event);
       }
