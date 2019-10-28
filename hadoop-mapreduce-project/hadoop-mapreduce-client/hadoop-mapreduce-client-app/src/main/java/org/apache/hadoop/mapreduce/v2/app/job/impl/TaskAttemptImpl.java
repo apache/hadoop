@@ -1978,7 +1978,7 @@ public abstract class TaskAttemptImpl implements
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
       if (taskAttempt.getInternalState() ==
           TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
-      sendContainerCleanup(taskAttempt, event);
+        sendContainerCleanup(taskAttempt, event);
       }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
