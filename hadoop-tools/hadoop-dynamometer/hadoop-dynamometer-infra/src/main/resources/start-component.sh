@@ -94,7 +94,7 @@ function hdfs_original {
 extraClasspathDir="$(pwd)/additionalClasspath/"
 mkdir -p "${extraClasspathDir}"
 
-junitClassPath="$(find $hadoopHome -name "junit*.jar" | head -n 1)"
+junitClassPath="$(find ${hadoopHome} -name "junit*.jar" | head -n 1)"
 if [[ -z "$junitClassPath" ]]; then
   echo "Can't find junit jar file."
   exit 1
