@@ -283,13 +283,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.namenode.blockreport.queue.size";
   public static final int    DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT
       = 1024;
-  public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_KEY = "dfs.web.authentication.filter";
-  /* Phrased as below to avoid javac inlining as a constant, to match the behavior when
-     this was AuthFilter.class.getName(). Note that if you change the import for AuthFilter, you
-     need to update the literal here as well as TestDFSConfigKeys.
-   */
-  public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT =
-      "org.apache.hadoop.hdfs.web.AuthFilter";
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;
