@@ -1977,7 +1977,7 @@ public abstract class TaskAttemptImpl implements
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
       if (taskAttempt.getInternalState() ==
-          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER){
+          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
       sendContainerCleanup(taskAttempt, event);
       }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
