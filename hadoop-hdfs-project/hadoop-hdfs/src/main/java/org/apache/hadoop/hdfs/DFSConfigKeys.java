@@ -624,7 +624,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // String table in the fsimage utilizes an expanded bit range.
   public static final String DFS_IMAGE_EXPANDED_STRING_TABLES_KEY =
       "dfs.image.string-tables.expanded";
-  public static final boolean DFS_IMAGE_EXPANDED_STRING_TABLES_DEFAULT = true;
+  public static final boolean DFS_IMAGE_EXPANDED_STRING_TABLES_DEFAULT = false;
 
   // Image transfer timeout
   public static final String DFS_IMAGE_TRANSFER_TIMEOUT_KEY = "dfs.image.transfer.timeout";
