@@ -24,13 +24,14 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.StatUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 
-import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,6 +129,8 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   @Test
   @SuppressWarnings("deprecation")
   public void testPermission() throws Exception {
+    assumeTrue("No native library",
+        NativeCodeLoader.isNativeCodeLoaded());
     Path testDir = getTestBaseDir();
     String testFilename = "teststat2File";
     Path path = new Path(testDir, testFilename);
@@ -146,11 +149,7 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsNIO =
         new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
             file, defaultBlockSize, rfs);
-    try {
-      fsNIO.loadPermissionInfoByNativeIO();
-    } catch (UnsatisfiedLinkError e) {
-      throw new AssumptionViolatedException("No native library", e);
-    }
+    fsNIO.loadPermissionInfoByNativeIO();
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsnonNIO =
         new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
             file, defaultBlockSize, rfs);
