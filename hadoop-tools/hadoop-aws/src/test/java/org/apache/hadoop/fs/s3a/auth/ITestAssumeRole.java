@@ -756,4 +756,28 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Assertions.assertThat(info)
         .contains(S3GuardTool.BucketInfo.LOCATION_UNKNOWN);
   }
+  /**
+   * Turn off access to dynamo DB Tags and see how DDB table init copes.
+   * There's no testing of the codepath other than checking the logs
+   * - this test does make sure that no regression stops the tag permission
+   * failures from halting the client
+   */
+  @Test
+  public void testRestrictDDBTagAccess() throws Throwable {
+
+    describe("extra policies in assumed roles need;"
+        + " all required policies stated");
+    Configuration conf = createAssumedRoleConfig();
+
+    bindRolePolicyStatements(conf,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_S3,
+        new Statement(Effects.Deny)
+            .addActions(S3_PATH_RW_OPERATIONS)
+            .addResources(ALL_DDB_TABLES));
+    Path path = path("testRestrictDDBTagAccess");
+
+    roleFS = (S3AFileSystem) path.getFileSystem(conf);
+  }
 }

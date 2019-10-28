@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -68,6 +69,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRIT
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateDynamoDBException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_ON_DEMAND_NO_SET_CAPACITY;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
@@ -228,19 +230,19 @@ public class DynamoDBMetadataStoreTableManager {
     return table;
   }
 
-  protected void tagTableWithVersionMarker() {
+  protected void tagTableWithVersionMarker() throws AmazonDynamoDBException {
     try {
       TagResourceRequest tagResourceRequest = new TagResourceRequest()
           .withResourceArn(table.getDescription().getTableArn())
           .withTags(newVersionMarkerTag());
       amazonDynamoDB.tagResource(tagResourceRequest);
     } catch (AmazonDynamoDBException e) {
-      LOG.warn("Exception during tagging table: {}", e.getMessage());
+      LOG.debug("Exception during tagging table: {}", e.getMessage(), e);
     }
   }
 
   protected static Item getVersionMarkerFromTags(Table table,
-      AmazonDynamoDB addb) {
+      AmazonDynamoDB addb) throws IOException {
     List<Tag> tags = null;
     try {
       final TableDescription description = table.describe();
@@ -252,8 +254,10 @@ public class DynamoDBMetadataStoreTableManager {
       LOG.error("Table: {} not found.", table.getTableName());
       throw e;
     } catch (AmazonDynamoDBException e) {
-      LOG.warn("Exception while getting tags from the dynamo table: {}",
-          e.getMessage());
+      LOG.debug("Exception while getting tags from the dynamo table: {}",
+          e.getMessage(), e);
+      throw translateDynamoDBException(table.getTableName(),
+          "Retrieving tags.", e);
     }
 
     if (tags == null) {
@@ -374,8 +378,15 @@ public class DynamoDBMetadataStoreTableManager {
   @VisibleForTesting
   protected void verifyVersionCompatibility() throws IOException {
     final Item versionMarkerItem = getVersionMarkerItem();
-    final Item versionMarkerFromTag =
-        getVersionMarkerFromTags(table, amazonDynamoDB);
+    Item versionMarkerFromTag = null;
+    boolean canReadDdbTags = true;
+
+    try {
+      versionMarkerFromTag = getVersionMarkerFromTags(table, amazonDynamoDB);
+    } catch (AccessDeniedException e) {
+      LOG.debug("Can not read tags of table.");
+      canReadDdbTags = false;
+    }
 
     LOG.debug("versionMarkerItem: {};  versionMarkerFromTag: {}",
         versionMarkerItem, versionMarkerFromTag);
@@ -387,12 +398,19 @@ public class DynamoDBMetadataStoreTableManager {
             + " Table: " + tableName);
       }
 
-      LOG.info("Table {} contains no version marker item or tag. " +
-              "The table is empty, so the version marker will be added " +
-              "as TAG and ITEM.", tableName);
+      if (canReadDdbTags) {
+        LOG.info("Table {} contains no version marker item and tag. " +
+            "The table is empty, so the version marker will be added " +
+            "as TAG and ITEM.", tableName);
+        putVersionMarkerItemToTable();
+        tagTableWithVersionMarker();
+      }
 
-      tagTableWithVersionMarker();
-      putVersionMarkerItemToTable();
+      if (!canReadDdbTags) {
+        LOG.info("Table {} contains no version marker item and the tags are not readable. " +
+            "The table is empty, so the ITEM version marker will be added .", tableName);
+        putVersionMarkerItemToTable();
+      }
     }
 
     if (versionMarkerItem == null && versionMarkerFromTag != null) {
@@ -408,7 +426,8 @@ public class DynamoDBMetadataStoreTableManager {
       putVersionMarkerItemToTable();
     }
 
-    if (versionMarkerItem != null && versionMarkerFromTag == null) {
+    if (versionMarkerItem != null && versionMarkerFromTag == null
+        && canReadDdbTags) {
       final int itemVersionMarker =
           extractVersionFromMarker(versionMarkerItem);
       throwExceptionOnVersionMismatch(itemVersionMarker, tableName,

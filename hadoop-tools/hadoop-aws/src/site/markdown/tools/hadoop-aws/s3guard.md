@@ -977,10 +977,7 @@ the check throws IOException
 
 *Note*: If the user does not have sufficient rights to tag the table the 
 initialization of S3Guard will not fail, but there will be no version marker tag
-on the dynamo table and the following message will be logged on WARN level:
-```
-Exception during tagging table: {AmazonDynamoDBException exception message}
-```
+on the dynamo table.
 
 *Versioning policy*
 
