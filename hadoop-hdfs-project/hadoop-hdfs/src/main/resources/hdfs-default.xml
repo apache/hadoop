@@ -5043,14 +5043,6 @@
 </property>
 
 <property>
-  <name>dfs.web.authentication.filter</name>
-  <value>org.apache.hadoop.hdfs.web.AuthFilter</value>
-  <description>
-    Authentication filter class used for WebHDFS.
-  </description>
-</property>
-
-<property>
   <name>dfs.web.authentication.simple.anonymous.allowed</name>
   <value></value>
   <description>
