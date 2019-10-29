@@ -259,10 +259,11 @@ public class DFSNetworkTopology extends NetworkTopology {
   }
 
   private boolean isNodeInScope(Node node, String scope) {
-    if (!scope.endsWith("/")) {
-      scope += "/";
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
     }
-    String nodeLocation = node.getNetworkLocation() + "/";
+    String nodeLocation =
+        node.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR;
     return nodeLocation.startsWith(scope);
   }
 
