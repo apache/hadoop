@@ -1883,7 +1883,7 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_DONE));
 
     assertEquals("Task attempt's internal state is not " +
-        "SUCCESS_FINISHING_CONTAINER", 
+        "SUCCESS_FINISHING_CONTAINER",
         TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
         taImpl.getInternalState());
 
