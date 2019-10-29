@@ -94,9 +94,10 @@ function hdfs_original {
 extraClasspathDir="$(pwd)/additionalClasspath/"
 mkdir -p "${extraClasspathDir}"
 
+# DataNodes need junit jar to run SimulatedDataNodes
 junitClassPath="$(find "${hadoopHome}" -name "junit*.jar" | head -n 1)"
 if [[ -z "$junitClassPath" ]]; then
-  echo "Can't find junit jar file."
+  echo "Can't find junit jar file in ${hadoopHome}."
   exit 1
 fi
 
