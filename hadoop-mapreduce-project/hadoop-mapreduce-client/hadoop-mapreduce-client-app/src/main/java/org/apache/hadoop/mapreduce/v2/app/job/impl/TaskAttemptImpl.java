@@ -382,6 +382,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+         new TooManyFetchFailureTransition())
      // ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
@@ -391,12 +395,6 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT))
 
-     // Transitions from SUCCESS_FINISHING_CONTAINER state to FAILED stat
-     // When the event TA_TOO_MANY_FETCH_FAILURE received
-    .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        TaskAttemptStateInternal.FAILED,
-        TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
-        new TooManyFetchFailureTransition())
      // Transitions from FAIL_FINISHING_CONTAINER state
      // When the container exits by itself, the notification of container
      // completed event will be routed via NM -> RM -> AM.
@@ -2154,6 +2152,10 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      if (taskAttempt.getInternalState() ==
+          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
+        sendContainerCleanup(taskAttempt, event);
+      }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks
