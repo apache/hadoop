@@ -444,6 +444,15 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void checkDdbInternalConsistency() throws Exception {
+    final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+    final DynamoDBMetadataStore ms =
+        (DynamoDBMetadataStore) guardedFs.getMetadataStore();
+    s3GuardFsck.checkDdbInternalConsistency(ms,
+        new Path("s3a://" + guardedFs.getBucket() + "/"));
+  }
+
   protected void assertComparePairsSize(
       List<S3GuardFsck.ComparePair> comparePairs, int num) {
     Assertions.assertThat(comparePairs)

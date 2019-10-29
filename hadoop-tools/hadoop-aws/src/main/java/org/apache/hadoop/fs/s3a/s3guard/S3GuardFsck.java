@@ -24,12 +24,21 @@ import java.security.InvalidParameterException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
+import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
+import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +47,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.StopWatch;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.itemToPathMetadata;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToKey;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToParentKey;
 
 /**
  * Main class for the FSCK factored out from S3GuardTool
@@ -393,6 +406,197 @@ public class S3GuardFsck {
           + ", msPathMetadata=" + msPathMetadata + ", s3DirListing=" +
           s3DirListing + ", msDirListing=" + msDirListing + ", path="
           + path + ", violations=" + violations + '}';
+    }
+  }
+
+  /**
+   * Tasks to do here:
+   *
+   * - find orphan entries (entries without a parent)
+   * - find if a file's parent is not a directory (so the parent is a file)
+   * - warn: no lastUpdated field
+   * - entries where the parent is a tombstone
+   * @param ddbms the metadatastore to check
+   */
+  public void checkDdbInternalConsistency (DynamoDBMetadataStore ddbms,
+      Path rootPath) throws IOException {
+
+    Preconditions.checkArgument(rootPath.isAbsolute(), "path must be absolute");
+
+    String rootStr = rootPath.toString();
+    LOG.info("Rootstr: {}", rootStr);
+
+    final Table table = ddbms.getTable();
+    DDBTree ddbTree = new DDBTree();
+
+    /**
+     * I. Root node construction
+     * - If the root node is the real bucket root, a node is constructed instead of
+     *   doing a query to the ddb because the bucket root is not stored.
+     * - If the root node is not a real bucket root then the entry is queried from
+     *   the ddb and constructed from the result.
+     */
+
+    DDBPathMetadata rootMeta;
+
+    if (!rootPath.isRoot()) {
+      PrimaryKey rootKey = pathToKey(rootPath);
+      final GetItemSpec spec = new GetItemSpec()
+          .withPrimaryKey(rootKey)
+          .withConsistentRead(true);
+      final Item rootItem = table.getItem(spec);
+      rootMeta = itemToPathMetadata(rootItem, ddbms.getUsername());
+    } else {
+      rootMeta = new DDBPathMetadata(
+          new S3AFileStatus(Tristate.UNKNOWN, rootPath, ddbms.getUsername())
+      );
+    }
+
+    DDBTreeNode root = new DDBTreeNode(rootMeta);
+    ddbTree.addNode(root);
+    ddbTree.setRoot(root);
+
+    /**
+     * II. Build the descendant tree:
+     * 1. query all nodes where the parent is our root, and put it in the tree
+     * 2. Add edges to the tree: connect each node with the parent.
+     *    - This should be done in O(n): we only need to find the parent based on the
+     *      path with a hashmap lookup.
+     *
+     * 3. Do a test if the graph is connected - find orphan entries
+     *
+     * 4. Do test the elements for errors:
+     *    - File is a parent of a file.
+     *    - Entries where the parent is tombstoned but the entries are not.
+     *    - Warn on no lastUpdated field.
+     */
+    ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+    builder.withCondition(
+        ExpressionSpecBuilder.S("parent")
+            .beginsWith(pathToParentKey(rootPath))
+    );
+    final IteratorSupport<Item, ScanOutcome> resultIterator = table.scan(
+        builder.buildForScan()).iterator();
+    resultIterator.forEachRemaining(item -> {
+      final DDBPathMetadata pmd = itemToPathMetadata(item, ddbms.getUsername());
+      System.out.println(pmd.getFileStatus().getPath());
+      DDBTreeNode ddbTreeNode = new DDBTreeNode(pmd);
+      ddbTree.addNode(ddbTreeNode);
+    });
+
+    System.out.println(ddbTree.getContentMap().toString());
+    LOG.info("Root: {}", ddbTree.getRoot());
+    LOG.debug("Constructing tree.");
+
+    for (Map.Entry<Path, DDBTreeNode> entry : ddbTree.getContentMap().entrySet()) {
+      // let's skip the root node for building.
+      if (entry.getValue().getFileStatus().getPath().isRoot()) {
+        continue;
+      }
+      if(entry.getValue().getVal().getLastUpdated() == 0) {
+        LOG.warn("Last updated is not set for entry: {}", entry.getKey());
+      }
+
+      final Path parent = entry.getValue()
+          .getFileStatus()
+          .getPath()
+          .getParent();
+      final DDBTreeNode parentNode = ddbTree.getContentMap().get(parent);
+      if (parentNode == null) {
+        LOG.error("Orphan entry: {}", entry.getKey());
+      } else {
+        if (!parentNode.isDirectory()) {
+          LOG.error("Parent is not a directory: {}", entry.getKey());
+        }
+        if(!entry.getValue().isTombstoned() && parentNode.isTombstoned()) {
+          LOG.error("Parent is tombstoned, but the entry is not. " +
+              "parent: {}; entry: {}", parent, entry.getKey());
+        }
+      }
+      entry.getValue().setParent(parentNode);
+    }
+  }
+
+  /**
+   * DDBTree is the tree that represents the structure of items in the DynamoDB
+   */
+  public static class DDBTree {
+    Map<Path, DDBTreeNode> contentMap = new HashMap<>();
+    DDBTreeNode root;
+
+    public DDBTree() {
+    }
+
+    public Map<Path, DDBTreeNode> getContentMap() {
+      return contentMap;
+    }
+
+    public DDBTreeNode getRoot() {
+      return root;
+    }
+
+    public void setRoot(DDBTreeNode root) {
+      this.root = root;
+    }
+
+    public void addNode(DDBTreeNode pm) {
+      contentMap.put(pm.getVal().getFileStatus().getPath(), pm);
+    }
+  }
+
+  /**
+   * Tree node for DDBTree
+   */
+  public static class DDBTreeNode {
+    final DDBPathMetadata val;
+    DDBTreeNode parent;
+    List<DDBPathMetadata> children;
+
+    public DDBTreeNode (DDBPathMetadata pm) {
+      this.val = pm;
+      this.parent = null;
+      this.children = new ArrayList<>();
+    }
+
+    public DDBPathMetadata getVal() {
+      return val;
+    }
+
+    public DDBTreeNode getParent() {
+      return parent;
+    }
+
+    public void setParent(DDBTreeNode parent) {
+      this.parent = parent;
+    }
+
+    public List<DDBPathMetadata> getChildren() {
+      return children;
+    }
+
+    public void setChildren(List<DDBPathMetadata> children) {
+      this.children = children;
+    }
+
+    public boolean isDirectory() {
+      return val.getFileStatus().isDirectory();
+    }
+
+    public S3AFileStatus getFileStatus() {
+      return val.getFileStatus();
+    }
+
+    public boolean isTombstoned() {
+      return val.isDeleted();
+    }
+
+    @Override
+    public String toString() {
+      return "DDBTreeNode{" +
+          "val=" + val +
+          ", parent=" + parent +
+          ", children=" + children +
+          '}';
     }
   }
 
