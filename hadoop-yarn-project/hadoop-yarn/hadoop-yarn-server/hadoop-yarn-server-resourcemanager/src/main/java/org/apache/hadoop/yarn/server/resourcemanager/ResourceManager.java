@@ -256,6 +256,8 @@ public class ResourceManager extends CompositeService
     return rmLoginUGI.getShortUserName();
   }
 
+  private RMInfo rmStatusInfoBean;
+
   @VisibleForTesting
   protected static void setClusterTimeStamp(long timestamp) {
     clusterTimeStamp = timestamp;
@@ -279,6 +281,10 @@ public class ResourceManager extends CompositeService
     UserGroupInformation.setConfiguration(conf);
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+    rmContext.setYarnConfiguration(conf);
+
+    rmStatusInfoBean = new RMInfo(this);
+    rmStatusInfoBean.register();
 
     // Set HA configuration should be done before login
     this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
@@ -340,8 +346,6 @@ public class ResourceManager extends CompositeService
         rmContext.setLeaderElectorService(elector);
       }
     }
-
-    rmContext.setYarnConfiguration(conf);
 
     createAndInitActiveServices(false);
 
@@ -1422,6 +1426,7 @@ public class ResourceManager extends CompositeService
     }
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);
+    rmStatusInfoBean.unregister();
   }
   
   protected ResourceTrackerService createResourceTrackerService() {
