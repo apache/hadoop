@@ -166,6 +166,7 @@ public class Client extends Configured implements Tool {
   public static final String WORKLOAD_REPLAY_ENABLE_ARG =
       "workload_replay_enable";
   public static final String WORKLOAD_INPUT_PATH_ARG = "workload_input_path";
+  public static final String WORKLOAD_OUTPUT_PATH_ARG = "workload_output_path";
   public static final String WORKLOAD_THREADS_PER_MAPPER_ARG =
       "workload_threads_per_mapper";
   public static final String WORKLOAD_START_DELAY_ARG = "workload_start_delay";
@@ -231,6 +232,8 @@ public class Client extends Configured implements Tool {
   private volatile Job workloadJob;
   // The input path for the workload job.
   private String workloadInputPath = "";
+  // The output path for the workload job metric results.
+  private String workloadOutputPath = "";
   // The number of threads to use per mapper for the workload job.
   private int workloadThreadsPerMapper;
   // The startup delay for the workload job.
@@ -347,6 +350,8 @@ public class Client extends Configured implements Tool {
         + "audit logs against the HDFS cluster which is started.");
     opts.addOption(WORKLOAD_INPUT_PATH_ARG, true,
         "Location of the audit traces to replay (Required for workload)");
+    opts.addOption(WORKLOAD_OUTPUT_PATH_ARG, true,
+        "Location of the metrics output (Required for workload)");
     opts.addOption(WORKLOAD_THREADS_PER_MAPPER_ARG, true, "Number of threads "
         + "per mapper to use to replay the workload. (default "
         + AuditReplayMapper.NUM_THREADS_DEFAULT + ")");
@@ -476,6 +481,7 @@ public class Client extends Configured implements Tool {
       }
       launchWorkloadJob = true;
       workloadInputPath = commandLine.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
+      workloadOutputPath = commandLine.getOptionValue(WORKLOAD_OUTPUT_PATH_ARG);
       workloadThreadsPerMapper = Integer
           .parseInt(commandLine.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
               String.valueOf(AuditReplayMapper.NUM_THREADS_DEFAULT)));
@@ -1032,6 +1038,7 @@ public class Client extends Configured implements Tool {
           + workloadStartDelayMs;
       Configuration workloadConf = new Configuration(getConf());
       workloadConf.set(AuditReplayMapper.INPUT_PATH_KEY, workloadInputPath);
+      workloadConf.set(AuditReplayMapper.OUTPUT_PATH_KEY, workloadOutputPath);
       workloadConf.setInt(AuditReplayMapper.NUM_THREADS_KEY,
           workloadThreadsPerMapper);
       workloadConf.setDouble(AuditReplayMapper.RATE_FACTOR_KEY,

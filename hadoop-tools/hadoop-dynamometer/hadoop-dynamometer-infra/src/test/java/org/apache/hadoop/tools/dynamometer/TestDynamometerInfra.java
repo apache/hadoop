@@ -132,6 +132,8 @@ public class TestDynamometerInfra {
   private static final String NAMENODE_NODELABEL = "dyno_namenode";
   private static final String DATANODE_NODELABEL = "dyno_datanode";
 
+  private static final String OUTPUT_PATH = "/tmp/trace_output_direct";
+
   private static MiniDFSCluster miniDFSCluster;
   private static MiniYARNCluster miniYARNCluster;
   private static YarnClient yarnClient;
@@ -408,6 +410,7 @@ public class TestDynamometerInfra {
         return false;
       }
     }, 3000, 60000);
+    assertTrue(fs.exists(new Path(OUTPUT_PATH)));
   }
 
   private void assertClusterIsFunctional(Configuration localConf,
@@ -477,6 +480,8 @@ public class TestDynamometerInfra {
             "-" + Client.WORKLOAD_REPLAY_ENABLE_ARG,
             "-" + Client.WORKLOAD_INPUT_PATH_ARG,
             fs.makeQualified(new Path("/tmp/audit_trace_direct")).toString(),
+            "-" + Client.WORKLOAD_OUTPUT_PATH_ARG,
+            fs.makeQualified(new Path(OUTPUT_PATH)).toString(),
             "-" + Client.WORKLOAD_THREADS_PER_MAPPER_ARG, "1",
             "-" + Client.WORKLOAD_START_DELAY_ARG, "10s",
             "-" + AMOptions.NAMENODE_ARGS_ARG,
