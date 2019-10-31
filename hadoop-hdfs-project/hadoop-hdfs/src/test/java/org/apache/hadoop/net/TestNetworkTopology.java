@@ -351,6 +351,10 @@ public class TestNetworkTopology {
   
   @Test
   public void testRemove() throws Exception {
+    // this cluster topology is:
+    // /d1/r1, /d1/r2, /d2/r3, /d3/r1, /d3/r2, /d4/r1
+    // so root "" has four children
+    assertEquals(4, cluster.clusterMap.getNumOfChildren());
     for(int i=0; i<dataNodes.length; i++) {
       cluster.remove(dataNodes[i]);
     }
@@ -359,6 +363,7 @@ public class TestNetworkTopology {
     }
     assertEquals(0, cluster.getNumOfLeaves());
     assertEquals(0, cluster.clusterMap.getChildren().size());
+    assertEquals(0, cluster.clusterMap.getNumOfChildren());
     for(int i=0; i<dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
     }
