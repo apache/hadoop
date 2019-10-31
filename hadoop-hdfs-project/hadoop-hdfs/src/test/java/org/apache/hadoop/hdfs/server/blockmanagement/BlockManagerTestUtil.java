@@ -168,6 +168,14 @@ public class BlockManagerTestUtil {
     }
   }
 
+  /**
+   * Wakeup the timer thread of PendingReconstructionBlocks.
+   */
+  public static void wakeupPendingReconstructionTimerThread(
+      final BlockManager blockManager) {
+    blockManager.pendingReconstruction.getTimerThread().interrupt();
+  }
+
   public static HeartbeatManager getHeartbeatManager(
       final BlockManager blockManager) {
     return blockManager.getDatanodeManager().getHeartbeatManager();
@@ -393,5 +401,21 @@ public class BlockManagerTestUtil {
       final DatanodeManager dnm =
           nn.getNamesystem().getBlockManager().getDatanodeManager();
       return !dnm.getNetworkTopology().contains(dnm.getDatanode(dnUuid));
+  }
+
+  /**
+   * Remove storage from block.
+   */
+  public static void removeStorage(BlockInfo block,
+      DatanodeStorageInfo storage) {
+    block.removeStorage(storage);
+  }
+
+  /**
+   * Add storage to block.
+   */
+  public static void addStorage(BlockInfo block, DatanodeStorageInfo storage,
+      Block reportedBlock) {
+    block.addStorage(storage, reportedBlock);
   }
 }

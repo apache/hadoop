@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
@@ -278,6 +279,13 @@ class PendingReconstructionBlocks {
     }
   }
 
+  /**
+   * @return timer thread.
+   */
+  @VisibleForTesting
+  public Daemon getTimerThread() {
+    return timerThread;
+  }
   /*
    * Shuts down the pending reconstruction monitor thread.
    * Waits for the thread to exit.
