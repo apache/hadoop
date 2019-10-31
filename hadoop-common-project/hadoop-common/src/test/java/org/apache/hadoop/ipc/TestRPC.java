@@ -84,6 +84,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
@@ -486,14 +487,14 @@ public class TestRPC extends TestRpcBase {
               .setParam2(2).build();
       TestProtos.AddResponseProto addResponse =
           proxy.add(null, addRequest);
-      assertEquals(addResponse.getResult(), 3);
+      assertThat(addResponse.getResult()).isEqualTo(3);
 
       Integer[] integers = new Integer[] {1, 2};
       TestProtos.AddRequestProto2 addRequest2 =
           TestProtos.AddRequestProto2.newBuilder().addAllParams(
               Arrays.asList(integers)).build();
       addResponse = proxy.add2(null, addRequest2);
-      assertEquals(addResponse.getResult(), 3);
+      assertThat(addResponse.getResult()).isEqualTo(3);
 
       boolean caught = false;
       try {

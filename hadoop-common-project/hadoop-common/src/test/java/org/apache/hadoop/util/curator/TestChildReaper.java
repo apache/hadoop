@@ -26,12 +26,13 @@ import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.Timing;
 import org.apache.zookeeper.data.Stat;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.BindException;
 import java.util.Random;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This is a copy of Curator 2.7.1's TestChildReaper class, with minor
@@ -90,7 +91,7 @@ public class TestChildReaper
       timing.forWaiting().sleepABit();
 
       Stat    stat = client.checkExists().forPath("/test");
-      Assert.assertEquals(stat.getNumChildren(), nonEmptyNodes);
+      assertThat(stat.getNumChildren()).isEqualTo(nonEmptyNodes);
     }
     finally
     {
@@ -120,7 +121,7 @@ public class TestChildReaper
       timing.forWaiting().sleepABit();
 
       Stat    stat = client.checkExists().forPath("/test");
-      Assert.assertEquals(stat.getNumChildren(), 0);
+      assertThat(stat.getNumChildren()).isZero();
     }
     finally
     {
@@ -153,11 +154,11 @@ public class TestChildReaper
       timing.forWaiting().sleepABit();
 
       Stat    stat = client.checkExists().forPath("/test1");
-      Assert.assertEquals(stat.getNumChildren(), 0);
+      assertThat(stat.getNumChildren()).isZero();
       stat = client.checkExists().forPath("/test2");
-      Assert.assertEquals(stat.getNumChildren(), 0);
+      assertThat(stat.getNumChildren()).isZero();
       stat = client.checkExists().forPath("/test3");
-      Assert.assertEquals(stat.getNumChildren(), 10);
+      assertThat(stat.getNumChildren()).isEqualTo(10);
     }
     finally
     {
@@ -193,11 +194,11 @@ public class TestChildReaper
       timing.forWaiting().sleepABit();
 
       Stat    stat = client.checkExists().forPath("/test");
-      Assert.assertEquals(stat.getNumChildren(), 0);
+      assertThat(stat.getNumChildren()).isZero();
 
       stat = client.usingNamespace(null).checkExists().forPath("/foo/test");
-      Assert.assertNotNull(stat);
-      Assert.assertEquals(stat.getNumChildren(), 0);
+      assertThat(stat).isNotNull();
+      assertThat(stat.getNumChildren()).isZero();
     }
     finally
     {
