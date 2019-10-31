@@ -56,11 +56,11 @@ public class CountTimeWritable implements Writable {
   }
 
   public void setCount(long count) {
-    this.count.set(getCount() + count);
+    this.count.set(count);
   }
 
   public void setTime(long time) {
-    this.time.set(getTime() + time);
+    this.time.set(time);
   }
 
   @Override
