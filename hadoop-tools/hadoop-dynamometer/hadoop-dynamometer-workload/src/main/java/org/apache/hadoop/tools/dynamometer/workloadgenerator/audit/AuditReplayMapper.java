@@ -77,7 +77,7 @@ import static org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditR
  * twice as fast, and a rate factor of 0.5 would make it occur half as fast.
  */
 public class AuditReplayMapper extends WorkloadMapper<LongWritable, Text,
-    UserCommandKey, LongWritable> {
+    UserCommandKey, CountTimeWritable> {
 
   public static final String INPUT_PATH_KEY = "auditreplay.input-path";
   public static final String OUTPUT_PATH_KEY = "auditreplay.output-path";
@@ -295,16 +295,17 @@ public class AuditReplayMapper extends WorkloadMapper<LongWritable, Text,
   @Override
   public void configureJob(Job job) {
     job.setMapOutputKeyClass(UserCommandKey.class);
-    job.setMapOutputValueClass(LongWritable.class);
+    job.setMapOutputValueClass(CountTimeWritable.class);
     job.setInputFormatClass(NoSplitTextInputFormat.class);
 
     job.setNumReduceTasks(1);
     job.setReducerClass(AuditReplayReducer.class);
     job.setOutputKeyClass(UserCommandKey.class);
-    job.setOutputValueClass(LongWritable.class);
+    job.setOutputValueClass(CountTimeWritable.class);
     job.setOutputFormatClass(TextOutputFormat.class);
 
     TextOutputFormat.setOutputPath(job, new Path(
         job.getConfiguration().get(OUTPUT_PATH_KEY)));
+    job.getConfiguration().set(TextOutputFormat.SEPARATOR, ",");
   }
 }

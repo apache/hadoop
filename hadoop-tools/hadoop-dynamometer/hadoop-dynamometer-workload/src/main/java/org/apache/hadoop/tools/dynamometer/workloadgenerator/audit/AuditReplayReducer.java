@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.tools.dynamometer.workloadgenerator.audit;
 
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
@@ -28,16 +27,18 @@ import java.io.IOException;
  * combines the user's id that ran the command and the type of the command
  * (READ/WRITE).
  */
-public class AuditReplayReducer extends
-    Reducer<UserCommandKey, LongWritable, UserCommandKey, LongWritable> {
+public class AuditReplayReducer extends Reducer<UserCommandKey,
+    CountTimeWritable, UserCommandKey, CountTimeWritable> {
 
   @Override
-  protected void reduce(UserCommandKey key, Iterable<LongWritable> values,
+  protected void reduce(UserCommandKey key, Iterable<CountTimeWritable> values,
       Context context) throws IOException, InterruptedException {
-    long sum = 0;
-    for (LongWritable v : values) {
-      sum += v.get();
+    long countSum = 0;
+    long timeSum = 0;
+    for (CountTimeWritable v : values) {
+      countSum += v.getCount();
+      timeSum += v.getTime();
     }
-    context.write(key, new LongWritable(sum));
+    context.write(key, new CountTimeWritable(countSum, timeSum));
   }
 }

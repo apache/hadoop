@@ -18,7 +18,6 @@
 package org.apache.hadoop.tools.dynamometer.workloadgenerator.audit;
 
 import com.google.common.base.Splitter;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.WorkloadDriver;
 import java.io.IOException;
 import java.net.URI;
@@ -77,7 +76,8 @@ public class AuditReplayThread extends Thread {
   // and merge them all together at the end.
   private Map<REPLAYCOUNTERS, Counter> replayCountersMap = new HashMap<>();
   private Map<String, Counter> individualCommandsMap = new HashMap<>();
-  private Map<UserCommandKey, LongWritable> commandLatencyMap = new HashMap<>();
+  private Map<UserCommandKey, CountTimeWritable> commandLatencyMap
+      = new HashMap<>();
 
   AuditReplayThread(Mapper.Context mapperContext,
       DelayQueue<AuditReplayCommand> queue,
@@ -127,7 +127,7 @@ public class AuditReplayThread extends Thread {
 
   void drainCommandLatencies(Mapper.Context context)
       throws InterruptedException, IOException {
-    for (Map.Entry<UserCommandKey, LongWritable> ent
+    for (Map.Entry<UserCommandKey, CountTimeWritable> ent
         : commandLatencyMap.entrySet()) {
       context.write(ent.getKey(), ent.getValue());
     }
@@ -291,10 +291,11 @@ public class AuditReplayThread extends Thread {
       long latency = System.currentTimeMillis() - startTime;
 
       UserCommandKey userCommandKey = new UserCommandKey(command.getSimpleUgi(),
-          replayCommand.getType().toString());
-      commandLatencyMap.putIfAbsent(userCommandKey, new LongWritable(0));
-      LongWritable latencyWritable = commandLatencyMap.get(userCommandKey);
-      latencyWritable.set(latencyWritable.get() + latency);
+          replayCommand.toString(), replayCommand.getType().toString());
+      commandLatencyMap.putIfAbsent(userCommandKey, new CountTimeWritable());
+      CountTimeWritable latencyWritable = commandLatencyMap.get(userCommandKey);
+      latencyWritable.setCount(latencyWritable.getCount() + 1);
+      latencyWritable.setTime(latencyWritable.getTime() + latency);
 
       switch (replayCommand.getType()) {
       case WRITE:

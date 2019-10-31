@@ -28,26 +28,30 @@ import java.util.Objects;
 
 /**
  * UserCommandKey is a {@link org.apache.hadoop.io.Writable} used as a composite
- * key combining the user id and type of a replayed command. It is used as the
- * output key for AuditReplayMapper and the keys for AuditReplayReducer.
+ * key combining the user id, name, and type of a replayed command. It is used
+ * as the output key for AuditReplayMapper and the keys for AuditReplayReducer.
  */
 public class UserCommandKey implements WritableComparable {
   private Text user;
   private Text command;
+  private Text type;
 
   public UserCommandKey() {
     user = new Text();
     command = new Text();
+    type = new Text();
   }
 
-  public UserCommandKey(Text user, Text command) {
+  public UserCommandKey(Text user, Text command, Text type) {
     this.user = user;
     this.command = command;
+    this.type = type;
   }
 
-  public UserCommandKey(String user, String command) {
+  public UserCommandKey(String user, String command, String type) {
     this.user = new Text(user);
     this.command = new Text(command);
+    this.type = new Text(type);
   }
 
   public String getUser() {
@@ -58,16 +62,22 @@ public class UserCommandKey implements WritableComparable {
     return command.toString();
   }
 
+  public String getType() {
+    return type.toString();
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     user.write(out);
     command.write(out);
+    type.write(out);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     user.readFields(in);
     command.readFields(in);
+    type.readFields(in);
   }
 
   @Override
@@ -77,7 +87,7 @@ public class UserCommandKey implements WritableComparable {
 
   @Override
   public String toString() {
-    return getUser() + "," + getCommand();
+    return getUser() + "," + getType() + "," + getCommand();
   }
 
   @Override
@@ -89,12 +99,13 @@ public class UserCommandKey implements WritableComparable {
       return false;
     }
     UserCommandKey that = (UserCommandKey) o;
-    return getUser().equals(that.getUser())
-        && getCommand().equals(that.getCommand());
+    return getUser().equals(that.getUser()) &&
+        getCommand().equals(that.getCommand()) &&
+        getType().equals(that.getType());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getUser(), getCommand());
+    return Objects.hash(getUser(), getCommand(), getType());
   }
 }

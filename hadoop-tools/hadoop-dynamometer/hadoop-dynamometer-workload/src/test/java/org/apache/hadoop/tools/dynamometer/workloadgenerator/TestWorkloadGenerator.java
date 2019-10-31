@@ -38,9 +38,12 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
+import org.jline.utils.Log;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS;
 import static org.junit.Assert.assertEquals;
@@ -50,6 +53,8 @@ import static org.junit.Assert.assertTrue;
 
 /** Tests for {@link WorkloadDriver} and related classes. */
 public class TestWorkloadGenerator {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWorkloadGenerator.class);
 
   private Configuration conf;
   private MiniDFSCluster miniCluster;
@@ -148,7 +153,12 @@ public class TestWorkloadGenerator {
         "part-r-00000"))) {
       String auditOutput = IOUtils.toString(auditOutputFile,
           StandardCharsets.UTF_8);
-      assertTrue(auditOutput.matches(".*hdfs,WRITE\\t[0-9]+\\n.*"));
+      Log.info(auditOutput);
+      assertTrue(auditOutput.matches(
+          ".*(hdfs,WRITE,[A-Z]+,[17]+,[0-9]+\\n){3}.*"));
+      // Matches three lines of the format "hdfs,WRITE,name,count,time"
+      // Using [17] for the count group because each operation is run either
+      // 1 or 7 times but the output order isn't guaranteed
     }
   }
 }
