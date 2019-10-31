@@ -2437,7 +2437,7 @@ public class TestConfiguration {
     }
     conf.set("different.prefix" + ".name", "value");
     Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
-    assertEquals(prefixedProps.size(), 10);
+    assertThat(prefixedProps.size(), is(10));
     for (int i = 0; i < 10; i++) {
       assertEquals("value" + i, prefixedProps.get("name" + i));
     }
@@ -2448,7 +2448,7 @@ public class TestConfiguration {
       conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
     }
     prefixedProps = conf.getPropsWithPrefix("subprefix.");
-    assertEquals(prefixedProps.size(), 10);
+    assertThat(prefixedProps.size(), is(10));
     for (int i = 0; i < 10; i++) {
       assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
     }
