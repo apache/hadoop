@@ -26,6 +26,8 @@ import java.util.Random;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -232,10 +234,10 @@ public class TestText {
   @Test
   public void testFind() throws Exception {
     Text text = new Text("abcd\u20acbdcd\u20ac");
-    assertTrue(text.find("abd")==-1);
-    assertTrue(text.find("ac") ==-1);
-    assertTrue(text.find("\u20ac") == 4);
-    assertTrue(text.find("\u20ac", 5)==11);
+    assertThat(text.find("abd")).isEqualTo(-1);
+    assertThat(text.find("ac")).isEqualTo(-1);
+    assertThat(text.find("\u20ac")).isEqualTo(4);
+    assertThat(text.find("\u20ac", 5)).isEqualTo(11);
   }
 
   @Test
