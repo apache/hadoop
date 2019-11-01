@@ -618,7 +618,7 @@ an exclusive lock on a file (whoever creates the file without an error is consid
 the holder of the lock) may not not a safe algorithm to use when working with object stores.
 
 * Object stores may create an empty file as a marker when a file is created.
-However, object stores whith overwrite=true semantics may not implement this atomically,
+However, object stores with overwrite=true semantics may not implement this atomically,
 so creating files with `overwrite==false` cannot be used as an implicit exclusion
 mechanism between processes.
 

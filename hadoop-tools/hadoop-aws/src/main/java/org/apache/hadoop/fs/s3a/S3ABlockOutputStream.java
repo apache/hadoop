@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
@@ -392,6 +391,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void close() throws IOException {
+    boolean alreadyClosed;
     acquireLock(false);
     try {
       synchronized (this) {
@@ -400,16 +400,30 @@ class S3ABlockOutputStream extends OutputStream implements
         // because the whole close() method is called, calling it on a stream
         // which has just been closed isn't going to block it for the duration
         // of the entire upload.
-        if (!stateModel.enterClosedState()) {
-          // already closed
-          LOG.debug("Ignoring close() as stream is not open");
-          return;
-        }
+        alreadyClosed = !stateModel.enterClosedState();
       }
     } finally {
       releaseLock();
     }
-    S3ADataBlocks.DataBlock block = getActiveBlock();
+    if (alreadyClosed) {
+      // already closed or in error state.
+      if (stateModel.isInState(StreamStateModel.State.Error)) {
+        // error state.
+        if (multiPartUpload != null) {
+          // attempt to abort any ongoing MPU.
+          multiPartUpload.abort();
+        }
+        // Log the operation as failing and rethrow.
+        IOException ioe = stateModel.getException();
+        writeOperationHelper.writeFailed(ioe);
+        throw ioe;
+      } else {
+        LOG.debug("Ignoring close() as stream is not open");
+        return;
+      }
+    }
+
+      S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();
     LOG.debug("{}: Closing block #{}: current block= {}",
         this,
@@ -453,9 +467,9 @@ class S3ABlockOutputStream extends OutputStream implements
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
-      enterErrorState(ioe);
-      writeOperationHelper.writeFailed(ioe);
-      throw ioe;
+      final IOException ex = enterErrorState(ioe);
+      writeOperationHelper.writeFailed(ex);
+      throw ex;
     } finally {
       closeAll(LOG, block, blockFactory);
       LOG.debug("Statistics: {}", statistics);
@@ -734,9 +748,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * Abort a multi-part upload. Retries are attempted on failures.
      * IOExceptions are caught; this is expected to be run as a cleanup process.
      */
-    public void abort() {
-      int retryCount = 0;
-      AmazonClientException lastException;
+    private void abort() {
       fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
       try {
         writeOperationHelper.abortMultipartUpload(key, uploadId,

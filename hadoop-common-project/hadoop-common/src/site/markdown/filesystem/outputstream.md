@@ -16,8 +16,23 @@
 
 # Output: `OutputStream`, `Syncable` and `StreamCapabilities`
 
+## Introduction
+
 This document covers the Output Streams within the context of the
 [Hadoop File System Specification](index.html).
+
+It uses the filesystem model defined in [A Model of a Hadoop Filesystem](model.html)
+with the notation defined in [notation](Notation.md).
+
+The target audiences are
+1. Users of the APIs. While `java.io.OutputStream` is a standard interfaces,
+this document clarifies how it is implemented in HDFS and elsewhere.
+The Hadoop-specific interfaces `Syncable` and `StreamCapabilities` are new;
+`Syncable` is notable in offering durability and visibility guarantees which
+exceed that of `OutputStream`.
+1. Implementors of File Systems and clients.
+
+## How data is written to a filesystem
 
 The core mechanism to write data to files through the Hadoop FileSystem APIs
 is through `OutputStream` subclasses obtained through calls to
@@ -29,6 +44,7 @@ can be written through various `write()` methods.
 After a stream's `close()` method is called, all data written to the
 stream MUST BE persisted to the fileysystem and visible to oll other
 clients attempting to read data from that path via `FileSystem.open()`.
+
 
 As well as operations to write the data, Hadoop's OutputStream implementations
 provide methods to flush buffered data back to the filesystem,
@@ -70,7 +86,7 @@ The destination path of the stream, `path`, can be tracked to form a triple
 Stream = (path: Path, open: Boolean, buffer: byte[])
 ```
 
-#### Visibility of flushed Data
+#### Visibility of Flushed Data
 
 (Immediately) after `Syncable` operations which flush data to the filesystem,
 the data at the stream's destination path MUST match that of
@@ -84,7 +100,7 @@ Any client reading the data at the path will see the new data.
 The two sync operations, `hflush()` and `hsync()` differ in their durability
 guarantees, not visibility of data.
 
-### State of Stream and filesystem after `Filesystem.create()`
+### State of Stream and Filesystem after `Filesystem.create()`
 
 The output stream returned by a `FileSystem.create(path)` or
 `FileSystem.createFile(path).build`
@@ -106,7 +122,7 @@ consistent with the data at the filesystem.
 
 *Object Stores*: see caveats in the "Object Stores" section below.
 
-### State of Stream and filesystem after `Filesystem.append()`
+### State of Stream and Filesystem after `Filesystem.append()`
 
 The output stream returned from a call of
  `FileSystem.append(path, buffersize, progress)`,
@@ -785,7 +801,7 @@ the write, or at some point in between. Expect in the special case that the
 object store supports an atomic PUT operation, the check for existence of
 existing data and the subsequent creation of data at the path contains a race
 condition: other clients may create data at the path between the existence check
-and the subsequent qrite.
+and the subsequent write.
 
 1. Calls to `create(FS, Path, overwrite=false)` may succeed, returning a new
 `OutputStream`, even while another stream is open and writing to the destination
@@ -821,8 +837,8 @@ existence probes, then even after the stream's `close()` operation has returned,
 `getFileStatus(FS, path)` and `open(FS, path)` may fail with a `FileNotFoundException`.
 
 In their favour, the atomicity of the store's PUT operations do offer their
-own guarantee: an newly created object is either absent or all of its data
-is present: the act of instantiatng the object, while potentially exhibiting
+own guarantee: a newly created object is either absent or all of its data
+is present: the act of instantiating the object, while potentially exhibiting
 create inconsistency, is atomic. Applications may be able to use that fact
 to their advantage.
 

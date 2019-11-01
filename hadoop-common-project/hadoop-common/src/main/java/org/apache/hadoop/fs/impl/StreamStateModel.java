@@ -28,6 +28,9 @@ import javax.annotation.Nullable;
 import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 
@@ -35,20 +38,52 @@ import static org.apache.hadoop.fs.FSExceptionMessages.STREAM_IS_CLOSED;
 
 /**
  * Models a stream's state and can be used for checking this state before
- * any operation.
- * 
- * It's designed to ensure that a stream knows when it is closed,
+ * any operation, and for using a lock to manage exclusive access to operations
+ * within the stream.
+ *
+ * The model designed to ensure that a stream knows when it is closed,
  * and, once it has entered a failed state, that the failure
  * is not forgotten.
  *
- * The model has three states: Open, Error, and Closed,
+ * This state model is based on the design of
+ * {@code org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream} and
+ * {@code org.apache.hadoop.fs.azure.PageBlobOutputStream} which both
+ * store and rethrow any previously raised error.
+ *
+ *
+ * The model has three states: Open, Error, and Closed:
  *
  * <pre>
- *   Open: caller can interact with the stream.
- *   Error: all operations will raise the previously recorded exception.
- *   Closed: operations will be rejected.
+ *   {@link State#Open}: caller can interact with the stream.
+ *   {@link State#Error}: all operations will raise the previously recorded exception.
+ *   {@link State#Closed}: operations will be rejected.
  * </pre>
+
+ * When an instance of the model is created, it is in {@link State#Open};
+ * a call to {@link #enterClosedState()} will move it from Open to Closed;
+ *
+ *
+ * <p>
+ * The lock/unlock operation relays to {@code java.util.concurrent.locks.Lock}
+ * and has a similar usage pattern. A key difference is that a check for the
+ * stream being open can be integrated with the lock acquisition.
+ * If {@link #acquireLock(boolean)} is called with checkOpen == true, then
+ * the caller will know that after the lock is granted then the stream
+ * is open.
+ * <pre>
+ *   model.acquireLock(true);
+ *   try {
+ *     (do some work)
+ *   } catch (IOException e) {
+ *     model.enterErrorState(e);
+ *   } finally {
+ *     model.releaseLock();
+ *   }
+ * </pre>
+ *
  */
+@InterfaceAudience.LimitedPrivate("Filesystems")
+@InterfaceStability.Unstable
 public class StreamStateModel {
 
   /**
@@ -126,7 +161,7 @@ public class StreamStateModel {
 
   /**
    * Change state to error and stores first error so it can be re-thrown.
-   * If already in error: return previous exception.
+   * If already in {@link State#Error}: return the previous exception.
    * @param ex the exception to record
    * @return the exception set when the error state was entered.
    */
@@ -149,8 +184,9 @@ public class StreamStateModel {
   /**
    * Verify that a stream is open, throwing an IOException if
    * not.
-   * If in an error state: rethrow that exception. If closed,
-   * throw an exception about that.
+   * If in an error state: rethrow that exception.
+   * If closed, throw an IOException with
+   * {@link FSExceptionMessages#STREAM_IS_CLOSED} in the message.
    * @throws IOException if the stream is not in {@link State#Open}.
    * @throws PathIOException if the stream was not open and a path was given
    * in the constructor.
@@ -173,10 +209,38 @@ public class StreamStateModel {
   }
 
   /**
+   * Probe for the model being in a specific state.
+   * @param probe state to probe for
+   * @return true if at the time of the check, the service
+   * was in the given state.
+   */
+  public boolean isInState(State probe) {
+    return state.get().equals(probe);
+  }
+
+  /**
+   * If the model is in {@link State#Error} throw the exception.
+   * @throws IOException if one was caught earlier.
+   */
+  public synchronized void throwAnyExceptionRaised() throws IOException {
+    if (exception != null) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Get any exception. Non-null iff the model is in the error state.
+   * @return any exception set on a transition to the error state.
+   */
+  public synchronized IOException getException() {
+    return exception;
+  }
+
+  /**
    * Acquire an exclusive lock.
    * @param checkOpen must the stream be open?
-   * @throws IOException if the stream is in error state or checkOpen==true
-   * and the stream is closed.
+   * @throws IOException if the stream is in error state or
+   * {@code checkOpen == true} and the stream is closed.
    */
   public void acquireLock(boolean checkOpen) throws IOException {
     // fail fast if the stream is required to be open and it is not
