@@ -142,7 +142,7 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
-      <groupId>com.squareup.okhttp</groupId>
+      <groupId>com.squareup.okhttp3</groupId>
       <artifactId>mockwebserver</artifactId>
       <version>${okhttp.version}</version>
       <scope>test</scope>
