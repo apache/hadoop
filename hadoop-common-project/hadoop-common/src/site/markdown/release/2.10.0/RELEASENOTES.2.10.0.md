@@ -32,6 +32,19 @@ This also adds GPU as a native resource type, built on top of the generic resour
 
 ---
 
+* [HDFS-12943](https://issues.apache.org/jira/browse/HDFS-12943) | *Major* | **Consistent Reads from Standby Node**
+
+Observer is a new type of a NameNode in addition to Active and Standby Nodes in HA settings. An Observer Node maintains a replica of the namespace same as a Standby Node. It additionally allows execution of clients read requests.
+
+To ensure read-after-write consistency within a single client, a state ID is introduced in RPC headers. The Observer responds to the client request only after its own state has caught up with the client’s state ID, which it previously received from the Active NameNode.
+
+Clients can explicitly invoke a new client protocol call msync(), which ensures that subsequent reads by this client from an Observer are consistent.
+
+A new client-side ObserverReadProxyProvider is introduced to provide automatic switching between Active and Observer NameNodes for submitting respectively write and read requests.
+
+
+---
+
 * [HDFS-13541](https://issues.apache.org/jira/browse/HDFS-13541) | *Major* | **NameNode Port based selective encryption**
 
 This feature allows HDFS to selectively enforce encryption for both RPC (NameNode) and data transfer (DataNode). With this feature enabled, NameNode can listen on multiple ports, and different ports can have different security configurations. Depending on which NameNode port clients connect to, the RPC calls and the following data transfer will enforce security configuration corresponding to this NameNode port. This can help when there is requirement to enforce different security policies depending on the location where the clients are connecting from.
