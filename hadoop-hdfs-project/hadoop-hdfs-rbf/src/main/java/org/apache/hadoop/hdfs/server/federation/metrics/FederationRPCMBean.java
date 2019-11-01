@@ -93,4 +93,10 @@ public interface FederationRPCMBean {
    * @return JSON string representation.
    */
   String getRpcClientConnections();
+
+  /**
+   * Get the JSON representation of the async caller thread pool.
+   * @return JSON string representation of the async caller thread pool.
+   */
+  String getAsyncCallerPool();
 }
