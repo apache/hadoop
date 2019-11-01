@@ -155,6 +155,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     this.allowNestedSnapshots = allowNestedSnapshots;
   }
 
+  public boolean isAllowNestedSnapshots() {
+    return allowNestedSnapshots;
+  }
+
   private void checkNestedSnapshottable(INodeDirectory dir, String path)
       throws SnapshotException {
     if (allowNestedSnapshots) {
@@ -285,6 +289,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       }
       throw new SnapshotException("Directory is neither snapshottable nor" +
           " under a snap root!");
+    }
+  }
+
+  public boolean isDescendantOfSnapshotRoot(INodeDirectory dir) {
+    if (dir.isSnapshottable()) {
+      return true;
+    } else {
+      for (INodeDirectory p = dir; p != null; p = p.getParent()) {
+        if (this.snapshottables.containsValue(p)) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 
