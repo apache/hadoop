@@ -18,21 +18,34 @@
 
 package org.apache.hadoop.hdds.scm.container;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.GeneratedMessage;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-import org.apache.hadoop.hdds.conf.ConfigType;
-import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.Config;
+import org.apache.hadoop.hdds.conf.ConfigGroup;
+import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms
-    .ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lock.LockManager;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -42,34 +55,26 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 
-import static org.apache.hadoop.hdds.conf.ConfigTag.*;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.GeneratedMessage;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import static org.apache.hadoop.hdds.conf.ConfigTag.OZONE;
+import static org.apache.hadoop.hdds.conf.ConfigTag.SCM;
 import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Replication Manager (RM) is the one which is responsible for making sure
  * that the containers are properly replicated. Replication Manager deals only
  * with Quasi Closed / Closed container.
  */
-public class ReplicationManager {
+public class ReplicationManager implements MetricsSource {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ReplicationManager.class);
+
+  public static final String METRICS_SOURCE_NAME = "SCMReplicationManager";
 
   /**
    * Reference to the ContainerManager.
@@ -140,15 +145,20 @@ public class ReplicationManager {
     this.lockManager = lockManager;
     this.conf = conf;
     this.running = false;
-    this.inflightReplication = new HashMap<>();
-    this.inflightDeletion = new HashMap<>();
+    this.inflightReplication = new ConcurrentHashMap<>();
+    this.inflightDeletion = new ConcurrentHashMap<>();
   }
 
   /**
    * Starts Replication Monitor thread.
    */
   public synchronized void start() {
+
     if (!isRunning()) {
+      DefaultMetricsSystem.instance().register(METRICS_SOURCE_NAME,
+          "SCM Replication manager (closed container replication) related "
+              + "metrics",
+          this);
       LOG.info("Starting Replication Monitor Thread.");
       running = true;
       replicationMonitor = new Thread(this::run);
@@ -181,7 +191,7 @@ public class ReplicationManager {
   @VisibleForTesting
   @SuppressFBWarnings(value="NN_NAKED_NOTIFY",
       justification="Used only for testing")
-  synchronized void processContainersNow() {
+  public synchronized void processContainersNow() {
     notify();
   }
 
@@ -472,6 +482,8 @@ public class ReplicationManager {
    */
   private void handleUnderReplicatedContainer(final ContainerInfo container,
       final Set<ContainerReplica> replicas) {
+    LOG.debug("Handling underreplicated container: {}",
+        container.getContainerID());
     try {
       final ContainerID id = container.containerID();
       final List<DatanodeDetails> deletionInFlight = inflightDeletion
@@ -748,6 +760,16 @@ public class ReplicationManager {
     }
   }
 
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    collector.addRecord(ReplicationManager.class.getSimpleName())
+        .addGauge(ReplicationManagerMetrics.INFLIGHT_REPLICATION,
+            inflightReplication.size())
+        .addGauge(ReplicationManagerMetrics.INFLIGHT_DELETION,
+            inflightDeletion.size())
+        .endRecord();
+  }
+
   /**
    * Wrapper class to hold the InflightAction with its start time.
    */
@@ -820,6 +842,34 @@ public class ReplicationManager {
 
     public long getEventTimeout() {
       return eventTimeout;
+    }
+  }
+
+  /**
+   * Metric name definitions for Replication manager.
+   */
+  public enum ReplicationManagerMetrics implements MetricsInfo {
+
+    INFLIGHT_REPLICATION("Tracked inflight container replication requests."),
+    INFLIGHT_DELETION("Tracked inflight container deletion requests.");
+
+    private final String desc;
+
+    ReplicationManagerMetrics(String desc) {
+      this.desc = desc;
+    }
+
+    @Override
+    public String description() {
+      return desc;
+    }
+
+    @Override
+    public String toString() {
+      return new StringJoiner(", ", this.getClass().getSimpleName() + "{", "}")
+          .add("name=" + name())
+          .add("description=" + desc)
+          .toString();
     }
   }
 }

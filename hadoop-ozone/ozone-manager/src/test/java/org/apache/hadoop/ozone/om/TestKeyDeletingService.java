@@ -34,12 +34,14 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.db.DBConfigFromFile;
+import org.apache.hadoop.hdds.utils.db.DBConfigFromFile;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -93,6 +95,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -115,6 +118,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
@@ -142,6 +146,7 @@ public class TestKeyDeletingService {
         new KeyManagerImpl(
             new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
+    keyManager.start(conf);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 0);
     KeyDeletingService keyDeletingService =
@@ -175,16 +180,15 @@ public class TestKeyDeletingService {
       // cheat here, just create a volume and bucket entry so that we can
       // create the keys, we put the same data for key and value since the
       // system does not decode the object
-      keyManager.getMetadataManager().getVolumeTable().put(volumeBytes,
+      TestOMRequestUtils.addVolumeToOM(keyManager.getMetadataManager(),
           OmVolumeArgs.newBuilder()
               .setOwnerName("o")
               .setAdminName("a")
               .setVolume(volumeName)
               .build());
 
-      keyManager.getMetadataManager().getBucketTable().put(bucketBytes,
-          OmBucketInfo.newBuilder()
-              .setVolumeName(volumeName)
+      TestOMRequestUtils.addBucketToOM(keyManager.getMetadataManager(),
+          OmBucketInfo.newBuilder().setVolumeName(volumeName)
               .setBucketName(bucketName)
               .build());
 

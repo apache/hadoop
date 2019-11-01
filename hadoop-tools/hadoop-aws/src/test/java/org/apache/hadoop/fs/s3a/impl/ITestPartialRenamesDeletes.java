@@ -155,6 +155,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public static final int DEPTH = 2;
   public static final int DEPTH_SCALED = 2;
 
+  public static final String PREFIX = "file-";
+
   /**
    * A role FS; if non-null it is closed in teardown.
    */
@@ -814,7 +816,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     }
     // create the file paths
     for (int i = 0; i < fileCount; i++) {
-      String name = "file-" + i;
+      String name = PREFIX + i;
       Path p = new Path(destDir, name);
       filePaths.add(p);
     }

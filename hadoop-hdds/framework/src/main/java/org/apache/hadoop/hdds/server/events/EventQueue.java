@@ -23,6 +23,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +58,8 @@ public class EventQueue implements EventPublisher, AutoCloseable {
   private final AtomicLong eventCount = new AtomicLong(0);
 
   private boolean isRunning = true;
+
+  private static final Gson TRACING_SERIALIZER = new GsonBuilder().create();
 
   public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void addHandler(
       EVENT_TYPE event, EventHandler<PAYLOAD> handler) {
@@ -129,8 +133,6 @@ public class EventQueue implements EventPublisher, AutoCloseable {
     executors.get(event).get(executor).add(handler);
   }
 
-
-
   /**
    * Route an event with payload to the right listener(s).
    *
@@ -160,10 +162,16 @@ public class EventQueue implements EventPublisher, AutoCloseable {
         for (EventHandler handler : executorAndHandlers.getValue()) {
           queuedCount.incrementAndGet();
           if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Delivering event {} to executor/handler {}: <json>{}</json>",
+                event.getName(),
+                executorAndHandlers.getKey().getName(),
+                TRACING_SERIALIZER.toJson(payload).replaceAll("\n", "\\\\n"));
+          } else if (LOG.isDebugEnabled()) {
             LOG.debug("Delivering event {} to executor/handler {}: {}",
                 event.getName(),
                 executorAndHandlers.getKey().getName(),
-                payload);
+                payload.getClass().getSimpleName());
           }
           executorAndHandlers.getKey()
               .onMessage(handler, payload, this);
@@ -232,6 +240,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
     }
   }
+
   @Override
   public void close() {
 
@@ -249,6 +258,5 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
     });
   }
-
 
 }

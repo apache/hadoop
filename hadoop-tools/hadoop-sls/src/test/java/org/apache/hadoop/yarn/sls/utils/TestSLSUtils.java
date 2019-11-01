@@ -37,13 +37,13 @@ public class TestSLSUtils {
   public void testGetRackHostname() {
     String str = "/rack1/node1";
     String rackHostname[] = SLSUtils.getRackHostName(str);
-    Assert.assertEquals(rackHostname[0], "rack1");
-    Assert.assertEquals(rackHostname[1], "node1");
+    Assert.assertEquals("rack1", rackHostname[0]);
+    Assert.assertEquals("node1", rackHostname[1]);
 
     str = "/rackA/rackB/node1";
     rackHostname = SLSUtils.getRackHostName(str);
-    Assert.assertEquals(rackHostname[0], "rackA/rackB");
-    Assert.assertEquals(rackHostname[1], "node1");
+    Assert.assertEquals("rackA/rackB", rackHostname[0]);
+    Assert.assertEquals("node1", rackHostname[1]);
   }
 
   @Test

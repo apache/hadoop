@@ -58,6 +58,7 @@ import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
@@ -67,13 +68,13 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueBlockIterator;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocationUtil;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -85,6 +86,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
@@ -119,7 +121,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -241,7 +242,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testSetVolumeQuota()
-      throws IOException, OzoneException {
+      throws IOException {
     String volumeName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
     store.getVolume(volumeName).setQuota(
@@ -265,7 +266,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateVolumeWithMetadata()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     VolumeArgs volumeArgs = VolumeArgs.newBuilder()
         .addMetadata("key1", "val1")
@@ -279,7 +280,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithMetadata()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
@@ -298,7 +299,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucket()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
@@ -313,7 +314,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateS3Bucket()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String userName = UserGroupInformation.getCurrentUser().getUserName();
     String bucketName = UUID.randomUUID().toString();
@@ -346,7 +347,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testListS3Buckets()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String userName = "ozone100";
     String bucketName1 = UUID.randomUUID().toString();
     String bucketName2 = UUID.randomUUID().toString();
@@ -364,7 +365,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testListS3BucketsFail()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String userName = "randomUser";
     Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
         null);
@@ -403,7 +404,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateS3BucketMapping()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     long currentTime = Time.now();
     String userName = "ozone";
     String bucketName = UUID.randomUUID().toString();
@@ -422,7 +423,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithVersioning()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -437,7 +438,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithStorageType()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -452,7 +453,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithAcls()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -471,7 +472,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testCreateBucketWithAllArgument()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -508,7 +509,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testAddBucketAcl()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -527,7 +528,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testRemoveBucketAcl()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     OzoneAcl userAcl = new OzoneAcl(USER, "test",
@@ -582,7 +583,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testSetBucketVersioning()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -619,7 +620,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testSetBucketStorageType()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -679,7 +680,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testPutKey()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -747,7 +748,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testPutKeyRatisOneNode()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -782,7 +783,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testPutKeyRatisThreeNodes()
-      throws IOException, OzoneException {
+      throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     long currentTime = Time.now();
@@ -949,7 +950,7 @@ public abstract class TestOzoneRpcClientAbstract {
       Configuration configuration = cluster.getConf();
       configuration.setBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
           verifyChecksum);
-      RpcClient client = new RpcClient(configuration);
+      RpcClient client = new RpcClient(configuration, null);
       OzoneInputStream is = client.getKey(volumeName, bucketName, keyName);
       is.read(new byte[100]);
       is.close();
@@ -977,7 +978,7 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
   @Test
-  public void testGetKeyDetails() throws IOException, OzoneException {
+  public void testGetKeyDetails() throws IOException, OzoneClientException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -2221,8 +2222,6 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForVolume() throws Exception {
-    assumeFalse("Remove this once ACL HA is supported",
-        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
 
@@ -2237,8 +2236,6 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForBucket() throws Exception {
-    assumeFalse("Remove this once ACL HA is supported",
-        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -2299,8 +2296,6 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForKey() throws Exception {
-    assumeFalse("Remove this once ACL HA is supported",
-        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     String key1 = "dir1/dir2" + UUID.randomUUID().toString();
@@ -2363,8 +2358,6 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForPrefix() throws Exception {
-    assumeFalse("Remove this once ACL HA is supported",
-        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -2655,5 +2648,163 @@ public abstract class TestOzoneRpcClientAbstract {
         .getVolumeName());
     Assert.assertEquals(omMultipartUploadCompleteInfo.getKey(), keyName);
     Assert.assertNotNull(omMultipartUploadCompleteInfo.getHash());
+  }
+
+  /**
+   * Tests GDPR encryption/decryption.
+   * 1. Create GDPR Enabled bucket.
+   * 2. Create a Key in this bucket so it gets encrypted via GDPRSymmetricKey.
+   * 3. Read key and validate the content/metadata is as expected because the
+   * readKey will decrypt using the GDPR Symmetric Key with details from KeyInfo
+   * Metadata.
+   * 4. To check encryption, we forcibly update KeyInfo Metadata and remove the
+   * gdprEnabled flag
+   * 5. When we now read the key, {@link RpcClient} checks for GDPR Flag in
+   * method createInputStream. If the gdprEnabled flag in metadata is set to
+   * true, it decrypts using the GDPRSymmetricKey. Since we removed that flag
+   * from metadata for this key, if will read the encrypted data as-is.
+   * 6. Thus, when we compare this content with expected text, it should
+   * not match as the decryption has not been performed.
+   * @throws Exception
+   */
+  @Test
+  public void testKeyReadWriteForGDPR() throws Exception {
+    //Step 1
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs args = BucketArgs.newBuilder()
+        .addMetadata(OzoneConsts.GDPR_FLAG, "true").build();
+    volume.createBucket(bucketName, args);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertNotNull(bucket.getMetadata());
+    Assert.assertEquals("true",
+        bucket.getMetadata().get(OzoneConsts.GDPR_FLAG));
+
+    //Step 2
+    String text = "hello world";
+    Map<String, String> keyMetadata = new HashMap<>();
+    keyMetadata.put(OzoneConsts.GDPR_FLAG, "true");
+    OzoneOutputStream out = bucket.createKey(keyName,
+        text.getBytes().length, STAND_ALONE, ONE, keyMetadata);
+    out.write(text.getBytes());
+    out.close();
+
+    //Step 3
+    OzoneKeyDetails key = bucket.getKey(keyName);
+
+    Assert.assertEquals(keyName, key.getName());
+    Assert.assertEquals("true", key.getMetadata().get(OzoneConsts.GDPR_FLAG));
+    Assert.assertEquals("AES",
+        key.getMetadata().get(OzoneConsts.GDPR_ALGORITHM));
+    Assert.assertTrue(key.getMetadata().get(OzoneConsts.GDPR_SECRET) != null);
+
+    OzoneInputStream is = bucket.readKey(keyName);
+    byte[] fileContent = new byte[text.getBytes().length];
+    is.read(fileContent);
+    Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+        keyName, STAND_ALONE,
+        ONE));
+    Assert.assertEquals(text, new String(fileContent));
+
+    //Step 4
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    OmKeyInfo omKeyInfo =
+        omMetadataManager.getKeyTable().get(omMetadataManager.getOzoneKey(
+            volumeName, bucketName, keyName));
+
+    omKeyInfo.getMetadata().remove(OzoneConsts.GDPR_FLAG);
+
+    omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
+         volumeName, bucketName, keyName), omKeyInfo);
+
+    //Step 5
+    key = bucket.getKey(keyName);
+    Assert.assertEquals(keyName, key.getName());
+    Assert.assertEquals(null, key.getMetadata().get(OzoneConsts.GDPR_FLAG));
+    is = bucket.readKey(keyName);
+    fileContent = new byte[text.getBytes().length];
+    is.read(fileContent);
+
+    //Step 6
+    Assert.assertNotEquals(text, new String(fileContent));
+
+  }
+
+  /**
+   * Tests deletedKey for GDPR.
+   * 1. Create GDPR Enabled bucket.
+   * 2. Create a Key in this bucket so it gets encrypted via GDPRSymmetricKey.
+   * 3. Read key and validate the content/metadata is as expected because the
+   * readKey will decrypt using the GDPR Symmetric Key with details from KeyInfo
+   * Metadata.
+   * 4. Delete this key in GDPR enabled bucket
+   * 5. Confirm the deleted key metadata in deletedTable does not contain the
+   * GDPR encryption details (flag, secret, algorithm).
+   * @throws Exception
+   */
+  @Test
+  public void testDeletedKeyForGDPR() throws Exception {
+    //Step 1
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs args = BucketArgs.newBuilder()
+        .addMetadata(OzoneConsts.GDPR_FLAG, "true").build();
+    volume.createBucket(bucketName, args);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertNotNull(bucket.getMetadata());
+    Assert.assertEquals("true",
+        bucket.getMetadata().get(OzoneConsts.GDPR_FLAG));
+
+    //Step 2
+    String text = "hello world";
+    Map<String, String> keyMetadata = new HashMap<>();
+    keyMetadata.put(OzoneConsts.GDPR_FLAG, "true");
+    OzoneOutputStream out = bucket.createKey(keyName,
+        text.getBytes().length, STAND_ALONE, ONE, keyMetadata);
+    out.write(text.getBytes());
+    out.close();
+
+    //Step 3
+    OzoneKeyDetails key = bucket.getKey(keyName);
+
+    Assert.assertEquals(keyName, key.getName());
+    Assert.assertEquals("true", key.getMetadata().get(OzoneConsts.GDPR_FLAG));
+    Assert.assertEquals("AES",
+        key.getMetadata().get(OzoneConsts.GDPR_ALGORITHM));
+    Assert.assertTrue(key.getMetadata().get(OzoneConsts.GDPR_SECRET) != null);
+
+    OzoneInputStream is = bucket.readKey(keyName);
+    byte[] fileContent = new byte[text.getBytes().length];
+    is.read(fileContent);
+    Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+        keyName, STAND_ALONE,
+        ONE));
+    Assert.assertEquals(text, new String(fileContent));
+
+    //Step 4
+    bucket.deleteKey(keyName);
+
+    //Step 5
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    String objectKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
+        keyName);
+    RepeatedOmKeyInfo deletedKeys =
+        omMetadataManager.getDeletedTable().get(objectKey);
+    Map<String, String> deletedKeyMetadata =
+        deletedKeys.getOmKeyInfoList().get(0).getMetadata();
+    Assert.assertFalse(deletedKeyMetadata.containsKey(OzoneConsts.GDPR_FLAG));
+    Assert.assertFalse(deletedKeyMetadata.containsKey(OzoneConsts.GDPR_SECRET));
+    Assert.assertFalse(
+        deletedKeyMetadata.containsKey(OzoneConsts.GDPR_ALGORITHM));
   }
 }

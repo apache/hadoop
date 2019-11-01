@@ -90,6 +90,8 @@ enum Type {
   GetAcl = 78;
 
   PurgeKeys = 81;
+
+  ListMultipartUploads = 82;
 }
 
 message OMRequest {
@@ -156,6 +158,9 @@ message OMRequest {
   optional GetAclRequest                    getAclRequest                  = 78;
 
   optional PurgeKeysRequest                 purgeKeysRequest               = 81;
+
+  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
+  optional ListMultipartUploadsRequest      listMultipartUploadsRequest    = 83;
 }
 
 message OMResponse {
@@ -223,6 +228,8 @@ message OMResponse {
   optional GetAclResponse                    getAclResponse                = 78;
 
   optional PurgeKeysResponse                  purgeKeysResponse            = 81;
+
+  optional ListMultipartUploadsResponse listMultipartUploadsResponse = 82;
 }
 
 enum Status {
@@ -287,6 +294,9 @@ enum Status {
     RATIS_ERROR = 52;
 
     INVALID_PATH_IN_ACL_REQUEST = 53; // Invalid path name in acl request.
+
+    USER_MISMATCH = 54; // Error code when requested user name passed is
+    // different from remote user.
 }
 
 
@@ -298,6 +308,8 @@ message VolumeInfo {
     repeated hadoop.hdds.KeyValue metadata = 5;
     repeated OzoneAclInfo volumeAcls = 6;
     optional uint64 creationTime = 7;
+    optional uint64 objectID = 8;
+    optional uint64 updateID = 9;
 }
 
 /**
@@ -340,8 +352,10 @@ message CreateVolumeResponse {
 
 }
 
-message VolumeList {
+message UserVolumeInfo {
     repeated string volumeNames = 1;
+    optional uint64 objectID = 2;
+    optional uint64 updateID = 3;
 }
 
 /**
@@ -586,7 +600,6 @@ message InfoBucketRequest {
 }
 
 message InfoBucketResponse {
-
     optional BucketInfo bucketInfo = 2;
 }
 
@@ -677,6 +690,10 @@ message KeyInfo {
     repeated OzoneAclInfo acls = 13;
 }
 
+message RepeatedKeyInfo {
+    repeated KeyInfo keyInfo = 1;
+}
+
 message OzoneFileStatusProto {
     required hadoop.fs.FileStatusProto status = 1;
 }
@@ -741,7 +758,6 @@ message CreateKeyRequest {
 }
 
 message CreateKeyResponse {
-
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations
     // (similar to a cookie).
@@ -754,7 +770,6 @@ message LookupKeyRequest {
 }
 
 message LookupKeyResponse {
-
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations (similar
     // to a cookie).
@@ -830,7 +845,6 @@ message ListKeysRequest {
 }
 
 message ListKeysResponse {
-
     repeated KeyInfo keyInfo = 2;
 }
 
@@ -868,6 +882,9 @@ message DBUpdatesRequest {
 message ServiceListResponse {
 
     repeated ServiceInfo serviceInfo = 2;
+    // When security is enabled, return SCM CA certificate to Ozone client
+    // to set up gRPC TLS for client to authenticate server(DN).
+    optional string caCertificate = 3;
 }
 
 message DBUpdatesResponse {
@@ -936,8 +953,7 @@ message S3ListBucketsRequest {
 }
 
 message S3ListBucketsResponse {
-
-    repeated BucketInfo bucketInfo = 2;
+   repeated BucketInfo bucketInfo = 2;
 }
 
 message MultipartInfoInitiateRequest {
@@ -1007,11 +1023,33 @@ message MultipartUploadListPartsRequest {
 }
 
 message MultipartUploadListPartsResponse {
-
     optional hadoop.hdds.ReplicationType type = 2;
-    optional uint32 nextPartNumberMarker = 3;
-    optional bool isTruncated = 4;
-    repeated PartInfo partsList = 5;
+    optional hadoop.hdds.ReplicationFactor factor = 3;
+    optional uint32 nextPartNumberMarker = 4;
+    optional bool isTruncated = 5;
+    repeated PartInfo partsList = 6;
+
+}
+
+message ListMultipartUploadsRequest {
+    required string volume = 1;
+    required string bucket = 2;
+    required string prefix = 3;
+}
+
+message ListMultipartUploadsResponse {
+    optional bool isTruncated = 1;
+    repeated MultipartUploadInfo uploadsList = 2;
+}
+
+message MultipartUploadInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required string uploadId = 4;
+    required uint64 creationTime = 5;
+    required hadoop.hdds.ReplicationType type = 6;
+    required hadoop.hdds.ReplicationFactor factor = 7;
 
 }
 
@@ -1022,12 +1060,12 @@ message PartInfo {
     required uint64 size = 4;
 }
 
-message GetDelegationTokenResponseProto{
+message GetDelegationTokenResponseProto {
 
     optional hadoop.common.GetDelegationTokenResponseProto response = 2;
 }
 
-message RenewDelegationTokenResponseProto{
+message RenewDelegationTokenResponseProto {
 
     optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
 }
@@ -1048,6 +1086,15 @@ message GetS3SecretRequest {
 
 message GetS3SecretResponse {
     required S3Secret s3Secret = 2;
+}
+
+/**
+  This will be used internally by OM to replicate S3 Secret across quorum of
+  OM's.
+*/
+message UpdateGetS3SecretRequest {
+    required string kerberosID = 1;
+    required string awsSecret = 2;
 }
 
 /**

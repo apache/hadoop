@@ -34,6 +34,45 @@ package hadoop.hdds;
 
 import "hdds.proto";
 
+
+message SCMDatanodeRequest {
+  required Type cmdType = 1; // Type of the command
+
+  optional string traceID = 2;
+
+  optional SCMVersionRequestProto getVersionRequest = 3;
+  optional SCMRegisterRequestProto registerRequest = 4;
+  optional SCMHeartbeatRequestProto sendHeartbeatRequest = 5;
+}
+
+message SCMDatanodeResponse {
+  required Type cmdType = 1; // Type of the command
+
+  optional string traceID = 2;
+
+  optional bool success = 3 [default = true];
+
+  optional string message = 4;
+
+  required Status status = 5;
+
+  optional SCMVersionResponseProto getVersionResponse = 6;
+  optional SCMRegisteredResponseProto registerResponse = 7;
+  optional SCMHeartbeatResponseProto sendHeartbeatResponse = 8;
+
+}
+
+enum Type {
+  GetVersion = 1;
+  Register = 2;
+  SendHeartbeat = 3;
+}
+
+enum Status {
+  OK = 1;
+  ERROR = 2;
+}
+
 /**
  * Request for version info of the software stack on the server.
  */
@@ -385,21 +424,6 @@ message ReplicateContainerCommandProto {
  */
 service StorageContainerDatanodeProtocolService {
 
-  /**
-  * Gets the version information from the SCM.
-  */
-  rpc getVersion (SCMVersionRequestProto) returns (SCMVersionResponseProto);
-
-  /**
-  * Registers a data node with SCM.
-  */
-  rpc register (SCMRegisterRequestProto) returns (SCMRegisteredResponseProto);
-
-  /**
-   * Send heartbeat from datanode to SCM. HB's under SCM looks more
-   * like life line protocol than HB's under HDFS. In other words, it is
-   * extremely light weight and contains no data payload.
-   */
-  rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
-
+  //Message sent from Datanode to SCM as a heartbeat.
+  rpc submitRequest (SCMDatanodeRequest) returns (SCMDatanodeResponse);
 }

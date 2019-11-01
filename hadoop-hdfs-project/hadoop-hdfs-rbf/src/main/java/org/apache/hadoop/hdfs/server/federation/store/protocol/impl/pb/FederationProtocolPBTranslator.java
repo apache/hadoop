@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.codec.binary.Base64;
 
-import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 import com.google.protobuf.MessageOrBuilder;
@@ -31,7 +31,7 @@ import com.google.protobuf.MessageOrBuilder;
  * Helper class for setting/getting data elements in an object backed by a
  * protobuf implementation.
  */
-public class FederationProtocolPBTranslator<P extends GeneratedMessage,
+public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
     B extends Builder, T extends MessageOrBuilder> {
 
   /** Optional proto byte stream used to create this object. */

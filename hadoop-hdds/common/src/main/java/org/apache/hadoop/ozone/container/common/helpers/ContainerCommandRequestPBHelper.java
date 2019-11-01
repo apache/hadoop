@@ -79,9 +79,11 @@ public final class ContainerCommandRequestPBHelper {
         auditParams.put("blockData",
             BlockData.getFromProtoBuf(msg.getPutBlock().getBlockData())
                 .toString());
-      }catch (IOException ex){
-        LOG.trace("Encountered error parsing BlockData from protobuf:"
-            + ex.getMessage());
+      } catch (IOException ex){
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Encountered error parsing BlockData from protobuf: "
+              + ex.getMessage());
+        }
         return null;
       }
       return auditParams;
@@ -134,9 +136,11 @@ public final class ContainerCommandRequestPBHelper {
         auditParams.put("blockData",
             BlockData.getFromProtoBuf(msg.getPutSmallFile()
                 .getBlock().getBlockData()).toString());
-      }catch (IOException ex){
-        LOG.trace("Encountered error parsing BlockData from protobuf:"
-            + ex.getMessage());
+      } catch (IOException ex){
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Encountered error parsing BlockData from protobuf: "
+              + ex.getMessage());
+        }
       }
       return auditParams;
 

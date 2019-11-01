@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler.CliOption;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverter;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -101,12 +105,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeSortingManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -136,7 +143,6 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
@@ -226,6 +232,13 @@ public class ResourceManager extends CompositeService
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
+  private static FSConfigToCSConfigArgumentHandler
+      fsConfigConversionArgumentHandler;
+
+  static {
+    FSConfigToCSConfigConverter converter = initFSConfigConverter();
+    initFSArgumentHandler(converter);
+  }
 
   public ResourceManager() {
     super("ResourceManager");
@@ -242,6 +255,8 @@ public class ResourceManager extends CompositeService
   public String getRMLoginUser() {
     return rmLoginUGI.getShortUserName();
   }
+
+  private RMInfo rmStatusInfoBean;
 
   @VisibleForTesting
   protected static void setClusterTimeStamp(long timestamp) {
@@ -266,6 +281,26 @@ public class ResourceManager extends CompositeService
     UserGroupInformation.setConfiguration(conf);
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+    rmContext.setYarnConfiguration(conf);
+
+    rmStatusInfoBean = new RMInfo(this);
+    rmStatusInfoBean.register();
+
+    // Set HA configuration should be done before login
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(this.conf);
+    }
+
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
 
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
@@ -285,22 +320,6 @@ public class ResourceManager extends CompositeService
     loadConfigurationXml(YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
     validateConfigs(this.conf);
-    
-    // Set HA configuration should be done before login
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
-    if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(this.conf);
-    }
-
-    // Set UGI and do login
-    // If security is enabled, use login user
-    // If security is not enabled, use current user
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -327,8 +346,6 @@ public class ResourceManager extends CompositeService
         rmContext.setLeaderElectorService(elector);
       }
     }
-
-    rmContext.setYarnConfiguration(conf);
 
     createAndInitActiveServices(false);
 
@@ -1232,8 +1249,7 @@ public class ResourceManager extends CompositeService
 
       if (null == onDiskPath) {
         String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
-        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
-        URL url = cl.findResource(war);
+        URL url = getClass().getClassLoader().getResource(war);
 
         if (null == url) {
           onDiskPath = getWebAppsPath("ui2");
@@ -1410,6 +1426,7 @@ public class ResourceManager extends CompositeService
     }
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);
+    rmStatusInfoBean.unregister();
   }
   
   protected ResourceTrackerService createResourceTrackerService() {
@@ -1554,9 +1571,27 @@ public class ResourceManager extends CompositeService
       if (argv.length >= 1) {
         if (argv[0].equals("-format-state-store")) {
           deleteRMStateStore(conf);
+        } else if (argv[0].equals("-format-conf-store")) {
+          deleteRMConfStore(conf);
         } else if (argv[0].equals("-remove-application-from-state-store")
             && argv.length == 2) {
           removeApplication(conf, argv[1]);
+        } else if (argv[0].equals("-convert-fs-configuration")) {
+          String[] args = Arrays.copyOfRange(argv, 1, argv.length);
+          try {
+            int exitCode =
+                fsConfigConversionArgumentHandler.parseAndConvert(args);
+            if (exitCode != 0) {
+              LOG.error(FATAL,
+                  "Error while starting FS configuration conversion, " +
+                      "see previous error messages for details!");
+              System.exit(exitCode);
+            }
+          } catch (Throwable t) {
+            LOG.error(FATAL,
+                "Error while starting FS configuration conversion!", t);
+            System.exit(-1);
+          }
         } else {
           printUsage(System.err);
         }
@@ -1646,6 +1681,45 @@ public class ResourceManager extends CompositeService
     }
   }
 
+  /**
+   * Deletes the YarnConfigurationStore
+   *
+   * @param conf
+   * @throws Exception
+   */
+  @VisibleForTesting
+  static void deleteRMConfStore(Configuration conf) throws Exception {
+    ResourceManager rm = new ResourceManager();
+    rm.conf = conf;
+    ResourceScheduler scheduler = rm.createScheduler();
+    RMContextImpl rmContext = new RMContextImpl();
+    rmContext.setResourceManager(rm);
+
+    boolean isConfigurationMutable = false;
+    String confProviderStr = conf.get(
+        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
+    switch (confProviderStr) {
+      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+      case YarnConfiguration.ZK_CONFIGURATION_STORE:
+      case YarnConfiguration.FS_CONFIGURATION_STORE:
+        isConfigurationMutable = true;
+        break;
+      default:
+    }
+
+    if (scheduler instanceof MutableConfScheduler && isConfigurationMutable) {
+      YarnConfigurationStore confStore = YarnConfigurationStoreFactory
+          .getStore(conf);
+      confStore.initialize(conf, conf, rmContext);
+      confStore.format();
+    } else {
+      System.out.println("Scheduler Configuration format only " +
+          "supported by MutableConfScheduler.");
+    }
+  }
+
   @VisibleForTesting
   static void removeApplication(Configuration conf, String applicationId)
       throws Exception {
@@ -1666,7 +1740,16 @@ public class ResourceManager extends CompositeService
   private static void printUsage(PrintStream out) {
     out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
-        + "[-remove-application-from-state-store <appId>]" + "\n");
+        + "[-remove-application-from-state-store <appId>]");
+    out.println("                            "
+        + "[-format-conf-store]" + "\n");
+
+    out.println("[-convert-fs-configuration ");
+    out.println(FSConfigToCSConfigConverter.WARNING_TEXT);
+    for (CliOption cliOption : CliOption.values()) {
+      out.println("   " + cliOption.getAsArgumentString());
+    }
+    out.println("]");
   }
 
   protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {
@@ -1684,4 +1767,17 @@ public class ResourceManager extends CompositeService
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
   }
+
+  @VisibleForTesting
+  static void initFSArgumentHandler(FSConfigToCSConfigConverter converter) {
+    ResourceManager.fsConfigConversionArgumentHandler =
+        new FSConfigToCSConfigArgumentHandler(converter);
+  }
+
+  private static FSConfigToCSConfigConverter initFSConfigConverter() {
+    FSConfigToCSConfigRuleHandler ruleHandler =
+        new FSConfigToCSConfigRuleHandler();
+    return new FSConfigToCSConfigConverter(ruleHandler);
+  }
+
 }

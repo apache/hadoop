@@ -18,40 +18,34 @@
 
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.KeyArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.ozone.TestDataUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import org.apache.commons.io.IOUtils;
 import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.junit.rules.Timeout;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Ozone file system tests that are not covered by contract tests.
@@ -66,11 +60,9 @@ public class TestOzoneFileSystem {
   private static FileSystem fs;
   private static OzoneFileSystem o3fs;
 
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
   private String volumeName;
   private String bucketName;
-  private String userName;
+
   private String rootPath;
 
   @Before
@@ -80,25 +72,14 @@ public class TestOzoneFileSystem {
         .setNumDatanodes(3)
         .build();
     cluster.waitForClusterToBeReady();
-    storageHandler =
-        new ObjectStoreHandler(conf).getStorageHandler();
 
     // create a volume and a bucket to be used by OzoneFileSystem
-    userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
-    VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
-    volumeArgs.setUserName(userName);
-    volumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(volumeArgs);
-    BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
-    storageHandler.createBucket(bucketArgs);
+    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    volumeName = bucket.getVolumeName();
+    bucketName = bucket.getName();
 
     rootPath = String.format("%s://%s.%s/",
-        OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
+        OzoneConsts.OZONE_URI_SCHEME, bucket.getName(), bucket.getVolumeName());
 
     // Set the fs.defaultFS and start the filesystem
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
@@ -112,7 +93,6 @@ public class TestOzoneFileSystem {
       cluster.shutdown();
     }
     IOUtils.closeQuietly(fs);
-    IOUtils.closeQuietly(storageHandler);
   }
 
   @Test
@@ -129,8 +109,8 @@ public class TestOzoneFileSystem {
     Path child = new Path(parent, "child");
     ContractTestUtils.touch(fs, child);
 
-    KeyInfo key = getKey(child, false);
-    assertEquals(key.getKeyName(), o3fs.pathToKey(child));
+    OzoneKeyDetails key = getKey(child, false);
+    assertEquals(key.getName(), o3fs.pathToKey(child));
 
     // Creating a child should not add parent keys to the bucket
     try {
@@ -167,8 +147,8 @@ public class TestOzoneFileSystem {
     // Deleting the only child should create the parent dir key if it does
     // not exist
     String parentKey = o3fs.pathToKey(parent) + "/";
-    KeyInfo parentKeyInfo = getKey(parent, true);
-    assertEquals(parentKey, parentKeyInfo.getKeyName());
+    OzoneKeyDetails parentKeyInfo = getKey(parent, true);
+    assertEquals(parentKey, parentKeyInfo.getName());
   }
 
   @Test
@@ -285,15 +265,38 @@ public class TestOzoneFileSystem {
         fileStatus2.equals(dir12.toString()));
   }
 
-  private KeyInfo getKey(Path keyPath, boolean isDirectory)
-      throws IOException, OzoneException {
+  @Test
+  public void testNonExplicitlyCreatedPathExistsAfterItsLeafsWereRemoved()
+      throws Exception {
+    Path source = new Path("/source");
+    Path interimPath = new Path(source, "interimPath");
+    Path leafInsideInterimPath = new Path(interimPath, "leaf");
+    Path target = new Path("/target");
+    Path leafInTarget = new Path(target, "leaf");
+
+    fs.mkdirs(source);
+    fs.mkdirs(target);
+    fs.mkdirs(leafInsideInterimPath);
+    assertTrue(fs.rename(leafInsideInterimPath, leafInTarget));
+
+    // after rename listStatus for interimPath should succeed and
+    // interimPath should have no children
+    FileStatus[] statuses = fs.listStatus(interimPath);
+    assertNotNull("liststatus returns a null array", statuses);
+    assertEquals("Statuses array is not empty", 0, statuses.length);
+    FileStatus fileStatus = fs.getFileStatus(interimPath);
+    assertEquals("FileStatus does not point to interimPath",
+        interimPath.getName(), fileStatus.getPath().getName());
+  }
+
+  private OzoneKeyDetails getKey(Path keyPath, boolean isDirectory)
+      throws IOException, OzoneClientException {
     String key = o3fs.pathToKey(keyPath);
     if (isDirectory) {
       key = key + "/";
     }
-    KeyArgs parentKeyArgs = new KeyArgs(volumeName, bucketName, key,
-        userArgs);
-    return storageHandler.getKeyInfo(parentKeyArgs);
+    return cluster.getClient().getObjectStore().getVolume(volumeName)
+        .getBucket(bucketName).getKey(key);
   }
 
   private void assertKeyNotFoundException(IOException ex) {

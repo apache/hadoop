@@ -226,6 +226,22 @@ public class TestSingleConstraintAppPlacementAllocator {
     schedulingRequest.getResourceSizing().setNumAllocations(10);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
 
+    // Update allocator with a newly constructed scheduling request different at
+    // #allocations, should succeeded.
+    SchedulingRequest newSchedulingRequest =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(PlacementConstraints
+                .targetNotIn(PlacementConstraints.NODE,
+                    PlacementConstraints.PlacementTargets.nodePartition(""),
+                    PlacementConstraints.PlacementTargets
+                        .allocationTag("mapper", "reducer"))
+                .build()).resourceSizing(
+            ResourceSizing.newInstance(11, Resource.newInstance(1024, 1)))
+            .build();
+    allocator.updatePendingAsk(schedulerRequestKey, newSchedulingRequest, false);
+
     // Update allocator with scheduling request different at resource,
     // should failed.
     schedulingRequest.getResourceSizing().setResources(

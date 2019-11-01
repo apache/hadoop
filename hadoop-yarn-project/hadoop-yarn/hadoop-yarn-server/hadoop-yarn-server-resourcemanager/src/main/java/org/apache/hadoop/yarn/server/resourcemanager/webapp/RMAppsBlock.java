@@ -60,6 +60,7 @@ public class RMAppsBlock extends AppsBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
+          .th(".apptag", "Application Tags")
           .th(".queue", "Queue").th(".priority", "Application Priority")
           .th(".starttime", "StartTime")
           .th("launchtime", "LaunchTime")
@@ -129,6 +130,10 @@ public class RMAppsBlock extends AppsBlock {
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getType())))
+        .append("\",\"")
+        .append(
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
+            app.getApplicationTags() == null ? "" : app.getApplicationTags())))
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app

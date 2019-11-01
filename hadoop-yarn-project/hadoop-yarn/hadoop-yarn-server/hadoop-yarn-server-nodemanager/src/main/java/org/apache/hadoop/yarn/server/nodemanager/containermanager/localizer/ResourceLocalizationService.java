@@ -1185,7 +1185,7 @@ public class ResourceLocalizationService extends CompositeService
             break;
           case FETCH_FAILURE:
             final String diagnostics = stat.getException().toString();
-            LOG.warn(req + " failed: " + diagnostics);
+            LOG.warn("{} failed for {} : {}", req, localizerId, diagnostics);
             fetchFailed = true;
             tracker.handle(new ResourceFailedLocalizationEvent(req,
                 diagnostics));

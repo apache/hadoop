@@ -52,8 +52,8 @@ import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +70,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class XceiverClientGrpc extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientGrpc.class);
+  private static final String COMPONENT = "dn";
   private final Pipeline pipeline;
   private final Configuration config;
   private Map<UUID, XceiverClientProtocolServiceStub> asyncStubs;
@@ -79,6 +80,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   private boolean closed = false;
   private SecurityConfig secConfig;
   private final boolean topologyAwareRead;
+  private X509Certificate caCert;
 
   /**
    * Constructs a client that can communicate with the Container framework on
@@ -86,8 +88,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    *
    * @param pipeline - Pipeline that defines the machines.
    * @param config   -- Ozone Config
+   * @param caCert   - SCM ca certificate.
    */
-  public XceiverClientGrpc(Pipeline pipeline, Configuration config) {
+  public XceiverClientGrpc(Pipeline pipeline, Configuration config,
+      X509Certificate caCert) {
     super();
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkNotNull(config);
@@ -102,6 +106,18 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.topologyAwareRead = config.getBoolean(
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
+    this.caCert = caCert;
+  }
+
+  /**
+   * Constructs a client that can communicate with the Container framework on
+   * data nodes.
+   *
+   * @param pipeline - Pipeline that defines the machines.
+   * @param config   -- Ozone Config
+   */
+  public XceiverClientGrpc(Pipeline pipeline, Configuration config) {
+    this(pipeline, config, null);
   }
 
   /**
@@ -142,27 +158,20 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
     // Add credential context to the client call
     String userName = UserGroupInformation.getCurrentUser().getShortUserName();
-    LOG.debug("Nodes in pipeline : {}", pipeline.getNodes().toString());
-    LOG.debug("Connecting to server : {}", dn.getIpAddress());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Nodes in pipeline : {}", pipeline.getNodes().toString());
+      LOG.debug("Connecting to server : {}", dn.getIpAddress());
+    }
     NettyChannelBuilder channelBuilder =
         NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
             .intercept(new ClientCredentialInterceptor(userName, encodedToken),
                 new GrpcClientInterceptor());
     if (secConfig.isGrpcTlsEnabled()) {
-      File trustCertCollectionFile = secConfig.getTrustStoreFile();
-      File privateKeyFile = secConfig.getClientPrivateKeyFile();
-      File clientCertChainFile = secConfig.getClientCertChainFile();
-
       SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-      if (trustCertCollectionFile != null) {
-        sslContextBuilder.trustManager(trustCertCollectionFile);
+      if (caCert != null) {
+        sslContextBuilder.trustManager(caCert);
       }
-      if (secConfig.isGrpcMutualTlsRequired() && clientCertChainFile != null
-          && privateKeyFile != null) {
-        sslContextBuilder.keyManager(clientCertChainFile, privateKeyFile);
-      }
-
       if (secConfig.useTestCert()) {
         channelBuilder.overrideAuthority("localhost");
       }
@@ -276,7 +285,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     }
     for (DatanodeDetails dn : datanodeList) {
       try {
-        LOG.debug("Executing command " + request + " on datanode " + dn);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Executing command " + request + " on datanode " + dn);
+        }
         // In case the command gets retried on a 2nd datanode,
         // sendCommandAsyncCall will create a new channel and async stub
         // in case these don't exist for the specific datanode.
@@ -370,9 +381,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     if (!isConnected(channel)) {
       reconnect(dn, token);
     }
-
-    LOG.debug("Send command {} to datanode {}", request.getCmdType().toString(),
-        dn.getNetworkFullPath());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Send command {} to datanode {}",
+          request.getCmdType().toString(), dn.getNetworkFullPath());
+    }
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();
     semaphore.acquire();

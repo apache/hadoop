@@ -24,13 +24,15 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.ozone.protocolPB
-    .ScmBlockLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ozone.protocolPB.ProtocolMessageMetrics;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -39,7 +41,7 @@ import java.util.UUID;
 
 /**
  * Test class for @{@link SCMBlockProtocolServer}.
- * */
+ */
 public class TestSCMBlockProtocolServer {
   private OzoneConfiguration config;
   private SCMBlockProtocolServer server;
@@ -64,7 +66,8 @@ public class TestSCMBlockProtocolServer {
 
     }
     server = scm.getBlockProtocolServer();
-    service = new ScmBlockLocationProtocolServerSideTranslatorPB(server);
+    service = new ScmBlockLocationProtocolServerSideTranslatorPB(server,
+        Mockito.mock(ProtocolMessageMetrics.class));
   }
 
   @After

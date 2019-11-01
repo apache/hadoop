@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.Tag;
+
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
+import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
@@ -157,8 +160,13 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       List<Tag> tags = ddbms.getAmazonDynamoDB().listTagsOfResource(listTagsOfResourceRequest).getTags();
 
       // assert
-      assertEquals(tagMap.size(), tags.size());
+      // table version is always there as a plus one tag.
+      assertEquals(tagMap.size() + 1, tags.size());
       for (Tag tag : tags) {
+        // skip the version marker tag
+        if (tag.getKey().equals(VERSION_MARKER_TAG_NAME)) {
+          continue;
+        }
         Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
       }
       // be sure to clean up - delete table
@@ -289,4 +297,31 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "-meta", "dynamodb://" + getTestTableName(DYNAMODB_TABLE));
   }
 
+  @Test
+  public void testCLIFsckWithoutParam() throws Exception {
+    intercept(ExitUtil.ExitException.class, () -> run(Fsck.NAME));
+  }
+
+  @Test
+  public void testCLIFsckWithParam() throws Exception {
+    final int result = run(S3GuardTool.Fsck.NAME, "-check",
+        "s3a://" + getFileSystem().getBucket());
+    LOG.info("This test serves the purpose to run fsck with the correct " +
+        "parameters, so there will be no exception thrown. " +
+        "The return value of the run: {}", result);
+  }
+
+  @Test
+  public void testCLIFsckWithParamParentOfRoot() throws Exception {
+    intercept(IOException.class, "Invalid URI",
+        () -> run(S3GuardTool.Fsck.NAME, "-check",
+            "s3a://" + getFileSystem().getBucket() + "/.."));
+  }
+
+  @Test
+  public void testCLIFsckFailInitializeFs() throws Exception {
+    intercept(FileNotFoundException.class, "does not exist",
+        () -> run(S3GuardTool.Fsck.NAME, "-check",
+            "s3a://this-bucket-does-not-exist-" + UUID.randomUUID()));
+  }
 }

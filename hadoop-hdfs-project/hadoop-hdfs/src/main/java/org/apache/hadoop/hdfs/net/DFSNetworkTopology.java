@@ -212,6 +212,9 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
+        if (excludeRoot != null && isNodeInScope(excludedNode, excludedScope)) {
+          continue;
+        }
         if (excludedNode instanceof DatanodeDescriptor) {
           availableCount -= ((DatanodeDescriptor) excludedNode)
               .hasStorageType(type) ? 1 : 0;
@@ -226,6 +229,9 @@ public class DFSNetworkTopology extends NetworkTopology {
           String nodeLocation = excludedNode.getNetworkLocation()
               + "/" + excludedNode.getName();
           DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+          if (dn == null) {
+            continue;
+          }
           availableCount -= dn.hasStorageType(type)? 1 : 0;
         } else {
           LOG.error("Unexpected node type: {}.", excludedNode.getClass());
@@ -250,6 +256,15 @@ public class DFSNetworkTopology extends NetworkTopology {
     } while (true);
     LOG.debug("chooseRandom returning {}", chosen);
     return chosen;
+  }
+
+  private boolean isNodeInScope(Node node, String scope) {
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
+    }
+    String nodeLocation =
+        node.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR;
+    return nodeLocation.startsWith(scope);
   }
 
   /**

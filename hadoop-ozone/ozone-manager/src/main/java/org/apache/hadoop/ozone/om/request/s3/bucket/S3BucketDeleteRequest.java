@@ -43,10 +43,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3DeleteBucketRequest;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MAX_LENGTH;
 import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MIN_LENGTH;
@@ -107,15 +105,9 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     OMClientResponse omClientResponse = null;
     try {
-      // check Acl
-      if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
-            OzoneObj.StoreType.S3, IAccessAuthorizer.ACLType.DELETE, null,
-            s3BucketName, null);
-      }
-
-      acquiredS3Lock = omMetadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
-          s3BucketName);
+      // TODO to support S3 ACL later.
+      acquiredS3Lock = omMetadataManager.getLock().acquireWriteLock(
+          S3_BUCKET_LOCK, s3BucketName);
 
       String s3Mapping = omMetadataManager.getS3Table().get(s3BucketName);
 
@@ -126,8 +118,8 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
         volumeName = getOzoneVolumeName(s3Mapping);
 
         acquiredBucketLock =
-            omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-                s3BucketName);
+            omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
+                volumeName, s3BucketName);
 
         String bucketKey = omMetadataManager.getBucketKey(volumeName,
             s3BucketName);
@@ -157,11 +149,12 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
                 transactionLogIndex));
       }
       if (acquiredBucketLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
             s3BucketName);
       }
       if (acquiredS3Lock) {
-        omMetadataManager.getLock().releaseLock(S3_BUCKET_LOCK, s3BucketName);
+        omMetadataManager.getLock().releaseWriteLock(S3_BUCKET_LOCK,
+            s3BucketName);
       }
     }
 

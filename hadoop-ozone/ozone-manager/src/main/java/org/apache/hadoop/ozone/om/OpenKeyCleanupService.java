@@ -22,10 +22,10 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.utils.BackgroundService;
-import org.apache.hadoop.utils.BackgroundTask;
-import org.apache.hadoop.utils.BackgroundTaskQueue;
-import org.apache.hadoop.utils.BackgroundTaskResult;
+import org.apache.hadoop.hdds.utils.BackgroundService;
+import org.apache.hadoop.hdds.utils.BackgroundTask;
+import org.apache.hadoop.hdds.utils.BackgroundTaskQueue;
+import org.apache.hadoop.hdds.utils.BackgroundTaskResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +88,9 @@ public class OpenKeyCleanupService extends BackgroundService {
             if (result.isSuccess()) {
               try {
                 keyManager.deleteExpiredOpenKey(result.getObjectKey());
-                LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
+                }
                 deletedSize += 1;
               } catch (IOException e) {
                 LOG.warn("Failed to delete hanging-open key {}",

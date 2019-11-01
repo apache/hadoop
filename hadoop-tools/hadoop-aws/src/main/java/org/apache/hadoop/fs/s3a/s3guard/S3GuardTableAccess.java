@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER_ITEM_NAME;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.CHILD;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.TABLE_VERSION;
@@ -199,8 +199,8 @@ class S3GuardTableAccess {
     public DDBPathMetadata next() {
       Item item = it.next();
       Pair<String, String> key = primaryKey(item);
-      if (VERSION_MARKER.equals(key.getLeft()) &&
-          VERSION_MARKER.equals(key.getRight())) {
+      if (VERSION_MARKER_ITEM_NAME.equals(key.getLeft()) &&
+          VERSION_MARKER_ITEM_NAME.equals(key.getRight())) {
         // a version marker is found, return the special type
         return new VersionMarker(item);
       } else {

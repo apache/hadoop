@@ -79,7 +79,7 @@ public final class SCMContainerPlacementCapacity extends SCMCommonPolicy {
    */
   public SCMContainerPlacementCapacity(final NodeManager nodeManager,
       final Configuration conf, final NetworkTopology networkTopology,
-      final boolean fallback) {
+      final boolean fallback, final SCMContainerPlacementMetrics metrics) {
     super(nodeManager, conf);
   }
 

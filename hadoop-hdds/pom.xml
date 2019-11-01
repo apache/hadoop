@@ -19,9 +19,9 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
-    <version>3.2.0</version>
-    <relativePath/>
+    <artifactId>hadoop-main-ozone</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <relativePath>../pom.ozone.xml</relativePath>
   </parent>
 
   <artifactId>hadoop-hdds</artifactId>
@@ -39,7 +39,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>tools</module>
     <module>docs</module>
     <module>config</module>
-
   </modules>
 
   <properties>
@@ -47,7 +46,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hdds.version>0.5.0-SNAPSHOT</hdds.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
+    <ratis.version>0.5.0-201fc85-SNAPSHOT</ratis.version>
 
     <bouncycastle.version>1.60</bouncycastle.version>
 
@@ -196,27 +195,23 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <version>${junit.jupiter.version}</version>
         <scope>test</scope>
       </dependency>
-
-      <dependency>
-        <groupId>com.google.code.findbugs</groupId>
-        <artifactId>findbugs</artifactId>
-        <version>3.0.1</version>
-        <scope>provided</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
+      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.squareup.okhttp</groupId>
@@ -227,12 +222,14 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop.version}</version>
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
@@ -294,19 +291,13 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery-3.4.1.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
             <exclude>src/test/resources/incorrect.checksum.container</exclude>
             <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/test.db.ini</exclude>
           </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>3.0.4</version>
-        <configuration>
-          <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
       </plugin>
       <plugin>

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
@@ -211,6 +212,7 @@ public class OzoneBucket extends WithMetadata {
    *
    * @return acls
    */
+  @JsonIgnore
   public List<OzoneAcl> getAcls() throws IOException {
     return proxy.getAcl(ozoneObj);
   }
@@ -551,6 +553,16 @@ public class OzoneBucket extends WithMetadata {
       String startKey, long numEntries) throws IOException {
     return proxy
         .listStatus(volumeName, name, keyName, recursive, startKey, numEntries);
+  }
+
+  /**
+   * Return with the list of the in-flight multipart uploads.
+   *
+   * @param prefix Optional string to filter for the selected keys.
+   */
+  public OzoneMultipartUploadList listMultipartUploads(String prefix)
+      throws IOException {
+    return proxy.listMultipartUploads(volumeName, getName(), prefix);
   }
 
   /**

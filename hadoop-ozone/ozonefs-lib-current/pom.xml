@@ -31,6 +31,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <shaded.prefix>org.apache.hadoop.ozone.shaded</shaded.prefix>
   </properties>
 
   <build>
@@ -47,26 +48,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <phase>prepare-package</phase>
-            <configuration>
-              <outputDirectory>target/classes</outputDirectory>
-              <includeScope>compile</includeScope>
-              <excludes>META-INF/*.SF</excludes>
-              <excludeArtifactIds>
-                slf4j-api,slf4j-log4j12,log4j-api,log4j-core,log4j
-              </excludeArtifactIds>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
         <executions>
@@ -77,11 +58,118 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <skip>true</skip>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer
+                        implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                  <resources>
+                    <resource>META-INF/BC1024KE.DSA</resource>
+                    <resource>META-INF/BC2048KE.DSA</resource>
+                    <resource>META-INF/BC1024KE.SF</resource>
+                    <resource>META-INF/BC2048KE.SF</resource>
+                  </resources>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
+                  <resource>ozone-default-generated.xml</resource>
+                </transformer>
+              </transformers>
+              <relocations>
+                <relocation>
+                  <pattern>org</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.org
+                  </shadedPattern>
+                  <includes>
+                    <include>org.yaml.**.*</include>
+                    <include>org.sqlite.**.*</include>
+                    <include>org.tukaani.**.*</include>
+                    <include>org.bouncycastle.**.*</include>
+                    <include>org.fusesource.leveldbjni.**.*</include>
+                    <include>org.rocksdb.**.*</include>
+                    <include>org.apache.commons.cli.**.*</include>
+                    <include>org.apache.commons.compress.**.*</include>
+                    <include>org.apache.commons.codec.**.*</include>
+                    <include>org.apache.commons.beanutils.**.*</include>
+                    <include>org.apache.commons.collections.**.*</include>
+                    <include>org.apache.commons.digester.**.*</include>
+                    <include>org.apache.commons.logging.**.*</include>
+                    <include>org.apache.commons.pool2.**.*</include>
+                    <include>org.apache.commons.validator.**.*</include>
+                    <include>org.sqlite.**.*</include>
+                    <include>org.apache.thrift.**.*</include>
+                    <!-- level db -->
+                    <include>org.iq80.**.*</include>
+                    <include>org.fusesource.**.*</include>
+                    <!-- http client and core -->
+                    <include>org.apache.http.**.*</include>
+                  </includes>
+                </relocation>
+                <relocation>
+                  <pattern>com</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.com
+                  </shadedPattern>
+                  <includes>
+                    <include>com.google.common.**.*</include>
+                    <include>com.google.gson.**.*</include>
+                    <include>com.codahale.**.*</include>
+                    <include>com.lmax.**.*</include>
+                    <include>com.github.joshelser.**.*</include>
+                    <include>com.twitter.**.*</include>
+                  </includes>
+                </relocation>
+                <relocation>
+                  <pattern>picocli</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.picocli
+                  </shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>info</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.info
+                  </shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.io
+                  </shadedPattern>
+                </relocation>
+
+                <!-- handling some special packages with special names -->
+                <relocation>
+                  <pattern>okio</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.okio
+                  </shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>okhttp3</pattern>
+                  <shadedPattern>
+                    ${shaded.prefix}.okhttp3
+                  </shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -91,6 +179,36 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-filesystem</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>

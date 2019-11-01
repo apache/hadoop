@@ -26,10 +26,12 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
+    .UserVolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+
+import javax.annotation.Nonnull;
 
 /**
  * Response for set owner request.
@@ -37,13 +39,13 @@ import org.apache.hadoop.utils.db.BatchOperation;
 public class OMVolumeSetOwnerResponse extends OMClientResponse {
 
   private String oldOwner;
-  private VolumeList oldOwnerVolumeList;
-  private VolumeList newOwnerVolumeList;
+  private UserVolumeInfo oldOwnerVolumeList;
+  private UserVolumeInfo newOwnerVolumeList;
   private OmVolumeArgs newOwnerVolumeArgs;
 
   public OMVolumeSetOwnerResponse(String oldOwner,
-      VolumeList oldOwnerVolumeList, VolumeList newOwnerVolumeList,
-      OmVolumeArgs newOwnerVolumeArgs, OMResponse omResponse) {
+      UserVolumeInfo oldOwnerVolumeList, UserVolumeInfo newOwnerVolumeList,
+      OmVolumeArgs newOwnerVolumeArgs, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.oldOwner = oldOwner;
     this.oldOwnerVolumeList = oldOwnerVolumeList;

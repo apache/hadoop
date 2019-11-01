@@ -419,6 +419,28 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 The caller does not have the permissions to access
 the key with which the data was encrypted.
 
+### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
+
+Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+```
+com.amazonaws.SdkClientException: Unable to find a region via the region provider
+chain. Must provide an explicit region in the builder or setup environment to supply a region.
+```
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
+S3 sts endpoint and region like the following:
+
+```xml
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint</name>
+    <value>${sts.endpoint}</value>
+</property>
+<property>
+    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+    <value>${sts.region}</value>
+</property>
+```
+
+
 ## <a name="connectivity"></a> Connectivity Problems
 
 ### <a name="bad_endpoint"></a> Error message "The bucket you are attempting to access must be addressed using the specified endpoint"
@@ -1029,6 +1051,56 @@ before versioning was enabled.
 See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
 for more information.
 
+### `RemoteFileChangedException`: "File to rename not found on guarded S3 store after repeated attempts"
+
+A file being renamed and listed in the S3Guard table could not be found
+in the S3 bucket even after multiple attempts.
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
+ `s3a://example/sourcedir/missing': File not found on S3 after repeated attempts: `s3a://example/sourcedir/missing'
+at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
+at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
+```
+
+Either the file has been deleted, or an attempt was made to read a file before it
+was created and the S3 load balancer has briefly cached the 404 returned by that
+operation. This is something which AWS S3 can do for short periods.
+
+If error occurs and the file is on S3, consider increasing the value of
+`fs.s3a.s3guard.consistency.retry.limit`.
+
+We also recommend using applications/application
+options which do  not rename files when committing work or when copying data
+to S3, but instead write directly to the final destination.
+
+### `RemoteFileChangedException`: "File to rename not found on unguarded S3 store"
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
+ `s3a://example/sourcedir/missing': File to rename not found on unguarded S3 store: `s3a://example/sourcedir/missing'
+at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
+at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
+at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
+at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
+```
+
+An attempt was made to rename a file in an S3 store not protected by SGuard,
+the directory list operation included the filename in its results but the
+actual operation to rename the file failed.
+
+This can happen because S3 directory listings and the store itself are not
+consistent: the list operation tends to lag changes in the store.
+It is possible that the file has been deleted.
+
+The fix here is to use S3Guard. We also recommend using applications/application
+options which do  not rename files when committing work or when copying data
+to S3, but instead write directly to the final destination.
+
 ## <a name="encryption"></a> S3 Server Side Encryption
 
 ### `AWSS3IOException` `KMS.NotFoundException` "Invalid arn" when using SSE-KMS
@@ -1275,3 +1347,40 @@ Please don't do that. Given that the emulated directory rename and delete operat
 are not atomic, even without retries, multiple S3 clients working with the same
 paths can interfere with each other
 
+### <a name="retries"></a> Tuning S3Guard open/rename Retry Policies
+
+When the S3A connector attempts to open a file for which it has an entry in
+its database, it will retry if the desired file is not found. This is
+done if:
+
+* No file is found in S3.
+* There is a file but its version or etag is not consistent with S3Guard table.
+
+These can be symptoms of S3's eventual consistency, hence the retries.
+They can also be caused by changes having been made to the S3 Store without
+SGuard being kept up to date.
+
+For this reason, the number of retry events are limited.
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry attempts to read/open/copy files when
+    S3Guard believes a specific version of the file to be available,
+    but the S3 request does not find any version of a file, or a different
+    version.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.interval</name>
+  <value>2s</value>
+  <description>
+    Initial interval between attempts to retry operations while waiting for S3
+    to become consistent with the S3Guard data.
+    An exponential back-off is used here: every failure doubles the delay.
+  </description>
+</property>
+```

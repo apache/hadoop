@@ -575,6 +575,9 @@ public final class LambdaTestUtils {
     if (o == null) {
       return NULL_RESULT;
     } else {
+      if (o instanceof String) {
+        return '"' + (String)o + '"';
+      }
       try {
         return o.toString();
       } catch (Exception e) {

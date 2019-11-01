@@ -39,12 +39,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 
 /**
  * A failover proxy provider implementation which allows clients to configure
@@ -68,31 +68,35 @@ public class OMFailoverProxyProvider implements
   private final Configuration conf;
   private final long omVersion;
   private final UserGroupInformation ugi;
+  private final Text delegationTokenService;
+
+  private final String omServiceId;
 
   public OMFailoverProxyProvider(OzoneConfiguration configuration,
-      UserGroupInformation ugi) throws IOException {
+      UserGroupInformation ugi, String omServiceId) throws IOException {
     this.conf = configuration;
     this.omVersion = RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     this.ugi = ugi;
-    loadOMClientConfigs(conf);
+    this.omServiceId = omServiceId;
+    loadOMClientConfigs(conf, this.omServiceId);
+    this.delegationTokenService = computeDelegationTokenService();
 
     currentProxyIndex = 0;
     currentProxyOMNodeId = omNodeIDList.get(currentProxyIndex);
   }
 
-  private void loadOMClientConfigs(Configuration config) throws IOException {
+  public OMFailoverProxyProvider(OzoneConfiguration configuration,
+      UserGroupInformation ugi) throws IOException {
+    this(configuration, ugi, null);
+  }
+
+  private void loadOMClientConfigs(Configuration config, String omSvcId)
+      throws IOException {
     this.omProxies = new HashMap<>();
     this.omProxyInfos = new HashMap<>();
     this.omNodeIDList = new ArrayList<>();
 
-    Collection<String> omServiceIds = config.getTrimmedStringCollection(
-        OZONE_OM_SERVICE_IDS_KEY);
-
-    if (omServiceIds.size() > 1) {
-      throw new IllegalArgumentException("Multi-OM Services is not supported." +
-          " Please configure only one OM Service ID in " +
-          OZONE_OM_SERVICE_IDS_KEY);
-    }
+    Collection<String> omServiceIds = Collections.singletonList(omSvcId);
 
     for (String serviceId : OmUtils.emptyAsSingletonNull(omServiceIds)) {
       Collection<String> omNodeIds = OmUtils.getOMNodeIds(config, serviceId);
@@ -178,9 +182,30 @@ public class OMFailoverProxyProvider implements
     }
   }
 
-  public synchronized Text getCurrentProxyDelegationToken() {
-    return omProxyInfos.get(currentProxyOMNodeId).getDelegationTokenService();
+  public Text getCurrentProxyDelegationToken() {
+    return delegationTokenService;
   }
+
+  private Text computeDelegationTokenService() {
+    // For HA, this will return "," separated address of all OM's.
+    StringBuilder rpcAddress = new StringBuilder();
+    int count = 0;
+    for (Map.Entry<String, OMProxyInfo> omProxyInfoSet :
+        omProxyInfos.entrySet()) {
+      count++;
+      rpcAddress =
+          rpcAddress.append(
+              omProxyInfoSet.getValue().getDelegationTokenService());
+
+      if (omProxyInfos.size() != count) {
+        rpcAddress.append(",");
+      }
+    }
+
+    return new Text(rpcAddress.toString());
+  }
+
+
 
   /**
    * Called whenever an error warrants failing over. It is determined by the
@@ -189,8 +214,10 @@ public class OMFailoverProxyProvider implements
   @Override
   public void performFailover(OzoneManagerProtocolPB currentProxy) {
     int newProxyIndex = incrementProxyIndex();
-    LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
-        newProxyIndex, omNodeIDList.get(newProxyIndex));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Failing over OM proxy to index: {}, nodeId: {}",
+          newProxyIndex, omNodeIDList.get(newProxyIndex));
+    }
   }
 
   /**

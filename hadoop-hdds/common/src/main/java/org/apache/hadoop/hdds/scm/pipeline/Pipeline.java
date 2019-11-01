@@ -41,8 +41,7 @@ import java.util.stream.Collectors;
  */
 public final class Pipeline {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(Pipeline.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Pipeline.class);
   private final PipelineID id;
   private final ReplicationType type;
   private final ReplicationFactor factor;
@@ -192,8 +191,10 @@ public final class Pipeline {
           }
         }
       }
-      LOG.debug("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
-          nodes);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
+            nodes);
+      }
     }
     return builder.build();
   }
@@ -339,8 +340,10 @@ public final class Pipeline {
             nodeIndex--;
           }
         }
-        LOG.debug("Deserialize nodesInOrder {} in pipeline {}", nodesWithOrder,
-            id.toString());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Deserialize nodesInOrder {} in pipeline {}",
+              nodesWithOrder, id.toString());
+        }
         pipeline.setNodesInOrder(nodesWithOrder);
       } else if (nodesInOrder != null){
         // This branch is for pipeline clone
@@ -354,7 +357,7 @@ public final class Pipeline {
    * Possible Pipeline states in SCM.
    */
   public enum PipelineState {
-    ALLOCATED, OPEN, CLOSED;
+    ALLOCATED, OPEN, DORMANT, CLOSED;
 
     public static PipelineState fromProtobuf(HddsProtos.PipelineState state)
         throws UnknownPipelineStateException {
@@ -362,6 +365,7 @@ public final class Pipeline {
       switch (state) {
       case PIPELINE_ALLOCATED: return ALLOCATED;
       case PIPELINE_OPEN: return OPEN;
+      case PIPELINE_DORMANT: return DORMANT;
       case PIPELINE_CLOSED: return CLOSED;
       default:
         throw new UnknownPipelineStateException(
@@ -375,6 +379,7 @@ public final class Pipeline {
       switch (state) {
       case ALLOCATED: return HddsProtos.PipelineState.PIPELINE_ALLOCATED;
       case OPEN: return HddsProtos.PipelineState.PIPELINE_OPEN;
+      case DORMANT: return HddsProtos.PipelineState.PIPELINE_DORMANT;
       case CLOSED: return HddsProtos.PipelineState.PIPELINE_CLOSED;
       default:
         throw new UnknownPipelineStateException(

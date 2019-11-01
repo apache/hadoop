@@ -36,8 +36,8 @@ import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.proto.SecurityProtos;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,22 +74,36 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
     // client does not need any proto changes.
 
     // Create UpdateGetDelegationTokenRequest with token response.
-    OMRequest.Builder omRequest = OMRequest.newBuilder()
-        .setUserInfo(getUserInfo())
-        .setUpdateGetDelegationTokenRequest(
-            UpdateGetDelegationTokenRequest.newBuilder()
-                .setGetDelegationTokenResponse(
-                    GetDelegationTokenResponseProto.newBuilder()
-                    .setResponse(SecurityProtos.GetDelegationTokenResponseProto
-                        .newBuilder().setToken(OMPBHelper
-                        .convertToTokenProto(token)).build()).build()))
-        .setCmdType(getOmRequest().getCmdType())
-        .setClientId(getOmRequest().getClientId());
 
+    OMRequest.Builder omRequest;
+    if (token != null) {
+      omRequest = OMRequest.newBuilder().setUserInfo(getUserInfo())
+          .setUpdateGetDelegationTokenRequest(
+              UpdateGetDelegationTokenRequest.newBuilder()
+                  .setGetDelegationTokenResponse(
+                      GetDelegationTokenResponseProto.newBuilder()
+                          .setResponse(
+                              SecurityProtos.GetDelegationTokenResponseProto
+                              .newBuilder().setToken(OMPBHelper
+                                  .convertToTokenProto(token)).build())
+                          .build()))
+          .setCmdType(getOmRequest().getCmdType())
+          .setClientId(getOmRequest().getClientId());
+
+
+    } else {
+      // If token is null, do not set GetDelegationTokenResponse with response.
+      omRequest = OMRequest.newBuilder().setUserInfo(getUserInfo())
+          .setUpdateGetDelegationTokenRequest(
+              UpdateGetDelegationTokenRequest.newBuilder()
+                  .setGetDelegationTokenResponse(
+                      GetDelegationTokenResponseProto.newBuilder()))
+          .setCmdType(getOmRequest().getCmdType())
+          .setClientId(getOmRequest().getClientId());
+    }
     if (getOmRequest().hasTraceID()) {
       omRequest.setTraceID(getOmRequest().getTraceID());
     }
-
     return omRequest.build();
   }
 
@@ -101,6 +115,29 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
     UpdateGetDelegationTokenRequest updateGetDelegationTokenRequest =
         getOmRequest().getUpdateGetDelegationTokenRequest();
 
+    OMResponse.Builder omResponse =
+        OMResponse.newBuilder()
+            .setCmdType(OzoneManagerProtocolProtos.Type.GetDelegationToken)
+            .setStatus(OzoneManagerProtocolProtos.Status.OK)
+            .setSuccess(true);
+
+    OMClientResponse omClientResponse = null;
+
+
+    // If security is not enabled and token request is received, leader
+    // returns token null. So, check here if updatedGetDelegationTokenResponse
+    // has response set or not. If it is not set, then token is null.
+    if (!updateGetDelegationTokenRequest.getGetDelegationTokenResponse()
+        .hasResponse()) {
+      omClientResponse = new OMGetDelegationTokenResponse(null, -1L,
+          omResponse.setGetDelegationTokenResponse(
+              GetDelegationTokenResponseProto.newBuilder()).build());
+      omClientResponse.setFlushFuture(
+          ozoneManagerDoubleBufferHelper.add(omClientResponse,
+              transactionLogIndex));
+      return omClientResponse;
+    }
+
     SecurityProtos.TokenProto tokenProto = updateGetDelegationTokenRequest
         .getGetDelegationTokenResponse().getResponse().getToken();
 
@@ -109,15 +146,9 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
-    OMClientResponse omClientResponse = null;
-    OMResponse.Builder omResponse =
-        OMResponse.newBuilder()
-            .setCmdType(OzoneManagerProtocolProtos.Type.GetDelegationToken)
-            .setStatus(OzoneManagerProtocolProtos.Status.OK)
-            .setSuccess(true);
     try {
-      OzoneTokenIdentifier ozoneTokenIdentifier =
-          ozoneTokenIdentifierToken.decodeIdentifier();
+      OzoneTokenIdentifier ozoneTokenIdentifier = OzoneTokenIdentifier.
+          readProtoBuf(ozoneTokenIdentifierToken.getIdentifier());
 
       // Update in memory map of token.
       long renewTime = ozoneManager.getDelegationTokenMgr()

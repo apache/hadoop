@@ -100,7 +100,8 @@ public class TestContainerPlacementFactory {
         .thenReturn(new SCMNodeMetric(storageCapacity, 70L, 30L));
 
     ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
-        .getPolicy(conf, nodeManager, cluster, true);
+        .getPolicy(conf, nodeManager, cluster, true,
+            SCMContainerPlacementMetrics.create());
 
     int nodeNum = 3;
     List<DatanodeDetails> datanodeDetails =
@@ -117,7 +118,7 @@ public class TestContainerPlacementFactory {
   @Test
   public void testDefaultPolicy() throws IOException {
     ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
-        .getPolicy(conf, null, null, true);
+        .getPolicy(conf, null, null, true, null);
     Assert.assertSame(SCMContainerPlacementRandom.class, policy.getClass());
   }
 
@@ -138,7 +139,7 @@ public class TestContainerPlacementFactory {
     // set a placement class which does't have the right constructor implemented
     conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         DummyImpl.class.getName());
-    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true);
+    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true, null);
   }
 
   @Test(expected = RuntimeException.class)
@@ -146,6 +147,6 @@ public class TestContainerPlacementFactory {
     // set a placement class not implemented
     conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         "org.apache.hadoop.hdds.scm.container.placement.algorithm.HelloWorld");
-    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true);
+    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true, null);
   }
 }

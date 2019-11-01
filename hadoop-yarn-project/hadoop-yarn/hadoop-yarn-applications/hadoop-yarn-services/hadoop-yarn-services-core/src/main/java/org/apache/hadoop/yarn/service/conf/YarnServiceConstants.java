@@ -47,6 +47,8 @@ public interface YarnServiceConstants {
 
   String SERVICES_DIRECTORY = "services";
 
+  String SERVICES_PUBLIC_DIRECTORY = "/tmp/hadoop-yarn/staging/";
+
   /**
    * JVM property to define the service lib directory;
    * this is set by the yarn.sh script

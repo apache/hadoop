@@ -94,6 +94,13 @@ function hdfs_original {
 extraClasspathDir="$(pwd)/additionalClasspath/"
 mkdir -p "${extraClasspathDir}"
 
+# DataNodes need junit jar to run SimulatedDataNodes
+junitClassPath="$(find "${hadoopHome}" -name "junit*.jar" | head -n 1)"
+if [[ -z "$junitClassPath" ]]; then
+  echo "Can't find junit jar file in ${hadoopHome}."
+  exit 1
+fi
+
 # Change environment variables for the Hadoop process
 export HADOOP_HOME="$hadoopHome"
 export HADOOP_PREFIX="$hadoopHome"
@@ -107,7 +114,7 @@ export HADOOP_CONF_DIR="${confDir}"
 export YARN_CONF_DIR="${confDir}"
 export HADOOP_LOG_DIR="${logDir}"
 export HADOOP_PID_DIR="${pidDir}"
-HADOOP_CLASSPATH="$(pwd)/dependencies/*:$extraClasspathDir"
+HADOOP_CLASSPATH="$(pwd)/dependencies/*:$extraClasspathDir:$junitClassPath"
 export HADOOP_CLASSPATH
 echo "Environment variables are set as:"
 echo "(note that this doesn't include changes made by hadoop-env.sh)"

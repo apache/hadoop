@@ -376,7 +376,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
         AppLogs logs = getAndSetActiveLog(appId, stat.getPath());
         executor.execute(new ActiveLogParser(logs));
       } else {
-        logsToScanCount += scanActiveLogs(stat.getPath());
+        if (stat.isDirectory()) {
+          logsToScanCount += scanActiveLogs(stat.getPath());
+        } else {
+          LOG.warn("Ignoring unexpected file in active directory {}",
+              stat.getPath());
+        }
       }
     }
     return logsToScanCount;
@@ -549,15 +554,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
 
   // converts the String to an ApplicationId or null if conversion failed
   private static ApplicationId parseApplicationId(String appIdStr) {
-    ApplicationId appId = null;
-    if (appIdStr.startsWith(ApplicationId.appIdStrPrefix)) {
-      try {
-        appId = ApplicationId.fromString(appIdStr);
-      } catch (IllegalArgumentException e) {
-        appId = null;
-      }
+    try {
+      return ApplicationId.fromString(appIdStr);
+    } catch (IllegalArgumentException e) {
+      return null;
     }
-    return appId;
   }
 
   private static ClassLoader createPluginClassLoader(

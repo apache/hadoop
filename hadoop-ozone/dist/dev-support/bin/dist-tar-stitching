@@ -38,8 +38,8 @@ function run()
   fi
 }
 
-run tar -c -f "ozone-${VERSION}.tar" "ozone-${VERSION}"
-run gzip -f "ozone-${VERSION}.tar"
+run tar -c -f "hadoop-ozone-${VERSION}.tar" "ozone-${VERSION}"
+run gzip -f "hadoop-ozone-${VERSION}.tar"
 echo
-echo "Ozone dist tar available at: ${BASEDIR}/ozone-${VERSION}.tar.gz"
+echo "Ozone dist tar available at: ${BASEDIR}/hadoop-ozone-${VERSION}.tar.gz"
 echo

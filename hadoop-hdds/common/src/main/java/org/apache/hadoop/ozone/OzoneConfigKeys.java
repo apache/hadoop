@@ -125,9 +125,6 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
 
-  public static final String OZONE_CLIENT_PROTOCOL =
-      "ozone.client.protocol";
-
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
       "ozone.client.stream.buffer.flush.size";
 
@@ -332,6 +329,11 @@ public final class OzoneConfigKeys {
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP;
   public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS;
+  public static final int
+      DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LEADER_NUM_PENDING_REQUESTS_DEFAULT;
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
   public static final TimeDuration
@@ -361,12 +363,12 @@ public final class OzoneConfigKeys {
       HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD =
       "hdds.datanode.storage.utilization.warning.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.95;
+      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.75;
   public static final String
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD =
       "hdds.datanode.storage.utilization.critical.threshold";
   public static final double
-      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
+      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.95;
 
   public static final String OZONE_SECURITY_ENABLED_KEY =
       "ozone.security.enabled";
@@ -450,6 +452,9 @@ public final class OzoneConfigKeys {
   public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
       "ozone.network.topology.aware.read";
   public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
+
+  public static final String OZONE_MANAGER_FAIR_LOCK = "ozone.om.lock.fair";
+  public static final boolean OZONE_MANAGER_FAIR_LOCK_DEFAULT = false;
 
   /**
    * There is no need to instantiate this class.

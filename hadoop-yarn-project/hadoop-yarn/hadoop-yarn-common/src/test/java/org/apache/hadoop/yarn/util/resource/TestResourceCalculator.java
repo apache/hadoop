@@ -36,6 +36,8 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class TestResourceCalculator {
+  private static final String EXTRA_RESOURCE_NAME = "test";
+
   private final ResourceCalculator resourceCalculator;
 
   @Parameterized.Parameters(name = "{0}")
@@ -55,7 +57,7 @@ public class TestResourceCalculator {
   private static void setupExtraResource() {
     Configuration conf = new Configuration();
 
-    conf.set(YarnConfiguration.RESOURCE_TYPES, "test");
+    conf.set(YarnConfiguration.RESOURCE_TYPES, EXTRA_RESOURCE_NAME);
     ResourceUtils.resetResourceTypes(conf);
   }
 
@@ -97,10 +99,10 @@ public class TestResourceCalculator {
     return res;
   }
 
-  private Resource newResource(long memory, int cpu, int test) {
+  private Resource newResource(long memory, int cpu, int extraResource) {
     Resource res = newResource(memory, cpu);
 
-    res.setResourceValue("test", test);
+    res.setResourceValue(EXTRA_RESOURCE_NAME, extraResource);
 
     return res;
   }
@@ -188,6 +190,7 @@ public class TestResourceCalculator {
       testCompareDefault(cluster);
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
       testCompareDominant(cluster);
+      testCompareDominantZeroValueResource();
     }
   }
 
@@ -201,6 +204,28 @@ public class TestResourceCalculator {
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 2), 1);
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 0, 0), 1);
+  }
+
+  /**
+   * Verify compare when one or all the resource are zero.
+   */
+  private void testCompareDominantZeroValueResource(){
+    Resource cluster = newResource(4L, 4, 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(1, 2, 2), 1);
+    assertComparison(cluster, newResource(2, 2, 1), newResource(2, 2, 2), 0);
+    assertComparison(cluster, newResource(0, 2, 1), newResource(0, 2, 2), 0);
+    assertComparison(cluster, newResource(0, 1, 2), newResource(1, 1, 2), -1);
+    assertComparison(cluster, newResource(1, 1, 2), newResource(2, 1, 2), -1);
+
+    // cluster resource zero
+    cluster = newResource(0, 0, 0);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 2, 2), newResource(1, 1, 1), 1);
+    assertComparison(cluster, newResource(2, 1, 1), newResource(1, 2, 1), 0);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 1, 1), 0);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 1, 2), -1);
+    assertComparison(cluster, newResource(1, 1, 1), newResource(1, 2, 1), -1);
   }
 
   private void testCompareDominant(Resource cluster) {
@@ -523,6 +548,45 @@ public class TestResourceCalculator {
       assertEquals(ImmutableSet.of(),
           resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
               newResource(1, 1)));
+    }
+  }
+
+  @Test
+  public void testRatioWithNoExtraResource() {
+    //setup
+    Resource resource1 = newResource(1, 1);
+    Resource resource2 = newResource(2, 1);
+
+    //act
+    float ratio = resourceCalculator.ratio(resource1, resource2);
+
+    //assert
+    if (resourceCalculator instanceof DefaultResourceCalculator) {
+      double ratioOfMemories = 0.5;
+      assertEquals(ratioOfMemories, ratio, 0.00001);
+    } else if (resourceCalculator instanceof DominantResourceCalculator) {
+      double ratioOfCPUs = 1.0;
+      assertEquals(ratioOfCPUs, ratio, 0.00001);
+    }
+  }
+
+  @Test
+  public void testRatioWithExtraResource() {
+    //setup
+    setupExtraResource();
+    Resource resource1 = newResource(1, 1, 2);
+    Resource resource2 = newResource(2, 1, 1);
+
+    //act
+    float ratio = resourceCalculator.ratio(resource1, resource2);
+
+    //assert
+    if (resourceCalculator instanceof DefaultResourceCalculator) {
+      double ratioOfMemories = 0.5;
+      assertEquals(ratioOfMemories, ratio, 0.00001);
+    } else if (resourceCalculator instanceof DominantResourceCalculator) {
+      double ratioOfExtraResources = 2.0;
+      assertEquals(ratioOfExtraResources, ratio, 0.00001);
     }
   }
 }

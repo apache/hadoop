@@ -40,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMNodeDetails;
+import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -169,8 +169,10 @@ public final class OzoneManagerRatisServer {
       omResponse.setMessage(stateMachineException.getCause().getMessage());
       omResponse.setStatus(parseErrorStatus(
           stateMachineException.getCause().getMessage()));
-      LOG.debug("Error while executing ratis request. " +
-          "stateMachineException: ", stateMachineException);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while executing ratis request. " +
+            "stateMachineException: ", stateMachineException);
+      }
       return omResponse.build();
     }
 
@@ -489,7 +491,7 @@ public final class OzoneManagerRatisServer {
             .getDuration(), nodeFailureTimeoutUnit);
     final TimeDuration nodeFailureTimeout = TimeDuration.valueOf(
         nodeFailureTimeoutDuration, nodeFailureTimeoutUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);

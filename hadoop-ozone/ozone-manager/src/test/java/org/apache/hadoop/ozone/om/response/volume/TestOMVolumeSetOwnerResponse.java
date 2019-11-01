@@ -27,11 +27,12 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .UserVolumeInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,7 +69,9 @@ public class TestOMVolumeSetOwnerResponse {
 
     String volumeName = UUID.randomUUID().toString();
     String oldOwner = "user1";
-    VolumeList volumeList = VolumeList.newBuilder()
+    UserVolumeInfo volumeList = UserVolumeInfo.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
 
     OMResponse omResponse = OMResponse.newBuilder()
@@ -87,9 +90,14 @@ public class TestOMVolumeSetOwnerResponse {
 
 
     String newOwner = "user2";
-    VolumeList newOwnerVolumeList = VolumeList.newBuilder()
+    UserVolumeInfo newOwnerVolumeList = UserVolumeInfo.newBuilder()
+        .setObjectID(1)
+        .setUpdateID(1)
         .addVolumeNames(volumeName).build();
-    VolumeList oldOwnerVolumeList = VolumeList.newBuilder().build();
+    UserVolumeInfo oldOwnerVolumeList = UserVolumeInfo.newBuilder()
+        .setObjectID(2)
+        .setUpdateID(2)
+        .build();
     OmVolumeArgs newOwnerVolumeArgs = OmVolumeArgs.newBuilder()
         .setOwnerName(newOwner).setAdminName(newOwner)
         .setVolume(volumeName).setCreationTime(omVolumeArgs.getCreationTime())
@@ -106,9 +114,15 @@ public class TestOMVolumeSetOwnerResponse {
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
 
-    Assert.assertEquals(newOwnerVolumeArgs,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
+
+    Table.KeyValue<String, OmVolumeArgs> keyValue =
+        omMetadataManager.getVolumeTable().iterator().next();
+
+    Assert.assertEquals(omMetadataManager.getVolumeKey(volumeName),
+        keyValue.getKey());
+    Assert.assertEquals(newOwnerVolumeArgs, keyValue.getValue());
 
     Assert.assertEquals(volumeList,
         omMetadataManager.getUserTable().get(

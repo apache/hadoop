@@ -34,8 +34,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
@@ -81,7 +81,8 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
             volume, bucket, key);
       }
       lockAcquired =
-          omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volume,
+              bucket);
 
       String dbKey = omMetadataManager.getOzoneKey(volume, bucket, key);
       omKeyInfo = omMetadataManager.getKeyTable().get(dbKey);
@@ -111,7 +112,8 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
                 transactionLogIndex));
       }
       if (lockAcquired) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volume,
+            bucket);
       }
     }
 

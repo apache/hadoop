@@ -323,9 +323,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             LOG.info("Deleting Queue " + queueName + ", as it is not"
                 + " present in the modified capacity configuration xml");
           } else{
-            throw new IOException(oldQueue.getQueuePath() + " is deleted from"
-                + " the new capacity scheduler configuration, but the"
-                + " queue is not yet in stopped state. " + "Current State : "
+            throw new IOException(oldQueue.getQueuePath() + " cannot be"
+                + " deleted from the capacity scheduler configuration, as the"
+                + " queue is not yet in stopped state. Current State : "
                 + oldQueue.getState());
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {

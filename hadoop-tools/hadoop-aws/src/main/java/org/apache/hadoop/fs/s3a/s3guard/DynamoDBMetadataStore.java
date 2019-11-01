@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
@@ -28,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,9 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
@@ -62,17 +58,9 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
-import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
-import com.amazonaws.services.dynamodbv2.model.Tag;
-import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.amazonaws.waiters.WaiterTimedOutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -88,7 +76,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.AWSClientIOException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -200,7 +188,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * sub-tree.
  *
  * Some mutating operations, notably
- * {@link MetadataStore#deleteSubtree(Path)} and
+ * {@link MetadataStore#deleteSubtree(Path, BulkOperationState)} and
  * {@link MetadataStore#move(Collection, Collection, BulkOperationState)}
  * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
@@ -232,18 +220,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
       OPERATIONS_LOG_NAME);
 
   /** parent/child name to use in the version marker. */
-  public static final String VERSION_MARKER = "../VERSION";
+  public static final String VERSION_MARKER_ITEM_NAME = "../VERSION";
+
+  /** parent/child name to use in the version marker. */
+  public static final String VERSION_MARKER_TAG_NAME = "s3guard_version";
 
   /** Current version number. */
   public static final int VERSION = 100;
-
-  /** Error: version marker not found in table. */
-  public static final String E_NO_VERSION_MARKER
-      = "S3Guard table lacks version marker.";
-
-  /** Error: version mismatch. */
-  public static final String E_INCOMPATIBLE_VERSION
-      = "Database table is from an incompatible S3Guard version.";
 
   @VisibleForTesting
   static final String BILLING_MODE
@@ -283,7 +266,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   static final String E_INCONSISTENT_UPDATE
       = "Duplicate and inconsistent entry in update operation";
 
-  private static ValueMap deleteTrackingValueMap =
+  private static final ValueMap DELETE_TRACKING_VALUE_MAP =
       new ValueMap().withBoolean(":false", false);
 
   /**
@@ -304,14 +287,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private String region;
   private Table table;
   private String tableName;
-  private String tableArn;
   private Configuration conf;
   private String username;
 
   /**
    * This policy is mostly for batched writes, not for processing
    * exceptions in invoke() calls.
-   * It also has a role purpose in {@link #getVersionMarkerItem()};
+   * It also has a role purpose in
+   * {@link DynamoDBMetadataStoreTableManager#getVersionMarkerItem()};
    * look at that method for the details.
    */
   private RetryPolicy batchWriteRetryPolicy;
@@ -357,6 +340,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * entries need to be created.
    */
   private ITtlTimeProvider ttlTimeProvider;
+
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -414,12 +399,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
       } catch (AccessDeniedException e) {
         // access denied here == can't call getBucket. Report meaningfully
         URI uri = owner.getUri();
-        LOG.error("Failed to get bucket location from S3 bucket {}",
-            uri);
-        throw (IOException)new AccessDeniedException(
-            "S3 client role lacks permission "
-                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri)
-            .initCause(e);
+        String message =
+            "Failed to get bucket location as client lacks permission "
+                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri;
+        LOG.error(message);
+        throw (IOException)new AccessDeniedException(message).initCause(e);
       }
       LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
     }
@@ -436,7 +420,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
     );
 
     this.ttlTimeProvider = ttlTp;
-    initTable();
+
+    tableHandler = new DynamoDBMetadataStoreTableManager(
+        dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
+        batchWriteRetryPolicy);
+    this.table = tableHandler.initTable();
 
     instrumentation.initialized();
   }
@@ -493,6 +481,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     conf = config;
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
+
     Preconditions.checkArgument(!StringUtils.isEmpty(tableName),
         "No DynamoDB table name configured");
     region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
@@ -517,7 +506,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
         "s3a-ddb-" + tableName);
     initDataAccessRetries(conf);
     this.ttlTimeProvider = ttlTp;
-    initTable();
+
+    tableHandler = new DynamoDBMetadataStoreTableManager(
+        dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
+        batchWriteRetryPolicy);
+    this.table = tableHandler.initTable();
   }
 
   /**
@@ -544,9 +537,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void delete(Path path)
+  public void delete(Path path,
+      final BulkOperationState operationState)
       throws IOException {
-    innerDelete(path, true, null);
+    innerDelete(path, true,
+        extractOrCreate(operationState,
+            BulkOperationState.OperationType.Delete));
   }
 
   @Override
@@ -562,7 +558,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * There is no check as to whether the entry exists in the table first.
    * @param path path to delete
    * @param tombstone flag to create a tombstone marker
-   * @param ancestorState ancestor state for logging
+   * @param ancestorState ancestor state for context.
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated
@@ -615,7 +611,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void deleteSubtree(Path path)
+  public void deleteSubtree(Path path,
+      final BulkOperationState operationState)
       throws IOException {
     checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
@@ -630,27 +627,51 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
       return;
     }
+    deleteEntries(new InternalIterators.PathFromRemoteStatusIterator(
+        new DescendantsIterator(this, meta)),
+        operationState);
+  }
 
-    try(AncestorState state = new AncestorState(this,
-        BulkOperationState.OperationType.Delete, path)) {
-      // Execute via the bounded threadpool.
-      final List<CompletableFuture<Void>> futures = new ArrayList<>();
-      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-          desc.hasNext();) {
-        final Path pathToDelete = desc.next().getPath();
-        futures.add(submit(executor, () -> {
-          innerDelete(pathToDelete, true, state);
-          return null;
-        }));
-        if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
-          // first batch done; block for completion.
-          waitForCompletion(futures);
-          futures.clear();
-        }
+  @Override
+  @Retries.RetryTranslated
+  public void deletePaths(Collection<Path> paths,
+      final BulkOperationState operationState)
+      throws IOException {
+    deleteEntries(
+        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+        operationState);
+  }
+
+  /**
+   * Delete the entries under an iterator.
+   * There's no attempt to order the paths: they are
+   * deleted in the order passed in.
+   * @param entries entries to delete.
+   * @param operationState Nullable operation state
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  private void deleteEntries(RemoteIterator<Path> entries,
+      final BulkOperationState operationState)
+      throws IOException {
+    final List<CompletableFuture<Void>> futures = new ArrayList<>();
+    AncestorState state = extractOrCreate(operationState,
+        BulkOperationState.OperationType.Delete);
+
+    while (entries.hasNext()) {
+      final Path pathToDelete = entries.next();
+      futures.add(submit(executor, () -> {
+        innerDelete(pathToDelete, true, state);
+        return null;
+      }));
+      if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+        // first batch done; block for completion.
+        waitForCompletion(futures);
+        futures.clear();
       }
-      // now wait for the final set.
-      waitForCompletion(futures);
     }
+    // now wait for the final set.
+    waitForCompletion(futures);
   }
 
   /**
@@ -723,7 +744,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             .withHashKey(pathToParentKeyAttribute(path))
             .withConsistentRead(true)
             .withFilterExpression(IS_DELETED + " = :false")
-            .withValueMap(deleteTrackingValueMap);
+            .withValueMap(DELETE_TRACKING_VALUE_MAP);
         boolean hasChildren = readOp.retry("get/hasChildren",
             path.toString(),
             true,
@@ -1409,32 +1430,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void destroy() throws IOException {
-    if (table == null) {
-      LOG.info("In destroy(): no table to delete");
-      return;
-    }
-    LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);
-    Preconditions.checkNotNull(dynamoDB, "Not connected to DynamoDB");
-    try {
-      invoker.retry("delete", null, true,
-          () -> table.delete());
-      table.waitForDelete();
-    } catch (IllegalArgumentException ex) {
-      throw new TableDeleteTimeoutException(tableName,
-          "Timeout waiting for the table " + tableArn + " to be deleted",
-          ex);
-    } catch (FileNotFoundException rnfe) {
-      LOG.info("FileNotFoundException while deleting DynamoDB table {} in "
-              + "region {}.  This may indicate that the table does not exist, "
-              + "or has been deleted by another concurrent thread or process.",
-          tableName, region);
-    } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      LOG.warn("Interrupted while waiting for DynamoDB table {} being deleted",
-          tableName, ie);
-      throw new InterruptedIOException("Table " + tableName
-          + " in region " + region + " has not been deleted");
-    }
+    tableHandler.destroy();
   }
 
   @Retries.RetryTranslated
@@ -1659,29 +1655,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
   }
 
-  /**
-   *  Add tags from configuration to the existing DynamoDB table.
-   */
-  @Retries.OnceRaw
-  public void tagTable() {
-    List<Tag> tags = new ArrayList<>();
-    Map <String, String> tagProperties =
-        conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG);
-    for (Map.Entry<String, String> tagMapEntry : tagProperties.entrySet()) {
-      Tag tag = new Tag().withKey(tagMapEntry.getKey())
-          .withValue(tagMapEntry.getValue());
-      tags.add(tag);
-    }
-    if (tags.isEmpty()) {
-      return;
-    }
-
-    TagResourceRequest tagResourceRequest = new TagResourceRequest()
-        .withResourceArn(table.getDescription().getTableArn())
-        .withTags(tags);
-    getAmazonDynamoDB().tagResource(tagResourceRequest);
-  }
-
   @VisibleForTesting
   public AmazonDynamoDB getAmazonDynamoDB() {
     return amazonDynamoDB;
@@ -1692,7 +1665,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return getClass().getSimpleName() + '{'
         + "region=" + region
         + ", tableName=" + tableName
-        + ", tableArn=" + tableArn
+        + ", tableArn=" + tableHandler.getTableArn()
         + '}';
   }
 
@@ -1706,273 +1679,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   public List<RoleModel.Statement> listAWSPolicyRules(
       final Set<AccessLevel> access) {
-    Preconditions.checkState(tableArn != null, "TableARN not known");
+    Preconditions.checkState(tableHandler.getTableArn() != null,
+        "TableARN not known");
     if (access.isEmpty()) {
       return Collections.emptyList();
     }
     RoleModel.Statement stat;
     if (access.contains(AccessLevel.ADMIN)) {
-      stat = allowAllDynamoDBOperations(tableArn);
+      stat = allowAllDynamoDBOperations(tableHandler.getTableArn());
     } else {
-      stat = allowS3GuardClientOperations(tableArn);
+      stat = allowS3GuardClientOperations(tableHandler.getTableArn());
     }
     return Lists.newArrayList(stat);
-  }
-
-  /**
-   * Create a table if it does not exist and wait for it to become active.
-   *
-   * If a table with the intended name already exists, then it uses that table.
-   * Otherwise, it will automatically create the table if the config
-   * {@link org.apache.hadoop.fs.s3a.Constants#S3GUARD_DDB_TABLE_CREATE_KEY} is
-   * enabled. The DynamoDB table creation API is asynchronous.  This method wait
-   * for the table to become active after sending the creation request, so
-   * overall, this method is synchronous, and the table is guaranteed to exist
-   * after this method returns successfully.
-   *
-   * The wait for a table becoming active is Retry+Translated; it can fail
-   * while a table is not yet ready.
-   *
-   * @throws IOException if table does not exist and auto-creation is disabled;
-   * or table is being deleted, or any other I/O exception occurred.
-   */
-  @VisibleForTesting
-  @Retries.OnceRaw
-  void initTable() throws IOException {
-    table = dynamoDB.getTable(tableName);
-    try {
-      try {
-        LOG.debug("Binding to table {}", tableName);
-        TableDescription description = table.describe();
-        LOG.debug("Table state: {}", description);
-        tableArn = description.getTableArn();
-        final String status = description.getTableStatus();
-        switch (status) {
-        case "CREATING":
-          LOG.debug("Table {} in region {} is being created/updated. This may"
-                  + " indicate that the table is being operated by another "
-                  + "concurrent thread or process. Waiting for active...",
-              tableName, region);
-          waitForTableActive(table);
-          break;
-        case "DELETING":
-          throw new FileNotFoundException("DynamoDB table "
-              + "'" + tableName + "' is being "
-              + "deleted in region " + region);
-        case "UPDATING":
-          // table being updated; it can still be used.
-          LOG.debug("Table is being updated.");
-          break;
-        case "ACTIVE":
-          break;
-        default:
-          throw new IOException("Unknown DynamoDB table status " + status
-              + ": tableName='" + tableName + "', region=" + region);
-        }
-
-        final Item versionMarker = getVersionMarkerItem();
-        verifyVersionCompatibility(tableName, versionMarker);
-        Long created = extractCreationTimeFromMarker(versionMarker);
-        LOG.debug("Using existing DynamoDB table {} in region {} created {}",
-            tableName, region, (created != null) ? new Date(created) : null);
-      } catch (ResourceNotFoundException rnfe) {
-        if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
-          long readCapacity = conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
-              S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT);
-          long writeCapacity = conf.getLong(
-              S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
-              S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT);
-          ProvisionedThroughput capacity;
-          if (readCapacity > 0 && writeCapacity > 0) {
-            capacity = new ProvisionedThroughput(
-                readCapacity,
-                writeCapacity);
-          } else {
-            // at least one capacity value is <= 0
-            // verify they are both exactly zero
-            Preconditions.checkArgument(
-                readCapacity == 0 && writeCapacity == 0,
-                "S3Guard table read capacity %d and and write capacity %d"
-                    + " are inconsistent", readCapacity, writeCapacity);
-            // and set the capacity to null for per-request billing.
-            capacity = null;
-          }
-
-          createTable(capacity);
-        } else {
-          throw (FileNotFoundException)new FileNotFoundException(
-              "DynamoDB table '" + tableName + "' does not "
-              + "exist in region " + region + "; auto-creation is turned off")
-              .initCause(rnfe);
-        }
-      }
-
-    } catch (AmazonClientException e) {
-      throw translateException("initTable", tableName, e);
-    }
-  }
-
-  /**
-   * Get the version mark item in the existing DynamoDB table.
-   *
-   * As the version marker item may be created by another concurrent thread or
-   * process, we sleep and retry a limited number times if the lookup returns
-   * with a null value.
-   * DDB throttling is always retried.
-   */
-  @VisibleForTesting
-  @Retries.RetryTranslated
-  Item getVersionMarkerItem() throws IOException {
-    final PrimaryKey versionMarkerKey =
-        createVersionMarkerPrimaryKey(VERSION_MARKER);
-    int retryCount = 0;
-    // look for a version marker, with usual throttling/failure retries.
-    Item versionMarker = queryVersionMarker(versionMarkerKey);
-    while (versionMarker == null) {
-      // The marker was null.
-      // Two possibilities
-      // 1. This isn't a S3Guard table.
-      // 2. This is a S3Guard table in construction; another thread/process
-      //    is about to write/actively writing the version marker.
-      // So that state #2 is handled, batchWriteRetryPolicy is used to manage
-      // retries.
-      // This will mean that if the cause is actually #1, failure will not
-      // be immediate. As this will ultimately result in a failure to
-      // init S3Guard and the S3A FS, this isn't going to be a performance
-      // bottleneck -simply a slightly slower failure report than would otherwise
-      // be seen.
-      // "if your settings are broken, performance is not your main issue"
-      try {
-        RetryPolicy.RetryAction action = batchWriteRetryPolicy.shouldRetry(null,
-            retryCount, 0, true);
-        if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
-          break;
-        } else {
-          LOG.debug("Sleeping {} ms before next retry", action.delayMillis);
-          Thread.sleep(action.delayMillis);
-        }
-      } catch (Exception e) {
-        throw new IOException("initTable: Unexpected exception " + e, e);
-      }
-      retryCount++;
-      versionMarker = queryVersionMarker(versionMarkerKey);
-    }
-    return versionMarker;
-  }
-
-  /**
-   * Issue the query to get the version marker, with throttling for overloaded
-   * DDB tables.
-   * @param versionMarkerKey key to look up
-   * @return the marker
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  private Item queryVersionMarker(final PrimaryKey versionMarkerKey)
-      throws IOException {
-    return readOp.retry("getVersionMarkerItem",
-        VERSION_MARKER, true,
-        () -> table.getItem(versionMarkerKey));
-  }
-
-  /**
-   * Verify that a table version is compatible with this S3Guard client.
-   * @param tableName name of the table (for error messages)
-   * @param versionMarker the version marker retrieved from the table
-   * @throws IOException on any incompatibility
-   */
-  @VisibleForTesting
-  static void verifyVersionCompatibility(String tableName,
-      Item versionMarker) throws IOException {
-    if (versionMarker == null) {
-      LOG.warn("Table {} contains no version marker", tableName);
-      throw new IOException(E_NO_VERSION_MARKER
-      + " Table: " + tableName);
-    } else {
-      final int version = extractVersionFromMarker(versionMarker);
-      if (VERSION != version) {
-        // version mismatch. Unless/until there is support for
-        // upgrading versions, treat this as an incompatible change
-        // and fail.
-        throw new IOException(E_INCOMPATIBLE_VERSION
-            + " Table "+  tableName
-            + " Expected version " + VERSION + " actual " + version);
-      }
-    }
-  }
-
-  /**
-   * Wait for table being active.
-   * @param t table to block on.
-   * @throws IOException IO problems
-   * @throws InterruptedIOException if the wait was interrupted
-   * @throws IllegalArgumentException if an exception was raised in the waiter
-   */
-  @Retries.RetryTranslated
-  private void waitForTableActive(Table t) throws IOException {
-    invoker.retry("Waiting for active state of table " + tableName,
-        null,
-        true,
-        () -> {
-          try {
-            t.waitForActive();
-          } catch (IllegalArgumentException ex) {
-            throw translateTableWaitFailure(tableName, ex);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while waiting for table {} in region {}"
-                    + " active",
-                tableName, region, e);
-            Thread.currentThread().interrupt();
-            throw (InterruptedIOException)
-                new InterruptedIOException("DynamoDB table '"
-                    + tableName + "' is not active yet in region " + region)
-                    .initCause(e);
-          }
-        });
-  }
-
-  /**
-   * Create a table, wait for it to become active, then add the version
-   * marker.
-   * Creating an setting up the table isn't wrapped by any retry operations;
-   * the wait for a table to become available is RetryTranslated.
-   * @param capacity capacity to provision. If null: create a per-request
-   * table.
-   * @throws IOException on any failure.
-   * @throws InterruptedIOException if the wait was interrupted
-   */
-  @Retries.OnceRaw
-  private void createTable(ProvisionedThroughput capacity) throws IOException {
-    try {
-      String mode;
-      CreateTableRequest request = new CreateTableRequest()
-          .withTableName(tableName)
-          .withKeySchema(keySchema())
-          .withAttributeDefinitions(attributeDefinitions());
-      if (capacity != null) {
-        mode = String.format("with provisioned read capacity %d and"
-                + " write capacity %s",
-            capacity.getReadCapacityUnits(), capacity.getWriteCapacityUnits());
-        request.withProvisionedThroughput(capacity);
-      } else {
-        mode = "with pay-per-request billing";
-        request.withBillingMode(BillingMode.PAY_PER_REQUEST);
-      }
-      LOG.info("Creating non-existent DynamoDB table {} in region {} {}",
-          tableName, region, mode);
-      table = dynamoDB.createTable(request);
-      LOG.debug("Awaiting table becoming active");
-    } catch (ResourceInUseException e) {
-      LOG.warn("ResourceInUseException while creating DynamoDB table {} "
-              + "in region {}.  This may indicate that the table was "
-              + "created by another concurrent thread or process.",
-          tableName, region);
-    }
-    waitForTableActive(table);
-    final Item marker = createVersionMarker(VERSION_MARKER, VERSION,
-        System.currentTimeMillis());
-    putItem(marker);
-    tagTable();
   }
 
   /**
@@ -1984,47 +1702,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private PutItemOutcome putItem(Item item) {
     LOG.debug("Putting item {}", item);
     return table.putItem(item);
-  }
-
-  /**
-   * Provision the table with given read and write capacity units.
-   * Call will fail if the table is busy, or the new values match the current
-   * ones.
-   * <p>
-   * Until the AWS SDK lets us switch a table to on-demand, an attempt to
-   * set the I/O capacity to zero will fail.
-   * @param readCapacity read units: must be greater than zero
-   * @param writeCapacity write units: must be greater than zero
-   * @throws IOException on a failure
-   */
-  @Retries.RetryTranslated
-  void provisionTable(Long readCapacity, Long writeCapacity)
-      throws IOException {
-
-    if (readCapacity == 0 || writeCapacity == 0) {
-      // table is pay on demand
-      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
-    }
-    final ProvisionedThroughput toProvision = new ProvisionedThroughput()
-        .withReadCapacityUnits(readCapacity)
-        .withWriteCapacityUnits(writeCapacity);
-    invoker.retry("ProvisionTable", tableName, true,
-        () -> {
-          final ProvisionedThroughputDescription p =
-              table.updateTable(toProvision).getProvisionedThroughput();
-          LOG.info("Provision table {} in region {}: readCapacityUnits={}, "
-                  + "writeCapacityUnits={}",
-              tableName, region, p.getReadCapacityUnits(),
-              p.getWriteCapacityUnits());
-        });
-  }
-
-  @Retries.RetryTranslated
-  @VisibleForTesting
-  void provisionTableBlocking(Long readCapacity, Long writeCapacity)
-      throws IOException {
-    provisionTable(readCapacity, writeCapacity);
-    waitForTableActive(table);
   }
 
   @VisibleForTesting
@@ -2146,7 +1823,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           currentRead, currentWrite);
       LOG.info("Changing capacity of table to read: {}, write: {}",
           newRead, newWrite);
-      provisionTableBlocking(newRead, newWrite);
+      tableHandler.provisionTableBlocking(newRead, newWrite);
     } else {
       LOG.info("Table capacity unchanged at read: {}, write: {}",
           newRead, newWrite);
@@ -2346,48 +2023,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Take an {@code IllegalArgumentException} raised by a DDB operation
-   * and if it contains an inner SDK exception, unwrap it.
-   * @param ex exception.
-   * @return the inner AWS exception or null.
-   */
-  public static SdkBaseException extractInnerException(
-      IllegalArgumentException ex) {
-    if (ex.getCause() instanceof  SdkBaseException) {
-      return (SdkBaseException) ex.getCause();
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Handle a table wait failure by extracting any inner cause and
-   * converting it, or, if unconvertable by wrapping
-   * the IllegalArgumentException in an IOE.
-   *
-   * @param name name of the table
-   * @param e exception
-   * @return an IOE to raise.
-   */
-  @VisibleForTesting
-  static IOException translateTableWaitFailure(
-      final String name, IllegalArgumentException e) {
-    final SdkBaseException ex = extractInnerException(e);
-    if (ex != null) {
-      if (ex instanceof WaiterTimedOutException) {
-        // a timeout waiting for state change: extract the
-        // message from the outer exception, but translate
-        // the inner one for the throttle policy.
-        return new AWSClientIOException(e.getMessage(), ex);
-      } else {
-        return translateException(e.getMessage(), name, ex);
-      }
-    } else {
-      return new IOException(e);
-    }
-  }
-
-  /**
    * Log a PUT into the operations log at debug level.
    * @param state optional ancestor state.
    * @param items items which have been PUT
@@ -2399,7 +2034,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       // log the operations
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
-        boolean tombstone = itemExists(item);
+        boolean tombstone = !itemExists(item);
         OPERATIONS_LOG.debug("{} {} {}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
@@ -2661,5 +2296,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
       return stateStr;
     }
+  }
+
+  protected DynamoDBMetadataStoreTableManager getTableHandler() {
+    Preconditions.checkNotNull(tableHandler, "Not initialized");
+    return tableHandler;
   }
 }

@@ -32,8 +32,10 @@ import java.io.DataInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -72,6 +74,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary.Section;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -999,5 +1003,153 @@ public class TestFSImage {
       }
     }
     throw new AssertionError("Policy is not found!");
+  }
+
+  private ArrayList<Section> getSubSectionsOfName(ArrayList<Section> sections,
+      FSImageFormatProtobuf.SectionName name) {
+    ArrayList<Section> subSec = new ArrayList<>();
+    for (Section s : sections) {
+      if (s.getName().equals(name.toString())) {
+        subSec.add(s);
+      }
+    }
+    return subSec;
+  }
+
+  private MiniDFSCluster createAndLoadParallelFSImage(Configuration conf)
+    throws IOException {
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "1");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "4");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "4");
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+
+    // Create 10 directories, each containing 5 files
+    String baseDir = "/abc/def";
+    for (int i=0; i<10; i++) {
+      Path dir = new Path(baseDir+"/"+i);
+      for (int j=0; j<5; j++) {
+        Path f = new Path(dir, Integer.toString(j));
+        FSDataOutputStream os = fs.create(f);
+        os.write(1);
+        os.close();
+      }
+    }
+
+    // checkpoint
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNode();
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+
+    // Ensure all the files created above exist, proving they were loaded
+    // correctly
+    for (int i=0; i<10; i++) {
+      Path dir = new Path(baseDir+"/"+i);
+      assertTrue(fs.getFileStatus(dir).isDirectory());
+      for (int j=0; j<5; j++) {
+        Path f = new Path(dir, Integer.toString(j));
+        assertTrue(fs.exists(f));
+      }
+    }
+    return cluster;
+  }
+
+  @Test
+  public void testParallelSaveAndLoad() throws IOException {
+    Configuration conf = new Configuration();
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = createAndLoadParallelFSImage(conf);
+
+      // Obtain the image summary section to check the sub-sections
+      // are being correctly created when the image is saved.
+      FsImageProto.FileSummary summary = FSImageTestUtil.
+          getLatestImageSummary(cluster);
+      ArrayList<Section> sections = Lists.newArrayList(
+          summary.getSectionsList());
+
+      ArrayList<Section> inodeSubSections =
+          getSubSectionsOfName(sections, SectionName.INODE_SUB);
+      ArrayList<Section> dirSubSections =
+          getSubSectionsOfName(sections, SectionName.INODE_DIR_SUB);
+      Section inodeSection =
+          getSubSectionsOfName(sections, SectionName.INODE).get(0);
+      Section dirSection = getSubSectionsOfName(sections,
+              SectionName.INODE_DIR).get(0);
+
+      // Expect 4 sub-sections for inodes and directories as target Sections
+      // is 4
+      assertEquals(4, inodeSubSections.size());
+      assertEquals(4, dirSubSections.size());
+
+      // Expect the sub-section offset and lengths do not overlap and cover a
+      // continuous range of the file. They should also line up with the parent
+      ensureSubSectionsAlignWithParent(inodeSubSections, inodeSection);
+      ensureSubSectionsAlignWithParent(dirSubSections, dirSection);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testNoParallelSectionsWithCompressionEnabled()
+      throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+        "org.apache.hadoop.io.compress.GzipCodec");
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = createAndLoadParallelFSImage(conf);
+
+      // Obtain the image summary section to check the sub-sections
+      // are being correctly created when the image is saved.
+      FsImageProto.FileSummary summary = FSImageTestUtil.
+          getLatestImageSummary(cluster);
+      ArrayList<Section> sections = Lists.newArrayList(
+          summary.getSectionsList());
+
+      ArrayList<Section> inodeSubSections =
+          getSubSectionsOfName(sections, SectionName.INODE_SUB);
+      ArrayList<Section> dirSubSections =
+          getSubSectionsOfName(sections, SectionName.INODE_DIR_SUB);
+
+      // As compression is enabled, there should be no sub-sections in the
+      // image header
+      assertEquals(0, inodeSubSections.size());
+      assertEquals(0, dirSubSections.size());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void ensureSubSectionsAlignWithParent(ArrayList<Section> subSec,
+      Section parent) {
+    // For each sub-section, check its offset + length == the next section
+    // offset
+    for (int i=0; i<subSec.size()-1; i++) {
+      Section s = subSec.get(i);
+      long endOffset = s.getOffset() + s.getLength();
+      assertEquals(subSec.get(i+1).getOffset(), endOffset);
+    }
+    // The last sub-section should align with the parent section
+    Section lastSubSection = subSec.get(subSec.size()-1);
+    assertEquals(parent.getLength()+parent.getOffset(),
+        lastSubSection.getLength() + lastSubSection.getOffset());
+    // The first sub-section and parent section should have the same offset
+    assertEquals(parent.getOffset(), subSec.get(0).getOffset());
   }
 }

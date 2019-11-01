@@ -15,9 +15,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
-    <version>3.2.0</version>
-    <relativePath/>
+    <artifactId>hadoop-main-ozone</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <relativePath>../pom.ozone.xml</relativePath>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
   <version>0.5.0-SNAPSHOT</version>
@@ -26,10 +26,9 @@
   <packaging>pom</packaging>
 
   <properties>
-    <hadoop.version>3.2.0</hadoop.version>
     <hdds.version>0.5.0-SNAPSHOT</hdds.version>
     <ozone.version>0.5.0-SNAPSHOT</ozone.version>
-    <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
+    <ratis.version>0.5.0-201fc85-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
@@ -46,15 +45,15 @@
     <module>ozonefs-lib-legacy</module>
     <module>tools</module>
     <module>integration-test</module>
-    <module>objectstore-service</module>
     <module>datanode</module>
     <module>s3gateway</module>
     <module>dist</module>
-    <module>ozone-recon</module>
-    <module>ozone-recon-codegen</module>
+    <module>recon</module>
+    <module>recon-codegen</module>
     <module>upgrade</module>
     <module>csi</module>
     <module>fault-injection-test</module>
+    <module>insight</module>
   </modules>
 
   <repositories>
@@ -80,11 +79,6 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-ozone-manager</artifactId>
-        <version>${ozone.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-ozone-objectstore-service</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
@@ -172,6 +166,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-tools</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-insight</artifactId>
         <version>${hdds.version}</version>
       </dependency>
       <dependency>
@@ -281,9 +280,9 @@
             <exclude>webapps/static/angular-1.6.4.min.js</exclude>
             <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>webapps/static/angular-route-1.6.4.min.js</exclude>
-            <exclude>webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>webapps/static/jquery-3.3.1.min.js</exclude>
+            <exclude>webapps/static/jquery-3.4.1.min.js</exclude>
             <exclude>webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css</exclude>
@@ -293,15 +292,8 @@
             <exclude>**/node_modules/**</exclude>
             <exclude>**/yarn.lock</exclude>
             <exclude>**/ozone-recon-web/build/**</exclude>
+            <exclude>src/main/license/**</exclude>
           </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>3.0.4</version>
-        <configuration>
-          <excludeFilterFile combine.self="override"/>
         </configuration>
       </plugin>
       <plugin>

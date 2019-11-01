@@ -26,6 +26,7 @@ import java.util.Map;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditAction;
@@ -142,7 +143,8 @@ public abstract class OMClientRequest implements RequestAuditor {
    */
   @VisibleForTesting
   public UserGroupInformation createUGI() {
-    if (omRequest.hasUserInfo()) {
+    if (omRequest.hasUserInfo() &&
+        !StringUtils.isBlank(omRequest.getUserInfo().getUserName())) {
       return UserGroupInformation.createRemoteUser(
           omRequest.getUserInfo().getUserName());
     } else {

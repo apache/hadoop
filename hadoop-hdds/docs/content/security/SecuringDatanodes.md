@@ -32,10 +32,13 @@ However, we support the legacy Kerberos based Authentication to make it easy
 for the current set of users.The HDFS configuration keys are the following
 that is setup in  hdfs-site.xml.
 
-Property|Example Value|Comment
---------|--------------|--------------
-dfs.datanode.keytab.file| /keytab/dn.service.keytab| Keytab file.
-dfs.datanode.kerberos.principal| dn/_HOST@REALM.TLD|  principal name.
+Property|Description
+--------|--------------
+dfs.datanode.kerberos.principal|The datanode service principal. <br/> e.g. dn/_HOST@REALM.COM
+dfs.datanode.keytab.file| The keytab file used by datanode daemon to login as its service principal.
+hdds.datanode.http.kerberos.principal| Datanode http server service principal.
+hdds.datanode.http.kerberos.keytab| The keytab file used by datanode http server to login as its service principal.
+
 
 ## How a data node becomes secure.
 
@@ -63,7 +66,7 @@ boot time to prove the identity of the data node container (This is also work
 in progress.)
 
 
-Once a certificate is issued, a Data node is secure and Ozone manager can
+Once a certificate is issued, a data node is secure and Ozone manager can
 issue block tokens. If there is no data node certificates or the SCM's root
 certificate is not present in the data node, then data node will register
 itself and down load the SCM's root certificate as well get the certificates

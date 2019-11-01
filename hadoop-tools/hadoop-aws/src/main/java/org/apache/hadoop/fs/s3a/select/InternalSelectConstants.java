@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.s3a.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
 

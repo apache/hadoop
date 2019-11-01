@@ -21,7 +21,7 @@ summary: Hadoop Compatible file system allows any application that expects an HD
   limitations under the License.
 -->
 
-The Hadoop compatible file system interface allpws storage backends like Ozone
+The Hadoop compatible file system interface allows storage backends like Ozone
 to be easily integrated into Hadoop eco-system.  Ozone file system is an
 Hadoop compatible file system.
 
@@ -36,7 +36,7 @@ ozone sh volume create /volume
 ozone sh bucket create /volume/bucket
 {{< /highlight >}}
 
-Once this is created, please make sure that bucket exists via the listVolume or listBucket commands.
+Once this is created, please make sure that bucket exists via the _list volume_ or _list bucket_ commands.
 
 Please add the following entry to the core-site.xml.
 
@@ -44,6 +44,10 @@ Please add the following entry to the core-site.xml.
 <property>
   <name>fs.o3fs.impl</name>
   <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+</property>
+<property>
+  <name>fs.AbstractFileSystem.o3fs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzFs</value>
 </property>
 <property>
   <name>fs.defaultFS</name>

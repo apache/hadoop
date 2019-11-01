@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdds.server;
 
-import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
+import static org.apache.hadoop.hdds.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -69,8 +69,10 @@ public class PrometheusMetricsSink implements MetricsSink {
             .append(key)
             .append(" ")
             .append(metrics.type().toString().toLowerCase())
-            .append("\n")
-            .append(key)
+            .append("\n");
+
+        StringBuilder prometheusMetricKey = new StringBuilder();
+        prometheusMetricKey.append(key)
             .append("{");
         String sep = "";
 
@@ -80,7 +82,7 @@ public class PrometheusMetricsSink implements MetricsSink {
 
           //ignore specific tag which includes sub-hierarchy
           if (!tagName.equals("numopenconnectionsperuser")) {
-            builder.append(sep)
+            prometheusMetricKey.append(sep)
                 .append(tagName)
                 .append("=\"")
                 .append(tag.value())
@@ -88,10 +90,14 @@ public class PrometheusMetricsSink implements MetricsSink {
             sep = ",";
           }
         }
-        builder.append("} ");
+        prometheusMetricKey.append("}");
+
+        String prometheusMetricKeyAsString = prometheusMetricKey.toString();
+        builder.append(prometheusMetricKeyAsString);
+        builder.append(" ");
         builder.append(metrics.value());
         builder.append("\n");
-        metricLines.put(key, builder.toString());
+        metricLines.put(prometheusMetricKeyAsString, builder.toString());
 
       }
     }
@@ -112,6 +118,10 @@ public class PrometheusMetricsSink implements MetricsSink {
 
     String baseName = StringUtils.capitalize(recordName)
         + StringUtils.capitalize(metricName);
+    return normalizeName(baseName);
+  }
+
+  public static String normalizeName(String baseName) {
     String[] parts = SPLIT_PATTERN.split(baseName);
     String result = String.join("_", parts).toLowerCase();
     return REPLACE_PATTERN.matcher(result).replaceAll("_");

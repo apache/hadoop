@@ -91,6 +91,7 @@ public class ITestDynamoDBMetadataStoreScale
   private static final long MAXIMUM_WRITE_CAPACITY = 15;
 
   private DynamoDBMetadataStore ddbms;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   private DynamoDB ddb;
 
@@ -160,6 +161,7 @@ public class ITestDynamoDBMetadataStoreScale
     super.setup();
     ddbms = (DynamoDBMetadataStore) createMetadataStore();
     tableName = ddbms.getTableName();
+    tableHandler = ddbms.getTableHandler();
     assertNotNull("table has no name", tableName);
     ddb = ddbms.getDynamoDB();
     table = ddb.getTable(tableName);
@@ -325,7 +327,7 @@ public class ITestDynamoDBMetadataStoreScale
     execute("get",
         OPERATIONS_PER_THREAD * 2,
         expectThrottling(),
-        () -> ddbms.getVersionMarkerItem()
+        () -> tableHandler.getVersionMarkerItem()
     );
   }
 
@@ -337,7 +339,7 @@ public class ITestDynamoDBMetadataStoreScale
   private void retryingDelete(final Path path) {
     try {
       ddbms.getInvoker().retry("Delete ", path.toString(), true,
-          () -> ddbms.delete(path));
+          () -> ddbms.delete(path, null));
     } catch (IOException e) {
       LOG.warn("Failed to delete {}: ", path, e);
     }
@@ -432,7 +434,7 @@ public class ITestDynamoDBMetadataStoreScale
           OPERATIONS_PER_THREAD,
           expectThrottling(),
           () -> {
-            ddbms.delete(path);
+            ddbms.delete(path, null);
           });
     }
   }

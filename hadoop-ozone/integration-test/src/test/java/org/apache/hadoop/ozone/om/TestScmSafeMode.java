@@ -37,13 +37,12 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.TestStorageContainerManagerHelper;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,10 +53,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.hdds.client.ReplicationType.RATIS;
+import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertFalse;
@@ -134,31 +135,13 @@ public class TestScmSafeMode {
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(keyName)
-        .setDataSize(1000)
-        .setAcls(Collections.emptyList())
-        .build();
-    OmVolumeArgs volArgs = new OmVolumeArgs.Builder()
-        .setAdminName(adminName)
-        .setCreationTime(Time.monotonicNow())
-        .setQuotaInBytes(10000)
-        .setVolume(volumeName)
-        .setOwnerName(userName)
-        .build();
-    OmBucketInfo bucketInfo = new OmBucketInfo.Builder()
-        .setBucketName(bucketName)
-        .setIsVersionEnabled(false)
-        .setVolumeName(volumeName)
-        .build();
-    om.createVolume(volArgs);
-    om.createBucket(bucketInfo);
-    om.openKey(keyArgs);
-    //om.commitKey(keyArgs, 1);
+
+    ObjectStore store = cluster.getRpcClient().getObjectStore();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    bucket.createKey(keyName, 1000, RATIS, ONE, new HashMap<>());
 
     cluster.stop();
 
@@ -176,10 +159,16 @@ public class TestScmSafeMode {
 
     om = cluster.getOzoneManager();
 
+
+    final OzoneBucket bucket1 =
+        cluster.getRpcClient().getObjectStore().getVolume(volumeName)
+            .getBucket(bucketName);
+
 // As cluster is restarted with out datanodes restart
     LambdaTestUtils.intercept(IOException.class,
         "SafeModePrecheck failed for allocateBlock",
-        () -> om.openKey(keyArgs));
+        () -> bucket1.createKey(keyName, 1000, RATIS, ONE,
+            new HashMap<>()));
   }
 
   /**
@@ -343,7 +332,7 @@ public class TestScmSafeMode {
 
   @Test(timeout = 300_000)
   public void testSCMSafeModeDisabled() throws Exception {
-    cluster.stop();
+    cluster.shutdown();
 
     // If safe mode is disabled, cluster should not be in safe mode even if
     // min number of datanodes are not started.

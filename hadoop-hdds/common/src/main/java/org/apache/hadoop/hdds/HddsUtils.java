@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -43,6 +44,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -177,23 +180,27 @@ public final class HddsUtils {
   /**
    * Create a scm security client.
    * @param conf    - Ozone configuration.
-   * @param address - inet socket address of scm.
    *
    * @return {@link SCMSecurityProtocol}
    * @throws IOException
    */
   public static SCMSecurityProtocolClientSideTranslatorPB getScmSecurityClient(
-      OzoneConfiguration conf, InetSocketAddress address) throws IOException {
+      OzoneConfiguration conf) throws IOException {
     RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
         ProtobufRpcEngine.class);
     long scmVersion =
         RPC.getProtocolVersion(ScmBlockLocationProtocolPB.class);
+    InetSocketAddress address =
+        getScmAddressForSecurityProtocol(conf);
+    RetryPolicy retryPolicy =
+        RetryPolicies.retryForeverWithFixedSleep(
+            1000, TimeUnit.MILLISECONDS);
     SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
         new SCMSecurityProtocolClientSideTranslatorPB(
-            RPC.getProxy(SCMSecurityProtocolPB.class, scmVersion,
+            RPC.getProtocolProxy(SCMSecurityProtocolPB.class, scmVersion,
                 address, UserGroupInformation.getCurrentUser(),
                 conf, NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf), retryPolicy).getProxy());
     return scmSecurityClient;
   }
 
@@ -416,8 +423,10 @@ public final class HddsUtils {
         InvocationTargetException e) {
 
       // Fallback
-      LOG.trace("Registering MBean {} without additional properties {}",
-          mBeanName, jmxProperties);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Registering MBean {} without additional properties {}",
+            mBeanName, jmxProperties);
+      }
       return MBeans.register(serviceName, mBeanName, mBean);
     }
   }

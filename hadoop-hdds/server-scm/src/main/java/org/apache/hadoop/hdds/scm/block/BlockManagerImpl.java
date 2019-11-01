@@ -45,7 +45,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.UniqueId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -153,7 +153,9 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   public AllocatedBlock allocateBlock(final long size, ReplicationType type,
       ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
-    LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
+    }
     ScmUtils.preCheck(ScmOps.allocateBlock, safeModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
@@ -241,8 +243,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       AllocatedBlock.Builder abb =  new AllocatedBlock.Builder()
           .setContainerBlockID(new ContainerBlockID(containerID, localID))
           .setPipeline(pipeline);
-      LOG.trace("New block allocated : {} Container ID: {}", localID,
-          containerID);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("New block allocated : {} Container ID: {}", localID,
+            containerID);
+      }
       pipelineManager.incNumBlocksAllocatedMetric(pipeline.getId());
       return abb.build();
     } catch (PipelineNotFoundException ex) {

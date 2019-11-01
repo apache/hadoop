@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -52,6 +53,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -104,6 +106,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.slf4j.event.Level.INFO;
 
 /**
@@ -113,6 +116,7 @@ import static org.slf4j.event.Level.INFO;
 public final class TestSecureOzoneCluster {
 
   private static final String TEST_USER = "testUgiUser@EXAMPLE.COM";
+  private static final String COMPONENT = "test";
   private static final int CLIENT_TIMEOUT = 2 * 1000;
   private Logger logger = LoggerFactory
       .getLogger(TestSecureOzoneCluster.class);
@@ -150,6 +154,18 @@ public final class TestSecureOzoneCluster {
     try {
       conf = new OzoneConfiguration();
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "localhost");
+
+      conf.setInt(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_KEY, ServerSocketUtil
+              .getPort(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_KEY, ServerSocketUtil
+              .getPort(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_KEY,
+              ServerSocketUtil.getPort(ScmConfigKeys
+                      .OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, 100));
+      conf.setInt(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
+              ServerSocketUtil.getPort(ScmConfigKeys
+                      .OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT, 100));
+
       DefaultMetricsSystem.setMiniClusterMode(true);
       final String path = folder.newFolder().toString();
       metaDirPath = Paths.get(path, "om-meta");
@@ -558,7 +574,7 @@ public final class TestSecureOzoneCluster {
   private void generateKeyPair(OzoneConfiguration config) throws Exception {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(conf);
     keyPair = keyGenerator.generateKey();
-    KeyCodec pemWriter = new KeyCodec(config);
+    KeyCodec pemWriter = new KeyCodec(new SecurityConfig(config), COMPONENT);
     pemWriter.writeKey(keyPair, true);
   }
 
@@ -689,11 +705,11 @@ public final class TestSecureOzoneCluster {
 
       //Creates a secret since it does not exist
       S3SecretValue firstAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //Fetches the secret from db since it was created in previous step
       S3SecretValue secondAttempt = omClient
-          .getS3Secret("HADOOP/JOHNDOE");
+          .getS3Secret(UserGroupInformation.getCurrentUser().getUserName());
 
       //secret fetched on both attempts must be same
       assertTrue(firstAttempt.getAwsSecret()
@@ -703,6 +719,13 @@ public final class TestSecureOzoneCluster {
       assertTrue(firstAttempt.getAwsAccessKey()
           .equals(secondAttempt.getAwsAccessKey()));
 
+
+      try {
+        omClient.getS3Secret("HADOOP/JOHNDOE");
+        fail("testGetS3Secret failed");
+      } catch (IOException ex) {
+        GenericTestUtils.assertExceptionContains("USER_MISMATCH", ex);
+      }
     } finally {
       if(om != null){
         om.stop();

@@ -19,8 +19,9 @@
 package org.apache.hadoop.ozone.container.common.interfaces;
 
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -109,14 +110,23 @@ public abstract class Handler {
       DispatcherContext dispatcherContext);
 
   /**
-   * Import container data from a raw input stream.
+   * Imports container from a raw input stream.
    */
   public abstract Container importContainer(
       long containerID,
       long maxSize,
       String originPipelineId,
       String originNodeId,
-      FileInputStream rawContainerStream,
+      InputStream rawContainerStream,
+      TarContainerPacker packer)
+      throws IOException;
+
+  /**
+   * Exports container to the output stream.
+   */
+  public abstract void exportContainer(
+      Container container,
+      OutputStream outputStream,
       TarContainerPacker packer)
       throws IOException;
 

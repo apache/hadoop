@@ -127,7 +127,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path p)
+  public void delete(Path p,
+      final BulkOperationState operationState)
       throws IOException {
     doDelete(p, false, true);
   }
@@ -138,7 +139,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path)
+  public void deleteSubtree(Path path,
+      final BulkOperationState operationState)
       throws IOException {
     doDelete(path, true, true);
   }
@@ -154,6 +156,14 @@ public class LocalMetadataStore implements MetadataStore {
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
       deleteEntryByAncestor(path, localCache, tombstone, ttlTimeProvider);
+    }
+  }
+
+  @Override
+  public void deletePaths(final Collection<Path> paths,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    for (Path path : paths) {
+      doDelete(path, false, true);
     }
   }
 
@@ -232,7 +242,7 @@ public class LocalMetadataStore implements MetadataStore {
       // 1. Delete pathsToDelete
       for (Path meta : pathsToDelete) {
         LOG.debug("move: deleting metadata {}", meta);
-        delete(meta);
+        delete(meta, null);
       }
 
       // 2. Create new destination path metadata

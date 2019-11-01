@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -93,6 +94,12 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
         S3ATestUtils.prepareTestConfiguration(configuration);
     configuration.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
     return configuration;
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeTrue(getFileSystem().hasMetadataStore());
   }
 
   @Test
@@ -331,7 +338,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
       // listing will contain the tombstone with oldtime
       when(mockTimeProvider.getNow()).thenReturn(oldTime);
-      final DirListingMetadata fullDLM = ms.listChildren(baseDirPath);
+      final DirListingMetadata fullDLM = getDirListingMetadata(ms, baseDirPath);
       List<Path> containedPaths = fullDLM.getListing().stream()
           .map(pm -> pm.getFileStatus().getPath())
           .collect(Collectors.toList());
@@ -342,7 +349,8 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
       // listing will be filtered, and won't contain the tombstone with oldtime
       when(mockTimeProvider.getNow()).thenReturn(newTime);
-      final DirListingMetadata filteredDLM = ms.listChildren(baseDirPath);
+      final DirListingMetadata filteredDLM = getDirListingMetadata(ms,
+          baseDirPath);
       containedPaths = filteredDLM.getListing().stream()
           .map(pm -> pm.getFileStatus().getPath())
           .collect(Collectors.toList());
@@ -354,6 +362,16 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       fs.delete(baseDirPath, true);
       fs.setTtlTimeProvider(originalTimeProvider);
     }
+  }
+
+  protected DirListingMetadata getDirListingMetadata(final MetadataStore ms,
+      final Path baseDirPath) throws IOException {
+    final DirListingMetadata fullDLM = ms.listChildren(baseDirPath);
+    Assertions.assertThat(fullDLM)
+        .describedAs("Metastrore directory listing of %s",
+            baseDirPath)
+        .isNotNull();
+    return fullDLM;
   }
 
 }

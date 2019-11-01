@@ -641,7 +641,7 @@ function signartifacts
 
   for i in ${ARTIFACTS_DIR}/*; do
     ${GPG} --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
-    ${GPG} --print-mds "${i}" > "${i}.mds"
+    sha512sum --tag "${i}" > "${i}.sha512"
   done
 
   if [[ "${ASFRELEASE}" = true ]]; then

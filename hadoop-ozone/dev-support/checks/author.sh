@@ -16,12 +16,18 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-#hide this tring to not confuse yetus
+REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/author"}
+mkdir -p "$REPORT_DIR"
+REPORT_FILE="$REPORT_DIR/summary.txt"
+
+#hide this string to not confuse yetus
 AUTHOR="uthor"
 AUTHOR="@a${AUTHOR}"
 
-if grep -r --include="*.java" "$AUTHOR" .; then
-  exit 1
-else
-  exit 0
+grep -r --include="*.java" "$AUTHOR" . | tee "$REPORT_FILE"
+
+wc -l "$REPORT_FILE" | awk '{print $1}'> "$REPORT_DIR/failures"
+
+if [[ -s "${REPORT_FILE}" ]]; then
+   exit 1
 fi

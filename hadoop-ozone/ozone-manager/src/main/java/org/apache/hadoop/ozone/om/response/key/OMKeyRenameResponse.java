@@ -24,9 +24,11 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
+import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * Response for RenameKey request.
@@ -37,8 +39,8 @@ public class OMKeyRenameResponse extends OMClientResponse {
   private final String toKeyName;
   private final String fromKeyName;
 
-  public OMKeyRenameResponse(OmKeyInfo renameKeyInfo, String toKeyName,
-      String fromKeyName, OMResponse omResponse) {
+  public OMKeyRenameResponse(@Nullable OmKeyInfo renameKeyInfo,
+      String toKeyName, String fromKeyName, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.renameKeyInfo = renameKeyInfo;
     this.toKeyName = toKeyName;

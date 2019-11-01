@@ -30,10 +30,10 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.BackgroundService;
-import org.apache.hadoop.utils.BackgroundTask;
-import org.apache.hadoop.utils.BackgroundTaskQueue;
-import org.apache.hadoop.utils.BackgroundTaskResult.EmptyTaskResult;
+import org.apache.hadoop.hdds.utils.BackgroundService;
+import org.apache.hadoop.hdds.utils.BackgroundTask;
+import org.apache.hadoop.hdds.utils.BackgroundTaskQueue;
+import org.apache.hadoop.hdds.utils.BackgroundTaskResult.EmptyTaskResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,11 +168,13 @@ public class SCMBlockDeletingService extends BackgroundService {
             // offline for sometime, the cached commands be flooded.
             eventPublisher.fireEvent(SCMEvents.RETRIABLE_DATANODE_COMMAND,
                 new CommandForDatanode<>(dnId, new DeleteBlocksCommand(dnTXs)));
-            LOG.debug(
-                "Added delete block command for datanode {} in the queue,"
-                    + " number of delete block transactions: {}, TxID list: {}",
-                dnId, dnTXs.size(), String.join(",",
-                    transactions.getTransactionIDList(dnId)));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                  "Added delete block command for datanode {} in the queue," +
+                      " number of delete block transactions: {}, TxID list: {}",
+                  dnId, dnTXs.size(), String.join(",",
+                      transactions.getTransactionIDList(dnId)));
+            }
           }
         }
         containerManager.updateDeleteTransactionId(transactionMap);

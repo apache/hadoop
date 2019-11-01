@@ -139,6 +139,13 @@ public class TestSetTimes {
                          " (" + mtime1 + ")");
       assertTrue(atime1 != 0);
 
+      // check setting negative value for atime and mtime.
+      fileSys.setTimes(file1, -2, -2);
+      // The values shouldn't change.
+      stat = fileSys.getFileStatus(file1);
+      assertEquals(mtime1, stat.getModificationTime());
+      assertEquals(atime1, stat.getAccessTime());
+
       //
       // record dir times
       //

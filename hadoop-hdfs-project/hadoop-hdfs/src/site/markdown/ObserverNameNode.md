@@ -120,6 +120,20 @@ Deployment
 To enable consistent reads from Observer NameNode, you'll need to add a
 few configurations to your **hdfs-site.xml**:
 
+*  **dfs.namenode.state.context.enabled** - to enable NameNode to maintain
+   and update server state and id.
+
+   This will lead to NameNode creating alignment context instance, which
+   keeps track of current server state id. Server state id will be carried
+   back to client. It is disabled by default to optimize performance of
+   Observer read cases. But this is **required to be turned on**
+   for the Observer NameNode feature.
+
+        <property>
+           <name>dfs.namenode.state.context.enabled</name>
+           <value>true</value>
+        </property>
+
 *  **dfs.ha.tail-edits.in-progress** - to enable fast tailing on
    in-progress edit logs.
 
@@ -163,7 +177,7 @@ few configurations to your **hdfs-site.xml**:
    between edit tailing attempts.
 
         <property>
-          <name>dfs.ha.tail-edits.period</name>
+          <name>dfs.ha.tail-edits.period.backoff-max</name>
           <value>10s</value>
         </property>
 

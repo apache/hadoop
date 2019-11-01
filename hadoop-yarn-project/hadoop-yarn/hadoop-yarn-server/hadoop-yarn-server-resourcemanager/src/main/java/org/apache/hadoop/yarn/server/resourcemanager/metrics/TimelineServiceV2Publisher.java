@@ -485,6 +485,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     } catch (IOException e) {
       LOG.error("Error when publishing entity " + entity);
       LOG.debug("Error when publishing entity {}", entity, e);
+    } catch (Exception e) {
+      LOG.error("Unexpected error when publishing entity {}", entity, e);
     }
   }
 

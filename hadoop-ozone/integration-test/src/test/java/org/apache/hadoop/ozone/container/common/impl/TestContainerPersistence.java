@@ -70,7 +70,6 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -349,11 +348,11 @@ public class TestContainerPersistence {
     }
     ChunkInfo info = getChunk(
         blockID.getLocalID(), 0, 0, datalen);
-    byte[] data = getData(datalen);
+    ByteBuffer data = getData(datalen);
     setDataChecksum(info, data);
     commitBytesBefore = container.getContainerData()
         .getVolume().getCommittedBytes();
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
     commitBytesAfter = container.getContainerData()
         .getVolume().getCommittedBytes();
@@ -397,9 +396,9 @@ public class TestContainerPersistence {
     Map<String, ChunkInfo> fileHashMap = new HashMap<>();
     for (int x = 0; x < chunkCount; x++) {
       ChunkInfo info = getChunk(blockID.getLocalID(), x, 0, datalen);
-      byte[] data = getData(datalen);
+      ByteBuffer data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+      chunkManager.writeChunk(container, blockID, info, data,
           getDispatcherContext());
       String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
       fileHashMap.put(fileName, info);
@@ -431,7 +430,7 @@ public class TestContainerPersistence {
       for (int x = 0; x < chunkCount; x++) {
         String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
         ChunkInfo info = fileHashMap.get(fileName);
-        byte[] data = chunkManager
+        ByteBuffer data = chunkManager
             .readChunk(container, blockID, info, getDispatcherContext());
         ChecksumData checksumData = checksum.computeChecksum(data);
         Assert.assertEquals(info.getChecksumData(), checksumData);
@@ -456,21 +455,22 @@ public class TestContainerPersistence {
     BlockID blockID = ContainerTestHelper.getTestBlockID(testContainerID);
     ChunkInfo info = getChunk(
         blockID.getLocalID(), 0, 0, datalen);
-    byte[] data = getData(datalen);
+    ByteBuffer data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
 
-    byte[] readData = chunkManager
+    ByteBuffer readData = chunkManager
         .readChunk(container, blockID, info, getDispatcherContext());
-    assertTrue(Arrays.equals(data, readData));
+    assertTrue(data.rewind().equals(readData.rewind()));
 
     ChunkInfo info2 = getChunk(blockID.getLocalID(), 0, start, length);
-    byte[] readData2 = chunkManager
+    ByteBuffer readData2 = chunkManager
         .readChunk(container, blockID, info2, getDispatcherContext());
-    assertEquals(length, readData2.length);
-    assertTrue(Arrays.equals(
-        Arrays.copyOfRange(data, start, start + length), readData2));
+    assertEquals(length, info2.getLen());
+    boolean equals =
+        data.position(start).limit(start+length).equals(readData2.rewind());
+    assertTrue(equals);
   }
 
   /**
@@ -491,15 +491,17 @@ public class TestContainerPersistence {
     BlockID blockID = ContainerTestHelper.getTestBlockID(testContainerID);
     ChunkInfo info = getChunk(
         blockID.getLocalID(), 0, 0, datalen);
-    byte[] data = getData(datalen);
+    ByteBuffer data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    data.rewind();
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
+    data.rewind();
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
     long bytesUsed = container.getContainerData().getBytesUsed();
     Assert.assertEquals(datalen, bytesUsed);
@@ -531,17 +533,18 @@ public class TestContainerPersistence {
       long offset = x * datalen;
       ChunkInfo info = getChunk(
           blockID.getLocalID(), 0, offset, datalen);
-      byte[] data = getData(datalen);
+      ByteBuffer data = getData(datalen);
       oldSha.update(data);
+      data.rewind();
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+      chunkManager.writeChunk(container, blockID, info, data,
           getDispatcherContext());
     }
 
     // Request to read the whole data in a single go.
     ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0,
         datalen * chunkCount);
-    byte[] newdata =
+    ByteBuffer newdata =
         chunkManager.readChunk(container, blockID, largeChunk,
             getDispatcherContext());
     MessageDigest newSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
@@ -566,9 +569,9 @@ public class TestContainerPersistence {
     BlockID blockID = ContainerTestHelper.getTestBlockID(testContainerID);
     ChunkInfo info = getChunk(
         blockID.getLocalID(), 0, 0, datalen);
-    byte[] data = getData(datalen);
+    ByteBuffer data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+    chunkManager.writeChunk(container, blockID, info, data,
         getDispatcherContext());
     chunkManager.deleteChunk(container, blockID, info);
     exception.expect(StorageContainerException.class);
@@ -681,9 +684,9 @@ public class TestContainerPersistence {
     for (int x = 1; x < chunkCount; x++) {
       // with holes in the front (before x * datalen)
       info = getChunk(blockID.getLocalID(), x, x * datalen, datalen);
-      byte[] data = getData(datalen);
+      ByteBuffer data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+      chunkManager.writeChunk(container, blockID, info, data,
           getDispatcherContext());
       totalSize += datalen;
       chunkList.add(info);

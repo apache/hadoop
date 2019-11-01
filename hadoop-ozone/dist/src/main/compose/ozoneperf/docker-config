@@ -35,16 +35,3 @@ HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 JAEGER_SAMPLER_PARAM=1
 JAEGER_SAMPLER_TYPE=const
 JAEGER_AGENT_HOST=jaeger
-
-LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
-LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
-LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
-LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
-LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
-LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
-LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
-LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.grpc.client.GrpcClientProtocolClient=WARN
-LOG4J.PROPERTIES_log4j.logger.http.requests.s3gateway=INFO,s3gatewayrequestlog
-LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog=org.apache.hadoop.http.HttpRequestLogAppender
-LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.Filename=/tmp/jetty-s3gateway-yyyy_mm_dd.log
-LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.RetainDays=3

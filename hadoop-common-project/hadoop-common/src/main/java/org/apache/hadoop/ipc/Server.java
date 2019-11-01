@@ -508,7 +508,7 @@ public abstract class Server {
    * Logs a Slow RPC Request.
    *
    * @param methodName - RPC Request method name
-   * @param processingTime - Processing Time.
+   * @param details - Processing Detail.
    *
    * if this request took too much time relative to other requests
    * we consider that as a slow RPC. 3 is a magic number that comes
@@ -517,7 +517,8 @@ public abstract class Server {
    * if and only if it falls above 99.7% of requests. We start this logic
    * only once we have enough sample size.
    */
-  void logSlowRpcCalls(String methodName, Call call, long processingTime) {
+  void logSlowRpcCalls(String methodName, Call call,
+      ProcessingDetails details) {
     final int deviation = 3;
 
     // 1024 for minSampleSize just a guess -- not a number computed based on
@@ -528,10 +529,15 @@ public abstract class Server {
     final double threeSigma = rpcMetrics.getProcessingMean() +
         (rpcMetrics.getProcessingStdDev() * deviation);
 
+    long processingTime =
+            details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma)) {
-      LOG.warn("Slow RPC : {} took {} {} to process from client {}",
-          methodName, processingTime, RpcMetrics.TIMEUNIT, call);
+      LOG.warn(
+          "Slow RPC : {} took {} {} to process from client {},"
+              + " the processing detail is {}",
+          methodName, processingTime, RpcMetrics.TIMEUNIT, call,
+          details.toString());
       rpcMetrics.incrSlowRpc();
     }
   }
@@ -570,7 +576,7 @@ public abstract class Server {
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
-      logSlowRpcCalls(name, call, processingTime);
+      logSlowRpcCalls(name, call, details);
     }
   }
 
@@ -3268,10 +3274,10 @@ public abstract class Server {
     cos.writeRawByte((byte)((length >>> 16) & 0xFF));
     cos.writeRawByte((byte)((length >>>  8) & 0xFF));
     cos.writeRawByte((byte)((length >>>  0) & 0xFF));
-    cos.writeRawVarint32(header.getSerializedSize());
+    cos.writeUInt32NoTag(header.getSerializedSize());
     header.writeTo(cos);
     if (payload != null) {
-      cos.writeRawVarint32(payload.getSerializedSize());
+      cos.writeUInt32NoTag(payload.getSerializedSize());
       payload.writeTo(cos);
     }
     return buf;
@@ -3279,7 +3285,7 @@ public abstract class Server {
 
   private static int getDelimitedLength(Message message) {
     int length = message.getSerializedSize();
-    return length + CodedOutputStream.computeRawVarint32Size(length);
+    return length + CodedOutputStream.computeUInt32SizeNoTag(length);
   }
 
   /**

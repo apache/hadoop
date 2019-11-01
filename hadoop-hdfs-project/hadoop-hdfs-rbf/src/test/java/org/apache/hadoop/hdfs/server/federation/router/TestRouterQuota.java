@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -176,7 +177,7 @@ public class TestRouterQuota {
   }
 
   @Test
-  public void testStorageSpaceQuotaaExceed() throws Exception {
+  public void testStorageSpaceQuotaExceed() throws Exception {
     long ssQuota = 3071;
     final FileSystem nnFs1 = nnContext1.getFileSystem();
     final FileSystem nnFs2 = nnContext2.getFileSystem();
@@ -474,6 +475,14 @@ public class TestRouterQuota {
     assertEquals(ssQuota, quota.getSpaceQuota());
     assertEquals(3, quota.getFileAndDirectoryCount());
     assertEquals(BLOCK_SIZE, quota.getSpaceConsumed());
+
+    // verify quota sync on adding new destination to mount entry.
+    updatedMountTable = getMountTable(path);
+    nnFs1.mkdirs(new Path("/newPath"));
+    updatedMountTable.setDestinations(
+        Collections.singletonList(new RemoteLocation("ns0", "/newPath", path)));
+    updateMountTable(updatedMountTable);
+    assertEquals(nsQuota, nnFs1.getQuotaUsage(new Path("/newPath")).getQuota());
   }
 
   /**
@@ -858,5 +867,93 @@ public class TestRouterQuota {
     routerFs.setTimes(path, 1L, 1L);
     routerFs.listStatus(path);
     routerFs.getContentSummary(path);
+  }
+
+  @Test
+  public void testGetGlobalQuota() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 3 * BLOCK_SIZE;
+    prepareGlobalQuotaTestMountTable(nsQuota, ssQuota);
+
+    Quota qModule = routerContext.getRouter().getRpcServer().getQuotaModule();
+    QuotaUsage qu = qModule.getGlobalQuota("/dir-1");
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota, qu.getSpaceQuota());
+    qu = qModule.getGlobalQuota("/dir-1/dir-2");
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota * 2, qu.getSpaceQuota());
+    qu = qModule.getGlobalQuota("/dir-1/dir-2/dir-3");
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota * 2, qu.getSpaceQuota());
+    qu = qModule.getGlobalQuota("/dir-4");
+    assertEquals(-1, qu.getQuota());
+    assertEquals(-1, qu.getSpaceQuota());
+  }
+
+  @Test
+  public void testFixGlobalQuota() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 3 * BLOCK_SIZE;
+    final FileSystem nnFs = nnContext1.getFileSystem();
+    prepareGlobalQuotaTestMountTable(nsQuota, ssQuota);
+
+    QuotaUsage qu = nnFs.getQuotaUsage(new Path("/dir-1"));
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota, qu.getSpaceQuota());
+    qu = nnFs.getQuotaUsage(new Path("/dir-2"));
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota * 2, qu.getSpaceQuota());
+    qu = nnFs.getQuotaUsage(new Path("/dir-3"));
+    assertEquals(nsQuota, qu.getQuota());
+    assertEquals(ssQuota * 2, qu.getSpaceQuota());
+    qu = nnFs.getQuotaUsage(new Path("/dir-4"));
+    assertEquals(-1, qu.getQuota());
+    assertEquals(-1, qu.getSpaceQuota());
+  }
+
+  /**
+   * Add three mount tables.
+   * /dir-1              --> ns0---/dir-1 [nsQuota, ssQuota]
+   * /dir-1/dir-2        --> ns0---/dir-2 [QUOTA_UNSET, ssQuota * 2]
+   * /dir-1/dir-2/dir-3  --> ns0---/dir-3 [QUOTA_UNSET, QUOTA_UNSET]
+   * /dir-4              --> ns0---/dir-4 [QUOTA_UNSET, QUOTA_UNSET]
+   *
+   * Expect three remote locations' global quota.
+   * ns0---/dir-1 --> [nsQuota, ssQuota]
+   * ns0---/dir-2 --> [nsQuota, ssQuota * 2]
+   * ns0---/dir-3 --> [nsQuota, ssQuota * 2]
+   * ns0---/dir-4 --> [-1, -1]
+   */
+  private void prepareGlobalQuotaTestMountTable(long nsQuota, long ssQuota)
+      throws IOException {
+    final FileSystem nnFs = nnContext1.getFileSystem();
+
+    // Create destination directory
+    nnFs.mkdirs(new Path("/dir-1"));
+    nnFs.mkdirs(new Path("/dir-2"));
+    nnFs.mkdirs(new Path("/dir-3"));
+    nnFs.mkdirs(new Path("/dir-4"));
+
+    MountTable mountTable = MountTable.newInstance("/dir-1",
+        Collections.singletonMap("ns0", "/dir-1"));
+    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(nsQuota)
+        .spaceQuota(ssQuota).build());
+    addMountTable(mountTable);
+    mountTable = MountTable.newInstance("/dir-1/dir-2",
+        Collections.singletonMap("ns0", "/dir-2"));
+    mountTable.setQuota(new RouterQuotaUsage.Builder().spaceQuota(ssQuota * 2)
+        .build());
+    addMountTable(mountTable);
+    mountTable = MountTable.newInstance("/dir-1/dir-2/dir-3",
+        Collections.singletonMap("ns0", "/dir-3"));
+    addMountTable(mountTable);
+    mountTable = MountTable.newInstance("/dir-4",
+        Collections.singletonMap("ns0", "/dir-4"));
+    addMountTable(mountTable);
+
+    // Ensure setQuota RPC was invoked and mount table was updated.
+    RouterQuotaUpdateService updateService = routerContext.getRouter()
+        .getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
   }
 }

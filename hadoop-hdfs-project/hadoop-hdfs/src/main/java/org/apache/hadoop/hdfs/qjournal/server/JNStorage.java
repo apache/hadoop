@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -50,12 +52,7 @@ class JNStorage extends Storage {
   private final StorageDirectory sd;
   private StorageState state;
 
-  private static final List<Pattern> CURRENT_DIR_PURGE_REGEXES =
-      ImmutableList.of(
-        Pattern.compile("edits_\\d+-(\\d+)"),
-        Pattern.compile("edits_inprogress_(\\d+)(?:\\..*)?"));
-  
-  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES = 
+  private static final List<Pattern> PAXOS_DIR_PURGE_REGEXES =
       ImmutableList.of(Pattern.compile("(\\d+)"));
 
   private static final String STORAGE_EDITS_SYNC = "edits.sync";
@@ -70,7 +67,9 @@ class JNStorage extends Storage {
       StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
-    sd = new StorageDirectory(logDir);
+    sd = new StorageDirectory(logDir, null, false, new FsPermission(conf.get(
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_KEY,
+        DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT)));
     this.addStorageDir(sd);
     this.fjm = new FileJournalManager(conf, sd, errorReporter);
 
@@ -177,8 +176,8 @@ class JNStorage extends Storage {
    * the given txid.
    */
   void purgeDataOlderThan(long minTxIdToKeep) throws IOException {
-    purgeMatching(sd.getCurrentDir(),
-        CURRENT_DIR_PURGE_REGEXES, minTxIdToKeep);
+    fjm.purgeLogsOlderThan(minTxIdToKeep);
+
     purgeMatching(getOrCreatePaxosDir(),
         PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
   }

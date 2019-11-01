@@ -32,9 +32,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -124,7 +122,7 @@ public class WorkloadDriver extends Configured implements Tool {
       startTimestampMs = tmpConf.getTimeDuration(tmpConfKey, 0,
           TimeUnit.MILLISECONDS) + System.currentTimeMillis();
     }
-    Class<? extends WorkloadMapper<?, ?>> mapperClass = getMapperClass(
+    Class<? extends WorkloadMapper<?, ?, ?, ?>> mapperClass = getMapperClass(
         cli.getOptionValue(MAPPER_CLASS_NAME));
     if (!mapperClass.newInstance().verifyConfigurations(getConf())) {
       System.err
@@ -140,8 +138,9 @@ public class WorkloadDriver extends Configured implements Tool {
   }
 
   public static Job getJobForSubmission(Configuration baseConf, String nnURI,
-      long startTimestampMs, Class<? extends WorkloadMapper<?, ?>> mapperClass)
-      throws IOException, InstantiationException, IllegalAccessException {
+      long startTimestampMs, Class<? extends WorkloadMapper<?, ?, ?, ?>>
+      mapperClass) throws IOException, InstantiationException,
+      IllegalAccessException {
     Configuration conf = new Configuration(baseConf);
     conf.set(NN_URI, nnURI);
     conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, false);
@@ -153,16 +152,9 @@ public class WorkloadDriver extends Configured implements Tool {
     conf.setLong(START_TIMESTAMP_MS, startTimestampMs);
 
     Job job = Job.getInstance(conf, "Dynamometer Workload Driver");
-    job.setOutputFormatClass(NullOutputFormat.class);
     job.setJarByClass(mapperClass);
     job.setMapperClass(mapperClass);
-    job.setInputFormatClass(mapperClass.newInstance().getInputFormat(conf));
-    job.setOutputFormatClass(NullOutputFormat.class);
-    job.setNumReduceTasks(0);
-    job.setMapOutputKeyClass(NullWritable.class);
-    job.setMapOutputValueClass(NullWritable.class);
-    job.setOutputKeyClass(NullWritable.class);
-    job.setOutputValueClass(NullWritable.class);
+    mapperClass.newInstance().configureJob(job);
 
     return job;
   }
@@ -175,8 +167,8 @@ public class WorkloadDriver extends Configured implements Tool {
   // The cast is actually checked via isAssignableFrom but the compiler doesn't
   // recognize this
   @SuppressWarnings("unchecked")
-  private Class<? extends WorkloadMapper<?, ?>> getMapperClass(String className)
-      throws ClassNotFoundException {
+  private Class<? extends WorkloadMapper<?, ?, ?, ?>> getMapperClass(
+      String className) throws ClassNotFoundException {
     if (!className.contains(".")) {
       className = WorkloadDriver.class.getPackage().getName() + "." + className;
     }
@@ -185,13 +177,14 @@ public class WorkloadDriver extends Configured implements Tool {
       throw new IllegalArgumentException(className + " is not a subclass of "
           + WorkloadMapper.class.getCanonicalName());
     }
-    return (Class<? extends WorkloadMapper<?, ?>>) mapperClass;
+    return (Class<? extends WorkloadMapper<?, ?, ?, ?>>) mapperClass;
   }
 
   private String getMapperUsageInfo(String mapperClassName)
       throws ClassNotFoundException, InstantiationException,
       IllegalAccessException {
-    WorkloadMapper<?, ?> mapper = getMapperClass(mapperClassName).newInstance();
+    WorkloadMapper<?, ?, ?, ?> mapper = getMapperClass(mapperClassName)
+        .newInstance();
     StringBuilder builder = new StringBuilder("Usage for ");
     builder.append(mapper.getClass().getSimpleName());
     builder.append(":\n");

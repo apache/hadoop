@@ -6,7 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* ProtocolBuffer 2.5.0
+* Protocol Buffers 3.7.1 (if compiling native code)
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -62,8 +62,16 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ sudo apt-get -y install maven
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
-* ProtocolBuffer 2.5.0 (required)
-  $ sudo apt-get -y install protobuf-compiler
+* Protocol Buffers 3.7.1 (required to build native code)
+  $ mkdir -p /opt/protobuf-3.7-src \
+        && curl -L -s -S \
+          https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+          -o /opt/protobuf-3.7.1.tar.gz \
+        && tar xzf /opt/protobuf-3.7.1.tar.gz --strip-components 1 -C /opt/protobuf-3.7-src \
+        && cd /opt/protobuf-3.7-src \
+        && ./configure\
+        && make install \
+        && rm -rf /opt/protobuf-3.7-src
 
 Optional packages:
 
@@ -303,16 +311,6 @@ time out after a while, using the Maven '-nsu' will stop Maven from trying
 to update SNAPSHOTs from external repos.
 
 ----------------------------------------------------------------------------------
-Protocol Buffer compiler
-
-The version of Protocol Buffer compiler, protoc, must match the version of the
-protobuf JAR.
-
-If you have multiple versions of protoc in your system, you can set in your
-build shell the HADOOP_PROTOC_PATH environment variable to point to the one you
-want to use for the Hadoop build. If you don't define this environment variable,
-protoc is looked up in the PATH.
-----------------------------------------------------------------------------------
 Importing projects to eclipse
 
 When you import the project to eclipse, install hadoop-maven-plugins at first.
@@ -397,11 +395,10 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 2.5.0 (required), since 2.5.0 is no longer in Homebrew,
-we need to compile it from source
-  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz
-  $ tar zxvf protobuf-2.5.0.tar.gz
-  $ cd protobuf-2.5.0
+* Protocol Buffers 3.7.1 (required to compile native code)
+  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz
+  $ mkdir -p protobuf-3.7 && tar zxvf protobuf-java-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7
+  $ cd protobuf-3.7
   $ ./configure
   $ make
   $ make check
@@ -432,7 +429,7 @@ Requirements:
 * Windows System
 * JDK 1.8
 * Maven 3.0 or later
-* ProtocolBuffer 2.5.0
+* Protocol Buffers 3.7.1
 * CMake 3.1 or newer
 * Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)

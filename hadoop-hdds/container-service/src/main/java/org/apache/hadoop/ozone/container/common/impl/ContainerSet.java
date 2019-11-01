@@ -27,21 +27,20 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common
-    .interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
+import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.stream.Collectors;
 
 
 /**
@@ -51,24 +50,26 @@ public class ContainerSet {
 
   private static final Logger LOG = LoggerFactory.getLogger(ContainerSet.class);
 
-  private final ConcurrentSkipListMap<Long, Container> containerMap = new
+  private final ConcurrentSkipListMap<Long, Container<?>> containerMap = new
       ConcurrentSkipListMap<>();
   private final ConcurrentSkipListSet<Long> missingContainerSet =
       new ConcurrentSkipListSet<>();
   /**
    * Add Container to container map.
-   * @param container
+   * @param container container to be added
    * @return If container is added to containerMap returns true, otherwise
    * false
    */
-  public boolean addContainer(Container container) throws
+  public boolean addContainer(Container<?> container) throws
       StorageContainerException {
     Preconditions.checkNotNull(container, "container cannot be null");
 
     long containerId = container.getContainerData().getContainerID();
-    if(containerMap.putIfAbsent(containerId, container) == null) {
-      LOG.debug("Container with container Id {} is added to containerMap",
-          containerId);
+    if (containerMap.putIfAbsent(containerId, container) == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Container with container Id {} is added to containerMap",
+            containerId);
+      }
       // wish we could have done this from ContainerData.setState
       container.getContainerData().commitSpace();
       return true;
@@ -82,10 +83,10 @@ public class ContainerSet {
 
   /**
    * Returns the Container with specified containerId.
-   * @param containerId
+   * @param containerId ID of the container to get
    * @return Container
    */
-  public Container getContainer(long containerId) {
+  public Container<?> getContainer(long containerId) {
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
     return containerMap.get(containerId);
@@ -93,15 +94,15 @@ public class ContainerSet {
 
   /**
    * Removes the Container matching with specified containerId.
-   * @param containerId
+   * @param containerId ID of the container to remove
    * @return If container is removed from containerMap returns true, otherwise
    * false
    */
   public boolean removeContainer(long containerId) {
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
-    Container removed = containerMap.remove(containerId);
-    if(removed == null) {
+    Container<?> removed = containerMap.remove(containerId);
+    if (removed == null) {
       LOG.debug("Container with containerId {} is not present in " +
           "containerMap", containerId);
       return false;
@@ -123,9 +124,9 @@ public class ContainerSet {
 
   /**
    * Return an container Iterator over {@link ContainerSet#containerMap}.
-   * @return {@literal Iterator<Container>}
+   * @return {@literal Iterator<Container<?>>}
    */
-  public Iterator<Container> getContainerIterator() {
+  public Iterator<Container<?>> getContainerIterator() {
     return containerMap.values().iterator();
   }
 
@@ -133,26 +134,23 @@ public class ContainerSet {
    * Return an iterator of containers associated with the specified volume.
    *
    * @param  volume the HDDS volume which should be used to filter containers
-   * @return {@literal Iterator<Container>}
+   * @return {@literal Iterator<Container<?>>}
    */
-  public Iterator<Container> getContainerIterator(HddsVolume volume) {
+  public Iterator<Container<?>> getContainerIterator(HddsVolume volume) {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(volume.getStorageID());
     String volumeUuid = volume.getStorageID();
-    return containerMap.values()
-                       .stream()
-                       .filter(x -> volumeUuid.equals(
-                               x.getContainerData().getVolume()
-                                       .getStorageID()))
-                       .iterator();
+    return containerMap.values().stream()
+        .filter(x -> volumeUuid.equals(x.getContainerData().getVolume()
+            .getStorageID()))
+        .iterator();
   }
 
   /**
    * Return an containerMap iterator over {@link ContainerSet#containerMap}.
    * @return containerMap Iterator
    */
-  public Iterator<Map.Entry<Long, Container>> getContainerMapIterator() {
-    containerMap.keySet().stream().collect(Collectors.toSet());
+  public Iterator<Map.Entry<Long, Container<?>>> getContainerMapIterator() {
     return containerMap.entrySet().iterator();
   }
 
@@ -161,8 +159,12 @@ public class ContainerSet {
    * @return containerMap
    */
   @VisibleForTesting
-  public Map<Long, Container> getContainerMapCopy() {
+  public Map<Long, Container<?>> getContainerMapCopy() {
     return ImmutableMap.copyOf(containerMap);
+  }
+
+  public Map<Long, Container<?>> getContainerMap() {
+    return Collections.unmodifiableMap(containerMap);
   }
 
   /**
@@ -176,7 +178,6 @@ public class ContainerSet {
    * @param startContainerId - Return containers with Id &gt;= startContainerId.
    * @param count - how many to return
    * @param data - Actual containerData
-   * @throws StorageContainerException
    */
   public void listContainer(long startContainerId, long count,
                             List<ContainerData> data) throws
@@ -190,14 +191,14 @@ public class ContainerSet {
             "must be positive");
     LOG.debug("listContainer returns containerData starting from {} of count " +
         "{}", startContainerId, count);
-    ConcurrentNavigableMap<Long, Container> map;
+    ConcurrentNavigableMap<Long, Container<?>> map;
     if (startContainerId == 0) {
       map = containerMap.tailMap(containerMap.firstKey(), true);
     } else {
       map = containerMap.tailMap(startContainerId, true);
     }
     int currentCount = 0;
-    for (Container entry : map.values()) {
+    for (Container<?> entry : map.values()) {
       if (currentCount < count) {
         data.add(entry.getContainerData());
         currentCount++;
@@ -211,7 +212,6 @@ public class ContainerSet {
    * Get container report.
    *
    * @return The container report.
-   * @throws IOException
    */
   public ContainerReportsProto getContainerReport() throws IOException {
     LOG.debug("Starting container report iteration.");
@@ -219,29 +219,16 @@ public class ContainerSet {
     // No need for locking since containerMap is a ConcurrentSkipListMap
     // And we can never get the exact state since close might happen
     // after we iterate a point.
-    List<Container> containers = containerMap.values().stream().collect(
-        Collectors.toList());
+    List<Container<?>> containers = new ArrayList<>(containerMap.values());
 
     ContainerReportsProto.Builder crBuilder =
         ContainerReportsProto.newBuilder();
 
-    for (Container container: containers) {
+    for (Container<?> container: containers) {
       crBuilder.addReports(container.getContainerReport());
     }
 
     return crBuilder.build();
-  }
-
-  public List<ContainerData> chooseContainerForBlockDeletion(int count,
-      ContainerDeletionChoosingPolicy deletionPolicy)
-      throws StorageContainerException {
-    Map<Long, ContainerData> containerDataMap = containerMap.entrySet().stream()
-        .filter(e -> deletionPolicy.isValidContainerType(
-            e.getValue().getContainerType()))
-        .collect(Collectors.toMap(Map.Entry::getKey,
-            e -> e.getValue().getContainerData()));
-    return deletionPolicy
-        .chooseContainerForBlockDeletion(count, containerDataMap);
   }
 
   public Set<Long> getMissingContainerSet() {
@@ -249,14 +236,46 @@ public class ContainerSet {
   }
 
   /**
-   * Builds the missing container set by taking a diff total no containers
-   * actually found and number of containers which actually got created.
+   * Builds the missing container set by taking a diff between total no
+   * containers actually found and number of containers which actually
+   * got created. It also validates the BCSID stored in the snapshot file
+   * for each container as against what is reported in containerScan.
    * This will only be called during the initialization of Datanode Service
    * when  it still not a part of any write Pipeline.
-   * @param createdContainerSet ContainerId set persisted in the Ratis snapshot
+   * @param container2BCSIDMap Map of containerId to BCSID persisted in the
+   *                           Ratis snapshot
    */
-  public void buildMissingContainerSet(Set<Long> createdContainerSet) {
-    missingContainerSet.addAll(createdContainerSet);
-    missingContainerSet.removeAll(containerMap.keySet());
+  public void buildMissingContainerSetAndValidate(
+      Map<Long, Long> container2BCSIDMap) {
+    container2BCSIDMap.entrySet().parallelStream().forEach((mapEntry) -> {
+      long id = mapEntry.getKey();
+      if (!containerMap.containsKey(id)) {
+        LOG.warn("Adding container {} to missing container set.", id);
+        missingContainerSet.add(id);
+      } else {
+        Container<?> container = containerMap.get(id);
+        long containerBCSID = container.getBlockCommitSequenceId();
+        long snapshotBCSID = mapEntry.getValue();
+        if (containerBCSID < snapshotBCSID) {
+          LOG.warn(
+              "Marking container {} unhealthy as reported BCSID {} is smaller"
+                  + " than ratis snapshot recorded value {}", id,
+              containerBCSID, snapshotBCSID);
+          // just mark the container unhealthy. Once the DatanodeStateMachine
+          // thread starts it will send container report to SCM where these
+          // unhealthy containers would be detected
+          try {
+            container.markContainerUnhealthy();
+          } catch (StorageContainerException sce) {
+            // The container will still be marked unhealthy in memory even if
+            // exception occurs. It won't accept any new transactions and will
+            // be handled by SCM. Eve if dn restarts, it will still be detected
+            // as unheathy as its BCSID won't change.
+            LOG.error("Unable to persist unhealthy state for container {}", id);
+          }
+        }
+      }
+    });
+
   }
 }

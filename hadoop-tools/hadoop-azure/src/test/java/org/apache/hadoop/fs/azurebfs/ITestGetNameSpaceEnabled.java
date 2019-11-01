@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
@@ -67,10 +69,10 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
             + testUri.substring(testUri.indexOf("@"));
     AzureBlobFileSystem fs = this.getFileSystem(nonExistingFsUrl);
 
-    intercept(AbfsRestOperationException.class,
+    intercept(FileNotFoundException.class,
             "\"The specified filesystem does not exist.\", 404",
             ()-> {
-              fs.getIsNamespaceEnabled();
+              fs.getFileStatus(new Path("/")); // Run a dummy FS call
             });
   }
 

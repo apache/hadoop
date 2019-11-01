@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.net;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Utility class to facilitate network topology functions.
@@ -71,18 +73,17 @@ public final class NetUtils {
    *  Remove node from mutableExcludedNodes if it's covered by excludedScope.
    *  Please noted that mutableExcludedNodes content might be changed after the
    *  function call.
-   * @return the new excludedScope
    */
-  public static String removeDuplicate(NetworkTopology topology,
-      Collection<Node> mutableExcludedNodes, String excludedScope,
+  public static void removeDuplicate(NetworkTopology topology,
+      Collection<Node> mutableExcludedNodes, List<String> mutableExcludedScopes,
       int ancestorGen) {
-    if (mutableExcludedNodes == null || mutableExcludedNodes.size() == 0 ||
-        excludedScope == null || topology == null) {
-      return excludedScope;
+    if (CollectionUtils.isEmpty(mutableExcludedNodes) ||
+        CollectionUtils.isEmpty(mutableExcludedScopes) || topology == null) {
+      return;
     }
 
     Iterator<Node> iterator = mutableExcludedNodes.iterator();
-    while (iterator.hasNext()) {
+    while (iterator.hasNext() && (!mutableExcludedScopes.isEmpty())) {
       Node node = iterator.next();
       Node ancestor = topology.getAncestor(node, ancestorGen);
       if (ancestor == null) {
@@ -90,16 +91,20 @@ public final class NetUtils {
             " of node :" + node);
         continue;
       }
-      if (excludedScope.startsWith(ancestor.getNetworkFullPath())) {
-        // reset excludedScope if it's covered by exclude node's ancestor
-        return null;
-      }
-      if (ancestor.getNetworkFullPath().startsWith(excludedScope)) {
-        // remove exclude node if it's covered by excludedScope
-        iterator.remove();
-      }
+      // excludedScope is child of ancestor
+      List<String> duplicateList = mutableExcludedScopes.stream()
+          .filter(scope -> scope.startsWith(ancestor.getNetworkFullPath()))
+          .collect(Collectors.toList());
+      mutableExcludedScopes.removeAll(duplicateList);
+
+      // ancestor is covered by excludedScope
+      mutableExcludedScopes.stream().forEach(scope -> {
+        if (ancestor.getNetworkFullPath().startsWith(scope)) {
+          // remove exclude node if it's covered by excludedScope
+          iterator.remove();
+        }
+      });
     }
-    return excludedScope;
   }
 
   /**
@@ -109,7 +114,7 @@ public final class NetUtils {
    */
   public static void removeOutscope(Collection<Node> mutableExcludedNodes,
       String scope) {
-    if (mutableExcludedNodes == null || scope == null) {
+    if (CollectionUtils.isEmpty(mutableExcludedNodes) || scope == null) {
       return;
     }
     synchronized (mutableExcludedNodes) {
@@ -134,7 +139,7 @@ public final class NetUtils {
   public static List<Node> getAncestorList(NetworkTopology topology,
       Collection<Node> nodes, int generation) {
     List<Node> ancestorList = new ArrayList<>();
-    if (topology == null ||nodes == null || nodes.size() == 0 ||
+    if (topology == null || CollectionUtils.isEmpty(nodes) ||
         generation == 0) {
       return ancestorList;
     }

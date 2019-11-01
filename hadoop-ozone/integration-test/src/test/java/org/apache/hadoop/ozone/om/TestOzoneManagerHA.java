@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.junit.After;
@@ -73,6 +75,7 @@ import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -98,8 +101,10 @@ public class TestOzoneManagerHA {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omServiceId;
   private int numOfOMs = 3;
   private static final long SNAPSHOT_THRESHOLD = 50;
+  private static final int LOG_PURGE_GAP = 50;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -119,21 +124,26 @@ public class TestOzoneManagerHA {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    omServiceId = "om-service-test1";
     conf.setBoolean(OZONE_ACL_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_ADMINISTRATORS,
+        OZONE_ADMINISTRATORS_WILDCARD);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 10);
     conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 10);
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
         SNAPSHOT_THRESHOLD);
+    conf.setInt(OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP, LOG_PURGE_GAP);
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
-        .setOMServiceId("om-service-test1")
+        .setOMServiceId(omServiceId)
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();
-    objectStore = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    objectStore = OzoneClientFactory.getRpcClient(omServiceId, conf)
+        .getObjectStore();
   }
 
   /**
@@ -751,7 +761,7 @@ public class TestOzoneManagerHA {
 
       // Get the ObjectStore and FailoverProxyProvider for OM at index i
       final ObjectStore store = OzoneClientFactory.getRpcClient(
-          omHostName, rpcPort, conf).getObjectStore();
+          omHostName, rpcPort, omServiceId, conf).getObjectStore();
       final OMFailoverProxyProvider proxyProvider =
           store.getClientProxy().getOMProxyProvider();
 
@@ -1087,7 +1097,7 @@ public class TestOzoneManagerHA {
     }
 
     GenericTestUtils.waitFor(() -> {
-      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+      if (ozoneManager.getRatisSnapshotIndex() > 0) {
         return true;
       }
       return false;
@@ -1097,7 +1107,7 @@ public class TestOzoneManagerHA {
     // than or equal to the saved snapshot index.
     long smLastAppliedIndex =
         ozoneManager.getOmRatisServer().getStateMachineLastAppliedIndex();
-    long ratisSnapshotIndex = ozoneManager.loadRatisSnapshotIndex();
+    long ratisSnapshotIndex = ozoneManager.getRatisSnapshotIndex();
     Assert.assertTrue("LastAppliedIndex on OM State Machine ("
             + smLastAppliedIndex + ") is less than the saved snapshot index("
             + ratisSnapshotIndex + ").",
@@ -1111,14 +1121,14 @@ public class TestOzoneManagerHA {
     }
 
     GenericTestUtils.waitFor(() -> {
-      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+      if (ozoneManager.getRatisSnapshotIndex() > 0) {
         return true;
       }
       return false;
     }, 1000, 100000);
 
     // The new snapshot index must be greater than the previous snapshot index
-    long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
+    long ratisSnapshotIndexNew = ozoneManager.getRatisSnapshotIndex();
     Assert.assertTrue("Latest snapshot index must be greater than previous " +
         "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);
 
@@ -1137,5 +1147,102 @@ public class TestOzoneManagerHA {
     ozoneOutputStream.write(data.getBytes(), 0, data.length());
     ozoneOutputStream.close();
     return keyName;
+  }
+
+  @Test
+  public void testOMRestart() throws Exception {
+    // Get the leader OM
+    String leaderOMNodeId = objectStore.getClientProxy().getOMProxyProvider()
+        .getCurrentProxyOMNodeId();
+    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+
+    // Get follower OMs
+    OzoneManager followerOM1 = cluster.getOzoneManager(
+        leaderOM.getPeerNodes().get(0).getOMNodeId());
+    OzoneManager followerOM2 = cluster.getOzoneManager(
+        leaderOM.getPeerNodes().get(1).getOMNodeId());
+
+    // Do some transactions so that the log index increases
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(userName)
+        .setAdmin(adminName)
+        .build();
+
+    objectStore.createVolume(volumeName, createVolumeArgs);
+    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
+
+    retVolumeinfo.createBucket(bucketName);
+    OzoneBucket ozoneBucket = retVolumeinfo.getBucket(bucketName);
+
+    for (int i = 0; i < 10; i++) {
+      createKey(ozoneBucket);
+    }
+
+    long lastAppliedTxOnFollowerOM =
+        followerOM1.getOmRatisServer().getStateMachineLastAppliedIndex();
+
+    // Stop one follower OM
+    followerOM1.stop();
+
+    // Do more transactions. Stopped OM should miss these transactions and
+    // the logs corresponding to atleast some of the missed transactions
+    // should be purged. This will force the OM to install snapshot when
+    // restarted.
+    long minNewTxIndex = lastAppliedTxOnFollowerOM + (LOG_PURGE_GAP * 10);
+    long leaderOMappliedLogIndex = leaderOM.getOmRatisServer()
+        .getStateMachineLastAppliedIndex();
+
+    List<String> missedKeys = new ArrayList<>();
+    while (leaderOMappliedLogIndex < minNewTxIndex) {
+      missedKeys.add(createKey(ozoneBucket));
+      leaderOMappliedLogIndex = leaderOM.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    // Restart the stopped OM.
+    followerOM1.restart();
+
+    // Get the latest snapshotIndex from the leader OM.
+    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot();
+
+    // The recently started OM should be lagging behind the leader OM.
+    long followerOMLastAppliedIndex =
+        followerOM1.getOmRatisServer().getStateMachineLastAppliedIndex();
+    Assert.assertTrue(
+        followerOMLastAppliedIndex < leaderOMSnaphsotIndex);
+
+    // Wait for the follower OM to catch up
+    GenericTestUtils.waitFor(() -> {
+      long lastAppliedIndex =
+          followerOM1.getOmRatisServer().getStateMachineLastAppliedIndex();
+      if (lastAppliedIndex >= leaderOMSnaphsotIndex) {
+        return true;
+      }
+      return false;
+    }, 100, 200000);
+
+    // Do more transactions. The restarted OM should receive the
+    // new transactions. It's last applied tx index should increase from the
+    // last snapshot index after more transactions are applied.
+    for (int i = 0; i < 10; i++) {
+      createKey(ozoneBucket);
+    }
+    long followerOM1lastAppliedIndex = followerOM1.getOmRatisServer()
+        .getStateMachineLastAppliedIndex();
+    Assert.assertTrue(followerOM1lastAppliedIndex >
+        leaderOMSnaphsotIndex);
+
+    // The follower OMs should be in sync. There can be a small lag between
+    // leader OM and follower OMs as txns are applied first on leader OM.
+    long followerOM2lastAppliedIndex = followerOM1.getOmRatisServer()
+        .getStateMachineLastAppliedIndex();
+    Assert.assertEquals(followerOM1lastAppliedIndex,
+        followerOM2lastAppliedIndex);
+
   }
 }

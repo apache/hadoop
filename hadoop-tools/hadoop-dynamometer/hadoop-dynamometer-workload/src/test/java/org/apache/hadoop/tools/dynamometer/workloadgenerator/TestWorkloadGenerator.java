@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.tools.dynamometer.workloadgenerator;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditCommandParser;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogDirectParser;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogHiveTableParser;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditReplayMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,9 +38,12 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
+import org.jline.utils.Log;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS;
 import static org.junit.Assert.assertEquals;
@@ -46,6 +53,8 @@ import static org.junit.Assert.assertTrue;
 
 /** Tests for {@link WorkloadDriver} and related classes. */
 public class TestWorkloadGenerator {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWorkloadGenerator.class);
 
   private Configuration conf;
   private MiniDFSCluster miniCluster;
@@ -73,22 +82,27 @@ public class TestWorkloadGenerator {
   }
 
   @Test
-  public void testAuditWorkloadDirectParser() throws Exception {
+  public void testAuditWorkloadDirectParserWithOutput() throws Exception {
     String workloadInputPath = TestWorkloadGenerator.class.getClassLoader()
         .getResource("audit_trace_direct").toString();
+    String auditOutputPath = "/tmp/trace_output_direct";
     conf.set(AuditReplayMapper.INPUT_PATH_KEY, workloadInputPath);
+    conf.set(AuditReplayMapper.OUTPUT_PATH_KEY, auditOutputPath);
     conf.setLong(AuditLogDirectParser.AUDIT_START_TIMESTAMP_KEY, 60 * 1000);
-    testAuditWorkload();
+    testAuditWorkloadWithOutput(auditOutputPath);
   }
 
   @Test
-  public void testAuditWorkloadHiveParser() throws Exception {
-    String workloadInputPath = TestWorkloadGenerator.class.getClassLoader()
-        .getResource("audit_trace_hive").toString();
+  public void testAuditWorkloadHiveParserWithOutput() throws Exception {
+    String workloadInputPath =
+        TestWorkloadGenerator.class.getClassLoader()
+            .getResource("audit_trace_hive").toString();
+    String auditOutputPath = "/tmp/trace_output_hive";
     conf.set(AuditReplayMapper.INPUT_PATH_KEY, workloadInputPath);
+    conf.set(AuditReplayMapper.OUTPUT_PATH_KEY, auditOutputPath);
     conf.setClass(AuditReplayMapper.COMMAND_PARSER_KEY,
         AuditLogHiveTableParser.class, AuditCommandParser.class);
-    testAuditWorkload();
+    testAuditWorkloadWithOutput(auditOutputPath);
   }
 
   /**
@@ -114,7 +128,8 @@ public class TestWorkloadGenerator {
     }
   }
 
-  private void testAuditWorkload() throws Exception {
+  private void testAuditWorkloadWithOutput(String auditOutputPath)
+      throws Exception {
     long workloadStartTime = System.currentTimeMillis() + 10000;
     Job workloadJob = WorkloadDriver.getJobForSubmission(conf,
         dfs.getUri().toString(), workloadStartTime, AuditReplayMapper.class);
@@ -132,5 +147,18 @@ public class TestWorkloadGenerator {
     assertTrue(
         dfs.getFileStatus(new Path("/tmp/testDirRenamed")).isDirectory());
     assertFalse(dfs.exists(new Path("/denied")));
+
+    assertTrue(dfs.exists(new Path(auditOutputPath)));
+    try (FSDataInputStream auditOutputFile = dfs.open(new Path(auditOutputPath,
+        "part-r-00000"))) {
+      String auditOutput = IOUtils.toString(auditOutputFile,
+          StandardCharsets.UTF_8);
+      Log.info(auditOutput);
+      assertTrue(auditOutput.matches(
+          ".*(hdfs,WRITE,[A-Z]+,[13]+,[0-9]+\\n){3}.*"));
+      // Matches three lines of the format "hdfs,WRITE,name,count,time"
+      // Using [13] for the count group because each operation is run either
+      // 1 or 3 times but the output order isn't guaranteed
+    }
   }
 }

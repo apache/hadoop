@@ -325,12 +325,6 @@ int sync_yarn_sysfs(char* const* local_dirs, const char *running_user,
  */
 int execute_regex_match(const char *regex_str, const char *input);
 
-/**
- * Validate the docker image name matches the expected input.
- * Return 0 on success.
- */
-int validate_docker_image_name(const char *image_name);
-
 struct configuration* get_cfg();
 
 /**

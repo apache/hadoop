@@ -23,9 +23,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_INDEX;
 import static org.apache.hadoop.ozone.OzoneConsts.
     OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -34,16 +33,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,8 +98,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
       return;
     }
 
-    FileInputStream checkpointFileInputStream = null;
-    File checkPointTarFile = null;
+    DBCheckpoint checkpoint = null;
     try {
 
       boolean flush = false;
@@ -126,13 +121,13 @@ public class OMDBCheckpointServlet extends HttpServlet {
         // ratis snapshot first. This step also included flushing the OM DB.
         // Hence, we can set flush to false.
         flush = false;
-        ratisSnapshotIndex = om.saveRatisSnapshot(true);
+        ratisSnapshotIndex = om.saveRatisSnapshot();
       } else {
-        ratisSnapshotIndex = om.loadRatisSnapshotIndex();
+        ratisSnapshotIndex = om.getRatisSnapshotIndex();
       }
 
-      DBCheckpoint checkpoint = omDbStore.getCheckpoint(flush);
-      if (checkpoint == null) {
+      checkpoint = omDbStore.getCheckpoint(flush);
+      if (checkpoint == null || checkpoint.getCheckpointLocation() == null) {
         LOG.error("Unable to process metadata snapshot request. " +
             "Checkpoint request returned null.");
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -141,49 +136,41 @@ public class OMDBCheckpointServlet extends HttpServlet {
       omMetrics.setLastCheckpointCreationTimeTaken(
           checkpoint.checkpointCreationTimeTaken());
 
-      Instant start = Instant.now();
-      checkPointTarFile = OmUtils.createTarFile(
-          checkpoint.getCheckpointLocation());
-      Instant end = Instant.now();
-
-      long duration = Duration.between(start, end).toMillis();
-      LOG.debug("Time taken to archive the checkpoint : " + duration +
-          " milliseconds");
-      LOG.info("Checkpoint Tar location = " +
-          checkPointTarFile.getAbsolutePath());
-      omMetrics.setLastCheckpointTarOperationTimeTaken(duration);
-
+      Path file = checkpoint.getCheckpointLocation().getFileName();
+      if (file == null) {
+        return;
+      }
       response.setContentType("application/x-tgz");
       response.setHeader("Content-Disposition",
           "attachment; filename=\"" +
-              checkPointTarFile.getName() + "\"");
+               file.toString() + ".tgz\"");
       // Ratis snapshot index used when downloading DB checkpoint to OM follower
       response.setHeader(OM_RATIS_SNAPSHOT_INDEX,
           String.valueOf(ratisSnapshotIndex));
 
-      checkpointFileInputStream = new FileInputStream(checkPointTarFile);
-      start = Instant.now();
-      TransferFsImage.copyFileToStream(response.getOutputStream(),
-          checkPointTarFile,
-          checkpointFileInputStream,
-          throttler);
-      end = Instant.now();
+      Instant start = Instant.now();
+      OmUtils.writeOmDBCheckpointToStream(checkpoint,
+          response.getOutputStream());
+      Instant end = Instant.now();
 
-      duration = Duration.between(start, end).toMillis();
-      LOG.debug("Time taken to write the checkpoint to response output " +
+      long duration = Duration.between(start, end).toMillis();
+      LOG.info("Time taken to write the checkpoint to response output " +
           "stream: " + duration + " milliseconds");
       omMetrics.setLastCheckpointStreamingTimeTaken(duration);
 
-      checkpoint.cleanupCheckpoint();
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error(
           "Unable to process metadata snapshot request. ", e);
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     } finally {
-      if (checkPointTarFile != null) {
-        FileUtils.deleteQuietly(checkPointTarFile);
+      if (checkpoint != null) {
+        try {
+          checkpoint.cleanupCheckpoint();
+        } catch (IOException e) {
+          LOG.error("Error trying to clean checkpoint at {} .",
+              checkpoint.getCheckpointLocation().toString());
+        }
       }
-      IOUtils.closeStream(checkpointFileInputStream);
     }
   }
 

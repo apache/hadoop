@@ -18,20 +18,21 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
-import com.google.common.collect.Lists;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
+import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -59,37 +60,59 @@ public class TestStagingPartitionedJobCommit
   /**
    * Subclass of the Partitioned Staging committer used in the test cases.
    */
-  private static final class PartitionedStagingCommitterForTesting
+  private final class PartitionedStagingCommitterForTesting
       extends PartitionedCommitterForTesting {
 
-    private boolean aborted = false;
+    private boolean aborted;
 
     private PartitionedStagingCommitterForTesting(TaskAttemptContext context)
         throws IOException {
       super(StagingTestBase.outputPath, context);
     }
 
+    /**
+     * Generate pending uploads to commit.
+     * This is quite complex as the mock pending uploads need to be saved
+     * to a filesystem for the next stage of the commit process.
+     * To simulate multiple commit, more than one .pendingset file is created,
+     * @param context job context
+     * @return an active commit containing a list of paths to valid pending set
+     * file.
+     * @throws IOException IO failure
+     */
     @Override
-    protected List<SinglePendingCommit> listPendingUploadsToCommit(
+    protected ActiveCommit listPendingUploadsToCommit(
         JobContext context) throws IOException {
-      List<SinglePendingCommit> pending = Lists.newArrayList();
 
+      LocalFileSystem localFS = FileSystem.getLocal(getConf());
+      ActiveCommit activeCommit = new ActiveCommit(localFS,
+          new ArrayList<>(0));
+      // need to create some pending entries.
       for (String dateint : Arrays.asList("20161115", "20161116")) {
+        PendingSet pendingSet = new PendingSet();
         for (String hour : Arrays.asList("13", "14")) {
+          String uploadId = UUID.randomUUID().toString();
           String key = OUTPUT_PREFIX + "/dateint=" + dateint + "/hour=" + hour +
-              "/" + UUID.randomUUID().toString() + ".parquet";
+              "/" + uploadId + ".parquet";
           SinglePendingCommit commit = new SinglePendingCommit();
           commit.setBucket(BUCKET);
           commit.setDestinationKey(key);
           commit.setUri("s3a://" + BUCKET + "/" + key);
-          commit.setUploadId(UUID.randomUUID().toString());
+          commit.setUploadId(uploadId);
           ArrayList<String> etags = new ArrayList<>();
           etags.add("tag1");
           commit.setEtags(etags);
-          pending.add(commit);
+          pendingSet.add(commit);
+          // register the upload so commit operations are not rejected
+          getMockResults().addUpload(uploadId, key);
         }
+        File file = File.createTempFile("staging", ".pendingset");
+        file.deleteOnExit();
+        Path path = new Path(file.toURI());
+        pendingSet.save(localFS, path, true);
+        activeCommit.add(path);
       }
-      return pending;
+      return activeCommit;
     }
 
     @Override

@@ -56,6 +56,7 @@ public enum OMAction implements AuditAction {
   COMMIT_MULTIPART_UPLOAD_PARTKEY,
   COMPLETE_MULTIPART_UPLOAD,
   LIST_MULTIPART_UPLOAD_PARTS,
+  LIST_MULTIPART_UPLOADS,
   ABORT_MULTIPART_UPLOAD,
 
   //ACL Actions
@@ -69,7 +70,9 @@ public enum OMAction implements AuditAction {
   CREATE_DIRECTORY,
   CREATE_FILE,
   LOOKUP_FILE,
-  LIST_STATUS;
+  LIST_STATUS,
+
+  GET_S3_SECRET;
 
   @Override
   public String getAction() {

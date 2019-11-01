@@ -53,6 +53,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
   private boolean fallback;
   private static final int RACK_LEVEL = 1;
   private static final int MAX_RETRY= 3;
+  private final SCMContainerPlacementMetrics metrics;
 
   /**
    * Constructs a Container Placement with rack awareness.
@@ -66,10 +67,11 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
    */
   public SCMContainerPlacementRackAware(final NodeManager nodeManager,
       final Configuration conf, final NetworkTopology networkTopology,
-      final boolean fallback) {
+      final boolean fallback, final SCMContainerPlacementMetrics metrics) {
     super(nodeManager, conf);
     this.networkTopology = networkTopology;
     this.fallback = fallback;
+    this.metrics = metrics;
   }
 
   /**
@@ -93,7 +95,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
       int nodesRequired, final long sizeRequired) throws SCMException {
     Preconditions.checkArgument(nodesRequired > 0);
-
+    metrics.incrDatanodeRequestCount(nodesRequired);
     int datanodeCount = networkTopology.getNumOfLeafNode(NetConstants.ROOT);
     int excludedNodesCount = excludedNodes == null ? 0 : excludedNodes.size();
     if (datanodeCount < nodesRequired + excludedNodesCount) {
@@ -240,17 +242,20 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       long sizeRequired) throws SCMException {
     int ancestorGen = RACK_LEVEL;
     int maxRetry = MAX_RETRY;
-    List<Node> excludedNodesForCapacity = null;
+    List<String> excludedNodesForCapacity = null;
+    boolean isFallbacked = false;
     while(true) {
-      Node node = networkTopology.chooseRandom(NetConstants.ROOT, null,
-          excludedNodes, affinityNode, ancestorGen);
+      metrics.incrDatanodeChooseAttemptCount();
+      Node node = networkTopology.chooseRandom(NetConstants.ROOT,
+          excludedNodesForCapacity, excludedNodes, affinityNode, ancestorGen);
       if (node == null) {
         // cannot find the node which meets all constrains
-        LOG.warn("Failed to find the datanode. excludedNodes:" +
+        LOG.warn("Failed to find the datanode for container. excludedNodes:" +
             (excludedNodes == null ? "" : excludedNodes.toString()) +
             ", affinityNode:" +
             (affinityNode == null ? "" : affinityNode.getNetworkFullPath()));
         if (fallback) {
+          isFallbacked = true;
           // fallback, don't consider the affinity node
           if (affinityNode != null) {
             affinityNode = null;
@@ -263,14 +268,17 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
           }
         }
         // there is no constrains to reduce or fallback is true
-        throw new SCMException("No satisfied datanode to meet the " +
+        throw new SCMException("No satisfied datanode to meet the" +
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
-        LOG.debug("Datanode {} is chosen. Required size is {}",
-            node.toString(), sizeRequired);
-        if (excludedNodes != null && excludedNodesForCapacity != null) {
-          excludedNodes.removeAll(excludedNodesForCapacity);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Datanode {} is chosen for container. Required size is {}",
+              node.toString(), sizeRequired);
+        }
+        metrics.incrDatanodeChooseSuccessCount();
+        if (isFallbacked) {
+          metrics.incrDatanodeChooseFallbackCount();
         }
         return node;
       } else {
@@ -285,12 +293,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
         if (excludedNodesForCapacity == null) {
           excludedNodesForCapacity = new ArrayList<>();
         }
-        excludedNodesForCapacity.add(node);
-        if (excludedNodes == null) {
-          excludedNodes = excludedNodesForCapacity;
-        } else {
-          excludedNodes.add(node);
-        }
+        excludedNodesForCapacity.add(node.getNetworkFullPath());
       }
     }
   }

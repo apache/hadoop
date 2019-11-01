@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -40,12 +41,13 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
@@ -55,7 +57,6 @@ import org.apache.ratis.protocol.RaftException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -78,6 +79,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public static XceiverClientRatis newXceiverClientRatis(
       org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
       Configuration ozoneConf) {
+    return newXceiverClientRatis(pipeline, ozoneConf, null);
+  }
+
+  public static XceiverClientRatis newXceiverClientRatis(
+      org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
+      Configuration ozoneConf, X509Certificate caCert) {
     final String rpcType = ozoneConf
         .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
             ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
@@ -87,7 +94,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
     final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
-        SecurityConfig(ozoneConf));
+        SecurityConfig(ozoneConf), caCert);
     return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
         retryPolicy, tlsConfig, clientRequestTimeout);
@@ -163,8 +170,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
-        RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
+          RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    }
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
@@ -212,16 +221,20 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     try (Scope scope = GlobalTracer.get()
         .buildSpan("XceiverClientRatis." + request.getCmdType().name())
         .startActive(true)) {
-      ContainerCommandRequestProto finalPayload =
-          ContainerCommandRequestProto.newBuilder(request)
-              .setTraceID(TracingUtil.exportCurrentSpan())
-              .build();
-      boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
-      ByteString byteString = finalPayload.toByteString();
-      LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
-      return isReadOnlyRequest ?
-          getClient().sendReadOnlyAsync(() -> byteString) :
-          getClient().sendAsync(() -> byteString);
+      final ContainerCommandRequestMessage message
+          = ContainerCommandRequestMessage.toMessage(
+              request, TracingUtil.exportCurrentSpan());
+      if (HddsUtils.isReadOnly(request)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync ReadOnly {}", message);
+        }
+        return getClient().sendReadOnlyAsync(message);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync {}", message);
+        }
+        return getClient().sendAsync(message);
+      }
     }
   }
 
@@ -251,7 +264,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       clientReply.setLogIndex(commitIndex);
       return clientReply;
     }
-    LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    }
     RaftClientReply reply;
     try {
       CompletableFuture<RaftClientReply> replyFuture = getClient()
@@ -303,10 +318,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     metrics.incrPendingContainerOpsMetrics(request.getCmdType());
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> {
-          LOG.debug("received reply {} for request: cmdType={} containerID={}"
-                  + " pipelineID={} traceID={} exception: {}", reply,
-              request.getCmdType(), request.getContainerID(),
-              request.getPipelineID(), request.getTraceID(), e);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("received reply {} for request: cmdType={} containerID={}"
+                    + " pipelineID={} traceID={} exception: {}", reply,
+                request.getCmdType(), request.getContainerID(),
+                request.getPipelineID(), request.getTraceID(), e);
+          }
           metrics.decrPendingContainerOpsMetrics(request.getCmdType());
           metrics.addContainerOpsLatency(request.getCmdType(),
               Time.monotonicNowNanos() - requestTime);

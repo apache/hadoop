@@ -23,8 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.protocol.RaftGroup;
@@ -54,14 +53,18 @@ public final class RatisPipelineUtils {
    *
    * @param pipeline        - Pipeline to be destroyed
    * @param ozoneConf       - Ozone configuration
+   * @param grpcTlsConfig
    * @throws IOException
    */
-  static void destroyPipeline(Pipeline pipeline, Configuration ozoneConf) {
+  static void destroyPipeline(Pipeline pipeline, Configuration ozoneConf,
+      GrpcTlsConfig grpcTlsConfig) {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
+    }
     for (DatanodeDetails dn : pipeline.getNodes()) {
       try {
-        destroyPipeline(dn, pipeline.getId(), ozoneConf);
+        destroyPipeline(dn, pipeline.getId(), ozoneConf, grpcTlsConfig);
       } catch (IOException e) {
         LOG.warn("Pipeline destroy failed for pipeline={} dn={}",
             pipeline.getId(), dn);
@@ -75,10 +78,11 @@ public final class RatisPipelineUtils {
    * @param dn         - Datanode on which pipeline needs to be destroyed
    * @param pipelineID - ID of pipeline to be destroyed
    * @param ozoneConf  - Ozone configuration
+   * @param grpcTlsConfig - grpc tls configuration
    * @throws IOException
    */
   static void destroyPipeline(DatanodeDetails dn, PipelineID pipelineID,
-      Configuration ozoneConf) throws IOException {
+      Configuration ozoneConf, GrpcTlsConfig grpcTlsConfig) throws IOException {
     final String rpcType = ozoneConf
         .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
             ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
@@ -86,13 +90,12 @@ public final class RatisPipelineUtils {
     final RaftPeer p = RatisHelper.toRaftPeer(dn);
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
-    final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(
-        new SecurityConfig(ozoneConf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
     try(RaftClient client = RatisHelper
         .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout)) {
+            retryPolicy, maxOutstandingRequests, grpcTlsConfig,
+            requestTimeout)) {
       client.groupRemove(RaftGroupId.valueOf(pipelineID.getId()),
           true, p.getId());
     }

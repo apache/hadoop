@@ -31,7 +31,7 @@ public class MockRatisPipelineProvider extends RatisPipelineProvider {
   public MockRatisPipelineProvider(NodeManager nodeManager,
                             PipelineStateManager stateManager,
                             Configuration conf) {
-    super(nodeManager, stateManager, conf);
+    super(nodeManager, stateManager, conf, null);
   }
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {

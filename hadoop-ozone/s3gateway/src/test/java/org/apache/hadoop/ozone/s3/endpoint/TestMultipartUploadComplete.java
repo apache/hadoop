@@ -70,7 +70,7 @@ public class TestMultipartUploadComplete {
 
   private String initiateMultipartUpload(String key) throws IOException,
       OS3Exception {
-    Response response = REST.multipartUpload(BUCKET, key, "", "", null);
+    Response response = REST.initializeMultipartUpload(BUCKET, key);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();
     assertNotNull(multipartUploadInitiateResponse.getUploadID());
@@ -99,7 +99,7 @@ public class TestMultipartUploadComplete {
   private void completeMultipartUpload(String key,
       CompleteMultipartUploadRequest completeMultipartUploadRequest,
       String uploadID) throws IOException, OS3Exception {
-    Response response = REST.multipartUpload(BUCKET, key, "", uploadID,
+    Response response = REST.completeMultipartUpload(BUCKET, key, uploadID,
         completeMultipartUploadRequest);
 
     assertEquals(response.getStatus(), 200);

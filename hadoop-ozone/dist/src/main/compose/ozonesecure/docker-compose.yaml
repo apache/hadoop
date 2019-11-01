@@ -35,7 +35,7 @@ services:
       command: ["hadoop", "kms"]
 
   datanode:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     volumes:
       - ../..:/opt/hadoop
     ports:
@@ -44,7 +44,7 @@ services:
     env_file:
       - docker-config
   om:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: om
     volumes:
       - ../..:/opt/hadoop
@@ -56,7 +56,7 @@ services:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
   s3g:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: s3g
     volumes:
       - ../..:/opt/hadoop
@@ -66,7 +66,7 @@ services:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
   recon:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: recon
     volumes:
       - ../..:/opt/hadoop
@@ -78,7 +78,7 @@ services:
       WAITFOR: om:9874
     command: ["/opt/hadoop/bin/ozone","recon"]
   scm:
-    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
     hostname: scm
     volumes:
       - ../..:/opt/hadoop

@@ -54,9 +54,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   public static final String PRIMARY_GROUP_MAPPING = "%primary_group";
 
+  public static final String SECONDARY_GROUP_MAPPING = "%secondary_group";
+
   private boolean overrideWithQueueMappings = false;
   private List<QueueMapping> mappings = null;
   private Groups groups;
+  private CapacitySchedulerQueueManager queueManager;
 
   @Private
   public static class QueueMapping {
@@ -159,10 +162,38 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     for (QueueMapping mapping : mappings) {
       if (mapping.type == MappingType.USER) {
         if (mapping.source.equals(CURRENT_USER_MAPPING)) {
-          if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+          if (mapping.getParentQueue() != null
+              && mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
+              && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
+            return getPlacementContext(
+                new QueueMapping(mapping.getType(), mapping.getSource(),
+                    CURRENT_USER_MAPPING, groups.getGroups(user).get(0)),
+                user);
+          } else if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
             return getPlacementContext(mapping, user);
           } else if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
             return getPlacementContext(mapping, groups.getGroups(user).get(0));
+          } else if (mapping.queue.equals(SECONDARY_GROUP_MAPPING)) {
+            List<String> groupsList = groups.getGroups(user);
+            String secondaryGroup = null;
+            // Traverse all secondary groups (as there could be more than one
+            // and position is not guaranteed) and ensure there is queue with
+            // the same name
+            for (int i = 1; i < groupsList.size(); i++) {
+              if (this.queueManager.getQueue(groupsList.get(i)) != null) {
+                secondaryGroup = groupsList.get(i);
+                break;
+              }
+            }
+            if (secondaryGroup != null) {
+              return getPlacementContext(mapping, secondaryGroup);
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("User {} is not associated with any Secondary "
+                    + "Group. Hence it may use the 'default' queue", user);
+              }
+              return null;
+            }
           } else {
             return getPlacementContext(mapping);
           }
@@ -251,8 +282,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // Get new user/group mappings
     List<QueueMapping> newMappings = new ArrayList<>();
 
-    CapacitySchedulerQueueManager queueManager =
-        schedulerContext.getCapacitySchedulerQueueManager();
+    queueManager = schedulerContext.getCapacitySchedulerQueueManager();
 
     // check if mappings refer to valid queues
     for (QueueMapping mapping : queueMappings) {
@@ -352,7 +382,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private static QueueMapping validateAndGetAutoCreatedQueueMapping(
       CapacitySchedulerQueueManager queueManager, QueueMapping mapping,
       QueuePath queuePath) throws IOException {
-    if (queuePath.hasParentQueue()) {
+    if (queuePath.hasParentQueue()
+        && queuePath.getParentQueue().equals(PRIMARY_GROUP_MAPPING)) {
+      // dynamic parent queue
+      return new QueueMapping(mapping.getType(), mapping.getSource(),
+          queuePath.getLeafQueue(), queuePath.getParentQueue());
+    } else if (queuePath.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
       validateParentQueue(queueManager.getQueue(queuePath.getParentQueue()),
@@ -365,10 +400,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   private static boolean isStaticQueueMapping(QueueMapping mapping) {
-    return !mapping.getQueue().contains(
-        UserGroupMappingPlacementRule.CURRENT_USER_MAPPING) && !mapping
-        .getQueue().contains(
-            UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING);
+    return !mapping.getQueue()
+        .contains(UserGroupMappingPlacementRule.CURRENT_USER_MAPPING)
+        && !mapping.getQueue()
+            .contains(UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING)
+        && !mapping.getQueue()
+            .contains(UserGroupMappingPlacementRule.SECONDARY_GROUP_MAPPING);
   }
 
   private static class QueuePath {
@@ -442,5 +479,11 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   @VisibleForTesting
   public List<QueueMapping> getQueueMappings() {
     return mappings;
+  }
+
+  @VisibleForTesting
+  @Private
+  public void setQueueManager(CapacitySchedulerQueueManager queueManager) {
+    this.queueManager = queueManager;
   }
 }

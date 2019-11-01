@@ -48,6 +48,8 @@ fi
 # shellcheck source=testlib.sh
 source "$COMPOSE_DIR/../testlib.sh"
 
+create_results_dir
+
 execute_robot_test "$1" "$2"
 
 generate_report

@@ -135,8 +135,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
   }
 
   @Override
-  public void buildMissingContainerSet(Set<Long> createdContainerSet) {
-    containerSet.buildMissingContainerSet(createdContainerSet);
+  public void buildMissingContainerSetAndValidate(
+      Map<Long, Long> container2BCSIDMap) {
+    containerSet
+        .buildMissingContainerSetAndValidate(container2BCSIDMap);
   }
 
   @Override
@@ -153,8 +155,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
   private ContainerCommandResponseProto dispatchRequest(
       ContainerCommandRequestProto msg, DispatcherContext dispatcherContext) {
     Preconditions.checkNotNull(msg);
-    LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
-        msg.getTraceID());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
+          msg.getTraceID());
+    }
 
     AuditAction action = ContainerCommandRequestPBHelper.getAuditAction(
         msg.getCmdType());
@@ -185,9 +189,9 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         cmdType == ContainerProtos.Type.WriteChunk && (dispatcherContext == null
             || dispatcherContext.getStage()
             == DispatcherContext.WriteChunkStage.COMBINED);
-    Set<Long> containerIdSet = null;
+    Map<Long, Long> container2BCSIDMap = null;
     if (dispatcherContext != null) {
-      containerIdSet = dispatcherContext.getCreateContainerSet();
+      container2BCSIDMap = dispatcherContext.getContainer2BCSIDMap();
     }
     if (isWriteCommitStage) {
       //  check if the container Id exist in the loaded snapshot file. if
@@ -196,9 +200,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       // snapshot.
       // just add it to the list, and remove it from missing container set
       // as it might have been added in the list during "init".
-      Preconditions.checkNotNull(containerIdSet);
-      if (!containerIdSet.contains(containerID)) {
-        containerIdSet.add(containerID);
+      Preconditions.checkNotNull(container2BCSIDMap);
+      if (container2BCSIDMap.get(containerID) == null) {
+        container2BCSIDMap
+            .put(containerID, container.getBlockCommitSequenceId());
         containerSet.getMissingContainerSet().remove(containerID);
       }
     }
@@ -228,11 +233,12 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
           audit(action, eventType, params, AuditEventStatus.FAILURE, sce);
           return ContainerUtils.logAndReturnError(LOG, sce, msg);
         }
-        Preconditions.checkArgument(isWriteStage && containerIdSet != null
+        Preconditions.checkArgument(isWriteStage && container2BCSIDMap != null
             || dispatcherContext == null);
-        if (containerIdSet != null) {
+        if (container2BCSIDMap != null) {
           // adds this container to list of containers created in the pipeline
-          containerIdSet.add(containerID);
+          // with initial BCSID recorded as 0.
+          container2BCSIDMap.putIfAbsent(containerID, Long.valueOf(0));
         }
         container = getContainer(containerID);
       }
@@ -284,6 +290,11 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       // state here.
 
       Result result = responseProto.getResult();
+      if (cmdType == ContainerProtos.Type.CreateContainer
+          && result == Result.SUCCESS && dispatcherContext != null) {
+        Preconditions.checkNotNull(dispatcherContext.getContainer2BCSIDMap());
+        container2BCSIDMap.putIfAbsent(containerID, Long.valueOf(0));
+      }
       if (!HddsUtils.isReadOnly(msg) && !canIgnoreException(result)) {
         // If the container is open/closing and the container operation
         // has failed, it should be first marked unhealthy and the initiate the
@@ -313,7 +324,8 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         sendCloseContainerActionIfNeeded(container);
       }
 
-      if(result == Result.SUCCESS) {
+      if (result == Result.SUCCESS) {
+        updateBCSID(container, dispatcherContext, cmdType);
         audit(action, eventType, params, AuditEventStatus.SUCCESS, null);
       } else {
         audit(action, eventType, params, AuditEventStatus.FAILURE,
@@ -329,6 +341,22 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
     }
   }
 
+  private void updateBCSID(Container container,
+      DispatcherContext dispatcherContext, ContainerProtos.Type cmdType) {
+    if (dispatcherContext != null && (cmdType == ContainerProtos.Type.PutBlock
+        || cmdType == ContainerProtos.Type.PutSmallFile)) {
+      Preconditions.checkNotNull(container);
+      long bcsID = container.getBlockCommitSequenceId();
+      long containerId = container.getContainerData().getContainerID();
+      Map<Long, Long> container2BCSIDMap;
+      container2BCSIDMap = dispatcherContext.getContainer2BCSIDMap();
+      Preconditions.checkNotNull(container2BCSIDMap);
+      Preconditions.checkArgument(container2BCSIDMap.containsKey(containerId));
+      // updates the latest BCSID on every putBlock or putSmallFile
+      // transaction over Ratis.
+      container2BCSIDMap.computeIfPresent(containerId, (u, v) -> v = bcsID);
+    }
+  }
   /**
    * Create a container using the input container request.
    * @param containerRequest - the container request which requires container
@@ -527,7 +555,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       }
       break;
 
-    default: LOG.debug("Invalid audit event status - " + result);
+    default:
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Invalid audit event status - " + result);
+      }
     }
   }
 

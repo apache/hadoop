@@ -32,6 +32,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.DDBPathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore;
@@ -92,7 +93,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
   }
 
   private S3AFileStatus getEmptyDirStatus(Path dir) throws IOException {
-    return getFileSystem().innerGetFileStatus(dir, true);
+    return getFileSystem().innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
   }
 
   @Test
@@ -118,21 +119,22 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       Path newFile = path("existing-dir/new-file");
       touch(fs, newFile);
 
-      S3AFileStatus status = fs.innerGetFileStatus(existingDir, true);
+      S3AFileStatus status = fs.innerGetFileStatus(existingDir, true,
+          StatusProbeEnum.ALL);
       assertEquals("Should not be empty dir", Tristate.FALSE,
           status.isEmptyDirectory());
 
       // 3. Assert that removing the only file the MetadataStore witnessed
       // being created doesn't cause it to think the directory is now empty.
       fs.delete(newFile, false);
-      status = fs.innerGetFileStatus(existingDir, true);
+      status = fs.innerGetFileStatus(existingDir, true, StatusProbeEnum.ALL);
       assertEquals("Should not be empty dir", Tristate.FALSE,
           status.isEmptyDirectory());
 
       // 4. Assert that removing the final file, that existed "before"
       // MetadataStore started, *does* cause the directory to be marked empty.
       fs.delete(existingFile, false);
-      status = fs.innerGetFileStatus(existingDir, true);
+      status = fs.innerGetFileStatus(existingDir, true, StatusProbeEnum.ALL);
       assertEquals("Should be empty dir now", Tristate.TRUE,
           status.isEmptyDirectory());
     } finally {

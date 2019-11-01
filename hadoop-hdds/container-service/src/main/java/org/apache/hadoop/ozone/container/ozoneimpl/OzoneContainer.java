@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto
@@ -42,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 
+import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
 import org.apache.hadoop.ozone.container.replication
     .OnDemandContainerReplicationSource;
@@ -52,7 +52,11 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 
 /**
  * Ozone main class sets up the network servers and initializes the container
@@ -71,7 +75,9 @@ public class OzoneContainer {
   private final XceiverServerSpi writeChannel;
   private final XceiverServerSpi readChannel;
   private final ContainerController controller;
-  private ContainerScrubber scrubber;
+  private ContainerMetadataScanner metadataScanner;
+  private List<ContainerDataScanner> dataScanners;
+  private final BlockDeletingService blockDeletingService;
 
   /**
    * Construct OzoneContainer object.
@@ -87,7 +93,7 @@ public class OzoneContainer {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
-    this.scrubber = null;
+    this.metadataScanner = null;
 
     buildContainerSet();
     final ContainerMetrics metrics = ContainerMetrics.create(conf);
@@ -107,11 +113,22 @@ public class OzoneContainer {
      */
     this.controller = new ContainerController(containerSet, handlers);
     this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
-        datanodeDetails, config, hddsDispatcher, context, certClient);
+        datanodeDetails, config, hddsDispatcher, controller, certClient,
+        context);
     this.readChannel = new XceiverServerGrpc(
         datanodeDetails, config, hddsDispatcher, certClient,
         createReplicationService());
-
+    long svcInterval = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    long serviceTimeout = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    this.blockDeletingService =
+        new BlockDeletingService(this, svcInterval, serviceTimeout,
+            TimeUnit.MILLISECONDS, config);
   }
 
   private GrpcReplicationService createReplicationService() {
@@ -152,18 +169,24 @@ public class OzoneContainer {
    * Start background daemon thread for performing container integrity checks.
    */
   private void startContainerScrub() {
-    boolean enabled = config.getBoolean(
-        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
-        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+    ContainerScrubberConfiguration c = config.getObject(
+        ContainerScrubberConfiguration.class);
+    boolean enabled = c.isEnabled();
 
     if (!enabled) {
-      LOG.info("Background container scrubber has been disabled by {}",
-              HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
+      LOG.info("Background container scanner has been disabled.");
     } else {
-      if (this.scrubber == null) {
-        this.scrubber = new ContainerScrubber(config, controller);
+      if (this.metadataScanner == null) {
+        this.metadataScanner = new ContainerMetadataScanner(c, controller);
       }
-      scrubber.up();
+      this.metadataScanner.start();
+
+      dataScanners = new ArrayList<>();
+      for (HddsVolume v : volumeSet.getVolumesList()) {
+        ContainerDataScanner s = new ContainerDataScanner(c, controller, v);
+        s.start();
+        dataScanners.add(s);
+      }
     }
   }
 
@@ -171,10 +194,14 @@ public class OzoneContainer {
    * Stop the scanner thread and wait for thread to die.
    */
   private void stopContainerScrub() {
-    if (scrubber == null) {
+    if (metadataScanner == null) {
       return;
     }
-    scrubber.down();
+    metadataScanner.shutdown();
+    metadataScanner = null;
+    for (ContainerDataScanner s : dataScanners) {
+      s.shutdown();
+    }
   }
 
   /**
@@ -189,6 +216,7 @@ public class OzoneContainer {
     readChannel.start();
     hddsDispatcher.init();
     hddsDispatcher.setScmId(scmId);
+    blockDeletingService.start();
   }
 
   /**
@@ -203,6 +231,8 @@ public class OzoneContainer {
     this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
+    blockDeletingService.shutdown();
+    ContainerMetrics.remove();
   }
 
 

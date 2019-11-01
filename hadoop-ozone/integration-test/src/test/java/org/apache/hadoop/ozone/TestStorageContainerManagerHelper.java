@@ -16,37 +16,30 @@
  */
 package org.apache.hadoop.ozone;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.hdds.utils.MetadataKeyFilters;
+import org.apache.hadoop.hdds.utils.MetadataKeyFilters.KeyPrefixFilter;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.web.handlers.BucketArgs;
-import org.apache.hadoop.ozone.web.handlers.KeyArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * A helper class used by {@link TestStorageContainerManager} to generate
@@ -56,53 +49,32 @@ public class TestStorageContainerManagerHelper {
 
   private final MiniOzoneCluster cluster;
   private final Configuration conf;
-  private final StorageHandler storageHandler;
 
   public TestStorageContainerManagerHelper(MiniOzoneCluster cluster,
       Configuration conf) throws IOException {
     this.cluster = cluster;
     this.conf = conf;
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 
   public Map<String, OmKeyInfo> createKeys(int numOfKeys, int keySize)
       throws Exception {
     Map<String, OmKeyInfo> keyLocationMap = Maps.newHashMap();
-    String volume = "volume" + RandomStringUtils.randomNumeric(5);
-    String bucket = "bucket" + RandomStringUtils.randomNumeric(5);
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
-    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    UserArgs userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
 
-    VolumeArgs createVolumeArgs = new VolumeArgs(volume, userArgs);
-    createVolumeArgs.setUserName(userName);
-    createVolumeArgs.setAdminName(adminName);
-    storageHandler.createVolume(createVolumeArgs);
-
-    BucketArgs bucketArgs = new BucketArgs(bucket, createVolumeArgs);
-    bucketArgs.setStorageType(StorageType.DISK);
-    storageHandler.createBucket(bucketArgs);
-
-    // Write 20 keys in bucket.
+    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    // Write 20 keys in bucketName.
     Set<String> keyNames = Sets.newHashSet();
-    KeyArgs keyArgs;
     for (int i = 0; i < numOfKeys; i++) {
       String keyName = RandomStringUtils.randomAlphabetic(5) + i;
       keyNames.add(keyName);
-      keyArgs = new KeyArgs(keyName, bucketArgs);
-      keyArgs.setSize(keySize);
-      // Just for testing list keys call, so no need to write real data.
-      OutputStream stream = storageHandler.newKeyWriter(keyArgs);
-      stream.write(DFSUtil.string2Bytes(
-          RandomStringUtils.randomAlphabetic(5)));
-      stream.close();
+
+      TestDataUtil
+          .createKey(bucket, keyName, RandomStringUtils.randomAlphabetic(5));
     }
 
     for (String key : keyNames) {
       OmKeyArgs arg = new OmKeyArgs.Builder()
-          .setVolumeName(volume)
-          .setBucketName(bucket)
+          .setVolumeName(bucket.getVolumeName())
+          .setBucketName(bucket.getName())
           .setKeyName(key)
           .setRefreshPipeline(true)
           .build();

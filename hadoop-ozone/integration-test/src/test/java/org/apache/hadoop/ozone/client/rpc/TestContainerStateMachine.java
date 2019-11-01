@@ -23,15 +23,20 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.ContainerStateMachine;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.RatisServerConfiguration;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -39,6 +44,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -85,7 +91,8 @@ public class TestContainerStateMachine {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, TimeUnit.SECONDS);
     conf.setQuietMode(false);
     OzoneManager.setTestSecureOmFlag(true);
-  //  conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
+    conf.setLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY, 1);
+    //  conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
     cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1)
             .setHbInterval(200)
@@ -148,4 +155,57 @@ public class TestContainerStateMachine {
             .getContainerState()
             == ContainerProtos.ContainerDataProto.State.UNHEALTHY);
   }
+
+  @Test
+  public void testRatisSnapshotRetention() throws Exception {
+
+    ContainerStateMachine stateMachine =
+        (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
+    SimpleStateMachineStorage storage =
+        (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
+    Assert.assertNull(storage.findLatestSnapshot());
+
+    // Write 10 keys. Num snapshots should be equal to config value.
+    for (int i = 1; i <= 10; i++) {
+      OzoneOutputStream key =
+          objectStore.getVolume(volumeName).getBucket(bucketName)
+              .createKey(("ratis" + i), 1024, ReplicationType.RATIS,
+                  ReplicationFactor.ONE, new HashMap<>());
+      // First write and flush creates a container in the datanode
+      key.write(("ratis" + i).getBytes());
+      key.flush();
+      key.write(("ratis" + i).getBytes());
+    }
+
+    RatisServerConfiguration ratisServerConfiguration =
+        conf.getObject(RatisServerConfiguration.class);
+
+    stateMachine =
+        (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
+    storage = (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
+    int numSnapshots = parentPath.getParent().toFile().listFiles().length;
+    Assert.assertTrue(Math.abs(ratisServerConfiguration
+        .getNumSnapshotsRetained() - numSnapshots) <= 1);
+
+    // Write 10 more keys. Num Snapshots should remain the same.
+    for (int i = 11; i <= 20; i++) {
+      OzoneOutputStream key =
+          objectStore.getVolume(volumeName).getBucket(bucketName)
+              .createKey(("ratis" + i), 1024, ReplicationType.RATIS,
+                  ReplicationFactor.ONE, new HashMap<>());
+      // First write and flush creates a container in the datanode
+      key.write(("ratis" + i).getBytes());
+      key.flush();
+      key.write(("ratis" + i).getBytes());
+    }
+    stateMachine =
+        (ContainerStateMachine) ContainerTestHelper.getStateMachine(cluster);
+    storage = (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
+    parentPath = storage.findLatestSnapshot().getFile().getPath();
+    numSnapshots = parentPath.getParent().toFile().listFiles().length;
+    Assert.assertTrue(Math.abs(ratisServerConfiguration
+        .getNumSnapshotsRetained() - numSnapshots) <= 1);
+  }
+
 }

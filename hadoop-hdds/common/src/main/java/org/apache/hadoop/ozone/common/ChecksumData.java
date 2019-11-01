@@ -40,9 +40,14 @@ public class ChecksumData {
   private List<ByteString> checksums;
 
   public ChecksumData(ChecksumType checksumType, int bytesPerChecksum) {
+    this(checksumType, bytesPerChecksum, Lists.newArrayList());
+  }
+
+  public ChecksumData(ChecksumType checksumType, int bytesPerChecksum,
+                      List<ByteString> checksums) {
     this.type = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
-    this.checksums = Lists.newArrayList();
+    this.checksums = checksums;
   }
 
   /**

@@ -21,11 +21,16 @@ package org.apache.hadoop.tools.mapred;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +58,8 @@ import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,6 +67,7 @@ import org.junit.Test;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCopyMapper {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyMapper.class);
@@ -444,6 +452,55 @@ public class TestCopyMapper {
     }
   }
 
+  @Test(timeout = 40000)
+  public void testCopyWhileAppend() throws Exception {
+    deleteState();
+    mkdirs(SOURCE_PATH + "/1");
+    touchFile(SOURCE_PATH + "/1/3");
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+            stubContext.getContext();
+    copyMapper.setup(context);
+    final Path path = new Path(SOURCE_PATH + "/1/3");
+    int manyBytes = 100000000;
+    appendFile(path, manyBytes);
+    ScheduledExecutorService scheduledExecutorService =
+            Executors.newSingleThreadScheduledExecutor();
+    Runnable task = new Runnable() {
+      public void run() {
+        try {
+          int maxAppendAttempts = 20;
+          int appendCount = 0;
+          while (appendCount < maxAppendAttempts) {
+            appendFile(path, 1000);
+            Thread.sleep(200);
+            appendCount++;
+          }
+        } catch (IOException | InterruptedException e) {
+            LOG.error("Exception encountered ", e);
+            Assert.fail("Test failed: " + e.getMessage());
+        }
+      }
+    };
+    scheduledExecutorService.schedule(task, 10, TimeUnit.MILLISECONDS);
+    try {
+      copyMapper.map(new Text(DistCpUtils.getRelativePath(
+              new Path(SOURCE_PATH), path)),
+              new CopyListingFileStatus(cluster.getFileSystem().getFileStatus(
+                      path)), context);
+    } catch (Exception ex) {
+      LOG.error("Exception encountered ", ex);
+      String exceptionAsString = StringUtils.stringifyException(ex);
+      if (exceptionAsString.contains(DistCpConstants.LENGTH_MISMATCH_ERROR_MSG) ||
+              exceptionAsString.contains(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)) {
+        Assert.fail("Test failed: " + exceptionAsString);
+      }
+    } finally {
+      scheduledExecutorService.shutdown();
+    }
+  }
+
   @Test(timeout=40000)
   public void testMakeDirFailure() {
     try {
@@ -713,7 +770,7 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(tmpFS.getFileStatus(
                   new Path(SOURCE_PATH + "/src/file"))),
                 context);
-            Assert.assertEquals(stubContext.getWriter().values().size(), 1);
+            assertThat(stubContext.getWriter().values().size()).isEqualTo(1);
             Assert.assertTrue(stubContext.getWriter().values().get(0).toString().startsWith("SKIP"));
             Assert.assertTrue(stubContext.getWriter().values().get(0).toString().
                 contains(SOURCE_PATH + "/src/file"));
