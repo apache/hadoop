@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-syntax = "proto2";
+
 option java_package = "org.apache.hadoop.ha.proto";
 option java_outer_classname = "ZKFCProtocolProtos";
 option java_generic_services = true;

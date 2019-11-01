@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax="proto2";
+
  // This file contains protocol buffers that are used to reconfigure NameNode
  // and DataNode by HDFS admin.
 

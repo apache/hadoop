@@ -19,7 +19,6 @@
 // This file contains protocol buffers that are used by bkjournal
 // mostly for storing data in zookeeper
 
-syntax = "proto2";
 option java_package = "org.apache.hadoop.contrib.bkjournal";
 option java_outer_classname = "BKJournalProtos";
 option java_generate_equals_and_hash = true;

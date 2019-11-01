@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-syntax="proto2";
+
 // This file contains protocol buffers used to communicate edits to clients
 // as part of the inotify system.
 

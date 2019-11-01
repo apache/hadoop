@@ -179,21 +179,29 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
           <execution>
-            <id>src-compile-protoc</id>
+            <id>compile-protoc</id>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
             <configuration>
-              <skip>false</skip>
-              <additionalProtoPathElements>
-                <additionalProtoPathElement>
-                  ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
-                </additionalProtoPathElement>
-                <additionalProtoPathElement>
-                  ${basedir}/../hadoop-hdfs-client/src/main/proto
-                </additionalProtoPathElement>
-              </additionalProtoPathElements>
+              <protocVersion>${protobuf.version}</protocVersion>
+              <protocCommand>${protoc.path}</protocCommand>
+              <imports>
+                <param>${basedir}/../hadoop-hdfs-client/src/main/proto</param>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>FederationProtocol.proto</include>
+                  <include>RouterProtocol.proto</include>
+                </includes>
+              </source>
             </configuration>
           </execution>
         </executions>

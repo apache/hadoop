@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
+
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "TestProtos";
 option java_generate_equals_and_hash = true;
