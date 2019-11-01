@@ -353,6 +353,11 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.microsoft.graph</groupId>
+      <artifactId>microsoft-graph</artifactId>
+      <version>1.7.1</version>
+    </dependency>
   </dependencies>
 
   <build>

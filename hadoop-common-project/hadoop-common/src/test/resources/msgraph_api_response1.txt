@@ -1,0 +1,44 @@
+[
+  {
+    "@odata.type": "#microsoft.graph.group",
+    "id": "id1",
+    "createdDateTime": "2016-07-20T02:43:11Z",
+    "creationOptions": [],
+    "description": null,
+    "displayName": "group 1",
+    "groupTypes": [],
+    "mail": null,
+    "mailEnabled": false,
+    "mailNickname": "group_1",
+    "renewedDateTime": "2016-07-20T02:43:11Z",
+    "securityEnabled": true
+  },
+  {
+    "@odata.type": "#microsoft.graph.group",
+    "id": "id2",
+    "description": "desc",
+    "displayName": "Group_2",
+    "groupTypes": [],
+    "mail": "Group_2@domain.com",
+    "mailEnabled": true,
+    "mailNickname": "Group_2",
+    "renewedDateTime": "2016-07-20T02:58:38Z",
+    "securityEnabled": true
+  },
+  {
+    "@odata.type": "#microsoft.graph.group",
+    "id": "id3",
+    "deletedDateTime": null,
+    "classification": null,
+    "createdDateTime": "2016-07-20T03:48:44Z",
+    "creationOptions": [],
+    "description": "desc3",
+    "displayName": "group3",
+    "groupTypes": [],
+    "mail": null,
+    "mailEnabled": false,
+    "mailNickname": "group3",
+    "renewedDateTime": "2016-07-20T03:48:44Z",
+    "securityEnabled": true
+  }
+]
