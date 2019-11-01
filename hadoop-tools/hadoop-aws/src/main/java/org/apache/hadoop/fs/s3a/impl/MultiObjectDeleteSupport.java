@@ -93,7 +93,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
       String code = error.getCode();
       result.append(String.format("%s: %s: %s%n", code, error.getKey(),
           error.getMessage()));
-      if (exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
+      if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
         exitCode = code;
       }
     }
