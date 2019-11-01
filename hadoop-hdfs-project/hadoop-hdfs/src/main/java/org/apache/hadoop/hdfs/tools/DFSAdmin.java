@@ -240,10 +240,10 @@ public class DFSAdmin extends FsShell {
         "\t\tThe storage type specific quota is cleared when -storageType " +
         "option is specified.\n" +
         "\t\tAvailable storageTypes are \n" +
-        "\t\t- RAM_DISK\n" +
         "\t\t- DISK\n" +
         "\t\t- SSD\n" +
-        "\t\t- ARCHIVE";
+        "\t\t- ARCHIVE\n" +
+        "\t\t- PROVIDED";
 
 
     private StorageType type;
@@ -304,10 +304,10 @@ public class DFSAdmin extends FsShell {
         "\t\t3. the directory does not exist or is a file.\n" +
         "\t\tThe storage type specific quota is set when -storageType option is specified.\n" +
         "\t\tAvailable storageTypes are \n" +
-        "\t\t- RAM_DISK\n" +
         "\t\t- DISK\n" +
         "\t\t- SSD\n" +
-        "\t\t- ARCHIVE";
+        "\t\t- ARCHIVE\n" +
+        "\t\t- PROVIDED";
 
     private long quota; // the quota to be set
     private StorageType type;
@@ -434,7 +434,7 @@ public class DFSAdmin extends FsShell {
   private static final String commonUsageSummary =
     "\t[-report [-live] [-dead] [-decommissioning] " +
     "[-enteringmaintenance] [-inmaintenance]]\n" +
-    "\t[-safemode <enter | leave | get | wait>]\n" +
+    "\t[-safemode <enter | leave | get | wait | forceExit>]\n" +
     "\t[-saveNamespace [-beforeShutdown]]\n" +
     "\t[-rollEdits]\n" +
     "\t[-restoreFailedStorage true|false|check]\n" +
@@ -466,7 +466,7 @@ public class DFSAdmin extends FsShell {
     "\t[-evictWriters <datanode_host:ipc_port>]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
-    "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
+    "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]]\n" +
     "\t[-listOpenFiles [-blockingDecommission] [-path <path>]]\n" +
     "\t[-help [cmd]]\n";
 
@@ -727,6 +727,13 @@ public class DFSAdmin extends FsShell {
     for (int j = 1; j < argv.length; j++) {
       args.add(argv[j]);
     }
+    // Block report to a specific namenode
+    InetSocketAddress namenodeAddr = null;
+    String nnHostPort = StringUtils.popOptionWithArgument("-namenode", args);
+    if (nnHostPort != null) {
+      namenodeAddr = NetUtils.createSocketAddr(nnHostPort);
+    }
+
     boolean incremental = StringUtils.popOption("-incremental", args);
     String hostPort = StringUtils.popFirstNonOption(args);
     if (hostPort == null) {
@@ -742,6 +749,7 @@ public class DFSAdmin extends FsShell {
     try {
       dnProxy.triggerBlockReport(
           new BlockReportOptions.Factory().
+              setNamenodeAddr(namenodeAddr).
               setIncremental(incremental).
               build());
     } catch (IOException e) {
@@ -750,7 +758,9 @@ public class DFSAdmin extends FsShell {
     }
     System.out.println("Triggering " +
         (incremental ? "an incremental " : "a full ") +
-        "block report on " + hostPort + ".");
+        "block report on " + hostPort +
+        (namenodeAddr == null ? "" : " to namenode " + nnHostPort) +
+        ".");
     return 0;
   }
 
@@ -1266,7 +1276,7 @@ public class DFSAdmin extends FsShell {
         + "\tbe used for checking if a datanode is alive.\n";
 
     String triggerBlockReport =
-      "-triggerBlockReport [-incremental] <datanode_host:ipc_port>\n"
+      "-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]\n"
         + "\tTrigger a block report for the datanode.\n"
         + "\tIf 'incremental' is specified, it will be an incremental\n"
         + "\tblock report; otherwise, it will be a full block report.\n";
@@ -2176,7 +2186,7 @@ public class DFSAdmin extends FsShell {
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else if ("-triggerBlockReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
+          + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]]");
     } else if ("-listOpenFiles".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-listOpenFiles [-blockingDecommission] [-path <path>]]");
@@ -2194,7 +2204,7 @@ public class DFSAdmin extends FsShell {
    * @return 0 on success, non zero on error.
    */
   @Override
-  public int run(String[] argv) throws Exception {
+  public int run(String[] argv) {
 
     if (argv.length < 1) {
       printUsage("");
@@ -2334,7 +2344,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-triggerBlockReport".equals(cmd)) {
-      if ((argv.length != 2) && (argv.length != 3)) {
+      if ((argv.length < 2) || (argv.length > 5)) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2346,16 +2356,7 @@ public class DFSAdmin extends FsShell {
     }
     
     // initialize DFSAdmin
-    try {
-      init();
-    } catch (RPC.VersionMismatch v) {
-      System.err.println("Version Mismatch between client and server"
-                         + "... command aborted.");
-      return exitCode;
-    } catch (IOException e) {
-      System.err.println("Bad connection to DFS... command aborted.");
-      return exitCode;
-    }
+    init();
 
     Exception debugException = null;
     exitCode = 0;

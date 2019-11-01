@@ -61,7 +61,7 @@ public class TestListParts {
     REST.setHeaders(headers);
     REST.setClient(client);
 
-    Response response = REST.multipartUpload(BUCKET, KEY, "", "", null);
+    Response response = REST.initializeMultipartUpload(BUCKET, KEY);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();
     assertNotNull(multipartUploadInitiateResponse.getUploadID());

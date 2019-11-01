@@ -34,6 +34,9 @@ message DatanodeDetailsProto {
     required string hostName = 3;      // hostname
     repeated Port ports = 4;
     optional string certSerialId = 5;   // Certificate serial id.
+    // network name, can be Ip address or host name, depends
+    optional string networkName = 6;
+    optional string networkLocation = 7; // Network topology location
 }
 
 /**
@@ -59,7 +62,8 @@ message PipelineID {
 enum PipelineState {
     PIPELINE_ALLOCATED = 1;
     PIPELINE_OPEN = 2;
-    PIPELINE_CLOSED = 3;
+    PIPELINE_DORMANT = 3;
+    PIPELINE_CLOSED = 4;
 }
 
 message Pipeline {
@@ -70,6 +74,7 @@ message Pipeline {
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
     required PipelineID id = 6;
+    repeated uint32 memberOrders = 7;
 }
 
 message KeyValue {

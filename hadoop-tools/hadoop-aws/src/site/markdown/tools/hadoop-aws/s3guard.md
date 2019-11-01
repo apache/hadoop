@@ -113,6 +113,9 @@ two different reasons:
     stored in metadata store.
     * This mode can be set as a configuration property
     `fs.s3a.metadatastore.authoritative`
+    * It can also be set only on specific directories by setting
+    `fs.s3a.authoritative.path` to one or more prefixes, for example
+    `s3a://bucket/path` or "/auth1,/auth2".
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
     the same metadata store.
     * This is independent from which metadata store implementation is used.
@@ -181,8 +184,8 @@ removed on `S3AFileSystem` level.
 
 ```xml
 <property>
-    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
-    <value>3600000</value>
+    <name>fs.s3a.metadatastore.metadata.ttl</name>
+    <value>15m</value>
 </property>
 ```
 
@@ -251,9 +254,11 @@ this sets the table name to `my-ddb-table-name`
 </property>
 ```
 
-It is good to share a table across multiple buckets for multiple reasons.
+It is good to share a table across multiple buckets for multiple reasons,
+especially if you are *not* using on-demand DynamoDB tables, and instead
+prepaying for provisioned I/O capacity.
 
-1. You are billed for the I/O capacity allocated to the table,
+1. You are billed for the provisioned I/O capacity allocated to the table,
 *even when the table is not used*. Sharing capacity can reduce costs.
 
 1. You can share the "provision burden" across the buckets. That is, rather
@@ -265,8 +270,13 @@ lower.
 S3Guard, because there is only one table to review and configure in the
 AWS management console.
 
+1. When you don't grant the permission to create DynamoDB tables to users.
+A single pre-created table for all buckets avoids the needs for an administrator
+to create one for every bucket.
+
 When wouldn't you want to share a table?
 
+1. When you are using on-demand DynamoDB and want to keep each table isolated.
 1. When you do explicitly want to provision I/O capacity to a specific bucket
 and table, isolated from others.
 
@@ -315,18 +325,25 @@ Next, you can choose whether or not the table will be automatically created
 </property>
 ```
 
-### 7. If creating a table: Set your DynamoDB I/O Capacity
+### 7. If creating a table: Choose your billing mode (and perhaps I/O Capacity)
 
-Next, you need to set the DynamoDB read and write throughput requirements you
-expect to need for your cluster.  Setting higher values will cost you more
-money.  *Note* that these settings only affect table creation when
+Next, you need to decide whether to use On-Demand DynamoDB and its
+pay-per-request billing (recommended), or to explicitly request a
+provisioned IO capacity.
+
+Before AWS offered pay-per-request billing, the sole billing mechanism,
+was "provisioned capacity". This mechanism requires you to choose 
+the DynamoDB read and write throughput requirements you
+expect to need for your expected uses of the S3Guard table.
+Setting higher values cost you more money -*even when the table was idle*
+  *Note* that these settings only affect table creation when
 `fs.s3a.s3guard.ddb.table.create` is enabled.  To change the throughput for
 an existing table, use the AWS console or CLI tool.
 
 For more details on DynamoDB capacity units, see the AWS page on [Capacity
 Unit Calculations](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#CapacityUnitCalculations).
 
-The charges are incurred per hour for the life of the table, *even when the
+Provisioned IO capacity is billed per hour for the life of the table, *even when the
 table and the underlying S3 buckets are not being used*.
 
 There are also charges incurred for data storage and for data I/O outside of the
@@ -334,34 +351,56 @@ region of the DynamoDB instance. S3Guard only stores metadata in DynamoDB: path 
 and summary details of objects —the actual data is stored in S3, so billed at S3
 rates.
 
+With provisioned I/O capacity, attempting to perform more I/O than the capacity
+requested throttles the operation and may result in operations failing.
+Larger I/O capacities cost more.
+
+With the introduction of On-Demand DynamoDB, you can now avoid paying for
+provisioned capacity by creating an on-demand table.
+With an on-demand table you are not throttled if your DynamoDB requests exceed
+any pre-provisioned limit, nor do you pay per hour even when a table is idle.
+
+You do, however, pay more per DynamoDB operation.
+Even so, the ability to cope with sudden bursts of read or write requests, combined
+with the elimination of charges for idle tables, suit the use patterns made of 
+S3Guard tables by applications interacting with S3. That is: periods when the table
+is rarely used, with intermittent high-load operations when directory trees
+are scanned (query planning and similar), or updated (rename and delete operations).
+
+
+We recommending using On-Demand DynamoDB for maximum performance in operations
+such as query planning, and lowest cost when S3 buckets are not being accessed.
+
+This is the default, as configured in the default configuration options.
+
 ```xml
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>500</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table.  This config value will only be used when
-    creating a new DynamoDB table, though later you can manually provision by
-    increasing or decreasing read capacity as needed for existing tables.
-    See DynamoDB documents for more information.
+    units for the DynamoDB table. This config value will only be used when
+    creating a new DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    If a positive integer is provided for this and the write capacity, then
+    a table with "provisioned capacity" will be created.
+    You can change the capacity of an existing provisioned-capacity table
+    through the "s3guard set-capacity" command.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>100</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.  Refer to related config
-    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+    capacity units for the DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
   </description>
 </property>
 ```
 
-Attempting to perform more I/O than the capacity requested throttles the
-I/O, and may result in operations failing. Larger I/O capacities cost more.
-We recommending using small read and write capacities when initially experimenting
-with S3Guard, and considering DynamoDB On-Demand.
 
 ## Authenticating with S3Guard
 
@@ -369,9 +408,7 @@ The DynamoDB metadata store takes advantage of the fact that the DynamoDB
 service uses the same authentication mechanisms as S3. S3Guard
 gets all its credentials from the S3A client that is using it.
 
-All existing S3 authentication mechanisms can be used, except for one
-exception. Credentials placed in URIs are not supported for S3Guard, for security
-reasons.
+All existing S3 authentication mechanisms can be used.
 
 ## Per-bucket S3Guard configuration
 
@@ -512,7 +549,13 @@ hadoop s3guard init -meta URI ( -region REGION | s3a://BUCKET )
 Creates and initializes an empty metadata store.
 
 A DynamoDB metadata store can be initialized with additional parameters
-pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html):
+pertaining to capacity. 
+
+If these values are both zero, then an on-demand DynamoDB table is created;
+if positive values then they set the
+[Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html)
+of the table.
+
 
 ```bash
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
@@ -528,21 +571,20 @@ metadata store will be created with these tags in DynamoDB.
 Example 1
 
 ```bash
-hadoop s3guard init -meta dynamodb://ireland-team -write 5 -read 10 s3a://ireland-1
+hadoop s3guard init -meta dynamodb://ireland-team -write 0 -read 0 s3a://ireland-1
 ```
 
-Creates a table "ireland-team" with a capacity of 5 for writes, 10 for reads,
-in the same location as the bucket "ireland-1".
+Creates an on-demand table "ireland-team",
+in the same location as the S3 bucket "ireland-1".
 
 
 Example 2
 
 ```bash
-hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
+hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1 --read 0 --write 0
 ```
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
-
 
 Example 3
 
@@ -550,7 +592,10 @@ Example 3
 hadoop s3guard init -meta dynamodb://ireland-team -tag tag1=first;tag2=second;
 ```
 
-Creates a table "ireland-team" with tags "first" and "second".
+Creates a table "ireland-team" with tags "first" and "second". The read and
+write capacity will be those of the site configuration's values of
+`fs.s3a.s3guard.ddb.table.capacity.read` and `fs.s3a.s3guard.ddb.table.capacity.write`;
+if these are both zero then it will be an on-demand table.
 
 ### Import a bucket: `s3guard import`
 
@@ -588,7 +633,7 @@ hadoop s3guard diff s3a://ireland-1
 Prints and optionally checks the s3guard and encryption status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [ -guarded ] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
+hadoop s3guard bucket-info [-guarded] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
 ```
 
 Options
@@ -751,7 +796,7 @@ time" is older than the specified age.
 
 ```bash
 hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
-    [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
+    [-seconds SECONDS] [-tombstone] [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
 A time value of hours, minutes and/or seconds must be supplied.
@@ -761,6 +806,13 @@ A time value of hours, minutes and/or seconds must be supplied.
 in the S3 Bucket.
 1. If an S3A URI is supplied, only the entries in the table specified by the
 URI and older than a specific age are deleted.
+
+
+The `-tombstone` option instructs the operation to only purge "tombstones",
+markers of deleted files. These tombstone markers are only used briefly,
+to indicate that a recently deleted file should not be found in listings.
+As a result, there is no adverse consequences in regularly pruning old
+tombstones.
 
 Example
 
@@ -772,23 +824,24 @@ Deletes all entries in the S3Guard table for files older than seven days from
 the table associated with `s3a://ireland-1`.
 
 ```bash
-hadoop s3guard prune -days 7 s3a://ireland-1/path_prefix/
+hadoop s3guard prune -tombstone -days 7 s3a://ireland-1/path_prefix/
 ```
 
-Deletes all entries in the S3Guard table for files older than seven days from
-the table associated with `s3a://ireland-1` and with the prefix "path_prefix"
+Deletes all entries in the S3Guard table for tombstones older than seven days from
+the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 
 ```bash
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "ireland-team" in
-the region "eu-west-1".
+Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+the region `eu-west-1`.
 
 
 ### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`
 
-Alter the read and/or write capacity of a s3guard table.
+Alter the read and/or write capacity of a s3guard table created with provisioned
+I/O capacity.
 
 ```bash
 hadoop s3guard set-capacity [--read UNIT] [--write UNIT] ( -region REGION | s3a://BUCKET )
@@ -796,6 +849,9 @@ hadoop s3guard set-capacity [--read UNIT] [--write UNIT] ( -region REGION | s3a:
 
 The `--read` and `--write` units are those of `s3guard init`.
 
+It cannot be used to change the I/O capacity of an on demand table (there is
+no need), and nor can it be used to convert an existing table to being
+on-demand. For that the AWS console must be used.
 
 Example
 
@@ -895,9 +951,33 @@ logged.
 
 ### Versioning
 
-S3Guard tables are created with a version marker, an entry with the primary
-key and child entry of `../VERSION`; the use of a relative path guarantees
-that it will not be resolved.
+S3Guard tables are created with a version marker entry and table tag.
+The entry is created with the primary key and child entry of `../VERSION`; 
+the use of a relative path guarantees that it will not be resolved.
+Table tag key is named `s3guard_version`.
+
+When the table is initialized by S3Guard, the table will be tagged during the 
+creating and the version marker entry will be created in the table.
+If the table lacks the version marker entry or tag, S3Guard will try to create
+it according to the following rules:
+
+1. If the table lacks both version markers AND it's empty, both markers will be added. 
+If the table is not empty the check throws IOException
+1. If there's no version marker ITEM, the compatibility with the TAG
+will be checked, and the version marker ITEM will be added if the
+TAG version is compatible.
+If the TAG version is not compatible, the check throws OException
+1. If there's no version marker TAG, the compatibility with the ITEM
+version marker will be checked, and the version marker ITEM will be
+added if the ITEM version is compatible.
+If the ITEM version is not compatible, the check throws IOException
+1. If the TAG and ITEM versions are both present then both will be checked
+for compatibility. If the ITEM or TAG version marker is not compatible,
+the check throws IOException
+
+*Note*: If the user does not have sufficient rights to tag the table the 
+initialization of S3Guard will not fail, but there will be no version marker tag
+on the dynamo table.
 
 *Versioning policy*
 
@@ -932,10 +1012,10 @@ merits more testing before it could be considered reliable.
 
 ## Managing DynamoDB I/O Capacity
 
-By default, DynamoDB is not only billed on use (data and I/O requests)
--it is billed on allocated I/O Capacity.
+Historically, DynamoDB has been not only billed on use (data and I/O requests)
+-but on provisioned I/O Capacity.
 
-When an application makes more requests than
+With Provisioned IO, when an application makes more requests than
 the allocated capacity permits, the request is rejected; it is up to
 the calling application to detect when it is being so throttled and
 react. S3Guard does this, but as a result: when the client is being
@@ -943,7 +1023,7 @@ throttled, operations are slower. This capacity throttling is averaged
 over a few minutes: a briefly overloaded table will not be throttled,
 but the rate cannot be sustained.
 
-The load on a table isvisible in the AWS console: go to the
+The load on a table is visible in the AWS console: go to the
 DynamoDB page for the table and select the "metrics" tab.
 If the graphs of throttled read or write
 requests show that a lot of throttling has taken place, then there is not
@@ -1015,20 +1095,33 @@ for S3Guard applications.
 * There's no explicit limit on I/O capacity, so operations which make
 heavy use of S3Guard tables (for example: SQL query planning) do not
 get throttled.
+* You are charged more per DynamoDB API call, in exchange for paying nothing
+when you are not interacting with DynamoDB.
 * There's no way put a limit on the I/O; you may unintentionally run up
 large bills through sustained heavy load.
 * The `s3guard set-capacity` command fails: it does not make sense any more.
 
 When idle, S3Guard tables are only billed for the data stored, not for
-any unused capacity. For this reason, there is no benefit from sharing
-a single S3Guard table across multiple buckets.
+any unused capacity. For this reason, there is no performance benefit
+from sharing a single S3Guard table across multiple buckets.
 
-*Enabling DynamoDB On-Demand for a S3Guard table*
+*Creating a S3Guard Table with On-Demand Tables*
 
-You cannot currently enable DynamoDB on-demand from the `s3guard` command
-when creating or updating a bucket.
+The default settings for S3Guard are to create on-demand tables; this
+can also be done explicitly in the `s3guard init` command by setting the
+read and write capacities to zero.
 
-Instead it must be done through the AWS console or [the CLI](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/update-table.html).
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -write 0 -read 0 s3a://ireland-1
+```
+
+*Enabling DynamoDB On-Demand for an existing S3Guard table*
+
+You cannot currently convert an existing S3Guard table to being an on-demand
+table through the `s3guard` command.
+
+It can be done through the AWS console or [the CLI](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/update-table.html).
 From the Web console or the command line, switch the billing to pay-per-request.
 
 Once enabled, the read and write capacities of the table listed in the
@@ -1078,7 +1171,7 @@ Metadata Store Diagnostics:
 The "magic" committer is supported
 ```
 
-### <a name="autoscaling"></a> Autoscaling S3Guard tables.
+### <a name="autoscaling"></a> Autoscaling (Provisioned Capacity) S3Guard tables.
 
 [DynamoDB Auto Scaling](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AutoScaling.html)
 can automatically increase and decrease the allocated capacity.
@@ -1093,7 +1186,7 @@ until any extra capacity is allocated. Furthermore, as this retrying will
 block the threads from performing other operations -including more I/O, the
 the autoscale may not scale fast enough.
 
-This is why the DynamoDB On-Demand appears to be a better option for
+This is why the DynamoDB On-Demand appears is a better option for
 workloads with Hadoop, Spark, Hive and other applications.
 
 If autoscaling is to be used, we recommend experimenting with the option,
@@ -1259,18 +1352,18 @@ Error Code: ProvisionedThroughputExceededException;
 ```
 The I/O load of clients of the (shared) DynamoDB table was exceeded.
 
-1. Increase the capacity of the DynamoDB table.
-1. Increase the retry count and/or sleep time of S3Guard on throttle events.
-1. Enable capacity autoscaling for the table in the AWS console.
+1. Switch to On-Demand Dynamo DB tables (AWS console)
+1. Increase the capacity of the DynamoDB table (AWS console or `s3guard set-capacity`)/
+1. Increase the retry count and/or sleep time of S3Guard on throttle events (Hadoop configuration).
 
 ### Error `Max retries exceeded`
 
 The I/O load of clients of the (shared) DynamoDB table was exceeded, and
 the number of attempts to retry the operation exceeded the configured amount.
 
+1. Switch to On-Demand Dynamo DB tables (AWS console).
 1. Increase the capacity of the DynamoDB table.
 1. Increase the retry count and/or sleep time of S3Guard on throttle events.
-1. Enable capacity autoscaling for the table in the AWS console.
 
 
 ### Error when running `set-capacity`: `org.apache.hadoop.fs.s3a.AWSServiceThrottledException: ProvisionTable`
@@ -1286,7 +1379,7 @@ Next decrease can be made at Wednesday, July 25, 2018 9:48:14 PM UTC
 ```
 
 There's are limit on how often you can change the capacity of an DynamoDB table;
-if you call set-capacity too often, it fails. Wait until the after the time indicated
+if you call `set-capacity` too often, it fails. Wait until the after the time indicated
 and try again.
 
 ### Error `Invalid region specified`
@@ -1414,6 +1507,18 @@ Caused by: java.lang.NullPointerException
   at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
   ... 1 more
 ```
+
+### Error `Attempt to change a resource which is still in use: Table is being deleted`
+
+```
+com.amazonaws.services.dynamodbv2.model.ResourceInUseException:
+  Attempt to change a resource which is still in use: Table is being deleted:
+   s3guard.test.testDynamoDBInitDestroy351245027
+    (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ResourceInUseException;)
+```
+
+You have attempted to call `hadoop s3guard destroy` on a table which is already
+being destroyed.
 
 ## Other Topics
 

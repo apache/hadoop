@@ -44,7 +44,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
         liveReplicaStorages, additionalReplRequired, priority);
     this.blockPoolId = blockPoolId;
     this.liveBlockIndicies = liveBlockIndicies;
-    BlockManager.LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
+    LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
 
@@ -157,18 +157,28 @@ class ErasureCodingWork extends BlockReconstructionWork {
         internBlkLen, stripedBlk.getGenerationStamp());
     source.addBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target});
-    if (BlockManager.LOG.isDebugEnabled()) {
-      BlockManager.LOG.debug("Add replication task from source {} to "
-          + "target {} for EC block {}", source, target, targetBlk);
-    }
+    LOG.debug("Add replication task from source {} to "
+        + "target {} for EC block {}", source, target, targetBlk);
   }
 
   private List<Integer> findLeavingServiceSources() {
+    // Mark the block in normal node.
+    BlockInfoStriped block = (BlockInfoStriped)getBlock();
+    BitSet bitSet = new BitSet(block.getRealTotalBlockNum());
+    for (int i = 0; i < getSrcNodes().length; i++) {
+      if (getSrcNodes()[i].isInService()) {
+        bitSet.set(liveBlockIndicies[i]);
+      }
+    }
+    // If the block is on the node which is decommissioning or
+    // entering_maintenance, and it doesn't exist on other normal nodes,
+    // we just add the node into source list.
     List<Integer> srcIndices = new ArrayList<>();
     for (int i = 0; i < getSrcNodes().length; i++) {
-      if (getSrcNodes()[i].isDecommissionInProgress() ||
+      if ((getSrcNodes()[i].isDecommissionInProgress() ||
           (getSrcNodes()[i].isEnteringMaintenance() &&
-          getSrcNodes()[i].isAlive())) {
+          getSrcNodes()[i].isAlive())) &&
+          !bitSet.get(liveBlockIndicies[i])) {
         srcIndices.add(i);
       }
     }

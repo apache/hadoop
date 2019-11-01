@@ -31,11 +31,13 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -442,6 +444,55 @@ public class ObjectStore {
    */
   public String getCanonicalServiceName() {
     return proxy.getCanonicalServiceName();
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @return true if acl is added successfully, else false.
+   * @throws IOException if there is error.
+   * */
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    return proxy.addAcl(obj, acl);
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @return true if acl is added successfully, else false.
+   * @throws IOException if there is error.
+   */
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    return proxy.removeAcl(obj, acl);
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @return true if acl is added successfully, else false.
+   * @throws IOException if there is error.
+   */
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    return proxy.setAcl(obj, acls);
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @return true if acl is added successfully, else false.
+   * @throws IOException if there is error.
+   */
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    return proxy.getAcl(obj);
   }
 
 }

@@ -40,6 +40,7 @@ import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -50,6 +51,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
@@ -77,9 +79,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem.HdfsDataOutputStreamBuilder;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -87,10 +91,13 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -191,8 +198,10 @@ public class TestDistributedFileSystem {
    * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
    * Also tests that any cached sockets are closed. (HDFS-3359)
+   * Also tests deprecated listOpenFiles(EnumSet<>). (HDFS-14595)
    */
   @Test
+  @SuppressWarnings("deprecation") // call to listOpenFiles(EnumSet<>)
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -203,6 +212,19 @@ public class TestDistributedFileSystem {
       // create two files, leaving them open
       fileSys.create(new Path("/test/dfsclose/file-0"));
       fileSys.create(new Path("/test/dfsclose/file-1"));
+
+      // Test listOpenFiles(EnumSet<>)
+      List<OpenFilesIterator.OpenFilesType> types = new ArrayList<>();
+      types.add(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES);
+      RemoteIterator<OpenFileEntry> listOpenFiles =
+          fileSys.listOpenFiles(EnumSet.copyOf(types));
+      assertTrue("Two files should be open", listOpenFiles.hasNext());
+      int countOpenFiles = 0;
+      while (listOpenFiles.hasNext()) {
+        listOpenFiles.next();
+        ++countOpenFiles;
+      }
+      assertEquals("Mismatch of open files count", 2, countOpenFiles);
 
       // create another file, close it, and read it, so
       // the client gets a socket in its SocketCache
@@ -1860,6 +1882,34 @@ public class TestDistributedFileSystem {
   }
 
   @Test
+  public void testListingStoragePolicyNonSuperUser() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/dir");
+      dfs.mkdirs(dir);
+      dfs.setPermission(dir,
+          new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+      // Create a non-super user.
+      UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "Non_SuperUser", new String[] {"Non_SuperGroup"});
+
+      DistributedFileSystem userfs = (DistributedFileSystem) user.doAs(
+          (PrivilegedExceptionAction<FileSystem>) () -> FileSystem.get(conf));
+      Path sDir = new Path("/dir/sPolicy");
+      userfs.mkdirs(sDir);
+      userfs.setStoragePolicy(sDir, "COLD");
+      HdfsFileStatus[] list = userfs.getClient()
+          .listPaths(dir.toString(), HdfsFileStatus.EMPTY_NAME)
+          .getPartialListing();
+      assertEquals(HdfsConstants.COLD_STORAGE_POLICY_ID,
+          list[0].getStoragePolicy());
+    }
+  }
+
+  @Test
   public void testRemoveErasureCodingPolicy() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -1923,10 +1973,12 @@ public class TestDistributedFileSystem {
       fs.addErasureCodingPolicies(policies);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
           getByName(policyName).getName());
-      fs.disableErasureCodingPolicy(policyName);
       fs.enableErasureCodingPolicy(policyName);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
-          getByName(policyName).getName());
+          getEnabledPolicyByName(policyName).getName());
+      fs.disableErasureCodingPolicy(policyName);
+      assertNull(ErasureCodingPolicyManager.getInstance().
+          getEnabledPolicyByName(policyName));
 
       //test enable a policy that doesn't exist
       try {
@@ -1977,6 +2029,32 @@ public class TestDistributedFileSystem {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testStorageFavouredNodes()
+      throws IOException, InterruptedException, TimeoutException {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .storageTypes(new StorageType[] {StorageType.SSD, StorageType.DISK})
+        .numDataNodes(3).storagesPerDatanode(2).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path file1 = new Path("/tmp/file1");
+      fs.mkdirs(new Path("/tmp"));
+      fs.setStoragePolicy(new Path("/tmp"), "ONE_SSD");
+      InetSocketAddress[] addrs =
+          {cluster.getDataNodes().get(0).getXferAddress()};
+      HdfsDataOutputStream stream = fs.create(file1, FsPermission.getDefault(),
+          false, 1024, (short) 3, 1024, null, addrs);
+      stream.write("Some Bytes".getBytes());
+      stream.close();
+      DFSTestUtil.waitReplication(fs, file1, (short) 3);
+      BlockLocation[] locations = fs.getClient()
+          .getBlockLocations(file1.toUri().getPath(), 0, Long.MAX_VALUE);
+      int numSSD = Collections.frequency(
+          Arrays.asList(locations[0].getStorageTypes()), StorageType.SSD);
+      assertEquals("Number of SSD should be 1 but was : " + numSSD, 1, numSSD);
     }
   }
 }

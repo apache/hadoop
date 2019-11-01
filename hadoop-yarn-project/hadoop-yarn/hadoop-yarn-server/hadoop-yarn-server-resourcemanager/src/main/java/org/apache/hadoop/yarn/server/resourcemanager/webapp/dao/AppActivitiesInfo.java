@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -32,16 +33,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/*
+/**
  * DAO object to display application activity.
  */
-@XmlRootElement
+@XmlRootElement(name = "appActivities")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AppActivitiesInfo {
-  protected String applicationId;
-  protected String diagnostic;
-  protected String timeStamp;
-  protected List<AppAllocationInfo> allocations;
+  private String applicationId;
+  private String diagnostic;
+  private Long timestamp;
+  private String dateTime;
+  private List<AppAllocationInfo> allocations;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AppActivitiesInfo.class);
@@ -52,35 +54,51 @@ public class AppActivitiesInfo {
   public AppActivitiesInfo(String errorMessage, String applicationId) {
     this.diagnostic = errorMessage;
     this.applicationId = applicationId;
-
-    Date date = new Date();
-    date.setTime(SystemClock.getInstance().getTime());
-    this.timeStamp = date.toString();
+    setTime(SystemClock.getInstance().getTime());
   }
 
   public AppActivitiesInfo(List<AppAllocation> appAllocations,
-      ApplicationId applicationId) {
+      ApplicationId applicationId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.applicationId = applicationId.toString();
     this.allocations = new ArrayList<>();
 
     if (appAllocations == null) {
       diagnostic = "waiting for display";
-
-      Date date = new Date();
-      date.setTime(SystemClock.getInstance().getTime());
-      this.timeStamp = date.toString();
+      setTime(SystemClock.getInstance().getTime());
     } else {
       for (int i = appAllocations.size() - 1; i > -1; i--) {
         AppAllocation appAllocation = appAllocations.get(i);
         AppAllocationInfo appAllocationInfo = new AppAllocationInfo(
-            appAllocation);
+            appAllocation, groupBy);
         this.allocations.add(appAllocationInfo);
       }
     }
   }
 
+  private void setTime(long ts) {
+    this.timestamp = ts;
+    this.dateTime = new Date(ts).toString();
+  }
+
   @VisibleForTesting
   public List<AppAllocationInfo> getAllocations() {
     return allocations;
+  }
+
+  public Long getTimestamp() {
+    return timestamp;
+  }
+
+  public String getDateTime() {
+    return dateTime;
+  }
+
+  public String getApplicationId() {
+    return applicationId;
+  }
+
+  public String getDiagnostic() {
+    return diagnostic;
   }
 }

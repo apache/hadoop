@@ -94,6 +94,8 @@ public class TestNodeHealthScriptRunner {
     String timeOutScript =
       Shell.WINDOWS ? "@echo off\nping -n 4 127.0.0.1 >nul\necho \"I am fine\""
       : "sleep 4\necho \"I am fine\"";
+    String exitCodeScript = "exit 127";
+
     Configuration conf = new Configuration();
     writeNodeHealthScriptFile(normalScript, true);
     NodeHealthScriptRunner nodeHealthScriptRunner = new NodeHealthScriptRunner(
@@ -132,5 +134,12 @@ public class TestNodeHealthScriptRunner {
     Assert.assertEquals(
             NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
             nodeHealthScriptRunner.getHealthReport());
+
+    // Exit code 127
+    writeNodeHealthScriptFile(exitCodeScript, true);
+    timerTask.run();
+    Assert.assertTrue("Node health status reported unhealthy",
+        nodeHealthScriptRunner.isHealthy());
+    Assert.assertEquals("", nodeHealthScriptRunner.getHealthReport());
   }
 }

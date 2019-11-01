@@ -38,6 +38,7 @@ public class RouterConfigBuilder {
   private boolean enableMetrics = false;
   private boolean enableQuota = false;
   private boolean enableSafemode = false;
+  private boolean enableCacheRefresh;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -104,6 +105,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder refreshCache(boolean enable) {
+    this.enableCacheRefresh = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
@@ -140,6 +146,10 @@ public class RouterConfigBuilder {
     return this.safemode(true);
   }
 
+  public RouterConfigBuilder refreshCache() {
+    return this.refreshCache(true);
+  }
+
   public Configuration build() {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_STORE_ENABLE,
         this.enableStateStore);
@@ -158,6 +168,8 @@ public class RouterConfigBuilder {
         this.enableQuota);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
         this.enableSafemode);
+    conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
+        this.enableCacheRefresh);
     return conf;
   }
 }

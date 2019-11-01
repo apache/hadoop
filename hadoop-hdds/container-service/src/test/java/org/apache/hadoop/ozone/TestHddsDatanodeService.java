@@ -65,13 +65,13 @@ public class TestHddsDatanodeService {
   public void testStartup() throws IOException {
     service = HddsDatanodeService.createHddsDatanodeService(args);
     service.start(conf);
-    service.join();
 
     assertNotNull(service.getDatanodeDetails());
     assertNotNull(service.getDatanodeDetails().getHostName());
     assertFalse(service.getDatanodeStateMachine().isDaemonStopped());
 
     service.stop();
+    service.join();
     service.close();
   }
 

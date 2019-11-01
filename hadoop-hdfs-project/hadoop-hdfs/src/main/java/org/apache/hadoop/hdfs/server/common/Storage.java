@@ -27,11 +27,14 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.io.FileUtils;
@@ -39,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -276,6 +280,7 @@ public abstract class Storage extends StorageInfo {
     final boolean isShared;
     final StorageDirType dirType; // storage dir type
     FileLock lock;                // storage lock
+    private final FsPermission permission;
 
     private String storageUuid = null;      // Storage directory identifier.
     
@@ -311,6 +316,11 @@ public abstract class Storage extends StorageInfo {
       this(dir, dirType, isShared, null);
     }
 
+    public StorageDirectory(File dir, StorageDirType dirType,
+                            boolean isShared, FsPermission permission) {
+      this(dir, dirType, isShared, null, permission);
+    }
+
     /**
      * Constructor
      * @param dirType storage directory type
@@ -320,7 +330,7 @@ public abstract class Storage extends StorageInfo {
      */
     public StorageDirectory(StorageDirType dirType, boolean isShared,
         StorageLocation location) {
-      this(getStorageLocationFile(location), dirType, isShared, location);
+      this(getStorageLocationFile(location), dirType, isShared, location, null);
     }
 
     /**
@@ -334,7 +344,7 @@ public abstract class Storage extends StorageInfo {
     public StorageDirectory(String bpid, StorageDirType dirType,
         boolean isShared, StorageLocation location) {
       this(getBlockPoolCurrentDir(bpid, location), dirType,
-          isShared, location);
+          isShared, location, null);
     }
 
     private static File getBlockPoolCurrentDir(String bpid,
@@ -348,13 +358,14 @@ public abstract class Storage extends StorageInfo {
     }
 
     private StorageDirectory(File dir, StorageDirType dirType,
-        boolean isShared, StorageLocation location) {
+        boolean isShared, StorageLocation location, FsPermission permission) {
       this.root = dir;
       this.lock = null;
       // default dirType is UNDEFINED
       this.dirType = (dirType == null ? NameNodeDirType.UNDEFINED : dirType);
       this.isShared = isShared;
       this.location = location;
+      this.permission = permission;
       assert location == null || dir == null ||
           dir.getAbsolutePath().startsWith(
               new File(location.getUri()).getAbsolutePath()):
@@ -432,8 +443,19 @@ public abstract class Storage extends StorageInfo {
         if (!(FileUtil.fullyDelete(curDir)))
           throw new IOException("Cannot remove current directory: " + curDir);
       }
-      if (!curDir.mkdirs())
+      if (!curDir.mkdirs()) {
         throw new IOException("Cannot create directory " + curDir);
+      }
+      if (permission != null) {
+        try {
+          Set<PosixFilePermission> permissions =
+              PosixFilePermissions.fromString(permission.toString());
+          Files.setPosixFilePermissions(curDir.toPath(), permissions);
+        } catch (UnsupportedOperationException uoe) {
+          // Default to FileUtil for non posix file systems
+          FileUtil.setPermission(curDir, permission);
+        }
+      }
     }
 
     /**
@@ -655,8 +677,9 @@ public abstract class Storage extends StorageInfo {
             return StorageState.NON_EXISTENT;
           }
           LOG.info("{} does not exist. Creating ...", rootPath);
-          if (!root.mkdirs())
+          if (!root.mkdirs()) {
             throw new IOException("Cannot create directory " + rootPath);
+          }
           hadMkdirs = true;
         }
         // or is inaccessible

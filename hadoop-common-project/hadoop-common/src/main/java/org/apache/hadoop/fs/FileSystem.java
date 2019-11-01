@@ -88,6 +88,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -134,7 +135,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer {
+    implements Closeable, DelegationTokenIssuer, PathCapabilities {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -204,6 +205,17 @@ public abstract class FileSystem extends Configured
   static void addFileSystemForTesting(URI uri, Configuration conf,
       FileSystem fs) throws IOException {
     CACHE.map.put(new Cache.Key(uri, conf), fs);
+  }
+
+  @VisibleForTesting
+  static void removeFileSystemForTesting(URI uri, Configuration conf,
+      FileSystem fs) throws IOException {
+    CACHE.map.remove(new Cache.Key(uri, conf), fs);
+  }
+
+  @VisibleForTesting
+  static int cacheSize() {
+    return CACHE.map.size();
   }
 
   /**
@@ -709,6 +721,7 @@ public abstract class FileSystem extends Configured
    *
    */
   protected void checkPath(Path path) {
+    Preconditions.checkArgument(path != null, "null path");
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     if (thatScheme == null)                // fs is relative
@@ -1783,6 +1796,33 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Set quota for the given {@link Path}.
+   *
+   * @param src the target path to set quota for
+   * @param namespaceQuota the namespace quota (i.e., # of files/directories)
+   *                       to set
+   * @param storagespaceQuota the storage space quota to set
+   * @throws IOException IO failure
+   */
+  public void setQuota(Path src, final long namespaceQuota,
+      final long storagespaceQuota) throws IOException {
+    methodNotSupported();
+  }
+
+  /**
+   * Set per storage type quota for the given {@link Path}.
+   *
+   * @param src the target path to set storage type quota for
+   * @param type the storage type to set
+   * @param quota the quota to set for the given storage type
+   * @throws IOException IO failure
+   */
+  public void setQuotaByStorageType(Path src, final StorageType type,
+      final long quota) throws IOException {
+    methodNotSupported();
+  }
+
+  /**
    * The default filter accepts all paths.
    */
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
@@ -2024,7 +2064,12 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    */
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
-    return new Globber(this, pathPattern, DEFAULT_FILTER).glob();
+    return Globber.createGlobber(this)
+        .withPathPattern(pathPattern)
+        .withPathFiltern(DEFAULT_FILTER)
+        .withResolveSymlinks(true)
+        .build()
+        .glob();
   }
 
   /**
@@ -3221,6 +3266,25 @@ public abstract class FileSystem extends Configured
     return ret;
   }
 
+  /**
+   * The base FileSystem implementation generally has no knowledge
+   * of the capabilities of actual implementations.
+   * Unless it has a way to explicitly determine the capabilities,
+   * this method returns false.
+   * {@inheritDoc}
+   */
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_SYMLINKS:
+      // delegate to the existing supportsSymlinks() call.
+      return supportsSymlinks() && areSymlinksEnabled();
+    default:
+      // the feature is not implemented.
+      return false;
+    }
+  }
+
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 
@@ -3379,6 +3443,9 @@ public abstract class FileSystem extends Configured
       }
 
       fs = createFileSystem(uri, conf);
+      final long timeout = conf.getTimeDuration(SERVICE_SHUTDOWN_TIMEOUT,
+          SERVICE_SHUTDOWN_TIMEOUT_DEFAULT,
+          ShutdownHookManager.TIME_UNIT_DEFAULT);
       synchronized (this) { // refetch the lock again
         FileSystem oldfs = map.get(key);
         if (oldfs != null) { // a file system is created while lock is releasing
@@ -3389,7 +3456,9 @@ public abstract class FileSystem extends Configured
         // now insert the new file system into the map
         if (map.isEmpty()
                 && !ShutdownHookManager.get().isShutdownInProgress()) {
-          ShutdownHookManager.get().addShutdownHook(clientFinalizer, SHUTDOWN_HOOK_PRIORITY);
+          ShutdownHookManager.get().addShutdownHook(clientFinalizer,
+              SHUTDOWN_HOOK_PRIORITY, timeout,
+              ShutdownHookManager.TIME_UNIT_DEFAULT);
         }
         fs.key = key;
         map.put(key, fs);
@@ -4442,6 +4511,22 @@ public abstract class FileSystem extends Configured
       result.completeExceptionally(tx);
     }
     return result;
+  }
+
+  /**
+   * Helper method that throws an {@link UnsupportedOperationException} for the
+   * current {@link FileSystem} method being called.
+   */
+  private void methodNotSupported() {
+    // The order of the stacktrace elements is (from top to bottom):
+    //   - java.lang.Thread.getStackTrace
+    //   - org.apache.hadoop.fs.FileSystem.methodNotSupported
+    //   - <the FileSystem method>
+    // therefore, to find out the current method name, we use the element at
+    // index 2.
+    String name = Thread.currentThread().getStackTrace()[2].getMethodName();
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method " + name);
   }
 
   /**

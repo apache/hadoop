@@ -33,11 +33,13 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
 
   private Configuration schedConf;
   private LogMutation pendingMutation;
+  private long configVersion;
 
   @Override
   public void initialize(Configuration conf, Configuration schedConf,
       RMContext rmContext) {
     this.schedConf = schedConf;
+    this.configVersion = 1L;
   }
 
   @Override
@@ -56,13 +58,24 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
           schedConf.set(kv.getKey(), kv.getValue());
         }
       }
+      this.configVersion = this.configVersion + 1L;
     }
     pendingMutation = null;
   }
 
   @Override
+  public void format() {
+    this.schedConf = null;
+  }
+
+  @Override
   public synchronized Configuration retrieve() {
     return schedConf;
+  }
+
+  @Override
+  public long getConfigVersion() {
+    return configVersion;
   }
 
   @Override

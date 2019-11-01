@@ -34,6 +34,8 @@ public final class S3Consts {
   }
 
   public static final String COPY_SOURCE_HEADER = "x-amz-copy-source";
+  public static final String COPY_SOURCE_HEADER_RANGE =
+      "x-amz-copy-source-range";
   public static final String STORAGE_CLASS_HEADER = "x-amz-storage-class";
   public static final String ENCODING_TYPE = "url";
 

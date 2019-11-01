@@ -85,6 +85,7 @@ public class TestByteBufferPread {
     testPreadWithPositionedByteBuffer(ByteBuffer.allocate(FILE_SIZE));
     testPreadWithLimitedByteBuffer(ByteBuffer.allocate(FILE_SIZE));
     testPositionedPreadWithByteBuffer(ByteBuffer.allocate(FILE_SIZE));
+    testPreadFullyWithByteBuffer(ByteBuffer.allocate(FILE_SIZE));
   }
 
   /**
@@ -97,6 +98,7 @@ public class TestByteBufferPread {
     testPreadWithPositionedByteBuffer(ByteBuffer.allocateDirect(FILE_SIZE));
     testPreadWithLimitedByteBuffer(ByteBuffer.allocateDirect(FILE_SIZE));
     testPositionedPreadWithByteBuffer(ByteBuffer.allocateDirect(FILE_SIZE));
+    testPreadFullyWithByteBuffer(ByteBuffer.allocateDirect(FILE_SIZE));
   }
 
   /**
@@ -122,7 +124,6 @@ public class TestByteBufferPread {
       byte[] bufferContents = new byte[FILE_SIZE];
       buffer.get(bufferContents);
       assertArrayEquals(bufferContents, fileContents);
-      buffer.position(buffer.limit());
     }
   }
 
@@ -157,7 +158,7 @@ public class TestByteBufferPread {
 
   /**
    * Reads half of the testFile into the {@link ByteBuffer} by setting a
-   * {@link ByteBuffer#limit} on the buffer. Validates that only half of the
+   * {@link ByteBuffer#limit()} on the buffer. Validates that only half of the
    * testFile is loaded into the buffer.
    */
   private void testPreadWithLimitedByteBuffer(
@@ -191,7 +192,7 @@ public class TestByteBufferPread {
 
   /**
    * Reads half of the testFile into the {@link ByteBuffer} by setting the
-   * {@link ByteBuffer#position} the half the size of the file. Validates that
+   * {@link ByteBuffer#position()} the half the size of the file. Validates that
    * only half of the testFile is loaded into the buffer.
    */
   private void testPreadWithPositionedByteBuffer(
@@ -254,6 +255,26 @@ public class TestByteBufferPread {
       buffer.get(bufferContents);
       assertArrayEquals(bufferContents,
               Arrays.copyOfRange(fileContents, FILE_SIZE / 2, FILE_SIZE));
+    }
+  }
+
+  /**
+   * Reads the entire testFile using the preadFully API and validates that its
+   * contents are properly loaded into the supplied {@link ByteBuffer}.
+   */
+  private void testPreadFullyWithByteBuffer(ByteBuffer buffer)
+          throws IOException {
+    int totalBytesRead = 0;
+    try (FSDataInputStream in = fs.open(testFile)) {
+      in.readFully(totalBytesRead, buffer);
+      // Make sure the buffer is full
+      assertFalse(buffer.hasRemaining());
+      // Make sure the contents of the read buffer equal the contents of the
+      // file
+      buffer.position(0);
+      byte[] bufferContents = new byte[FILE_SIZE];
+      buffer.get(bufferContents);
+      assertArrayEquals(bufferContents, fileContents);
     }
   }
 

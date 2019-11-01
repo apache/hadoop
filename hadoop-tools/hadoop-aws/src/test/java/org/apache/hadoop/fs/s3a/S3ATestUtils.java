@@ -27,12 +27,15 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -52,6 +55,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,7 +63,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -69,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.junit.Assert.*;
@@ -88,6 +96,10 @@ public final class S3ATestUtils {
    */
   public static final String UNSET_PROPERTY = "unset";
   public static final int PURGE_DELAY_SECONDS = 60 * 60;
+
+  public static final int TIMESTAMP_SLEEP = 2000;
+  public static final int STABILIZATION_TIME = 20_000;
+  public static final int PROBE_INTERVAL_MILLIS = 500;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -431,8 +443,7 @@ public final class S3ATestUtils {
    */
   public static void assumeS3GuardState(boolean shouldBeEnabled,
       Configuration originalConf) throws URISyntaxException {
-    boolean isEnabled = getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
-        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false));
+    boolean isEnabled = isS3GuardTestPropertySet(originalConf);
     Assume.assumeThat("Unexpected S3Guard test state:"
             + " shouldBeEnabled=" + shouldBeEnabled
             + " and isEnabled=" + isEnabled,
@@ -451,12 +462,21 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Is the test option for S3Guard set?
+   * @param conf configuration to examine.
+   * @return true if the config or system property turns s3guard tests on
+   */
+  public static boolean isS3GuardTestPropertySet(final Configuration conf) {
+    return getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
+        conf.getBoolean(TEST_S3GUARD_ENABLED, false));
+  }
+
+  /**
    * Conditionally set the S3Guard options from test properties.
    * @param conf configuration
    */
   public static void maybeEnableS3Guard(Configuration conf) {
-    if (getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
-        conf.getBoolean(TEST_S3GUARD_ENABLED, false))) {
+    if (isS3GuardTestPropertySet(conf)) {
       // S3Guard is enabled.
       boolean authoritative = getTestPropertyBool(conf,
           TEST_S3GUARD_AUTHORITATIVE,
@@ -481,6 +501,7 @@ public final class S3ATestUtils {
       LOG.debug("Enabling S3Guard, authoritative={}, implementation={}",
           authoritative, implClass);
       conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+      conf.set(AUTHORITATIVE_PATH, "");
       conf.set(S3_METADATA_STORE_IMPL, implClass);
       conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
     }
@@ -501,6 +522,16 @@ public final class S3ATestUtils {
     return conf.getBoolean(
         Constants.METADATASTORE_AUTHORITATIVE,
         Constants.DEFAULT_METADATASTORE_AUTHORITATIVE);
+  }
+
+  /**
+   * Require a filesystem to have a metadata store; skip test
+   * if not.
+   * @param fs filesystem to check
+   */
+  public static void assumeFilesystemHasMetadatastore(S3AFileSystem fs) {
+    assume("Filesystem does not have a metastore",
+        fs.hasMetadataStore());
   }
 
   /**
@@ -578,7 +609,7 @@ public final class S3ATestUtils {
     String tmpDir = conf.get(HADOOP_TMP_DIR, "target/build/test");
     if (testUniqueForkId != null) {
       // patch temp dir for the specific branch
-      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
+      tmpDir = tmpDir + File.separator + testUniqueForkId;
       conf.set(HADOOP_TMP_DIR, tmpDir);
     }
     conf.set(BUFFER_DIR, tmpDir);
@@ -660,7 +691,7 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket),
+          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
@@ -735,8 +766,9 @@ public final class S3ATestUtils {
     for (String option : options) {
       final String stripped = option.substring("fs.s3a.".length());
       String target = bucketPrefix + stripped;
-      if (conf.get(target) != null) {
-        LOG.debug("Removing option {}", target);
+      String v = conf.get(target);
+      if (v != null) {
+        LOG.debug("Removing option {}; was {}", target, v);
         conf.unset(target);
       }
     }
@@ -755,6 +787,20 @@ public final class S3ATestUtils {
       conf.unset(option);
     }
     removeBucketOverrides(bucket, conf, options);
+  }
+
+  /**
+   * Remove any values from the test bucket and the base values too.
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBaseAndBucketOverrides(
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf, options);
   }
 
   /**
@@ -814,6 +860,22 @@ public final class S3ATestUtils {
   public static <T extends Service> T terminateService(final T service) {
     ServiceOperations.stopQuietly(LOG, service);
     return null;
+  }
+
+  /**
+   * Get a file status from S3A with the {@code needEmptyDirectoryFlag}
+   * state probed.
+   * This accesses a package-private method in the
+   * S3A filesystem.
+   * @param fs filesystem
+   * @param dir directory
+   * @return a status
+   * @throws IOException
+   */
+  public static S3AFileStatus getStatusWithEmptyDirFlag(
+      final S3AFileSystem fs,
+      final Path dir) throws IOException {
+    return fs.innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
   }
 
   /**
@@ -1186,9 +1248,12 @@ public final class S3ATestUtils {
    * Skip a test if the FS isn't marked as supporting magic commits.
    * @param fs filesystem
    */
-  public static void assumeMagicCommitEnabled(S3AFileSystem fs) {
+  public static void assumeMagicCommitEnabled(S3AFileSystem fs)
+      throws IOException {
     assume("Magic commit option disabled on " + fs,
-        fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
+        fs.hasPathCapability(
+            fs.getWorkingDirectory(),
+            CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
   }
 
   /**
@@ -1215,5 +1280,133 @@ public final class S3ATestUtils {
       return false;
     }
     return Boolean.valueOf(persists);
+  }
+
+  /**
+   * Set the metadata store of a filesystem instance to the given
+   * store, via a package-private setter method.
+   * @param fs filesystem.
+   * @param ms metastore
+   */
+  public static void setMetadataStore(S3AFileSystem fs, MetadataStore ms) {
+    fs.setMetadataStore(ms);
+}
+
+  public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, lfs.getPath());
+    }
+    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, fileStatus.getPath());
+    }
+    LOG.info("{}; file omitted from listStatus as expected.", filePath);
+  }
+
+  public static void checkListingContainsPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+
+    boolean listFilesHasIt = false;
+    boolean listStatusHasIt = false;
+
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+
+
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      if (filePath.equals(lfs.getPath())) {
+        listFilesHasIt = true;
+      }
+    }
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      if (filePath.equals(fileStatus.getPath())) {
+        listStatusHasIt = true;
+      }
+    }
+    assertTrue("fs.listFiles didn't include " + filePath,
+          listFilesHasIt);
+    assertTrue("fs.listStatus didn't include " + filePath,
+          listStatusHasIt);
+  }
+
+  /**
+   * Wait for a deleted file to no longer be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @throws Exception failure
+   */
+  public static void awaitDeletedFileDisappearance(final S3AFileSystem fs,
+      final Path testFilePath) throws Exception {
+    eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> intercept(FileNotFoundException.class,
+            () -> fs.getFileStatus(testFilePath)));
+  }
+
+  /**
+   * Wait for a file to be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @return the file status.
+   * @throws Exception failure
+   */
+  public static S3AFileStatus awaitFileStatus(S3AFileSystem fs,
+      final Path testFilePath)
+      throws Exception {
+    return (S3AFileStatus) eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> fs.getFileStatus(testFilePath));
+  }
+
+  /**
+   * This creates a set containing all current threads and some well-known
+   * thread names whose existence should not fail test runs.
+   * They are generally static cleaner threads created by various classes
+   * on instantiation.
+   * @return a set of threads to use in later assertions.
+   */
+  public static Set<String> listInitialThreadsForLifecycleChecks() {
+    Set<String> threadSet = getCurrentThreadNames();
+    // static filesystem statistics cleaner
+    threadSet.add(
+        "org.apache.hadoop.fs.FileSystem$Statistics$StatisticsDataReferenceCleaner");
+    // AWS progress callbacks
+    threadSet.add("java-sdk-progress-listener-callback-thread");
+    // another AWS thread
+    threadSet.add("java-sdk-http-connection-reaper");
+    // java.lang.UNIXProcess. maybe if chmod is called?
+    threadSet.add("process reaper");
+    // once a quantile has been scheduled, the mutable quantile thread pool
+    // is initialized; it has a minimum thread size of 1.
+    threadSet.add("MutableQuantiles-0");
+    // IDE?
+    threadSet.add("Attach Listener");
+    return threadSet;
+  }
+
+  /**
+   * Get a set containing the names of all active threads,
+   * stripping out all test runner threads.
+   * @return the current set of threads.
+   */
+  public static Set<String> getCurrentThreadNames() {
+    TreeSet<String> threads = Thread.getAllStackTraces().keySet()
+        .stream()
+        .map(Thread::getName)
+        .filter(n -> n.startsWith("JUnit"))
+        .filter(n -> n.startsWith("surefire"))
+        .collect(Collectors.toCollection(TreeSet::new));
+    return threads;
   }
 }

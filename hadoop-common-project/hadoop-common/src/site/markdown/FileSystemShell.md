@@ -268,7 +268,7 @@ Displays a summary of file lengths.
 expunge
 -------
 
-Usage: `hadoop fs -expunge [-immediate]`
+Usage: `hadoop fs -expunge [-immediate] [-fs <path>]`
 
 Permanently delete files in checkpoints older than the retention threshold
 from trash directory, and create new checkpoint.
@@ -285,6 +285,15 @@ This value should be smaller or equal to `fs.trash.interval`.
 
 If the `-immediate` option is passed, all files in the trash for the current
 user are immediately deleted, ignoring the `fs.trash.interval` setting.
+
+If the `-fs` option is passed, the supplied filesystem will be expunged,
+rather than the default filesystem and checkpoint is created.
+
+For example
+
+```
+hadoop fs -expunge --immediate -fs s3a://landsat-pds/
+```
 
 Refer to the
 [HDFS Architecture guide](../hadoop-hdfs/HdfsDesign.html#File_Deletes_and_Undeletes)
@@ -629,7 +638,7 @@ Options:
 * -R: Apply operations to all files and directories recursively.
 * -m: Modify ACL. New entries are added to the ACL, and existing entries are retained.
 * -x: Remove specified ACL entries. Other ACL entries are retained.
-* ``--set``: Fully replace the ACL, discarding all existing entries. The *acl\_spec* must include entries for user, group, and others for compatibility with permission bits.
+* ``--set``: Fully replace the ACL, discarding all existing entries. The *acl\_spec* must include entries for user, group, and others for compatibility with permission bits. If the ACL spec contains only access entries, then the existing default entries are retained. If the ACL spec contains only default entries, then the existing access entries are retained. If the ACL spec contains both access and default entries, then both are replaced.
 * *acl\_spec*: Comma separated list of ACL entries.
 * *path*: File or directory to modify.
 
@@ -724,16 +733,16 @@ Exit Code: Returns 0 on success and -1 on error.
 test
 ----
 
-Usage: `hadoop fs -test -[defsz] URI`
+Usage: `hadoop fs -test -[defswrz] URI`
 
 Options:
 
-* -d: f the path is a directory, return 0.
+* -d: if the path is a directory, return 0.
 * -e: if the path exists, return 0.
 * -f: if the path is a file, return 0.
 * -s: if the path is not empty, return 0.
-* -r: if the path exists and read permission is granted, return 0.
 * -w: if the path exists and write permission is granted, return 0.
+* -r: if the path exists and read permission is granted, return 0.
 * -z: if the file is zero length, return 0.
 
 

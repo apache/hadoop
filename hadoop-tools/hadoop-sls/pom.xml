@@ -14,7 +14,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -124,7 +124,6 @@
           <excludes>
             <exclude>src/main/data/2jobs2min-rumen-jh.json</exclude>
             <exclude>src/main/html/js/thirdparty/jquery.js</exclude>
-            <exclude>src/main/html/js/thirdparty/d3-LICENSE</exclude>
             <exclude>src/main/html/js/thirdparty/d3.v3.js</exclude>
             <exclude>src/main/html/simulate.html.template</exclude>
             <exclude>src/main/html/simulate.info.html.template</exclude>
@@ -140,6 +139,7 @@
             <exclude>src/test/resources/nodes-with-resources.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
             <exclude>src/test/resources/ongoing-invariants.txt</exclude>
+            <exclude>src/test/resources/sls_dag.json</exclude>
           </excludes>
         </configuration>
       </plugin>

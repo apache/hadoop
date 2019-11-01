@@ -18,13 +18,13 @@
 
 Must:
 
-- Apache Hadoop 3.1.x, YARN service enabled.
+- Apache Hadoop version newer than 2.7.3
 
 Optional:
 
-- Enable YARN DNS. (When yarn service runtime is required.)
-- Enable GPU on YARN support. (When GPU-based training is required.)
-- Docker images for Submarine jobs. (When docker container is required.)
+- Enable YARN DNS. (Only when YARN Service runtime is required)
+- Enable GPU on YARN support. (When GPU-based training is required)
+- Docker images for Submarine jobs. (When docker container is required)
 ```
   # Get prebuilt docker images (No liability)
   docker pull hadoopsubmarine/tf-1.13.1-gpu:0.0.1
@@ -36,6 +36,20 @@ For more details, please refer to:
 - [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
 
 - [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
+
+## Submarine runtimes
+After submarine 0.2.0, it supports two runtimes which are YARN native service
+ runtime and Linkedin's TonY runtime. Each runtime can support both Tensorflow
+ and Pytorch framework. And the user don't need to worry about the usage
+ because the two runtime implements the same interface.
+
+To use the TonY runtime, please set below value in the submarine configuration.
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `submarine.runtime.class` | org.apache.hadoop.yarn.submarine.runtimes.tony.TonyRuntimeFactory |
+
+For more details of TonY runtime, please check [TonY runtime guide](TonYRuntimeGuide.html)
 
 ## Run jobs
 
@@ -107,7 +121,7 @@ usage: job run
 #### Notes:
 When using `localization` option to make a collection of dependency Python
 scripts available to entry python script in the container, you may also need to
-set `PYTHONPATH` environment variable as below to avoid module import error
+set the `PYTHONPATH` environment variable as below to avoid module import errors
 reported from `entry_script.py`.
 
 ```
@@ -123,7 +137,7 @@ reported from `entry_script.py`.
 
 ### Submarine Configuration
 
-For Submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
+For Submarine internal configuration, please create a `submarine.xml` file which should be placed under `$HADOOP_CONF_DIR`.
 
 |Configuration Name | Description |
 |:---- |:---- |
@@ -143,7 +157,7 @@ yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
   --docker_image <your-docker-image> \
   --input_path hdfs://default/dataset/cifar-10-data  \
   --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
-  --worker_resources memory=4G,vcores=2,gpu=2  \
+  --worker_resources memory=4G,vcores=2,gpu=2 \
   --worker_launch_cmd "python ... (Your training application cmd)" \
   --tensorboard # this will launch a companion tensorboard container for monitoring
 ```
@@ -154,17 +168,20 @@ yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
 
 2) `DOCKER_HADOOP_HDFS_HOME` points to HADOOP_HDFS_HOME inside Docker image.
 
-3) `--worker_resources` can include gpu when you need GPU to train your task.
+3) `--worker_resources` can include GPU when you need GPU to train your task.
 
 4) When `--tensorboard` is specified, you can go to YARN new UI, go to services -> `<you specified service>` -> Click `...` to access Tensorboard.
 
-This will launch a Tensorboard to monitor *all your jobs*. By access YARN UI (the new UI). You can go to services page, go to the `tensorboard-service`, click quick links (`Tensorboard`) can lead you to the tensorboard.
+This will launch Tensorboard to monitor *all your jobs*.
+By access the YARN UI (new UI), you can go to the Services page, then go to the `tensorboard-service`, click quick links (`Tensorboard`)
+This will lead you to Tensorboard.
 
 See below screenshot:
 
 ![alt text](./images/tensorboard-service.png "Tensorboard service")
 
-If there is no hadoop client, we can also use the java command and the uber jar, hadoop-submarine-all-*.jar, to submit the job.
+After v0.2.0, if there is no hadoop client, we can also use the java command
+and the uber jar, hadoop-submarine-all-*.jar, to submit the job.
 
 ```
 java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
@@ -214,7 +231,7 @@ java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
 
 #### Notes:
 
-1) Very similar to standalone TF application, but you need to specify #worker/#ps
+1) Very similar to standalone TF application, but you need to specify number of workers / PS processes.
 
 2) Different resources can be specified for worker and PS.
 
@@ -268,22 +285,23 @@ java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
   --num_workers 0 --tensorboard
 ```
 
-You can view multiple job training history like from the `Tensorboard` link:
+You can view multiple job training history from the `Tensorboard` link:
 
 ![alt text](./images/multiple-tensorboard-jobs.png "Tensorboard for multiple jobs")
 
 
 ### Get component logs from a training job
 
-There're two ways to get training job logs, one is from YARN UI (new or old):
+There are two ways to get the logs of a training job.
+First, from YARN UI (new or old):
 
 ![alt text](./images/job-logs-ui.png "Job logs UI")
 
-Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
+Alternatively, you can use `yarn logs -applicationId <applicationId>` to get logs from CLI.
 
 ## Build from source code
 
-If you want to build the Submarine project by yourself, you can follow the steps:
+If you want to build the Submarine project by yourself, you should follow these steps:
 
 - Run 'mvn install -DskipTests' from Hadoop source top level once.
 

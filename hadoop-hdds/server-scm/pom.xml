@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-http://maven.apache.org/xsd/maven-4.0.0.xsd">
+https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -101,8 +101,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>bcprov-jdk15on</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>findbugs</artifactId>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs</artifactId>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -141,5 +141,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
     </plugins>
+    <testResources>
+      <testResource>
+        <directory>${basedir}/../../hadoop-hdds/common/src/main/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>${basedir}/src/test/resources</directory>
+      </testResource>
+    </testResources>
   </build>
 </project>

@@ -18,52 +18,55 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.OptionalLong;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-
-import io.opentracing.Scope;
-import io.opentracing.util.GlobalTracer;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
+import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.GroupMismatchException;
-import org.apache.ratis.protocol.RaftRetryFailureException;
-import org.apache.ratis.retry.RetryPolicy;
-import org.apache.ratis.thirdparty.com.google.protobuf
-    .InvalidProtocolBufferException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
-
-import org.apache.ratis.RatisHelper;
-import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
+import org.apache.ratis.protocol.RaftException;
+import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
+import io.opentracing.Scope;
+import io.opentracing.util.GlobalTracer;
 
 /**
  * An abstract implementation of {@link XceiverClientSpi} using Ratis.
@@ -76,6 +79,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public static XceiverClientRatis newXceiverClientRatis(
       org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
       Configuration ozoneConf) {
+    return newXceiverClientRatis(pipeline, ozoneConf, null);
+  }
+
+  public static XceiverClientRatis newXceiverClientRatis(
+      org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
+      Configuration ozoneConf, X509Certificate caCert) {
     final String rpcType = ozoneConf
         .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
             ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
@@ -85,7 +94,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
     final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
-        SecurityConfig(ozoneConf));
+        SecurityConfig(ozoneConf), caCert);
     return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
         retryPolicy, tlsConfig, clientRequestTimeout);
@@ -161,8 +170,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
-        RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
+          RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
+    }
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
@@ -210,16 +221,20 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     try (Scope scope = GlobalTracer.get()
         .buildSpan("XceiverClientRatis." + request.getCmdType().name())
         .startActive(true)) {
-      ContainerCommandRequestProto finalPayload =
-          ContainerCommandRequestProto.newBuilder(request)
-              .setTraceID(TracingUtil.exportCurrentSpan())
-              .build();
-      boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
-      ByteString byteString = finalPayload.toByteString();
-      LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
-      return isReadOnlyRequest ?
-          getClient().sendReadOnlyAsync(() -> byteString) :
-          getClient().sendAsync(() -> byteString);
+      final ContainerCommandRequestMessage message
+          = ContainerCommandRequestMessage.toMessage(
+              request, TracingUtil.exportCurrentSpan());
+      if (HddsUtils.isReadOnly(request)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync ReadOnly {}", message);
+        }
+        return getClient().sendReadOnlyAsync(message);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("sendCommandAsync {}", message);
+        }
+        return getClient().sendAsync(message);
+      }
     }
   }
 
@@ -249,7 +264,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       clientReply.setLogIndex(commitIndex);
       return clientReply;
     }
-    LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    }
     RaftClientReply reply;
     try {
       CompletableFuture<RaftClientReply> replyFuture = getClient()
@@ -257,7 +274,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
       Throwable t = HddsClientUtils.checkForException(e);
-      LOG.warn("3 way commit failed ", e);
+      LOG.warn("3 way commit failed on pipeline {}", pipeline, e);
       if (t instanceof GroupMismatchException) {
         throw e;
       }
@@ -276,8 +293,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         // replication.
         commitInfoMap.remove(address);
         LOG.info(
-            "Could not commit " + index + " to all the nodes. Server " + address
-                + " has failed." + " Committed by majority.");
+            "Could not commit index {} on pipeline {} to all the nodes. " +
+            "Server {} has failed. Committed by majority.",
+            index, pipeline, address);
       });
     }
     clientReply.setLogIndex(index);
@@ -300,19 +318,18 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     metrics.incrPendingContainerOpsMetrics(request.getCmdType());
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> {
-          LOG.debug("received reply {} for request: cmdType={} containerID={}"
-                  + " pipelineID={} traceID={} exception: {}", reply,
-              request.getCmdType(), request.getContainerID(),
-              request.getPipelineID(), request.getTraceID(), e);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("received reply {} for request: cmdType={} containerID={}"
+                    + " pipelineID={} traceID={} exception: {}", reply,
+                request.getCmdType(), request.getContainerID(),
+                request.getPipelineID(), request.getTraceID(), e);
+          }
           metrics.decrPendingContainerOpsMetrics(request.getCmdType());
           metrics.addContainerOpsLatency(request.getCmdType(),
               Time.monotonicNowNanos() - requestTime);
         }).thenApply(reply -> {
           try {
-            // we need to handle RaftRetryFailure Exception
-            RaftRetryFailureException raftRetryFailureException =
-                reply.getRetryFailureException();
-            if (raftRetryFailureException != null) {
+            if (!reply.isSuccess()) {
               // in case of raft retry failure, the raft client is
               // not able to connect to the leader hence the pipeline
               // can not be used but this instance of RaftClient will close
@@ -324,7 +341,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               // to SCM as in this case, it is the raft client which is not
               // able to connect to leader in the pipeline, though the
               // pipeline can still be functional.
-              throw new CompletionException(raftRetryFailureException);
+              RaftException exception = reply.getException();
+              Preconditions.checkNotNull(exception, "Raft reply failure but " +
+                  "no exception propagated.");
+              throw new CompletionException(exception);
             }
             ContainerCommandResponseProto response =
                 ContainerCommandResponseProto

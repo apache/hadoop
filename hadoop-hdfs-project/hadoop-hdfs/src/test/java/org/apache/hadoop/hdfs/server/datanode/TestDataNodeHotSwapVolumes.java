@@ -416,7 +416,7 @@ public class TestDataNodeHotSwapVolumes {
       minNumBlocks = Math.min(minNumBlocks, blockList.getNumberOfBlocks());
       maxNumBlocks = Math.max(maxNumBlocks, blockList.getNumberOfBlocks());
     }
-    assertTrue(Math.abs(maxNumBlocks - maxNumBlocks) <= 1);
+    assertTrue(Math.abs(maxNumBlocks - minNumBlocks) <= 1);
     verifyFileLength(cluster.getFileSystem(), testFile, numBlocks);
   }
 
@@ -549,7 +549,8 @@ public class TestDataNodeHotSwapVolumes {
     dn.data = Mockito.spy(data);
 
     final int newVolumeCount = 40;
-    List<Thread> addVolumeDelayedThreads = new ArrayList<>();
+    List<Thread> addVolumeDelayedThreads =
+        Collections.synchronizedList(new ArrayList<>());
     AtomicBoolean addVolumeError = new AtomicBoolean(false);
     AtomicBoolean listStorageError = new AtomicBoolean(false);
     CountDownLatch addVolumeCompletionLatch =

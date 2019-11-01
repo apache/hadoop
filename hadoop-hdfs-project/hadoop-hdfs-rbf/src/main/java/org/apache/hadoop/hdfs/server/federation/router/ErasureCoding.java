@@ -140,7 +140,7 @@ public class ErasureCoding {
     rpcServer.checkOperation(OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod remoteMethod = new RemoteMethod("getErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
     ErasureCodingPolicy ret = rpcClient.invokeSequential(
@@ -153,21 +153,29 @@ public class ErasureCoding {
     rpcServer.checkOperation(OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod remoteMethod = new RemoteMethod("setErasureCodingPolicy",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), ecPolicyName);
-    rpcClient.invokeSequential(locations, remoteMethod, null, null);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, remoteMethod);
+    } else {
+      rpcClient.invokeSequential(locations, remoteMethod);
+    }
   }
 
   public void unsetErasureCodingPolicy(String src) throws IOException {
     rpcServer.checkOperation(OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod remoteMethod = new RemoteMethod("unsetErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
-    rpcClient.invokeSequential(locations, remoteMethod, null, null);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, remoteMethod);
+    } else {
+      rpcClient.invokeSequential(locations, remoteMethod);
+    }
   }
 
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {
@@ -179,33 +187,6 @@ public class ErasureCoding {
         rpcClient.invokeConcurrent(
             nss, method, true, false, ECBlockGroupStats.class);
 
-    // Merge the stats from all the namespaces
-    long lowRedundancyBlockGroups = 0;
-    long corruptBlockGroups = 0;
-    long missingBlockGroups = 0;
-    long bytesInFutureBlockGroups = 0;
-    long pendingDeletionBlocks = 0;
-    long highestPriorityLowRedundancyBlocks = 0;
-    boolean hasHighestPriorityLowRedundancyBlocks = false;
-
-    for (ECBlockGroupStats stats : allStats.values()) {
-      lowRedundancyBlockGroups += stats.getLowRedundancyBlockGroups();
-      corruptBlockGroups += stats.getCorruptBlockGroups();
-      missingBlockGroups += stats.getMissingBlockGroups();
-      bytesInFutureBlockGroups += stats.getBytesInFutureBlockGroups();
-      pendingDeletionBlocks += stats.getPendingDeletionBlocks();
-      if (stats.hasHighestPriorityLowRedundancyBlocks()) {
-        hasHighestPriorityLowRedundancyBlocks = true;
-        highestPriorityLowRedundancyBlocks +=
-            stats.getHighestPriorityLowRedundancyBlocks();
-      }
-    }
-    if (hasHighestPriorityLowRedundancyBlocks) {
-      return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-          missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
-          highestPriorityLowRedundancyBlocks);
-    }
-    return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks);
+    return ECBlockGroupStats.merge(allStats.values());
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.security.token.block;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -55,6 +57,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private StorageType[] storageTypes;
   private String[] storageIds;
   private boolean useProto;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
 
@@ -76,6 +79,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     this.storageIds = Optional.ofNullable(storageIds)
                               .orElse(new String[0]);
     this.useProto = useProto;
+    this.handshakeMsg = new byte[0];
   }
 
   @Override
@@ -132,6 +136,15 @@ public class BlockTokenIdentifier extends TokenIdentifier {
 
   public String[] getStorageIds(){
     return storageIds;
+  }
+
+  public byte[] getHandshakeMsg() {
+    return handshakeMsg;
+  }
+
+  public void setHandshakeMsg(byte[] bytes) {
+    cache = null; // invalidate the cache
+    handshakeMsg = bytes;
   }
 
   @Override
@@ -203,6 +216,15 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if (!dis.markSupported()) {
       throw new IOException("Could not peek first byte.");
     }
+
+    // this.cache should be assigned the raw bytes from the input data for
+    // upgrading compatibility. If we won't mutate fields and call getBytes()
+    // for something (e.g retrieve password), we should return the raw bytes
+    // instead of serializing the instance self fields to bytes, because we may
+    // lose newly added fields which we can't recognize
+    this.cache = IOUtils.readFullyToByteArray(dis);
+    dis.reset();
+
     dis.mark(1);
     final byte firstByte = dis.readByte();
     dis.reset();
@@ -241,6 +263,16 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = readStorageIds;
 
     useProto = false;
+
+    try {
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+
+    }
   }
 
   @VisibleForTesting
@@ -271,6 +303,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = blockTokenSecretProto.getStorageIdsList().stream()
         .toArray(String[]::new);
     useProto = true;
+
+    if(blockTokenSecretProto.hasHandshakeSecret()) {
+      handshakeMsg = blockTokenSecretProto
+          .getHandshakeSecret().toByteArray();
+    } else {
+      handshakeMsg = new byte[0];
+    }
   }
 
   @Override
@@ -300,6 +339,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, storageIds.length);
     for (String id: storageIds) {
       WritableUtils.writeString(out, id);
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
     }
   }
 

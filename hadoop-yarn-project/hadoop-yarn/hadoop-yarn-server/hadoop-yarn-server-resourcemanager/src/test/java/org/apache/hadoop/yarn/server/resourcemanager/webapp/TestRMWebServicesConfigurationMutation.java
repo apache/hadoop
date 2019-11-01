@@ -190,6 +190,67 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   @Test
+  public void testFormatSchedulerConf() throws Exception {
+    CapacitySchedulerConfiguration newConf = getSchedulerConf();
+    assertNotNull(newConf);
+    assertEquals(3, newConf.getQueues("root").length);
+
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> nearEmptyCapacity = new HashMap<>();
+    nearEmptyCapacity.put(CapacitySchedulerConfiguration.CAPACITY, "1E-4");
+    QueueConfigInfo d = new QueueConfigInfo("root.formattest",
+        nearEmptyCapacity);
+    updateInfo.getAddQueueInfo().add(d);
+
+    Map<String, String> stoppedParam = new HashMap<>();
+    stoppedParam.put(CapacitySchedulerConfiguration.STATE,
+        QueueState.STOPPED.toString());
+    QueueConfigInfo stoppedInfo = new QueueConfigInfo("root.formattest",
+        stoppedParam);
+    updateInfo.getUpdateQueueInfo().add(stoppedInfo);
+
+    // Add a queue root.formattest to the existing three queues
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    newConf = getSchedulerConf();
+    assertNotNull(newConf);
+    assertEquals(4, newConf.getQueues("root").length);
+
+    // Format the scheduler config and validate root.formattest is not present
+    response = r.path("ws").path("v1").path("cluster")
+        .queryParam("user.name", userName)
+        .path(RMWSConsts.FORMAT_SCHEDULER_CONF)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    newConf = getSchedulerConf();
+    assertEquals(3, newConf.getQueues("root").length);
+  }
+
+  private long getConfigVersion() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .queryParam("user.name", userName)
+        .path(RMWSConsts.SCHEDULER_CONF_VERSION)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    return Long.parseLong(json.get("versionID").toString());
+  }
+
+  @Test
+  public void testSchedulerConfigVersion() throws Exception {
+    assertEquals(1, getConfigVersion());
+    testAddNestedQueue();
+    assertEquals(2, getConfigVersion());
+  }
+
+  @Test
   public void testAddNestedQueue() throws Exception {
     CapacitySchedulerConfiguration orgConf = getSchedulerConf();
     assertNotNull(orgConf);

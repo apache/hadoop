@@ -26,7 +26,8 @@ import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClie
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.security.SecurityUtil;
@@ -169,8 +169,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   }
 
   public void start() {
-    DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
+    HddsUtils.initializeMetrics(conf, "HddsDatanode");
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
         String hostname = HddsUtils.getHostName(conf);
@@ -271,16 +271,24 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     try {
       PKCS10CertificationRequest csr = getCSR(config);
       // TODO: For SCM CA we should fetch certificate from multiple SCMs.
-      SCMSecurityProtocol secureScmClient =
-          HddsUtils.getScmSecurityClient(config,
-              HddsUtils.getScmAddressForSecurityProtocol(config));
-
-      String pemEncodedCert = secureScmClient.getDataNodeCertificate(
-          datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
-      dnCertClient.storeCertificate(pemEncodedCert, true);
-      datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
-          getSerialNumber().toString());
-      persistDatanodeDetails(datanodeDetails);
+      SCMSecurityProtocolClientSideTranslatorPB secureScmClient =
+          HddsUtils.getScmSecurityClient(config);
+      SCMGetCertResponseProto response = secureScmClient.
+          getDataNodeCertificateChain(datanodeDetails.getProtoBufMessage(),
+              getEncodedString(csr));
+      // Persist certificates.
+      if(response.hasX509CACertificate()) {
+        String pemEncodedCert = response.getX509Certificate();
+        dnCertClient.storeCertificate(pemEncodedCert, true);
+        dnCertClient.storeCertificate(response.getX509CACertificate(), true,
+            true);
+        datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
+            getSerialNumber().toString());
+        persistDatanodeDetails(datanodeDetails);
+      } else {
+        throw new RuntimeException("Unable to retrieve datanode certificate " +
+            "chain");
+      }
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);

@@ -31,12 +31,16 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnterSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDestinationRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDestinationResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetSafeModeRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.LeaveSafeModeRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.LeaveSafeModeResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryRequestProto;
@@ -52,12 +56,16 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequ
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -72,12 +80,16 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnterSafe
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnterSafeModeResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDisabledNameservicesRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDisabledNameservicesResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDestinationRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDestinationResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetMountTableEntriesRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetSafeModeRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetSafeModeResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.LeaveSafeModeRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.LeaveSafeModeResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryRequestPBImpl;
@@ -270,6 +282,39 @@ public class RouterAdminProtocolServerSideTranslatorPB implements
           server.getDisabledNameservices(req);
       GetDisabledNameservicesResponsePBImpl responsePB =
           (GetDisabledNameservicesResponsePBImpl)response;
+      return responsePB.getProto();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RefreshMountTableEntriesResponseProto refreshMountTableEntries(
+      RpcController controller, RefreshMountTableEntriesRequestProto request)
+      throws ServiceException {
+    try {
+      RefreshMountTableEntriesRequest req =
+          new RefreshMountTableEntriesRequestPBImpl(request);
+      RefreshMountTableEntriesResponse response =
+          server.refreshMountTableEntries(req);
+      RefreshMountTableEntriesResponsePBImpl responsePB =
+          (RefreshMountTableEntriesResponsePBImpl) response;
+      return responsePB.getProto();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetDestinationResponseProto getDestination(
+      RpcController controller, GetDestinationRequestProto request)
+      throws ServiceException {
+    try {
+      GetDestinationRequest req =
+          new GetDestinationRequestPBImpl(request);
+      GetDestinationResponse response = server.getDestination(req);
+      GetDestinationResponsePBImpl responsePB =
+          (GetDestinationResponsePBImpl)response;
       return responsePB.getProto();
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -18,7 +18,8 @@
 package org.apache.hadoop.mapred.nativetask.buffer;
 
 import org.junit.Test;
-import org.junit.Assert;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestOutputBuffer {
 
@@ -26,21 +27,21 @@ public class TestOutputBuffer {
   public void testOutputBuffer() {
     final int size = 100;
     final OutputBuffer output1 = new OutputBuffer(BufferType.DIRECT_BUFFER, size);
-    Assert.assertEquals(output1.getType(), BufferType.DIRECT_BUFFER);
+    assertThat(output1.getType()).isEqualTo(BufferType.DIRECT_BUFFER);
 
-    Assert.assertTrue(output1.length() == 0);
-    Assert.assertEquals(output1.limit(), size);
+    assertThat(output1.length()).isZero();
+    assertThat(output1.limit()).isEqualTo(size);
 
     final OutputBuffer output2 = new OutputBuffer(BufferType.HEAP_BUFFER, size);
-    Assert.assertEquals(output2.getType(), BufferType.HEAP_BUFFER);
+    assertThat(output2.getType()).isEqualTo(BufferType.HEAP_BUFFER);
 
-    Assert.assertTrue(output2.length() == 0);
-    Assert.assertEquals(output2.limit(), size);
+    assertThat(output2.length()).isZero();
+    assertThat(output2.limit()).isEqualTo(size);
 
     final OutputBuffer output3 = new OutputBuffer(new byte[size]);
-    Assert.assertEquals(output3.getType(), BufferType.HEAP_BUFFER);
+    assertThat(output3.getType()).isEqualTo(BufferType.HEAP_BUFFER);
 
-    Assert.assertTrue(output3.length() == 0);
-    Assert.assertEquals(output3.limit(), size);
+    assertThat(output3.length()).isZero();
+    assertThat(output3.limit()).isEqualTo(size);
   }
 }

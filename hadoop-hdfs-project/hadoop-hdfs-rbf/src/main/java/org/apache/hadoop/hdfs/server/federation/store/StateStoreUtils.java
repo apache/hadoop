@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,4 +113,27 @@ public final class StateStoreUtils {
     }
     return matchingList;
   }
+
+  /**
+   * Returns address in form of host:port, empty string if address is null.
+   *
+   * @param address address
+   * @return host:port
+   */
+  public static String getHostPortString(InetSocketAddress address) {
+    if (null == address) {
+      return "";
+    }
+    String hostName = address.getHostName();
+    if (hostName.equals("0.0.0.0")) {
+      try {
+        hostName = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        LOG.error("Failed to get local host name", e);
+        return "";
+      }
+    }
+    return hostName + ":" + address.getPort();
+  }
+
 }

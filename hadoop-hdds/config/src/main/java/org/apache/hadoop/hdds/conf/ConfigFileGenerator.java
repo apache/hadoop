@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 import java.util.Set;
 
 /**
@@ -60,7 +61,7 @@ public class ConfigFileGenerator extends AbstractProcessor {
           .getResource(StandardLocation.CLASS_OUTPUT, "",
               OUTPUT_FILE_NAME).openInputStream()) {
         appender.load(input);
-      } catch (FileNotFoundException ex) {
+      } catch (FileNotFoundException | NoSuchFileException ex) {
         appender.init();
       }
 
@@ -93,21 +94,21 @@ public class ConfigFileGenerator extends AbstractProcessor {
           }
 
         }
-        FileObject resource = filer
-            .createResource(StandardLocation.CLASS_OUTPUT, "",
-                OUTPUT_FILE_NAME);
-
-        try (Writer writer = new OutputStreamWriter(
-            resource.openOutputStream(), StandardCharsets.UTF_8)) {
-          appender.write(writer);
-        }
       }
+      FileObject resource = filer
+          .createResource(StandardLocation.CLASS_OUTPUT, "",
+              OUTPUT_FILE_NAME);
+
+      try (Writer writer = new OutputStreamWriter(
+          resource.openOutputStream(), StandardCharsets.UTF_8)) {
+        appender.write(writer);
+      }
+
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Kind.ERROR,
-          "Can't generate the config file from annotation: " + e.getMessage());
+          "Can't generate the config file from annotation: " + e);
     }
     return false;
   }
-
 
 }

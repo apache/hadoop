@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.security.ssl.OpenSSLSocketFactory;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -139,9 +139,15 @@ public final class Constants {
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
+
+  // the maximum number of tasks cached if all threads are already uploading
+  public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
+
+  public static final int DEFAULT_MAX_TOTAL_TASKS = 32;
+
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 48;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -150,8 +156,9 @@ public final class Constants {
 
   // use OpenSSL or JSEE for secure connections
   public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
-  public static final OpenSSLSocketFactory.SSLChannelMode
-      DEFAULT_SSL_CHANNEL_MODE = OpenSSLSocketFactory.SSLChannelMode.Default;
+  public static final DelegatingSSLSocketFactory.SSLChannelMode
+      DEFAULT_SSL_CHANNEL_MODE =
+          DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
 
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
@@ -169,7 +176,7 @@ public final class Constants {
 
   // number of times we should retry errors
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 20;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
@@ -200,18 +207,14 @@ public final class Constants {
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
 
-  // the maximum number of tasks cached if all threads are already uploading
-  public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
-  public static final int DEFAULT_MAX_TOTAL_TASKS = 5;
-
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
-  public static final long DEFAULT_MULTIPART_SIZE = 104857600; // 100 MB
+  public static final long DEFAULT_MULTIPART_SIZE = 67108864; // 64M
 
   // minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_THRESHOLD =
       "fs.s3a.multipart.threshold";
-  public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
+  public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = 134217728; // 128M
 
   //enable multiobject-delete calls?
   public static final String ENABLE_MULTI_DELETE =
@@ -289,6 +292,22 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
 
+  /**
+   * The capacity of executor queues for operations other than block
+   * upload, where {@link #FAST_UPLOAD_ACTIVE_BLOCKS} is used instead.
+   * This should be less than {@link #MAX_THREADS} for fair
+   * submission.
+   * Value: {@value}.
+   */
+  public static final String EXECUTOR_CAPACITY = "fs.s3a.executor.capacity";
+
+  /**
+   * The capacity of executor queues for operations other than block
+   * upload, where {@link #FAST_UPLOAD_ACTIVE_BLOCKS} is used instead.
+   * Value: {@value}
+   */
+  public static final int DEFAULT_EXECUTOR_CAPACITY = 16;
+
   // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
   // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
   public static final String CANNED_ACL = "fs.s3a.acl.default";
@@ -331,8 +350,46 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  //override signature algorithm used for signing requests
+  /**
+   * List of custom Signers. The signer class will be loaded, and the signer
+   * name will be associated with this signer class in the S3 SDK.
+   * Examples
+   * CustomSigner {@literal ->} 'CustomSigner:org.apache...CustomSignerClass'
+   * CustomSigners {@literal ->} 'CSigner1:CSigner1Class,CSigner2:CSigner2Class'
+   * Initializer {@literal ->} 'CSigner1:CSigner1Class:CSigner1InitializerClass'
+   * With Existing {@literal ->} 'AWS4Signer,CSigner1,CSigner2:CSigner2Class'
+   */
+  public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
+
+  /**
+   * There's 3 parameters that can be used to specify a non-default signing
+   * algorithm.<br>
+   * fs.s3a.signing-algorithm - This property has existed for the longest time.
+   * If specified, without either of the other 2 properties being specified,
+   * this signing algorithm will be used for S3 and DDB (S3Guard). <br>
+   * The other 2 properties override this value for S3 or DDB. <br>
+   * fs.s3a.s3.signing-algorithm - Allows overriding the S3 Signing algorithm.
+   * This does not affect DDB. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for S3
+   * requests, and the default will be used for DDB.<br>
+   * fs.s3a.ddb.signing-algorithm - Allows overriding the DDB Signing algorithm.
+   * This does not affect S3. Specifying this property without specifying
+   * fs.s3a.signing-algorithm will only update the signing algorithm for
+   * DDB requests, and the default will be used for S3.
+   */
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_S3 =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
+          + ".signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_DDB =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_DDB.toLowerCase()
+          + "signing-algorithm";
+
+  public static final String SIGNING_ALGORITHM_STS =
+      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
+          + "signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -351,6 +408,10 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
+  /** Whether or not to allow MetadataStore to be source of truth for a path prefix */
+  public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
+  public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
+
   /** Whether or not to allow MetadataStore to be source of truth. */
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
@@ -359,10 +420,14 @@ public final class Constants {
   /**
    * How long a directory listing in the MS is considered as authoritative.
    */
-  public static final String METADATASTORE_AUTHORITATIVE_DIR_TTL =
-      "fs.s3a.metadatastore.authoritative.dir.ttl";
-  public static final long DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL =
-      TimeUnit.MINUTES.toMillis(60);
+  public static final String METADATASTORE_METADATA_TTL =
+      "fs.s3a.metadatastore.metadata.ttl";
+
+  /**
+   * Default TTL in milliseconds: 15 minutes.
+   */
+  public static final long DEFAULT_METADATASTORE_METADATA_TTL =
+      TimeUnit.MINUTES.toMillis(15);
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
@@ -445,7 +510,6 @@ public final class Constants {
    * This config has no default value. If the user does not set this, the
    * S3Guard will operate table in the associated S3 bucket region.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_REGION_KEY =
       "fs.s3a.s3guard.ddb.region";
 
@@ -455,7 +519,6 @@ public final class Constants {
    * This config has no default value. If the user does not set this, the
    * S3Guard implementation will use the respective S3 bucket name.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.table";
 
@@ -465,36 +528,45 @@ public final class Constants {
    * For example:
    * fs.s3a.s3guard.ddb.table.tag.mytag
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_TAG =
       "fs.s3a.s3guard.ddb.table.tag.";
 
   /**
-   * Test table name to use during DynamoDB integration test.
-   *
-   * The table will be modified, and deleted in the end of the tests.
-   * If this value is not set, the integration tests that would be destructive
-   * won't run.
-   */
-  @InterfaceStability.Unstable
-  public static final String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
-      "fs.s3a.s3guard.ddb.test.table";
-
-  /**
    * Whether to create the DynamoDB table if the table does not exist.
+   * Value: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
       "fs.s3a.s3guard.ddb.table.create";
 
-  @InterfaceStability.Unstable
+  /**
+   * Read capacity when creating a table.
+   * When it and the write capacity are both "0", a per-request table is
+   * created.
+   * Value: {@value}.
+   */
   public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.read";
-  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
-  @InterfaceStability.Unstable
+
+  /**
+   * Default read capacity when creating a table.
+   * Value: {@value}.
+   */
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 0;
+
+  /**
+   * Write capacity when creating a table.
+   * When it and the read capacity are both "0", a per-request table is
+   * created.
+   * Value: {@value}.
+   */
   public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.write";
-  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
+
+  /**
+   * Default write capacity when creating a table.
+   * Value: {@value}.
+   */
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 0;
 
   /**
    * The maximum put or delete requests per BatchWriteItem request.
@@ -503,7 +575,6 @@ public final class Constants {
    */
   public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
 
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_MAX_RETRIES =
       "fs.s3a.s3guard.ddb.max.retries";
 
@@ -515,7 +586,6 @@ public final class Constants {
   public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT =
       DEFAULT_MAX_ERROR_RETRIES;
 
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL =
       "fs.s3a.s3guard.ddb.throttle.retry.interval";
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL_DEFAULT =
@@ -534,7 +604,6 @@ public final class Constants {
   /**
    * The default "Null" metadata store: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_NULL
       = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
 
@@ -567,7 +636,6 @@ public final class Constants {
   /**
    * Use DynamoDB for the metadata: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_DYNAMO
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
 
@@ -612,7 +680,7 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
-  public static final int RETRY_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Interval between retry attempts.: {@value}.
@@ -738,4 +806,41 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
+      "fs.s3a.s3guard.consistency.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
+
+  /**
+   * Initial retry interval: {@value}.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
+      "fs.s3a.s3guard.consistency.retry.interval";
+
+  /**
+   * Default initial retry interval: {@value}.
+   * The consistency retry probe uses exponential backoff, because
+   * each probe can cause the S3 load balancers to retain any 404 in
+   * its cache for longer. See HADOOP-16490.
+   */
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
+      "2s";
+
+  public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
+  public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
+  public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
+
+  /**
+   * How long to wait for the thread pool to terminate when cleaning up.
+   * Value: {@value} seconds.
+   */
+  public static final int THREAD_POOL_SHUTDOWN_DELAY_SECONDS = 30;
 }

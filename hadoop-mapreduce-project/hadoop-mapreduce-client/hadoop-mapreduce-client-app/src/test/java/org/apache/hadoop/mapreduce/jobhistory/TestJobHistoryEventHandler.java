@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -412,8 +413,9 @@ public class TestJobHistoryEventHandler {
               JobStateInternal.FAILED.toString())));
 
       // verify the value of the sensitive property in job.xml is restored.
-      Assert.assertEquals(sensitivePropertyName + " is modified.",
-          conf.get(sensitivePropertyName), sensitivePropertyValue);
+      assertThat(conf.get(sensitivePropertyName))
+          .isEqualTo(sensitivePropertyValue)
+          .withFailMessage(sensitivePropertyName + " is modified.");
 
       // load the job_conf.xml in JHS directory and verify property redaction.
       Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
@@ -543,19 +545,19 @@ public class TestJobHistoryEventHandler {
 
       JobHistoryEventHandler.MetaInfo mi =
           JobHistoryEventHandler.fileMap.get(t.jobId);
-      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
-      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      assertThat(mi.getJobIndexInfo().getSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobIndexInfo().getJobStartTime()).isEqualTo(200);
+      assertThat(mi.getJobSummary().getJobSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobSummary().getJobLaunchTime()).isEqualTo(200);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
           0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
 
-      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
-      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
-      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      assertThat(mi.getJobIndexInfo().getSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobIndexInfo().getJobStartTime()).isEqualTo(200);
+      assertThat(mi.getJobSummary().getJobSubmitTime()).isEqualTo(100);
+      assertThat(mi.getJobSummary().getJobLaunchTime()).isEqualTo(200);
       verify(jheh, times(1)).processDoneFiles(t.jobId);
 
       mockWriter = jheh.getEventWriter();

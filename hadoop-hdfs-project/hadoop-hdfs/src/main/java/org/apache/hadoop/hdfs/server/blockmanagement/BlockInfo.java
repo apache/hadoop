@@ -182,6 +182,12 @@ public abstract class BlockInfo extends Block
   abstract boolean hasNoStorage();
 
   /**
+   * Checks whether this block has a Provided replica.
+   * @return true if this block has a replica on Provided storage.
+   */
+  abstract boolean isProvided();
+
+  /**
    * Find specified DatanodeStorageInfo.
    * @return DatanodeStorageInfo or null if not found.
    */

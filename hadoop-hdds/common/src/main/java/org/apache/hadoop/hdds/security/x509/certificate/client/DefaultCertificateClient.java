@@ -20,7 +20,9 @@
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -80,6 +82,8 @@ import static org.apache.hadoop.hdds.security.x509.exceptions.CertificateExcepti
 public abstract class DefaultCertificateClient implements CertificateClient {
 
   private static final String CERT_FILE_NAME_FORMAT = "%s.crt";
+  private static final String CA_CERT_PREFIX = "CA-";
+  private static final int CA_CERT_PREFIX_LEN = 3;
   private final Logger logger;
   private final SecurityConfig securityConfig;
   private final KeyCodec keyCodec;
@@ -88,16 +92,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private X509Certificate x509Certificate;
   private Map<String, X509Certificate> certificateMap;
   private String certSerialId;
-
+  private String caCertId;
+  private String component;
 
   DefaultCertificateClient(SecurityConfig securityConfig, Logger log,
-      String certSerialId) {
+      String certSerialId, String component) {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
-    keyCodec = new KeyCodec(securityConfig);
+    keyCodec = new KeyCodec(securityConfig, component);
     this.logger = log;
     this.certificateMap = new ConcurrentHashMap<>();
     this.certSerialId = certSerialId;
+    this.component = component;
 
     loadAllCertificates();
   }
@@ -107,7 +113,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   private void loadAllCertificates() {
     // See if certs directory exists in file system.
-    Path certPath = securityConfig.getCertificateLocation();
+    Path certPath = securityConfig.getCertificateLocation(component);
     if (Files.exists(certPath) && Files.isDirectory(certPath)) {
       getLogger().info("Loading certificate from location:{}.",
           certPath);
@@ -115,7 +121,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
       if (certFiles != null) {
         CertificateCodec certificateCodec =
-            new CertificateCodec(securityConfig);
+            new CertificateCodec(securityConfig, component);
+        long latestCaCertSerailId = -1L;
         for (File file : certFiles) {
           if (file.isFile()) {
             try {
@@ -129,6 +136,15 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                 }
                 certificateMap.putIfAbsent(cert.getSerialNumber().toString(),
                     cert);
+                if (file.getName().startsWith(CA_CERT_PREFIX)) {
+                  String certFileName = FilenameUtils.getBaseName(
+                      file.getName());
+                  long tmpCaCertSerailId = NumberUtils.toLong(
+                      certFileName.substring(CA_CERT_PREFIX_LEN));
+                  if (tmpCaCertSerailId > latestCaCertSerailId) {
+                    latestCaCertSerailId = tmpCaCertSerailId;
+                  }
+                }
                 getLogger().info("Added certificate from file:{}.",
                     file.getAbsolutePath());
               } else {
@@ -140,6 +156,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                   file.getAbsolutePath(), e);
             }
           }
+        }
+        if (latestCaCertSerailId != -1) {
+          caCertId = Long.toString(latestCaCertSerailId);
         }
       }
     }
@@ -157,7 +176,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return privateKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPrivateKeyFileName())) {
       try {
@@ -181,7 +200,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return publicKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPublicKeyFileName())) {
       try {
@@ -216,6 +235,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       x509Certificate = certificateMap.get(certSerialId);
     }
     return x509Certificate;
+  }
+
+  /**
+   * Return the latest CA certificate known to the client.
+   * @return latest ca certificate known to the client.
+   */
+  @Override
+  public X509Certificate getCACertificate() {
+    if (caCertId != null) {
+      return certificateMap.get(caCertId);
+    }
+    return null;
   }
 
   /**
@@ -452,22 +483,44 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * Stores the Certificate  for this client. Don't use this api to add trusted
    * certificates of others.
    *
-   * @param pemEncodedCert - pem encoded X509 Certificate
-   * @param force - override any existing file
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
    * @throws CertificateException - on Error.
    *
    */
   @Override
   public void storeCertificate(String pemEncodedCert, boolean force)
       throws CertificateException {
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig);
+    this.storeCertificate(pemEncodedCert, force, false);
+  }
+
+  /**
+   * Stores the Certificate  for this client. Don't use this api to add trusted
+   * certificates of others.
+   *
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
+   * @param caCert                - Is CA certificate.
+   * @throws CertificateException - on Error.
+   *
+   */
+  @Override
+  public void storeCertificate(String pemEncodedCert, boolean force,
+      boolean caCert) throws CertificateException {
+    CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
+        component);
     try {
-      Path basePath = securityConfig.getCertificateLocation();
+      Path basePath = securityConfig.getCertificateLocation(component);
 
       X509Certificate cert =
           CertificateCodec.getX509Certificate(pemEncodedCert);
       String certName = String.format(CERT_FILE_NAME_FORMAT,
           cert.getSerialNumber().toString());
+
+      if(caCert) {
+        certName = CA_CERT_PREFIX + certName;
+        caCertId = cert.getSerialNumber().toString();
+      }
 
       certificateCodec.writeCertificate(basePath, certName,
           pemEncodedCert, force);
@@ -717,7 +770,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * location.
    * */
   protected void bootstrapClientKeys() throws CertificateException {
-    Path keyPath = securityConfig.getKeyLocation();
+    Path keyPath = securityConfig.getKeyLocation(component);
     if (Files.notExists(keyPath)) {
       try {
         Files.createDirectories(keyPath);

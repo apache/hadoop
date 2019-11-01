@@ -14,7 +14,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
@@ -59,7 +59,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     </repository>
     <repository>
       <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+      <url>https://repository.jboss.org/nexus/content/groups/public/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -69,13 +69,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
 
   <organization>
     <name>Apache Software Foundation</name>
-    <url>http://www.apache.org</url>
+    <url>https://www.apache.org</url>
   </organization>
 
   <properties>
@@ -116,6 +116,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
     <shell-executable>bash</shell-executable>
 
+    <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
   </properties>
 
   <modules>
@@ -400,14 +401,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <exclude>.gitattributes</exclude>
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
+            <exclude>.github/pull_request_template.md</exclude>
             <exclude>.idea/**</exclude>
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
             <exclude>hadoop-hdds/**/</exclude>
             <exclude>hadoop-ozone/**/</exclude>
-            <exclude>hadoop-submarine/target/**</exclude>
-            <exclude>hadoop-submarine/**/target/**</exclude>
+            <exclude>hadoop-submarine/**/</exclude>
+            <exclude>licenses/**</exclude>
+            <exclude>licenses-binary/**</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -586,7 +589,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </build>
     </profile>
     <profile>
-      <id>hdds-src</id>
+      <id>submarine-src</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
@@ -606,12 +609,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <configuration>
                   <appendAssemblyId>false</appendAssemblyId>
                   <attach>false</attach>
-                  <finalName>hadoop-${project.version}-src-with-hdds</finalName>
+                  <finalName>hadoop-submarine-${project.version}-src</finalName>
                   <outputDirectory>hadoop-dist/target</outputDirectory>
                   <!-- Not using descriptorRef and hadoop-assembly dependency -->
                   <!-- to avoid making hadoop-main to depend on a module      -->
                   <descriptors>
-                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-with-hdds.xml</descriptor>
+                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-submarine.xml</descriptor>
                   </descriptors>
                 </configuration>
               </execution>
@@ -631,7 +634,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <configuration>
                   <target>
                     <echo/>
-                    <echo>Hadoop source tar (including HDDS) available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-hdds.tar.gz</echo>
+                    <echo>Hadoop source tar with Submarine source is available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-submarine.tar.gz</echo>
                     <echo/>
                   </target>
                 </configuration>
@@ -641,6 +644,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </plugins>
       </build>
     </profile>
+
 
     <profile>
       <id>sign</id>
@@ -743,8 +747,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <activeByDefault>false</activeByDefault>
       </activation>
       <modules>
-        <module>hadoop-ozone</module>
         <module>hadoop-hdds</module>
+        <module>hadoop-ozone</module>
       </modules>
     </profile>
     <profile>
@@ -755,6 +759,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <modules>
         <module>hadoop-submarine</module>
       </modules>
+    </profile>
+    <profile>
+      <id>aarch64</id>
+      <properties>
+        <leveldbjni.group>org.openlabtesting.leveldbjni</leveldbjni.group>
+      </properties>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
     </profile>
 
   </profiles>

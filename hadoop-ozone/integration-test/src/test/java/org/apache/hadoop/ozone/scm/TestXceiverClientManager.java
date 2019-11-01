@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdds.scm.XceiverClientManager.ScmClientConfig;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -40,8 +40,6 @@ import java.io.IOException;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
-import static org.apache.hadoop.hdds.scm
-    .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
 
 /**
  * Test for XceiverClientManager caching and eviction.
@@ -111,11 +109,13 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
     String metaDir = GenericTestUtils.getTempPath(
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -144,9 +144,8 @@ public class TestXceiverClientManager {
             + container1.getContainerInfo().getReplicationType());
     Assert.assertEquals(null, nonExistent1);
     // However container call should succeed because of refcount on the client.
-    String traceID1 = "trace" + RandomStringUtils.randomNumeric(4);
     ContainerProtocolCalls.createContainer(client1,
-        container1.getContainerInfo().getContainerID(), traceID1, null);
+        container1.getContainerInfo().getContainerID(), null);
 
     // After releasing the client, this connection should be closed
     // and any container operations should fail
@@ -155,7 +154,7 @@ public class TestXceiverClientManager {
     String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
-          container1.getContainerInfo().getContainerID(), traceID1, null);
+          container1.getContainerInfo().getContainerID(), null);
       Assert.fail("Create container should throw exception on closed"
           + "client");
     } catch (Exception e) {
@@ -168,11 +167,13 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
     String metaDir = GenericTestUtils.getTempPath(
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -202,11 +203,10 @@ public class TestXceiverClientManager {
     Assert.assertEquals(null, nonExistent);
 
     // Any container operation should now fail
-    String traceID2 = "trace" + RandomStringUtils.randomNumeric(4);
     String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
-          container1.getContainerInfo().getContainerID(), traceID2, null);
+          container1.getContainerInfo().getContainerID(), null);
       Assert.fail("Create container should throw exception on closed"
           + "client");
     } catch (Exception e) {
@@ -219,8 +219,10 @@ public class TestXceiverClientManager {
   @Test
   public void testFreeByRetryFailure() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
-    XceiverClientManager clientManager = new XceiverClientManager(conf);
+    ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
+    clientConfig.setMaxSize(1);
+    XceiverClientManager clientManager =
+        new XceiverClientManager(conf, clientConfig, null);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 

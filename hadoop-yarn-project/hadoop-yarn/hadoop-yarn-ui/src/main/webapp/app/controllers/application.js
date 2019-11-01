@@ -73,4 +73,11 @@ export default Ember.Controller.extend({
     }
     return null;
   }.property('model.userInfo'),
+
+  isTimelineUnHealthy: function() {
+    if (this.model && this.model.timelineHealth) {
+      return this.model.timelineHealth.get('isTimelineUnHealthy');
+    }
+    return true;
+  }.property('model.timelineHealth')
 });

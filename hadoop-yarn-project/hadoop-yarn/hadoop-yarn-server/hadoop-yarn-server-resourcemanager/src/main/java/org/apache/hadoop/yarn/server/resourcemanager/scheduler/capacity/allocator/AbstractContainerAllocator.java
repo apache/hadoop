@@ -109,16 +109,10 @@ public abstract class AbstractContainerAllocator {
             allocatedResource);
 
         if (rmContainer != null) {
-          ActivitiesLogger.APP.recordAppActivityWithAllocation(
-              activitiesManager, node, application, updatedContainer,
-              ActivityState.RE_RESERVED);
           ActivitiesLogger.APP.finishSkippedAppAllocationRecording(
               activitiesManager, application.getApplicationId(),
               ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
         } else {
-          ActivitiesLogger.APP.recordAppActivityWithAllocation(
-              activitiesManager, node, application, updatedContainer,
-              ActivityState.RESERVED);
           ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
               activitiesManager, application.getApplicationId(),
               updatedContainer.getContainerId(), ActivityState.RESERVED,
@@ -149,7 +143,7 @@ public abstract class AbstractContainerAllocator {
             node, application, updatedContainer, ActivityState.ALLOCATED);
         ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
             activitiesManager, application.getApplicationId(),
-            updatedContainer.getContainerId(), ActivityState.ACCEPTED,
+            updatedContainer.getContainerId(), ActivityState.ALLOCATED,
             ActivityDiagnosticConstant.EMPTY);
 
         // Update unformed resource
@@ -162,6 +156,9 @@ public abstract class AbstractContainerAllocator {
         assignment.setSkippedType(
             CSAssignment.SkippedType.QUEUE_LIMIT);
       }
+      ActivitiesLogger.APP.finishSkippedAppAllocationRecording(
+          activitiesManager, application.getApplicationId(),
+          ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
     }
 
     return assignment;

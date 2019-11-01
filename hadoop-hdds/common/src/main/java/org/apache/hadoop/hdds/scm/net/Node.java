@@ -32,10 +32,22 @@ public interface Node {
    *  exclude itself. In another words, its parent's full network location */
   String getNetworkLocation();
 
+  /**
+   * Set this node's network location.
+   * @param location it's network location
+   */
+  void setNetworkLocation(String location);
+
   /** @return this node's self name in network topology. This should be node's
    * IP or hostname.
    * */
   String getNetworkName();
+
+  /**
+   * Set this node's name, can be hostname or Ipaddress.
+   * @param name it's network name
+   */
+  void setNetworkName(String name);
 
   /** @return this node's full path in network topology. It's the concatenation
    *  of location and name.

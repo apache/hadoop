@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor
     .ChangeMonitoringContainerResourceEvent;
@@ -44,7 +43,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 
 
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService
         .RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
@@ -132,21 +130,14 @@ public class ContainerScheduler extends AbstractService implements
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    try {
-      if (resourceHandlerChain == null) {
-        resourceHandlerChain = ResourceHandlerModule
-            .getConfiguredResourceHandlerChain(conf, context);
-      }
-      LOG.debug("Resource handler chain enabled = {}",
-          (resourceHandlerChain != null));
-      if (resourceHandlerChain != null) {
-        LOG.debug("Bootstrapping resource handler chain");
-        resourceHandlerChain.bootstrap(conf);
-      }
-    } catch (ResourceHandlerException e) {
-      LOG.error("Failed to bootstrap configured resource subsystems! ", e);
-      throw new IOException(
-          "Failed to bootstrap configured resource subsystems!");
+    if (resourceHandlerChain == null) {
+      resourceHandlerChain = ResourceHandlerModule
+          .getConfiguredResourceHandlerChain(conf, context);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
+          != null));
+
     }
     this.usePauseEventForPreemption =
         conf.getBoolean(
@@ -199,6 +190,7 @@ public class ContainerScheduler extends AbstractService implements
       startPendingContainers(maxOppQueueLength <= 0);
       metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
           queuedGuaranteedContainers.size());
+      break;
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());

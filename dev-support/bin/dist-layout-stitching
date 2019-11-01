@@ -122,6 +122,10 @@ run mkdir "hadoop-${VERSION}"
 run cd "hadoop-${VERSION}"
 run cp -p "${ROOT}/LICENSE.txt" .
 run cp -p "${ROOT}/NOTICE.txt" .
+run cp -p "${ROOT}/LICENSE-binary" .
+run mkdir licenses-binary
+run cp -p "${ROOT}/licenses-binary"/* licenses-binary/
+run cp -p "${ROOT}/NOTICE-binary" .
 run cp -p "${ROOT}/README.txt" .
 
 # Copy hadoop-common first so that it have always have all dependencies.
@@ -148,6 +152,7 @@ run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-runtime/target/hadoop-cli
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-minicluster/target/hadoop-client-minicluster-${VERSION}.jar" share/hadoop/client/
 
 run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
+run copy "${ROOT}/hadoop-tools/hadoop-dynamometer/hadoop-dynamometer-dist/target/hadoop-dynamometer-dist-${VERSION}" .
 
 
 echo

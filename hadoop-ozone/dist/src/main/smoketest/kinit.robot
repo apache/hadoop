@@ -20,6 +20,9 @@ Resource            commonlib.robot
 Test Timeout        2 minute
 
 
+*** Variables ***
+${testuser}          testuser
+
 *** Test Cases ***
 Kinit
-   Kinit test user
+   Kinit test user     ${testuser}     ${testuser}.keytab

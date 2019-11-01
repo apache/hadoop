@@ -34,6 +34,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -44,6 +45,14 @@ import org.apache.hadoop.conf.Configuration;
 public class OzoneConfiguration extends Configuration {
   static {
     activate();
+  }
+
+  public static OzoneConfiguration of(Configuration conf) {
+    Preconditions.checkNotNull(conf);
+
+    return conf instanceof OzoneConfiguration
+        ? (OzoneConfiguration) conf
+        : new OzoneConfiguration(conf);
   }
 
   public OzoneConfiguration() {

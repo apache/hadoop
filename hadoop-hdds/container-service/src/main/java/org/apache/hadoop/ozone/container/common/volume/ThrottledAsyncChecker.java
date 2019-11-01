@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -26,7 +25,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.datanode.checker.AsyncChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
 import org.apache.hadoop.util.Timer;
 
@@ -37,6 +35,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -122,7 +121,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
   public Optional<ListenableFuture<V>> schedule(
       Checkable<K, V> target, K context) {
     if (checksInProgress.containsKey(target)) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
     if (completedChecks.containsKey(target)) {
@@ -130,10 +129,12 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
           completedChecks.get(target);
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
-        LOG.debug("Skipped checking {}. Time since last check {}ms " +
-                "is less than the min gap {}ms.",
-            target, msSinceLastCheck, minMsBetweenChecks);
-        return Optional.absent();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipped checking {}. Time since last check {}ms " +
+                  "is less than the min gap {}ms.",
+              target, msSinceLastCheck, minMsBetweenChecks);
+        }
+        return Optional.empty();
       }
     }
 

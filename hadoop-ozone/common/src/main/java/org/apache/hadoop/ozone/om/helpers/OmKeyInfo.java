@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
@@ -50,6 +51,10 @@ public final class OmKeyInfo extends WithMetadata {
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
   private FileEncryptionInfo encInfo;
+  /**
+   * ACL Information.
+   */
+  private List<OzoneAcl> acls;
 
   @SuppressWarnings("parameternumber")
   OmKeyInfo(String volumeName, String bucketName, String keyName,
@@ -58,7 +63,7 @@ public final class OmKeyInfo extends WithMetadata {
       HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor,
       Map<String, String> metadata,
-      FileEncryptionInfo encInfo) {
+      FileEncryptionInfo encInfo, List<OzoneAcl> acls) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -81,6 +86,7 @@ public final class OmKeyInfo extends WithMetadata {
     this.type = type;
     this.metadata = metadata;
     this.encInfo = encInfo;
+    this.acls = acls;
   }
 
   public String getVolumeName() {
@@ -159,17 +165,21 @@ public final class OmKeyInfo extends WithMetadata {
    * part of the latest version, not a new version.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime if true, will update modification time.
    * @throws IOException
    */
   public synchronized void appendNewBlocks(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     if (keyLocationVersions.size() == 0) {
       throw new IOException("Appending new block, but no version exist");
     }
     OmKeyLocationInfoGroup currentLatestVersion =
         keyLocationVersions.get(keyLocationVersions.size() - 1);
     currentLatestVersion.appendNewBlocks(newLocationList);
-    setModificationTime(Time.now());
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
   }
 
   /**
@@ -177,10 +187,12 @@ public final class OmKeyInfo extends WithMetadata {
    * version to the all version list.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime - if true, updates modification time.
    * @throws IOException
    */
   public synchronized long addNewVersion(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     long latestVersionNum;
     if (keyLocationVersions.size() == 0) {
       // no version exist, these blocks are the very first version.
@@ -196,7 +208,10 @@ public final class OmKeyInfo extends WithMetadata {
       keyLocationVersions.add(newVersion);
       latestVersionNum = newVersion.getVersion();
     }
-    setModificationTime(Time.now());
+
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
     return latestVersionNum;
   }
 
@@ -216,6 +231,22 @@ public final class OmKeyInfo extends WithMetadata {
     return encInfo;
   }
 
+  public List<OzoneAcl> getAcls() {
+    return acls;
+  }
+
+  public boolean addAcl(OzoneAcl acl) {
+    return OzoneAclUtil.addAcl(acls, acl);
+  }
+
+  public boolean removeAcl(OzoneAcl acl) {
+    return OzoneAclUtil.removeAcl(acls, acl);
+  }
+
+  public boolean setAcls(List<OzoneAcl> newAcls) {
+    return OzoneAclUtil.setAcl(acls, newAcls);
+  }
+
   /**
    * Builder of OmKeyInfo.
    */
@@ -232,10 +263,12 @@ public final class OmKeyInfo extends WithMetadata {
     private HddsProtos.ReplicationFactor factor;
     private Map<String, String> metadata;
     private FileEncryptionInfo encInfo;
+    private List<OzoneAcl> acls;
 
     public Builder() {
       this.metadata = new HashMap<>();
       omKeyLocationInfoGroups = new ArrayList<>();
+      acls = new ArrayList<>();
     }
 
     public Builder setVolumeName(String volume) {
@@ -299,11 +332,18 @@ public final class OmKeyInfo extends WithMetadata {
       return this;
     }
 
+    public Builder setAcls(List<OzoneAcl> listOfAcls) {
+      if (listOfAcls != null) {
+        this.acls.addAll(listOfAcls);
+      }
+      return this;
+    }
+
     public OmKeyInfo build() {
       return new OmKeyInfo(
           volumeName, bucketName, keyName, omKeyLocationInfoGroups,
           dataSize, creationTime, modificationTime, type, factor, metadata,
-          encInfo);
+          encInfo, acls);
     }
   }
 
@@ -323,7 +363,8 @@ public final class OmKeyInfo extends WithMetadata {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
-        .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
+        .addAllAcls(OzoneAclUtil.toProtobuf(acls));
     if (encInfo != null) {
       kb.setFileEncryptionInfo(OMPBHelper.convert(encInfo));
     }
@@ -331,21 +372,23 @@ public final class OmKeyInfo extends WithMetadata {
   }
 
   public static OmKeyInfo getFromProtobuf(KeyInfo keyInfo) {
-    return new OmKeyInfo(
-        keyInfo.getVolumeName(),
-        keyInfo.getBucketName(),
-        keyInfo.getKeyName(),
-        keyInfo.getKeyLocationListList().stream()
+    return new OmKeyInfo.Builder()
+        .setVolumeName(keyInfo.getVolumeName())
+        .setBucketName(keyInfo.getBucketName())
+        .setKeyName(keyInfo.getKeyName())
+        .setOmKeyLocationInfos(keyInfo.getKeyLocationListList().stream()
             .map(OmKeyLocationInfoGroup::getFromProtobuf)
-            .collect(Collectors.toList()),
-        keyInfo.getDataSize(),
-        keyInfo.getCreationTime(),
-        keyInfo.getModificationTime(),
-        keyInfo.getType(),
-        keyInfo.getFactor(),
-        KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()),
-        keyInfo.hasFileEncryptionInfo() ? OMPBHelper.convert(keyInfo
-            .getFileEncryptionInfo()): null);
+            .collect(Collectors.toList()))
+        .setDataSize(keyInfo.getDataSize())
+        .setCreationTime(keyInfo.getCreationTime())
+        .setModificationTime(keyInfo.getModificationTime())
+        .setReplicationType(keyInfo.getType())
+        .setReplicationFactor(keyInfo.getFactor())
+        .addAllMetadata(KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()))
+        .setFileEncryptionInfo(keyInfo.hasFileEncryptionInfo() ?
+            OMPBHelper.convert(keyInfo.getFileEncryptionInfo()): null)
+        .setAcls(OzoneAclUtil.fromProtobuf(keyInfo.getAclsList()))
+        .build();
   }
 
   @Override
@@ -367,7 +410,8 @@ public final class OmKeyInfo extends WithMetadata {
             .equals(keyLocationVersions, omKeyInfo.keyLocationVersions) &&
         type == omKeyInfo.type &&
         factor == omKeyInfo.factor &&
-        Objects.equals(metadata, omKeyInfo.metadata);
+        Objects.equals(metadata, omKeyInfo.metadata) &&
+        Objects.equals(acls, omKeyInfo.acls);
   }
 
   @Override

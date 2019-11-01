@@ -146,7 +146,8 @@ public abstract class ReconfigurableBase
             oldConf.unset(change.prop);
           }
         } catch (ReconfigurationException e) {
-          errorMessage = e.getCause().getMessage();
+          Throwable cause = e.getCause();
+          errorMessage = cause == null ? e.getMessage() : cause.getMessage();
         }
         results.put(change, Optional.ofNullable(errorMessage));
       }

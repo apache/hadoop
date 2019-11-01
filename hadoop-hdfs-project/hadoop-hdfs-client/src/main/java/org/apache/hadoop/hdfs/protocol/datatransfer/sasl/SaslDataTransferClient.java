@@ -227,7 +227,7 @@ public class SaslDataTransferClient {
       throws IOException {
     boolean localTrusted = trustedChannelResolver.isTrusted();
     boolean remoteTrusted = trustedChannelResolver.isTrusted(addr);
-    LOG.info("SASL encryption trust check: localHostTrusted = {}, "
+    LOG.debug("SASL encryption trust check: localHostTrusted = {}, "
         + "remoteHostTrusted = {}", localTrusted, remoteTrusted);
     if (!localTrusted || !remoteTrusted) {
       // The encryption key factory only returns a key if encryption is enabled.
@@ -320,9 +320,7 @@ public class SaslDataTransferClient {
     if (secretKey != null) {
       LOG.debug("DataNode overwriting downstream QOP" +
           saslProps.get(Sasl.QOP));
-      byte[] newSecret =  SecretManager.createPassword(saslProps.get(Sasl.QOP)
-          .getBytes(Charsets.UTF_8), secretKey);
-      accessToken.setDNHandshakeSecret(newSecret);
+      updateToken(accessToken, secretKey, saslProps);
     }
 
     LOG.debug("Client using encryption algorithm {}",
@@ -438,9 +436,7 @@ public class SaslDataTransferClient {
       }
       LOG.debug("DataNode overwriting downstream QOP " +
           saslProps.get(Sasl.QOP));
-      byte[] newSecret = SecretManager.createPassword(
-          saslProps.get(Sasl.QOP).getBytes(Charsets.UTF_8), secretKey);
-      accessToken.setDNHandshakeSecret(newSecret);
+      updateToken(accessToken, secretKey, saslProps);
     }
     targetQOP = saslProps.get(Sasl.QOP);
     String userName = buildUserName(accessToken);
@@ -449,6 +445,18 @@ public class SaslDataTransferClient {
         password);
     return doSaslHandshake(addr, underlyingOut, underlyingIn, userName,
         saslProps, callbackHandler, accessToken);
+  }
+
+  private void updateToken(Token<BlockTokenIdentifier> accessToken,
+      SecretKey secretKey, Map<String, String> saslProps)
+      throws IOException {
+    byte[] newSecret = saslProps.get(Sasl.QOP).getBytes(Charsets.UTF_8);
+    BlockTokenIdentifier bkid = accessToken.decodeIdentifier();
+    bkid.setHandshakeMsg(newSecret);
+    byte[] bkidBytes = bkid.getBytes();
+    accessToken.setPassword(
+        SecretManager.createPassword(bkidBytes, secretKey));
+    accessToken.setID(bkidBytes);
   }
 
   /**
@@ -507,20 +515,29 @@ public class SaslDataTransferClient {
     try {
       // Start of handshake - "initial response" in SASL terminology.
       // The handshake secret can be null, this happens when client is running
-      // a new version but the cluster does not have this feature. In which case
-      // there will be no encrypted secret sent from NN.
-      byte[] handshakeSecret = accessToken.getDnHandshakeSecret();
-      if (handshakeSecret == null || handshakeSecret.length == 0) {
-        LOG.debug("Handshake secret is null, sending without "
-            + "handshake secret.");
-        sendSaslMessage(out, new byte[0]);
+      // a new version but the cluster does not have this feature.
+      // In which case there will be no encrypted secret sent from NN.
+      BlockTokenIdentifier blockTokenIdentifier =
+          accessToken.decodeIdentifier();
+      if (blockTokenIdentifier != null) {
+        byte[] handshakeSecret =
+            accessToken.decodeIdentifier().getHandshakeMsg();
+        if (handshakeSecret == null || handshakeSecret.length == 0) {
+          LOG.debug("Handshake secret is null, "
+              + "sending without handshake secret.");
+          sendSaslMessage(out, new byte[0]);
+        } else {
+          LOG.debug("Sending handshake secret.");
+          BlockTokenIdentifier identifier = new BlockTokenIdentifier();
+          identifier.readFields(new DataInputStream(
+              new ByteArrayInputStream(accessToken.getIdentifier())));
+          String bpid = identifier.getBlockPoolId();
+          sendSaslMessageHandshakeSecret(out, new byte[0],
+              handshakeSecret, bpid);
+        }
       } else {
-        LOG.debug("Sending handshake secret.");
-        BlockTokenIdentifier identifier = new BlockTokenIdentifier();
-        identifier.readFields(new DataInputStream(
-            new ByteArrayInputStream(accessToken.getIdentifier())));
-        String bpid = identifier.getBlockPoolId();
-        sendSaslMessageHandshakeSecret(out, new byte[0], handshakeSecret, bpid);
+        LOG.debug("Block token id is null, sending without handshake secret.");
+        sendSaslMessage(out, new byte[0]);
       }
 
       // step 1

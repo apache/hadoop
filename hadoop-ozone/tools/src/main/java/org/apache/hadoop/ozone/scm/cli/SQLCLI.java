@@ -34,13 +34,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAc
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.UserVolumeInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.hdds.utils.MetadataStore;
+import org.apache.hadoop.hdds.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -360,7 +360,7 @@ public class SQLCLI  extends Configured implements Tool {
                           byte[] value) throws IOException, SQLException {
     switch (type) {
     case USER:
-      VolumeList volumeList = VolumeList.parseFrom(value);
+      UserVolumeInfo volumeList = UserVolumeInfo.parseFrom(value);
       for (String volumeName : volumeList.getVolumeNamesList()) {
         String insertVolumeList =
             String.format(INSERT_VOLUME_LIST, keyName, volumeName);

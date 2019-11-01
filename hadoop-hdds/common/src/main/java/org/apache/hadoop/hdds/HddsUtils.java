@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -42,9 +43,15 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
@@ -173,23 +180,27 @@ public final class HddsUtils {
   /**
    * Create a scm security client.
    * @param conf    - Ozone configuration.
-   * @param address - inet socket address of scm.
    *
    * @return {@link SCMSecurityProtocol}
    * @throws IOException
    */
-  public static SCMSecurityProtocol getScmSecurityClient(
-      OzoneConfiguration conf, InetSocketAddress address) throws IOException {
+  public static SCMSecurityProtocolClientSideTranslatorPB getScmSecurityClient(
+      OzoneConfiguration conf) throws IOException {
     RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
         ProtobufRpcEngine.class);
     long scmVersion =
         RPC.getProtocolVersion(ScmBlockLocationProtocolPB.class);
+    InetSocketAddress address =
+        getScmAddressForSecurityProtocol(conf);
+    RetryPolicy retryPolicy =
+        RetryPolicies.retryForeverWithFixedSleep(
+            1000, TimeUnit.MILLISECONDS);
     SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
         new SCMSecurityProtocolClientSideTranslatorPB(
-            RPC.getProxy(SCMSecurityProtocolPB.class, scmVersion,
+            RPC.getProtocolProxy(SCMSecurityProtocolPB.class, scmVersion,
                 address, UserGroupInformation.getCurrentUser(),
                 conf, NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf), retryPolicy).getProxy());
     return scmSecurityClient;
   }
 
@@ -226,7 +237,12 @@ public final class HddsUtils {
     if ((value == null) || value.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(HostAndPort.fromString(value).getHostText());
+    String hostname = value.replaceAll("\\:[0-9]+$", "");
+    if (hostname.length() == 0) {
+      return Optional.empty();
+    } else {
+      return Optional.of(hostname);
+    }
   }
 
   /**
@@ -407,8 +423,10 @@ public final class HddsUtils {
         InvocationTargetException e) {
 
       // Fallback
-      LOG.trace("Registering MBean {} without additional properties {}",
-          mBeanName, jmxProperties);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Registering MBean {} without additional properties {}",
+            mBeanName, jmxProperties);
+      }
       return MBeans.register(serviceName, mBeanName, mBean);
     }
   }
@@ -470,4 +488,18 @@ public final class HddsUtils {
         .orElse(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT));
   }
 
+  /**
+   * Initialize hadoop metrics system for Ozone servers.
+   * @param configuration OzoneConfiguration to use.
+   * @param serverName    The logical name of the server components.
+   * @return
+   */
+  public static MetricsSystem initializeMetrics(
+      OzoneConfiguration configuration, String serverName) {
+    MetricsSystem metricsSystem = DefaultMetricsSystem.initialize(serverName);
+    JvmMetrics.create(serverName,
+        configuration.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
+    return metricsSystem;
+  }
 }

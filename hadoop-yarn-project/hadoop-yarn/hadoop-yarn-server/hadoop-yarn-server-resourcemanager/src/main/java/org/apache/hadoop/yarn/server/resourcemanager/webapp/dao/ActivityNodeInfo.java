@@ -20,14 +20,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /*
  * DAO object to display node information in allocation tree.
@@ -36,28 +38,41 @@ import java.util.List;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ActivityNodeInfo {
-  protected String name;  // The name for activity node
-  protected String appPriority;
-  protected String requestPriority;
-  protected String allocationState;
-  protected String diagnostic;
+  private String name;  // The name for activity node
+  private Integer appPriority;
+  private Integer requestPriority;
+  private Long allocationRequestId;
+  private String allocationState;
+  private String diagnostic;
   private String nodeId;
-  private String allocationRequestId;
+
+  // Used for groups of activities
+  private Integer count;
+  private List<String> nodeIds;
 
   protected List<ActivityNodeInfo> children;
 
   ActivityNodeInfo() {
   }
 
-  public ActivityNodeInfo(String name, ActivityState allocationState,
+  public ActivityNodeInfo(String name, ActivityState activityState,
       String diagnostic, NodeId nId) {
     this.name = name;
-    this.allocationState = allocationState.name();
+    this.allocationState = activityState.name();
     this.diagnostic = diagnostic;
     setNodeId(nId);
   }
 
-  ActivityNodeInfo(ActivityNode node) {
+  public ActivityNodeInfo(ActivityState groupActivityState,
+      String groupDiagnostic, List<String> groupNodeIds) {
+    this.allocationState = groupActivityState.name();
+    this.diagnostic = groupDiagnostic;
+    this.count = groupNodeIds.size();
+    this.nodeIds = groupNodeIds;
+  }
+
+  ActivityNodeInfo(ActivityNode node,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.name = node.getName();
     setPriority(node);
     setNodeId(node.getNodeId());
@@ -65,11 +80,14 @@ public class ActivityNodeInfo {
     this.diagnostic = node.getDiagnostic();
     this.requestPriority = node.getRequestPriority();
     this.allocationRequestId = node.getAllocationRequestId();
-    this.children = new ArrayList<>();
-
-    for (ActivityNode child : node.getChildren()) {
-      ActivityNodeInfo containerInfo = new ActivityNodeInfo(child);
-      this.children.add(containerInfo);
+    // only consider grouping for request type
+    if (node.isRequestType()) {
+      this.children = ActivitiesUtils
+          .getRequestActivityNodeInfos(node.getChildren(), groupBy);
+    } else {
+      this.children = node.getChildren().stream()
+          .map(e -> new ActivityNodeInfo(e, groupBy))
+          .collect(Collectors.toList());
     }
   }
 
@@ -80,7 +98,7 @@ public class ActivityNodeInfo {
   }
 
   private void setPriority(ActivityNode node) {
-    if (node.getType()) {
+    if (node.isAppType()) {
       this.appPriority = node.getAppPriority();
     } else {
       this.requestPriority = node.getRequestPriority();
@@ -91,7 +109,43 @@ public class ActivityNodeInfo {
     return nodeId;
   }
 
-  public String getAllocationRequestId() {
+  public void setNodeIds(List<String> nodeIds) {
+    this.nodeIds = nodeIds;
+  }
+
+  public Long getAllocationRequestId() {
     return allocationRequestId;
+  }
+
+  public Integer getCount() {
+    return count;
+  }
+
+  public List<String> getNodeIds() {
+    return nodeIds;
+  }
+
+  public List<ActivityNodeInfo> getChildren() {
+    return children;
+  }
+
+  public String getAllocationState() {
+    return allocationState;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public Integer getAppPriority() {
+    return appPriority;
+  }
+
+  public Integer getRequestPriority() {
+    return requestPriority;
+  }
+
+  public String getDiagnostic() {
+    return diagnostic;
   }
 }

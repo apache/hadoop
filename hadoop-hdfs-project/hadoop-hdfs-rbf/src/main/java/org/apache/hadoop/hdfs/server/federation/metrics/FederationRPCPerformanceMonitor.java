@@ -129,7 +129,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   public long proxyOp() {
     PROXY_TIME.set(monotonicNow());
     long processingTime = getProcessingTime();
-    if (processingTime >= 0) {
+    if (metrics != null && processingTime >= 0) {
       metrics.addProcessingTime(processingTime);
     }
     return Thread.currentThread().getId();
@@ -139,7 +139,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   public void proxyOpComplete(boolean success) {
     if (success) {
       long proxyTime = getProxyTime();
-      if (proxyTime >= 0) {
+      if (metrics != null && proxyTime >= 0) {
         metrics.addProxyTime(proxyTime);
       }
     }
@@ -147,47 +147,72 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   @Override
   public void proxyOpFailureStandby() {
-    metrics.incrProxyOpFailureStandby();
+    if (metrics != null) {
+      metrics.incrProxyOpFailureStandby();
+    }
   }
 
   @Override
   public void proxyOpFailureCommunicate() {
-    metrics.incrProxyOpFailureCommunicate();
+    if (metrics != null) {
+      metrics.incrProxyOpFailureCommunicate();
+    }
   }
 
   @Override
   public void proxyOpFailureClientOverloaded() {
-    metrics.incrProxyOpFailureClientOverloaded();
+    if (metrics != null) {
+      metrics.incrProxyOpFailureClientOverloaded();
+    }
   }
 
   @Override
   public void proxyOpNotImplemented() {
-    metrics.incrProxyOpNotImplemented();
+    if (metrics != null) {
+      metrics.incrProxyOpNotImplemented();
+    }
   }
 
   @Override
   public void proxyOpRetries() {
-    metrics.incrProxyOpRetries();
+    if (metrics != null) {
+      metrics.incrProxyOpRetries();
+    }
+  }
+
+  @Override
+  public void proxyOpNoNamenodes() {
+    if (metrics != null) {
+      metrics.incrProxyOpNoNamenodes();
+    }
   }
 
   @Override
   public void routerFailureStateStore() {
-    metrics.incrRouterFailureStateStore();
+    if (metrics != null) {
+      metrics.incrRouterFailureStateStore();
+    }
   }
 
   @Override
   public void routerFailureSafemode() {
-    metrics.incrRouterFailureSafemode();
+    if (metrics != null) {
+      metrics.incrRouterFailureSafemode();
+    }
   }
 
   @Override
   public void routerFailureReadOnly() {
-    metrics.incrRouterFailureReadOnly();
+    if (metrics != null) {
+      metrics.incrRouterFailureReadOnly();
+    }
   }
 
   @Override
   public void routerFailureLocked() {
-    metrics.incrRouterFailureLocked();
+    if (metrics != null) {
+      metrics.incrRouterFailureLocked();
+    }
   }
 
 

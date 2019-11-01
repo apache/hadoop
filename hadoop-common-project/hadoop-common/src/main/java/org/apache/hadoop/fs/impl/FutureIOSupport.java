@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.impl;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -108,20 +109,55 @@ public final class FutureIOSupport {
    */
   public static <T> T raiseInnerCause(final ExecutionException e)
       throws IOException {
+    throw unwrapInnerException(e);
+  }
+
+  /**
+   * Extract the cause of a completion failure and rethrow it if an IOE
+   * or RTE.
+   * @param e exception.
+   * @param <T> type of return value.
+   * @return nothing, ever.
+   * @throws IOException either the inner IOException, or a wrapper around
+   * any non-Runtime-Exception
+   * @throws RuntimeException if that is the inner cause.
+   */
+  public static <T> T raiseInnerCause(final CompletionException e)
+      throws IOException {
+    throw unwrapInnerException(e);
+  }
+
+  /**
+   * From the inner cause of an execution exception, extract the inner cause.
+   * If it is an RTE: throw immediately.
+   * If it is an IOE: Return.
+   * If it is a WrappedIOException: Unwrap and return
+   * Else: create a new IOException.
+   *
+   * Recursively handles wrapped Execution and Completion Exceptions in
+   * case something very complicated has happened.
+   * @param e exception.
+   * @return an IOException extracted or built from the cause.
+   * @throws RuntimeException if that is the inner cause.
+   */
+  private static IOException unwrapInnerException(final Throwable e) {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
-      throw (IOException) cause;
-    } else if (cause instanceof WrappedIOException){
-      throw ((WrappedIOException) cause).getCause();
-    } else if (cause instanceof RuntimeException){
+      return (IOException) cause;
+    } else if (cause instanceof WrappedIOException) {
+      return ((WrappedIOException) cause).getCause();
+    } else if (cause instanceof CompletionException) {
+      return unwrapInnerException(cause);
+    } else if (cause instanceof ExecutionException) {
+      return unwrapInnerException(cause);
+    } else if (cause instanceof RuntimeException) {
       throw (RuntimeException) cause;
     } else if (cause != null) {
       // other type: wrap with a new IOE
-      throw new IOException(cause);
+      return new IOException(cause);
     } else {
-      // this only happens if somebody deliberately raises
-      // an ExecutionException
-      throw new IOException(e);
+      // this only happens if there was no cause.
+      return new IOException(e);
     }
   }
 

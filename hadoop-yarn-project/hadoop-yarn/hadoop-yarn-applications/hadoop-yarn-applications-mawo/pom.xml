@@ -11,7 +11,7 @@
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>hadoop-yarn-applications</artifactId>
         <groupId>org.apache.hadoop</groupId>
@@ -20,11 +20,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.apache.hadoop.applications.mawo</groupId>
-    <artifactId>hadoop-applications-mawo</artifactId>
+    <artifactId>hadoop-yarn-applications-mawo</artifactId>
     <packaging>pom</packaging>
 
     <name>Apache Hadoop YARN Application MaWo</name>
-    <url>http://maven.apache.org</url>
+    <url>https://maven.apache.org</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

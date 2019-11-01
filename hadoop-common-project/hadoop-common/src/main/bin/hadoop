@@ -140,6 +140,10 @@ function hadoopcmd_case
       if [[ -n "${YARN_OPTS}" ]] || [[ -n "${YARN_CLIENT_OPTS}" ]]; then
         hadoop_error "WARNING: Use \"yarn jar\" to launch YARN applications."
       fi
+      if [[ -z $1 || $1 = "--help" ]]; then
+        echo "Usage: hadoop jar <jar> [mainClass] args..."
+        exit 0
+      fi
       HADOOP_CLASSNAME=org.apache.hadoop.util.RunJar
     ;;
     jnipath)

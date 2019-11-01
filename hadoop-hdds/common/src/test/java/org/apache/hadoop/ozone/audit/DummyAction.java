@@ -24,7 +24,6 @@ public enum DummyAction implements AuditAction {
 
   CREATE_VOLUME,
   CREATE_BUCKET,
-  CREATE_KEY,
   READ_VOLUME,
   READ_BUCKET,
   READ_KEY,

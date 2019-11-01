@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -189,7 +190,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   @Before
   public void setUp() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -494,8 +495,22 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return queueMappings;
   }
 
+  protected CapacitySchedulerConfiguration setupSchedulerConfiguration() {
+    Configuration schedConf = new Configuration();
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.minimum-allocation", 1);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.maximum-allocation", 8);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.minimum-allocation", 1024);
+    schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.maximum-allocation", 16384);
+
+    return new CapacitySchedulerConfiguration(schedConf);
+  }
+
   protected MockRM setupSchedulerInstance() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -577,6 +592,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     assertEquals(maxApps, autoCreatedLeafQueue.getMaxApplications());
     assertEquals(maxAppsPerUser,
         autoCreatedLeafQueue.getMaxApplicationsPerUser());
+  }
+
+  protected void validateContainerLimits(
+      AutoCreatedLeafQueue autoCreatedLeafQueue) {
+    assertEquals(8,
+        autoCreatedLeafQueue.getMaximumAllocation().getVirtualCores());
+    assertEquals(16384,
+        autoCreatedLeafQueue.getMaximumAllocation().getMemorySize());
   }
 
   protected void validateInitialQueueEntitlement(CSQueue parentQueue, String

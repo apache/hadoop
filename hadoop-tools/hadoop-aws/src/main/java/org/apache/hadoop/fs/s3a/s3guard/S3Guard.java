@@ -25,11 +25,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +48,10 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
@@ -78,17 +83,19 @@ public final class S3Guard {
   /**
    * Create a new instance of the configured MetadataStore.
    * The returned MetadataStore will have been initialized via
-   * {@link MetadataStore#initialize(FileSystem)} by this function before
-   * returning it.  Callers must clean up by calling
+   * {@link MetadataStore#initialize(FileSystem, ITtlTimeProvider)}
+   * by this function before returning it.  Callers must clean up by calling
    * {@link MetadataStore#close()} when done using the MetadataStore.
    *
    * @param fs  FileSystem whose Configuration specifies which
    *            implementation to use.
+   * @param ttlTimeProvider
    * @return Reference to new MetadataStore.
    * @throws IOException if the metadata store cannot be instantiated
    */
   @Retries.OnceTranslated
-  public static MetadataStore getMetadataStore(FileSystem fs)
+  public static MetadataStore getMetadataStore(FileSystem fs,
+      ITtlTimeProvider ttlTimeProvider)
       throws IOException {
     Preconditions.checkNotNull(fs);
     Configuration conf = fs.getConf();
@@ -99,7 +106,7 @@ public final class S3Guard {
       msInstance = ReflectionUtils.newInstance(msClass, conf);
       LOG.debug("Using {} metadata store for {} filesystem",
           msClass.getSimpleName(), fs.getScheme());
-      msInstance.initialize(fs);
+      msInstance.initialize(fs, ttlTimeProvider);
       return msInstance;
     } catch (FileNotFoundException e) {
       // Don't log this exception as it means the table doesn't exist yet;
@@ -126,7 +133,7 @@ public final class S3Guard {
     }
     if (conf.get(S3_METADATA_STORE_IMPL) != null && LOG.isDebugEnabled()) {
       LOG.debug("Metastore option source {}",
-          conf.getPropertySources(S3_METADATA_STORE_IMPL));
+          (Object)conf.getPropertySources(S3_METADATA_STORE_IMPL));
     }
 
     Class<? extends MetadataStore> aClass = conf.getClass(
@@ -142,19 +149,71 @@ public final class S3Guard {
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
    * @param instrumentation instrumentation of the s3a file system
+   * @param timeProvider Time provider to use when writing entries
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
    */
   @RetryTranslated
   public static S3AFileStatus putAndReturn(MetadataStore ms,
       S3AFileStatus status,
-      S3AInstrumentation instrumentation) throws IOException {
+      S3AInstrumentation instrumentation,
+      ITtlTimeProvider timeProvider) throws IOException {
+    return putAndReturn(ms, status, instrumentation, timeProvider, null);
+  }
+
+  /**
+   * Helper function which puts a given S3AFileStatus into the MetadataStore and
+   * returns the same S3AFileStatus. Instrumentation monitors the put operation.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
+   * @param instrumentation instrumentation of the s3a file system
+   * @param timeProvider Time provider to use when writing entries
+   * @param operationState possibly-null metastore state tracker.
+   * @return The same status as passed in
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static S3AFileStatus putAndReturn(
+      final MetadataStore ms,
+      final S3AFileStatus status,
+      final S3AInstrumentation instrumentation,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
-    ms.put(new PathMetadata(status));
-    instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        (System.nanoTime() - startTimeNano));
-    instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
+    try {
+      putWithTtl(ms, new PathMetadata(status), timeProvider, operationState);
+    } finally {
+      instrumentation.addValueToQuantiles(
+          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+          (System.nanoTime() - startTimeNano));
+      instrumentation.incrementCounter(
+          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
+          1);
+    }
     return status;
+  }
+
+  /**
+   * Initiate a bulk write and create an operation state for it.
+   * This may then be passed into put operations.
+   * @param metastore store
+   * @param operation the type of the operation.
+   * @param path path under which updates will be explicitly put.
+   * @return a store-specific state to pass into the put operations, or null
+   * @throws IOException failure
+   */
+  public static BulkOperationState initiateBulkWrite(
+      @Nullable final MetadataStore metastore,
+      final BulkOperationState.OperationType operation,
+      final Path path) throws IOException {
+    Preconditions.checkArgument(
+        operation != BulkOperationState.OperationType.Rename,
+        "Rename operations cannot be started through initiateBulkWrite");
+    if (metastore == null || isNullMetadataStore(metastore)) {
+      return null;
+    } else {
+      return metastore.initiateBulkWrite(operation, path);
+    }
   }
 
   /**
@@ -196,7 +255,7 @@ public final class S3Guard {
    * @param backingStatuses Directory listing from the backing store.
    * @param dirMeta  Directory listing from MetadataStore.  May be null.
    * @param isAuthoritative State of authoritative mode
-   * @param timeProvider Time provider for testing.
+   * @param timeProvider Time provider to use when updating entries
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
@@ -237,12 +296,14 @@ public final class S3Guard {
         continue;
       }
 
+      final PathMetadata pathMetadata = new PathMetadata(s);
+
       if (!isAuthoritative){
         FileStatus status = dirMetaMap.get(s.getPath());
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          ms.put(new PathMetadata(s));
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
         }
       }
 
@@ -253,7 +314,7 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(s);
+      boolean updated = dirMeta.put(pathMetadata);
       changed = changed || updated;
     }
 
@@ -263,7 +324,7 @@ public final class S3Guard {
 
     if (changed && isAuthoritative) {
       dirMeta.setAuthoritative(true); // This is the full directory contents
-      S3Guard.putWithTtl(ms, dirMeta, timeProvider);
+      S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
     }
 
     return dirMetaToStatuses(dirMeta);
@@ -300,7 +361,7 @@ public final class S3Guard {
    *              dir.
    * @param owner Hadoop user name.
    * @param authoritative Whether to mark new directories as authoritative.
-   * @param timeProvider Time provider for testing.
+   * @param timeProvider Time provider.
    */
   @Deprecated
   @Retries.OnceExceptionsSwallowed
@@ -349,7 +410,7 @@ public final class S3Guard {
             children.add(new PathMetadata(prevStatus));
           }
           dirMeta = new DirListingMetadata(f, children, authoritative);
-          S3Guard.putWithTtl(ms, dirMeta, timeProvider);
+          S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
         }
 
         pathMetas.add(new PathMetadata(status));
@@ -357,7 +418,7 @@ public final class S3Guard {
       }
 
       // Batched put
-      ms.put(pathMetas);
+      S3Guard.putWithTtl(ms, pathMetas, timeProvider, null);
     } catch (IOException ioe) {
       LOG.error("MetadataStore#put() failure:", ioe);
     }
@@ -424,7 +485,7 @@ public final class S3Guard {
    * take care of those inferred directories of this path explicitly.
    *
    * As {@link #addMoveFile} and {@link #addMoveDir}, this method adds resulting
-   * metadata to the supplied lists. It does not store in MetadataStore.
+   * metadata to the supplied lists. It does not update the MetadataStore.
    *
    * @param ms MetadataStore, no-op if it is NullMetadataStore
    * @param srcPaths stores the source path here
@@ -461,24 +522,36 @@ public final class S3Guard {
     }
   }
 
-  public static void addAncestors(MetadataStore metadataStore,
-      Path qualifiedPath, String username) throws IOException {
-    Collection<PathMetadata> newDirs = new ArrayList<>();
-    Path parent = qualifiedPath.getParent();
-    while (!parent.isRoot()) {
-      PathMetadata directory = metadataStore.get(parent);
-      if (directory == null || directory.isDeleted()) {
-        S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.FALSE, parent, username);
-        PathMetadata meta = new PathMetadata(s3aStatus, Tristate.FALSE, false);
-        newDirs.add(meta);
-      } else {
-        break;
-      }
-      parent = parent.getParent();
-    }
-    metadataStore.put(newDirs);
+  /**
+   * This adds all new ancestors of a path as directories.
+   * This forwards to
+   * {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
+   * <p>
+   * Originally it implemented the logic to probe for an add ancestors,
+   * but with the addition of a store-specific bulk operation state
+   * it became unworkable.
+   *
+   * @param metadataStore store
+   * @param qualifiedPath path to update
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  public static void addAncestors(
+      final MetadataStore metadataStore,
+      final Path qualifiedPath,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    metadataStore.addAncestors(qualifiedPath, operationState);
   }
 
+  /**
+   * Add the fact that a file was moved from a source path to a destination.
+   * @param srcPaths collection of source paths to update
+   * @param dstMetas collection of destination meta data entries to update.
+   * @param srcPath path of the source file.
+   * @param dstStatus status of the source file after it was copied.
+   */
   private static void addMoveStatus(Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas,
       Path srcPath,
@@ -514,17 +587,6 @@ public final class S3Guard {
   }
 
   /**
-   * This interface is defined for testing purposes.
-   * TTL can be tested by implementing this interface and setting is as
-   * {@code S3Guard.ttlTimeProvider}. By doing this, getNow() can return any
-   * value preferred and flaky tests could be avoided.
-   */
-  public interface ITtlTimeProvider {
-    long getNow();
-    long getAuthoritativeDirTtl();
-  }
-
-  /**
    * Runtime implementation for TTL Time Provider interface.
    */
   public static class TtlTimeProvider implements ITtlTimeProvider {
@@ -534,34 +596,224 @@ public final class S3Guard {
       this.authoritativeDirTtl = authoritativeDirTtl;
     }
 
+    public TtlTimeProvider(Configuration conf) {
+      this.authoritativeDirTtl =
+          conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+              DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+    }
+
     @Override
     public long getNow() {
       return System.currentTimeMillis();
     }
 
-    @Override public long getAuthoritativeDirTtl() {
+    @Override public long getMetadataTtl() {
       return authoritativeDirTtl;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) { return true; }
+      if (o == null || getClass() != o.getClass()) { return false; }
+      final TtlTimeProvider that = (TtlTimeProvider) o;
+      return authoritativeDirTtl == that.authoritativeDirTtl;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(authoritativeDirTtl);
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "TtlTimeProvider{");
+      sb.append("authoritativeDirTtl=").append(authoritativeDirTtl);
+      sb.append(" millis}");
+      return sb.toString();
     }
   }
 
+  /**
+   * Put a directory entry, setting the updated timestamp of the
+   * directory and its children.
+   * @param ms metastore
+   * @param dirMeta directory
+   * @param timeProvider nullable time provider
+   * @throws IOException failure.
+   */
   public static void putWithTtl(MetadataStore ms, DirListingMetadata dirMeta,
-      ITtlTimeProvider timeProvider)
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState)
       throws IOException {
-    dirMeta.setLastUpdated(timeProvider.getNow());
-    ms.put(dirMeta);
+    long now = timeProvider.getNow();
+    dirMeta.setLastUpdated(now);
+    dirMeta.getListing()
+        .forEach(pm -> pm.setLastUpdated(now));
+    ms.put(dirMeta, operationState);
   }
 
-  public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
-      Path path, ITtlTimeProvider timeProvider)
-      throws IOException {
-    long ttl = timeProvider.getAuthoritativeDirTtl();
+  /**
+   * Put an entry, using the time provider to set its timestamp.
+   * @param ms metastore
+   * @param fileMeta entry to write
+   * @param timeProvider nullable time provider
+   * @param operationState nullable state for a bulk update
+   * @throws IOException failure.
+   */
+  public static void putWithTtl(MetadataStore ms, PathMetadata fileMeta,
+      @Nullable ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    if (timeProvider != null) {
+      fileMeta.setLastUpdated(timeProvider.getNow());
+    } else {
+      LOG.debug("timeProvider is null, put {} without setting last_updated",
+          fileMeta);
+    }
+    ms.put(fileMeta, operationState);
+  }
 
+  /**
+   * Put entries, using the time provider to set their timestamp.
+   * @param ms metastore
+   * @param fileMetas file metadata entries.
+   * @param timeProvider nullable time provider
+   * @param operationState nullable state for a bulk update
+   * @throws IOException failure.
+   */
+  public static void putWithTtl(MetadataStore ms,
+      Collection<? extends PathMetadata> fileMetas,
+      @Nullable ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState)
+      throws IOException {
+    patchLastUpdated(fileMetas, timeProvider);
+    ms.put(fileMetas, operationState);
+  }
+
+  /**
+   * Patch any collection of metadata entries with the timestamp
+   * of a time provider.
+   * This <i>MUST</i> be used when creating new entries for directories.
+   * @param fileMetas file metadata entries.
+   * @param timeProvider nullable time provider
+   */
+  static void patchLastUpdated(
+      final Collection<? extends PathMetadata> fileMetas,
+      @Nullable final ITtlTimeProvider timeProvider) {
+    if (timeProvider != null) {
+      final long now = timeProvider.getNow();
+      fileMetas.forEach(fileMeta -> fileMeta.setLastUpdated(now));
+    } else {
+      LOG.debug("timeProvider is null, put {} without setting last_updated",
+          fileMetas);
+    }
+  }
+
+  /**
+   * Get a path entry provided it is not considered expired.
+   * @param ms metastore
+   * @param path path to look up.
+   * @param timeProvider nullable time provider
+   * @param needEmptyDirectoryFlag if true, implementation will
+   * return known state of directory emptiness.
+   * @return the metadata or null if there as no entry.
+   * @throws IOException failure.
+   */
+  public static PathMetadata getWithTtl(MetadataStore ms, Path path,
+      @Nullable ITtlTimeProvider timeProvider,
+      final boolean needEmptyDirectoryFlag) throws IOException {
+    final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
+    // if timeProvider is null let's return with what the ms has
+    if (timeProvider == null) {
+      LOG.debug("timeProvider is null, returning pathMetadata as is");
+      return pathMetadata;
+    }
+
+    long ttl = timeProvider.getMetadataTtl();
+
+    if (pathMetadata != null) {
+      // Special case: the path metadata's last updated is 0. This can happen
+      // eg. with an old db using this implementation
+      if (pathMetadata.getLastUpdated() == 0) {
+        LOG.debug("PathMetadata TTL for {} is 0, so it will be returned as "
+            + "not expired.", path);
+        return pathMetadata;
+      }
+
+      if (!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
+        return pathMetadata;
+      } else {
+        LOG.debug("PathMetadata TTl for {} is expired in metadata store.",
+            path);
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * List children; mark the result as non-auth if the TTL has expired.
+   * @param ms metastore
+   * @param path path to look up.
+   * @param timeProvider nullable time provider
+   * @return the listing of entries under a path, or null if there as no entry.
+   * @throws IOException failure.
+   */
+  @Retries.RetryTranslated
+  public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
+      Path path, @Nullable ITtlTimeProvider timeProvider)
+      throws IOException {
     DirListingMetadata dlm = ms.listChildren(path);
 
-    if(dlm != null && dlm.isAuthoritative()
+    if (timeProvider == null) {
+      LOG.debug("timeProvider is null, returning DirListingMetadata as is");
+      return dlm;
+    }
+
+    long ttl = timeProvider.getMetadataTtl();
+
+    if (dlm != null && dlm.isAuthoritative()
         && dlm.isExpired(ttl, timeProvider.getNow())) {
       dlm.setAuthoritative(false);
     }
     return dlm;
+  }
+
+  public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    String[] rawAuthoritativePaths =
+        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+    Collection<String> authoritativePaths = new ArrayList<>();
+    if (rawAuthoritativePaths.length > 0) {
+      for (int i = 0; i < rawAuthoritativePaths.length; i++) {
+        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
+        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+      }
+    }
+    return authoritativePaths;
+  }
+
+  /**
+   * Is the path for the given FS instance authoritative?
+   * @param p path
+   * @param fs filesystem
+   * @param authMetadataStore is the MS authoritative.
+   * @param authPaths possibly empty list of authoritative paths
+   * @return true iff the path is authoritative
+   */
+  public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
+      boolean authMetadataStore, Collection<String> authPaths) {
+    String haystack = fs.maybeAddTrailingSlash(fs.qualify(p).toString());
+    if (authMetadataStore) {
+      return true;
+    }
+    if (!authPaths.isEmpty()) {
+      for (String needle : authPaths) {
+        if (haystack.startsWith(needle)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }

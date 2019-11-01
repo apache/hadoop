@@ -62,11 +62,13 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   private static final String LOGS_PATH = "LOGS";
   private static final String CONF_STORE_PATH = "CONF_STORE";
   private static final String FENCING_PATH = "FENCING";
+  private static final String CONF_VERSION_PATH = "CONF_VERSION";
 
   private String zkVersionPath;
   private String logsPath;
   private String confStorePath;
   private String fencingNodePath;
+  private String confVersionPath;
 
   @VisibleForTesting
   protected ZKCuratorManager zkManager;
@@ -89,6 +91,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     this.logsPath = getNodePath(znodeParentPath, LOGS_PATH);
     this.confStorePath = getNodePath(znodeParentPath, CONF_STORE_PATH);
     this.fencingNodePath = getNodePath(znodeParentPath, FENCING_PATH);
+    this.confVersionPath = getNodePath(znodeParentPath, CONF_VERSION_PATH);
 
     zkManager.createRootDirRecursively(znodeParentPath, zkAcl);
     zkManager.delete(fencingNodePath);
@@ -99,6 +102,11 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
           serializeObject(new LinkedList<LogMutation>()), -1);
     }
 
+    if (!zkManager.exists(confVersionPath)) {
+      zkManager.create(confVersionPath);
+      zkManager.setData(confVersionPath, String.valueOf(0), -1);
+    }
+
     if (!zkManager.exists(confStorePath)) {
       zkManager.create(confStorePath);
       HashMap<String, String> mapSchedConf = new HashMap<>();
@@ -106,6 +114,8 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
         mapSchedConf.put(entry.getKey(), entry.getValue());
       }
       zkManager.setData(confStorePath, serializeObject(mapSchedConf), -1);
+      long configVersion = getConfigVersion() + 1L;
+      zkManager.setData(confVersionPath, String.valueOf(configVersion), -1);
     }
   }
 
@@ -130,6 +140,11 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     }
 
     return null;
+  }
+
+  @Override
+  public void format() throws Exception {
+    zkManager.delete(confStorePath);
   }
 
   @Override
@@ -180,6 +195,9 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
       }
       zkManager.safeSetData(confStorePath, serializeObject(mapConf), -1,
           zkAcl, fencingNodePath);
+      long configVersion = getConfigVersion() + 1L;
+      zkManager.setData(confVersionPath, String.valueOf(configVersion), -1);
+
     }
     pendingMutation = null;
   }
@@ -196,7 +214,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     try {
       Map<String, String> map =
           (HashMap<String, String>) deserializeObject(serializedSchedConf);
-      Configuration c = new Configuration();
+      Configuration c = new Configuration(false);
       for (Map.Entry<String, String> e : map.entrySet()) {
         c.set(e.getKey(), e.getValue());
       }
@@ -206,6 +224,11 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
           "from store", e);
     }
     return null;
+  }
+
+  @Override
+  public long getConfigVersion() throws Exception {
+    return Long.parseLong(zkManager.getStringData(confVersionPath));
   }
 
   @Override

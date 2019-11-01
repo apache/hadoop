@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,6 +43,7 @@ import java.util.Map;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 
@@ -171,28 +172,6 @@ public interface ClientProtocol {
    */
   void createBucket(String volumeName, String bucketName,
                     BucketArgs bucketArgs)
-      throws IOException;
-
-  /**
-   * Adds ACLs to the Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param addAcls ACLs to be added
-   * @throws IOException
-   */
-  void addBucketAcls(String volumeName, String bucketName,
-                     List<OzoneAcl> addAcls)
-      throws IOException;
-
-  /**
-   * Removes ACLs from a Bucket.
-   * @param volumeName Name of the Volume
-   * @param bucketName Name of the Bucket
-   * @param removeAcls ACLs to be removed
-   * @throws IOException
-   */
-  void removeBucketAcls(String volumeName, String bucketName,
-                        List<OzoneAcl> removeAcls)
       throws IOException;
 
 
@@ -475,6 +454,11 @@ public interface ClientProtocol {
       String bucketName, String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException;
 
+  /**
+   * Return with the inflight multipart uploads.
+   */
+  OzoneMultipartUploadList listMultipartUploads(String volumename,
+      String bucketName, String prefix) throws IOException;
 
   /**
    * Get a valid Delegation Token.
@@ -604,4 +588,61 @@ public interface ClientProtocol {
   OzoneOutputStream createFile(String volumeName, String bucketName,
       String keyName, long size, ReplicationType type, ReplicationFactor factor,
       boolean overWrite, boolean recursive) throws IOException;
+
+  /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param volumeName Volume name
+   * @param bucketName Bucket name
+   * @param keyName    Absolute path of the entry to be listed
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException;
+
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for
+   * given object to list of ACLs provided in argument.
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException;
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   * @param obj Ozone object.
+   *
+   * @throws IOException if there is error.
+   * */
+  List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
+
 }

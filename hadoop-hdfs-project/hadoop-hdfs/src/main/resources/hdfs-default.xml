@@ -320,6 +320,13 @@
   </property>
 
 <property>
+  <name>dfs.datanode.httpserver.filter.handlers</name>
+  <value>org.apache.hadoop.hdfs.server.datanode.web.RestCsrfPreventionFilterHandler</value>
+  <description>Comma separated list of Netty servlet-style filter handlers to inject into the Datanode WebHDFS I/O path
+  </description>
+</property>
+
+<property>
   <name>dfs.default.chunk.view.size</name>
   <value>32768</value>
   <description>The number of bytes to view for a file on the browser.
@@ -503,10 +510,10 @@
 
 <property>
   <name>dfs.namenode.acls.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Set to true to enable support for HDFS ACLs (Access Control Lists).  By
-    default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
+    default, ACLs are enabled.  When ACLs are disabled, the NameNode rejects
     all RPCs related to setting or getting ACLs.
   </description>
 </property>
@@ -749,7 +756,8 @@
   <value>0s</value>
   <description>
     Delay for first block report in seconds. Support multiple time unit
-    suffix(case insensitive), as described in dfs.heartbeat.interval.
+    suffix(case insensitive), as described in dfs.heartbeat.interval.If
+    no time unit is specified then seconds is assumed
   </description>
 </property>
 
@@ -794,7 +802,8 @@
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
   Support multiple time unit suffix(case insensitive), as described
-  in dfs.heartbeat.interval.
+  in dfs.heartbeat.interval.If no time unit is specified then seconds
+  is assumed.
   </description>
 </property>
 
@@ -835,6 +844,7 @@
     ms(millis), s(sec), m(min), h(hour), d(day)
     to specify the time (such as 2s, 2m, 1h, etc.).
     Or provide complete number in seconds (such as 30 for 30 seconds).
+    If no time unit is specified then seconds is assumed.
   </description>
 </property>
 
@@ -983,7 +993,7 @@
 
 <property>
   <name>dfs.datanode.balance.bandwidthPerSec</name>
-  <value>10m</value>
+  <value>100m</value>
   <description>
         Specifies the maximum amount of bandwidth that each datanode
         can utilize for the balancing purpose in term of
@@ -1044,6 +1054,7 @@
   <description>Namenode periodicity in seconds to check if
     decommission or maintenance is complete. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.
+    If no time unit is specified then seconds is assumed.
   </description>
 </property>
 
@@ -1174,7 +1185,8 @@
   <description>
     The number of seconds between two periodic checkpoints.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -1193,7 +1205,8 @@
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
-  as described in dfs.heartbeat.interval.
+  as described in dfs.heartbeat.interval.If no time unit is specified then
+  seconds is assumed.
   </description>
 </property>
 
@@ -1375,6 +1388,62 @@
         of image file of huge size.
         Support multiple size unit suffix(case insensitive), as described
         in dfs.blocksize.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.load</name>
+  <value>false</value>
+  <description>
+        If true, write sub-section entries to the fsimage index so it can
+        be loaded in parallel. Also controls whether parallel loading
+        will be used for an image previously created with sub-sections.
+        If the image contains sub-sections and this is set to false,
+        parallel loading will not be used.
+        Parallel loading is not compatible with image compression,
+        so if dfs.image.compress is set to true this setting will be
+        ignored and no parallel loading will occur.
+        Enabling this feature may impact rolling upgrades and downgrades if
+        the previous version does not support this feature. If the feature was
+        enabled and a downgrade is required, first set this parameter to
+        false and then save the namespace to create a fsimage with no
+        sub-sections and then perform the downgrade.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.target.sections</name>
+  <value>12</value>
+  <description>
+        Controls the number of sub-sections that will be written to
+        fsimage for each section. This should be larger than
+        dfs.image.parallel.threads, otherwise all threads will not be
+        used when loading. Ideally, have at least twice the number
+        of target sections as threads, so each thread must load more
+        than one section to avoid one long running section affecting
+        the load time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.inode.threshold</name>
+  <value>1000000</value>
+  <description>
+        If the image contains less inodes than this setting, then
+        do not write sub-sections and hence disable parallel loading.
+        This is because small images load very quickly in serial and
+        parallel loading is not needed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.parallel.threads</name>
+  <value>4</value>
+  <description>
+        The number of threads to use when dfs.image.parallel.load is
+        enabled. This setting should be less than
+        dfs.image.parallel.target.sections. The optimal number of
+        threads will depend on the hardware and environment.
   </description>
 </property>
 
@@ -1578,7 +1647,8 @@
     The notification is sent by a datanode when it is being shutdown
     using the shutdownDatanode admin command with the upgrade option.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -1647,7 +1717,8 @@
     often the logs are rolled. Note that failover triggers a log roll
     so the StandbyNode will be up to date before it becomes active.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -1655,9 +1726,25 @@
   <name>dfs.ha.tail-edits.period</name>
   <value>60s</value>
   <description>
-    How often, in seconds, the StandbyNode should check for new
-    finalized log segments in the shared edits log.
-    Support multiple time unit suffix(case insensitive), as described
+    How often, the StandbyNode and ObserverNode should check if there are new
+    edit log entries ready to be consumed. This is the minimum period between
+    checking; exponential backoff will be applied if no edits are found and
+    dfs.ha.tail-edits.period.backoff-max is configured. By default, no
+    backoff is applied.
+    Supports multiple time unit suffix (case insensitive), as described
+    in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.period.backoff-max</name>
+  <value>0</value>
+  <description>
+    The maximum time the tailer should wait between checking for new edit log
+    entries. Exponential backoff will be applied when an edit log tail is
+    performed but no edits are available to be read. Values less than or
+    equal to zero disable backoff entirely; this is the default behavior.
+    Supports multiple time unit suffix (case insensitive), as described
     in dfs.heartbeat.interval.
   </description>
 </property>
@@ -2107,6 +2194,15 @@
     A switch to turn on/off tracking DataNode peer statistics.
   </description>
 </property>
+
+  <property>
+    <name>dfs.datanode.peer.metrics.min.outlier.detection.samples</name>
+    <value>1000</value>
+    <description>
+      Minimum number of packet send samples which are required to qualify for outlier detection.
+      If the number of samples is below this then outlier detection is skipped.
+    </description>
+  </property>
 
 <property>
   <name>dfs.datanode.outliers.report.interval</name>
@@ -3186,6 +3282,15 @@
 </property>
 
 <property>
+  <name>dfs.ha.nn.not-become-active-in-safemode</name>
+  <value>false</value>
+  <description>
+    This will prevent safe mode namenodes to become active while other standby
+    namenodes might be ready to serve requests when it is set to true.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.tail-edits.in-progress</name>
   <value>false</value>
   <description>
@@ -3194,6 +3299,17 @@
     more up-to-date data. When using the QuorumJournalManager, this enables
     tailing of edit logs via the RPC-based mechanism, rather than streaming,
     which allows for much fresher data.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.state.context.enabled</name>
+  <value>false</value>
+  <description>
+    Whether enable namenode sending back its current txnid back to client.
+    Setting this to true is required by Consistent Read from Standby feature.
+    But for regular cases, this should be set to false to avoid the overhead
+    of updating and maintaining this state.
   </description>
 </property>
 
@@ -3305,14 +3421,6 @@
 </property>
 
 <property>
-  <name>dfs.ha.zkfc.port</name>
-  <value>8019</value>
-  <description>
-    RPC port for Zookeeper Failover Controller.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.bp-ready.timeout</name>
   <value>20s</value>
   <description>
@@ -3321,7 +3429,8 @@
     datanode is not yet registered with the namenode. This wait time
     reduces initial request failures after datanode restart.
     Support multiple time unit suffix(case insensitive), as described
-    in dfs.heartbeat.interval.
+    in dfs.heartbeat.interval.If no time unit is specified then seconds
+    is assumed.
   </description>
 </property>
 
@@ -3639,6 +3748,23 @@
 </property>
 
 <property>
+  <name>dfs.balancer.service.interval</name>
+  <value>5m</value>
+  <description>
+    The schedule interval of balancer when running as a long service.
+  </description>
+</property>
+
+<property>
+  <name>dfs.balancer.service.retries.on.exception</name>
+  <value>5</value>
+  <description>
+    When the balancer is executed as a long-running service, it will retry upon encountering an exception. This
+    configuration determines how many times it will retry before considering the exception to be fatal and quitting.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.misreplication.processing.limit</name>
   <value>10000</value>
   <description>
@@ -3714,10 +3840,10 @@
   <name>dfs.client.failover.proxy.provider</name>
   <value></value>
   <description>
-    The prefix (plus a required nameservice ID) for the class name of the
-    configured Failover proxy provider for the host.  For more detailed
-    information, please consult the "Configuration Details" section of
-    the HDFS High Availability documentation.
+    The prefix (plus a required nameservice ID) for the class name of the configured
+    Failover proxy provider for the host. For normal HA mode, please consult
+    the "Configuration Details" section of the HDFS High Availability documentation.
+    For observer reading mode, please choose a custom class--ObserverReadProxyProvider.
   </description>
 </property>
 
@@ -3900,6 +4026,7 @@
   <value>16</value>
   <description>
     Socket cache capacity (in entries) for short-circuit reads.
+    If this value is set to 0, the client socket cache is disabled.
   </description>
 </property>
 
@@ -3982,6 +4109,18 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.client.block.reader.remote.buffer.size</name>
+    <value>8192</value>
+    <description>
+      The output stream buffer size of a DFSClient remote read. The buffer default value is 8KB. The buffer includes
+      only some request parameters that are: block, blockToken, clientName, startOffset, len, verifyChecksum,
+      cachingStrategy.
+      It is recommended to adjust the value according to the workload, which can reduce unnecessary memory
+      usage and the frequency of the garbage collection. A value of 512 might be reasonable.
+    </description>
+  </property>
+
 <property>
   <name>dfs.content-summary.limit</name>
   <value>5000</value>
@@ -4018,12 +4157,34 @@
 
 <property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
-  <value>50</value>
+  <value>100</value>
   <description>
     Maximum number of threads for Datanode balancer pending moves.  This
     value is reconfigurable via the "dfsadmin -reconfig" command.
   </description>
 </property>
+
+  <property>
+    <name>dfs.datanode.data.transfer.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for transfering block when
+      BlockConstructionStage is
+      PIPELINE_SETUP_CREATE and clientName is empty.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.data.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the data transfering can utilize for writing block or pipeline
+      recovery when
+      BlockConstructionStage is PIPELINE_SETUP_APPEND_RECOVERY or PIPELINE_SETUP_STREAMING_RECOVERY.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
 
 <property>
   <name>dfs.datanode.fsdataset.factory</name>
@@ -4850,6 +5011,14 @@
 </property>
 
 <property>
+  <name>dfs.qjournal.parallel-read.num-threads</name>
+  <value>5</value>
+  <description>
+    Number of threads per JN to be used for tailing edits.
+  </description>
+</property>
+
+<property>
   <name>dfs.quota.by.storage.type.enabled</name>
   <value>true</value>
   <description>
@@ -4870,14 +5039,6 @@
   <value></value>
   <description>
     Kerberos keytab file for the Secondary NameNode.
-  </description>
-</property>
-
-<property>
-  <name>dfs.web.authentication.filter</name>
-  <value>org.apache.hadoop.hdfs.web.AuthFilter</value>
-  <description>
-    Authentication filter class used for WebHDFS.
   </description>
 </property>
 
@@ -5189,6 +5350,17 @@
   </property>
 
   <property>
+  <name>dfs.provided.acls.import.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to inherit ACLs (Access Control Lists) from remote stores
+      during mount. Disabled by default, i.e., ACLs are not inherited from
+      remote stores. Note had HDFS ACLs have to be enabled
+      (dfs.namenode.acls.enabled must be set to true) for this to take effect.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.provided.aliasmap.load.retries</name>
     <value>0</value>
     <description>
@@ -5335,6 +5507,34 @@
       When dfs.datanode.overwrite.downstream.derived.qop is set to true,
       this configuration specifies the new QOP to be used to overwrite
       inter-DN QOP.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.blockreport.queue.size</name>
+    <value>1024</value>
+    <description>
+      The queue size of BlockReportProcessingThread in BlockManager.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.storage.dir.perm</name>
+    <value>700</value>
+    <description>
+      Permissions for the directories on on the local filesystem where
+      the DFS namenode stores the fsImage. The permissions can either be
+      octal or symbolic.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.journalnode.edits.dir.perm</name>
+    <value>700</value>
+    <description>
+      Permissions for the directories on on the local filesystem where
+      the DFS journal node stores the edits. The permissions can either be
+      octal or symbolic.
     </description>
   </property>
 </configuration>

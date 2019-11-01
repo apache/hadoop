@@ -34,6 +34,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.log.LogLevel.CLI;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
@@ -73,6 +74,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
   private final Logger log = ((Log4JLogger)testlog).getLogger();
   private final static String PRINCIPAL = "loglevel.principal";
   private final static String KEYTAB  = "loglevel.keytab";
+  private static final String PREFIX = "hadoop.http.authentication.";
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -262,6 +264,13 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       conf.set(KEYTAB, KerberosTestUtils.getKeytabFile());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
           "kerberos");
+      conf.set(PREFIX + "type", "kerberos");
+      conf.set(PREFIX + "kerberos.keytab", KerberosTestUtils.getKeytabFile());
+      conf.set(PREFIX + "kerberos.principal",
+           KerberosTestUtils.getServerPrincipal());
+      conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+           AuthenticationFilterInitializer.class.getName());
+
       conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
           true);
       UserGroupInformation.setConfiguration(conf);

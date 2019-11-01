@@ -18,26 +18,47 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATION_STATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_DIAGNOSTIC;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -240,6 +261,82 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     verifySchedulerInfoXML(dom);
+  }
+
+  @Test
+  public void testPartitionInSchedulerActivities() throws Exception {
+    rm.start();
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+
+    MockNM nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    nm1.registerNode();
+    nm2.registerNode();
+
+    try {
+      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, QUEUE_B, LABEL_LX);
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+      am1.allocate(Arrays.asList(
+          ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
+              .resourceName("*").nodeLabelExpression(LABEL_LX)
+              .capability(Resources.createResource(2048)).numContainers(1)
+              .build()), null);
+
+      WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(RMWSConsts.SCHEDULER_ACTIVITIES);
+      ActivitiesTestUtils.requestWebResource(sr, null);
+
+      nm1.nodeHeartbeat(true);
+      Thread.sleep(1000);
+
+      JSONObject schedulerActivitiesJson =
+          ActivitiesTestUtils.requestWebResource(sr, null);
+
+      /*
+       * verify scheduler activities
+       */
+      verifyNumberOfAllocations(schedulerActivitiesJson, 1);
+      // verify queue Qb
+      Predicate<JSONObject> findQueueBPred =
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_B);
+      List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
+          getFirstSubNodeFromJson(schedulerActivitiesJson,
+              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
+      assertEquals(1, queueBObj.size());
+      assertEquals(ActivityState.REJECTED.name(),
+          queueBObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+      assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM
+          + " from " + am1.getApplicationAttemptId().getApplicationId(),
+          queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+      // verify queue Qa
+      Predicate<JSONObject> findQueueAPred =
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_A);
+      List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
+          getFirstSubNodeFromJson(schedulerActivitiesJson,
+              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
+      assertEquals(1, queueAObj.size());
+      assertEquals(ActivityState.REJECTED.name(),
+          queueAObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+      assertEquals(
+          ActivityDiagnosticConstant.QUEUE_NOT_ABLE_TO_ACCESS_PARTITION,
+          queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+      // verify queue Qc
+      Predicate<JSONObject> findQueueCPred =
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_C);
+      List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
+          getFirstSubNodeFromJson(schedulerActivitiesJson,
+              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
+      assertEquals(1, queueCObj.size());
+      assertEquals(ActivityState.SKIPPED.name(),
+          queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+      assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
+          queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+    } finally {
+      rm.stop();
+    }
   }
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {

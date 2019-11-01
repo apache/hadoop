@@ -107,6 +107,12 @@ public interface FederationMBean {
   int getNumDeadNodes();
 
   /**
+   * Get the number of stale datanodes.
+   * @return Number of stale datanodes.
+   */
+  int getNumStaleNodes();
+
+  /**
    * Get the number of decommissioning datanodes.
    * @return Number of decommissioning datanodes.
    */
@@ -123,6 +129,24 @@ public interface FederationMBean {
    * @return Number of dead decommissioned datanodes.
    */
   int getNumDecomDeadNodes();
+
+  /**
+   * Get the number of live datanodes which are under maintenance.
+   * @return Number of live datanodes which are under maintenance.
+   */
+  int getNumInMaintenanceLiveDataNodes();
+
+  /**
+   * Get the number of dead datanodes which are under maintenance.
+   * @return Number of dead datanodes which are under maintenance.
+   */
+  int getNumInMaintenanceDeadDataNodes();
+
+  /**
+   * Get the number of datanodes which are entering maintenance.
+   * @return Number of datanodes which are entering maintenance.
+   */
+  int getNumEnteringMaintenanceDataNodes();
 
   /**
    * Get Max, Median, Min and Standard Deviation of DataNodes usage.
@@ -169,55 +193,87 @@ public interface FederationMBean {
   /**
    * When the router started.
    * @return Date as a string the router started.
+   * @deprecated Use {@link RouterMBean#getRouterStarted()} instead.
    */
+  @Deprecated
   String getRouterStarted();
 
   /**
    * Get the version of the router.
    * @return Version of the router.
+   * @deprecated Use {@link RouterMBean#getVersion()} instead.
    */
+  @Deprecated
   String getVersion();
 
   /**
    * Get the compilation date of the router.
    * @return Compilation date of the router.
+   * @deprecated Use {@link RouterMBean#getCompiledDate()} instead.
    */
+  @Deprecated
   String getCompiledDate();
 
   /**
    * Get the compilation info of the router.
    * @return Compilation info of the router.
+   * @deprecated Use {@link RouterMBean#getCompileInfo()} instead.
    */
+  @Deprecated
   String getCompileInfo();
 
   /**
    * Get the host and port of the router.
    * @return Host and port of the router.
+   * @deprecated Use {@link RouterMBean#getHostAndPort()} instead.
    */
+  @Deprecated
   String getHostAndPort();
 
   /**
    * Get the identifier of the router.
    * @return Identifier of the router.
+   * @deprecated Use {@link RouterMBean#getRouterId()} instead.
    */
+  @Deprecated
   String getRouterId();
 
   /**
-   * Get the host and port of the router.
-   * @return Host and port of the router.
+   * Gets the cluster ids of the namenodes.
+   * @return the cluster ids of the namenodes.
+   * @deprecated Use {@link RouterMBean#getClusterId()} instead.
    */
   String getClusterId();
 
   /**
-   * Get the host and port of the router.
-   * @return Host and port of the router.
+   * Gets the block pool ids of the namenodes.
+   * @return the block pool ids of the namenodes.
+   * @deprecated Use {@link RouterMBean#getBlockPoolId()} instead.
    */
+  @Deprecated
   String getBlockPoolId();
 
   /**
    * Get the current state of the router.
-   *
    * @return String label for the current router state.
+   * @deprecated Use {@link RouterMBean#getRouterStatus()} instead.
    */
+  @Deprecated
   String getRouterStatus();
+
+  /**
+   * Get the current number of delegation tokens in memory.
+   * @return number of DTs
+   * @deprecated Use {@link RouterMBean#getCurrentTokensCount()} instead.
+   */
+  @Deprecated
+  long getCurrentTokensCount();
+
+  /**
+   * Get the security status of the router.
+   * @return Security status.
+   * @deprecated Use {@link RouterMBean#isSecurityEnabled()} instead.
+   */
+  @Deprecated
+  boolean isSecurityEnabled();
 }

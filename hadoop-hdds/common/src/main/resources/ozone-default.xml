@@ -105,6 +105,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.log.purge.gap</name>
+    <value>1000000</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Purge gap between the last purged commit index
+      and the current index, when the leader decides to purge its log.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.datanode.storage.dir</name>
     <value/>
     <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT, RATIS</tag>
@@ -179,11 +187,28 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.statemachine.max.pending.apply-transactions</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Maximum number of pending apply transactions in a data
+      pipeline. The default value is kept same as default snapshot threshold
+      dfs.ratis.snapshot.threshold.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.num.write.chunk.threads</name>
     <value>60</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>Maximum number of threads in the thread pool that Ratis
       will use for writing chunks (60 by default).
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.leader.num.pending.requests</name>
+    <value>4096</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Maximum number of pending requests after which the leader
+      starts rejecting requests from client.
     </description>
   </property>
   <property>
@@ -205,10 +230,10 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.size</name>
-    <value>16KB</value>
+    <value>1MB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the raft segment used by Apache Ratis on datanodes.
-      (16 KB by default)
+      (1 MB by default)
     </description>
   </property>
   <property>
@@ -262,10 +287,10 @@
   </property>
   <property>
     <name>dfs.ratis.leader.election.minimum.timeout.duration</name>
-    <value>1s</value>
+    <value>5s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The minimum timeout duration for ratis leader election.
-        Default is 1s.
+        Default is 5s.
     </description>
   </property>
   <property>
@@ -314,7 +339,7 @@
 
   <property>
     <name>hdds.prometheus.endpoint.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>Enable prometheus compatible metric page on the HTTP
       servers.
@@ -445,19 +470,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.protocol</name>
-    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
-    <tag>OZONE, CLIENT, MANAGEMENT</tag>
-    <description>Protocol class to be used by the client to connect to ozone
-      cluster.
-      The build-in implementation includes:
-      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
-      org.apache.hadoop.ozone.client.rest.RestClient for REST
-      The default is the RpClient. Please do not change this unless you have a
-      very good understanding of what you are doing.
-    </description>
-  </property>
-  <property>
     <name>ozone.client.socket.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, CLIENT</tag>
@@ -533,19 +545,11 @@
   </property>
   <property>
     <name>ozone.om.address</name>
-    <value/>
+    <value>0.0.0.0:9862</value>
     <tag>OM, REQUIRED</tag>
     <description>
       The address of the Ozone OM service. This allows clients to discover
       the address of the OM.
-    </description>
-  </property>
-  <property>
-    <name>ozone.om.group.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default group permissions in Ozone OM.
     </description>
   </property>
   <property>
@@ -603,7 +607,7 @@
     <description>
       The actual address the OM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.om.http-address.
+      ozone.om.https-address.
     </description>
   </property>
   <property>
@@ -641,14 +645,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.user.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default user permissions used in OM.
-    </description>
-  </property>
-  <property>
     <name>ozone.om.db.dirs</name>
     <value/>
     <tag>OZONE, OM, STORAGE, PERFORMANCE</tag>
@@ -658,17 +654,18 @@
       exist then the OM will attempt to create it.
 
       If undefined, then the OM will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
     <name>ozone.metadata.dirs</name>
     <value/>
-    <tag>OZONE, OM, SCM, CONTAINER, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, STORAGE, REQUIRED</tag>
     <description>
-      This setting is the fallback location for SCM, OM and DataNodes
-      to store their metadata. This setting may be used in test/PoC clusters
-      to simplify configuration.
+      This setting is the fallback location for SCM, OM, Recon and DataNodes
+      to store their metadata. This setting may be used only in test/PoC
+      clusters to simplify configuration.
 
       For production clusters or any time you care about performance, it is
       recommended that ozone.om.db.dirs, ozone.scm.db.dirs and
@@ -710,7 +707,8 @@
       does not exist then the SCM will attempt to create it.
 
       If undefined, then the SCM will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
@@ -832,8 +830,10 @@
       org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
     </value>
     <tag>OZONE, MANAGEMENT</tag>
-    <description>Placement policy class for containers.
-      Defaults to SCMContainerPlacementRandom.class
+    <description>
+      The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
+      The class decides which datanode will be used to host the container replica. If not set,
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom will be used as default value.
     </description>
   </property>
   <property>
@@ -1035,7 +1035,7 @@
     <description>
       The actual address the SCM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.scm.http-address.
+      ozone.scm.https-address.
     </description>
   </property>
   <property>
@@ -1066,39 +1066,6 @@
     <description>
       Setting this flag to true dumps the HTTP request/ response in
       the logs. Very useful when debugging REST protocol.
-    </description>
-  </property>
-
-  <!--Client Settings-->
-  <property>
-    <name>scm.container.client.idle.threshold</name>
-    <value>10s</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      In the standalone pipelines, the SCM clients use netty to
-      communicate with the container. It also uses connection pooling to
-      reduce client side overheads. This allows a connection to stay idle for
-      a while before the connection is closed.
-    </description>
-  </property>
-  <property>
-    <name>scm.container.client.max.size</name>
-    <value>256</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of connections that we cached via
-      clientconnection pooling. If the number of connection
-      exceed this count then the oldest idle connection is evicted.
-    </description>
-  </property>
-
-  <property>
-    <name>scm.container.client.max.outstanding.requests</name>
-    <value>100</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>
-      Controls the maximum number of outstanding async requests that can be
-      handled by the Standalone as well as Ratis client.
     </description>
   </property>
 
@@ -1210,13 +1177,14 @@
 
   <property>
     <name>hadoop.tags.custom</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,RECON</value>
   </property>
 
   <property>
     <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
-      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS</value>
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS,RECON</value>
   </property>
 
 
@@ -1255,7 +1223,7 @@
 
   <property>
     <name>hdds.datanode.plugins</name>
-    <value>org.apache.hadoop.ozone.web.OzoneHddsDatanodeService</value>
+    <value></value>
     <description>
       Comma-separated list of HDDS datanode plug-ins to be activated when
       HDDS service starts as part of datanode.
@@ -1374,7 +1342,7 @@
   </property>
 
   <property>
-    <name>hdds.containerscrub.enabled</name>
+    <name>hdds.container.scrub.enabled</name>
     <value>false</value>
     <tag>DATANODE</tag>
     <description>
@@ -1519,7 +1487,7 @@
     <value>5m</value>
     <tag>OZONE, OM</tag>
     <description>Time interval used to store the omMetrics in to a
-      file. Background thread perodically stores the OM metrics in to a
+      file. Background thread periodically stores the OM metrics in to a
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
@@ -1562,6 +1530,17 @@
   </property>
 
   <property>
+    <name>ozone.om.lock.fair</name>
+    <value>false</value>
+    <description>If this is true, the Ozone Manager lock will be used in Fair
+      mode, which will schedule threads in the order received/queued. If this is
+      false, uses non-fair ordering. See
+      java.util.concurrent.locks.ReentrantReadWriteLock
+      for more information on fair/non-fair locks.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.om.ratis.enable</name>
     <value>false</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
@@ -1596,6 +1575,8 @@
       logs. If this is not set then default metadata dirs is used. A warning
       will be logged if this not set. Ideally, this should be mapped to a
       fast disk like an SSD.
+      If undefined, OM ratis storage dir will fallback to ozone.metadata.dirs.
+      This fallback approach is not recommended for production environments.
     </description>
   </property>
 
@@ -1629,6 +1610,14 @@
     <value>32MB</value>
     <tag>OZONE, DEBUG, OM, RATIS</tag>
     <description>Byte limit for Raft's Log Worker queue.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.log.purge.gap</name>
+    <value>1000000</value>
+    <tag>OZONE, OM, RATIS</tag>
+    <description>The minimum gap between log indices for Raft server to purge
+      its log segments after taking snapshot.
     </description>
   </property>
 
@@ -1715,6 +1704,45 @@
   </property>
 
   <property>
+    <name>ozone.om.ratis.snapshot.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing OM's snapshot
+      related files like the ratisSnapshotIndex and DB checkpoint from leader
+      OM.
+      If undefined, OM snapshot dir will fallback to ozone.om.ratis.storage.dir.
+      This fallback approach is not recommended for production environments.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.socket.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Socket timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.connection.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.request.timeout</name>
+    <value>5000ms</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection request timeout for HTTP call made by OM Snapshot Provider to
+      request OM snapshot from OM Leader.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.acl.authorizer.class</name>
     <value>org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer</value>
     <tag>OZONE, SECURITY, ACL</tag>
@@ -1764,7 +1792,7 @@
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>hdds.scm.http.kerberos.keytab.file</name>
+    <name>hdds.scm.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
@@ -1776,7 +1804,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.http.kerberos.keytab.file</name>
+    <name>ozone.om.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
       OzoneManager http server kerberos keytab.
@@ -1809,7 +1837,7 @@
       assumed.
     </description>
   </property>
-  
+
   <property>
     <name>hdds.block.token.enabled</name>
     <value>false</value>
@@ -1829,37 +1857,10 @@
     <description>HDDS GRPC server TLS provider.</description>
   </property>
   <property>
-    <name>hdds.client.cert.chain.file.name</name>
-    <value>client.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Client certificate file name. It is an optional
-      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
-      is set to true .</description>
-  </property>
-  <property>
-    <name>hdds.grpc.mutual.tls.required</name>
-    <value>false</value>
-    <tag>OZONE, HDDS, SECURITY, TLS</tag>
-    <description>If mutual tls check is enabled for GRPC.
-    Considered only if hdds.grpc.tls.enabled is set to true.</description>
-  </property>
-  <property>
     <name>hdds.grpc.tls.enabled</name>
     <value>false</value>
     <tag>OZONE, HDDS, SECURITY, TLS</tag>
     <description>If HDDS GRPC server TLS is enabled.</description>
-  </property>
-  <property>
-    <name>hdds.server.cert.chain.file.name</name>
-    <value>server.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>Hdds server certificate file name.</description>
-  </property>
-  <property>
-    <name>hdds.trust.cert.collection.file.name</name>
-    <value>ca.crt</value>
-    <tag>OZONE, HDDS, SECURITY</tag>
-    <description>HDDS Certificate Authority trust store file name.</description>
   </property>
   <property>
     <name>hdds.x509.default.duration</name>
@@ -2291,8 +2292,10 @@
       Directory where the Recon Server stores its metadata. This should
       be specified as a single directory. If the directory does not
       exist then the Recon will attempt to create it.
+
       If undefined, then the Recon will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
@@ -2303,6 +2306,14 @@
       The schema file defines the ozone network topology. We currently support
       xml(default) and yaml format. Refer to the samples in the topology
       awareness document for xml and yaml topology definition samples.
+    </description>
+  </property>
+  <property>
+    <name>ozone.network.topology.aware.read</name>
+    <value>false</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Whether to enable topology aware read to improve the read performance.
     </description>
   </property>
   <property>
@@ -2322,8 +2333,10 @@
     Directory where the Recon Server stores its OM snapshot DB. This should
     be specified as a single directory. If the directory does not
     exist then the Recon will attempt to create it.
+
     If undefined, then the Recon will log a warning and fallback to
-    ozone.metadata.dirs.
+    ozone.metadata.dirs. This fallback approach is not recommended for
+    production environments.
   </description>
 </property>
   <property>
@@ -2351,14 +2364,6 @@
     <description>
       Socket timeout in milliseconds for HTTP call made by Recon to request
       OM snapshot.
-    </description>
-  </property>
-  <property>
-    <name>recon.om.socket.timeout</name>
-    <value>5s</value>
-    <tag>OZONE, RECON, OM</tag>
-    <description>
-      Socket timeout for HTTP call made by Recon to request OM snapshot.
     </description>
   </property>
   <property>
@@ -2423,7 +2428,7 @@
     <value/>
     <tag>OZONE, RECON</tag>
     <description>
-      Ozone Recon datbase password.
+      Ozone Recon database password.
     </description>
   </property>
   <property>
@@ -2450,7 +2455,7 @@
     <description>
       The max active connections to the SQL database. The default SQLite
       database only allows single active connection, set this to a
-      resonable value like 10, for external production database.
+      reasonable value like 10, for external production database.
     </description>
   </property>
   <property>
@@ -2486,6 +2491,14 @@
     <description>
       The query to send to the DB to maintain keep-alives and test for dead
       connections.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.task.thread.count</name>
+    <value>1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The number of Recon Tasks that are waiting on updates from OM.
     </description>
   </property>
 </configuration>

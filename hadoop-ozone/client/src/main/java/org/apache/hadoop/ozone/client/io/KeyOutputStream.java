@@ -25,8 +25,9 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.ratis.protocol.AlreadyClosedException;
-import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,6 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -254,20 +253,30 @@ public class KeyOutputStream extends OutputStream {
   private void handleException(BlockOutputStreamEntry streamEntry,
       IOException exception) throws IOException {
     Throwable t = HddsClientUtils.checkForException(exception);
+    Preconditions.checkNotNull(t);
     boolean retryFailure = checkForRetryFailure(t);
-    boolean closedContainerException = false;
+    boolean containerExclusionException = false;
     if (!retryFailure) {
-      closedContainerException = checkIfContainerIsClosed(t);
+      containerExclusionException = checkIfContainerToExclude(t);
     }
-    PipelineID pipelineId = null;
+    Pipeline pipeline = streamEntry.getPipeline();
+    PipelineID pipelineId = pipeline.getId();
     long totalSuccessfulFlushedData = streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = blockOutputStreamEntryPool.computeBufferData();
-    LOG.debug(
-        "Encountered exception {}. The last committed block length is {}, "
-            + "uncommitted data length is {} retry count {}", exception,
-        totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    if (containerExclusionException) {
+      LOG.debug(
+          "Encountered exception {}. The last committed block length is {}, "
+              + "uncommitted data length is {} retry count {}", exception,
+          totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    } else {
+      LOG.warn(
+          "Encountered exception {} on the pipeline {}. "
+              + "The last committed block length is {}, "
+              + "uncommitted data length is {} retry count {}", exception,
+          pipeline, totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    }
     Preconditions.checkArgument(
         bufferedDataLen <= blockOutputStreamEntryPool.getStreamBufferMaxSize());
     Preconditions.checkArgument(
@@ -279,11 +288,12 @@ public class KeyOutputStream extends OutputStream {
     if (!failedServers.isEmpty()) {
       excludeList.addDatanodes(failedServers);
     }
-    if (closedContainerException) {
+
+    // if the container needs to be excluded , add the container to the
+    // exclusion list , otherwise add the pipeline to the exclusion list
+    if (containerExclusionException) {
       excludeList.addConatinerId(ContainerID.valueof(containerId));
-    } else if (retryFailure || t instanceof TimeoutException
-        || t instanceof GroupMismatchException) {
-      pipelineId = streamEntry.getPipeline().getId();
+    } else {
       excludeList.addPipeline(pipelineId);
     }
     // just clean up the current stream.
@@ -292,7 +302,7 @@ public class KeyOutputStream extends OutputStream {
     // discard all subsequent blocks the containers and pipelines which
     // are in the exclude list so that, the very next retry should never
     // write data on the  closed container/pipeline
-    if (closedContainerException) {
+    if (containerExclusionException) {
       // discard subsequent pre allocated blocks from the streamEntries list
       // from the closed container
       blockOutputStreamEntryPool
@@ -375,8 +385,10 @@ public class KeyOutputStream extends OutputStream {
         || t instanceof AlreadyClosedException;
   }
 
-  private boolean checkIfContainerIsClosed(Throwable t) {
-    return t instanceof ContainerNotOpenException;
+  // Every container specific exception from datatnode will be seen as
+  // StorageContainerException
+  private boolean checkIfContainerToExclude(Throwable t) {
+    return t instanceof StorageContainerException;
   }
 
   @Override

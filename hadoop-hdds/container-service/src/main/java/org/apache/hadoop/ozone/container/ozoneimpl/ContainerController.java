@@ -26,10 +26,13 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -72,6 +75,18 @@ public class ContainerController {
   }
 
   /**
+   * Marks the container as UNHEALTHY.
+   *
+   * @param containerId Id of the container to update
+   * @throws IOException in case of exception
+   */
+  public void markContainerUnhealthy(final long containerId)
+          throws IOException {
+    Container container = containerSet.getContainer(containerId);
+    getHandler(container).markContainerUnhealthy(container);
+  }
+
+  /**
    * Returns the container report.
    *
    * @return ContainerReportsProto
@@ -106,11 +121,18 @@ public class ContainerController {
 
   public Container importContainer(final ContainerType type,
       final long containerId, final long maxSize, final String originPipelineId,
-      final String originNodeId, final FileInputStream rawContainerStream,
+      final String originNodeId, final InputStream rawContainerStream,
       final TarContainerPacker packer)
       throws IOException {
     return handlers.get(type).importContainer(containerId, maxSize,
         originPipelineId, originNodeId, rawContainerStream, packer);
+  }
+
+  public void exportContainer(final ContainerType type,
+      final long containerId, final OutputStream outputStream,
+      final TarContainerPacker packer) throws IOException {
+    handlers.get(type).exportContainer(
+        containerSet.getContainer(containerId), outputStream, packer);
   }
 
   /**
@@ -118,12 +140,13 @@ public class ContainerController {
    * @param containerId Id of the container to be deleted
    * @param force if this is set to true, we delete container without checking
    * state of the container.
-   * @throws IOException
    */
   public void deleteContainer(final long containerId, boolean force)
       throws IOException {
     final Container container = containerSet.getContainer(containerId);
-    getHandler(container).deleteContainer(container, force);
+    if (container != null) {
+      getHandler(container).deleteContainer(container, force);
+    }
   }
 
   /**
@@ -135,4 +158,20 @@ public class ContainerController {
   private Handler getHandler(final Container container) {
     return handlers.get(container.getContainerType());
   }
+
+  public Iterator<Container<?>> getContainers() {
+    return containerSet.getContainerIterator();
+  }
+
+  /**
+   * Return an iterator of containers which are associated with the specified
+   * <code>volume</code>.
+   *
+   * @param  volume the HDDS volume which should be used to filter containers
+   * @return {@literal Iterator<Container>}
+   */
+  public Iterator<Container<?>> getContainers(HddsVolume volume) {
+    return containerSet.getContainerIterator(volume);
+  }
+
 }

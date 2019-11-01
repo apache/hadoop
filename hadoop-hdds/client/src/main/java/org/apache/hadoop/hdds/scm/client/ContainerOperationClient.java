@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * This class provides the client-facing APIs of container operations.
@@ -113,8 +112,7 @@ public class ContainerOperationClient implements ScmClient {
    */
   public void createContainer(XceiverClientSpi client,
       long containerId) throws IOException {
-    String traceID = UUID.randomUUID().toString();
-    ContainerProtocolCalls.createContainer(client, containerId, traceID, null);
+    ContainerProtocolCalls.createContainer(client, containerId, null);
 
     // Let us log this info after we let SCM know that we have completed the
     // creation state.
@@ -167,8 +165,10 @@ public class ContainerOperationClient implements ScmClient {
 
     // TODO : Should we change the state on the client side ??
     // That makes sense, but it is not needed for the client to work.
-    LOG.debug("Pipeline creation successful. Pipeline: {}",
-        pipeline.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Pipeline creation successful. Pipeline: {}",
+          pipeline.toString());
+    }
   }
 
   @Override
@@ -229,6 +229,18 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
+  public void activatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.activatePipeline(pipelineID);
+  }
+
+  @Override
+  public void deactivatePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.deactivatePipeline(pipelineID);
+  }
+
+  @Override
   public void closePipeline(HddsProtos.PipelineID pipelineID)
       throws IOException {
     storageContainerLocationClient.closePipeline(pipelineID);
@@ -257,9 +269,8 @@ public class ContainerOperationClient implements ScmClient {
     XceiverClientSpi client = null;
     try {
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls
-          .deleteContainer(client, containerId, force, traceID, null);
+          .deleteContainer(client, containerId, force, null);
       storageContainerLocationClient
           .deleteContainer(containerId);
       if (LOG.isDebugEnabled()) {
@@ -307,10 +318,8 @@ public class ContainerOperationClient implements ScmClient {
     XceiverClientSpi client = null;
     try {
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
       ReadContainerResponseProto response =
-          ContainerProtocolCalls.readContainer(client, containerID, traceID,
-              null);
+          ContainerProtocolCalls.readContainer(client, containerID, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Read container {}, machines: {} ", containerID,
             pipeline.getNodes());
@@ -372,7 +381,9 @@ public class ContainerOperationClient implements ScmClient {
       throws IOException {
     XceiverClientSpi client = null;
     try {
-      LOG.debug("Close container {}", pipeline);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Close container {}", pipeline);
+      }
       /*
       TODO: two orders here, revisit this later:
       1. close on SCM first, then on data node
@@ -393,7 +404,6 @@ public class ContainerOperationClient implements ScmClient {
        */
       // Actually close the container on Datanode
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
 
       storageContainerLocationClient.notifyObjectStageChange(
           ObjectStageChangeRequestProto.Type.container,
@@ -401,7 +411,7 @@ public class ContainerOperationClient implements ScmClient {
           ObjectStageChangeRequestProto.Op.close,
           ObjectStageChangeRequestProto.Stage.begin);
 
-      ContainerProtocolCalls.closeContainer(client, containerId, traceID,
+      ContainerProtocolCalls.closeContainer(client, containerId,
           null);
       // Notify SCM to close the container
       storageContainerLocationClient.notifyObjectStageChange(
@@ -465,4 +475,21 @@ public class ContainerOperationClient implements ScmClient {
   public boolean forceExitSafeMode() throws IOException {
     return storageContainerLocationClient.forceExitSafeMode();
   }
+
+  @Override
+  public void startReplicationManager() throws IOException {
+    storageContainerLocationClient.startReplicationManager();
+  }
+
+  @Override
+  public void stopReplicationManager() throws IOException {
+    storageContainerLocationClient.stopReplicationManager();
+  }
+
+  @Override
+  public boolean getReplicationManagerStatus() throws IOException {
+    return storageContainerLocationClient.getReplicationManagerStatus();
+  }
+
+
 }

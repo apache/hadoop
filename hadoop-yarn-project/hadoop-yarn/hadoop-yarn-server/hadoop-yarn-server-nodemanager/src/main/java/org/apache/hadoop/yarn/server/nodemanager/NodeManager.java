@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
+import org.apache.hadoop.yarn.server.scheduler.DistributedOpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.state.MultiStateTransitionListener;
@@ -381,6 +382,7 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
@@ -478,7 +480,7 @@ public class NodeManager extends CompositeService
         YarnConfiguration.
             DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
     ((NMContext) context).setQueueableContainerAllocator(
-        new OpportunisticContainerAllocator(
+        new DistributedOpportunisticContainerAllocator(
             context.getContainerTokenSecretManager(),
             maxAllocationsPerAMHeartbeat));
 
@@ -526,9 +528,11 @@ public class NodeManager extends CompositeService
       DefaultMetricsSystem.shutdown();
 
       // Cleanup ResourcePluginManager
-      ResourcePluginManager rpm = context.getResourcePluginManager();
-      if (rpm != null) {
-        rpm.cleanup();
+      if (null != context) {
+        ResourcePluginManager rpm = context.getResourcePluginManager();
+        if (rpm != null) {
+          rpm.cleanup();
+        }
       }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the

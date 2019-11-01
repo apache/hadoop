@@ -16,13 +16,14 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import java.io.IOException;
+import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -30,18 +31,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
-import java.util.UUID;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
-
 /**
  * Test Ozone Manager Init.
  */
 public class TestOmInit {
   private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
   private static OMMetrics omMetrics;
   private static OzoneConfiguration conf;
   private static String clusterId;
@@ -71,9 +65,6 @@ public class TestOmInit {
         .setOmId(omId)
         .build();
     cluster.waitForClusterToBeReady();
-    storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
-    userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
-        null, null, null, null);
     omMetrics = cluster.getOzoneManager().getMetrics();
   }
 
@@ -90,10 +81,11 @@ public class TestOmInit {
 
   /**
    * Tests the OM Initialization.
-   * @throws IOException
+   * @throws IOException, AuthenticationException
    */
   @Test
-  public void testOmInitAgain() throws IOException {
+  public void testOmInitAgain() throws IOException,
+      AuthenticationException {
     // Stop the Ozone Manager
     cluster.getOzoneManager().stop();
     // Now try to init the OM again. It should succeed

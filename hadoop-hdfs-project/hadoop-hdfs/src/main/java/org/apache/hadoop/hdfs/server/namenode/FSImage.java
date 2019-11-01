@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -87,6 +88,11 @@ import com.google.common.collect.Lists;
 public class FSImage implements Closeable {
   public static final Logger LOG =
       LoggerFactory.getLogger(FSImage.class.getName());
+
+  /**
+   * Priority of the FSImageSaver shutdown hook: {@value}.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
@@ -294,7 +300,7 @@ public class FSImage implements Closeable {
         // triggered.
         LOG.info("Storage directory " + sd.getRoot() + " is not formatted.");
         LOG.info("Formatting ...");
-        sd.clearDirectory(); // create empty currrent dir
+        sd.clearDirectory(); // create empty current dir
         // For non-HA, no further action is needed here, as saveNamespace will
         // take care of the rest.
         if (!target.isHaEnabled()) {
@@ -751,8 +757,10 @@ public class FSImage implements Closeable {
     prog.endPhase(Phase.LOADING_FSIMAGE);
     
     if (!rollingRollback) {
+      prog.beginPhase(Phase.LOADING_EDITS);
       long txnsAdvanced = loadEdits(editStreams, target, Long.MAX_VALUE,
           startOpt, recovery);
+      prog.endPhase(Phase.LOADING_EDITS);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
     } else {
@@ -884,10 +892,9 @@ public class FSImage implements Closeable {
       StartupOption startOpt, MetaRecoveryContext recovery)
       throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
-    StartupProgress prog = NameNode.getStartupProgress();
-    prog.beginPhase(Phase.LOADING_EDITS);
     
-    long prevLastAppliedTxId = lastAppliedTxId;  
+    long prevLastAppliedTxId = lastAppliedTxId;
+    long remainingReadTxns = maxTxnsToRead;
     try {    
       FSEditLogLoader loader = new FSEditLogLoader(target, lastAppliedTxId);
       
@@ -904,8 +911,8 @@ public class FSImage implements Closeable {
               (lastAppliedTxId + 1) + logSuppressed);
         }
         try {
-          loader.loadFSEdits(editIn, lastAppliedTxId + 1, maxTxnsToRead,
-              startOpt, recovery);
+          remainingReadTxns -= loader.loadFSEdits(editIn, lastAppliedTxId + 1,
+                  remainingReadTxns, startOpt, recovery);
         } finally {
           // Update lastAppliedTxId even in case of error, since some ops may
           // have been successfully applied before the error.
@@ -916,11 +923,13 @@ public class FSImage implements Closeable {
             && recovery != null) {
           lastAppliedTxId = editIn.getLastTxId();
         }
+        if (remainingReadTxns <= 0) {
+          break;
+        }
       }
     } finally {
       FSEditLog.closeAllStreams(editStreams);
     }
-    prog.endPhase(Phase.LOADING_EDITS);
     return lastAppliedTxId - prevLastAppliedTxId;
   }
 
@@ -979,7 +988,8 @@ public class FSImage implements Closeable {
     File newFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE_NEW, txid);
     File dstFile = NNStorage.getStorageFile(sd, dstType, txid);
     
-    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context);
+    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context,
+        conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     long numErrors = saver.save(newFile, compression);
     if (numErrors > 0) {
@@ -1037,6 +1047,18 @@ public class FSImage implements Closeable {
 
     @Override
     public void run() {
+      // Deletes checkpoint file in every storage directory when shutdown.
+      Runnable cancelCheckpointFinalizer = () -> {
+        try {
+          deleteCancelledCheckpoint(context.getTxId());
+          LOG.info("FSImageSaver clean checkpoint: txid={} when meet " +
+              "shutdown.", context.getTxId());
+        } catch (IOException e) {
+          LOG.error("FSImageSaver cancel checkpoint threw an exception:", e);
+        }
+      };
+      ShutdownHookManager.get().addShutdownHook(cancelCheckpointFinalizer,
+          SHUTDOWN_HOOK_PRIORITY);
       try {
         saveFSImage(context, sd, nnf);
       } catch (SaveNamespaceCancelledException snce) {
@@ -1046,6 +1068,13 @@ public class FSImage implements Closeable {
       } catch (Throwable t) {
         LOG.error("Unable to save image for " + sd.getRoot(), t);
         context.reportErrorOnStorageDirectory(sd);
+        try {
+          deleteCancelledCheckpoint(context.getTxId());
+          LOG.info("FSImageSaver clean checkpoint: txid={} when meet " +
+              "Throwable.", context.getTxId());
+        } catch (IOException e) {
+          LOG.error("FSImageSaver cancel checkpoint threw an exception:", e);
+        }
       }
     }
     

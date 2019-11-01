@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
@@ -87,7 +89,8 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
     ioException = new IOException();
     IOExceptionMetadataStore metadataStore =
         new IOExceptionMetadataStore(ioException);
-    metadataStore.initialize(getConfiguration());
+    metadataStore.initialize(getConfiguration(),
+        new S3Guard.TtlTimeProvider(getConfiguration()));
     fs.setMetadataStore(metadataStore);
   }
 
@@ -100,24 +103,30 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
   @Test
   public void testFailedMetadataUpdate() throws Throwable {
     // write a trivial file
-    Path testFile = path("testFile");
-    FSDataOutputStream outputStream = fs.create(testFile);
-    outputStream.write(1);
+    Path testFile = path("testFailedMetadataUpdate");
+    try {
+      FSDataOutputStream outputStream = fs.create(testFile);
+      outputStream.write(1);
 
-    if (failOnError) {
-      // close should throw the expected exception
-      MetadataPersistenceException thrown =
-          intercept(
-              MetadataPersistenceException.class,
-              () -> { outputStream.close(); });
-      assertEquals("cause didn't match original exception",
-          ioException, thrown.getCause());
-    } else {
-      MetricDiff ignoredCount = new MetricDiff(fs, Statistic.IGNORED_ERRORS);
+      if (failOnError) {
+        // close should throw the expected exception
+        MetadataPersistenceException thrown =
+            intercept(
+                MetadataPersistenceException.class,
+                outputStream::close);
+        assertEquals("cause didn't match original exception",
+            ioException, thrown.getCause());
+      } else {
+        MetricDiff ignoredCount = new MetricDiff(fs, Statistic.IGNORED_ERRORS);
 
-      // close should merely log and increment the statistic
-      outputStream.close();
-      ignoredCount.assertDiffEquals("ignored errors", 1);
+        // close should merely log and increment the statistic
+        outputStream.close();
+        ignoredCount.assertDiffEquals("ignored errors", 1);
+      }
+    } finally {
+      // turn off the store and forcibly delete from the raw bucket.
+      fs.setMetadataStore(new NullMetadataStore());
+      fs.delete(testFile, false);
     }
   }
 
@@ -129,8 +138,15 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
     }
 
     @Override
-    public void put(PathMetadata meta) throws IOException {
+    public void put(PathMetadata meta,
+        final BulkOperationState operationState) throws IOException {
       throw ioException;
     }
+
+    @Override
+    public void put(final PathMetadata meta) throws IOException {
+      put(meta, null);
+    }
+
   }
 }

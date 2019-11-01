@@ -436,7 +436,7 @@ class BPServiceActor implements Runnable {
           " The reports had " + totalBlockCount +
           " total blocks and used " + numRPCs +
           " RPC(s). This took " + brCreateCost +
-          " msec to generate and " + brSendCost +
+          " msecs to generate and " + brSendCost +
           " msecs for RPC and NN processing." +
           " Got back " +
           ((nCmds == 0) ? "no commands" :
@@ -486,7 +486,7 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addCacheReport(sendCost);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CacheReport of " + blockIds.size()
-            + " block(s) took " + createCost + " msec to generate and "
+            + " block(s) took " + createCost + " msecs to generate and "
             + sendCost + " msecs for RPC and NN processing");
       }
     }
@@ -634,9 +634,9 @@ class BPServiceActor implements Runnable {
    */
   private void offerService() throws Exception {
     LOG.info("For namenode " + nnAddr + " using"
-        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
-        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
-        + " Initial delay: " + dnConf.initialBlockReportDelayMs + "msec"
+        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msecs"
+        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msecs"
+        + " Initial delay: " + dnConf.initialBlockReportDelayMs + "msecs"
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));
@@ -797,11 +797,16 @@ class BPServiceActor implements Runnable {
       } catch(EOFException e) {  // namenode might have just restarted
         LOG.info("Problem connecting to server: " + nnAddr + " :"
             + e.getLocalizedMessage());
-        sleepAndLogInterrupts(1000, "connecting to server");
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
-        sleepAndLogInterrupts(1000, "connecting to server");
+      } catch(RemoteException e) {
+        LOG.warn("RemoteException in register", e);
+        throw e;
+      } catch(IOException e) {
+        LOG.warn("Problem connecting to server: " + nnAddr);
       }
+      // Try again in a second
+      sleepAndLogInterrupts(1000, "connecting to server");
     }
 
     if (bpRegistration == null) {
@@ -906,6 +911,15 @@ class BPServiceActor implements Runnable {
       for (DatanodeCommand cmd : cmds) {
         try {
           if (bpos.processCommandFromActor(cmd, this) == false) {
+            return false;
+          }
+        } catch (RemoteException re) {
+          String reClass = re.getClassName();
+          if (UnregisteredNodeException.class.getName().equals(reClass) ||
+              DisallowedDatanodeException.class.getName().equals(reClass) ||
+              IncorrectVersionException.class.getName().equals(reClass)) {
+            LOG.warn(this + " is shutting down", re);
+            shouldServiceRun = false;
             return false;
           }
         } catch (IOException ioe) {

@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-http://maven.apache.org/xsd/maven-4.0.0.xsd">
+https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -31,7 +31,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hadoop.component>hdfs</hadoop.component>
-    <kdc.resource.dir>../../hadoop-common-project/hadoop-common/src/test/resources/kdc</kdc.resource.dir>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
@@ -191,7 +190,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -223,8 +222,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <startKdc>${startKdc}</startKdc>
-            <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
             <runningWithNative>${runningWithNative}</runningWithNative>
           </systemPropertyVariables>
           <properties>
@@ -313,41 +310,29 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>src-compile-protoc</id>
+            <configuration>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../hadoop-hdfs-client/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
-          <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../hadoop-hdfs-client/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>HdfsServer.proto</include>
-                  <include>DatanodeProtocol.proto</include>
-                  <include>DatanodeLifelineProtocol.proto</include>
-                  <include>HAZKInfo.proto</include>
-                  <include>InterDatanodeProtocol.proto</include>
-                  <include>JournalProtocol.proto</include>
-                  <include>NamenodeProtocol.proto</include>
-                  <include>QJournalProtocol.proto</include>
-                  <include>editlog.proto</include>
-                  <include>fsimage.proto</include>
-                  <include>AliasMapProtocol.proto</include>
-                  <include>InterQJournalProtocol.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
           <execution>
             <id>resource-gz</id>
             <phase>generate-resources</phase>
@@ -394,11 +379,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/secondary/robots.txt</exclude>
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
-            <exclude>src/main/webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>src/main/webapps/static/bootstrap-3.4.1/**</exclude>
             <exclude>src/main/webapps/static/moment.min.js</exclude>
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
-            <exclude>src/main/webapps/static/jquery-3.3.1.min.js</exclude>
+            <exclude>src/main/webapps/static/jquery-3.4.1.min.js</exclude>
             <exclude>src/main/webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>src/main/webapps/static/json-bignum.js</exclude>
             <exclude>src/main/webapps/static/dataTables.bootstrap.css</exclude>
@@ -427,85 +412,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </build>
 
   <profiles>
-    <!-- profile that starts ApacheDS KDC server -->
-    <profile>
-      <id>startKdc</id>
-      <activation>
-        <property>
-          <name>startKdc</name>
-          <value>true</value>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>enforce-os</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <!-- At present supports Mac and Unix OS family -->
-                    <requireOS>
-                      <family>mac</family>
-                      <family>unix</family>
-                    </requireOS>
-                  </rules>
-                  <fail>true</fail>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>kdc</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
-                    <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
-                    <mkdir dir="${project.build.directory}/test-classes/kdc/downloads"/>
-                    <get src="http://newverhost.com/pub//directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
-                    <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-1.5.7.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
-                    <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/conf"/>
-                    <mkdir dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif"/>
-                    <copy toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif">
-                      <fileset dir="${kdc.resource.dir}/ldif"/>
-                    </copy>
-                    <chmod file="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/apacheds.sh" perm="775" />
-                    <exec dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/" executable="./apacheds.sh" spawn="true"/>
-                  </target>
-                </configuration>
-              </execution>
-              <!-- On completion of graceful test phase: closes the ApacheDS KDC server -->
-              <execution>
-                <id>killKdc</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
-                    <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
     <profile>
       <id>parallel-tests</id>
       <build>

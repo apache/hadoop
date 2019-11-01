@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +36,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -48,6 +53,7 @@ import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -82,14 +88,20 @@ import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestLogsCLI {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestLogsCLI.class);
 
   ByteArrayOutputStream sysOutStream;
   private PrintStream sysOut;
@@ -397,17 +409,19 @@ public class TestLogsCLI {
     List<String> logTypes = new ArrayList<String>();
     logTypes.add("syslog");
     // create container logs in localLogDir
-    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes);
-    createContainerLogInLocalDir(appLogsDir, containerId2, fs, logTypes);
-
+    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes,
+        ImmutableList.of("empty"));
+    createContainerLogInLocalDir(appLogsDir, containerId2, fs, logTypes,
+        Collections.emptyList());
     // create two logs for container3 in localLogDir
     logTypes.add("stdout");
     logTypes.add("stdout1234");
-    createContainerLogInLocalDir(appLogsDir, containerId3, fs, logTypes);
+    createContainerLogInLocalDir(appLogsDir, containerId3, fs, logTypes,
+        Collections.emptyList());
 
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-        + "/bucket_logs/0001/application_0_0001");
+        + "/bucket-logs-tfile/0001/application_0_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -444,6 +458,7 @@ public class TestLogsCLI {
     cli.setConf(configuration);
 
     int exitCode = cli.run(new String[] { "-applicationId", appId.toString() });
+    LOG.info(sysOutStream.toString());
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId1, "syslog")));
@@ -455,6 +470,8 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout")));
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
+    assertTrue(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
@@ -470,6 +487,8 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout")));
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
+    assertTrue(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
@@ -485,6 +504,8 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout")));
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
+    assertTrue(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     int fullSize = sysOutStream.toByteArray().length;
     sysOutStream.reset();
 
@@ -501,6 +522,8 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout")));
     assertFalse(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
+    assertFalse(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
@@ -516,6 +539,8 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout")));
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
+    assertFalse(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
@@ -584,6 +609,15 @@ public class TestLogsCLI {
     Assert.assertEquals(new String(logMessage.getBytes(), 0, 5),
         new String(sysOutStream.toByteArray(),
         (fullContextSize - fileContentSize - tailContentSize), 5));
+    sysOutStream.reset();
+
+    // specify how many bytes we should get from an empty log
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId1.toString(), "-log_files", "empty",
+        "-size", "5"});
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
     sysOutStream.reset();
 
     // specify a negative number, it would get the last n bytes from
@@ -789,7 +823,8 @@ public class TestLogsCLI {
     List<String> logTypes = new ArrayList<String>();
     logTypes.add(fileName);
     // create container logs in localLogDir
-    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes);
+    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes,
+        Collections.emptyList());
 
     Path containerDirPath = new Path(appLogsDir, containerId1.toString());
     Path logPath = new Path(containerDirPath, fileName);
@@ -963,11 +998,12 @@ public class TestLogsCLI {
       logTypes.add("syslog");
 
       // create container logs in localLogDir for app
-      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
+      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes,
+          Collections.emptyList());
 
       // create the remote app dir for app but for a different user testUser
-      Path path = new Path(remoteLogRootDir + testUser + "/bucket_logs/0001/"
-          + appId);
+      Path path = new Path(remoteLogRootDir + testUser +
+          "/bucket-logs-tfile/0001/" + appId);
       if (fs.exists(path)) {
         fs.delete(path, true);
       }
@@ -1049,7 +1085,7 @@ public class TestLogsCLI {
           System.currentTimeMillis(), 1000);
       String priorityUser = "priority";
       Path pathWithoutPerm = new Path(remoteLogRootDir + priorityUser
-          + "/bucket_logs/1000/" + appTest);
+          + "/bucket-logs-tfile/1000/" + appTest);
       if (fs.exists(pathWithoutPerm)) {
         fs.delete(pathWithoutPerm, true);
       }
@@ -1139,6 +1175,84 @@ public class TestLogsCLI {
     }
   }
 
+  @Test (timeout = 5000)
+  public void testGuessAppOwnerWithCustomSuffix() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String jobUser = "user1";
+    String loggedUser = "user2";
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    String controllerName = "indexed";
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, controllerName);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+         controllerName), LogAggregationIndexedFileController.class.getName());
+    conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+         controllerName), controllerName);
+
+    FileSystem fs = FileSystem.get(conf);
+    try {
+      // Test New App Log Dir Struture (after YARN-6929) with Custom Suffix
+      ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+      Path path = new Path(remoteLogRootDir + jobUser + "/bucket-indexed/0001/"
+          + appId1);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      String appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId1,
+          loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+
+      // Test Old App Log Dir Struture (before YARN-6929) with Custom Suffix
+      ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+      path = new Path(remoteLogRootDir + jobUser + "/indexed/" + appId2);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId2, loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+    } finally {
+      fs.delete(new Path(remoteLogRootDir), true);
+    }
+  }
+
+  @Test (timeout = 5000)
+  public void testGuessAppOwnerWithCustomAppLogDir() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String remoteLogRootDir1 = "target/logs1/";
+    String jobUser = "user1";
+    String loggedUser = "user2";
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    String controllerName = "indexed";
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, controllerName);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+         controllerName), LogAggregationIndexedFileController.class.getName());
+    conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+         controllerName), remoteLogRootDir1);
+
+    FileSystem fs = FileSystem.get(conf);
+    try {
+      // Test Custom App Log Dir Structure
+      ApplicationId appId1 = ApplicationId.newInstance(0, 3);
+      Path path = new Path(remoteLogRootDir1 + jobUser +
+          "/bucket-logs-indexed/0003/" + appId1);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      String appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(appId1,
+          loggedUser, conf);
+      assertThat(appOwner).isEqualTo(jobUser);
+    } finally {
+      fs.delete(new Path(remoteLogRootDir1), true);
+    }
+  }
 
   @Test (timeout = 15000)
   public void testSaveContainerLogsLocally() throws Exception {
@@ -1407,7 +1521,7 @@ public class TestLogsCLI {
     assertNotNull(harUrl);
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs/application_1440536969523_0001");
+            + "/bucket-logs-tfile/0001/application_1440536969523_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -1464,11 +1578,12 @@ public class TestLogsCLI {
     logTypes.add("syslog");
     // create container logs in localLogDir
     for (ContainerId containerId : containerIds) {
-      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
+      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes,
+          Collections.emptyList());
     }
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-        + "/logs/application_0_0001");
+        + "/bucket-logs-tfile/0001/application_0_0001");
 
     if (fs.exists(path)) {
       fs.delete(path, true);
@@ -1481,7 +1596,8 @@ public class TestLogsCLI {
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,
-      ContainerId containerId, FileSystem fs, List<String> logTypes) throws Exception {
+      ContainerId containerId, FileSystem fs, List<String> logTypes,
+      List<String> emptyLogTypes) throws Exception {
     Path containerLogsDir = new Path(appLogsDir, containerId.toString());
     if (fs.exists(containerLogsDir)) {
       fs.delete(containerLogsDir, true);
@@ -1493,12 +1609,22 @@ public class TestLogsCLI {
       writer.write(logMessage(containerId, logType));
       writer.close();
     }
+    for (String emptyLogType : emptyLogTypes) {
+      Writer writer =
+          new FileWriter(new File(containerLogsDir.toString(), emptyLogType));
+      writer.write("");
+      writer.close();
+    }
   }
 
   private static String logMessage(ContainerId containerId, String logType) {
     StringBuilder sb = new StringBuilder();
     sb.append("Hello " + containerId + " in " + logType + "!");
     return sb.toString();
+  }
+
+  private static String createEmptyLog(String logType) {
+    return "LogContents:\n\nEnd of LogType:" + logType;
   }
 
   private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,

@@ -147,3 +147,23 @@ a:hover {
 h4 {
   font-weight: bold;
 }
+
+.cardgroup {
+   margin-bottom: 50px;
+}
+
+.cardgroup .card {
+  padding: 20px;
+}
+
+.cardgroup .media {
+  padding: 30px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.card {
+  padding: 20px;
+}

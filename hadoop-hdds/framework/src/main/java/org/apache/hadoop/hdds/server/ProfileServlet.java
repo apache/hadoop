@@ -32,7 +32,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -111,9 +113,13 @@ public class ProfileServlet extends HttpServlet {
   private static final AtomicInteger ID_GEN = new AtomicInteger(0);
   static final Path OUTPUT_DIR =
       Paths.get(System.getProperty("java.io.tmpdir"), "prof-output");
+  public static final String FILE_PREFIX = "async-prof-pid-";
+
+  public static final Pattern FILE_NAME_PATTERN =
+      Pattern.compile(FILE_PREFIX + "[0-9]+-[0-9A-Za-z\\-_]+-[0-9]+\\.[a-z]+");
 
   private Lock profilerLock = new ReentrantLock();
-  private Integer pid;
+  private final Integer pid;
   private String asyncProfilerHome;
   private transient Process process;
 
@@ -165,6 +171,26 @@ public class ProfileServlet extends HttpServlet {
     }
   }
 
+  @VisibleForTesting
+  protected static String generateFileName(Integer pid, Output output,
+      Event event) {
+    return FILE_PREFIX + pid + "-" +
+        event.name().toLowerCase() + "-" + ID_GEN.incrementAndGet()
+        + "." +
+        output.name().toLowerCase();
+  }
+
+  @VisibleForTesting
+  protected static String validateFileName(String filename) {
+    if (!FILE_NAME_PATTERN.matcher(filename).matches()) {
+      throw new IllegalArgumentException(
+          "Invalid file name parameter " + filename + " doesn't match pattern "
+              + FILE_NAME_PATTERN);
+
+    }
+    return filename;
+  }
+
   @Override
   protected void doGet(final HttpServletRequest req,
       final HttpServletResponse resp) throws IOException {
@@ -182,11 +208,11 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
     // if pid is explicitly specified, use it else default to current process
-    pid = getInteger(req, "pid", pid);
+    Integer processId = getInteger(req, "pid", pid);
 
     // if pid is not specified in query param and if current process pid
     // cannot be determined
-    if (pid == null) {
+    if (processId == null) {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
       resp.getWriter().write(
@@ -195,7 +221,8 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
 
-    final int duration = getInteger(req, "duration", DEFAULT_DURATION_SECONDS);
+    final int duration =
+        getInteger(req, "duration", DEFAULT_DURATION_SECONDS);
     final Output output = getOutput(req);
     final Event event = getEvent(req);
     final Long interval = getLong(req, "interval");
@@ -213,11 +240,11 @@ public class ProfileServlet extends HttpServlet {
         int lockTimeoutSecs = 3;
         if (profilerLock.tryLock(lockTimeoutSecs, TimeUnit.SECONDS)) {
           try {
+            //Should be in sync with FILE_NAME_PATTERN
             File outputFile =
-                OUTPUT_DIR.resolve("async-prof-pid-" + pid + "-" +
-                    event.name().toLowerCase() + "-" + ID_GEN.incrementAndGet()
-                    + "." +
-                    output.name().toLowerCase()).toFile();
+                OUTPUT_DIR.resolve(
+                    ProfileServlet.generateFileName(processId, output, event))
+                    .toFile();
             List<String> cmd = new ArrayList<>();
             cmd.add(asyncProfilerHome + PROFILER_SCRIPT);
             cmd.add("-e");
@@ -261,7 +288,7 @@ public class ProfileServlet extends HttpServlet {
             if (reverse) {
               cmd.add("--reverse");
             }
-            cmd.add(pid.toString());
+            cmd.add(processId.toString());
             process = runCmdAsync(cmd);
 
             // set response and set refresh header to output location
@@ -270,7 +297,8 @@ public class ProfileServlet extends HttpServlet {
             String relativeUrl = "/prof?file=" + outputFile.getName();
             resp.getWriter().write(
                 "Started [" + event.getInternalName()
-                    + "] profiling. This page will automatically redirect to " +
+                    + "] profiling. This page will automatically redirect to "
+                    +
                     relativeUrl + " after " + duration
                     + " seconds.\n\ncommand:\n" + Joiner.on(" ").join(cmd));
             resp.getWriter().write(
@@ -320,9 +348,11 @@ public class ProfileServlet extends HttpServlet {
       final HttpServletResponse resp)
       throws IOException {
 
+    String safeFileName = validateFileName(fileName);
     File requestedFile =
-        ProfileServlet.OUTPUT_DIR.resolve(fileName).toAbsolutePath()
-            .toFile();
+        ProfileServlet.OUTPUT_DIR
+            .resolve(safeFileName)
+            .toAbsolutePath().toFile();
     // async-profiler version 1.4 writes 'Started [cpu] profiling' to output
     // file when profiler is running which
     // gets replaced by final output. If final output is not ready yet, the
@@ -331,14 +361,14 @@ public class ProfileServlet extends HttpServlet {
       LOG.info("{} is incomplete. Sending auto-refresh header..",
           requestedFile);
       resp.setHeader("Refresh",
-          "2," + req.getRequestURI() + "?file=" + fileName);
+          "2," + req.getRequestURI() + "?file=" + safeFileName);
       resp.getWriter().write(
           "This page will auto-refresh every 2 second until output file is "
               + "ready..");
     } else {
-      if (fileName.endsWith(".svg")) {
+      if (safeFileName.endsWith(".svg")) {
         resp.setContentType("image/svg+xml");
-      } else if (fileName.endsWith(".tree")) {
+      } else if (safeFileName.endsWith(".tree")) {
         resp.setContentType("text/html");
       }
       try (InputStream input = new FileInputStream(requestedFile)) {
@@ -347,7 +377,8 @@ public class ProfileServlet extends HttpServlet {
     }
   }
 
-  private Integer getInteger(final HttpServletRequest req, final String param,
+  private Integer getInteger(final HttpServletRequest req,
+      final String param,
       final Integer defaultValue) {
     final String value = req.getParameter(param);
     if (value != null) {
@@ -439,8 +470,8 @@ public class ProfileServlet extends HttpServlet {
     L1_DCACHE_LOAD_MISSES("L1-dcache-load-misses"),
     LLC_LOAD_MISSES("LLC-load-misses"),
     DTLB_LOAD_MISSES("dTLB-load-misses"),
-    MEM_BREAKPOINT("mem:breakpoint"),
-    TRACE_TRACEPOINT("trace:tracepoint");
+    MEM_BREAKPOINT("mem-breakpoint"),
+    TRACE_TRACEPOINT("trace-tracepoint");
 
     private String internalName;
 

@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerDataProto;
-import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
@@ -50,14 +49,14 @@ public class InfoSubcommand implements Callable<Void> {
       LoggerFactory.getLogger(InfoSubcommand.class);
 
   @ParentCommand
-  private SCMCLI parent;
+  private ContainerCommands parent;
 
   @Parameters(description = "Decimal id of the container.")
   private long containerID;
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.createScmClient()) {
+    try (ScmClient scmClient = parent.getParent().createScmClient()) {
       ContainerWithPipeline container = scmClient.
           getContainerWithPipeline(containerID);
       Preconditions.checkNotNull(container, "Container cannot be null");

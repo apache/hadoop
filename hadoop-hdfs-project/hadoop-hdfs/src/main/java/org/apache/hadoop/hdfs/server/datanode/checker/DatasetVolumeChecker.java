@@ -26,6 +26,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -120,7 +122,7 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (maxAllowedTimeForCheckMs <= 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
           + maxAllowedTimeForCheckMs + " (should be > 0)");
     }
@@ -137,7 +139,7 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (minDiskCheckGapMs < 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY + " - "
           + minDiskCheckGapMs + " (should be >= 0)");
     }
@@ -148,7 +150,7 @@ public class DatasetVolumeChecker {
         TimeUnit.MILLISECONDS);
 
     if (diskCheckTimeout < 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
           + diskCheckTimeout + " (should be >= 0)");
     }
@@ -156,7 +158,7 @@ public class DatasetVolumeChecker {
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
     if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
           + maxVolumeFailuresTolerated + " "
           + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);

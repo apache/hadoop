@@ -75,9 +75,10 @@ public final class RouterQuotaUsage extends QuotaUsage {
    * @throws NSQuotaExceededException If the quota is exceeded.
    */
   public void verifyNamespaceQuota() throws NSQuotaExceededException {
-    if (Quota.isViolated(getQuota(), getFileAndDirectoryCount())) {
-      throw new NSQuotaExceededException(getQuota(),
-          getFileAndDirectoryCount());
+    long quota = getQuota();
+    long fileAndDirectoryCount = getFileAndDirectoryCount();
+    if (Quota.isViolated(quota, fileAndDirectoryCount)) {
+      throw new NSQuotaExceededException(quota, fileAndDirectoryCount);
     }
   }
 
@@ -87,25 +88,29 @@ public final class RouterQuotaUsage extends QuotaUsage {
    * @throws DSQuotaExceededException If the quota is exceeded.
    */
   public void verifyStoragespaceQuota() throws DSQuotaExceededException {
-    if (Quota.isViolated(getSpaceQuota(), getSpaceConsumed())) {
-      throw new DSQuotaExceededException(getSpaceQuota(), getSpaceConsumed());
+    long spaceQuota = getSpaceQuota();
+    long spaceConsumed = getSpaceConsumed();
+    if (Quota.isViolated(spaceQuota, spaceConsumed)) {
+      throw new DSQuotaExceededException(spaceQuota, spaceConsumed);
     }
   }
 
   @Override
   public String toString() {
-    String nsQuota = String.valueOf(getQuota());
-    String nsCount = String.valueOf(getFileAndDirectoryCount());
-    if (getQuota() == HdfsConstants.QUOTA_RESET) {
-      nsQuota = "-";
-      nsCount = "-";
+    String nsQuota = "-";
+    String nsCount = "-";
+    long quota = getQuota();
+    if (quota != HdfsConstants.QUOTA_RESET) {
+      nsQuota = String.valueOf(quota);
+      nsCount = String.valueOf(getFileAndDirectoryCount());
     }
 
-    String ssQuota = StringUtils.byteDesc(getSpaceQuota());
-    String ssCount = StringUtils.byteDesc(getSpaceConsumed());
-    if (getSpaceQuota() == HdfsConstants.QUOTA_RESET) {
-      ssQuota = "-";
-      ssCount = "-";
+    String ssQuota = "-";
+    String ssCount = "-";
+    long spaceQuota = getSpaceQuota();
+    if (spaceQuota != HdfsConstants.QUOTA_RESET) {
+      ssQuota = StringUtils.byteDesc(spaceQuota);
+      ssCount = StringUtils.byteDesc(getSpaceConsumed());
     }
 
     StringBuilder str = new StringBuilder();

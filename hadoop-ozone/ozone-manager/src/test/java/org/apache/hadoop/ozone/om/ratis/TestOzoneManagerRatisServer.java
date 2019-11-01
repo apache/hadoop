@@ -31,7 +31,10 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMNodeDetails;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -41,15 +44,23 @@ import org.apache.ratis.util.LifeCycle;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
+import static org.mockito.Mockito.when;
 
 /**
  * Test OM Ratis server.
  */
 public class TestOzoneManagerRatisServer {
+
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
 
   private OzoneConfiguration conf;
   private OzoneManagerRatisServer omRatisServer;
@@ -57,6 +68,9 @@ public class TestOzoneManagerRatisServer {
   private String omID;
   private String clientId = UUID.randomUUID().toString();
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
+  private OMMetadataManager omMetadataManager;
+  private OzoneManager ozoneManager;
+  private OMNodeDetails omNodeDetails;
 
   @Before
   public void init() throws Exception {
@@ -73,14 +87,23 @@ public class TestOzoneManagerRatisServer {
         OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT);
     InetSocketAddress rpcAddress = new InetSocketAddress(
         InetAddress.getLocalHost(), 0);
-    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+    omNodeDetails = new OMNodeDetails.Builder()
         .setRpcAddress(rpcAddress)
         .setRatisPort(ratisPort)
         .setOMNodeId(omID)
         .setOMServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
         .build();
     // Starts a single node Ratis server
-    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, null,
+    ozoneManager = Mockito.mock(OzoneManager.class);
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
+        folder.newFolder().getAbsolutePath());
+    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
+    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
+    OMRatisSnapshotInfo omRatisSnapshotInfo = new OMRatisSnapshotInfo(
+        folder.newFolder());
+    when(ozoneManager.getSnapshotInfo()).thenReturn(omRatisSnapshotInfo);
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
       omNodeDetails, Collections.emptyList());
     omRatisServer.start();
     omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(omID,
@@ -107,6 +130,24 @@ public class TestOzoneManagerRatisServer {
         LifeCycle.State.RUNNING, omRatisServer.getServerState());
   }
 
+  @Test
+  public void testLoadSnapshotInfoOnStart() throws Exception {
+    // Stop the Ratis server and manually update the snapshotInfo.
+    long oldSnaphsotIndex = ozoneManager.saveRatisSnapshot();
+    ozoneManager.getSnapshotInfo().saveRatisSnapshotToDisk(oldSnaphsotIndex);
+    omRatisServer.stop();
+    long newSnapshotIndex = oldSnaphsotIndex + 100;
+    ozoneManager.getSnapshotInfo().saveRatisSnapshotToDisk(newSnapshotIndex);
+
+    // Start new Ratis server. It should pick up and load the new SnapshotInfo
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
+        omNodeDetails, Collections.emptyList());
+    omRatisServer.start();
+    long lastAppliedIndex = omRatisServer.getStateMachineLastAppliedIndex();
+
+    Assert.assertEquals(newSnapshotIndex, lastAppliedIndex);
+  }
+
   /**
    * Test that all of {@link OzoneManagerProtocolProtos.Type} enum values are
    * categorized in {@link OmUtils#isReadOnly(OMRequest)}.
@@ -124,7 +165,8 @@ public class TestOzoneManagerRatisServer {
           .setClientId(clientId)
           .build();
       OmUtils.isReadOnly(request);
-      assertFalse(cmdtype + "is not categorized in OmUtils#isReadyOnly",
+      assertFalse(cmdtype + " is not categorized in " +
+              "OmUtils#isReadyOnly",
           logCapturer.getOutput().contains("CmdType " + cmdtype +" is not " +
               "categorized as readOnly or not."));
       logCapturer.clearOutput();
@@ -156,16 +198,17 @@ public class TestOzoneManagerRatisServer {
     int ratisPort = 9873;
     InetSocketAddress rpcAddress = new InetSocketAddress(
         InetAddress.getLocalHost(), 0);
-    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+    OMNodeDetails nodeDetails = new OMNodeDetails.Builder()
         .setRpcAddress(rpcAddress)
         .setRatisPort(ratisPort)
         .setOMNodeId(newOmId)
         .setOMServiceId(customOmServiceId)
         .build();
     // Starts a single node Ratis server
+    omRatisServer.stop();
     OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
-        .newOMRatisServer(newConf, null,
-            omNodeDetails, Collections.emptyList());
+        .newOMRatisServer(newConf, ozoneManager, nodeDetails,
+            Collections.emptyList());
     newOmRatisServer.start();
     OzoneManagerRatisClient newOmRatisClient = OzoneManagerRatisClient
         .newOzoneManagerRatisClient(
@@ -177,5 +220,8 @@ public class TestOzoneManagerRatisServer {
     RaftGroupId raftGroupId = newOmRatisServer.getRaftGroup().getGroupId();
     Assert.assertEquals(uuid, raftGroupId.getUuid());
     Assert.assertEquals(raftGroupId.toByteString().size(), 16);
+    newOmRatisServer.stop();
   }
+
+
 }

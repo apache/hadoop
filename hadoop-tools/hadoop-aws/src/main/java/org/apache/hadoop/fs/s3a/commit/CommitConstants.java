@@ -78,14 +78,32 @@ public final class CommitConstants {
    * Value: {@value}.
    */
   public static final String STREAM_CAPABILITY_MAGIC_OUTPUT
+      = "fs.s3a.capability.magic.output.stream";
+
+  /**
+   * Flag to indicate that a store supports magic committers.
+   * returned in {@code PathCapabilities}
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_MAGIC_COMMITTER
+      = "fs.s3a.capability.magic.committer";
+
+  /**
+   * Flag to indicate whether a stream is a magic output stream;
+   * returned in {@code StreamCapabilities}
+   * Value: {@value}.
+   */
+  @Deprecated
+  public static final String STREAM_CAPABILITY_MAGIC_OUTPUT_OLD
       = "s3a:magic.output.stream";
 
   /**
    * Flag to indicate that a store supports magic committers.
-   * returned in {@code StreamCapabilities}
+   * returned in {@code PathCapabilities}
    * Value: {@value}.
    */
-  public static final String STORE_CAPABILITY_MAGIC_COMMITTER
+  @Deprecated
+  public static final String STORE_CAPABILITY_MAGIC_COMMITTER_OLD
       = "s3a:magic.committer";
 
   /**
@@ -198,7 +216,7 @@ public final class CommitConstants {
   public static final String CONFLICT_MODE_REPLACE = "replace";
 
   /** Default conflict mode: {@value}. */
-  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_FAIL;
+  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_APPEND;
 
   /**
    * Number of threads in committers for parallel operations on files
@@ -236,5 +254,11 @@ public final class CommitConstants {
    */
   public static final String FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS =
       "fs.s3a.committer.staging.abort.pending.uploads";
+
+  /**
+   * The limit to the number of committed objects tracked during
+   * job commits and saved to the _SUCCESS file.
+   */
+  public static final int SUCCESS_MARKER_FILE_LIMIT = 100;
 
 }

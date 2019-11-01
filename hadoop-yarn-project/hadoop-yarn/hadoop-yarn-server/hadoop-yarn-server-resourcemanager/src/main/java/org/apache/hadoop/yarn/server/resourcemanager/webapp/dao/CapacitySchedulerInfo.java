@@ -61,7 +61,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
         parent.getQueueResourceQuotas(), false);
-    queues = getQueues(parent);
+    queues = getQueues(cs, parent);
     health = new CapacitySchedulerHealthInfo(cs);
   }
 
@@ -89,7 +89,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     return this.queues;
   }
 
-  protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {
+  protected CapacitySchedulerQueueInfoList getQueues(
+      CapacityScheduler cs, CSQueue parent) {
     CapacitySchedulerQueueInfoList queuesInfo =
         new CapacitySchedulerQueueInfoList();
     // JAXB marashalling leads to situation where the "type" field injected
@@ -112,10 +113,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     for (CSQueue queue : childQueues) {
       CapacitySchedulerQueueInfo info;
       if (queue instanceof LeafQueue) {
-        info = new CapacitySchedulerLeafQueueInfo((LeafQueue) queue);
+        info = new CapacitySchedulerLeafQueueInfo(cs, (LeafQueue) queue);
       } else {
-        info = new CapacitySchedulerQueueInfo(queue);
-        info.queues = getQueues(queue);
+        info = new CapacitySchedulerQueueInfo(cs, queue);
+        info.queues = getQueues(cs, queue);
       }
       queuesInfo.addToQueueInfoList(info);
     }

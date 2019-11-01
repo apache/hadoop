@@ -67,7 +67,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         TestUtils.getMockApplicationId(1));
     when(appSchedulingInfo.getApplicationAttemptId()).thenReturn(
         TestUtils.getMockApplicationAttemptId(1, 1));
-
+    when(appSchedulingInfo.getDefaultNodeLabelExpression()).thenReturn("y");
     // stub RMContext
     rmContext = TestUtils.getMockRMContext();
 
@@ -153,7 +153,8 @@ public class TestSingleConstraintAppPlacementAllocator {
         .resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals("", allocator.getTargetNodePartition());
+    // Node partition is unspecified, use the default node label expression y
+    Assert.assertEquals("y", allocator.getTargetNodePartition());
 
     // Valid (with application Id target)
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -167,7 +168,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
     // Allocation tags should not include application Id
-    Assert.assertEquals("", allocator.getTargetNodePartition());
+    Assert.assertEquals("y", allocator.getTargetNodePartition());
 
     // Invalid (without sizing)
     assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -224,6 +225,22 @@ public class TestSingleConstraintAppPlacementAllocator {
     // should succeeded.
     schedulingRequest.getResourceSizing().setNumAllocations(10);
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
+
+    // Update allocator with a newly constructed scheduling request different at
+    // #allocations, should succeeded.
+    SchedulingRequest newSchedulingRequest =
+        SchedulingRequest.newBuilder().executionType(
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+            .allocationRequestId(10L).priority(Priority.newInstance(1))
+            .placementConstraintExpression(PlacementConstraints
+                .targetNotIn(PlacementConstraints.NODE,
+                    PlacementConstraints.PlacementTargets.nodePartition(""),
+                    PlacementConstraints.PlacementTargets
+                        .allocationTag("mapper", "reducer"))
+                .build()).resourceSizing(
+            ResourceSizing.newInstance(11, Resource.newInstance(1024, 1)))
+            .build();
+    allocator.updatePendingAsk(schedulerRequestKey, newSchedulingRequest, false);
 
     // Update allocator with scheduling request different at resource,
     // should failed.

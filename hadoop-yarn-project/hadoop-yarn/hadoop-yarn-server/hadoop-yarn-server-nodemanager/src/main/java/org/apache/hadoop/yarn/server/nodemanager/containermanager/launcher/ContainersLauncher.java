@@ -38,7 +38,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -58,15 +57,15 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * 
  */
 public class ContainersLauncher extends AbstractService
-    implements EventHandler<ContainersLauncherEvent> {
+    implements AbstractContainersLauncher {
 
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainersLauncher.class);
 
-  private final Context context;
-  private final ContainerExecutor exec;
-  private final Dispatcher dispatcher;
-  private final ContainerManagerImpl containerManager;
+  private Context context;
+  private ContainerExecutor exec;
+  private Dispatcher dispatcher;
+  private ContainerManagerImpl containerManager;
 
   private LocalDirsHandlerService dirsHandler;
   @VisibleForTesting
@@ -79,15 +78,27 @@ public class ContainersLauncher extends AbstractService
   public final Map<ContainerId, ContainerLaunch> running =
     Collections.synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
 
+  public ContainersLauncher() {
+    super("containers-launcher");
+  }
+
+  @VisibleForTesting
   public ContainersLauncher(Context context, Dispatcher dispatcher,
       ContainerExecutor exec, LocalDirsHandlerService dirsHandler,
       ContainerManagerImpl containerManager) {
-    super("containers-launcher");
-    this.exec = exec;
-    this.context = context;
-    this.dispatcher = dispatcher;
-    this.dirsHandler = dirsHandler;
-    this.containerManager = containerManager;
+    this();
+    init(context, dispatcher, exec, dirsHandler, containerManager);
+  }
+
+  @Override
+  public void init(Context nmContext, Dispatcher nmDispatcher,
+      ContainerExecutor containerExec, LocalDirsHandlerService nmDirsHandler,
+      ContainerManagerImpl nmContainerManager) {
+    this.exec = containerExec;
+    this.context = nmContext;
+    this.dispatcher = nmDispatcher;
+    this.dirsHandler = nmDirsHandler;
+    this.containerManager = nmContainerManager;
   }
 
   @Override

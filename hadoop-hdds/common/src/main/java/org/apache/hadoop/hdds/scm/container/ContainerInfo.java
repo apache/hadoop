@@ -54,7 +54,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
     mapper
         .setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE);
-    WRITER = mapper.writer();
+    WRITER = mapper.writerWithDefaultPrettyPrinter();
   }
 
   private HddsProtos.LifeCycleState state;
@@ -467,4 +467,5 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return state == HddsProtos.LifeCycleState.OPEN
         || state == HddsProtos.LifeCycleState.CLOSING;
   }
+
 }

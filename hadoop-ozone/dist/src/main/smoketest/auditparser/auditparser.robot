@@ -20,8 +20,9 @@ Library             BuiltIn
 Resource            ../commonlib.robot
 
 *** Variables ***
-${user}        hadoop
-${count}       4
+${user}              hadoop
+${count}             4
+${auditworkdir}      /tmp/
 
 *** Keywords ***
 Set username
@@ -36,16 +37,17 @@ Initiating freon to generate data
                        Should Not Contain               ${result}  ERROR
 
 Testing audit parser
-    ${logfile} =       Execute              ls -t /opt/hadoop/logs | grep om-audit | head -1
-                       Execute              ozone auditparser /opt/hadoop/audit.db load "/opt/hadoop/logs/${logfile}"
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5cmds
+    ${logdir} =        Get Environment Variable      HADOOP_LOG_DIR     /var/log/hadoop
+    ${logfile} =       Execute              ls -t "${logdir}" | grep om-audit | head -1
+                       Execute              ozone auditparser "${auditworkdir}/audit.db" load "${logdir}/${logfile}"
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" template top5cmds
                        Should Contain       ${result}  ALLOCATE_KEY
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5users
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" template top5users
     Run Keyword If     '${SECURITY_ENABLED}' == 'true'      Set username
                        Should Contain       ${result}  ${user}
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_VOLUME' and RESULT='SUCCESS'"
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" query "select count(*) from audit where op='CREATE_VOLUME' and RESULT='SUCCESS'"
     ${result} =        Convert To Number     ${result}
                        Should be true       ${result}>${count}
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
+    ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
     ${result} =        Convert To Number     ${result}
                        Should be true       ${result}>${count}

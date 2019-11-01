@@ -18,16 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.concurrent.TimeoutException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -46,32 +38,62 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverter;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverterParams;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.concurrent.TimeoutException;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.CONVERSION_RULES_FILE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.FS_ALLOC_FILE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.OUTPUT_DIR;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.YARN_SITE_XML;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.setupFSConfigConversionFiles;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class TestResourceManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceManager.class);
-  
+
   private ResourceManager resourceManager = null;
-  
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+  private FSConfigConverterTestCommons converterTestCommons;
+
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
     resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
     resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
+
+    converterTestCommons = new FSConfigConverterTestCommons();
+    converterTestCommons.setUp();
   }
 
   @After
   public void tearDown() throws Exception {
     resourceManager.stop();
+    converterTestCommons.tearDown();
   }
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
@@ -329,4 +351,92 @@ public class TestResourceManager {
     }
   }
 
+  /**
+   * Test whether ResourceManager passes user-provided conf to
+   * UserGroupInformation class. If it reads this (incorrect)
+   * AuthenticationMethod enum an exception is thrown.
+   */
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Invalid attribute value for "
+        + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
+        + " of DUMMYAUTH");
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "DUMMYAUTH");
+    ResourceManager dummyResourceManager = new ResourceManager();
+    try {
+      dummyResourceManager.init(dummyConf);
+    } finally {
+      dummyResourceManager.stop();
+    }
+  }
+
+  /**
+   * Example command: <br>
+   *   opt/hadoop/bin/yarn resourcemanager -convert-fs-configuration<br>
+   *   -o /tmp/output<br>
+   *   -y /opt/hadoop/etc/hadoop/yarn-site.xml<br>
+   *   -f /opt/hadoop/etc/hadoop/fair-scheduler.xml<br>
+   *   -r /home/systest/sample-rules-config.properties<br>
+   */
+  @Test
+  @SuppressWarnings("checkstyle:javadocstyle")
+  public void testResourceManagerConvertFSConfigurationDefaults()
+      throws Exception {
+    setupFSConfigConversionFiles();
+
+    ArgumentCaptor<FSConfigToCSConfigConverterParams> conversionParams =
+        ArgumentCaptor.forClass(FSConfigToCSConfigConverterParams.class);
+
+    final String mainSwitch = "-convert-fs-configuration";
+    FSConfigToCSConfigConverter mockConverter =
+        mock(FSConfigToCSConfigConverter.class);
+
+    ResourceManager.initFSArgumentHandler(mockConverter);
+    ResourceManager.main(new String[] {mainSwitch, "-o", OUTPUT_DIR,
+        "-y", YARN_SITE_XML, "-f", FS_ALLOC_FILE, "-r",
+        CONVERSION_RULES_FILE});
+
+    // validate params
+    verify(mockConverter).convert(conversionParams.capture());
+    FSConfigToCSConfigConverterParams params = conversionParams.getValue();
+    LOG.info("FS config converter parameters: " + params);
+
+    assertThat(params.getYarnSiteXmlConfig()).isEqualTo(YARN_SITE_XML);
+    assertThat(params.getFairSchedulerXmlConfig()).isEqualTo(FS_ALLOC_FILE);
+    assertThat(params.getConversionRulesConfig())
+      .isEqualTo(CONVERSION_RULES_FILE);
+    assertThat(params.isConsole()).isEqualTo(false);
+  }
+
+  @Test
+  public void testResourceManagerConvertFSConfigurationWithConsoleParam()
+      throws Exception {
+    setupFSConfigConversionFiles();
+
+    ArgumentCaptor<FSConfigToCSConfigConverterParams> conversionParams =
+        ArgumentCaptor.forClass(FSConfigToCSConfigConverterParams.class);
+
+    final String mainSwitch = "-convert-fs-configuration";
+    FSConfigToCSConfigConverter mockConverter =
+        mock(FSConfigToCSConfigConverter.class);
+
+    ResourceManager.initFSArgumentHandler(mockConverter);
+    ResourceManager.main(new String[] {mainSwitch, "-o", OUTPUT_DIR,
+        "-p", "-y", YARN_SITE_XML, "-f", FS_ALLOC_FILE, "-r",
+        CONVERSION_RULES_FILE});
+
+    // validate params
+    verify(mockConverter).convert(conversionParams.capture());
+    FSConfigToCSConfigConverterParams params = conversionParams.getValue();
+    LOG.info("FS config converter parameters: " + params);
+
+    assertThat(params.getYarnSiteXmlConfig()).isEqualTo(YARN_SITE_XML);
+    assertThat(params.getFairSchedulerXmlConfig()).isEqualTo(FS_ALLOC_FILE);
+    assertThat(params.getConversionRulesConfig())
+      .isEqualTo(CONVERSION_RULES_FILE);
+    assertThat(params.isConsole()).isEqualTo(true);
+  }
 }

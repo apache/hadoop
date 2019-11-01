@@ -74,8 +74,9 @@ public class TestFifoOrderingPolicyForPendingApps {
     schedOrder.addSchedulableEntity(msp7);
 
     // Assignment with serial id's are 3,2,4,1,6,5,7
-    checkSerials(schedOrder.getAssignmentIterator(), new long[] { 3, 2, 4, 1,
-        6, 5, 7 });
+    checkSerials(schedOrder.getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR), new long[] {3, 2, 4, 1,
+        6, 5, 7});
 
     //Preemption, youngest to oldest
     checkSerials(schedOrder.getPreemptionIterator(), new long[] { 7, 5, 6, 1,

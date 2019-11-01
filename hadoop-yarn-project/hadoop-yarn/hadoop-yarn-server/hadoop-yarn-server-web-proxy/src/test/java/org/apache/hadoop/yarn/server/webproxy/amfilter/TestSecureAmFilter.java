@@ -36,9 +36,9 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -54,6 +54,7 @@ public class TestSecureAmFilter {
   private String proxyHost = "localhost";
   private static final File TEST_ROOT_DIR = new File("target",
       TestSecureAmFilter.class.getName() + "-root");
+  private static final String PREFIX = "hadoop.http.authentication.";
   private static File httpSpnegoKeytabFile = new File(
       KerberosTestUtils.getKeytabFile());
   private static Configuration rmconf = new Configuration();
@@ -70,7 +71,12 @@ public class TestSecureAmFilter {
     rmconf.setBoolean(YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
         true);
     rmconf.set("hadoop.http.filter.initializers",
-        RMAuthenticationFilterInitializer.class.getName());
+        AuthenticationFilterInitializer.class.getName());
+    rmconf.set(PREFIX + "type", "kerberos");
+    rmconf.set(PREFIX + "kerberos.keytab",
+        httpSpnegoKeytabFile.getAbsolutePath());
+    rmconf.set(PREFIX + "kerberos.principal", httpSpnegoPrincipal);
+
     rmconf.set(YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY,
         httpSpnegoPrincipal);
     rmconf.set(YarnConfiguration.RM_KEYTAB,

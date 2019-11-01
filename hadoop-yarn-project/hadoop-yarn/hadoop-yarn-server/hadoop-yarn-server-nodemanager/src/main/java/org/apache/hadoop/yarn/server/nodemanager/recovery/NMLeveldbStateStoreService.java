@@ -1424,8 +1424,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String keyResChng = CONTAINERS_KEY_PREFIX + container.getContainerId().toString()
         + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
     try {
-      WriteBatch batch = db.createWriteBatch();
-      try {
+      try (WriteBatch batch = db.createWriteBatch()) {
         ResourceMappings.AssignedResources res =
             new ResourceMappings.AssignedResources();
         res.updateAssignedResources(assignedResources);
@@ -1433,8 +1432,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         // New value will overwrite old values for the same key
         batch.put(bytes(keyResChng), res.toBytes());
         db.write(batch);
-      } finally {
-        batch.close();
       }
     } catch (DBException e) {
       markStoreUnHealthy(e);

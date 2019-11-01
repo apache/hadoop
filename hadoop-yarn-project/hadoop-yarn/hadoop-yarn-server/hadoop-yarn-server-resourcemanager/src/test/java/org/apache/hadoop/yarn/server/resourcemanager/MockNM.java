@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRe
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -233,6 +234,13 @@ public class MockNM {
     return nodeHeartbeat(conts, isHealthy, responseId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy, int resId) throws Exception {
     ArrayList<ContainerStatus> updatedStats = new ArrayList<ContainerStatus>();
@@ -243,15 +251,62 @@ public class MockNM {
         isHealthy, resId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param isHealthy whether node is healthy.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(
       List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
         isHealthy, responseId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param oppContainersStatus opportunistic containers status.
+   * @param isHealthy whether node is healthy.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
+  public NodeHeartbeatResponse nodeHeartbeat(
+      OpportunisticContainersStatus oppContainersStatus, boolean isHealthy)
+      throws Exception {
+    return nodeHeartbeat(Collections.emptyList(),
+        Collections.emptyList(), isHealthy, responseId, oppContainersStatus);
+  }
+
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param increasedConts containers whose resource has been increased.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
+  public NodeHeartbeatResponse nodeHeartbeat(
+      List<ContainerStatus> updatedStats, List<Container> increasedConts,
+      boolean isHealthy, int resId) throws Exception {
+    return nodeHeartbeat(updatedStats, increasedConts,
+        isHealthy, resId, null);
+  }
+
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param increasedConts containers whose resource has been increased.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @param oppContainersStatus opportunistic containers status.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
-      List<Container> increasedConts, boolean isHealthy, int resId)
-          throws Exception {
+      List<Container> increasedConts, boolean isHealthy, int resId,
+      OpportunisticContainersStatus oppContainersStatus) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setResponseId(resId);
@@ -269,6 +324,7 @@ public class MockNM {
       containerStats.remove(cid);
     }
     status.setIncreasedContainers(increasedConts);
+    status.setOpportunisticContainersStatus(oppContainersStatus);
     NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);
     healthStatus.setHealthReport("");
     healthStatus.setIsNodeHealthy(isHealthy);

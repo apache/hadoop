@@ -36,8 +36,8 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.hdds.utils.MetadataStore;
+import org.apache.hadoop.hdds.utils.MetadataStoreBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -186,7 +186,7 @@ public final class GenesisUtil {
       omStorage.setOmId(UUID.randomUUID().toString());
       omStorage.initialize();
     }
-    return OzoneManager.createOm(null, conf);
+    return OzoneManager.createOm(conf);
   }
 
   static void configureOM(Configuration conf, int numHandlers) {

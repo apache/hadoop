@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,12 +39,12 @@ public final class PipelineFactory {
   private Map<ReplicationType, PipelineProvider> providers;
 
   PipelineFactory(NodeManager nodeManager, PipelineStateManager stateManager,
-      Configuration conf) {
+      Configuration conf, GrpcTlsConfig tlsConfig) {
     providers = new HashMap<>();
     providers.put(ReplicationType.STAND_ALONE,
         new SimplePipelineProvider(nodeManager));
     providers.put(ReplicationType.RATIS,
-        new RatisPipelineProvider(nodeManager, stateManager, conf));
+        new RatisPipelineProvider(nodeManager, stateManager, conf, tlsConfig));
   }
 
   @VisibleForTesting
@@ -60,5 +61,9 @@ public final class PipelineFactory {
   public Pipeline create(ReplicationType type, ReplicationFactor factor,
       List<DatanodeDetails> nodes) {
     return providers.get(type).create(factor, nodes);
+  }
+
+  public void shutdown() {
+    providers.values().forEach(provider -> provider.shutdown());
   }
 }

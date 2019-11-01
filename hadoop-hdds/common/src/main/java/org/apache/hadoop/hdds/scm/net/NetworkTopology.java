@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.net;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * The interface defines a network topology.
@@ -38,14 +39,12 @@ public interface NetworkTopology {
    */
   void add(Node node);
 
-
   /**
    * Remove a node from the network topology. This will be called when a
    * existing datanode is removed from the system.
    * @param node node to be removed; cannot be null
    */
   void remove(Node node);
-
 
   /**
    * Check if the tree already contains node <i>node</i>.
@@ -66,7 +65,6 @@ public interface NetworkTopology {
    * @return true if their specified generation ancestor are equal
    */
   boolean isSameAncestor(Node node1, Node node2, int ancestorGen);
-
 
   /**
    * Get the ancestor for node on generation <i>ancestorGen</i>.
@@ -118,11 +116,11 @@ public interface NetworkTopology {
    * Randomly choose a node in the scope, ano not in the exclude scope.
    * @param scope range of nodes from which a node will be chosen. cannot start
    *              with ~
-   * @param excludedScope the chosen node cannot be in this range. cannot
+   * @param excludedScopes the chosen nodes cannot be in these ranges. cannot
    *                      starts with ~
    * @return the chosen node
    */
-  Node chooseRandom(String scope, String excludedScope);
+  Node chooseRandom(String scope, List<String>  excludedScopes);
 
   /**
    * Randomly choose a leaf node from <i>scope</i>.
@@ -159,26 +157,6 @@ public interface NetworkTopology {
   Node chooseRandom(String scope, Collection<Node> excludedNodes,
       int ancestorGen);
 
-
-  /**
-   * Randomly choose a leaf node.
-   *
-   * @param scope range from which a node will be chosen, cannot start with ~
-   * @param excludedNodes nodes to be excluded
-   * @param excludedScope excluded node range. Cannot start with ~
-   * @param ancestorGen matters when excludeNodes is not null. It means the
-   * ancestor generation that's not allowed to share between chosen node and the
-   * excludedNodes. For example, if ancestorGen is 1, means chosen node
-   * cannot share the same parent with excludeNodes. If value is 2, cannot
-   * share the same grand parent, and so on. If ancestorGen is 0, then no
-   * effect.
-   *
-   * @return the chosen node
-   */
-  Node chooseRandom(String scope, String excludedScope,
-      Collection<Node> excludedNodes, int ancestorGen);
-
-
   /**
    * Randomly choose one node from <i>scope</i>, share the same generation
    * ancestor with <i>affinityNode</i>, and exclude nodes in
@@ -186,7 +164,7 @@ public interface NetworkTopology {
    *
    * @param scope range of nodes from which a node will be chosen, cannot start
    *              with ~
-   * @param excludedScope range of nodes to be excluded, cannot start with ~
+   * @param excludedScopes ranges of nodes to be excluded, cannot start with ~
    * @param excludedNodes nodes to be excluded
    * @param affinityNode  when not null, the chosen node should share the same
    *                     ancestor with this node at generation ancestorGen.
@@ -197,7 +175,7 @@ public interface NetworkTopology {
    *                     excludedNodes if affinityNode is null
    * @return the chosen node
    */
-  Node chooseRandom(String scope, String excludedScope,
+  Node chooseRandom(String scope, List<String>  excludedScopes,
       Collection<Node> excludedNodes, Node affinityNode, int ancestorGen);
 
   /**
@@ -209,7 +187,7 @@ public interface NetworkTopology {
    *                  excludedNodes
    * @param scope range of nodes from which a node will be chosen, cannot start
    *              with ~
-   * @param excludedScope range of nodes to be excluded, cannot start with ~
+   * @param excludedScopes ranges of nodes to be excluded, cannot start with ~
    * @param excludedNodes nodes to be excluded
    * @param affinityNode  when not null, the chosen node should share the same
    *                     ancestor with this node at generation ancestorGen.
@@ -220,7 +198,7 @@ public interface NetworkTopology {
    *                     excludedNodes if affinityNode is null
    * @return the chosen node
    */
-  Node getNode(int leafIndex, String scope, String excludedScope,
+  Node getNode(int leafIndex, String scope, List<String> excludedScopes,
       Collection<Node> excludedNodes, Node affinityNode, int ancestorGen);
 
   /** Return the distance cost between two nodes
@@ -246,5 +224,6 @@ public interface NetworkTopology {
    * @param nodes     Available replicas with the requested data
    * @param activeLen Number of active nodes at the front of the array
    */
-  void sortByDistanceCost(Node reader, Node[] nodes, int activeLen);
+  List<? extends Node> sortByDistanceCost(Node reader,
+      List<? extends Node> nodes, int activeLen);
 }

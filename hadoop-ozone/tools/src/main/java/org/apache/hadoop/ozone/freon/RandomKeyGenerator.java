@@ -24,12 +24,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Scope;
 import io.opentracing.util.GlobalTracer;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -66,8 +66,6 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
-import static java.lang.Math.min;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
@@ -75,6 +73,8 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.security.MessageDigest;
 
 /**
  * Data generator tool to generate as much keys as possible.
@@ -97,17 +97,23 @@ public final class RandomKeyGenerator implements Callable<Void> {
     KEY_WRITE
   }
 
-  private static final String RATIS = "ratis";
-
   private static final String DURATION_FORMAT = "HH:mm:ss,SSS";
 
   private static final int QUANTILES = 10;
 
+  private static final int CHECK_INTERVAL_MILLIS = 5000;
+
+  private byte[] keyValueBuffer = null;
+
+  private static final String DIGEST_ALGORITHM = "MD5";
+  // A common initial MesssageDigest for each key without its UUID
+  private MessageDigest commonInitialMD = null;
+
   private static final Logger LOG =
       LoggerFactory.getLogger(RandomKeyGenerator.class);
 
-  private boolean completed = false;
-  private boolean exception = false;
+  private volatile boolean completed = false;
+  private volatile Exception exception = null;
 
   @Option(names = "--numOfThreads",
       description = "number of threads to be launched for the run",
@@ -136,7 +142,20 @@ public final class RandomKeyGenerator implements Callable<Void> {
       description = "Specifies the size of Key in bytes to be created",
       defaultValue = "10240"
   )
-  private int keySize = 10240;
+  private long keySize = 10240;
+
+  @Option(
+      names = "--validateWrites",
+      description = "Specifies whether to validate keys after writing"
+  )
+  private boolean validateWrites = false;
+
+  @Option(
+      names = "--bufferSize",
+      description = "Specifies the buffer size while writing",
+      defaultValue = "4096"
+  )
+  private int bufferSize = 4096;
 
   @Option(
       names = "--json",
@@ -159,13 +178,10 @@ public final class RandomKeyGenerator implements Callable<Void> {
   private ReplicationFactor factor = ReplicationFactor.ONE;
 
   private int threadPoolSize;
-  private byte[] keyValue = null;
-
-  private boolean validateWrites;
 
   private OzoneClient ozoneClient;
   private ObjectStore objectStore;
-  private ExecutorService processor;
+  private ExecutorService executor;
 
   private long startTime;
   private long jobStartTime;
@@ -177,6 +193,14 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
   private AtomicLong totalBytesWritten;
 
+  private int totalBucketCount;
+  private long totalKeyCount;
+  private AtomicInteger volumeCounter;
+  private AtomicInteger bucketCounter;
+  private AtomicLong keyCounter;
+  private Map<Integer, OzoneVolume> volumes;
+  private Map<Integer, OzoneBucket> buckets;
+
   private AtomicInteger numberOfVolumesCreated;
   private AtomicInteger numberOfBucketsCreated;
   private AtomicLong numberOfKeysAdded;
@@ -185,7 +209,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
   private Long writeValidationSuccessCount;
   private Long writeValidationFailureCount;
 
-  private BlockingQueue<KeyValue> validationQueue;
+  private BlockingQueue<KeyValidate> validationQueue;
   private ArrayList<Histogram> histograms = new ArrayList<>();
 
   private OzoneConfiguration ozoneConfiguration;
@@ -210,6 +234,11 @@ public final class RandomKeyGenerator implements Callable<Void> {
     numberOfVolumesCreated = new AtomicInteger();
     numberOfBucketsCreated = new AtomicInteger();
     numberOfKeysAdded = new AtomicLong();
+    volumeCounter = new AtomicInteger();
+    bucketCounter = new AtomicInteger();
+    keyCounter = new AtomicLong();
+    volumes = new ConcurrentHashMap<>();
+    buckets = new ConcurrentHashMap<>();
     ozoneClient = OzoneClientFactory.getClient(configuration);
     objectStore = ozoneClient.getObjectStore();
     for (FreonOps ops : FreonOps.values()) {
@@ -223,28 +252,47 @@ public final class RandomKeyGenerator implements Callable<Void> {
   @Override
   public Void call() throws Exception {
     if (ozoneConfiguration != null) {
+      if (!ozoneConfiguration.getBoolean(
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA,
+          HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA_DEFAULT)) {
+        LOG.info("Override validateWrites to false, because "
+            + HddsConfigKeys.HDDS_CONTAINER_PERSISTDATA + " is set to false.");
+        validateWrites = false;
+      }
       init(ozoneConfiguration);
     } else {
       init(freon.createOzoneConfiguration());
     }
 
-    keyValue =
-        DFSUtil.string2Bytes(RandomStringUtils.randomAscii(keySize - 36));
+    keyValueBuffer = DFSUtil.string2Bytes(
+        RandomStringUtils.randomAscii(bufferSize));
+
+    // Compute the common initial digest for all keys without their UUID
+    if (validateWrites) {
+      commonInitialMD = DigestUtils.getDigest(DIGEST_ALGORITHM);
+      for (long nrRemaining = keySize; nrRemaining > 0;
+          nrRemaining -= bufferSize) {
+        int curSize = (int)Math.min(bufferSize, nrRemaining);
+        commonInitialMD.update(keyValueBuffer, 0, curSize);
+      }
+    }
+
+    totalBucketCount = numOfVolumes * numOfBuckets;
+    totalKeyCount = totalBucketCount * numOfKeys;
 
     LOG.info("Number of Threads: " + numOfThreads);
-    threadPoolSize =
-        min(numOfVolumes, numOfThreads);
-    processor = Executors.newFixedThreadPool(threadPoolSize);
+    threadPoolSize = numOfThreads;
+    executor = Executors.newFixedThreadPool(threadPoolSize);
     addShutdownHook();
 
     LOG.info("Number of Volumes: {}.", numOfVolumes);
     LOG.info("Number of Buckets per Volume: {}.", numOfBuckets);
     LOG.info("Number of Keys per Bucket: {}.", numOfKeys);
     LOG.info("Key size: {} bytes", keySize);
-    for (int i = 0; i < numOfVolumes; i++) {
-      String volume = "vol-" + i + "-" +
-          RandomStringUtils.randomNumeric(5);
-      processor.submit(new OfflineProcessor(volume));
+    LOG.info("Buffer size: {} bytes", bufferSize);
+    LOG.info("validateWrites : {}", validateWrites);
+    for (int i = 0; i < numOfThreads; i++) {
+      executor.submit(new ObjectCreator());
     }
 
     Thread validator = null;
@@ -253,32 +301,33 @@ public final class RandomKeyGenerator implements Callable<Void> {
       writeValidationSuccessCount = 0L;
       writeValidationFailureCount = 0L;
 
-      validationQueue =
-          new ArrayBlockingQueue<>(numOfThreads);
+      validationQueue = new LinkedBlockingQueue<>();
       validator = new Thread(new Validator());
       validator.start();
       LOG.info("Data validation is enabled.");
     }
 
-    Supplier<Long> currentValue;
-    long maxValue;
-
-    currentValue = () -> numberOfKeysAdded.get();
-    maxValue = numOfVolumes *
-            numOfBuckets *
-            numOfKeys;
-
-    progressbar = new ProgressBar(System.out, maxValue, currentValue);
+    Supplier<Long> currentValue = numberOfKeysAdded::get;
+    progressbar = new ProgressBar(System.out, totalKeyCount, currentValue);
 
     LOG.info("Starting progress bar Thread.");
 
     progressbar.start();
 
-    processor.shutdown();
-    processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+    // wait until all keys are added or exception occurred.
+    while ((numberOfKeysAdded.get() != totalKeyCount)
+           && exception == null) {
+      try {
+        Thread.sleep(CHECK_INTERVAL_MILLIS);
+      } catch (InterruptedException e) {
+        throw e;
+      }
+    }
+    executor.shutdown();
+    executor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     completed = true;
 
-    if (exception) {
+    if (exception != null) {
       progressbar.terminate();
     } else {
       progressbar.shutdown();
@@ -288,6 +337,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
       validator.join();
     }
     ozoneClient.close();
+    if (exception != null) {
+      throw exception;
+    }
     return null;
   }
 
@@ -337,7 +389,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
     out.println();
     out.println("***************************************************");
-    out.println("Status: " + (exception ? "Failed" : "Success"));
+    out.println("Status: " + (exception != null ? "Failed" : "Success"));
     out.println("Git Base Revision: " + VersionInfo.getRevision());
     out.println("Number of Volumes created: " + numberOfVolumesCreated);
     out.println("Number of Buckets created: " + numberOfBucketsCreated);
@@ -505,160 +557,211 @@ public final class RandomKeyGenerator implements Callable<Void> {
    */
   @VisibleForTesting
   long getUnsuccessfulValidationCount() {
-    return writeValidationFailureCount;
+    return validateWrites ? writeValidationFailureCount : 0;
   }
 
   /**
-   * Returns the length of the common key value initialized.
-   *
-   * @return key value length initialized.
+   * Wrapper to hold ozone keyValidate entry.
    */
-  @VisibleForTesting
-  long getKeyValueLength() {
-    return keyValue.length;
-  }
-
-  /**
-   * Wrapper to hold ozone key-value pair.
-   */
-  private static class KeyValue {
-
+  private static class KeyValidate {
     /**
-     * Bucket name associated with the key-value.
+     * Bucket name.
      */
     private OzoneBucket bucket;
-    /**
-     * Key name associated with the key-value.
-     */
-    private String key;
-    /**
-     * Value associated with the key-value.
-     */
-    private byte[] value;
 
     /**
-     * Constructs a new ozone key-value pair.
-     *
-     * @param key   key part
-     * @param value value part
+     * Key name.
      */
-    KeyValue(OzoneBucket bucket, String key, byte[] value) {
+    private String keyName;
+
+    /**
+     * Digest of this key's full value.
+     */
+    private byte[] digest;
+
+    /**
+     * Constructs a new ozone keyValidate.
+     *
+     * @param bucket    bucket part
+     * @param keyName   key part
+     * @param digest    digest of this key's full value
+     */
+    KeyValidate(OzoneBucket bucket, String keyName, byte[] digest) {
       this.bucket = bucket;
-      this.key = key;
-      this.value = value;
+      this.keyName = keyName;
+      this.digest = digest;
     }
   }
 
-  private class OfflineProcessor implements Runnable {
-
-    private int totalBuckets;
-    private int totalKeys;
-    private String volumeName;
-
-    OfflineProcessor(String volumeName) {
-      this.totalBuckets = numOfBuckets;
-      this.totalKeys = numOfKeys;
-      this.volumeName = volumeName;
-    }
-
+  private class ObjectCreator implements Runnable {
     @Override
-    @SuppressFBWarnings("REC_CATCH_EXCEPTION")
     public void run() {
-      LOG.trace("Creating volume: {}", volumeName);
-      long start = System.nanoTime();
-      OzoneVolume volume;
-      try (Scope scope = GlobalTracer.get().buildSpan("createVolume")
-          .startActive(true)) {
-        objectStore.createVolume(volumeName);
-        long volumeCreationDuration = System.nanoTime() - start;
-        volumeCreationTime.getAndAdd(volumeCreationDuration);
-        histograms.get(FreonOps.VOLUME_CREATE.ordinal())
-            .update(volumeCreationDuration);
-        numberOfVolumesCreated.getAndIncrement();
-        volume = objectStore.getVolume(volumeName);
-      } catch (IOException e) {
-        exception = true;
-        LOG.error("Could not create volume", e);
-        return;
-      }
-
-      Long threadKeyWriteTime = 0L;
-      for (int j = 0; j < totalBuckets; j++) {
-        String bucketName = "bucket-" + j + "-" +
-            RandomStringUtils.randomNumeric(5);
-        try {
-          LOG.trace("Creating bucket: {} in volume: {}",
-              bucketName, volume.getName());
-          start = System.nanoTime();
-          try (Scope scope = GlobalTracer.get().buildSpan("createBucket")
-              .startActive(true)) {
-            volume.createBucket(bucketName);
-            long bucketCreationDuration = System.nanoTime() - start;
-            histograms.get(FreonOps.BUCKET_CREATE.ordinal())
-                .update(bucketCreationDuration);
-            bucketCreationTime.getAndAdd(bucketCreationDuration);
-            numberOfBucketsCreated.getAndIncrement();
-          }
-          OzoneBucket bucket = volume.getBucket(bucketName);
-          for (int k = 0; k < totalKeys; k++) {
-            String key = "key-" + k + "-" +
-                RandomStringUtils.randomNumeric(5);
-            byte[] randomValue =
-                DFSUtil.string2Bytes(UUID.randomUUID().toString());
-            try {
-              LOG.trace("Adding key: {} in bucket: {} of volume: {}",
-                  key, bucket, volume);
-              long keyCreateStart = System.nanoTime();
-              try (Scope scope = GlobalTracer.get().buildSpan("createKey")
-                  .startActive(true)) {
-                OzoneOutputStream os =
-                    bucket
-                        .createKey(key, keySize, type, factor, new HashMap<>());
-                long keyCreationDuration = System.nanoTime() - keyCreateStart;
-                histograms.get(FreonOps.KEY_CREATE.ordinal())
-                    .update(keyCreationDuration);
-                keyCreationTime.getAndAdd(keyCreationDuration);
-                long keyWriteStart = System.nanoTime();
-                try (Scope writeScope = GlobalTracer.get()
-                    .buildSpan("writeKeyData")
-                    .startActive(true)) {
-                  os.write(keyValue);
-                  os.write(randomValue);
-                  os.close();
-                }
-
-                long keyWriteDuration = System.nanoTime() - keyWriteStart;
-
-                threadKeyWriteTime += keyWriteDuration;
-                histograms.get(FreonOps.KEY_WRITE.ordinal())
-                    .update(keyWriteDuration);
-                totalBytesWritten.getAndAdd(keySize);
-                numberOfKeysAdded.getAndIncrement();
-              }
-              if (validateWrites) {
-                byte[] value = ArrayUtils.addAll(keyValue, randomValue);
-                boolean validate = validationQueue.offer(
-                    new KeyValue(bucket, key, value));
-                if (validate) {
-                  LOG.trace("Key {}, is queued for validation.", key);
-                }
-              }
-            } catch (Exception e) {
-              exception = true;
-              LOG.error("Exception while adding key: {} in bucket: {}" +
-                  " of volume: {}.", key, bucket, volume, e);
-            }
-          }
-        } catch (Exception e) {
-          exception = true;
-          LOG.error("Exception while creating bucket: {}" +
-              " in volume: {}.", bucketName, volume, e);
+      int v;
+      while ((v = volumeCounter.getAndIncrement()) < numOfVolumes) {
+        if (!createVolume(v)) {
+          return;
         }
       }
 
-      keyWriteTime.getAndAdd(threadKeyWriteTime);
-    }
+      int b;
+      while ((b = bucketCounter.getAndIncrement()) < totalBucketCount) {
+        if (!createBucket(b)) {
+          return;
+        }
+      }
 
+      long k;
+      while ((k = keyCounter.getAndIncrement()) < totalKeyCount) {
+        if (!createKey(k)) {
+          return;
+        }
+      }
+    }
+  }
+
+  private boolean createVolume(int volumeNumber) {
+    String volumeName = "vol-" + volumeNumber + "-"
+        + RandomStringUtils.randomNumeric(5);
+    LOG.trace("Creating volume: {}", volumeName);
+    try (Scope ignored = GlobalTracer.get().buildSpan("createVolume")
+        .startActive(true)) {
+      long start = System.nanoTime();
+      objectStore.createVolume(volumeName);
+      long volumeCreationDuration = System.nanoTime() - start;
+      volumeCreationTime.getAndAdd(volumeCreationDuration);
+      histograms.get(FreonOps.VOLUME_CREATE.ordinal())
+          .update(volumeCreationDuration);
+      numberOfVolumesCreated.getAndIncrement();
+
+      OzoneVolume volume = objectStore.getVolume(volumeName);
+      volumes.put(volumeNumber, volume);
+      return true;
+    } catch (IOException e) {
+      exception = e;
+      LOG.error("Could not create volume", e);
+      return false;
+    }
+  }
+
+  private boolean createBucket(int globalBucketNumber) {
+    int volumeNumber = globalBucketNumber % numOfVolumes;
+    int bucketNumber = globalBucketNumber / numOfVolumes;
+    OzoneVolume volume = getVolume(volumeNumber);
+    if (volume == null) {
+      return false;
+    }
+    String bucketName = "bucket-" + bucketNumber + "-" +
+        RandomStringUtils.randomNumeric(5);
+    LOG.trace("Creating bucket: {} in volume: {}",
+        bucketName, volume.getName());
+    try (Scope ignored = GlobalTracer.get().buildSpan("createBucket")
+        .startActive(true)) {
+      long start = System.nanoTime();
+      volume.createBucket(bucketName);
+      long bucketCreationDuration = System.nanoTime() - start;
+      histograms.get(FreonOps.BUCKET_CREATE.ordinal())
+          .update(bucketCreationDuration);
+      bucketCreationTime.getAndAdd(bucketCreationDuration);
+      numberOfBucketsCreated.getAndIncrement();
+
+      OzoneBucket bucket = volume.getBucket(bucketName);
+      buckets.put(globalBucketNumber, bucket);
+      return true;
+    } catch (IOException e) {
+      exception = e;
+      LOG.error("Could not create bucket ", e);
+      return false;
+    }
+  }
+
+  @SuppressFBWarnings("REC_CATCH_EXCEPTION")
+  private boolean createKey(long globalKeyNumber) {
+    int globalBucketNumber = (int) (globalKeyNumber % totalBucketCount);
+    long keyNumber = globalKeyNumber / totalBucketCount;
+    OzoneBucket bucket = getBucket(globalBucketNumber);
+    if (bucket == null) {
+      return false;
+    }
+    String bucketName = bucket.getName();
+    String volumeName = bucket.getVolumeName();
+    String keyName = "key-" + keyNumber + "-"
+        + RandomStringUtils.randomNumeric(5);
+    LOG.trace("Adding key: {} in bucket: {} of volume: {}",
+        keyName, bucketName, volumeName);
+    try {
+      try (Scope scope = GlobalTracer.get().buildSpan("createKey")
+          .startActive(true)) {
+        long keyCreateStart = System.nanoTime();
+        OzoneOutputStream os = bucket.createKey(keyName, keySize, type,
+            factor, new HashMap<>());
+        long keyCreationDuration = System.nanoTime() - keyCreateStart;
+        histograms.get(FreonOps.KEY_CREATE.ordinal())
+            .update(keyCreationDuration);
+        keyCreationTime.getAndAdd(keyCreationDuration);
+
+        try (Scope writeScope = GlobalTracer.get().buildSpan("writeKeyData")
+            .startActive(true)) {
+          long keyWriteStart = System.nanoTime();
+          for (long nrRemaining = keySize;
+               nrRemaining > 0; nrRemaining -= bufferSize) {
+            int curSize = (int) Math.min(bufferSize, nrRemaining);
+            os.write(keyValueBuffer, 0, curSize);
+          }
+          os.close();
+
+          long keyWriteDuration = System.nanoTime() - keyWriteStart;
+          histograms.get(FreonOps.KEY_WRITE.ordinal())
+              .update(keyWriteDuration);
+          keyWriteTime.getAndAdd(keyWriteDuration);
+          totalBytesWritten.getAndAdd(keySize);
+          numberOfKeysAdded.getAndIncrement();
+        }
+      }
+
+      if (validateWrites) {
+        MessageDigest tmpMD = (MessageDigest) commonInitialMD.clone();
+        boolean validate = validationQueue.offer(
+            new KeyValidate(bucket, keyName, tmpMD.digest()));
+        if (validate) {
+          LOG.trace("Key {} is queued for validation.", keyName);
+        }
+      }
+
+      return true;
+    } catch (Exception e) {
+      exception = e;
+      LOG.error("Exception while adding key: {} in bucket: {}" +
+          " of volume: {}.", keyName, bucketName, volumeName, e);
+      return false;
+    }
+  }
+
+  private OzoneVolume getVolume(Integer volumeNumber) {
+    return waitUntilAddedToMap(volumes, volumeNumber);
+  }
+
+  private OzoneBucket getBucket(Integer bucketNumber) {
+    return waitUntilAddedToMap(buckets, bucketNumber);
+  }
+
+  /**
+   * Looks up volume or bucket from the cache.  Waits for it to be created if
+   * needed (can happen for the last few items depending on the number of
+   * threads).
+   *
+   * @return may return null if this thread is interrupted, or if any other
+   *   thread encounters an exception (and stores it to {@code exception})
+   */
+  private <T> T waitUntilAddedToMap(Map<Integer, T> map, Integer i) {
+    while (exception == null && !map.containsKey(i)) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+      }
+    }
+    return map.get(i);
   }
 
   private final class FreonJobInfo {
@@ -675,7 +778,8 @@ public final class RandomKeyGenerator implements Callable<Void> {
     private String replicationFactor;
     private String replicationType;
 
-    private int keySize;
+    private long keySize;
+    private int bufferSize;
 
     private String totalThroughputPerSecond;
 
@@ -696,12 +800,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
     private String[] tenQuantileKeyWriteTime;
 
     private FreonJobInfo() {
-      this.status = exception ? "Failed" : "Success";
+      this.status = exception != null ? "Failed" : "Success";
       this.numOfVolumes = RandomKeyGenerator.this.numOfVolumes;
       this.numOfBuckets = RandomKeyGenerator.this.numOfBuckets;
       this.numOfKeys = RandomKeyGenerator.this.numOfKeys;
       this.numOfThreads = RandomKeyGenerator.this.numOfThreads;
       this.keySize = RandomKeyGenerator.this.keySize;
+      this.bufferSize = RandomKeyGenerator.this.bufferSize;
       this.jobStartTime = Time.formatTime(RandomKeyGenerator.this.jobStartTime);
       this.replicationFactor = RandomKeyGenerator.this.factor.name();
       this.replicationType = RandomKeyGenerator.this.type.name();
@@ -853,8 +958,12 @@ public final class RandomKeyGenerator implements Callable<Void> {
       return status;
     }
 
-    public int getKeySize() {
+    public long getKeySize() {
       return keySize;
+    }
+
+    public int getBufferSize() {
+      return bufferSize;
     }
 
     public String getGitBaseRevision() {
@@ -922,28 +1031,32 @@ public final class RandomKeyGenerator implements Callable<Void> {
    * Validates the write done in ozone cluster.
    */
   private class Validator implements Runnable {
-
     @Override
     public void run() {
-      while (!completed) {
-        try {
-          KeyValue kv = validationQueue.poll(5, TimeUnit.SECONDS);
-          if (kv != null) {
+      DigestUtils dig = new DigestUtils(DIGEST_ALGORITHM);
 
-            OzoneInputStream is = kv.bucket.readKey(kv.key);
-            byte[] value = new byte[kv.value.length];
-            int length = is.read(value);
+      while (true) {
+        if (completed && validationQueue.isEmpty()) {
+          return;
+        }
+
+        try {
+          KeyValidate kv = validationQueue.poll(5, TimeUnit.SECONDS);
+          if (kv != null) {
+            OzoneInputStream is = kv.bucket.readKey(kv.keyName);
+            dig.getMessageDigest().reset();
+            byte[] curDigest = dig.digest(is);
             totalWritesValidated++;
-            if (length == kv.value.length && Arrays.equals(value, kv.value)) {
+            if (MessageDigest.isEqual(kv.digest, curDigest)) {
               writeValidationSuccessCount++;
             } else {
               writeValidationFailureCount++;
               LOG.warn("Data validation error for key {}/{}/{}",
-                  kv.bucket.getVolumeName(), kv.bucket, kv.key);
+                  kv.bucket.getVolumeName(), kv.bucket, kv.keyName);
               LOG.warn("Expected checksum: {}, Actual checksum: {}",
-                  DigestUtils.md5Hex(kv.value),
-                  DigestUtils.md5Hex(value));
+                  kv.digest, curDigest);
             }
+            is.close();
           }
         } catch (IOException | InterruptedException ex) {
           LOG.error("Exception while validating write: " + ex.getMessage());
@@ -973,7 +1086,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
   }
 
   @VisibleForTesting
-  public void setKeySize(int keySize) {
+  public void setKeySize(long keySize) {
     this.keySize = keySize;
   }
 
@@ -990,5 +1103,10 @@ public final class RandomKeyGenerator implements Callable<Void> {
   @VisibleForTesting
   public void setValidateWrites(boolean validateWrites) {
     this.validateWrites = validateWrites;
+  }
+
+  @VisibleForTesting
+  public int getThreadPoolSize() {
+    return threadPoolSize;
   }
 }

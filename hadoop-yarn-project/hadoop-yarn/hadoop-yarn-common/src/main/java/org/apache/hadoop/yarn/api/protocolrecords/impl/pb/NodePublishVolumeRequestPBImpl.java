@@ -154,10 +154,10 @@ public class NodePublishVolumeRequestPBImpl extends
       CsiAdaptorProtos.VolumeCapability vc =
           CsiAdaptorProtos.VolumeCapability.newBuilder()
               .setAccessMode(CsiAdaptorProtos.VolumeCapability
-                  .AccessMode.valueOf(
+                  .AccessMode.forNumber(
                       capability.getAccessMode().ordinal()))
               .setVolumeType(CsiAdaptorProtos.VolumeCapability
-                  .VolumeType.valueOf(capability.getVolumeType().ordinal()))
+                  .VolumeType.forNumber(capability.getVolumeType().ordinal()))
               .addAllMountFlags(capability.getMountFlags())
               .build();
       builder.setVolumeCapability(vc);

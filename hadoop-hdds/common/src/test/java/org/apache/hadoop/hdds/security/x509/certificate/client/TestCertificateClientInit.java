@@ -66,8 +66,11 @@ public class TestCertificateClientInit {
   private HDDSKeyGenerator keyGenerator;
   private Path metaDirPath;
   private SecurityConfig securityConfig;
-  private KeyCodec keyCodec;
+  private KeyCodec dnKeyCodec;
+  private KeyCodec omKeyCodec;
   private X509Certificate x509Certificate;
+  private final static String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
+  private final static String OM_COMPONENT = OMCertificateClient.COMPONENT_NAME;
 
   @Parameter
   public boolean pvtKeyPresent;
@@ -107,9 +110,11 @@ public class TestCertificateClientInit {
         certSerialId);
     omCertificateClient = new OMCertificateClient(securityConfig,
         certSerialId);
-    keyCodec = new KeyCodec(securityConfig);
+    dnKeyCodec = new KeyCodec(securityConfig, DN_COMPONENT);
+    omKeyCodec = new KeyCodec(securityConfig, OM_COMPONENT);
 
-    Files.createDirectories(securityConfig.getKeyLocation());
+    Files.createDirectories(securityConfig.getKeyLocation(DN_COMPONENT));
+    Files.createDirectories(securityConfig.getKeyLocation(OM_COMPONENT));
   }
 
   @After
@@ -123,28 +128,32 @@ public class TestCertificateClientInit {
   @Test
   public void testInitDatanode() throws Exception {
     if (pvtKeyPresent) {
-      keyCodec.writePrivateKey(keyPair.getPrivate());
+      dnKeyCodec.writePrivateKey(keyPair.getPrivate());
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getPrivateKeyFileName()).toFile());
+      FileUtils.deleteQuietly(Paths.get(
+          securityConfig.getKeyLocation(DN_COMPONENT).toString(),
+          securityConfig.getPrivateKeyFileName()).toFile());
     }
 
     if (pubKeyPresent) {
       if (dnCertificateClient.getPublicKey() == null) {
-        keyCodec.writePublicKey(keyPair.getPublic());
+        dnKeyCodec.writePublicKey(keyPair.getPublic());
       }
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getPublicKeyFileName()).toFile());
+      FileUtils.deleteQuietly(
+          Paths.get(securityConfig.getKeyLocation(DN_COMPONENT).toString(),
+              securityConfig.getPublicKeyFileName()).toFile());
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig);
+      CertificateCodec codec = new CertificateCodec(securityConfig,
+          DN_COMPONENT);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getCertificateFileName()).toFile());
+      FileUtils.deleteQuietly(Paths.get(
+          securityConfig.getKeyLocation(DN_COMPONENT).toString(),
+          securityConfig.getCertificateFileName()).toFile());
     }
     InitResponse response = dnCertificateClient.init();
 
@@ -152,10 +161,10 @@ public class TestCertificateClientInit {
 
     if (!response.equals(FAILURE)) {
       assertTrue(OzoneSecurityUtil.checkIfFileExist(
-          securityConfig.getKeyLocation(),
+          securityConfig.getKeyLocation(DN_COMPONENT),
           securityConfig.getPrivateKeyFileName()));
       assertTrue(OzoneSecurityUtil.checkIfFileExist(
-          securityConfig.getKeyLocation(),
+          securityConfig.getKeyLocation(DN_COMPONENT),
           securityConfig.getPublicKeyFileName()));
     }
   }
@@ -163,28 +172,32 @@ public class TestCertificateClientInit {
   @Test
   public void testInitOzoneManager() throws Exception {
     if (pvtKeyPresent) {
-      keyCodec.writePrivateKey(keyPair.getPrivate());
+      omKeyCodec.writePrivateKey(keyPair.getPrivate());
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getPrivateKeyFileName()).toFile());
+      FileUtils.deleteQuietly(Paths.get(
+          securityConfig.getKeyLocation(OM_COMPONENT).toString(),
+          securityConfig.getPrivateKeyFileName()).toFile());
     }
 
     if (pubKeyPresent) {
       if (omCertificateClient.getPublicKey() == null) {
-        keyCodec.writePublicKey(keyPair.getPublic());
+        omKeyCodec.writePublicKey(keyPair.getPublic());
       }
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getPublicKeyFileName()).toFile());
+      FileUtils.deleteQuietly(Paths.get(
+          securityConfig.getKeyLocation(OM_COMPONENT).toString(),
+          securityConfig.getPublicKeyFileName()).toFile());
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig);
+      CertificateCodec codec = new CertificateCodec(securityConfig,
+          OM_COMPONENT);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
     } else {
-      FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-          .toString(), securityConfig.getCertificateFileName()).toFile());
+      FileUtils.deleteQuietly(Paths.get(
+          securityConfig.getKeyLocation(OM_COMPONENT).toString(),
+          securityConfig.getCertificateFileName()).toFile());
     }
     InitResponse response = omCertificateClient.init();
 
@@ -196,10 +209,10 @@ public class TestCertificateClientInit {
 
     if (!response.equals(FAILURE)) {
       assertTrue(OzoneSecurityUtil.checkIfFileExist(
-          securityConfig.getKeyLocation(),
+          securityConfig.getKeyLocation(OM_COMPONENT),
           securityConfig.getPrivateKeyFileName()));
       assertTrue(OzoneSecurityUtil.checkIfFileExist(
-          securityConfig.getKeyLocation(),
+          securityConfig.getKeyLocation(OM_COMPONENT),
           securityConfig.getPublicKeyFileName()));
     }
   }

@@ -23,8 +23,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 
 import static junit.framework.TestCase.assertNotNull;
 
@@ -66,11 +71,30 @@ public class TestRMHAMetrics {
     Configuration conf = new YarnConfiguration(configuration);
     MockRM rm = new MockRM(conf);
     rm.init(conf);
+
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName =
+        new ObjectName("Hadoop:service=ResourceManager,name=RMInfo");
+
+    Assert.assertEquals("initializing",
+        (String) mbs.getAttribute(mxbeanName, "State"));
+
     rm.start();
+    Assert.assertEquals("standby",
+        (String) mbs.getAttribute(mxbeanName, "State"));
+
     rm.transitionToActive();
+    Assert
+        .assertEquals("active",
+            (String) mbs.getAttribute(mxbeanName, "State"));
+
     rm.transitionToStandby(true);
+    Assert.assertEquals("standby",
+        (String) mbs.getAttribute(mxbeanName, "State"));
+
     assertNotNull(DefaultMetricsSystem.instance().getSource("JvmMetrics"));
     assertNotNull(DefaultMetricsSystem.instance().getSource("UgiMetrics"));
+
     rm.stop();
   }
 }

@@ -17,44 +17,6 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto
-        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
-import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.hdds.scm.VersionInfo;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto
-    .ErrorCode;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
-import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.protocol.VersionResponse;
-import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
-import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
-import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -63,8 +25,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedList;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto.ErrorCode;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.scm.VersionInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
+import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.CachedDNSToSwitchMapping;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.TableMapping;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
+import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Maintains information about the Datanodes on SCM side.
@@ -86,28 +91,43 @@ public class SCMNodeManager implements NodeManager {
       LoggerFactory.getLogger(SCMNodeManager.class);
 
   private final NodeStateManager nodeStateManager;
-  private final String clusterID;
   private final VersionInfo version;
   private final CommandQueue commandQueue;
   private final SCMNodeMetrics metrics;
   // Node manager MXBean
   private ObjectName nmInfoBean;
-  private final StorageContainerManager scmManager;
+  private final SCMStorageConfig scmStorageConfig;
+  private final NetworkTopology clusterMap;
+  private final DNSToSwitchMapping dnsToSwitchMapping;
+  private final boolean useHostname;
+  private final ConcurrentHashMap<String, Set<String>> dnsToUuidMap =
+      new ConcurrentHashMap<>();
 
   /**
    * Constructs SCM machine Manager.
    */
-  public SCMNodeManager(OzoneConfiguration conf, String clusterID,
-      StorageContainerManager scmManager, EventPublisher eventPublisher)
-      throws IOException {
+  public SCMNodeManager(OzoneConfiguration conf,
+      SCMStorageConfig scmStorageConfig, EventPublisher eventPublisher,
+      NetworkTopology networkTopology) {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
-    this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
-    this.scmManager = scmManager;
+    this.scmStorageConfig = scmStorageConfig;
     LOG.info("Entering startup safe mode.");
     registerMXBean();
     this.metrics = SCMNodeMetrics.create(this);
+    this.clusterMap = networkTopology;
+    Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
+        conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            TableMapping.class, DNSToSwitchMapping.class);
+    DNSToSwitchMapping newInstance = ReflectionUtils.newInstance(
+        dnsToSwitchMappingClass, conf);
+    this.dnsToSwitchMapping =
+        ((newInstance instanceof CachedDNSToSwitchMapping) ? newInstance
+            : new CachedDNSToSwitchMapping(newInstance));
+    this.useHostname = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
   }
 
   private void registerMXBean() {
@@ -184,6 +204,7 @@ public class SCMNodeManager implements NodeManager {
   public void close() throws IOException {
     unregisterMXBean();
     metrics.unRegister();
+    nodeStateManager.close();
   }
 
   /**
@@ -198,9 +219,8 @@ public class SCMNodeManager implements NodeManager {
     return VersionResponse.newBuilder()
         .setVersion(this.version.getVersion())
         .addValue(OzoneConsts.SCM_ID,
-            this.scmManager.getScmStorageConfig().getScmId())
-        .addValue(OzoneConsts.CLUSTER_ID, this.scmManager.getScmStorageConfig()
-            .getClusterID())
+            this.scmStorageConfig.getScmId())
+        .addValue(OzoneConsts.CLUSTER_ID, this.scmStorageConfig.getClusterID())
         .build();
   }
 
@@ -228,20 +248,55 @@ public class SCMNodeManager implements NodeManager {
       datanodeDetails.setIpAddress(dnAddress.getHostAddress());
     }
     try {
+      String dnsName;
+      String networkLocation;
+      datanodeDetails.setNetworkName(datanodeDetails.getUuidString());
+      if (useHostname) {
+        dnsName = datanodeDetails.getHostName();
+      } else {
+        dnsName = datanodeDetails.getIpAddress();
+      }
+      networkLocation = nodeResolve(dnsName);
+      if (networkLocation != null) {
+        datanodeDetails.setNetworkLocation(networkLocation);
+      }
       nodeStateManager.addNode(datanodeDetails);
+      clusterMap.add(datanodeDetails);
+      addEntryTodnsToUuidMap(dnsName, datanodeDetails.getUuidString());
       // Updating Node Report, as registration is successful
       processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
     } catch (NodeAlreadyExistsException e) {
-      LOG.trace("Datanode is already registered. Datanode: {}",
-          datanodeDetails.toString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Datanode is already registered. Datanode: {}",
+            datanodeDetails.toString());
+      }
     }
+
     return RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
-        .setDatanodeUUID(datanodeDetails.getUuidString())
-        .setClusterID(this.clusterID)
-        .setHostname(datanodeDetails.getHostName())
-        .setIpAddress(datanodeDetails.getIpAddress())
+        .setDatanode(datanodeDetails)
+        .setClusterID(this.scmStorageConfig.getClusterID())
         .build();
+  }
+
+  /**
+   * Add an entry to the dnsToUuidMap, which maps hostname / IP to the DNs
+   * running on that host. As each address can have many DNs running on it,
+   * this is a one to many mapping.
+   * @param dnsName String representing the hostname or IP of the node
+   * @param uuid String representing the UUID of the registered node.
+   */
+  @SuppressFBWarnings(value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+      justification="The method is synchronized and this is the only place "+
+          "dnsToUuidMap is modified")
+  private synchronized void addEntryTodnsToUuidMap(
+      String dnsName, String uuid) {
+    Set<String> dnList = dnsToUuidMap.get(dnsName);
+    if (dnList == null) {
+      dnList = ConcurrentHashMap.newKeySet();
+      dnsToUuidMap.put(dnsName, dnList);
+    }
+    dnList.add(uuid);
   }
 
   /**
@@ -284,6 +339,15 @@ public class SCMNodeManager implements NodeManager {
   @Override
   public void processNodeReport(DatanodeDetails datanodeDetails,
                                 NodeReportProto nodeReport) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing node report from [datanode={}]",
+          datanodeDetails.getHostName());
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("HB is received from [datanode={}]: <json>{}</json>",
+          datanodeDetails.getHostName(),
+          nodeReport.toString().replaceAll("\n", "\\\\n"));
+    }
     try {
       DatanodeInfo datanodeInfo = nodeStateManager.getNode(datanodeDetails);
       if (nodeReport != null) {
@@ -462,6 +526,13 @@ public class SCMNodeManager implements NodeManager {
     nodeStateManager.removePipeline(pipeline);
   }
 
+  @Override
+  public void addContainer(final DatanodeDetails datanodeDetails,
+                           final ContainerID containerId)
+      throws NodeNotFoundException {
+    nodeStateManager.addContainer(datanodeDetails.getUuid(), containerId);
+  }
+
   /**
    * Update set of containers available on a datanode.
    * @param datanodeDetails - DatanodeID
@@ -515,5 +586,99 @@ public class SCMNodeManager implements NodeManager {
     return commandQueue.getCommand(dnID);
   }
 
+  /**
+   * Given datanode uuid, returns the DatanodeDetails for the node.
+   *
+   * @param uuid node host address
+   * @return the given datanode, or null if not found
+   */
+  @Override
+  public DatanodeDetails getNodeByUuid(String uuid) {
+    if (Strings.isNullOrEmpty(uuid)) {
+      LOG.warn("uuid is null");
+      return null;
+    }
+    DatanodeDetails temp = DatanodeDetails.newBuilder().setUuid(uuid).build();
+    try {
+      return nodeStateManager.getNode(temp);
+    } catch (NodeNotFoundException e) {
+      LOG.warn("Cannot find node for uuid {}", uuid);
+      return null;
+    }
+  }
 
+  /**
+   * Given datanode address(Ipaddress or hostname), return a list of
+   * DatanodeDetails for the datanodes registered on that address.
+   *
+   * @param address datanode address
+   * @return the given datanode, or empty list if none found
+   */
+  @Override
+  public List<DatanodeDetails> getNodesByAddress(String address) {
+    List<DatanodeDetails> results = new LinkedList<>();
+    if (Strings.isNullOrEmpty(address)) {
+      LOG.warn("address is null");
+      return results;
+    }
+    Set<String> uuids = dnsToUuidMap.get(address);
+    if (uuids == null) {
+      LOG.warn("Cannot find node for address {}", address);
+      return results;
+    }
+
+    for (String uuid : uuids) {
+      DatanodeDetails temp = DatanodeDetails.newBuilder().setUuid(uuid).build();
+      try {
+        results.add(nodeStateManager.getNode(temp));
+      } catch (NodeNotFoundException e) {
+        LOG.warn("Cannot find node for uuid {}", uuid);
+      }
+    }
+    return results;
+  }
+
+  private String nodeResolve(String hostname) {
+    List<String> hosts = new ArrayList<>(1);
+    hosts.add(hostname);
+    List<String> resolvedHosts = dnsToSwitchMapping.resolve(hosts);
+    if (resolvedHosts != null && !resolvedHosts.isEmpty()) {
+      String location = resolvedHosts.get(0);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Resolve datanode {} return location {}", hostname, location);
+      }
+      return location;
+    } else {
+      LOG.error("Node {} Resolution failed. Please make sure that DNS table " +
+          "mapping or configured mapping is functional.", hostname);
+      return null;
+    }
+  }
+
+  /**
+   * Test utility to stop heartbeat check process.
+   * @return ScheduledFuture of next scheduled check that got cancelled.
+   */
+  @VisibleForTesting
+  ScheduledFuture pauseHealthCheck() {
+    return nodeStateManager.pause();
+  }
+
+  /**
+   * Test utility to resume the paused heartbeat check process.
+   * @return ScheduledFuture of the next scheduled check
+   */
+  @VisibleForTesting
+  ScheduledFuture unpauseHealthCheck() {
+    return nodeStateManager.unpause();
+  }
+
+  /**
+   * Test utility to get the count of skipped heartbeat check iterations.
+   * @return count of skipped heartbeat check iterations
+   */
+  @VisibleForTesting
+  long getSkippedHealthChecks() {
+    return nodeStateManager.getSkippedHealthChecks();
+  }
 }

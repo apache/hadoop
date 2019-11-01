@@ -97,9 +97,10 @@ public class TestReplicationManager {
 
     Mockito.when(containerPlacementPolicy.chooseDatanodes(
         Mockito.anyListOf(DatanodeDetails.class),
+        Mockito.anyListOf(DatanodeDetails.class),
         Mockito.anyInt(), Mockito.anyLong()))
         .thenAnswer(invocation -> {
-          int count = (int) invocation.getArguments()[1];
+          int count = (int) invocation.getArguments()[2];
           return IntStream.range(0, count)
               .mapToObj(i -> randomDatanodeDetails())
               .collect(Collectors.toList());
@@ -113,6 +114,22 @@ public class TestReplicationManager {
         new LockManager<>(conf));
     replicationManager.start();
     Thread.sleep(100L);
+  }
+
+
+  /**
+   * Checks if restarting of replication manager works.
+   */
+  @Test
+  public void testReplicationManagerRestart() throws InterruptedException {
+    Assert.assertTrue(replicationManager.isRunning());
+    replicationManager.stop();
+    // Stop is a non-blocking call, it might take sometime for the
+    // ReplicationManager to shutdown
+    Thread.sleep(500);
+    Assert.assertFalse(replicationManager.isRunning());
+    replicationManager.start();
+    Assert.assertTrue(replicationManager.isRunning());
   }
 
   /**

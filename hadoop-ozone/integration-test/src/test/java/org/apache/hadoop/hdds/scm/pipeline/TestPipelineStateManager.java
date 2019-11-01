@@ -246,6 +246,13 @@ public class TestPipelineStateManager {
           stateManager.openPipeline(pipeline.getId());
           pipelines.add(pipeline);
 
+          // 5 pipelines in dormant state for each type and factor
+          pipeline = createDummyPipeline(type, factor, factor.getNumber());
+          stateManager.addPipeline(pipeline);
+          stateManager.openPipeline(pipeline.getId());
+          stateManager.deactivatePipeline(pipeline.getId());
+          pipelines.add(pipeline);
+
           // 5 pipelines in closed state for each type and factor
           pipeline = createDummyPipeline(type, factor, factor.getNumber());
           stateManager.addPipeline(pipeline);

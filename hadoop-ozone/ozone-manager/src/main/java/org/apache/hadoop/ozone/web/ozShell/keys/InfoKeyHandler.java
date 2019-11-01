@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.ObjectPrinter;
 import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -63,9 +63,13 @@ public class InfoKeyHandler extends Handler {
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
     OzoneKeyDetails key = bucket.getKey(keyName);
+    // For compliance/security, GDPR Secret & Algorithm details are removed
+    // from local copy of metadata before printing. This doesn't remove these
+    // from Ozone Manager's actual metadata.
+    key.getMetadata().remove(OzoneConsts.GDPR_SECRET);
+    key.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
 
-    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(OzoneClientUtils.asKeyInfoDetails(key))));
+    ObjectPrinter.printObjectAsJson(key);
     return null;
   }
 }

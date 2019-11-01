@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.net;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * The interface defines an inner node in a network topology.
@@ -72,13 +73,13 @@ public interface InnerNode extends Node {
    *
    * @param leafIndex ode's index, start from 0, skip the nodes in
    *                  excludedScope and excludedNodes with ancestorGen
-   * @param excludedScope the excluded scope
+   * @param excludedScopes the excluded scopes
    * @param excludedNodes nodes to be excluded. If ancestorGen is not 0,
    *                      the chosen node will not share same ancestor with
    *                      those in excluded nodes at the specified generation
    * @param ancestorGen ignored with value is 0
    * @return the leaf node corresponding to the given index
    */
-  Node getLeaf(int leafIndex, String excludedScope,
+  Node getLeaf(int leafIndex, List<String> excludedScopes,
       Collection<Node> excludedNodes, int ancestorGen);
 }

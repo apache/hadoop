@@ -1,0 +1,43 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
+OZONE-SITE.XML_ozone.scm.names=scm
+OZONE-SITE.XML_ozone.enabled=True
+OZONE-SITE.XML_ozone.scm.datanode.id.dir=/data
+OZONE-SITE.XML_ozone.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
+OZONE-SITE.XML_ozone.handler.type=distributed
+OZONE-SITE.XML_ozone.scm.client.address=scm
+OZONE-SITE.XML_ozone.replication=1
+OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
+OZONE-SITE.XML_hdds.profiler.endpoint.enabled=true
+OZONE-SITE.XML_ozone.scm.container.placement.impl=org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
+OZONE-SITE.XML_net.topology.node.switch.mapping.impl=org.apache.hadoop.net.TableMapping
+OZONE-SITE.XML_net.topology.table.file.name=/opt/hadoop/compose/ozone-topology/network-config
+OZONE-SITE.XML_dfs.network.topology.aware.read.enable=true
+HDFS-SITE.XML_rpc.metrics.quantile.enable=true
+HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
+ASYNC_PROFILER_HOME=/opt/profiler
+HDDS_DN_OPTS=-Dmodule.name=datanode
+HDFS_OM_OPTS=-Dmodule.name=om
+HDFS_STORAGECONTAINERMANAGER_OPTS=-Dmodule.name=scm
+HDFS_OM_SH_OPTS=-Dmodule.name=sh
+HDFS_SCM_CLI_OPTS=-Dmodule.name=scmcli
+
+#Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
+#BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm

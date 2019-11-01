@@ -40,9 +40,14 @@ public class ChecksumData {
   private List<ByteString> checksums;
 
   public ChecksumData(ChecksumType checksumType, int bytesPerChecksum) {
+    this(checksumType, bytesPerChecksum, Lists.newArrayList());
+  }
+
+  public ChecksumData(ChecksumType checksumType, int bytesPerChecksum,
+                      List<ByteString> checksums) {
     this.type = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
-    this.checksums = Lists.newArrayList();
+    this.checksums = checksums;
   }
 
   /**
@@ -111,13 +116,20 @@ public class ChecksumData {
   }
 
   /**
-   * Verify that this ChecksumData matches with the input ChecksumData.
+   * Verify that this ChecksumData from startIndex to endIndex matches with the
+   * provided ChecksumData.
+   * The checksum at startIndex of this ChecksumData will be matched with the
+   * checksum at index 0 of the provided ChecksumData, and checksum at
+   * (startIndex + 1) of this ChecksumData with checksum at index 1 of
+   * provided ChecksumData and so on.
    * @param that the ChecksumData to match with
+   * @param startIndex index of the first checksum from this ChecksumData
+   *                   which will be used to compare checksums
    * @return true if checksums match
    * @throws OzoneChecksumException
    */
-  public boolean verifyChecksumDataMatches(ChecksumData that) throws
-      OzoneChecksumException {
+  public boolean verifyChecksumDataMatches(ChecksumData that, int startIndex)
+      throws OzoneChecksumException {
 
     // pre checks
     if (this.checksums.size() == 0) {
@@ -130,18 +142,22 @@ public class ChecksumData {
           "checksums");
     }
 
-    if (this.checksums.size() != that.checksums.size()) {
-      throw new OzoneChecksumException("Original and Computed checksumData's " +
-          "has different number of checksums");
-    }
+    int numChecksums = that.checksums.size();
 
-    // Verify that checksum matches at each index
-    for (int index = 0; index < this.checksums.size(); index++) {
-      if (!matchChecksumAtIndex(this.checksums.get(index),
-          that.checksums.get(index))) {
-        // checksum mismatch. throw exception.
-        throw new OzoneChecksumException(index);
+    try {
+      // Verify that checksum matches at each index
+      for (int index = 0; index < numChecksums; index++) {
+        if (!matchChecksumAtIndex(this.checksums.get(startIndex + index),
+            that.checksums.get(index))) {
+          // checksum mismatch. throw exception.
+          throw new OzoneChecksumException(index);
+        }
       }
+    } catch (ArrayIndexOutOfBoundsException e) {
+      throw new OzoneChecksumException("Computed checksum has "
+          + numChecksums + " number of checksums. Original checksum has " +
+          (this.checksums.size() - startIndex) + " number of checksums " +
+          "starting from index " + startIndex);
     }
     return true;
   }

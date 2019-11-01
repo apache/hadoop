@@ -28,11 +28,13 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
+import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.util.ToolRunner;
@@ -61,9 +63,11 @@ import static org.apache.hadoop.fs.permission.FsAction.READ;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDistCpUtils {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpUtils.class);
@@ -95,39 +99,39 @@ public class TestDistCpUtils {
   public void testGetRelativePathRoot() {
     Path root = new Path("/");
     Path child = new Path("/a");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/a");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/a");
   }
 
   @Test
   public void testGetRelativePath() {
     Path root = new Path("/tmp/abc");
     Path child = new Path("/tmp/abc/xyz/file");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/xyz/file");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/xyz/file");
   }
 
   @Test
   public void testPackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.noneOf(FileAttribute.class);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("");
 
     attributes.add(FileAttribute.REPLICATION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "R");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("R");
 
     attributes.add(FileAttribute.BLOCKSIZE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RB");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RB");
 
     attributes.add(FileAttribute.USER);
     attributes.add(FileAttribute.CHECKSUMTYPE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUC");
 
     attributes.add(FileAttribute.GROUP);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGC");
 
     attributes.add(FileAttribute.PERMISSION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPC");
 
     attributes.add(FileAttribute.TIMES);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPCT");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPCT");
   }
 
   @Test
@@ -1203,6 +1207,63 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
     Assert.assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
     Assert.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
+  }
+
+  @Test
+  public void testCompareFileLengthsAndChecksums() throws Throwable {
+
+    String base = "/tmp/verify-checksum/";
+    long srcSeed = System.currentTimeMillis();
+    long dstSeed = srcSeed + rand.nextLong();
+    short replFactor = 2;
+
+    FileSystem fs = FileSystem.get(config);
+    Path basePath = new Path(base);
+    fs.mkdirs(basePath);
+
+    // empty lengths comparison
+    Path srcWithLen0 = new Path(base + "srcLen0");
+    Path dstWithLen0 = new Path(base + "dstLen0");
+    fs.create(srcWithLen0).close();
+    fs.create(dstWithLen0).close();
+    DistCpUtils.compareFileLengthsAndChecksums(0, fs, srcWithLen0,
+        null, fs, dstWithLen0, false, 0);
+
+    // different lengths comparison
+    Path srcWithLen1 = new Path(base + "srcLen1");
+    Path dstWithLen2 = new Path(base + "dstLen2");
+    DFSTestUtil.createFile(fs, srcWithLen1, 1, replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithLen2, 2, replFactor, srcSeed);
+
+    intercept(IOException.class, DistCpConstants.LENGTH_MISMATCH_ERROR_MSG,
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1, fs,
+                srcWithLen1, null, fs, dstWithLen2, false, 2));
+
+    // checksums matched
+    Path srcWithChecksum1 = new Path(base + "srcChecksum1");
+    Path dstWithChecksum1 = new Path(base + "dstChecksum1");
+    DFSTestUtil.createFile(fs, srcWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        null, fs, dstWithChecksum1, false, 1024);
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        fs.getFileChecksum(srcWithChecksum1), fs, dstWithChecksum1,
+        false, 1024);
+
+    // checksums mismatched
+    Path dstWithChecksum2 = new Path(base + "dstChecksum2");
+    DFSTestUtil.createFile(fs, dstWithChecksum2, 1024,
+        replFactor, dstSeed);
+    intercept(IOException.class, DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG,
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1024, fs,
+               srcWithChecksum1, null, fs, dstWithChecksum2,
+               false, 1024));
+
+    // checksums mismatched but skipped
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        null, fs, dstWithChecksum2, true, 1024);
   }
 
   private static Random rand = new Random();

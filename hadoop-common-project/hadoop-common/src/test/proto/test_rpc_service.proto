@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "TestRpcServiceProtos";
 option java_generic_services = true;
@@ -39,6 +40,7 @@ service TestProtobufRpcProto {
   rpc testServerGet(EmptyRequestProto) returns (EmptyResponseProto);
   rpc exchange(ExchangeRequestProto) returns (ExchangeResponseProto);
   rpc sleep(SleepRequestProto) returns (EmptyResponseProto);
+  rpc lockAndSleep(SleepRequestProto) returns (EmptyResponseProto);
   rpc getAuthMethod(EmptyRequestProto) returns (AuthMethodResponseProto);
   rpc getAuthUser(EmptyRequestProto) returns (UserResponseProto);
   rpc echoPostponed(EchoRequestProto) returns (EchoResponseProto);

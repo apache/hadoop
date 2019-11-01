@@ -22,9 +22,9 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This data structure maintains the list of pipelines which the given
@@ -59,7 +59,7 @@ public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
   public synchronized void addPipeline(Pipeline pipeline) {
     for (DatanodeDetails details : pipeline.getNodes()) {
       UUID dnId = details.getUuid();
-      dn2ObjectMap.computeIfAbsent(dnId, k -> new HashSet<>())
+      dn2ObjectMap.computeIfAbsent(dnId, k -> ConcurrentHashMap.newKeySet())
           .add(pipeline.getId());
     }
   }

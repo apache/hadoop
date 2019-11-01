@@ -21,16 +21,19 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -202,5 +205,87 @@ public class TestRouter {
 
     router.stop();
     router.close();
+  }
+
+  @Test
+  public void testRouterMetricsWhenDisabled() throws Exception {
+
+    Router router = new Router();
+    router.init(new RouterConfigBuilder(conf).rpc().build());
+    router.start();
+
+    intercept(IOException.class, "Namenode metrics is not initialized",
+        () -> router.getNamenodeMetrics().getCacheCapacity());
+
+    router.stop();
+    router.close();
+  }
+
+  @Test
+  public void testSwitchRouter() throws IOException {
+    assertRouterHeartbeater(true, true);
+    assertRouterHeartbeater(true, false);
+    assertRouterHeartbeater(false, true);
+    assertRouterHeartbeater(false, false);
+  }
+
+  /**
+   * Execute the test by specify the routerHeartbeat and nnHeartbeat switch.
+   *
+   * @param expectedRouterHeartbeat expect the routerHeartbeat enable state.
+   * @param expectedNNHeartbeat expect the nnHeartbeat enable state.
+   */
+  private void assertRouterHeartbeater(boolean expectedRouterHeartbeat,
+      boolean expectedNNHeartbeat) throws IOException {
+    final Router router = new Router();
+    Configuration baseCfg = new RouterConfigBuilder(conf).rpc().build();
+    baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
+        expectedRouterHeartbeat);
+    baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
+        expectedNNHeartbeat);
+    router.init(baseCfg);
+    RouterHeartbeatService routerHeartbeatService =
+        router.getRouterHeartbeatService();
+    if (expectedRouterHeartbeat) {
+      assertNotNull(routerHeartbeatService);
+    } else {
+      assertNull(routerHeartbeatService);
+    }
+    Collection<NamenodeHeartbeatService> namenodeHeartbeatServices =
+        router.getNamenodeHeartbeatServices();
+    if (expectedNNHeartbeat) {
+      assertNotNull(namenodeHeartbeatServices);
+    } else {
+      assertNull(namenodeHeartbeatServices);
+    }
+    router.close();
+  }
+
+  @Test
+  public void testNamenodeHeartBeatEnableDefault() throws IOException {
+    checkNamenodeHeartBeatEnableDefault(true);
+    checkNamenodeHeartBeatEnableDefault(false);
+  }
+
+  /**
+   * Check the default value of dfs.federation.router.namenode.heartbeat.enable
+   * when it isn't explicitly defined.
+   * @param enable value for dfs.federation.router.heartbeat.enable.
+   */
+  private void checkNamenodeHeartBeatEnableDefault(boolean enable)
+      throws IOException {
+    final Router router = new Router();
+    try {
+      Configuration config = new HdfsConfiguration();
+      config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, enable);
+      router.init(config);
+      if (enable) {
+        assertNotNull(router.getNamenodeHeartbeatServices());
+      } else {
+        assertNull(router.getNamenodeHeartbeatServices());
+      }
+    } finally {
+      router.close();
+    }
   }
 }

@@ -20,9 +20,14 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.google.common.collect.Lists;
+import org.junit.Assume;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -31,13 +36,16 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.*;
+import static org.apache.hadoop.fs.s3a.impl.TestPartialDeleteFailures.keysToDelete;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
- * Test S3A Failure translation.
+ * ITest for failure handling, primarily multipart deletion.
  */
 public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   private static final Logger LOG =
@@ -69,12 +77,17 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
 
   private void removeKeys(S3AFileSystem fileSystem, String... keys)
       throws IOException {
+    fileSystem.removeKeys(buildDeleteRequest(keys), false, null);
+  }
+
+  private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
+      final String[] keys) {
     List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
         keys.length);
     for (String key : keys) {
       request.add(new DeleteObjectsRequest.KeyVersion(key));
     }
-    fileSystem.removeKeys(request, false, false);
+    return request;
   }
 
   @Test
@@ -87,12 +100,87 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     timer.end("removeKeys");
   }
 
+
+  private Path maybeGetCsvPath() {
+    Configuration conf = getConfiguration();
+    String csvFile = conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
+    Assume.assumeTrue("CSV test file is not the default",
+        DEFAULT_CSVTEST_FILE.equals(csvFile));
+    return new Path(csvFile);
+  }
+
+  /**
+   * Test low-level failure handling with low level delete request.
+   */
   @Test
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
-    Path testFile = getLandsatCSVPath(getConfiguration());
-    S3AFileSystem fs = (S3AFileSystem)testFile.getFileSystem(
+    describe("Delete the landsat CSV file and expect it to fail");
+    Path csvPath = maybeGetCsvPath();
+    S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
         getConfiguration());
-    intercept(MultiObjectDeleteException.class,
-        () -> removeKeys(fs, fs.pathToKey(testFile)));
+    List<DeleteObjectsRequest.KeyVersion> keys
+        = buildDeleteRequest(
+            new String[]{
+                fs.pathToKey(csvPath),
+                "missing-key.csv"
+            });
+    MultiObjectDeleteException ex = intercept(
+        MultiObjectDeleteException.class,
+        () -> fs.removeKeys(keys, false, null));
+
+    final List<Path> undeleted
+        = extractUndeletedPaths(ex, fs::keyToQualifiedPath);
+    String undeletedFiles = join(undeleted);
+    failIf(undeleted.size() != 2,
+        "undeleted list size wrong: " + undeletedFiles,
+        ex);
+    assertTrue("no CSV in " +undeletedFiles, undeleted.contains(csvPath));
+
+    // and a full split, after adding a new key
+    String marker = "/marker";
+    Path markerPath = fs.keyToQualifiedPath(marker);
+    keys.add(new DeleteObjectsRequest.KeyVersion(marker));
+
+    Pair<List<Path>, List<Path>> pair =
+        new MultiObjectDeleteSupport(fs.createStoreContext(), null)
+        .splitUndeletedKeys(ex, keys);
+    assertEquals(undeleted, pair.getLeft());
+    List<Path> right = pair.getRight();
+    assertEquals("Wrong size for " + join(right), 1, right.size());
+    assertEquals(markerPath, right.get(0));
+  }
+
+  /**
+   * See what happens when you delete two entries which do not exist.
+   * It must not raise an exception.
+   */
+  @Test
+  public void testMultiObjectDeleteMissingEntriesSucceeds() throws Throwable {
+    describe("Delete keys which don't exist");
+    Path base = path("missing");
+    S3AFileSystem fs = getFileSystem();
+    List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(
+        Lists.newArrayList(new Path(base, "1"), new Path(base, "2")));
+    fs.removeKeys(keys, false, null);
+  }
+
+  private String join(final Iterable iterable) {
+    return "[" + StringUtils.join(iterable, ",") + "]";
+  }
+
+  /**
+   * Test low-level failure handling with a single-entry file.
+   * This is deleted as a single call, so isn't that useful.
+   */
+  @Test
+  public void testSingleObjectDeleteNoPermissionsTranslated() throws Throwable {
+    describe("Delete the landsat CSV file and expect it to fail");
+    Path csvPath = maybeGetCsvPath();
+    S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
+        getConfiguration());
+    AccessDeniedException aex = intercept(AccessDeniedException.class,
+        () -> fs.delete(csvPath, false));
+    Throwable cause = aex.getCause();
+    failIf(cause == null, "no nested exception", aex);
   }
 }

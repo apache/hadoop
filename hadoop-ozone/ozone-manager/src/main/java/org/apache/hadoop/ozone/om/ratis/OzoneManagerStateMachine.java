@@ -19,41 +19,41 @@ package org.apache.hadoop.ozone.om.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.ozone.container.common.transport.server.ratis
-    .ContainerStateMachine;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.RaftStorage;
+import org.apache.ratis.statemachine.SnapshotInfo;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.LifeCycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
 
 /**
  * The OM StateMachine is the state machine for OM Ratis server. It is
@@ -63,32 +63,73 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
 public class OzoneManagerStateMachine extends BaseStateMachine {
 
   static final Logger LOG =
-      LoggerFactory.getLogger(ContainerStateMachine.class);
+      LoggerFactory.getLogger(OzoneManagerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
-  private final OzoneManagerServerProtocol ozoneManager;
+  private final OzoneManager ozoneManager;
   private OzoneManagerHARequestHandler handler;
   private RaftGroupId raftGroupId;
-  private long lastAppliedIndex = 0;
+  private long lastAppliedIndex;
+  private OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
+  private final OMRatisSnapshotInfo snapshotInfo;
+  private final ExecutorService executorService;
+  private final ExecutorService installSnapshotExecutor;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
-    this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager);
+
+    this.snapshotInfo = ozoneManager.getSnapshotInfo();
+    updateLastAppliedIndexWithSnaphsotIndex();
+
+    this.ozoneManagerDoubleBuffer =
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
+            this::updateLastAppliedIndex);
+
+    this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
+        ozoneManagerDoubleBuffer);
+
+    ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
+        .setNameFormat("OM StateMachine ApplyTransaction Thread - %d").build();
+    this.executorService = HadoopExecutors.newSingleThreadExecutor(build);
+    this.installSnapshotExecutor = HadoopExecutors.newSingleThreadExecutor();
   }
 
   /**
    * Initializes the State Machine with the given server, group and storage.
-   * TODO: Load the latest snapshot from the file system.
    */
   @Override
-  public void initialize(
-      RaftServer server, RaftGroupId id, RaftStorage raftStorage)
-      throws IOException {
-    super.initialize(server, id, raftStorage);
-    this.raftGroupId = id;
-    storage.init(raftStorage);
+  public void initialize(RaftServer server, RaftGroupId id,
+      RaftStorage raftStorage) throws IOException {
+    lifeCycle.startAndTransition(() -> {
+      super.initialize(server, id, raftStorage);
+      this.raftGroupId = id;
+      storage.init(raftStorage);
+    });
+  }
+
+  @Override
+  public SnapshotInfo getLatestSnapshot() {
+    return snapshotInfo;
+  }
+
+  /**
+   * Called to notify state machine about indexes which are processed
+   * internally by Raft Server, this currently happens when conf entries are
+   * processed in raft Server. This keep state machine to keep a track of index
+   * updates.
+   * @param term term of the current log entry
+   * @param index index which is being updated
+   */
+  @Override
+  public void notifyIndexUpdate(long term, long index) {
+    // SnapshotInfo should be updated when the term changes.
+    // The index here refers to the log entry index and the index in
+    // SnapshotInfo represents the snapshotIndex i.e. the index of the last
+    // transaction included in the snapshot. Hence, snaphsotInfo#index is not
+    // updated here.
+    snapshotInfo.updateTerm(term);
   }
 
   /**
@@ -129,8 +170,36 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       OMRequest request = OMRatisHelper.convertByteStringToOMRequest(
           trx.getStateMachineLogEntry().getLogData());
       long trxLogIndex = trx.getLogEntry().getIndex();
-      CompletableFuture<Message> future = CompletableFuture
-          .supplyAsync(() -> runCommand(request, trxLogIndex));
+      // In the current approach we have one single global thread executor.
+      // with single thread. Right now this is being done for correctness, as
+      // applyTransaction will be run on multiple OM's we want to execute the
+      // transactions in the same order on all OM's, otherwise there is a
+      // chance that OM replica's can be out of sync.
+      // TODO: In this way we are making all applyTransactions in
+      // OM serial order. Revisit this in future to use multiple executors for
+      // volume/bucket.
+
+      // Reason for not immediately implementing executor per volume is, if
+      // one executor operations are slow, we cannot update the
+      // lastAppliedIndex in OzoneManager StateMachine, even if other
+      // executor has completed the transactions with id more.
+
+      // We have 300 transactions, And for each volume we have transactions
+      // of 150. Volume1 transactions 0 - 149 and Volume2 transactions 150 -
+      // 299.
+      // Example: Executor1 - Volume1 - 100 (current completed transaction)
+      // Example: Executor2 - Volume2 - 299 (current completed transaction)
+
+      // Now we have applied transactions of 0 - 100 and 149 - 299. We
+      // cannot update lastAppliedIndex to 299. We need to update it to 100,
+      // since 101 - 149 are not applied. When OM restarts it will
+      // applyTransactions from lastAppliedIndex.
+      // We can update the lastAppliedIndex to 100, and update it to 299,
+      // only after completing 101 - 149. In initial stage, we are starting
+      // with single global executor. Will revisit this when needed.
+
+      CompletableFuture<Message> future = CompletableFuture.supplyAsync(
+          () -> runCommand(request, trxLogIndex), executorService);
       return future;
     } catch (IOException e) {
       return completeExceptionally(e);
@@ -151,6 +220,27 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     }
   }
 
+  @Override
+  public void pause() {
+    lifeCycle.transition(LifeCycle.State.PAUSING);
+    lifeCycle.transition(LifeCycle.State.PAUSED);
+    ozoneManagerDoubleBuffer.stop();
+  }
+
+  /**
+   * Unpause the StateMachine, re-initialize the DoubleBuffer and update the
+   * lastAppliedIndex. This should be done after uploading new state to the
+   * StateMachine.
+   */
+  public void unpause(long newLastAppliedSnaphsotIndex) {
+    lifeCycle.startAndTransition(() -> {
+      this.ozoneManagerDoubleBuffer =
+          new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
+              this::updateLastAppliedIndex);
+      this.updateLastAppliedIndex(newLastAppliedSnaphsotIndex);
+    });
+  }
+
   /**
    * Take OM Ratis snapshot. Write the snapshot index to file. Snapshot index
    * is the log index corresponding to the last applied transaction on the OM
@@ -166,6 +256,39 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       return ozoneManager.saveRatisSnapshot();
     }
     return 0;
+  }
+
+  /**
+   * Leader OM has purged entries from its log. To catch up, OM must download
+   * the latest checkpoint from the leader OM and install it.
+   * @param roleInfoProto the leader node information
+   * @param firstTermIndexInLog TermIndex of the first append entry available
+   *                           in the Leader's log.
+   * @return the last term index included in the installed snapshot.
+   */
+  @Override
+  public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
+      RaftProtos.RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+
+    String leaderNodeId = RaftPeerId.valueOf(roleInfoProto.getSelf().getId())
+        .toString();
+
+    LOG.info("Received install snapshot notificaiton form OM leader: {} with " +
+            "term index: {}", leaderNodeId, firstTermIndexInLog);
+
+    if (!roleInfoProto.getRole().equals(RaftProtos.RaftPeerRole.LEADER)) {
+      // A non-leader Ratis server should not send this notification.
+      LOG.error("Received Install Snapshot notification from non-leader OM " +
+          "node: {}. Ignoring the notification.", leaderNodeId);
+      return completeExceptionally(new OMException("Received notification to " +
+          "install snaphost from non-leader OM node",
+          OMException.ResultCodes.RATIS_ERROR));
+    }
+
+    CompletableFuture<TermIndex> future = CompletableFuture.supplyAsync(
+        () -> ozoneManager.installSnapshot(leaderNodeId),
+        installSnapshotExecutor);
+    return future;
   }
 
   /**
@@ -186,214 +309,12 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private TransactionContext handleStartTransactionRequests(
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
 
-    OMRequest newOmRequest = null;
-    try {
-      switch (omRequest.getCmdType()) {
-      case CreateVolume:
-      case SetVolumeProperty:
-      case DeleteVolume:
-      case CreateBucket:
-      case SetBucketProperty:
-      case DeleteBucket:
-        newOmRequest = handler.handleStartTransaction(omRequest);
-        break;
-      case AllocateBlock:
-        return handleAllocateBlock(raftClientRequest, omRequest);
-      case CreateKey:
-        return handleCreateKeyRequest(raftClientRequest, omRequest);
-      case InitiateMultiPartUpload:
-        return handleInitiateMultipartUpload(raftClientRequest, omRequest);
-      default:
-        return TransactionContext.newBuilder()
-            .setClientRequest(raftClientRequest)
-            .setStateMachine(this)
-            .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-            .setLogData(raftClientRequest.getMessage().getContent())
-            .build();
-      }
-    } catch (IOException ex) {
-      TransactionContext transactionContext = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      if (ex instanceof OMException) {
-        IOException ioException =
-            new IOException(ex.getMessage() + STATUS_CODE +
-                ((OMException) ex).getResult());
-        transactionContext.setException(ioException);
-      } else {
-        transactionContext.setException(ex);
-      }
-      LOG.error("Exception in startTransaction for cmdType " +
-          omRequest.getCmdType(), ex);
-      return transactionContext;
-    }
-    TransactionContext transactionContext = TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(OMRatisHelper.convertRequestToByteString(newOmRequest))
-        .build();
-    return transactionContext;
-  }
-
-  private TransactionContext handleInitiateMultipartUpload(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-
-    // Generate a multipart uploadID, and create a new request.
-    // When applyTransaction happen's all OM's use the same multipartUploadID
-    // for the key.
-
-    long time = Time.monotonicNowNanos();
-    String multipartUploadID = UUID.randomUUID().toString() + "-" + time;
-
-    MultipartInfoApplyInitiateRequest multipartInfoApplyInitiateRequest =
-        MultipartInfoApplyInitiateRequest.newBuilder()
-            .setKeyArgs(omRequest.getInitiateMultiPartUploadRequest()
-                .getKeyArgs()).setMultipartUploadID(multipartUploadID).build();
-
-    OMRequest.Builder newOmRequest =
-        OMRequest.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.ApplyInitiateMultiPartUpload)
-            .setInitiateMultiPartUploadApplyRequest(
-                multipartInfoApplyInitiateRequest)
-            .setClientId(omRequest.getClientId());
-
-    if (omRequest.hasTraceID()) {
-      newOmRequest.setTraceID(omRequest.getTraceID());
-    }
-
-    ByteString messageContent =
-        ByteString.copyFrom(newOmRequest.build().toByteArray());
-
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
         .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
+        .setLogData(raftClientRequest.getMessage().getContent())
         .build();
-  }
-
-  /**
-   * Handle createKey Request, which needs a special handling. This request
-   * needs to be executed on the leader, and the response received from this
-   * request we need to create a ApplyKeyRequest and create a
-   * TransactionContext object.
-   */
-  private TransactionContext handleCreateKeyRequest(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-    OMResponse omResponse = handler.handle(omRequest);
-
-    // TODO: if not success should we retry depending on the error if it is
-    //  retriable?
-    if (!omResponse.getSuccess()) {
-      TransactionContext transactionContext = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      transactionContext.setException(
-          constructExceptionForFailedRequest(omResponse));
-      return transactionContext;
-    }
-
-    // Get original request
-    OzoneManagerProtocolProtos.CreateKeyRequest createKeyRequest =
-        omRequest.getCreateKeyRequest();
-
-    // Create Applykey Request.
-    OzoneManagerProtocolProtos.ApplyCreateKeyRequest applyCreateKeyRequest =
-        OzoneManagerProtocolProtos.ApplyCreateKeyRequest.newBuilder()
-            .setCreateKeyRequest(createKeyRequest)
-            .setCreateKeyResponse(omResponse.getCreateKeyResponse()).build();
-
-    OMRequest.Builder newOmRequest =
-        OMRequest.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.ApplyCreateKey)
-            .setApplyCreateKeyRequest(applyCreateKeyRequest)
-            .setClientId(omRequest.getClientId());
-
-    if (omRequest.hasTraceID()) {
-      newOmRequest.setTraceID(omRequest.getTraceID());
-    }
-
-    ByteString messageContent =
-        ByteString.copyFrom(newOmRequest.build().toByteArray());
-
-    return TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
-        .build();
-  }
-
-  /**
-   * Handle AllocateBlock Request, which needs a special handling. This
-   * request needs to be executed on the leader, where it connects to SCM and
-   * get Block information.
-   * @param raftClientRequest
-   * @param omRequest
-   * @return TransactionContext
-   */
-  private TransactionContext handleAllocateBlock(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-    OMResponse omResponse = handler.handle(omRequest);
-
-    // If request is failed, no need to proceed further.
-    // Setting the exception with omResponse message and code.
-
-    // TODO: the allocate block fails when scm is in safe mode or when scm is
-    //  down, but that error is not correctly received in OM end, once that
-    //  is fixed, we need to see how to handle this failure case or how we
-    //  need to retry or how to handle this scenario. For other errors like
-    //  KEY_NOT_FOUND, we don't need a retry/
-    if (!omResponse.getSuccess()) {
-      TransactionContext transactionContext = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      transactionContext.setException(
-          constructExceptionForFailedRequest(omResponse));
-      return transactionContext;
-    }
-
-    // Get original request
-    OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
-        omRequest.getAllocateBlockRequest();
-
-    // Create new AllocateBlockRequest with keyLocation set.
-    OzoneManagerProtocolProtos.AllocateBlockRequest newAllocateBlockRequest =
-        OzoneManagerProtocolProtos.AllocateBlockRequest.newBuilder().
-            mergeFrom(allocateBlockRequest)
-            .setKeyLocation(
-                omResponse.getAllocateBlockResponse().getKeyLocation()).build();
-
-    OMRequest newOmRequest = omRequest.toBuilder().setCmdType(
-        OzoneManagerProtocolProtos.Type.AllocateBlock)
-        .setAllocateBlockRequest(newAllocateBlockRequest).build();
-
-    ByteString messageContent = ByteString.copyFrom(newOmRequest.toByteArray());
-
-    return TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
-        .build();
-  }
-
-  /**
-   * Construct IOException message for failed requests in StartTransaction.
-   * @param omResponse
-   * @return
-   */
-  private IOException constructExceptionForFailedRequest(
-      OMResponse omResponse) {
-    return new IOException(omResponse.getMessage() + " " +
-        STATUS_CODE + omResponse.getStatus());
   }
 
   /**
@@ -403,9 +324,18 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
    * @throws ServiceException
    */
   private Message runCommand(OMRequest request, long trxLogIndex) {
-    OMResponse response = handler.handleApplyTransaction(request);
+    OMResponse response = handler.handleApplyTransaction(request, trxLogIndex);
     lastAppliedIndex = trxLogIndex;
     return OMRatisHelper.convertResponseToMessage(response);
+  }
+
+  @SuppressWarnings("HiddenField")
+  public void updateLastAppliedIndex(long lastAppliedIndex) {
+    this.lastAppliedIndex = lastAppliedIndex;
+  }
+
+  public void updateLastAppliedIndexWithSnaphsotIndex() {
+    this.lastAppliedIndex = snapshotInfo.getIndex();
   }
 
   /**
@@ -439,4 +369,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.raftGroupId = raftGroupId;
   }
 
+  public void stop() {
+    ozoneManagerDoubleBuffer.stop();
+    HadoopExecutors.shutdown(executorService, LOG, 5, TimeUnit.SECONDS);
+    HadoopExecutors.shutdown(installSnapshotExecutor, LOG, 5, TimeUnit.SECONDS);
+  }
 }

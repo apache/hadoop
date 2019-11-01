@@ -26,8 +26,10 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.qjournal.TestSecureNNWithQJM;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -74,6 +76,7 @@ public class TestDFSInotifyEventInputStreamKerberized {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDFSInotifyEventInputStreamKerberized.class);
+  private static final String PREFIX = "hadoop.http.authentication.";
 
   private File baseDir;
   private String keystoresDir;
@@ -182,6 +185,12 @@ public class TestDFSInotifyEventInputStreamKerberized {
     final String hdfsPrincipal =
         userName + "/" + krbInstance + "@" + kdc.getRealm();
     final String spnegoPrincipal = "HTTP/" + krbInstance + "@" + kdc.getRealm();
+
+    baseConf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        AuthenticationFilterInitializer.class.getName());
+    baseConf.set(PREFIX + "type", "kerberos");
+    baseConf.set(PREFIX + "kerberos.keytab", nnKeytabFile.getAbsolutePath());
+    baseConf.set(PREFIX + "kerberos.principal", "HTTP/" + krbInstance);
 
     baseConf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     baseConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);

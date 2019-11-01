@@ -148,7 +148,7 @@
   </property>
 
   <property>
-    <name>httpfs.authentication.signature.secret.file</name>
+    <name>hadoop.http.authentication.signature.secret.file</name>
     <value>${httpfs.config.dir}/httpfs-signature.secret</value>
     <description>
       File containing the secret to sign HttpFS hadoop-auth cookies.
@@ -157,11 +157,17 @@
 
       If multiple HttpFS servers are used in a load-balancer/round-robin fashion,
       they should share the secret file.
+
+      If the secret file specified here does not exist, random secret is
+      generated at startup time.
+
+      httpfs.authentication.signature.secret.file is deprecated. Instead use
+      hadoop.http.authentication.signature.secret.file.
     </description>
   </property>
 
   <property>
-    <name>httpfs.authentication.type</name>
+    <name>hadoop.http.authentication.type</name>
     <value>simple</value>
     <description>
       Defines the authentication mechanism used by httpfs for its HTTP clients.
@@ -172,26 +178,35 @@
       'user.name' query string parameter.
 
       If using 'kerberos' HTTP clients must use HTTP SPNEGO or delegation tokens.
+
+      httpfs.authentication.type is deprecated. Instead use
+      hadoop.http.authentication.type.
     </description>
   </property>
 
   <property>
-    <name>httpfs.authentication.kerberos.principal</name>
+    <name>hadoop.http.authentication.kerberos.principal</name>
     <value>HTTP/${httpfs.hostname}@${kerberos.realm}</value>
     <description>
       The HTTP Kerberos principal used by HttpFS in the HTTP endpoint.
 
       The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos
       HTTP SPNEGO specification.
+
+      httpfs.authentication.kerberos.principal is deprecated. Instead use
+      hadoop.http.authentication.kerberos.principal.
     </description>
   </property>
 
   <property>
-    <name>httpfs.authentication.kerberos.keytab</name>
+    <name>hadoop.http.authentication.kerberos.keytab</name>
     <value>${user.home}/httpfs.keytab</value>
     <description>
       The Kerberos keytab file with the credentials for the
       HTTP Kerberos principal used by httpfs in the HTTP endpoint.
+
+      httpfs.authentication.kerberos.keytab is deprecated. Instead use
+      hadoop.http.authentication.kerberos.keytab.
     </description>
   </property>
 

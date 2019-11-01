@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.LinkedList;
 
 /**
  * A Node Manager to test replication.
@@ -182,6 +183,13 @@ public class ReplicationNodeManagerMock implements NodeManager {
     throw new UnsupportedOperationException("Not yet implemented");
   }
 
+  @Override
+  public void addContainer(DatanodeDetails datanodeDetails,
+                           ContainerID containerId)
+      throws NodeNotFoundException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
   /**
    * Update set of containers available on a datanode.
    * @param uuid - DatanodeID
@@ -308,5 +316,15 @@ public class ReplicationNodeManagerMock implements NodeManager {
   @Override
   public List<SCMCommand> getCommandQueue(UUID dnID) {
     return null;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByUuid(String address) {
+    return null;
+  }
+
+  @Override
+  public List<DatanodeDetails> getNodesByAddress(String address) {
+    return new LinkedList<>();
   }
 }

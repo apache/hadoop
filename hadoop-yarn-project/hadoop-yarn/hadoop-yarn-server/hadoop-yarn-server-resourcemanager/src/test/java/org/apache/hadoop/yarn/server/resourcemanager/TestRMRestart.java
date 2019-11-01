@@ -754,13 +754,14 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       @Override
       public void updateApplicationStateInternal(ApplicationId appId,
           ApplicationStateData appStateData) throws Exception {
-        if (count == 0) {
-          // do nothing; simulate app final state is not saved.
+        if (count == 1) {
+          // Application state is updated on attempt launch.
+          // After that, do nothing; simulate app final state is not saved.
           LOG.info(appId + " final state is not saved.");
-          count++;
         } else {
           super.updateApplicationStateInternal(appId, appStateData);
         }
+        count++;
       }
     };
     memStore.init(conf);
@@ -774,7 +775,6 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 15120);
     RMApp app0 = rm1.submitApp(200);
     MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
-
     FinishApplicationMasterRequest req =
         FinishApplicationMasterRequest.newInstance(
           FinalApplicationStatus.SUCCEEDED, "", "");
@@ -1798,8 +1798,11 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.KILLED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
-    Assert.assertEquals(1, ((TestMemoryRMStateStore) memStore).updateAttempt);
-    Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateApp);
+    // count = 1 on storing RMApp launchTime
+    // count = 2 on storing attempt state on kill
+    // count = 3 on storing app state on kill
+    Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateAttempt);
+    Assert.assertEquals(3, ((TestMemoryRMStateStore) memStore).updateApp);
   }
 
   // Test Application that fails on submission is saved in state store.
@@ -2099,9 +2102,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
+    UserGroupInformation.setConfiguration(conf);
 
     // start RM
-    MockRM rm1 = createMockRM(conf);
+    MockRM rm1 = new TestSecurityMockRM(conf);
     rm1.start();
     final MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
@@ -2109,7 +2113,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     RMApp app0 = rm1.submitApp(200);
     final MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
 
-    MockRM rm2 = new MockRM(conf, rm1.getRMStateStore()) {
+    MockRM rm2 = new TestSecurityMockRM(conf, rm1.getRMStateStore()) {
       @Override
       protected ResourceTrackerService createResourceTrackerService() {
         return new ResourceTrackerService(this.rmContext,
@@ -2547,8 +2551,6 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // create an app and finish the app.
     RMApp app0 = rm1.submitApp(200);
-    ApplicationStateData app0State = memStore.getState().getApplicationState()
-        .get(app0.getApplicationId());
 
     MockAM am0 = launchAndFailAM(app0, rm1, nm1);
     MockAM am1 = launchAndFailAM(app0, rm1, nm1);
@@ -2557,6 +2559,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // am1 is missed from MemoryRMStateStore
     memStore.removeApplicationAttemptInternal(am1.getApplicationAttemptId());
+    ApplicationStateData app0State = memStore.getState().getApplicationState()
+        .get(app0.getApplicationId());
     ApplicationAttemptStateData am2State = app0State.getAttempt(
         am2.getApplicationAttemptId());
     // am2's state is not consistent: MemoryRMStateStore just saved its initial

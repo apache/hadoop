@@ -67,7 +67,7 @@ public class TestPartUpload {
   @Test
   public void testPartUpload() throws Exception {
 
-    Response response = REST.multipartUpload(BUCKET, KEY, "", "", null);
+    Response response = REST.initializeMultipartUpload(BUCKET, KEY);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();
     assertNotNull(multipartUploadInitiateResponse.getUploadID());
@@ -86,7 +86,7 @@ public class TestPartUpload {
   @Test
   public void testPartUploadWithOverride() throws Exception {
 
-    Response response = REST.multipartUpload(BUCKET, KEY, "", "", null);
+    Response response = REST.initializeMultipartUpload(BUCKET, KEY);
     MultipartUploadInitiateResponse multipartUploadInitiateResponse =
         (MultipartUploadInitiateResponse) response.getEntity();
     assertNotNull(multipartUploadInitiateResponse.getUploadID());

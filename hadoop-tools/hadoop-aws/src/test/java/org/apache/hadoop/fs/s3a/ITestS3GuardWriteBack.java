@@ -132,6 +132,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
 
     conf.set(Constants.S3_METADATA_STORE_IMPL, metastore);
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+    conf.unset(AUTHORITATIVE_PATH);
     S3AUtils.setBucketOption(conf, host,
         METADATASTORE_AUTHORITATIVE,
         Boolean.toString(authoritativeMeta));

@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
+import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
+import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
@@ -53,9 +55,12 @@ import org.apache.hadoop.fs.s3a.scale.AbstractITestS3AMetadataStoreScale;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.DurationInfo;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.s3guard.MetadataStoreTestBase.basicFileStatus;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 import static org.junit.Assume.*;
 
 /**
@@ -64,7 +69,10 @@ import static org.junit.Assume.*;
  * The throttle tests aren't quite trying to verify that throttling can
  * be recovered from, because that makes for very slow tests: you have
  * to overload the system and them have them back of until they finally complete.
- * Instead
+ * <p>
+ * With DDB on demand, throttling is very unlikely.
+ * Here the tests simply run to completion, so act as regression tests of
+ * parallel invocations on the metastore APIs
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ITestDynamoDBMetadataStoreScale
@@ -83,6 +91,7 @@ public class ITestDynamoDBMetadataStoreScale
   private static final long MAXIMUM_WRITE_CAPACITY = 15;
 
   private DynamoDBMetadataStore ddbms;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   private DynamoDB ddb;
 
@@ -98,6 +107,8 @@ public class ITestDynamoDBMetadataStoreScale
   private static final int THREADS = 40;
 
   private static final int OPERATIONS_PER_THREAD = 50;
+
+  private boolean isOnDemandTable;
 
   /**
    * Create the metadata store. The table and region are determined from
@@ -117,8 +128,7 @@ public class ITestDynamoDBMetadataStoreScale
         store instanceof DynamoDBMetadataStore);
     DDBCapacities capacities = DDBCapacities.extractCapacities(
         store.getDiagnostics());
-    assumeTrue("DBB table is on-demand",
-        !capacities.isOnDemandTable());
+    isOnDemandTable = capacities.isOnDemandTable();
 
     DynamoDBMetadataStore fsStore = (DynamoDBMetadataStore) store;
     Configuration conf = new Configuration(fs.getConf());
@@ -139,7 +149,7 @@ public class ITestDynamoDBMetadataStoreScale
     conf.set(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, "5ms");
 
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(conf);
+    ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
     // wire up the owner FS so that we can make assertions about throttle
     // events
     ms.bindToOwnerFilesystem(fs);
@@ -151,6 +161,7 @@ public class ITestDynamoDBMetadataStoreScale
     super.setup();
     ddbms = (DynamoDBMetadataStore) createMetadataStore();
     tableName = ddbms.getTableName();
+    tableHandler = ddbms.getTableHandler();
     assertNotNull("table has no name", tableName);
     ddb = ddbms.getDynamoDB();
     table = ddb.getTable(tableName);
@@ -161,14 +172,31 @@ public class ITestDynamoDBMetadataStoreScale
     isOverProvisionedForTest = (
         originalCapacity.getReadCapacityUnits() > MAXIMUM_READ_CAPACITY
             || originalCapacity.getWriteCapacityUnits() > MAXIMUM_WRITE_CAPACITY);
-    assumeFalse("Table has too much capacity: " + originalCapacity.toString(),
-        isOverProvisionedForTest);
   }
 
   @Override
   public void teardown() throws Exception {
+    if (ddbms != null) {
+      S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
+      ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+      builder.withCondition(
+          ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
+
+      Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
+      List<Path> list = new ArrayList<>();
+      entries.iterator().forEachRemaining(e -> {
+        Path p = e.getFileStatus().getPath();
+        LOG.info("Deleting {}", p);
+        list.add(p);
+      });
+      tableAccess.delete(list);
+    }
     IOUtils.cleanupWithLogger(LOG, ddbms);
     super.teardown();
+  }
+
+  private boolean expectThrottling() {
+    return !isOverProvisionedForTest && !isOnDemandTable;
   }
 
   /**
@@ -177,12 +205,12 @@ public class ITestDynamoDBMetadataStoreScale
   @Test
   @Override
   public void test_020_Moves() throws Throwable {
-    ThrottleTracker tracker = new ThrottleTracker();
+    ThrottleTracker tracker = new ThrottleTracker(ddbms);
     try {
       // if this doesn't throttle, all is well.
       super.test_020_Moves();
     } catch (AWSServiceThrottledException ex) {
-      // if the service was throttled, we ex;ect the exception text
+      // if the service was throttled, we expect the exception text
       GenericTestUtils.assertExceptionContains(
           DynamoDBMetadataStore.HINT_DDB_IOPS_TOO_LOW,
           ex,
@@ -221,15 +249,18 @@ public class ITestDynamoDBMetadataStoreScale
     try {
       describe("Running %d iterations of batched put, size %d", iterations,
           BATCH_SIZE);
+      Path base = path(getMethodName());
+      final String pathKey = base.toUri().getPath();
 
       ThrottleTracker result = execute("prune",
           1,
-          true,
+          expectThrottling(),
           () -> {
-            ThrottleTracker tracker = new ThrottleTracker();
+            ThrottleTracker tracker = new ThrottleTracker(ddbms);
             long pruneItems = 0;
             for (long i = 0; i < iterations; i++) {
-              Path longPath = pathOfDepth(BATCH_SIZE, String.valueOf(i));
+              Path longPath = pathOfDepth(BATCH_SIZE,
+                  pathKey, String.valueOf(i));
               S3AFileStatus status = basicFileStatus(longPath, 0, false,
                   12345);
               PathMetadata pm = new PathMetadata(status);
@@ -237,13 +268,14 @@ public class ITestDynamoDBMetadataStoreScale
                 toCleanup.add(pm);
               }
 
-              ddbms.put(pm);
+              ddbms.put(pm, null);
 
               pruneItems++;
 
               if (pruneItems == BATCH_SIZE) {
                 describe("pruning files");
-                ddbms.prune(Long.MAX_VALUE /* all files */);
+                ddbms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+                    Long.MAX_VALUE, pathKey);
                 pruneItems = 0;
               }
               if (tracker.probe()) {
@@ -252,8 +284,10 @@ public class ITestDynamoDBMetadataStoreScale
               }
             }
           });
-      assertNotEquals("No batch retries in " + result,
-          0, result.batchThrottles);
+      if (expectThrottling()) {
+        assertNotEquals("No batch retries in " + result,
+            0, result.getBatchThrottles());
+      }
     } finally {
       describe("Cleaning up table %s", tableName);
       for (PathMetadata pm : toCleanup) {
@@ -273,11 +307,11 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/get");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     try {
       execute("get",
           OPERATIONS_PER_THREAD,
-          true,
+          expectThrottling(),
           () -> ddbms.get(path, true)
       );
     } finally {
@@ -292,8 +326,8 @@ public class ITestDynamoDBMetadataStoreScale
   public void test_050_getVersionMarkerItem() throws Throwable {
     execute("get",
         OPERATIONS_PER_THREAD * 2,
-        true,
-        () -> ddbms.getVersionMarkerItem()
+        expectThrottling(),
+        () -> tableHandler.getVersionMarkerItem()
     );
   }
 
@@ -305,7 +339,7 @@ public class ITestDynamoDBMetadataStoreScale
   private void retryingDelete(final Path path) {
     try {
       ddbms.getInvoker().retry("Delete ", path.toString(), true,
-          () -> ddbms.delete(path));
+          () -> ddbms.delete(path, null));
     } catch (IOException e) {
       LOG.warn("Failed to delete {}: ", path, e);
     }
@@ -317,12 +351,12 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/list");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     try {
       Path parent = path.getParent();
       execute("list",
           OPERATIONS_PER_THREAD,
-          true,
+          expectThrottling(),
           () -> ddbms.listChildren(parent)
       );
     } finally {
@@ -336,14 +370,16 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/putDirMarker");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     DirListingMetadata children = ddbms.listChildren(path.getParent());
-    try {
+    try (DynamoDBMetadataStore.AncestorState state =
+             ddbms.initiateBulkWrite(
+                 BulkOperationState.OperationType.Put,
+                 path)) {
       execute("list",
           OPERATIONS_PER_THREAD,
-          true,
-          () -> ddbms.put(children)
-      );
+          expectThrottling(),
+          () -> ddbms.put(children, state));
     } finally {
       retryingDelete(path);
     }
@@ -355,27 +391,73 @@ public class ITestDynamoDBMetadataStoreScale
     Path base = new Path("s3a://example.org/test_080_fullPathsToPut");
     Path child = new Path(base, "child");
     List<PathMetadata> pms = new ArrayList<>();
-    ddbms.put(new PathMetadata(makeDirStatus(base)));
-    ddbms.put(new PathMetadata(makeDirStatus(child)));
-    ddbms.getInvoker().retry("set up directory tree",
-        base.toString(),
-        true,
-        () -> ddbms.put(pms));
     try {
-      DDBPathMetadata dirData = ddbms.get(child, true);
-      execute("list",
-          OPERATIONS_PER_THREAD,
-          true,
-          () -> ddbms.fullPathsToPut(dirData)
-      );
+      try (BulkOperationState bulkUpdate
+              = ddbms.initiateBulkWrite(
+                  BulkOperationState.OperationType.Put, child)) {
+        ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
+        ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
+        ddbms.getInvoker().retry("set up directory tree",
+            base.toString(),
+            true,
+            () -> ddbms.put(pms, bulkUpdate));
+      }
+      try (BulkOperationState bulkUpdate
+              = ddbms.initiateBulkWrite(
+                  BulkOperationState.OperationType.Put, child)) {
+        DDBPathMetadata dirData = ddbms.get(child, true);
+        execute("put",
+            OPERATIONS_PER_THREAD,
+            expectThrottling(),
+            () -> ddbms.fullPathsToPut(dirData, bulkUpdate)
+        );
+      }
     } finally {
-      retryingDelete(base);
+      ddbms.forgetMetadata(child);
+      ddbms.forgetMetadata(base);
+    }
+  }
+
+  /**
+   * Try many deletes in parallel; this will create tombstones.
+   */
+  @Test
+  public void test_090_delete() throws Throwable {
+    Path path = new Path("s3a://example.org/delete");
+    S3AFileStatus status = new S3AFileStatus(true, path, "alice");
+    PathMetadata metadata = new PathMetadata(status);
+    ddbms.put(metadata, null);
+    ITtlTimeProvider time = checkNotNull(getTtlTimeProvider(), "time provider");
+
+    try (DurationInfo ignored = new DurationInfo(LOG, true, "delete")) {
+      execute("delete",
+          OPERATIONS_PER_THREAD,
+          expectThrottling(),
+          () -> {
+            ddbms.delete(path, null);
+          });
+    }
+  }
+
+  /**
+   * Forget Metadata: delete entries without tombstones.
+   */
+  @Test
+  public void test_100_forgetMetadata() throws Throwable {
+    Path path = new Path("s3a://example.org/delete");
+    try (DurationInfo ignored = new DurationInfo(LOG, true, "delete")) {
+      execute("delete",
+          OPERATIONS_PER_THREAD,
+          expectThrottling(),
+          () -> ddbms.forgetMetadata(path)
+      );
     }
   }
 
   @Test
   public void test_900_instrumentation() throws Throwable {
     describe("verify the owner FS gets updated after throttling events");
+    Assume.assumeTrue("No throttling expected", expectThrottling());
     // we rely on the FS being shared
     S3AFileSystem fs = getFileSystem();
     String fsSummary = fs.toString();
@@ -410,7 +492,7 @@ public class ITestDynamoDBMetadataStoreScale
       throws Exception {
 
     final ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    final ThrottleTracker tracker = new ThrottleTracker();
+    final ThrottleTracker tracker = new ThrottleTracker(ddbms);
     final ExecutorService executorService = Executors.newFixedThreadPool(
         THREADS);
     final List<Callable<ExecutionOutcome>> tasks = new ArrayList<>(THREADS);
@@ -487,108 +569,27 @@ public class ITestDynamoDBMetadataStoreScale
    * @param ms store
    * @param pm path to clean up
    */
-  private void cleanupMetadata(MetadataStore ms, PathMetadata pm) {
+  private void cleanupMetadata(DynamoDBMetadataStore ms, PathMetadata pm) {
     Path path = pm.getFileStatus().getPath();
     try {
-      ddbms.getInvoker().retry("clean up", path.toString(), true,
-          () -> ms.forgetMetadata(path));
+      ITestDynamoDBMetadataStore.deleteMetadataUnderPath(ms, path, true);
     } catch (IOException ioe) {
       // Ignore.
       LOG.info("Ignoring error while cleaning up {} in database", path, ioe);
     }
   }
 
-  private Path pathOfDepth(long n, @Nullable String fileSuffix) {
+  private Path pathOfDepth(long n,
+      String name, @Nullable String fileSuffix) {
     StringBuilder sb = new StringBuilder();
     for (long i = 0; i < n; i++) {
-      sb.append(i == 0 ? "/" + this.getClass().getSimpleName() : "lvl");
-      sb.append(i);
+      sb.append(i == 0 ? "/" + name : String.format("level-%03d", i));
       if (i == n - 1 && fileSuffix != null) {
         sb.append(fileSuffix);
       }
       sb.append("/");
     }
     return new Path(getFileSystem().getUri().toString(), sb.toString());
-  }
-
-  /**
-   * Something to track throttles.
-   * The constructor sets the counters to the current count in the
-   * DDB table; a call to {@link #reset()} will set it to the latest values.
-   * The {@link #probe()} will pick up the latest values to compare them with
-   * the original counts.
-   */
-  private class ThrottleTracker {
-
-    private long writeThrottleEventOrig = ddbms.getWriteThrottleEventCount();
-
-    private long readThrottleEventOrig = ddbms.getReadThrottleEventCount();
-
-    private long batchWriteThrottleCountOrig =
-        ddbms.getBatchWriteCapacityExceededCount();
-
-    private long readThrottles;
-
-    private long writeThrottles;
-
-    private long batchThrottles;
-
-    ThrottleTracker() {
-      reset();
-    }
-
-    /**
-     * Reset the counters.
-     */
-    private synchronized void reset() {
-      writeThrottleEventOrig
-          = ddbms.getWriteThrottleEventCount();
-
-      readThrottleEventOrig
-          = ddbms.getReadThrottleEventCount();
-
-      batchWriteThrottleCountOrig
-          = ddbms.getBatchWriteCapacityExceededCount();
-    }
-
-    /**
-     * Update the latest throttle count; synchronized.
-     * @return true if throttling has been detected.
-     */
-    private synchronized boolean probe() {
-      readThrottles = ddbms.getReadThrottleEventCount() - readThrottleEventOrig;
-      writeThrottles = ddbms.getWriteThrottleEventCount()
-          - writeThrottleEventOrig;
-      batchThrottles = ddbms.getBatchWriteCapacityExceededCount()
-          - batchWriteThrottleCountOrig;
-      return isThrottlingDetected();
-    }
-
-    @Override
-    public String toString() {
-      return String.format(
-          "Tracker with read throttle events = %d;"
-              + " write events = %d;"
-              + " batch throttles = %d",
-          readThrottles, writeThrottles, batchThrottles);
-    }
-
-    /**
-     * Assert that throttling has been detected.
-     */
-    void assertThrottlingDetected() {
-      assertTrue("No throttling detected in " + this +
-              " against " + ddbms.toString(),
-          isThrottlingDetected());
-    }
-
-    /**
-     * Has there been any throttling on an operation?
-     * @return true iff read, write or batch operations were throttled.
-     */
-    private boolean isThrottlingDetected() {
-      return readThrottles > 0 || writeThrottles > 0 || batchThrottles > 0;
-    }
   }
 
   /**

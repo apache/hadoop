@@ -285,6 +285,7 @@ are allowed. It contains the following properties:
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
 | `docker.allowed.runtimes` | Comma seperated runtimes that containers are allowed to use. By default no runtimes are allowed to be added.|
+| `docker.service-mode.enabled` | Set to "true" or "false" to enable or disable docker container service mode. Default value is "false". |
 
 Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
 
@@ -359,6 +360,58 @@ implicitly perform a Docker pull command. Both MapReduce and Spark assume that
 tasks which take more that 10 minutes to report progress have stalled, so
 specifying a large Docker image may cause the application to fail.
 
+CGroups configuration Requirements
+----------------------------------
+The Docker plugin utilizes cgroups to limit resource usage of individual containers.
+Since launched containers belong to YARN, the command line option `--cgroup-parent` is
+used to define the appropriate control group.
+
+Docker supports two different cgroups driver: `cgroupfs` and `systemd`. Note that only
+`cgroupfs` is supported - attempt to launch a Docker container with `systemd` results in the
+following, similar error message:
+
+```
+Container id: container_1561638268473_0006_01_000002
+Exit code: 7
+Exception message: Launch container failed
+Shell error output: /usr/bin/docker-current: Error response from daemon: cgroup-parent for systemd cgroup should be a valid slice named as "xxx.slice".
+See '/usr/bin/docker-current run --help'.
+Shell output: main : command provided 4
+```
+
+This means you have to reconfigure the Docker deamon on each host where `systemd` driver is used.
+
+Depending on what OS Hadoop is running on, reconfiguration might require different steps. However,
+if `systemd` was chosen for cgroups driver, it is likely that the `systemctl` command is available
+on the system.
+
+Check the `ExecStart` property of the Docker daemon:
+
+```
+~$ systemctl show --no-pager --property=ExecStart docker.service
+ExecStart={ path=/usr/bin/dockerd-current ; argv[]=/usr/bin/dockerd-current --add-runtime
+docker-runc=/usr/libexec/docker/docker-runc-current --default-runtime=docker-runc --exec-opt native.cgroupdriver=systemd
+--userland-proxy-path=/usr/libexec/docker/docker-proxy-current
+--init-path=/usr/libexec/docker/docker-init-current
+--seccomp-profile=/etc/docker/seccomp.json
+$OPTIONS $DOCKER_STORAGE_OPTIONS $DOCKER_NETWORK_OPTIONS $ADD_REGISTRY $BLOCK_REGISTRY $INSECURE_REGISTRY $REGISTRIES ;
+ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+```
+
+This example shows that the `native.cgroupdriver` is `systemd`. You have to modify that in the unit file of the daemon.
+
+```
+~$ sudo systemctl edit --full docker.service
+```
+
+This brings up the whole configuration for editing. Just replace the `systemd` string to `cgroupfs`. Save the
+changes and restart both the systemd and Docker daemon:
+
+```
+~$ sudo systemctl daemon-reload
+~$ sudo systemctl restart docker.service
+```
+
 Application Submission
 ----------------------
 
@@ -384,6 +437,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS` | Adds additional tmpfs mounts to the Docker container. The value of the environment variable should be a comma-separated list of absolute mount points within the container. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
 | `YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE` | Enable mounting of container working directory sysfs sub-directory into Docker container /hadoop/yarn/sysfs.  This is useful for populating cluster information into container. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE` | Enable Service Mode which runs the docker container as defined by the image but does not set the user (--user and --group-add). |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -666,6 +720,14 @@ In development environment, local images can be tagged with a repository name pr
 ```
 docker tag centos:latest localhost:5000/centos:latest
 ```
+
+Let's say you have an Ubuntu-based image with some changes in the local repository and you wish to use it.
+The following example tags the `local_ubuntu` image:
+```
+docker tag local_ubuntu local/ubuntu:latest
+```
+
+Next, you have to add `local` to `docker.trusted.registries`. The image can be referenced by using `local/ubuntu`.
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
@@ -981,6 +1043,32 @@ In yarn-env.sh, define:
 export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true
 ```
 
+Requirements when not using ENTRYPOINT (YARN mode)
+--------------------------------------------------
+There are two requirements when ENTRYPOINT is not used:
+
+1. `/bin/bash` must be available inside the image. This is generally true,
+however, tiny Docker images (eg. ones which use busybox for shell commands)
+might not have bash installed. In this case, the following error is
+displayed:
+
+    ```
+    Container id: container_1561638268473_0015_01_000002
+    Exit code: 7
+    Exception message: Launch container failed
+    Shell error output: /usr/bin/docker-current: Error response from daemon: oci runtime error: container_linux.go:235: starting container process caused "exec: \"bash\": executable file not found in $PATH".
+    Shell output: main : command provided 4
+    ```
+
+2. `find` command must also be available inside the image. Not having
+`find` causes this error:
+
+    ```
+    Container exited with a non-zero exit code 127. Error file: prelaunch.err.
+    Last 4096 bytes of prelaunch.err :
+    /tmp/hadoop-systest/nm-local-dir/usercache/hadoopuser/appcache/application_1561638268473_0017/container_1561638268473_0017_01_000002/launch_container.sh: line 44: find: command not found
+    ```
+
 Docker Container YARN SysFS Support
 -----------------------------------
 
@@ -994,3 +1082,24 @@ YARN service framework automatically populates cluster information
 to /hadoop/yarn/sysfs/app.json.  For more information about
 YARN service, see: [YARN Service](./yarn-service/Overview.html).
 
+Docker Container Service Mode
+-----------------------------
+
+Docker Container Service Mode runs the container as defined by the image
+but does not set the user (--user and --group-add). This mode is disabled
+by default. The administrator sets docker.service-mode.enabled to true
+in container-executor.cfg under docker section to enable.
+
+Part of a container-executor.cfg which allows docker service mode is below:
+
+```
+yarn.nodemanager.linux-container-executor.group=yarn
+[docker]
+  module.enabled=true
+  docker.privileged-containers.enabled=true
+  docker.service-mode.enabled=true
+```
+
+Application User can enable or disable service mode at job level by exporting
+environment variable YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE in the application's
+environment with value true or false respectively.

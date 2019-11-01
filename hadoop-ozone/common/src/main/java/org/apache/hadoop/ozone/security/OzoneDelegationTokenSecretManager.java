@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.S3SecretManager;
 import org.apache.hadoop.ozone.om.S3SecretManagerImpl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -71,6 +72,8 @@ public class OzoneDelegationTokenSecretManager
    */
   private Object noInterruptsLock = new Object();
 
+  private boolean isRatisEnabled;
+
   /**
    * Create a secret manager.
    *
@@ -81,18 +84,24 @@ public class OzoneDelegationTokenSecretManager
    * milliseconds
    * @param dtRemoverScanInterval how often the tokens are scanned for expired
    * tokens in milliseconds
+   * @param certClient certificate client to SCM CA
    */
   public OzoneDelegationTokenSecretManager(OzoneConfiguration conf,
       long tokenMaxLifetime, long tokenRenewInterval,
       long dtRemoverScanInterval, Text service,
-      S3SecretManager s3SecretManager) throws IOException {
+      S3SecretManager s3SecretManager, CertificateClient certClient)
+      throws IOException {
     super(new SecurityConfig(conf), tokenMaxLifetime, tokenRenewInterval,
         service, LOG);
+    setCertClient(certClient);
     currentTokens = new ConcurrentHashMap();
     this.tokenRemoverScanInterval = dtRemoverScanInterval;
     this.s3SecretManager = (S3SecretManagerImpl) s3SecretManager;
     this.store = new OzoneSecretStore(conf,
         this.s3SecretManager.getOmMetadataManager());
+    isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     loadTokenSecretState(store.loadState());
   }
 
@@ -131,13 +140,35 @@ public class OzoneDelegationTokenSecretManager
     byte[] password = createPassword(identifier.getBytes(),
         getCurrentKey().getPrivateKey());
     long expiryTime = identifier.getIssueDate() + getTokenRenewInterval();
-    addToTokenStore(identifier, password, expiryTime);
+
+    // For HA ratis will take care of updating.
+    // This will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      addToTokenStore(identifier, password, expiryTime);
+    }
+
     Token<OzoneTokenIdentifier> token = new Token<>(identifier.getBytes(),
         password, identifier.getKind(), getService());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created delegation token: {}", token);
     }
     return token;
+  }
+
+  /**
+   * Add delegation token in to in-memory map of tokens.
+   * @param token
+   * @param ozoneTokenIdentifier
+   * @return renewTime - If updated successfully, return renewTime.
+   */
+  public long updateToken(Token<OzoneTokenIdentifier> token,
+      OzoneTokenIdentifier ozoneTokenIdentifier) {
+    long renewTime =
+        ozoneTokenIdentifier.getIssueDate() + getTokenRenewInterval();
+    TokenInfo tokenInfo = new TokenInfo(renewTime, token.getPassword(),
+        ozoneTokenIdentifier.getTrackingId());
+    currentTokens.put(ozoneTokenIdentifier, tokenInfo);
+    return renewTime;
   }
 
   /**
@@ -223,12 +254,28 @@ public class OzoneDelegationTokenSecretManager
     }
 
     long renewTime = Math.min(id.getMaxDate(), now + getTokenRenewInterval());
-    try {
-      addToTokenStore(id, token.getPassword(),  renewTime);
-    } catch (IOException e) {
-      LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+
+    // For HA ratis will take care of updating.
+    // This will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        addToTokenStore(id, token.getPassword(), renewTime);
+      } catch (IOException e) {
+        LOG.error("Unable to update token " + id.getSequenceNumber(), e);
+      }
     }
     return renewTime;
+  }
+
+  public void updateRenewToken(Token<OzoneTokenIdentifier> token,
+      OzoneTokenIdentifier ozoneTokenIdentifier, long expiryTime) {
+    //TODO: Instead of having in-memory map inside this class, we can use
+    // cache from table and make this table cache clean up policy NEVER. In
+    // this way, we don't need to maintain seperate in-memory map. To do this
+    // work we need to merge HA/Non-HA code.
+    TokenInfo tokenInfo = new TokenInfo(expiryTime, token.getPassword(),
+        ozoneTokenIdentifier.getTrackingId());
+    currentTokens.put(ozoneTokenIdentifier, tokenInfo);
   }
 
   /**
@@ -242,8 +289,10 @@ public class OzoneDelegationTokenSecretManager
       String canceller) throws IOException {
     OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(
         token.getIdentifier());
-    LOG.debug("Token cancellation requested for identifier: {}",
-        formatTokenId(id));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Token cancellation requested for identifier: {}",
+          formatTokenId(id));
+    }
 
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner " + formatTokenId(id));
@@ -259,16 +308,38 @@ public class OzoneDelegationTokenSecretManager
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token " + formatTokenId(id));
     }
-    try {
-      store.removeToken(id);
-    } catch (IOException e) {
-      LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
-    }
-    TokenInfo info = currentTokens.remove(id);
-    if (info == null) {
-      throw new InvalidToken("Token not found " + formatTokenId(id));
+
+    // For HA ratis will take care of removal.
+    // This check will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      try {
+        store.removeToken(id);
+      } catch (IOException e) {
+        LOG.error("Unable to remove token " + id.getSequenceNumber(), e);
+      }
+      TokenInfo info = currentTokens.remove(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found " + formatTokenId(id));
+      }
+    } else {
+      // Check whether token is there in-memory map of tokens or not on the
+      // OM leader.
+      TokenInfo info = currentTokens.get(id);
+      if (info == null) {
+        throw new InvalidToken("Token not found in-memory map of tokens" +
+            formatTokenId(id));
+      }
     }
     return id;
+  }
+
+  /**
+   * Remove the expired token from in-memory map.
+   * @param ozoneTokenIdentifier
+   * @throws IOException
+   */
+  public void removeToken(OzoneTokenIdentifier ozoneTokenIdentifier) {
+    currentTokens.remove(ozoneTokenIdentifier);
   }
 
   @Override

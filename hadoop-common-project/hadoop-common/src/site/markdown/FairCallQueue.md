@@ -91,6 +91,21 @@ This is configurable via the **identity provider**, which defaults to the **User
 provider simply uses the username of the client submitting the request. However, a custom identity provider can be used
 to performing throttling based on other groupings, or using an external identity provider.
 
+### Cost-based Fair Call Queue
+
+Though the fair call queue itself does a good job of mitigating the impact from users who submit a very high _number_
+of requests, it does not take account into how expensive each request is to process. Thus, when considering the
+HDFS NameNode, a user who submits 1000 "getFileInfo" requests would be prioritized the same as a user who submits 1000
+"listStatus" requests on some very large directory, or a user who submits 1000 "mkdir" requests, which are more
+expensive as they require an exclusive lock on the namesystem. To account for the _cost_ of an operation when
+considering the prioritization of user requests, there is a "cost-based" extension to the Fair Call Queue which uses
+the aggregate processing time of a user's operations to determine how that user should be prioritized. By default,
+queue time (time spent waiting to be processed) and lock wait time (time spent waiting to acquire a lock) is not
+considered in the cost, time spent processing without a lock is neutrally (1x) weighted, time spent processing with a
+shared lock is weighted 10x higher, and time spent processing with an exclusive lock is weighted 100x higher.
+This attempts to prioritize users based on the actual load they place on the server. To enable this feature, set the
+`costprovder.impl` configuration to `org.apache.hadoop.ipc.WeightedTimeCostProvider` as described below.
+
 Configuration
 -------------
 
@@ -115,12 +130,16 @@ omitted.
 | scheduler.priority.levels | RpcScheduler, CallQueue | How many priority levels to use within the scheduler and call queue. | 4 |
 | faircallqueue.multiplexer.weights | WeightedRoundRobinMultiplexer | How much weight to give to each priority queue. This should be a comma-separated list of length equal to the number of priority levels. | Weights descend by a factor of 2 (e.g., for 4 levels: `8,4,2,1`) |
 | identity-provider.impl | DecayRpcScheduler | The identity provider mapping user requests to their identity. | org.apache.hadoop.ipc.UserIdentityProvider |
+| cost-provider.impl | DecayRpcScheduler | The cost provider mapping user requests to their cost. To enable determination of cost based on processing time, use `org.apache.hadoop.ipc.WeightedTimeCostProvider`. | org.apache.hadoop.ipc.DefaultCostProvider |
 | decay-scheduler.period-ms | DecayRpcScheduler | How frequently the decay factor should be applied to the operation counts of users. Higher values have less overhead, but respond less quickly to changes in client behavior. | 5000 |
 | decay-scheduler.decay-factor | DecayRpcScheduler | When decaying the operation counts of users, the multiplicative decay factor to apply. Higher values will weight older operations more strongly, essentially giving the scheduler a longer memory, and penalizing heavy clients for a longer period of time. | 0.5 |
 | decay-scheduler.thresholds | DecayRpcScheduler | The client load threshold, as an integer percentage, for each priority queue. Clients producing less load, as a percent of total operations, than specified at position _i_ will be given priority _i_. This should be a comma-separated list of length equal to the number of priority levels minus 1 (the last is implicitly 100). | Thresholds ascend by a factor of 2 (e.g., for 4 levels: `13,25,50`) |
 | decay-scheduler.backoff.responsetime.enable | DecayRpcScheduler | Whether or not to enable the backoff by response time feature. | false |
 | decay-scheduler.backoff.responsetime.thresholds | DecayRpcScheduler | The response time thresholds, as time durations, for each priority queue. If the average response time for a queue is above this threshold, backoff will occur in lower priority queues. This should be a comma-separated list of length equal to the number of priority levels. | Threshold increases by 10s per level (e.g., for 4 levels: `10s,20s,30s,40s`) |
 | decay-scheduler.metrics.top.user.count | DecayRpcScheduler | The number of top (i.e., heaviest) users to emit metric information about. | 10 |
+| weighted-cost.lockshared | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phase which holds a shared (read) lock. | 10 |
+| weighted-cost.lockexclusive | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phase which holds an exclusive (write) lock. | 100 |
+| weighted-cost.{handler,lockfree,response} | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phases which do not involve holding a lock. See `org.apache.hadoop.ipc.ProcessingDetails.Timing` for more details on each phase. | 1 |
 
 ### Example Configuration
 

@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
@@ -192,4 +193,11 @@ public interface TimelineReader extends Service {
    * storage.
    */
   Set<String> getEntityTypes(TimelineReaderContext context) throws IOException;
+
+  /**
+   * Check if reader connection is working properly.
+   *
+   * @return True if reader connection works as expected, false otherwise.
+   */
+  TimelineHealth getHealthStatus();
 }

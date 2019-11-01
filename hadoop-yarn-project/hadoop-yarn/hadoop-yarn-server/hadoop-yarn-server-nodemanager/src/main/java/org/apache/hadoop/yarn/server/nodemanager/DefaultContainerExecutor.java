@@ -167,16 +167,15 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String tokenFn = String.format(TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
-    LOG.info("Copying from " + nmPrivateContainerTokensPath
-        + " to " + tokenDst);
+    LOG.info("Copying from {} to {}", nmPrivateContainerTokensPath, tokenDst);
 
 
     FileContext localizerFc =
         FileContext.getFileContext(lfs.getDefaultFileSystem(), getConf());
     localizerFc.setUMask(lfs.getUMask());
     localizerFc.setWorkingDirectory(appStorageDir);
-    LOG.info("Localizer CWD set to " + appStorageDir + " = " 
-        + localizerFc.getWorkingDirectory());
+    LOG.info("Localizer CWD set to {} = {}", appStorageDir,
+        localizerFc.getWorkingDirectory());
 
     ContainerLocalizer localizer =
         createContainerLocalizer(user, appId, locId, tokenFn, localDirs,
@@ -292,8 +291,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     if (pidFile != null) {
       sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
-      LOG.info("Container " + containerIdStr
-          + " pid file not set. Returning terminated error");
+      LOG.info("Container {} pid file not set. Returning terminated error",
+          containerIdStr);
       return ExitCode.TERMINATED.getExitCode();
     }
     
@@ -312,8 +311,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       if (isContainerActive(containerId)) {
         shExec.execute();
       } else {
-        LOG.info("Container " + containerIdStr +
-            " was marked as inactive. Returning terminated error");
+        LOG.info("Container {} was marked as inactive. "
+            + "Returning terminated error", containerIdStr);
         return ExitCode.TERMINATED.getExitCode();
       }
     } catch (IOException e) {
@@ -321,14 +320,14 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         return -1;
       }
       int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
+      LOG.warn("Exit code from container {} is : {}", containerId, exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
       // container-executor's output
       if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
           && exitCode != ExitCode.TERMINATED.getExitCode()) {
-        LOG.warn("Exception from container-launch with container ID: "
-            + containerId + " and exit code: " + exitCode , e);
+        LOG.warn("Exception from container-launch with container ID: {}"
+            + " and exit code: {}", containerId, exitCode, e);
 
         StringBuilder builder = new StringBuilder();
         builder.append("Exception from container-launch.\n")
@@ -386,13 +385,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String[] command = getRunCommand(wrapperScriptPath,
         containerIdStr, user, pidFile, this.getConf(), resource);
 
-      LOG.info("launchContainer: " + Arrays.toString(command));
-      return new ShellCommandExecutor(
-          command,
-          workDir,
-          environment,
-          0L,
-          false);
+    LOG.info("launchContainer: {}", Arrays.toString(command));
+    return new ShellCommandExecutor(
+        command,
+        workDir,
+        environment,
+        0L,
+        false);
   }
 
   /**
@@ -648,19 +647,19 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     List<Path> baseDirs = ctx.getBasedirs();
 
     if (baseDirs == null || baseDirs.size() == 0) {
-      LOG.info("Deleting absolute path : " + subDir);
+      LOG.info("Deleting absolute path : {}", subDir);
       if (!lfs.delete(subDir, true)) {
         //Maybe retry
-        LOG.warn("delete returned false for path: [" + subDir + "]");
+        LOG.warn("delete returned false for path: [{}]", subDir);
       }
       return;
     }
     for (Path baseDir : baseDirs) {
       Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
-      LOG.info("Deleting path : " + del);
+      LOG.info("Deleting path : {}", del);
       try {
         if (!lfs.delete(del, true)) {
-          LOG.warn("delete returned false for path: [" + del + "]");
+          LOG.warn("delete returned false for path: [{}]", del);
         }
       } catch (FileNotFoundException e) {
         continue;
@@ -743,7 +742,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       try {
         space = getDiskFreeSpace(curBase);
       } catch (IOException e) {
-        LOG.warn("Unable to get Free Space for " + curBase.toString(), e);
+        LOG.warn("Unable to get Free Space for {}", curBase, e);
       }
       availableOnDisk[i++] = space;
       totalAvailable += space;
@@ -823,7 +822,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         createDir(getUserCacheDir(new Path(localDir), user), userperms, true,
             user);
       } catch (IOException e) {
-        LOG.warn("Unable to create the user directory : " + localDir, e);
+        LOG.warn("Unable to create the user directory : {}", localDir, e);
         continue;
       }
       userDirStatus = true;
@@ -850,7 +849,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    */
   void createUserCacheDirs(List<String> localDirs, String user)
       throws IOException {
-    LOG.info("Initializing user " + user);
+    LOG.info("Initializing user {}", user);
 
     boolean appcacheDirStatus = false;
     boolean distributedCacheDirStatus = false;
@@ -865,7 +864,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         createDir(appDir, appCachePerms, true, user);
         appcacheDirStatus = true;
       } catch (IOException e) {
-        LOG.warn("Unable to create app cache directory : " + appDir, e);
+        LOG.warn("Unable to create app cache directory : {}", appDir, e);
       }
       // create $local.dir/usercache/$user/filecache
       final Path distDir = getFileCacheDir(localDirPath, user);
@@ -873,7 +872,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         createDir(distDir, fileperms, true, user);
         distributedCacheDirStatus = true;
       } catch (IOException e) {
-        LOG.warn("Unable to create file cache directory : " + distDir, e);
+        LOG.warn("Unable to create file cache directory : {}", distDir, e);
       }
     }
     if (!appcacheDirStatus) {
@@ -911,7 +910,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         createDir(fullAppDir, appperms, true, user);
         initAppDirStatus = true;
       } catch (IOException e) {
-        LOG.warn("Unable to create app directory " + fullAppDir.toString(), e);
+        LOG.warn("Unable to create app directory {}",
+            fullAppDir, e);
       }
     }
     if (!initAppDirStatus) {
@@ -942,7 +942,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       try {
         createDir(appLogDir, appLogDirPerms, true, user);
       } catch (IOException e) {
-        LOG.warn("Unable to create the app-log directory : " + appLogDir, e);
+        LOG.warn("Unable to create the app-log directory : {}", appLogDir, e);
         continue;
       }
       appLogDirStatus = true;
@@ -976,8 +976,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       try {
         createDir(containerLogDir, containerLogDirPerms, true, user);
       } catch (IOException e) {
-        LOG.warn("Unable to create the container-log directory : "
-            + appLogDir, e);
+        LOG.warn("Unable to create the container-log directory : {}",
+            appLogDir, e);
         continue;
       }
       containerLogDirStatus = true;

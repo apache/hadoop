@@ -71,6 +71,11 @@ public interface S3ATestConstants {
   String KEY_DIRECTORY_COUNT = SCALE_TEST + "directory.count";
 
   /**
+   * The file count to use in rename/delete tests: {@value}.
+   */
+  String KEY_FILE_COUNT = SCALE_TEST + "file.count";
+
+  /**
    * The readahead buffer: {@value}.
    */
   String KEY_READ_BUFFER_SIZE = S3A_SCALE_TEST + "read.buffer.size";
@@ -128,6 +133,12 @@ public interface S3ATestConstants {
    * directory performance/scale tests.
    */
   int DEFAULT_DIRECTORY_COUNT = 2;
+
+  /**
+   * Default number of files to create when performing
+   * delete/rename tests.
+   */
+  int DEFAULT_FILE_COUNT = 50;
 
   /**
    * Default policy on scale tests: {@value}.
@@ -197,4 +208,14 @@ public interface S3ATestConstants {
   Duration TEST_SESSION_TOKEN_DURATION = Duration.ofSeconds(
       TEST_SESSION_TOKEN_DURATION_SECONDS);
 
+  /**
+   * Test table name to use during DynamoDB integration tests in
+   * {@code ITestDynamoDBMetadataStore}.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
 }

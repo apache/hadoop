@@ -54,7 +54,7 @@ of `FileSystem`.
 
 ```java
 out = fs.openFile(path)
-    .opt("fs.s3a.experimental.fadvise", "random")
+    .opt("fs.s3a.experimental.input.fadvise", "random")
     .must("fs.s3a.readahead.range", 256 * 1024)
     .build()
     .get();

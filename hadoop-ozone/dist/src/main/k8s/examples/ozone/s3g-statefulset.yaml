@@ -39,13 +39,23 @@ spec:
         args:
         - ozone
         - s3g
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9878
+          initialDelaySeconds: 30
         envFrom:
         - configMapRef:
             name: config
         volumeMounts:
         - name: data
           mountPath: /data
-      initContainers: []
-      volumes:
-      - name: data
-        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi

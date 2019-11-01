@@ -82,7 +82,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_MAXIMUM_DATA_LENGTH =
       "ipc.maximum.data.length";
   /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
-  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
+  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 128 * 1024 * 1024;
 
   /** Max response size a client will accept. */
   public static final String IPC_MAXIMUM_RESPONSE_LENGTH =
@@ -106,8 +106,14 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";
   public static final String IPC_SCHEDULER_IMPL_KEY = "scheduler.impl";
   public static final String IPC_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
+  public static final String IPC_COST_PROVIDER_KEY = "cost-provider.impl";
   public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
   public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
+  // Callqueue overflow trigger failover for stateless servers.
+  public static final String IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE =
+      "callqueue.overflow.trigger.failover";
+  public static final boolean IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT =
+      false;
 
   /**
    * IPC scheduler priority levels.
@@ -218,6 +224,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   SECURITY_CLIENT_PROTOCOL_ACL = "security.client.protocol.acl";
   public static final String SECURITY_CLIENT_DATANODE_PROTOCOL_ACL =
       "security.client.datanode.protocol.acl";
+  public static final String SECURITY_ROUTER_ADMIN_PROTOCOL_ACL =
+      "security.router.admin.protocol.acl";
   public static final String
   SECURITY_DATANODE_PROTOCOL_ACL = "security.datanode.protocol.acl";
   public static final String
@@ -256,8 +264,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /**
    * HA health monitor and failover controller.
    */
- 
-  /** How often to retry connecting to the service. */
   public static final String HA_HM_CONNECT_RETRY_INTERVAL_KEY =
     "ha.health-monitor.connect-retry-interval.ms";
   public static final long HA_HM_CONNECT_RETRY_INTERVAL_DEFAULT = 1000;
@@ -271,7 +277,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HA_HM_SLEEP_AFTER_DISCONNECT_KEY =
     "ha.health-monitor.sleep-after-disconnect.ms";
   public static final long HA_HM_SLEEP_AFTER_DISCONNECT_DEFAULT = 1000;
- 
+
+  /** How many time to retry connecting to the service. */
+  public static final String HA_HM_RPC_CONNECT_MAX_RETRIES_KEY =
+    "ha.health-monitor.rpc.connect.max.retries";
+  public static final int HA_HM_RPC_CONNECT_MAX_RETRIES_DEFAULT = 1;
+
+  /** How often to retry connecting to the service. */
   /* Timeout for the actual monitorHealth() calls. */
   public static final String HA_HM_RPC_TIMEOUT_KEY =
     "ha.health-monitor.rpc-timeout.ms";
@@ -401,4 +413,17 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends DomainNameResolver>
       HADOOP_DOMAINNAME_RESOLVER_IMPL_DEFAULT =
       DNSDomainNameResolver.class;
+  /*
+   *  Ignore KMS default URI returned from NameNode.
+   *  When set to true, kms uri is searched in the following order:
+   *  1. If there is a mapping in Credential's secrets map for namenode uri.
+   *  2. Fallback to local conf.
+   *  If client choose to ignore KMS uri provided by NameNode then client
+   *  should set KMS URI using 'hadoop.security.key.provider.path' to access
+   *  the right KMS for encrypted files.
+   * */
+  public static final String DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI =
+      "dfs.client.ignore.namenode.default.kms.uri";
+  public static final boolean
+      DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT = false;
 }

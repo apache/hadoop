@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.documentstore;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.lib.DocumentStoreVendor;
@@ -98,6 +99,18 @@ public class DocumentStoreTimelineReaderImpl
 
   public Set<String> getEntityTypes(TimelineReaderContext context) {
     return collectionReader.fetchEntityTypes(context);
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    if (collectionReader != null) {
+      return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+          "");
+    } else {
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          "Timeline store reader not initialized.");
+    }
   }
 
   // for honoring all filters from {@link TimelineEntityFilters}

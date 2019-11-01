@@ -62,6 +62,9 @@ public class OzoneClientProducer {
   @Inject
   private Text omService;
 
+  @Inject
+  private String omServiceID;
+
 
   @Produces
   public OzoneClient createClient() throws IOException {
@@ -83,8 +86,9 @@ public class OzoneClientProducer {
             identifier.setSignature(v4RequestParser.getSignature());
             identifier.setAwsAccessId(v4RequestParser.getAwsAccessId());
             identifier.setOwner(new Text(v4RequestParser.getAwsAccessId()));
-
-            LOG.trace("Adding token for service:{}", omService);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Adding token for service:{}", omService);
+            }
             Token<OzoneTokenIdentifier> token = new Token(identifier.getBytes(),
                 identifier.getSignature().getBytes(UTF_8),
                 identifier.getKind(),
@@ -105,7 +109,13 @@ public class OzoneClientProducer {
     } catch (Exception e) {
       LOG.error("Error: ", e);
     }
-    return OzoneClientFactory.getClient(ozoneConfiguration);
+
+    if (omServiceID == null) {
+      return OzoneClientFactory.getClient(ozoneConfiguration);
+    } else {
+      // As in HA case, we need to pass om service ID.
+      return OzoneClientFactory.getRpcClient(omServiceID, ozoneConfiguration);
+    }
   }
 
   @VisibleForTesting

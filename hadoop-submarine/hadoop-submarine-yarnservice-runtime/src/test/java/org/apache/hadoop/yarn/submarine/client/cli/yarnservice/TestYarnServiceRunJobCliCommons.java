@@ -40,6 +40,7 @@ public class TestYarnServiceRunJobCliCommons {
   static final String DEFAULT_DOCKER_IMAGE = "tf-docker:1.1.0";
   static final String DEFAULT_INPUT_PATH = "s3://input";
   static final String DEFAULT_CHECKPOINT_PATH = "s3://output";
+  static final String DEFAULT_QUEUE = "root.queue";
   static final String DEFAULT_WORKER_DOCKER_IMAGE = "worker.image";
   static final String DEFAULT_PS_DOCKER_IMAGE = "ps.image";
   static final String DEFAULT_WORKER_LAUNCH_CMD = "python run-job.py";

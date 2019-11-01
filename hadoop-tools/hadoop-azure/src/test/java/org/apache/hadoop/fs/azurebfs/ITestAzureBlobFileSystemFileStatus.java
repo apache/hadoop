@@ -122,4 +122,22 @@ public class ITestAzureBlobFileSystemFileStatus extends
     assertEquals(pathWithHost2.getName(), fileStatus2.getPath().getName());
   }
 
+  @Test
+  public void testLastModifiedTime() throws IOException {
+    AzureBlobFileSystem fs = this.getFileSystem();
+    Path testFilePath = new Path("childfile1.txt");
+    long createStartTime = System.currentTimeMillis();
+    long minCreateStartTime = (createStartTime / 1000) * 1000 - 1;
+    //  Dividing and multiplying by 1000 to make last 3 digits 0.
+    //  It is observed that modification time is returned with last 3
+    //  digits 0 always.
+    fs.create(testFilePath);
+    long createEndTime = System.currentTimeMillis();
+    FileStatus fStat = fs.getFileStatus(testFilePath);
+    long lastModifiedTime = fStat.getModificationTime();
+    assertTrue("lastModifiedTime should be after minCreateStartTime",
+        minCreateStartTime < lastModifiedTime);
+    assertTrue("lastModifiedTime should be before createEndTime",
+        createEndTime > lastModifiedTime);
+  }
 }

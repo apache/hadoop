@@ -234,7 +234,7 @@ with a single profile and a means for administrators to regulate how resources
 are consumed.
 
 To configure resource types, the administrator must set
-`yarn.resourcemanager.resource-profiles.enabled` ot `true` in the resource
+`yarn.resourcemanager.resource-profiles.enabled` to `true` in the resource
 manager's `yarn-site.xml` file. This file defines the supported profiles.
 For example:
 

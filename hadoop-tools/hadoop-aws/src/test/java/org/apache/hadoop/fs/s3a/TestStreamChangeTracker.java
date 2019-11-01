@@ -32,11 +32,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.test.HadoopTestBase;
-import org.apache.http.HttpStatus;
 
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.createPolicy;
@@ -58,6 +58,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
   public static final String DEST_OBJECT = "new_object";
 
   public static final String URI = "s3a://" + BUCKET + "/" + OBJECT;
+
+  public static final Path PATH = new Path(URI);
 
   @Test
   public void testVersionCheckingHandlingNoVersions() throws Throwable {
@@ -250,7 +252,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     // https://github.com/aws/aws-sdk-java/issues/1644
     AmazonServiceException awsException =
         new AmazonServiceException("aws exception");
-    awsException.setStatusCode(HttpStatus.SC_PRECONDITION_FAILED);
+    awsException.setStatusCode(ChangeTracker.SC_PRECONDITION_FAILED);
     expectChangeException(tracker, awsException, "copy",
         RemoteFileChangedException.PRECONDITIONS_FAILED);
 
@@ -435,10 +437,12 @@ public class TestStreamChangeTracker extends HadoopTestBase {
   private S3ObjectAttributes objectAttributes(
       String etag, String versionId) {
     return new S3ObjectAttributes(BUCKET,
+        PATH,
         OBJECT,
         null,
         null,
         etag,
-        versionId);
+        versionId,
+        0);
   }
 }

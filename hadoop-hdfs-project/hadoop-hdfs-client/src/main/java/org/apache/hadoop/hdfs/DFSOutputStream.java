@@ -965,7 +965,7 @@ public class DFSOutputStream extends FSOutputSummer
         }
         try {
           if (retries == 0) {
-            throw new IOException("Unable to close file because the last block"
+            throw new IOException("Unable to close file because the last block "
                 + last + " does not have enough number of replicas.");
           }
           retries--;

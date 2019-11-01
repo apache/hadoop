@@ -412,7 +412,7 @@ public class ProtoUtils {
   /*
    * Resource
    */
-  public static synchronized ResourceProto convertToProtoFormat(Resource r) {
+  public static ResourceProto convertToProtoFormat(Resource r) {
     return ResourcePBImpl.getProto(r);
   }
 

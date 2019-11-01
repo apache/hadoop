@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -326,6 +327,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, true);
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     setConf(conf);
     setupInternal(NUM_NMS);
 
@@ -518,6 +521,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     setConf(conf);
     setupInternal(3);
     ServiceClient client = createClient(getConf());
@@ -727,6 +732,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     setConf(conf);
     setupInternal(3);
     ServiceClient client = createClient(getConf());
@@ -908,5 +915,27 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       assertThat(s).isEqualTo(component.getName() + "-" + i);
       i++;
     }
+  }
+
+  @Test (timeout = 200000)
+  public void testRestartServiceForNonExistingInRM() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 0);
+    setConf(conf);
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    Service exampleApp = createExampleApplication();
+    client.actionCreate(exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
+    try {
+      client.actionStop(exampleApp.getName(), true);
+    } catch (ApplicationNotFoundException e) {
+      LOG.info("ignore ApplicationNotFoundException during stopping");
+    }
+    client.actionStart(exampleApp.getName());
+    waitForServiceToBeStable(client, exampleApp);
+    Service service = client.getStatus(exampleApp.getName());
+    Assert.assertEquals("Restarted service state should be STABLE",
+        ServiceState.STABLE, service.getState());
   }
 }

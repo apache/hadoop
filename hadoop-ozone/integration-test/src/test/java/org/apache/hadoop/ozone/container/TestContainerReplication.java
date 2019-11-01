@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,15 +40,19 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer
     .writeChunkForContainer;
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -64,19 +67,28 @@ public class TestContainerReplication {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
+  private OzoneConfiguration conf;
+  private MiniOzoneCluster cluster;
+
+  @Before
+  public void setup() throws Exception {
+    conf = newOzoneConfiguration();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
+        .setRandomContainerPort(true).build();
+  }
+
+  @After
+  public void teardown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testContainerReplication() throws Exception {
     //GIVEN
-    OzoneConfiguration conf = newOzoneConfiguration();
-
     long containerId = 1L;
 
-    conf.setSocketAddr("hdls.datanode.http-address",
-        new InetSocketAddress("0.0.0.0", 0));
-
-    MiniOzoneCluster cluster =
-        MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2)
-            .setRandomContainerPort(true).build();
     cluster.waitForClusterToBeReady();
 
     HddsDatanodeService firstDatanode = cluster.getHddsDatanodes().get(0);
@@ -104,9 +116,6 @@ public class TestContainerReplication {
     ContainerCommandRequestProto putBlockRequest = ContainerTestHelper
         .getPutBlockRequest(sourcePipelines, requestProto.getWriteChunk());
 
-    ContainerProtos.BlockData blockData =
-        putBlockRequest.getPutBlock().getBlockData();
-
     ContainerCommandResponseProto response =
         client.sendCommand(putBlockRequest);
 
@@ -117,18 +126,29 @@ public class TestContainerReplication {
         chooseDatanodeWithoutContainer(sourcePipelines,
             cluster.getHddsDatanodes());
 
+    // Close the container
+    ContainerCommandRequestProto closeContainerRequest = ContainerTestHelper
+        .getCloseContainer(sourcePipelines, containerId);
+    response = client.sendCommand(closeContainerRequest);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+
     //WHEN: send the order to replicate the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(destinationDatanode.getDatanodeDetails().getUuid(),
             new ReplicateContainerCommand(containerId,
                 sourcePipelines.getNodes()));
 
-    Thread.sleep(3000);
+    DatanodeStateMachine destinationDatanodeDatanodeStateMachine =
+        destinationDatanode.getDatanodeStateMachine();
+
+    //wait for the replication
+    GenericTestUtils.waitFor(()
+        -> destinationDatanodeDatanodeStateMachine.getSupervisor()
+        .getReplicationCounter() > 0, 1000, 20_000);
 
     OzoneContainer ozoneContainer =
-        destinationDatanode.getDatanodeStateMachine().getContainer();
-
-
+        destinationDatanodeDatanodeStateMachine.getContainer();
 
     Container container =
         ozoneContainer
@@ -142,9 +162,6 @@ public class TestContainerReplication {
         "ContainerData of the replicated container is null",
         container.getContainerData());
 
-    long keyCount = ((KeyValueContainerData) container.getContainerData())
-        .getKeyCount();
-
     KeyValueHandler handler = (KeyValueHandler) ozoneContainer.getDispatcher()
         .getHandler(ContainerType.KeyValueContainer);
 
@@ -155,7 +172,6 @@ public class TestContainerReplication {
     Assert.assertEquals(1, key.getChunks().size());
     Assert.assertEquals(requestProto.getWriteChunk().getChunkData(),
         key.getChunks().get(0));
-
   }
 
   private HddsDatanodeService chooseDatanodeWithoutContainer(Pipeline pipeline,
@@ -169,9 +185,8 @@ public class TestContainerReplication {
         "No datanode outside of the pipeline");
   }
 
-  static OzoneConfiguration newOzoneConfiguration() {
-    final OzoneConfiguration conf = new OzoneConfiguration();
-    return conf;
+  private static OzoneConfiguration newOzoneConfiguration() {
+    return new OzoneConfiguration();
   }
 
 }

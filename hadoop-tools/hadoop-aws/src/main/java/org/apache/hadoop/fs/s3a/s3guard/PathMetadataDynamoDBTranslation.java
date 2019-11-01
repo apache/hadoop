@@ -51,7 +51,8 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-final class PathMetadataDynamoDBTranslation {
+@VisibleForTesting
+public final class PathMetadataDynamoDBTranslation {
 
   /** The HASH key name of each item. */
   @VisibleForTesting
@@ -246,7 +247,7 @@ final class PathMetadataDynamoDBTranslation {
    * @return the creation time, or null
    * @throws IOException if the item is not a version marker
    */
-  static Long extractCreationTimeFromMarker(Item marker) throws IOException {
+  static Long extractCreationTimeFromMarker(Item marker) {
     if (marker.hasAttribute(TABLE_CREATED)) {
       return marker.getLong(TABLE_CREATED);
     } else {
@@ -289,13 +290,15 @@ final class PathMetadataDynamoDBTranslation {
    * @param path path to convert
    * @return string for parent key
    */
-  static String pathToParentKey(Path path) {
+  @VisibleForTesting
+  public static String pathToParentKey(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
+    Preconditions.checkArgument(path.isUriPathAbsolute(),
+        "Path not absolute: '%s'", path);
     URI uri = path.toUri();
     String bucket = uri.getHost();
     Preconditions.checkArgument(!StringUtils.isEmpty(bucket),
-        "Path missing bucket");
+        "Path missing bucket %s", path);
     String pKey = "/" + bucket + uri.getPath();
 
     // Strip trailing slash
@@ -343,10 +346,56 @@ final class PathMetadataDynamoDBTranslation {
   private PathMetadataDynamoDBTranslation() {
   }
 
+  /**
+   * Convert a collection of metadata entries to a list
+   * of DDBPathMetadata entries.
+   * If the sources are already DDBPathMetadata instances, they
+   * are copied directly into the new list, otherwise new
+   * instances are created.
+   * @param pathMetadatas source data
+   * @return the converted list.
+   */
   static List<DDBPathMetadata> pathMetaToDDBPathMeta(
-      Collection<PathMetadata> pathMetadatas) {
-    return pathMetadatas.stream().map(p -> new DDBPathMetadata(p))
+      Collection<? extends PathMetadata> pathMetadatas) {
+    return pathMetadatas.stream().map(p ->
+        (p instanceof DDBPathMetadata)
+            ? (DDBPathMetadata) p
+            : new DDBPathMetadata(p))
         .collect(Collectors.toList());
   }
 
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String itemPrimaryKeyToString(Item item) {
+    String parent = item.getString(PARENT);
+    String child = item.getString(CHILD);
+    return "s3a://" + parent + "/" + child;
+  }
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String primaryKeyToString(PrimaryKey item) {
+    Collection<KeyAttribute> c = item.getComponents();
+    String parent = "";
+    String child = "";
+    for (KeyAttribute attr : c) {
+      switch (attr.getName()) {
+      case PARENT:
+        parent = attr.getValue().toString();
+        break;
+      case CHILD:
+        child = attr.getValue().toString();
+        break;
+      default:
+      }
+    }
+    return "s3a://" + parent + "/" + child;
+  }
 }

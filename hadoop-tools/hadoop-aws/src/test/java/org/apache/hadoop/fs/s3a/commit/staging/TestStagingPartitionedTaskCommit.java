@@ -27,13 +27,13 @@ import java.util.UUID;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.assertj.core.api.Assertions;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.mapreduce.JobContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -80,48 +80,13 @@ public class TestStagingPartitionedTaskCommit
 
   @Test
   public void testDefault() throws Exception {
-    FileSystem mockS3 = getMockS3A();
-
     JobContext job = getJob();
     job.getConfiguration().unset(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
     final PartitionedStagingCommitter committer = newTaskCommitter();
 
     committer.setupTask(getTAC());
-    assertConflictResolution(committer, job, ConflictResolution.FAIL);
-    createTestOutputFiles(relativeFiles,
-        committer.getTaskAttemptPath(getTAC()), getTAC().getConfiguration());
-
-    // test failure when one partition already exists
-    reset(mockS3);
-    Path exists = new Path(outputPath, relativeFiles.get(0)).getParent();
-    pathExists(mockS3, exists);
-
-    intercept(PathExistsException.class,
-        InternalCommitterConstants.E_DEST_EXISTS,
-        "Expected a PathExistsException as a partition"
-            + " already exists:" + exists,
-        () ->  {
-            committer.commitTask(getTAC());
-            mockS3.getFileStatus(exists);
-        });
-
-    // test success
-    reset(mockS3);
-
-    committer.commitTask(getTAC());
-    Set<String> files = Sets.newHashSet();
-    for (InitiateMultipartUploadRequest request :
-        getMockResults().getRequests().values()) {
-      assertEquals(BUCKET, request.getBucketName());
-      files.add(request.getKey());
-    }
-    assertEquals("Should have the right number of uploads",
-        relativeFiles.size(), files.size());
-
-    Set<String> expected = buildExpectedList(committer);
-
-    assertEquals("Should have correct paths", expected, files);
+    assertConflictResolution(committer, job, ConflictResolution.APPEND);
   }
 
   @Test
@@ -150,18 +115,7 @@ public class TestStagingPartitionedTaskCommit
     reset(mockS3);
 
     committer.commitTask(getTAC());
-    Set<String> files = Sets.newHashSet();
-    for (InitiateMultipartUploadRequest request :
-        getMockResults().getRequests().values()) {
-      assertEquals(BUCKET, request.getBucketName());
-      files.add(request.getKey());
-    }
-    assertEquals("Should have the right number of uploads",
-        relativeFiles.size(), files.size());
-
-    Set<String> expected = buildExpectedList(committer);
-
-    assertEquals("Should have correct paths", expected, files);
+    verifyFilesCreated(committer);
   }
 
   @Test
@@ -182,18 +136,29 @@ public class TestStagingPartitionedTaskCommit
     pathExists(mockS3, new Path(outputPath, relativeFiles.get(2)).getParent());
 
     committer.commitTask(getTAC());
+    verifyFilesCreated(committer);
+  }
+
+  /**
+   * Verify that the files created matches that expected.
+   * @param committer committer
+   */
+  protected void verifyFilesCreated(
+      final PartitionedStagingCommitter committer) {
     Set<String> files = Sets.newHashSet();
     for (InitiateMultipartUploadRequest request :
         getMockResults().getRequests().values()) {
       assertEquals(BUCKET, request.getBucketName());
       files.add(request.getKey());
     }
-    assertEquals("Should have the right number of uploads",
-        relativeFiles.size(), files.size());
+    Assertions.assertThat(files)
+        .describedAs("Should have the right number of uploads")
+        .hasSize(relativeFiles.size());
 
     Set<String> expected = buildExpectedList(committer);
-
-    assertEquals("Should have correct paths", expected, files);
+    Assertions.assertThat(files)
+        .describedAs("Should have correct paths")
+        .containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Test
@@ -216,18 +181,7 @@ public class TestStagingPartitionedTaskCommit
     pathExists(mockS3, new Path(outputPath, relativeFiles.get(3)).getParent());
 
     committer.commitTask(getTAC());
-    Set<String> files = Sets.newHashSet();
-    for (InitiateMultipartUploadRequest request :
-        getMockResults().getRequests().values()) {
-      assertEquals(BUCKET, request.getBucketName());
-      files.add(request.getKey());
-    }
-    assertEquals("Should have the right number of uploads",
-        relativeFiles.size(), files.size());
-
-    Set<String> expected = buildExpectedList(committer);
-
-    assertEquals("Should have correct paths", expected, files);
+    verifyFilesCreated(committer);
   }
 
   public Set<String> buildExpectedList(StagingCommitter committer) {

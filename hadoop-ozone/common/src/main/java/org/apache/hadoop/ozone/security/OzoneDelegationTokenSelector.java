@@ -41,12 +41,30 @@ public class OzoneDelegationTokenSelector
       .getLogger(OzoneDelegationTokenSelector.class);
 
   @Override
-  public Token selectToken(Text service,
+  public Token<OzoneTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
-    LOG.trace("Getting token for service {}", service);
-    Token token = super.selectToken(service, tokens);
-    LOG.debug("Got tokens: {} for service {}", token, service);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Getting token for service {}", service);
+    }
+    Token token = getSelectedTokens(service, tokens);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Got tokens: {} for service {}", token, service);
+    }
     return token;
+  }
+
+  private Token<OzoneTokenIdentifier> getSelectedTokens(Text service,
+      Collection<Token<? extends TokenIdentifier>> tokens) {
+    if (service == null) {
+      return null;
+    }
+    for (Token<? extends TokenIdentifier> token : tokens) {
+      if (OzoneTokenIdentifier.KIND_NAME.equals(token.getKind())
+          && token.getService().toString().contains(service.toString())) {
+        return (Token<OzoneTokenIdentifier>) token;
+      }
+    }
+    return null;
   }
 
 }

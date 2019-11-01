@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -31,16 +32,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
 
-/*
- * DAO object to display node allocation activity.
+/**
+ * DAO object to display allocation activities.
  */
-@XmlRootElement
+@XmlRootElement(name = "activities")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ActivitiesInfo {
-  protected String nodeId;
-  protected String timeStamp;
-  protected String diagnostic = null;
-  protected List<NodeAllocationInfo> allocations;
+  private String nodeId;
+  private Long timestamp;
+  private String dateTime;
+  private String diagnostic;
+  private List<NodeAllocationInfo> allocations;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ActivitiesInfo.class);
@@ -53,7 +55,8 @@ public class ActivitiesInfo {
     this.nodeId = nodeId;
   }
 
-  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId) {
+  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.nodeId = nodeId;
     this.allocations = new ArrayList<>();
 
@@ -71,17 +74,38 @@ public class ActivitiesInfo {
           this.nodeId = nodeAllocations.get(0).getNodeId().toString();
         }
 
+        this.timestamp = nodeAllocations.get(0).getTimestamp();
         Date date = new Date();
-        date.setTime(nodeAllocations.get(0).getTimeStamp());
-        this.timeStamp = date.toString();
+        date.setTime(this.timestamp);
+        this.dateTime = date.toString();
 
         for (int i = 0; i < nodeAllocations.size(); i++) {
           NodeAllocation nodeAllocation = nodeAllocations.get(i);
           NodeAllocationInfo allocationInfo = new NodeAllocationInfo(
-              nodeAllocation);
+              nodeAllocation, groupBy);
           this.allocations.add(allocationInfo);
         }
       }
     }
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public Long getTimestamp() {
+    return timestamp;
+  }
+
+  public String getDateTime() {
+    return dateTime;
+  }
+
+  public String getDiagnostic() {
+    return diagnostic;
+  }
+
+  public List<NodeAllocationInfo> getAllocations() {
+    return allocations;
   }
 }

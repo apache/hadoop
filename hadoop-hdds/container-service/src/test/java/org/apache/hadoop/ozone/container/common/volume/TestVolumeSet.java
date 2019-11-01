@@ -230,13 +230,14 @@ public class TestVolumeSet {
     ozoneConfig.set(HDDS_DATANODE_DIR_KEY, readOnlyVolumePath.getAbsolutePath()
         + "," + volumePath.getAbsolutePath());
     volSet = new VolumeSet(UUID.randomUUID().toString(), ozoneConfig);
-    assertTrue(volSet.getFailedVolumesList().size() == 1);
+    assertEquals(1, volSet.getFailedVolumesList().size());
     assertEquals(readOnlyVolumePath, volSet.getFailedVolumesList().get(0)
         .getHddsRootDir());
 
     //Set back to writable
     try {
       readOnlyVolumePath.setWritable(true);
+      volSet.shutdown();
     } finally {
       FileUtil.fullyDelete(volumePath);
     }

@@ -60,6 +60,8 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   private MutableCounterLong proxyOpNotImplemented;
   @Metric("Number of operation retries")
   private MutableCounterLong proxyOpRetries;
+  @Metric("Number of operations to hit no namenodes available")
+  private MutableCounterLong proxyOpNoNamenodes;
 
   @Metric("Failed requests due to State Store unavailable")
   private MutableCounterLong routerFailureStateStore;
@@ -136,6 +138,15 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Override
   public long getProxyOpRetries() {
     return proxyOpRetries.value();
+  }
+
+  public void incrProxyOpNoNamenodes() {
+    proxyOpNoNamenodes.incr();
+  }
+
+  @Override
+  public long getProxyOpNoNamenodes() {
+    return proxyOpNoNamenodes.value();
   }
 
   public void incrRouterFailureStateStore() {

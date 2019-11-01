@@ -64,3 +64,13 @@ Add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.f
 | hadoop.http.cross-origin.allowed-methods | `GET,POST,HEAD`                               | Comma separated list of methods that are allowed                                       |
 | hadoop.http.cross-origin.allowed-headers | `X-Requested-With,Content-Type,Accept,Origin` | Comma separated list of headers that are allowed                                       |
 | hadoop.http.cross-origin.max-age         | `1800`                                        | Number of seconds a pre-flighted request can be cached                                 |
+
+
+Trusted Proxy
+-------------
+Trusted Proxy adds support to perform operations using end user instead of proxy user. It fetches the end user from
+doAs query parameter. To enable Trusted Proxy, please set the following configuration parameter:
+
+Add org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer to hadoop.http.filter.initializers in core-site.xml
+instead of org.apache.hadoop.security.AuthenticationFilterInitializer.
+

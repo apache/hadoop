@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourcesExceptionUtil.throwIfNecessary;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
 
@@ -75,7 +77,8 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
             + "any usable GPU devices, please double check configuration!";
         LOG.error(message);
-        throw new ResourceHandlerException(message);
+        throwIfNecessary(new ResourceHandlerException(message),
+            configuration);
       }
     } catch (YarnException e) {
       LOG.error("Exception when trying to get usable GPU device", e);
@@ -105,7 +108,7 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     // Create device cgroups for the container
     cGroupsHandler.createCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerIdStr);
-    if (!DockerLinuxContainerRuntime.isDockerContainerRequested(
+    if (!OCIContainerRuntime.isOCICompliantContainerRequested(
         nmContext.getConf(),
         container.getLaunchContext().getEnvironment())) {
       // Write to devices cgroup only for non-docker container. The reason is
@@ -177,7 +180,7 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   @Override
   public synchronized List<PrivilegedOperation> postComplete(
       ContainerId containerId) throws ResourceHandlerException {
-    gpuAllocator.cleanupAssignGpus(containerId);
+    gpuAllocator.unassignGpus(containerId);
     cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerId.toString());
     return null;

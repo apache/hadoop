@@ -280,8 +280,15 @@ public class MembershipNamenodeResolver
           report.getNumDecommissioningDatanodes());
       stats.setNumOfActiveDatanodes(report.getNumLiveDatanodes());
       stats.setNumOfDeadDatanodes(report.getNumDeadDatanodes());
+      stats.setNumOfStaleDatanodes(report.getNumStaleDatanodes());
       stats.setNumOfDecomActiveDatanodes(report.getNumDecomLiveDatanodes());
       stats.setNumOfDecomDeadDatanodes(report.getNumDecomDeadDatanodes());
+      stats.setNumOfInMaintenanceLiveDataNodes(
+          report.getNumInMaintenanceLiveDataNodes());
+      stats.setNumOfInMaintenanceDeadDataNodes(
+          report.getNumInMaintenanceDeadDataNodes());
+      stats.setNumOfEnteringMaintenanceDataNodes(
+          report.getNumEnteringMaintenanceDataNodes());
       record.setStats(stats);
     }
 

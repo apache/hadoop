@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -35,12 +34,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMNodeDetails;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
+import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
+import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
@@ -51,10 +58,15 @@ import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.GroupInfoReply;
 import org.apache.ratis.protocol.GroupInfoRequest;
+import org.apache.ratis.protocol.Message;
+import org.apache.ratis.protocol.NotLeaderException;
+import org.apache.ratis.protocol.RaftClientReply;
+import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
@@ -65,6 +77,8 @@ import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
 
 /**
  * Creates a Ratis server endpoint for OM.
@@ -80,7 +94,7 @@ public final class OzoneManagerRatisServer {
   private final RaftGroup raftGroup;
   private final RaftPeerId raftPeerId;
 
-  private final OzoneManagerServerProtocol ozoneManager;
+  private final OzoneManager ozoneManager;
   private final OzoneManagerStateMachine omStateMachine;
   private final ClientId clientId = ClientId.randomId();
 
@@ -98,6 +112,106 @@ public final class OzoneManagerRatisServer {
   }
 
   /**
+   * Submit request to Ratis server.
+   * @param omRequest
+   * @return OMResponse - response returned to the client.
+   * @throws ServiceException
+   */
+  public OMResponse submitRequest(OMRequest omRequest) throws ServiceException {
+    RaftClientRequest raftClientRequest =
+        createWriteRaftClientRequest(omRequest);
+    RaftClientReply raftClientReply;
+    try {
+      raftClientReply = server.submitClientRequestAsync(raftClientRequest)
+          .get();
+    } catch (Exception ex) {
+      throw new ServiceException(ex.getMessage(), ex);
+    }
+
+    return processReply(omRequest, raftClientReply);
+  }
+
+  /**
+   * Create Write RaftClient request from OMRequest.
+   * @param omRequest
+   * @return RaftClientRequest - Raft Client request which is submitted to
+   * ratis server.
+   */
+  private RaftClientRequest createWriteRaftClientRequest(OMRequest omRequest) {
+    return new RaftClientRequest(clientId, server.getId(), raftGroupId,
+        nextCallId(),
+        Message.valueOf(OMRatisHelper.convertRequestToByteString(omRequest)),
+        RaftClientRequest.writeRequestType(), null);
+  }
+
+  /**
+   * Process the raftClientReply and return OMResponse.
+   * @param omRequest
+   * @param reply
+   * @return OMResponse - response which is returned to client.
+   * @throws ServiceException
+   */
+  private OMResponse processReply(OMRequest omRequest, RaftClientReply reply)
+      throws ServiceException {
+    // NotLeader exception is thrown only when the raft server to which the
+    // request is submitted is not the leader. This can happen first time
+    // when client is submitting request to OM.
+    NotLeaderException notLeaderException = reply.getNotLeaderException();
+    if (notLeaderException != null) {
+      throw new ServiceException(notLeaderException);
+    }
+    StateMachineException stateMachineException =
+        reply.getStateMachineException();
+    if (stateMachineException != null) {
+      OMResponse.Builder omResponse = OMResponse.newBuilder();
+      omResponse.setCmdType(omRequest.getCmdType());
+      omResponse.setSuccess(false);
+      omResponse.setMessage(stateMachineException.getCause().getMessage());
+      omResponse.setStatus(parseErrorStatus(
+          stateMachineException.getCause().getMessage()));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while executing ratis request. " +
+            "stateMachineException: ", stateMachineException);
+      }
+      return omResponse.build();
+    }
+
+    try {
+      return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
+    } catch (InvalidProtocolBufferException ex) {
+      if (ex.getMessage() != null) {
+        throw new ServiceException(ex.getMessage(), ex);
+      } else {
+        throw new ServiceException(ex);
+      }
+    }
+
+    // TODO: Still need to handle RaftRetry failure exception and
+    //  NotReplicated exception.
+  }
+
+  /**
+   * Parse errorMessage received from the exception and convert to
+   * {@link OzoneManagerProtocolProtos.Status}.
+   * @param errorMessage
+   * @return OzoneManagerProtocolProtos.Status
+   */
+  private OzoneManagerProtocolProtos.Status parseErrorStatus(
+      String errorMessage) {
+    if (errorMessage.contains(STATUS_CODE)) {
+      String errorCode = errorMessage.substring(
+          errorMessage.indexOf(STATUS_CODE) + STATUS_CODE.length());
+      LOG.debug("Parsing error message for error code " +
+          errorCode);
+      return OzoneManagerProtocolProtos.Status.valueOf(errorCode.trim());
+    } else {
+      return OzoneManagerProtocolProtos.Status.INTERNAL_ERROR;
+    }
+
+  }
+
+
+  /**
    * Returns an OM Ratis server.
    * @param conf configuration
    * @param om the OM instance starting the ratis server
@@ -108,7 +222,7 @@ public final class OzoneManagerRatisServer {
    * @throws IOException
    */
   private OzoneManagerRatisServer(Configuration conf,
-      OzoneManagerServerProtocol om,
+      OzoneManager om,
       String raftGroupIdStr, RaftPeerId localRaftPeerId,
       InetSocketAddress addr, List<RaftPeer> raftPeers)
       throws IOException {
@@ -157,7 +271,7 @@ public final class OzoneManagerRatisServer {
    * Creates an instance of OzoneManagerRatisServer.
    */
   public static OzoneManagerRatisServer newOMRatisServer(
-      Configuration ozoneConf, OzoneManagerServerProtocol omProtocol,
+      Configuration ozoneConf, OzoneManager omProtocol,
       OMNodeDetails omNodeDetails, List<OMNodeDetails> peerNodes)
       throws IOException {
 
@@ -196,13 +310,18 @@ public final class OzoneManagerRatisServer {
   }
 
   /**
-   * Returns OzoneManager StateMachine.
+   * Initializes and returns OzoneManager StateMachine.
    */
   private OzoneManagerStateMachine getStateMachine() {
-    return  new OzoneManagerStateMachine(this);
+    return new OzoneManagerStateMachine(this);
   }
 
-  public OzoneManagerServerProtocol getOzoneManager() {
+  @VisibleForTesting
+  public OzoneManagerStateMachine getOmStateMachine() {
+    return omStateMachine;
+  }
+
+  public OzoneManager getOzoneManager() {
     return ozoneManager;
   }
 
@@ -219,6 +338,7 @@ public final class OzoneManagerRatisServer {
   public void stop() {
     try {
       server.close();
+      omStateMachine.stop();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -244,7 +364,7 @@ public final class OzoneManagerRatisServer {
     }
 
     // Set Ratis storage directory
-    String storageDir = getOMRatisDirectory(conf);
+    String storageDir = OmUtils.getOMRatisDirectory(conf);
     RaftServerConfigKeys.setStorageDirs(properties,
         Collections.singletonList(new File(storageDir)));
 
@@ -274,6 +394,12 @@ public final class OzoneManagerRatisServer {
         SizeInBytes.valueOf(logAppenderQueueByteLimit));
     RaftServerConfigKeys.Log.setPreallocatedSize(properties,
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
+    RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
+        false);
+    final int logPurgeGap = conf.getInt(
+        OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP,
+        OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT);
+    RaftServerConfigKeys.Log.setPurgeGap(properties, logPurgeGap);
 
     // For grpc set the maximum message size
     // TODO: calculate the optimal max message size
@@ -365,7 +491,7 @@ public final class OzoneManagerRatisServer {
             .getDuration(), nodeFailureTimeoutUnit);
     final TimeDuration nodeFailureTimeout = TimeDuration.valueOf(
         nodeFailureTimeoutDuration, nodeFailureTimeoutUnit);
-    RaftServerConfigKeys.setLeaderElectionTimeout(properties,
+    RaftServerConfigKeys.Notification.setNoLeaderTimeout(properties,
         nodeFailureTimeout);
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);
@@ -456,7 +582,13 @@ public final class OzoneManagerRatisServer {
       } else if (thisNodeRole.equals(RaftPeerRole.FOLLOWER)) {
         ByteString leaderNodeId = roleInfoProto.getFollowerInfo()
             .getLeaderInfo().getId().getId();
-        RaftPeerId leaderPeerId = RaftPeerId.valueOf(leaderNodeId);
+        // There may be a chance, here we get leaderNodeId as null. For
+        // example, in 3 node OM Ratis, if 2 OM nodes are down, there will
+        // be no leader.
+        RaftPeerId leaderPeerId = null;
+        if (leaderNodeId != null && !leaderNodeId.isEmpty()) {
+          leaderPeerId = RaftPeerId.valueOf(leaderNodeId);
+        }
 
         setServerRole(thisNodeRole, leaderPeerId);
 
@@ -504,18 +636,6 @@ public final class OzoneManagerRatisServer {
   @VisibleForTesting
   public RaftPeerId getRaftPeerId() {
     return this.raftPeerId;
-  }
-
-  /**
-   * Get the local directory where ratis logs will be stored.
-   */
-  public static String getOMRatisDirectory(Configuration conf) {
-    String storageDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_STORAGE_DIR);
-
-    if (Strings.isNullOrEmpty(storageDir)) {
-      storageDir = HddsServerUtil.getDefaultRatisDirectory(conf);
-    }
-    return storageDir;
   }
 
   private UUID getRaftGroupIdFromOmServiceId(String omServiceId) {

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
@@ -68,10 +71,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.BLOCK_TOKEN_VERIFICATION_FAILED;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.SUCCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getCreateContainerRequest;
@@ -79,6 +81,7 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.getTestConta
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test Container servers when security is enabled.
@@ -97,6 +100,7 @@ public class TestSecureContainerServer {
 
   @BeforeClass
   static public void setup() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
     CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
     CONF.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
     CONF.setBoolean(HDDS_BLOCK_TOKEN_ENABLED, true);
@@ -146,8 +150,9 @@ public class TestSecureContainerServer {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis
-        .newXceiverServerRatis(dn, conf, dispatcher, null, caClient);
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
+        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        caClient, null);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
@@ -200,9 +205,11 @@ public class TestSecureContainerServer {
                 " authenticate with GRPC XceiverServer with Ozone block token",
             () -> finalClient.sendCommand(request));
       } else {
-        ContainerCommandResponseProto response = finalClient.
-            sendCommand(request);
-        assertEquals(BLOCK_TOKEN_VERIFICATION_FAILED, response.getResult());
+        IOException e = LambdaTestUtils.intercept(IOException.class,
+            () -> finalClient.sendCommand(request));
+        Throwable rootCause = ExceptionUtils.getRootCause(e);
+        String msg = rootCause.getMessage();
+        assertTrue(msg, msg.contains("Block token verification failed"));
       }
 
       // Test 2: Test success in request with valid block token.
@@ -277,8 +284,8 @@ public class TestSecureContainerServer {
     }
 
     @Override
-    public void buildMissingContainerSet(Set<Long> createdContainerSet) {
+    public void buildMissingContainerSetAndValidate(
+        Map<Long, Long> container2BCSIDMap) {
     }
   }
-
 }

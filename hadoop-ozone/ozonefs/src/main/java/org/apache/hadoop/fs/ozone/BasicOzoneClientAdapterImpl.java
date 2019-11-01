@@ -21,17 +21,22 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -86,9 +91,11 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
-    OzoneConfiguration conf = new OzoneConfiguration();
-    Thread.currentThread().setContextClassLoader(contextClassLoader);
-    return conf;
+    try {
+      return new OzoneConfiguration();
+    } finally {
+      Thread.currentThread().setContextClassLoader(contextClassLoader);
+    }
   }
 
   public BasicOzoneClientAdapterImpl(OzoneConfiguration conf, String volumeStr,
@@ -104,20 +111,39 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
-    OzoneConfiguration conf;
-    if (hadoopConf instanceof OzoneConfiguration) {
-      conf = (OzoneConfiguration) hadoopConf;
-    } else {
-      conf = new OzoneConfiguration(hadoopConf);
-    }
-
-    SecurityConfig secConfig = new SecurityConfig(conf);
-
-    if (secConfig.isSecurityEnabled()) {
-      this.securityEnabled = true;
-    }
 
     try {
+      OzoneConfiguration conf = OzoneConfiguration.of(hadoopConf);
+
+      if (omHost == null && OmUtils.isServiceIdsDefined(conf)) {
+        // When the host name or service id isn't given
+        // but ozone.om.service.ids is defined, declare failure.
+
+        // This is a safety precaution that prevents the client from
+        // accidentally failing over to an unintended OM.
+        throw new IllegalArgumentException("Service ID or host name must not"
+            + " be omitted when ozone.om.service.ids is defined.");
+      }
+
+      if (omPort != -1) {
+        // When the port number is specified, perform the following check
+        if (OmUtils.isOmHAServiceId(conf, omHost)) {
+          // If omHost is a service id, it shouldn't use a port
+          throw new IllegalArgumentException("Port " + omPort +
+              " specified in URI but host '" + omHost + "' is a "
+              + "logical (HA) OzoneManager and does not use port information.");
+        }
+      } else {
+        // When port number is not specified, read it from config
+        omPort = OmUtils.getOmRpcPort(conf);
+      }
+
+      SecurityConfig secConfig = new SecurityConfig(conf);
+
+      if (secConfig.isSecurityEnabled()) {
+        this.securityEnabled = true;
+      }
+
       String replicationTypeConf =
           conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
               OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT);
@@ -125,7 +151,12 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       int replicationCountConf = conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
           OzoneConfigKeys.OZONE_REPLICATION_DEFAULT);
 
-      if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
+      if (OmUtils.isOmHAServiceId(conf, omHost)) {
+        // omHost is listed as one of the service ids in the config,
+        // thus we should treat omHost as omServiceId
+        this.ozoneClient =
+            OzoneClientFactory.getRpcClient(omHost, conf);
+      } else if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
         this.ozoneClient =
             OzoneClientFactory.getRpcClient(omHost, omPort, conf);
       } else {
@@ -234,23 +265,61 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     }
   }
 
-  public OzoneFileStatus getFileStatus(String pathKey) throws IOException {
+  public FileStatusAdapter getFileStatus(String key, URI uri,
+      Path qualifiedPath, String userName)
+      throws IOException {
     try {
       incrementCounter(Statistic.OBJECTS_QUERY);
-      return bucket.getFileStatus(pathKey);
+      OzoneFileStatus status = bucket.getFileStatus(key);
+      makeQualified(status, uri, qualifiedPath, userName);
+      return toFileStatusAdapter(status);
+
     } catch (OMException e) {
       if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
         throw new
-            FileNotFoundException(pathKey + ": No such file or directory!");
+            FileNotFoundException(key + ": No such file or directory!");
       }
       throw e;
     }
+  }
+
+  public void makeQualified(FileStatus status, URI uri, Path path,
+      String username) {
+    if (status instanceof OzoneFileStatus) {
+      ((OzoneFileStatus) status)
+          .makeQualified(uri, path,
+              username, username);
+    }
+
   }
 
   @Override
   public Iterator<BasicKeyInfo> listKeys(String pathKey) {
     incrementCounter(Statistic.OBJECTS_LIST);
     return new IteratorAdapter(bucket.listKeys(pathKey));
+  }
+
+  public List<FileStatusAdapter> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries, URI uri,
+      Path workingDir, String username) throws IOException {
+    try {
+      incrementCounter(Statistic.OBJECTS_LIST);
+      List<OzoneFileStatus> statuses = bucket
+          .listStatus(keyName, recursive, startKey, numEntries);
+
+      List<FileStatusAdapter> result = new ArrayList<>();
+      for (OzoneFileStatus status : statuses) {
+        Path qualifiedPath = status.getPath().makeQualified(uri, workingDir);
+        makeQualified(status, uri, qualifiedPath, username);
+        result.add(toFileStatusAdapter(status));
+      }
+      return result;
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
+        throw new FileNotFoundException(e.getMessage());
+      }
+      throw e;
+    }
   }
 
   @Override
@@ -357,5 +426,21 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         );
       }
     }
+  }
+
+  private FileStatusAdapter toFileStatusAdapter(OzoneFileStatus status) {
+    return new FileStatusAdapter(
+        status.getLen(),
+        status.getPath(),
+        status.isDirectory(),
+        status.getReplication(),
+        status.getBlockSize(),
+        status.getModificationTime(),
+        status.getAccessTime(),
+        status.getPermission().toShort(),
+        status.getOwner(),
+        status.getGroup(),
+        status.getPath()
+    );
   }
 }

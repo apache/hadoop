@@ -219,7 +219,6 @@ public class TestDiskBalancer {
     } finally {
       cluster.shutdown();
     }
-
   }
 
   @Test
@@ -316,13 +315,11 @@ public class TestDiskBalancer {
     final Path filePath = new Path(fileName);
     long fileLen = blockCount * blockSize;
 
-
     //Writing data only to one nameservice.
     FileSystem fs = cluster.getFileSystem(0);
     TestBalancer.createFile(cluster, filePath, fileLen, (short) 1,
         0);
     DFSTestUtil.waitReplication(fs, filePath, (short) 1);
-
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(DiskBalancer.LOG);
@@ -334,15 +331,14 @@ public class TestDiskBalancer {
       NodePlan plan = dataMover.generatePlan();
       dataMover.executePlan(plan);
       dataMover.verifyPlanExectionDone();
-      //Because here we have one nameservice empty, don't check
-      // blockPoolCount.
+      // Because here we have one nameservice empty, don't check blockPoolCount.
       dataMover.verifyAllVolumesHaveData(false);
     } finally {
-      Assert.assertTrue(logCapturer.getOutput().contains("There are no " +
-          "blocks in the blockPool"));
+      String logOut = logCapturer.getOutput();
+      Assert.assertTrue("Wrong log: " + logOut, logOut.contains(
+          "NextBlock call returned null. No valid block to copy."));
       cluster.shutdown();
     }
-
   }
 
   @Test

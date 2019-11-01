@@ -19,8 +19,12 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
+import org.junit.AfterClass;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,19 +37,22 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.deployService;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
 
 /**
  * Full integration test MR jobs.
  *
- * This is all done on shared static mini YARN and HDFS clusters, set up before
- * any of the tests methods run.
+ * This is all done on shared static mini YARN and (optionally) HDFS clusters,
+ * set up before any of the tests methods run.
  *
  * To isolate tests properly for parallel test runs, that static state
  * needs to be stored in the final classes implementing the tests, and
@@ -61,43 +68,71 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_S
  * If two subclasses of this class are instantiated in the same JVM, in order,
  * they are guaranteed to be isolated.
  *
- * History: this is a superclass extracted from
- * {@link AbstractITCommitMRJob} while adding support for testing terasorting.
- *
  */
 public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractYarnClusterITest.class);
 
-  private static final int TEST_FILE_COUNT = 2;
-  private static final int SCALE_TEST_FILE_COUNT = 20;
+  private static final int TEST_FILE_COUNT = 1;
+  private static final int SCALE_TEST_FILE_COUNT = 10;
 
-  public static final int SCALE_TEST_KEYS = 1000;
+  public static final int SCALE_TEST_KEYS = 100;
   public static final int BASE_TEST_KEYS = 10;
+
+  public static final int NO_OF_NODEMANAGERS = 2;
 
   private boolean scaleTest;
 
-  private boolean uniqueFilenames = false;
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    terminateCluster(clusterBinding);
+    clusterBinding = null;
+  }
 
   /**
    * This is the cluster binding which every subclass must create.
    */
   protected static final class ClusterBinding {
 
+    private String clusterName;
+
     private final MiniDFSClusterService hdfs;
 
     private final MiniMRYarnCluster yarn;
 
     public ClusterBinding(
+        final String clusterName,
         final MiniDFSClusterService hdfs,
         final MiniMRYarnCluster yarn) {
-      this.hdfs = checkNotNull(hdfs);
+      this.clusterName = clusterName;
+      this.hdfs = hdfs;
       this.yarn = checkNotNull(yarn);
     }
 
     public MiniDFSClusterService getHdfs() {
       return hdfs;
+    }
+
+    /**
+     * Get the cluster FS, which will either be HDFS or the local FS.
+     * @return a filesystem.
+     * @throws IOException failure
+     */
+    public FileSystem getClusterFS() throws IOException {
+      MiniDFSClusterService miniCluster = getHdfs();
+      return miniCluster != null
+          ? miniCluster.getClusterFS()
+          : FileSystem.getLocal(yarn.getConfig());
     }
 
     public MiniMRYarnCluster getYarn() {
@@ -108,6 +143,10 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
       return getYarn().getConfig();
     }
 
+    public String getClusterName() {
+      return clusterName;
+    }
+
     public void terminate() {
       terminateService(getYarn());
       terminateService(getHdfs());
@@ -115,68 +154,111 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   }
 
   /**
-   * Create the cluster binding. This must be done in
-   * class setup of the (final) subclass.
-   * The HDFS and YARN clusters share the same configuration, so
+   * Create the cluster binding.
+   * The configuration will be patched by propagating down options
+   * from the maven build (S3Guard binding etc) and turning off unwanted
+   * YARN features.
+   *
+   * If an HDFS cluster is requested,
+   * the HDFS and YARN clusters will share the same configuration, so
    * the HDFS cluster binding is implicitly propagated to YARN.
+   * If one is not requested, the local filesystem is used as the cluster FS.
    * @param conf configuration to start with.
+   * @param useHDFS should an HDFS cluster be instantiated.
    * @return the cluster binding.
    * @throws IOException failure.
    */
-  protected static ClusterBinding createCluster(JobConf conf)
-      throws IOException {
-
+  protected static ClusterBinding createCluster(
+      final JobConf conf,
+      final boolean useHDFS) throws IOException {
+    prepareTestConfiguration(conf);
     conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
-
-    // create a unique cluster name.
-    String clusterName = "yarn-" + UUID.randomUUID();
-    MiniDFSClusterService miniDFSClusterService = deployService(conf,
-        new MiniDFSClusterService());
+    // minicluster tests overreact to not enough disk space.
+    conf.setBoolean(YarnConfiguration.NM_DISK_HEALTH_CHECK_ENABLE, false);
+    conf.setInt(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 100);
+    // create a unique cluster name based on the current time in millis.
+    String timestamp = LocalDateTime.now().format(
+        DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SS"));
+    String clusterName = "yarn-" + timestamp;
+    MiniDFSClusterService miniDFSClusterService =
+        useHDFS
+            ? deployService(conf, new MiniDFSClusterService())
+            : null;
     MiniMRYarnCluster yarnCluster = deployService(conf,
-        new MiniMRYarnCluster(clusterName, 2));
-    return new ClusterBinding(miniDFSClusterService, yarnCluster);
+        new MiniMRYarnCluster(clusterName, NO_OF_NODEMANAGERS));
+    return new ClusterBinding(clusterName, miniDFSClusterService, yarnCluster);
   }
 
   /**
-   * Get the cluster binding for this subclass
-   * @return
+   * Terminate the cluster if it is not null.
+   * @param cluster the cluster
    */
-  protected abstract ClusterBinding getClusterBinding();
-
-  protected MiniDFSClusterService getHdfs() {
-    return getClusterBinding().getHdfs();
+  protected static void terminateCluster(ClusterBinding cluster) {
+    if (cluster != null) {
+      cluster.terminate();
+    }
   }
 
+  /**
+   * Get the cluster binding for this subclass.
+   * @return the cluster binding
+   */
+  protected ClusterBinding getClusterBinding() {
+    return clusterBinding;
+  }
 
   protected MiniMRYarnCluster getYarn() {
     return getClusterBinding().getYarn();
   }
 
-  public FileSystem getLocalFS() {
-    return getHdfs().getLocalFS();
+  /**
+   * Get the cluster filesystem -hdfs or local.
+   * @return the filesystem shared across the yarn nodes.
+   */
+  protected FileSystem getClusterFS() throws IOException {
+    return getClusterBinding().getClusterFS();
   }
 
-  protected FileSystem getDFS() {
-    return getHdfs().getClusterFS();
-  }
+
+  /**
+   * We stage work into a temporary directory rather than directly under
+   * the user's home directory, as that is often rejected by CI test
+   * runners.
+   */
+  @Rule
+  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
 
   /**
    * The name of the committer as returned by
-   * {@link AbstractS3ACommitter#getName()} and used for committer construction.
+   * {@link AbstractS3ACommitter#getName()}
+   * and used for committer construction.
    */
   protected abstract String committerName();
+
+  /**
+   * binding on demand rather than in a BeforeClass static method.
+   * Subclasses can override this to change the binding options.
+   * @return the cluster binding
+   */
+  protected ClusterBinding demandCreateClusterBinding() throws Exception {
+    return createCluster(new JobConf(), false);
+  }
 
   @Override
   public void setup() throws Exception {
     super.setup();
-    assertNotNull("cluster is not bound",
-        getClusterBinding());
 
     scaleTest = getTestPropertyBool(
         getConfiguration(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
+    if (getClusterBinding() == null) {
+      clusterBinding = demandCreateClusterBinding();
+    }
+    assertNotNull("cluster is not bound",
+        getClusterBinding());
+
   }
 
   @Override
@@ -184,27 +266,46 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return SCALE_TEST_TIMEOUT_SECONDS * 1000;
   }
 
-  protected JobConf newJobConf() {
-    return new JobConf(getYarn().getConfig());
+  /**
+   * Create a job configuration.
+   * This creates a new job conf from the yarn
+   * cluster configuration then calls
+   * {@link #applyCustomConfigOptions(JobConf)} to allow it to be customized.
+   * @return the new job configuration.
+   * @throws IOException failure
+   */
+  protected JobConf newJobConf() throws IOException {
+    JobConf jobConf = new JobConf(getYarn().getConfig());
+    jobConf.addResource(getConfiguration());
+    applyCustomConfigOptions(jobConf);
+    return jobConf;
   }
 
 
-  protected Job createJob() throws IOException {
-    Job mrJob = Job.getInstance(getClusterBinding().getConf(),
-        getMethodName());
+  protected Job createJob(Configuration jobConf) throws IOException {
+    Job mrJob = Job.getInstance(jobConf, getMethodName());
     patchConfigurationForCommitter(mrJob.getConfiguration());
     return mrJob;
   }
 
+  /**
+   * Patch the (job) configuration for this committer.
+   * @param jobConf configuration to patch
+   * @return a configuration which will run this configuration.
+   */
   protected Configuration patchConfigurationForCommitter(
       final Configuration jobConf) {
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        uniqueFilenames);
+        isUniqueFilenames());
     bindCommitter(jobConf,
         CommitConstants.S3A_COMMITTER_FACTORY,
         committerName());
     // pass down the scale test flag
-    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
+    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, isScaleTest());
+    // and fix the commit dir to the local FS across all workers.
+    String staging = stagingFilesDir.getRoot().getAbsolutePath();
+    LOG.info("Staging temp dir is {}", staging);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, staging);
     return jobConf;
   }
 
@@ -213,7 +314,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * @return the number of mappers to create.
    */
   public int getTestFileCount() {
-    return scaleTest ? SCALE_TEST_FILE_COUNT : TEST_FILE_COUNT;
+    return isScaleTest() ? SCALE_TEST_FILE_COUNT : TEST_FILE_COUNT;
   }
 
   /**
@@ -251,6 +352,6 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   }
 
   public boolean isUniqueFilenames() {
-    return uniqueFilenames;
+    return false;
   }
 }

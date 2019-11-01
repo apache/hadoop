@@ -43,11 +43,24 @@ public class RouterHDFSContract extends HDFSContract {
   }
 
   public static void createCluster() throws IOException {
+    createCluster(false);
+  }
+
+  public static void createCluster(boolean security) throws IOException {
+    createCluster(true, 2, security);
+  }
+
+  public static void createCluster(
+      boolean ha, int numNameServices, boolean security) throws IOException {
     try {
-      cluster = new MiniRouterDFSCluster(true, 2);
+      Configuration conf = null;
+      if (security) {
+        conf = SecurityConfUtil.initSecurity();
+      }
+      cluster = new MiniRouterDFSCluster(ha, numNameServices, conf);
 
       // Start NNs and DNs and wait until ready
-      cluster.startCluster();
+      cluster.startCluster(conf);
 
       // Start routers with only an RPC service
       cluster.startRouters();
@@ -79,10 +92,19 @@ public class RouterHDFSContract extends HDFSContract {
       cluster.shutdown();
       cluster = null;
     }
+    try {
+      SecurityConfUtil.destroy();
+    } catch (Exception e) {
+      throw new IOException("Cannot destroy security context", e);
+    }
   }
 
   public static MiniDFSCluster getCluster() {
     return cluster.getCluster();
+  }
+
+  public static MiniRouterDFSCluster getRouterCluster() {
+    return cluster;
   }
 
   public static FileSystem getFileSystem() throws IOException {

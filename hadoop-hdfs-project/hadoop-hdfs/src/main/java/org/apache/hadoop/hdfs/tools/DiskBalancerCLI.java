@@ -21,6 +21,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -37,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 
 /**
  * DiskBalancer is a tool that can be used to ensure that data is spread evenly
@@ -191,6 +193,12 @@ public class DiskBalancerCLI extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options opts = getOpts();
     CommandLine cmd = parseArgs(args, opts);
+    String[] cmdArgs = cmd.getArgs();
+    if (cmdArgs.length > 2) {
+      throw new HadoopIllegalArgumentException(
+          "Invalid or extra Arguments: " + Arrays
+              .toString(Arrays.copyOfRange(cmdArgs, 2, cmdArgs.length)));
+    }
     return dispatch(cmd, opts);
   }
 

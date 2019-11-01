@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
@@ -26,9 +27,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
@@ -123,10 +126,23 @@ class GlobalStateIdContext implements AlignmentContext {
    */
   @Override
   public long receiveRequestState(RpcRequestHeaderProto header,
-      long clientWaitTime) throws RetriableException {
-    long serverStateId =
-        namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+      long clientWaitTime) throws IOException {
+    if (!header.hasStateId() &&
+        HAServiceState.OBSERVER.equals(namesystem.getState())) {
+      // This could happen if client configured with non-observer proxy provider
+      // (e.g., ConfiguredFailoverProxyProvider) is accessing a cluster with
+      // observers. In this case, we should let the client failover to the
+      // active node, rather than potentially serving stale result (client
+      // stateId is 0 if not set).
+      throw new StandbyException("Observer Node received request without "
+          + "stateId. This mostly likely is because client is not configured "
+          + "with " + ObserverReadProxyProvider.class.getSimpleName());
+    }
+    long serverStateId = getLastSeenStateId();
     long clientStateId = header.getStateId();
+    FSNamesystem.LOG.trace("Client State ID= {} and Server State ID= {}",
+        clientStateId, serverStateId);
+
     if (clientStateId > serverStateId &&
         HAServiceState.ACTIVE.equals(namesystem.getState())) {
       FSNamesystem.LOG.warn("The client stateId: {} is greater than "
@@ -149,7 +165,9 @@ class GlobalStateIdContext implements AlignmentContext {
 
   @Override
   public long getLastSeenStateId() {
-    return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+    // Should not need to call getCorrectLastAppliedOrWrittenTxId()
+    // see HDFS-14822.
+    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
   }
 
   @Override

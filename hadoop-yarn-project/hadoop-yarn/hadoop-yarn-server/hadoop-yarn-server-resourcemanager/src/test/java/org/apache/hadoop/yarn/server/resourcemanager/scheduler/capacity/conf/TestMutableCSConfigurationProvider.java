@@ -104,6 +104,47 @@ public class TestMutableCSConfigurationProvider {
     confProvider.confirmPendingMutation(false);
     assertNull(confProvider.loadConfiguration(conf).get(
         "yarn.scheduler.capacity.root.a.badKey"));
+
+    confProvider.formatConfigurationInStore(conf);
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
+  }
+
+  @Test
+  public void testRemoveQueueConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+    confProvider.init(conf);
+
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> updateMap = new HashMap<>();
+    updateMap.put("testkey1", "testval1");
+    updateMap.put("testkey2", "testval2");
+    QueueConfigInfo queueConfigInfo = new
+        QueueConfigInfo("root.a", updateMap);
+    updateInfo.getUpdateQueueInfo().add(queueConfigInfo);
+
+    confProvider.logAndApplyMutation(TEST_USER, updateInfo);
+    confProvider.confirmPendingMutation(true);
+    assertEquals("testval1", confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey1"));
+    assertEquals("testval2", confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey2"));
+
+    // Unset testkey1.
+    updateInfo = new SchedConfUpdateInfo();
+    updateMap.put("testkey1", "");
+    queueConfigInfo = new QueueConfigInfo("root.a", updateMap);
+    updateInfo.getUpdateQueueInfo().add(queueConfigInfo);
+
+    confProvider.logAndApplyMutation(TEST_USER, updateInfo);
+    confProvider.confirmPendingMutation(true);
+    assertNull("Failed to remove config",
+        confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey1"));
+    assertEquals("testval2", confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey2"));
   }
 
   @Test
@@ -136,6 +177,10 @@ public class TestMutableCSConfigurationProvider {
     confProvider.confirmPendingMutation(false);
     assertNull(confProvider.loadConfiguration(conf).get(
         "yarn.scheduler.capacity.root.a.badKey"));
+
+    confProvider.formatConfigurationInStore(conf);
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
 
   }
 

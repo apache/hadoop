@@ -57,6 +57,8 @@ public class TestKeyCodec {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private OzoneConfiguration configuration;
+  private SecurityConfig securityConfig;
+  private String component;
   private HDDSKeyGenerator keyGenerator;
   private String prefix;
 
@@ -66,6 +68,8 @@ public class TestKeyCodec {
     prefix = temporaryFolder.newFolder().toString();
     configuration.set(HDDS_METADATA_DIR_NAME, prefix);
     keyGenerator = new HDDSKeyGenerator(configuration);
+    securityConfig = new SecurityConfig(configuration);
+    component = "test_component";
   }
 
   /**
@@ -83,11 +87,11 @@ public class TestKeyCodec {
       throws NoSuchProviderException, NoSuchAlgorithmException,
       IOException, InvalidKeySpecException {
     KeyPair keys = keyGenerator.generateKey();
-    KeyCodec pemWriter = new KeyCodec(configuration);
+    KeyCodec pemWriter = new KeyCodec(securityConfig, component);
     pemWriter.writeKey(keys);
 
     // Assert that locations have been created.
-    Path keyLocation = pemWriter.getSecurityConfig().getKeyLocation();
+    Path keyLocation = pemWriter.getSecurityConfig().getKeyLocation(component);
     Assert.assertTrue(keyLocation.toFile().exists());
 
     // Assert that locations are created in the locations that we specified
@@ -172,7 +176,7 @@ public class TestKeyCodec {
   public void testReWriteKey()
       throws Exception {
     KeyPair kp = keyGenerator.generateKey();
-    KeyCodec pemWriter = new KeyCodec(configuration);
+    KeyCodec pemWriter = new KeyCodec(securityConfig, component);
     SecurityConfig secConfig = pemWriter.getSecurityConfig();
     pemWriter.writeKey(kp);
 
@@ -181,13 +185,13 @@ public class TestKeyCodec {
         .intercept(IOException.class, "Private Key file already exists.",
             () -> pemWriter.writeKey(kp));
     FileUtils.deleteQuietly(Paths.get(
-        secConfig.getKeyLocation().toString() + "/" + secConfig
+        secConfig.getKeyLocation(component).toString() + "/" + secConfig
             .getPrivateKeyFileName()).toFile());
     LambdaTestUtils
         .intercept(IOException.class, "Public Key file already exists.",
             () -> pemWriter.writeKey(kp));
     FileUtils.deleteQuietly(Paths.get(
-        secConfig.getKeyLocation().toString() + "/" + secConfig
+        secConfig.getKeyLocation(component).toString() + "/" + secConfig
             .getPublicKeyFileName()).toFile());
 
     // Should succeed now as both public and private key are deleted.
@@ -206,7 +210,7 @@ public class TestKeyCodec {
   public void testWriteKeyInNonPosixFS()
       throws Exception {
     KeyPair kp = keyGenerator.generateKey();
-    KeyCodec pemWriter = new KeyCodec(configuration);
+    KeyCodec pemWriter = new KeyCodec(securityConfig, component);
     pemWriter.setIsPosixFileSystem(() -> false);
 
     // Assert key rewrite fails in non Posix file system.
@@ -221,7 +225,7 @@ public class TestKeyCodec {
       InvalidKeySpecException {
 
     KeyPair kp = keyGenerator.generateKey();
-    KeyCodec keycodec = new KeyCodec(configuration);
+    KeyCodec keycodec = new KeyCodec(securityConfig, component);
     keycodec.writeKey(kp);
 
     PublicKey pubKey = keycodec.readPublicKey();

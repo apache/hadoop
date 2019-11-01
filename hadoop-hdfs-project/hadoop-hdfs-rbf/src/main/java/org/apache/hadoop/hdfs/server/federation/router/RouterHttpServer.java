@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
@@ -84,12 +83,14 @@ public class RouterHttpServer extends AbstractService {
     String webApp = "router";
     HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(
         this.conf, this.httpAddress, this.httpsAddress, webApp,
-        DFSConfigKeys.DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+        RBFConfigKeys.DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
+        RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY);
 
     this.httpServer = builder.build();
 
-    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), null,
+    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+        RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY));
+    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), httpKeytab,
         httpServer, RouterWebHdfsMethods.class.getPackage().getName());
 
     this.httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, this.router);

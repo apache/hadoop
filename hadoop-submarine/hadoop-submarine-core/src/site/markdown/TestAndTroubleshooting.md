@@ -37,7 +37,7 @@ Distributed-shell + GPU + cgroup
 
 ## Issues:
 
-### Issue 1: Fail to start nodemanager after system reboot
+### Issue 1: Fail to start NodeManager after system reboot
 
 ```
 2018-09-20 18:54:39,785 ERROR org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor: Failed to bootstrap configured resource subsystems!
@@ -62,7 +62,7 @@ chown :yarn -R /sys/fs/cgroup/cpu,cpuacct
 chmod g+rwx -R /sys/fs/cgroup/cpu,cpuacct
 ```
 
-If GPUs are used，the access to cgroup devices folder is neede as well
+If GPUs are used, access to cgroup devices folder is required as well.
 
 ```
 chown :yarn -R /sys/fs/cgroup/devices
@@ -140,7 +140,7 @@ $ chmod +x find-busy-mnt.sh
 $ kill -9 5007
 ```
 
-### Issue 5：Yarn failed to start containers
+### Issue 5：YARN fails to start containers
 
-if the number of GPUs required by applications is larger than the number of GPUs in the cluster, there would be some containers can't be created.
+If the number of GPUs required by an application is greater than the number of GPUs in the cluster, some container will not be created.
 

@@ -25,12 +25,16 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -39,13 +43,16 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -143,10 +150,10 @@ public class TestActivitiesManager {
             .recordAppActivityWithoutAllocation(activitiesManager, node,
                 randomApp,
                 new SchedulerRequestKey(Priority.newInstance(0), 0, null),
-                ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
-                ActivityState.REJECTED);
+                ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+                ActivityState.REJECTED, ActivityLevel.NODE);
         ActivitiesLogger.NODE
-            .finishNodeUpdateRecording(activitiesManager, node.getNodeID());
+            .finishNodeUpdateRecording(activitiesManager, node.getNodeID(), "");
         return null;
       };
       futures.add(threadPoolExecutor.submit(task));
@@ -188,10 +195,10 @@ public class TestActivitiesManager {
             .recordAppActivityWithoutAllocation(activitiesManager, node,
                 randomApp,
                 new SchedulerRequestKey(Priority.newInstance(0), 0, null),
-                ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
-                ActivityState.REJECTED);
+                ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+                ActivityState.REJECTED, ActivityLevel.NODE);
         ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
-            ActivitiesManager.EMPTY_NODE_ID);
+            ActivitiesManager.EMPTY_NODE_ID, "");
         return null;
       };
       futures.add(threadPoolExecutor.submit(task));
@@ -229,13 +236,13 @@ public class TestActivitiesManager {
               .recordAppActivityWithoutAllocation(activitiesManager, node,
                   randomApp,
                   new SchedulerRequestKey(Priority.newInstance(0), 0, null),
-                  ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
-                  ActivityState.REJECTED);
+                  ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+                  ActivityState.REJECTED, ActivityLevel.NODE);
         }
         ActivitiesLogger.APP
-            .finishAllocatedAppAllocationRecording(activitiesManager,
-                randomApp.getApplicationId(), null, ActivityState.SKIPPED,
-                ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
+            .finishSkippedAppAllocationRecording(activitiesManager,
+                randomApp.getApplicationId(), ActivityState.SKIPPED,
+                ActivityDiagnosticConstant.EMPTY);
         return null;
       };
       futures.add(threadPoolExecutor.submit(task));
@@ -278,24 +285,188 @@ public class TestActivitiesManager {
       ActivitiesLogger.APP
           .recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
               new SchedulerRequestKey(Priority.newInstance(0), 0, null),
-              ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
-              ActivityState.REJECTED);
+              ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+              ActivityState.REJECTED, ActivityLevel.NODE);
       ActivitiesLogger.APP
-          .finishAllocatedAppAllocationRecording(newActivitiesManager,
-              app.getApplicationId(), null, ActivityState.SKIPPED,
-              ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
+          .finishSkippedAppAllocationRecording(newActivitiesManager,
+              app.getApplicationId(), ActivityState.SKIPPED,
+              ActivityDiagnosticConstant.EMPTY);
     }
     AppActivitiesInfo appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            false, 3);
     Assert.assertEquals(numActivities,
         appActivitiesInfo.getAllocations().size());
     // sleep until all app activities expired
     Thread.sleep(cleanupIntervalMs + appActivitiesTTL);
     // there should be no remaining app activities
     appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            false, 3);
     Assert.assertEquals(0,
         appActivitiesInfo.getAllocations().size());
+  }
+
+  @Test (timeout = 30000)
+  public void testAppActivitiesPerformance() {
+    // start recording activities for first app
+    SchedulerApplicationAttempt app = apps.get(0);
+    FiCaSchedulerNode node = (FiCaSchedulerNode) nodes.get(0);
+    activitiesManager.turnOnAppActivitiesRecording(app.getApplicationId(), 100);
+    int numActivities = 100;
+    int numNodes = 10000;
+    int testingTimes = 10;
+    for (int ano = 0; ano < numActivities; ano++) {
+      ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager, node,
+          SystemClock.getInstance().getTime(), app);
+      for (int i = 0; i < numNodes; i++) {
+        NodeId nodeId = NodeId.newInstance("host" + i, 0);
+        activitiesManager
+            .addSchedulingActivityForApp(app.getApplicationId(), null, 0,
+                ActivityState.SKIPPED,
+                ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
+                ActivityLevel.NODE, nodeId, 0L);
+      }
+      ActivitiesLogger.APP
+          .finishSkippedAppAllocationRecording(activitiesManager,
+              app.getApplicationId(), ActivityState.SKIPPED,
+              ActivityDiagnosticConstant.EMPTY);
+    }
+
+    // It often take a longer time for the first query, ignore this distraction
+    activitiesManager
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            true, 100);
+
+    // Test getting normal app activities
+    Supplier<Void> normalSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+              false, 100);
+      Assert.assertEquals(numActivities,
+          appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .get(0).getChildren().size());
+      return null;
+    };
+    testManyTimes("Getting normal app activities", normalSupplier,
+        testingTimes);
+
+    // Test getting aggregated app activities
+    Supplier<Void> aggregatedSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null,
+              RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, false, 100);
+      Assert.assertEquals(numActivities,
+          appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .get(0).getChildren().size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .get(0).getChildren().get(0).getNodeIds().size());
+      return null;
+    };
+    testManyTimes("Getting aggregated app activities", aggregatedSupplier,
+        testingTimes);
+
+    // Test getting summarized app activities
+    Supplier<Void> summarizedSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null,
+              RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, true, 100);
+      Assert.assertEquals(1, appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .get(0).getChildren().size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getChildren()
+              .get(0).getChildren().get(0).getNodeIds().size());
+      return null;
+    };
+    testManyTimes("Getting summarized app activities", summarizedSupplier,
+        testingTimes);
+  }
+
+  @Test (timeout = 10000)
+  public void testAppActivitiesMaxQueueLengthUpdate()
+      throws TimeoutException, InterruptedException {
+    Configuration conf = new Configuration();
+    int configuredAppActivitiesMaxQueueLength = 1;
+    conf.setInt(YarnConfiguration.
+            RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH,
+        configuredAppActivitiesMaxQueueLength);
+    conf.setInt(YarnConfiguration.RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS,
+        500);
+    ConcurrentMap<NodeId, RMNode> mockNodes = new ConcurrentHashMap<>();
+    int numNodes = 5;
+    for (int i = 0; i < numNodes; i++) {
+      mockNodes.put(NodeId.newInstance("node" + i, 0), mock(RMNode.class));
+    }
+    CapacityScheduler cs = Mockito.mock(CapacityScheduler.class);
+    RMContext mockRMContext = Mockito.mock(RMContext.class);
+    Mockito.when(mockRMContext.getRMNodes()).thenReturn(mockNodes);
+    Mockito.when(mockRMContext.getYarnConfiguration()).thenReturn(conf);
+    Mockito.when(mockRMContext.getScheduler()).thenReturn(cs);
+    /*
+     * Test for async-scheduling with multi-node placement disabled
+     */
+    Mockito.when(cs.isMultiNodePlacementEnabled()).thenReturn(false);
+    int numAsyncSchedulerThreads = 3;
+    Mockito.when(cs.getNumAsyncSchedulerThreads())
+        .thenReturn(numAsyncSchedulerThreads);
+    ActivitiesManager newActivitiesManager =
+        new ActivitiesManager(mockRMContext);
+    Assert.assertEquals(1,
+        newActivitiesManager.getAppActivitiesMaxQueueLength());
+    newActivitiesManager.init(conf);
+    newActivitiesManager.start();
+    GenericTestUtils.waitFor(
+        () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
+            == numNodes * numAsyncSchedulerThreads, 100, 3000);
+    Assert.assertEquals(15,
+        newActivitiesManager.getAppActivitiesMaxQueueLength());
+    /*
+     * Test for HB-driven scheduling with multi-node placement disabled
+     */
+    Mockito.when(cs.getNumAsyncSchedulerThreads()).thenReturn(0);
+    GenericTestUtils.waitFor(
+        () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
+            == numNodes * 1.2, 100, 3000);
+    Assert.assertEquals(6,
+        newActivitiesManager.getAppActivitiesMaxQueueLength());
+    /*
+     * Test for scheduling with multi-node placement enabled
+     */
+    Mockito.when(cs.isMultiNodePlacementEnabled()).thenReturn(true);
+    GenericTestUtils.waitFor(
+        () -> newActivitiesManager.getAppActivitiesMaxQueueLength()
+            == configuredAppActivitiesMaxQueueLength, 100, 3000);
+    Assert.assertEquals(1,
+        newActivitiesManager.getAppActivitiesMaxQueueLength());
+  }
+
+  private void testManyTimes(String testingName,
+      Supplier<Void> supplier, int testingTimes) {
+    long totalTime = 0;
+    for (int i = 0; i < testingTimes; i++) {
+      long startTime = System.currentTimeMillis();
+      supplier.get();
+      totalTime += System.currentTimeMillis() - startTime;
+    }
+    System.out.println("#" + testingName + ", testing times : " + testingTimes
+        + ", total cost time : " + totalTime + " ms, average cost time : "
+        + (float) totalTime / testingTimes + " ms.");
   }
 
   /**

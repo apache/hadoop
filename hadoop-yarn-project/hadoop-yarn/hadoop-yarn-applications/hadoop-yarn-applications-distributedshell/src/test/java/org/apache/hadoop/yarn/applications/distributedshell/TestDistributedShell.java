@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -32,7 +33,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -52,7 +52,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -62,12 +61,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
@@ -97,6 +98,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -397,7 +399,6 @@ public class TestDistributedShell {
     YarnClient yarnClient = YarnClient.createYarnClient();
     yarnClient.init(new Configuration(yarnCluster.getConfig()));
     yarnClient.start();
-    String hostName = NetUtils.getHostname();
 
     boolean verified = false;
     String errorMessage = "";
@@ -416,10 +417,9 @@ public class TestDistributedShell {
         continue;
       }
       errorMessage =
-          "Expected host name to start with '" + hostName + "', was '"
-              + appReport.getHost() + "'. Expected rpc port to be '-1', was '"
+          "'. Expected rpc port to be '-1', was '"
               + appReport.getRpcPort() + "'.";
-      if (checkHostname(appReport.getHost()) && appReport.getRpcPort() == -1) {
+      if (appReport.getRpcPort() == -1) {
         verified = true;
       }
 
@@ -726,64 +726,6 @@ public class TestDistributedShell {
     return argsList.toArray(new String[argsList.size()]);
   }
 
-  /*
-   * NetUtils.getHostname() returns a string in the form "hostname/ip".
-   * Sometimes the hostname we get is the FQDN and sometimes the short name. In
-   * addition, on machines with multiple network interfaces, it runs any one of
-   * the ips. The function below compares the returns values for
-   * NetUtils.getHostname() accounting for the conditions mentioned.
-   */
-  private boolean checkHostname(String appHostname) throws Exception {
-
-    String hostname = NetUtils.getHostname();
-    if (hostname.equals(appHostname)) {
-      return true;
-    }
-
-    Assert.assertTrue("Unknown format for hostname " + appHostname,
-      appHostname.contains("/"));
-    Assert.assertTrue("Unknown format for hostname " + hostname,
-      hostname.contains("/"));
-
-    String[] appHostnameParts = appHostname.split("/");
-    String[] hostnameParts = hostname.split("/");
-
-    return (compareFQDNs(appHostnameParts[0], hostnameParts[0]) && checkIPs(
-      hostnameParts[0], hostnameParts[1], appHostnameParts[1]));
-  }
-
-  private boolean compareFQDNs(String appHostname, String hostname)
-      throws Exception {
-    if (appHostname.equals(hostname)) {
-      return true;
-    }
-    String appFQDN = InetAddress.getByName(appHostname).getCanonicalHostName();
-    String localFQDN = InetAddress.getByName(hostname).getCanonicalHostName();
-    return appFQDN.equals(localFQDN);
-  }
-
-  private boolean checkIPs(String hostname, String localIP, String appIP)
-      throws Exception {
-
-    if (localIP.equals(appIP)) {
-      return true;
-    }
-    boolean appIPCheck = false;
-    boolean localIPCheck = false;
-    InetAddress[] addresses = InetAddress.getAllByName(hostname);
-    for (InetAddress ia : addresses) {
-      if (ia.getHostAddress().equals(appIP)) {
-        appIPCheck = true;
-        continue;
-      }
-      if (ia.getHostAddress().equals(localIP)) {
-        localIPCheck = true;
-      }
-    }
-    return (appIPCheck && localIPCheck);
-
-  }
-
   protected String getSleepCommand(int sec) {
     // Windows doesn't have a sleep command, ping -n does the trick
     return Shell.WINDOWS ? "ping -n " + (sec + 1) + " 127.0.0.1 >nul"
@@ -956,6 +898,29 @@ public class TestDistributedShell {
     Assert.assertTrue(LOG_Client.isDebugEnabled());
     Assert.assertTrue(LOG_AM.isInfoEnabled());
     Assert.assertTrue(LOG_AM.isDebugEnabled());
+  }
+
+  @Test
+  public void testSpecifyingLogAggregationContext() throws Exception {
+    String regex = ".*(foo|bar)\\d";
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--shell_command",
+        "echo",
+        "--rolling_log_pattern",
+        regex
+    };
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    Assert.assertTrue(client.init(args));
+
+    ApplicationSubmissionContext context =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    client.specifyLogAggregationContext(context);
+    LogAggregationContext logContext = context.getLogAggregationContext();
+    assertEquals(logContext.getRolledLogsIncludePattern(), regex);
+    assertTrue(logContext.getRolledLogsExcludePattern().isEmpty());
   }
 
   public void testDSShellWithCommands() throws Exception {
