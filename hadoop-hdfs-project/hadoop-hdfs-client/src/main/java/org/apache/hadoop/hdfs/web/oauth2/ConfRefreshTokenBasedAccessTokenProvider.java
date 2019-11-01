@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.Response;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -103,11 +103,11 @@ public class ConfRefreshTokenBasedAccessTokenProvider
 
   void refresh() throws IOException {
     try {
-      OkHttpClient client = new OkHttpClient();
-      client.setConnectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-          TimeUnit.MILLISECONDS);
-      client.setReadTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-                TimeUnit.MILLISECONDS);
+      OkHttpClient client = new OkHttpClient.Builder()
+          .connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+              TimeUnit.MILLISECONDS)
+          .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+              TimeUnit.MILLISECONDS).build();
 
       String bodyString = Utils.postBody(GRANT_TYPE, REFRESH_TOKEN,
           REFRESH_TOKEN, refreshToken,

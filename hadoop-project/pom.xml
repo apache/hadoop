@@ -108,7 +108,7 @@
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp.version>2.7.5</okhttp.version>
+    <okhttp.version>3.14.4</okhttp.version>
     <jna.version>5.2.0</jna.version>
 
     <!-- Maven protoc compiler -->
@@ -177,7 +177,7 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.squareup.okhttp</groupId>
+        <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okhttp</artifactId>
         <version>${okhttp.version}</version>
       </dependency>
