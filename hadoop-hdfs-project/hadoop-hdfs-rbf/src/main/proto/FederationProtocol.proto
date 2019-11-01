@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
+
 option java_package = "org.apache.hadoop.hdfs.federation.protocol.proto";
 option java_outer_classname = "HdfsServerFederationProtos";
 option java_generic_services = true;

@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-syntax="proto2";
+
 // This file contains protocol buffers that are used to transfer data
 // to and from the datanode, as well as between datanodes.
 
