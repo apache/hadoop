@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,9 +54,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
  * cr: name of the caller method
  * ce: name of the callee method
  * r: result (Succeeded/Failed)
- * l: latency (time spend in callee)
- * ls: latency sum (aggregate time spend in caller; logged when there are multiple callees)
- * lc: latency count (number of callees; logged when there are multiple callees)
+ * l: latency (time spent in callee)
+ * ls: latency sum (aggregate time spent in caller; logged when there are multiple callees;
+ *     logged with the last callee)
+ * lc: latency count (number of callees; logged when there are multiple callees;
+ *     logged with the last callee)
  * s: HTTP Status code
  * e: Error code
  * ci: client request ID
@@ -73,6 +76,30 @@ public final class AbfsPerfTracker {
 
   // the logger
   private static final Logger LOG = LoggerFactory.getLogger(AbfsPerfTracker.class);
+
+  // the field names of perf log lines
+  private static final String HostNameKey = "h";
+  private static final String TimestampKey = "t";
+  private static final String StorageAccountNameKey = "a";
+  private static final String ContainerNameKey = "c";
+  private static final String CallerMethodNameKey = "cr";
+  private static final String CalleeMethodNameKey = "ce";
+  private static final String ResultKey = "r";
+  private static final String LatencyKey = "l";
+  private static final String LatencySumKey = "ls";
+  private static final String LatencyCountKey = "lc";
+  private static final String HttpStatusCodeKey = "s";
+  private static final String ErrorCodeKey = "e";
+  private static final String ClientRequestIdKey = "ci";
+  private static final String ServerRequestIdKey = "ri";
+  private static final String ConnectionTimeKey = "ct";
+  private static final String SendingTimeKey = "st";
+  private static final String ReceivingTimeKey = "rt";
+  private static final String BytesSentKey = "bs";
+  private static final String BytesReceivedKey = "br";
+  private static final String HttpMethodKey = "m";
+  private static final String HttpUrlKey = "u";
+  private static final String StringPlaceholder = "%s";
 
   // the queue to hold latency information
   private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
@@ -105,8 +132,71 @@ public final class AbfsPerfTracker {
         hostName = "UnknownHost";
       }
 
-      singletonLatencyReportingFormat = "h=" + hostName + " t=%s a=" + accountName + " c=" + filesystemName + " cr=%s ce=%s r=%s l=%s%s";
-      aggregateLatencyReportingFormat = "h=" + hostName + " t=%s a=" + accountName + " c=" + filesystemName + " cr=%s ce=%s r=%s l=%s ls=%s lc=%s%s";
+      String commonReportingFormat = new StringBuilder()
+              .append(HostNameKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(hostName)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(TimestampKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(StorageAccountNameKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(accountName)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(ContainerNameKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(filesystemName)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(CallerMethodNameKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(CalleeMethodNameKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(ResultKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(LatencyKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .toString();
+
+      /**
+        * Example singleton log (no ls or lc field)
+        * h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+        * c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath r=Succeeded l=32 s=200
+        * e= ci=95121dae-70a8-4187-b067-614091034558 ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+        * u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Fabfs-testcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+      */
+      singletonLatencyReportingFormat = new StringBuilder()
+              .append(commonReportingFormat)
+              .append(StringPlaceholder)
+              .toString();
+
+      /**
+       * Example aggregate log
+       * h=KARMA t=2019-10-25T20:21:14.518Z a=abfstest01.dfs.core.windows.net
+       * c=abfs-testcontainer-84828169-6488-4a62-a875-1e674275a29f cr=delete ce=deletePath r=Succeeded l=32 ls=32 lc=1 s=200
+       * e= ci=95121dae-70a8-4187-b067-614091034558 ri=97effdcf-201f-0097-2d71-8bae00000000 ct=0 st=0 rt=0 bs=0 br=0 m=DELETE
+       * u=https%3A%2F%2Fabfstest01.dfs.core.windows.net%2Fabfs-testcontainer%2Ftest%3Ftimeout%3D90%26recursive%3Dtrue
+       */
+      aggregateLatencyReportingFormat = new StringBuilder()
+              .append(commonReportingFormat)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(LatencySumKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
+              .append(LatencyCountKey)
+              .append(AbfsHttpConstants.EQUAL)
+              .append(StringPlaceholder)
+              .append(StringPlaceholder)
+              .toString();
     }
   }
 

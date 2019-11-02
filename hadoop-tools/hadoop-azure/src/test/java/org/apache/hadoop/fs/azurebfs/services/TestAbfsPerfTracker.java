@@ -27,10 +27,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Pattern;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -72,8 +70,10 @@ public final class TestAbfsPerfTracker {
     String latencyDetails = abfsPerfTracker.getClientLatency();
     assertThat(latencyDetails).describedAs("AbfsPerfTracker should be empty").isNull();
 
-    try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "disablingCaller", "disablingCallee")) {
-      tracker.registerResult(new AbfsHttpOperation(url, "GET", new ArrayList<>())).registerSuccess(true);
+    try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "disablingCaller",
+            "disablingCallee")) {
+      AbfsHttpOperation op = new AbfsHttpOperation(url, "GET", new ArrayList<>());
+      tracker.registerResult(op).registerSuccess(true);
     }
 
     latencyDetails = abfsPerfTracker.getClientLatency();
@@ -92,9 +92,10 @@ public final class TestAbfsPerfTracker {
     List<Callable<Integer>> tasks = new ArrayList<>();
     AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
           tracker.registerResult(httpOperation).registerSuccess(true);
           return 0;
         }
@@ -105,13 +106,13 @@ public final class TestAbfsPerfTracker {
       fr.get();
     }
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       latencyDetails = abfsPerfTracker.getClientLatency();
       assertThat(latencyDetails).describedAs("AbfsPerfTracker should return non-null record").isNotNull();
-      assertThat(Pattern.matches(
-              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
-                      + " s=0 e= ci=[^ ]* ri=[^ ]* ct=[0-9]+ st=[0-9]+ rt=[0-9]+ bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails))
-      .describedAs("Latency record should be in the correct format").isTrue();
+      assertThat(latencyDetails).describedAs("Latency record should be in the correct format")
+        .containsPattern("h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller"
+          + " ce=oneOperationCallee r=Succeeded l=[0-9]+ s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET"
+          + " u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile");
     }
 
     latencyDetails = abfsPerfTracker.getClientLatency();
@@ -125,15 +126,17 @@ public final class TestAbfsPerfTracker {
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, true);
 
     String latencyDetails = abfsPerfTracker.getClientLatency();
-    Assert.assertNull("AbfsPerfTracker should be empty", latencyDetails);
+    assertThat(latencyDetails).describedAs("AbfsPerfTracker should be empty").isNull();
 
     List<Callable<Integer>> tasks = new ArrayList<>();
     AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
-          tracker.registerResult(httpOperation).registerSuccess(true).registerAggregates(Instant.now(), TEST_AGGREGATE_COUNT);
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
+          tracker.registerResult(httpOperation).registerSuccess(true)
+                  .registerAggregates(Instant.now(), TEST_AGGREGATE_COUNT);
           return 0;
         }
       });
@@ -143,13 +146,13 @@ public final class TestAbfsPerfTracker {
       fr.get();
     }
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       latencyDetails = abfsPerfTracker.getClientLatency();
       assertThat(latencyDetails).describedAs("AbfsPerfTracker should return non-null record").isNotNull();
-      assertThat(Pattern.matches(
-              "h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller ce=oneOperationCallee r=Succeeded l=[0-9]+"
-                      + " ls=[0-9]+ lc=" + TEST_AGGREGATE_COUNT + " s=0 e= ci=[^ ]* ri=[^ ]* ct=[0-9]+ st=[0-9]+ rt=[0-9]+ bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile", latencyDetails))
-      .describedAs("Latency record should be in the correct format").isTrue();
+      assertThat(latencyDetails).describedAs("Latency record should be in the correct format")
+        .containsPattern("h=[^ ]* t=[^ ]* a=bogusFilesystemName c=bogusAccountName cr=oneOperationCaller"
+                + " ce=oneOperationCallee r=Succeeded l=[0-9]+ ls=[0-9]+ lc=" + TEST_AGGREGATE_COUNT
+                + " s=0 e= ci=[^ ]* ri=[^ ]* bs=0 br=0 m=GET u=http%3A%2F%2Fwww.microsoft.com%2FbogusFile");
     }
 
     latencyDetails = abfsPerfTracker.getClientLatency();
@@ -167,11 +170,12 @@ public final class TestAbfsPerfTracker {
     List<Callable<Long>> tasks = new ArrayList<>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startRecord = Instant.now();
 
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
           tracker.registerResult(httpOperation).registerSuccess(true);
         }
 
@@ -201,12 +205,14 @@ public final class TestAbfsPerfTracker {
     List<Callable<Long>> tasks = new ArrayList<>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startRecord = Instant.now();
 
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
-          tracker.registerResult(httpOperation).registerSuccess(true).registerAggregates(startRecord, TEST_AGGREGATE_COUNT);
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
+          tracker.registerResult(httpOperation).registerSuccess(true)
+                  .registerAggregates(startRecord, TEST_AGGREGATE_COUNT);
         }
 
         long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -234,7 +240,7 @@ public final class TestAbfsPerfTracker {
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, false);
     List<Callable<Long>> tasks = new ArrayList<>();
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startGet = Instant.now();
         abfsPerfTracker.getClientLatency();
@@ -263,11 +269,12 @@ public final class TestAbfsPerfTracker {
     List<Callable<Long>> tasks = new ArrayList<>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startRecord = Instant.now();
 
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
           tracker.registerResult(httpOperation).registerSuccess(true);
         }
 
@@ -296,12 +303,14 @@ public final class TestAbfsPerfTracker {
     List<Callable<Long>> tasks = new ArrayList<>();
     final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>());
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startRecord = Instant.now();
 
-        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller", "oneOperationCallee")) {
-          tracker.registerResult(httpOperation).registerSuccess(true).registerAggregates(startRecord, TEST_AGGREGATE_COUNT);
+        try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "oneOperationCaller",
+                "oneOperationCallee")) {
+          tracker.registerResult(httpOperation).registerSuccess(true).
+                  registerAggregates(startRecord, TEST_AGGREGATE_COUNT);
         }
 
         long latencyRecord = Duration.between(startRecord, Instant.now()).toMillis();
@@ -328,7 +337,7 @@ public final class TestAbfsPerfTracker {
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, true);
     List<Callable<Long>> tasks = new ArrayList<>();
 
-    for (int i=0; i < numTasks; i++) {
+    for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
         Instant startRecord = Instant.now();
         abfsPerfTracker.getClientLatency();
@@ -348,7 +357,7 @@ public final class TestAbfsPerfTracker {
   }
 
   @Test
-  public void verifyNoExceptionOnInvalidInputWhenDisabled() throws Exception {
+  public void verifyNoExceptionOnInvalidInput() throws Exception {
     Instant testInstant = Instant.now();
     AbfsPerfTracker abfsPerfTrackerDisabled = new AbfsPerfTracker(accountName, filesystemName, false);
     AbfsPerfTracker abfsPerfTrackerEnabled = new AbfsPerfTracker(accountName, filesystemName, true);

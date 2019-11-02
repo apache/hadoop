@@ -125,7 +125,9 @@ public class AbfsRestOperation {
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
 
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader("x-ms-abfs-client-latency", latencyHeader));
+      AbfsHttpHeader httpHeader =
+              new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
+      requestHeaders.add(httpHeader);
     }
 
     int retryCount = 0;

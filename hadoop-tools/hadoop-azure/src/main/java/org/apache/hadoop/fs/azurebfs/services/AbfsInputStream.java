@@ -226,9 +226,10 @@ public class AbfsInputStream extends FSInputStream {
       throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
     }
     final AbfsRestOperation op;
-    try (AbfsPerfInfo tracker = new AbfsPerfInfo(client.getAbfsPerfTracker(), "readRemote", "read")) {
+    AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+    try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
-      tracker.registerResult(op.getResult()).registerSuccess(true);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;

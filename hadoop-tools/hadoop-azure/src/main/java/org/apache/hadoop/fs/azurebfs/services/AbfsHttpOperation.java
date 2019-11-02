@@ -168,35 +168,41 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public String getLogString() {
     String urlStr = null;
 
-    try{
+    try {
       urlStr = URLEncoder.encode(url.toString(), "UTF-8");
     } catch(UnsupportedEncodingException e) {
       urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
     }
 
-    return new StringBuilder()
-      .append("s=")
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
       .append(statusCode)
       .append(" e=")
       .append(storageErrorCode)
       .append(" ci=")
       .append(clientRequestId)
       .append(" ri=")
-      .append(requestId)
-      .append(" ct=")
-      .append(connectionTimeMs)
-      .append(" st=")
-      .append(sendRequestTimeMs)
-      .append(" rt=")
-      .append(recvResponseTimeMs)
-      .append(" bs=")
+      .append(requestId);
+
+    if (isTraceEnabled) {
+      sb.append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs);
+    }
+
+    sb.append(" bs=")
       .append(bytesSent)
       .append(" br=")
       .append(bytesReceived)
       .append(" m=")
       .append(method)
       .append(" u=")
-      .append(urlStr).toString();
+      .append(urlStr);
+
+    return sb.toString();
   }
 
   /**
