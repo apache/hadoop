@@ -87,6 +87,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int maxApplicationsPerUser;
     int userLimit;
     float userLimitFactor;
+    long defaultApplicationLifetime;
+    long maxApplicationLifetime;
   }
 
   private static class WebServletModule extends ServletModule {
@@ -133,6 +135,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     config.setQueues(A, new String[] {"a1", "a2"});
     config.setCapacity(A1, 30);
     config.setMaximumCapacity(A1, 50);
+    config.setMaximumLifetimePerQueue(A2, 100);
+    config.setDefaultLifetimePerQueue(A2, 50);
 
     config.setUserLimitFactor(A1, 100.0f);
     config.setCapacity(A2, 70);
@@ -313,6 +317,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
       lqi.userLimitFactor =
           WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
+      lqi.defaultApplicationLifetime =
+          WebServicesTestUtils.getXmlLong(qElem, "defaultApplicationLifetime");
+      lqi.maxApplicationLifetime =
+          WebServicesTestUtils.getXmlLong(qElem, "maxApplicationLifetime");
       verifyLeafQueueGeneric(q, lqi);
     }
   }
@@ -323,7 +331,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 8, info.length());
+    assertEquals("incorrect number of elements in: " + info, 12, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
@@ -338,6 +346,16 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONArray lastRunDetails = health.getJSONArray("lastRunDetails");
     assertEquals("incorrect number of elements in: " + health, 3,
         lastRunDetails.length());
+
+    JSONObject maximumAllocation = info.getJSONObject("maximumAllocation");
+    assertEquals("8192", maximumAllocation.getString("memory"));
+    assertEquals("4", maximumAllocation.getString("vCores"));
+
+    JSONObject queueAcls = info.getJSONObject("queueAcls");
+    assertEquals(1, queueAcls.length());
+
+    assertEquals("0", info.getString("queuePriority"));
+    assertEquals("utilization", info.getString("orderingPolicyInfo"));
 
     JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
     assertEquals("incorrect number of elements in: " + arr, 2, arr.length());
@@ -393,6 +411,16 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         String q2 = q + "." + obj.getString("queueName");
         verifySubQueue(obj, q2, qi.absoluteCapacity, qi.absoluteMaxCapacity);
       }
+
+      JSONObject maximumAllocation = info.getJSONObject("maximumAllocation");
+      assertEquals("8192", maximumAllocation.getString("memory"));
+      assertEquals("4", maximumAllocation.getString("vCores"));
+
+      JSONObject queueAcls = info.getJSONObject("queueAcls");
+      assertEquals(1, queueAcls.length());
+
+      assertEquals("0", info.getString("queuePriority"));
+      assertEquals("utilization", info.getString("orderingPolicyInfo"));
     } else {
       Assert.assertEquals("\"type\" field is incorrect",
           "capacitySchedulerLeafQueueInfo", info.getString("type"));
@@ -404,6 +432,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
       lqi.userLimit = info.getInt("userLimit");
       lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
+      lqi.defaultApplicationLifetime =
+          info.getLong("defaultApplicationLifetime");
+      lqi.maxApplicationLifetime = info.getLong("maxApplicationLifetime");
       verifyLeafQueueGeneric(q, lqi);
       // resourcesUsed and users (per-user resources used) are checked in
       // testPerUserResource()
@@ -468,6 +499,15 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         info.userLimit);
     assertEquals("userLimitFactor doesn't match",
         csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
+
+    if (q.equals("root.a.a2")) {
+      assertEquals("defaultApplicationLifetime doesn't match",
+          csConf.getDefaultLifetimePerQueue(q),
+          info.defaultApplicationLifetime);
+      assertEquals("maxApplicationLifetime doesn't match",
+          csConf.getMaximumLifetimePerQueue(q),
+          info.maxApplicationLifetime);
+    }
   }
 
   //Return a child Node of node with the tagname or null if none exists
