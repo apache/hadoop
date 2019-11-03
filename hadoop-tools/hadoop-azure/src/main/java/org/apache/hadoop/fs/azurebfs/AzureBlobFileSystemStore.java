@@ -274,7 +274,8 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
-    try (AbfsPerfInfo perfInfo = startTracking("getFilesystemProperties", "getFilesystemProperties")) {
+    try (AbfsPerfInfo perfInfo = startTracking("getFilesystemProperties",
+            "getFilesystemProperties")) {
       LOG.debug("getFilesystemProperties for filesystem: {}",
               client.getFileSystem());
 
@@ -302,7 +303,8 @@ public class AzureBlobFileSystemStore implements Closeable {
             client.getFileSystem(),
             properties);
 
-    try (AbfsPerfInfo perfInfo = startTracking("setFilesystemProperties", "setFilesystemProperties")) {
+    try (AbfsPerfInfo perfInfo = startTracking("setFilesystemProperties",
+            "setFilesystemProperties")) {
       final String commaSeparatedProperties;
       try {
         commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
@@ -797,7 +799,10 @@ public class AzureBlobFileSystemStore implements Closeable {
       final String transformedOwner = identityTransformer.transformUserOrGroupForSetRequest(owner);
       final String transformedGroup = identityTransformer.transformUserOrGroupForSetRequest(group);
 
-      final AbfsRestOperation op = client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), transformedOwner, transformedGroup);
+      final AbfsRestOperation op = client.setOwner(
+              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+              transformedOwner,
+              transformedGroup);
 
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
@@ -818,7 +823,8 @@ public class AzureBlobFileSystemStore implements Closeable {
               path.toString(),
               permission.toString());
 
-      final AbfsRestOperation op = client.setPermission(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+      final AbfsRestOperation op = client.setPermission(
+              AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
               String.format(AbfsHttpConstants.PERMISSION_FORMAT, permission.toOctal()));
 
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -855,9 +861,12 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfoGet.registerSuccess(true).finishTracking();
 
       try (AbfsPerfInfo perfInfoSet = startTracking("modifyAclEntries", "setAcl")) {
-        final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        final AbfsRestOperation setAclOp
+                = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
                 AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
-        perfInfoSet.registerResult(setAclOp.getResult()).registerSuccess(true).registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
+        perfInfoSet.registerResult(setAclOp.getResult())
+                .registerSuccess(true)
+                .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
       }
     }
   }
@@ -891,9 +900,12 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfoGet.registerSuccess(true).finishTracking();
 
       try (AbfsPerfInfo perfInfoSet = startTracking("removeAclEntries", "setAcl")) {
-        final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        final AbfsRestOperation setAclOp =
+                client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
                 AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
-        perfInfoSet.registerResult(setAclOp.getResult()).registerSuccess(true).registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
+        perfInfoSet.registerResult(setAclOp.getResult())
+                .registerSuccess(true)
+                .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
       }
     }
   }
@@ -928,9 +940,12 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfoGet.registerSuccess(true).finishTracking();
 
       try (AbfsPerfInfo perfInfoSet = startTracking("removeDefaultAcl", "setAcl")) {
-        final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        final AbfsRestOperation setAclOp =
+                client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
                 AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
-        perfInfoSet.registerResult(setAclOp.getResult()).registerSuccess(true).registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
+        perfInfoSet.registerResult(setAclOp.getResult())
+                .registerSuccess(true)
+                .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
       }
     }
   }
@@ -962,9 +977,12 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfoGet.registerSuccess(true).finishTracking();
 
       try (AbfsPerfInfo perfInfoSet = startTracking("removeAcl", "setAcl")) {
-        final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        final AbfsRestOperation setAclOp =
+                client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
                 AbfsAclHelper.serializeAclSpec(newAclEntries), eTag);
-        perfInfoSet.registerResult(setAclOp.getResult()).registerSuccess(true).registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
+        perfInfoSet.registerResult(setAclOp.getResult())
+                .registerSuccess(true)
+                .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
       }
     }
   }
@@ -998,9 +1016,12 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfoGet.registerSuccess(true).finishTracking();
 
       try (AbfsPerfInfo perfInfoSet = startTracking("setAcl", "setAcl")) {
-        final AbfsRestOperation setAclOp = client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        final AbfsRestOperation setAclOp =
+                client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
                 AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
-        perfInfoSet.registerResult(setAclOp.getResult()).registerSuccess(true).registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
+        perfInfoSet.registerResult(setAclOp.getResult())
+                .registerSuccess(true)
+                .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);
       }
     }
   }
