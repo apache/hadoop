@@ -785,14 +785,15 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "setOwner filesystem: {} path: {} owner: {} group: {}",
-            client.getFileSystem(),
-            path.toString(),
-            owner,
-            group);
-
     try (AbfsPerfInfo perfInfo = startTracking("setOwner", "setOwner")) {
+
+      LOG.debug(
+              "setOwner filesystem: {} path: {} owner: {} group: {}",
+              client.getFileSystem(),
+              path.toString(),
+              owner,
+              group);
+
       final String transformedOwner = identityTransformer.transformUserOrGroupForSetRequest(owner);
       final String transformedGroup = identityTransformer.transformUserOrGroupForSetRequest(group);
 
@@ -809,13 +810,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "setPermission filesystem: {} path: {} permission: {}",
-            client.getFileSystem(),
-            path.toString(),
-            permission.toString());
-
     try (AbfsPerfInfo perfInfo = startTracking("setPermission", "setPermission")) {
+
+      LOG.debug(
+              "setPermission filesystem: {} path: {} permission: {}",
+              client.getFileSystem(),
+              path.toString(),
+              permission.toString());
+
       final AbfsRestOperation op = client.setPermission(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
               String.format(AbfsHttpConstants.PERMISSION_FORMAT, permission.toOctal()));
 
@@ -830,13 +832,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "modifyAclEntries filesystem: {} path: {} aclSpec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
     try (AbfsPerfInfo perfInfoGet = startTracking("modifyAclEntries", "getAclStatus")) {
+
+      LOG.debug(
+              "modifyAclEntries filesystem: {} path: {} aclSpec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
       identityTransformer.transformAclEntriesForSetRequest(aclSpec);
       final Map<String, String> modifyAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
       boolean useUpn = AbfsAclHelper.isUpnFormatAclEntries(modifyAclEntries);
@@ -865,13 +868,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "removeAclEntries filesystem: {} path: {} aclSpec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
     try (AbfsPerfInfo perfInfoGet = startTracking("removeAclEntries", "getAclStatus")) {
+
+      LOG.debug(
+              "removeAclEntries filesystem: {} path: {} aclSpec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
       identityTransformer.transformAclEntriesForSetRequest(aclSpec);
       final Map<String, String> removeAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
       boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(removeAclEntries);
@@ -900,12 +904,13 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "removeDefaultAcl filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
-
     try (AbfsPerfInfo perfInfoGet = startTracking("removeDefaultAcl", "getAclStatus")) {
+
+      LOG.debug(
+              "removeDefaultAcl filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+
       final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
       perfInfoGet.registerResult(op.getResult());
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
@@ -936,12 +941,13 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "removeAcl filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
-
     try (AbfsPerfInfo perfInfoGet = startTracking("removeAcl", "getAclStatus")){
+
+      LOG.debug(
+              "removeAcl filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+
       final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
       perfInfoGet.registerResult(op.getResult());
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
@@ -969,13 +975,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "setAcl filesystem: {} path: {} aclspec: {}",
-            client.getFileSystem(),
-            path.toString(),
-            AclEntry.aclSpecToString(aclSpec));
-
     try (AbfsPerfInfo perfInfoGet = startTracking("setAcl", "getAclStatus")) {
+
+      LOG.debug(
+              "setAcl filesystem: {} path: {} aclspec: {}",
+              client.getFileSystem(),
+              path.toString(),
+              AclEntry.aclSpecToString(aclSpec));
+
       identityTransformer.transformAclEntriesForSetRequest(aclSpec);
       final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
       final boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(aclEntries);
@@ -1004,25 +1011,27 @@ public class AzureBlobFileSystemStore implements Closeable {
               "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
-    LOG.debug(
-            "getAclStatus filesystem: {} path: {}",
-            client.getFileSystem(),
-            path.toString());
-
     try (AbfsPerfInfo perfInfo = startTracking("getAclStatus", "getAclStatus")) {
+
+      LOG.debug(
+              "getAclStatus filesystem: {} path: {}",
+              client.getFileSystem(),
+              path.toString());
+
       AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
-      perfInfo.registerResult(op.getResult());
+      AbfsHttpOperation result = op.getResult();
+      perfInfo.registerResult(result);
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
-              op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
               true,
               userName);
       final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
-              op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
               false,
               primaryUserGroup);
 
-      final String permissions = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
+      final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
       final String aclSpecString = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL);
 
       final List<AclEntry> aclEntries = AclEntry.parseAclSpec(AbfsAclHelper.processAclString(aclSpecString), true);
