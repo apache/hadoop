@@ -57,6 +57,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   @XmlTransient
   protected String orderingPolicyInfo;
 
+  @XmlTransient
+  protected String orderingPolicyDisplayName;
+
   CapacitySchedulerLeafQueueInfo() {
   };
 
@@ -74,7 +77,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
     preemptionDisabled = q.getPreemptionDisabled();
     intraQueuePreemptionDisabled = q.getIntraQueuePreemptionDisabled();
-    orderingPolicyInfo = q.getOrderingPolicy().getInfo();
+    orderingPolicyDisplayName = q.getOrderingPolicy().getInfo();
+    orderingPolicyInfo = q.getOrderingPolicy().getConfigName();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
     ArrayList<UserInfo> usersList = users.getUsersList();
@@ -155,6 +159,10 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public boolean getIntraQueuePreemptionDisabled() {
     return intraQueuePreemptionDisabled;
+  }
+
+  public String getOrderingPolicyDisplayName() {
+    return orderingPolicyDisplayName;
   }
   
   public String getOrderingPolicyInfo() {
