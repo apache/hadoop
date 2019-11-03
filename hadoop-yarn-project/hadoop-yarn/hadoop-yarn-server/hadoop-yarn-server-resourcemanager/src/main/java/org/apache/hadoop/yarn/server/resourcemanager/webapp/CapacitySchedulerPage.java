@@ -201,7 +201,7 @@ class CapacitySchedulerPage extends RmView {
           __("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
           __("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
           __("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
-          __("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
+          __("Ordering Policy: ", lqinfo.getOrderingPolicyDisplayName()).
           __("Preemption:",
               lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
           __("Intra-queue Preemption:", lqinfo.getIntraQueuePreemptionDisabled()

@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 
@@ -117,6 +118,11 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
   public String getInfo() {
     String sbw = sizeBasedWeight ? " with sizeBasedWeight" : "";
     return "FairOrderingPolicy" + sbw;
+  }
+
+  @Override
+  public String getConfigName() {
+    return CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY;
   }
 
 }
