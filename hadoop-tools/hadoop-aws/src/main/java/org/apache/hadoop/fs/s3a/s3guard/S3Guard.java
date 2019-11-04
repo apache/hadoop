@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -815,5 +816,46 @@ public final class S3Guard {
       }
     }
     return false;
+  }
+
+  public static final String DISABLED_LOG_MSG =
+      "S3Guard is disabled on this bucket: {}";
+
+  public static final String UNKNOWN_WARN_LEVEL =
+      "Unknown S3Guard disabled warn level: ";
+
+  public enum DisabledWarnLevel {
+    SILENT,
+    INFORM,
+    WARN,
+    FAIL
+  }
+
+  public static void logS3GuardDisabled(Logger logger, String warnLevelStr,
+      String bucket)
+      throws UnsupportedOperationException, IllegalArgumentException {
+    final DisabledWarnLevel warnLevel;
+    try {
+      warnLevel = DisabledWarnLevel.valueOf(warnLevelStr.toUpperCase(Locale.US));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr, e);
+    }
+
+    switch (warnLevel) {
+    case SILENT:
+      logger.debug(DISABLED_LOG_MSG, bucket);
+      break;
+    case INFORM:
+      logger.info(DISABLED_LOG_MSG, bucket);
+      break;
+    case WARN:
+      logger.warn(DISABLED_LOG_MSG, bucket);
+      break;
+    case FAIL:
+      logger.error(DISABLED_LOG_MSG, bucket);
+      throw new UnsupportedOperationException(DISABLED_LOG_MSG + bucket);
+    default:
+      throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr);
+    }
   }
 }
