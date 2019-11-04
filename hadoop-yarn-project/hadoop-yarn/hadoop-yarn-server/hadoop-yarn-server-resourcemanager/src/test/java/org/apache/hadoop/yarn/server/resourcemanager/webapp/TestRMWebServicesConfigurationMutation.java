@@ -60,6 +60,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
 /**
  * Test scheduler configuration mutation via REST API.
@@ -331,6 +332,105 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(4, newCSConf.getQueues("root").length);
     assertEquals(25.0f, newCSConf.getNonLabeledQueueCapacity("root.d"), 0.01f);
     assertEquals(50.0f, newCSConf.getNonLabeledQueueCapacity("root.b"), 0.01f);
+  }
+
+  @Test
+  public void testUnsetParentQueueOrderingPolicy() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // Update ordering policy of Leaf Queue root.b to fair
+    SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.ORDERING_POLICY,
+        "fair");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.b", updateParam);
+    updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    String bOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.b" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertEquals("fair", newCSConf.get(bOrderingPolicy));
+
+    stopQueue("root.b");
+
+    // Add root.b.b1 which makes root.b a Parent Queue
+    SchedConfUpdateInfo updateInfo2 = new SchedConfUpdateInfo();
+    Map<String, String> capacity = new HashMap<>();
+    capacity.put(CapacitySchedulerConfiguration.CAPACITY, "100");
+    QueueConfigInfo b1 = new QueueConfigInfo("root.b.b1", capacity);
+    updateInfo2.getAddQueueInfo().add(b1);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+
+    // Validate unset ordering policy of root.b after converted to
+    // Parent Queue
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    newCSConf = ((CapacityScheduler) rm.getResourceScheduler())
+        .getConfiguration();
+    bOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.b" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertNull("Failed to unset Parent Queue OrderingPolicy",
+        newCSConf.get(bOrderingPolicy));
+  }
+
+  @Test
+  public void testUnsetLeafQueueOrderingPolicy() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // Update ordering policy of Parent Queue root.c to priority-utilization
+    SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
+    Map<String, String> updateParam = new HashMap<>();
+    updateParam.put(CapacitySchedulerConfiguration.ORDERING_POLICY,
+        "priority-utilization");
+    QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.c", updateParam);
+    updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    CapacitySchedulerConfiguration newCSConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    String cOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.c" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertEquals("priority-utilization", newCSConf.get(cOrderingPolicy));
+
+    stopQueue("root.c.c1");
+
+    // Remove root.c.c1 which makes root.c a Leaf Queue
+    SchedConfUpdateInfo updateInfo2 = new SchedConfUpdateInfo();
+    updateInfo2.getRemoveQueueInfo().add("root.c.c1");
+    response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-conf").queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    // Validate unset ordering policy of root.c after converted to
+    // Leaf Queue
+    newCSConf = ((CapacityScheduler) rm.getResourceScheduler())
+        .getConfiguration();
+    cOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+        + "root.c" + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    assertNull("Failed to unset Leaf Queue OrderingPolicy",
+        newCSConf.get(cOrderingPolicy));
   }
 
   @Test
