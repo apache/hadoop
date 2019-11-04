@@ -426,6 +426,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
       }
+
+      // LOG if S3Guard is disabled on the warn level set in config
+      if (!hasMetadataStore()) {
+        String warnLevel = conf.getTrimmed(S3GUARD_DISABLED_WARN_LEVEL,
+            DEFAULT_S3GUARD_DISABLED_WARN_LEVEL);
+        S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
+      }
+
       initMultipartUploads(conf);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
@@ -2192,7 +2200,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Invoke {@link #removeKeysS3(List, boolean)} with handling of
+   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
    * {@code MultiObjectDeleteException}.
    *
    * @param keysToDelete collection of keys to delete on the s3-backend.
