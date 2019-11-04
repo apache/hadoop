@@ -1488,7 +1488,7 @@ class BlockReceiver implements Closeable {
             removeAckHead();
           }
         } catch (IOException e) {
-          LOG.warn("IOException in BlockReceiver.run(): ", e);
+          LOG.warn("IOException in PacketResponder.run(): ", e);
           if (running) {
             // Volume error check moved to FileIoProvider
             LOG.info(myString, e);
