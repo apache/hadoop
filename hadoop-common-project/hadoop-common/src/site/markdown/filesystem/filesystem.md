@@ -610,6 +610,8 @@ The updated (valid) FileSystem must contains all the parent directories of the p
 The result is `FSDataOutputStream`, which through its operations may generate new filesystem states with updated values of
 `FS.Files[p]`
 
+The behavior of the returned stream is covered in [Output](outputstream.html).
+
 #### Implementation Notes
 
 * Some implementations split the create into a check for the file existing
@@ -640,6 +642,8 @@ this precondition fails.
 ### `FSDataOutputStreamBuilder createFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to create a file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -672,10 +676,14 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
 by appending data to the existing list.
 
+The behavior of the returned stream is covered in [Output](outputstream.html).
+
 ### `FSDataOutputStreamBuilder appendFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to append to an
 existing file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
