@@ -38,6 +38,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -214,8 +216,15 @@ public class FederationClientInterceptor
 
     ApplicationClientProtocol clientRMProxy = null;
     try {
+      boolean serviceAuthEnabled = getConf().getBoolean(
+              CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+      UserGroupInformation realUser = user;
+      if (serviceAuthEnabled) {
+        realUser = UserGroupInformation.createProxyUser(
+                user.getShortUserName(), UserGroupInformation.getLoginUser());
+      }
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
-          ApplicationClientProtocol.class, subClusterId, user);
+          ApplicationClientProtocol.class, subClusterId, realUser);
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
           "Unable to create the interface to reach the SubCluster "
