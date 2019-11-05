@@ -248,7 +248,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
    */
   protected NamenodeStatusReport getNamenodeStatusReport() {
     NamenodeStatusReport report = new NamenodeStatusReport(nameserviceId,
-        namenodeId, rpcAddress, serviceAddress, lifelineAddress, webAddress);
+        namenodeId, rpcAddress, serviceAddress,
+        lifelineAddress, scheme, webAddress);
 
     try {
       LOG.debug("Probing NN at service address: {}", serviceAddress);

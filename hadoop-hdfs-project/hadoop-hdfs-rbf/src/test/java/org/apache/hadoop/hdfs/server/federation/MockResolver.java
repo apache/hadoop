@@ -155,12 +155,14 @@ public class MockResolver
     return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   private static class MockNamenodeContext
       implements FederationNamenodeContext {
 
     private String namenodeId;
     private String nameserviceId;
 
+    private String webScheme;
     private String webAddress;
     private String rpcAddress;
     private String serviceAddress;
@@ -170,11 +172,12 @@ public class MockResolver
     private long dateModified;
 
     MockNamenodeContext(
-        String rpc, String service, String lifeline, String web,
+        String rpc, String service, String lifeline, String scheme, String web,
         String ns, String nn, FederationNamenodeServiceState state) {
       this.rpcAddress = rpc;
       this.serviceAddress = service;
       this.lifelineAddress = lifeline;
+      this.webScheme = scheme;
       this.webAddress = web;
       this.namenodeId = nn;
       this.nameserviceId = ns;
@@ -200,6 +203,11 @@ public class MockResolver
     @Override
     public String getLifelineAddress() {
       return lifelineAddress;
+    }
+
+    @Override
+    public String getWebScheme() {
+      return webScheme;
     }
 
     @Override
@@ -242,8 +250,9 @@ public class MockResolver
 
     MockNamenodeContext context = new MockNamenodeContext(
         report.getRpcAddress(), report.getServiceAddress(),
-        report.getLifelineAddress(), report.getWebAddress(),
-        report.getNameserviceId(), report.getNamenodeId(), report.getState());
+        report.getLifelineAddress(), report.getWebScheme(),
+        report.getWebAddress(), report.getNameserviceId(),
+        report.getNamenodeId(), report.getState());
 
     String nsId = report.getNameserviceId();
     String bpId = report.getBlockPoolId();

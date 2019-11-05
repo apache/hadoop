@@ -166,6 +166,16 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
   }
 
   @Override
+  public void setWebScheme(String webScheme) {
+    Builder builder = this.translator.getBuilder();
+    if (webScheme == null) {
+      builder.clearWebScheme();
+    } else {
+      builder.setWebScheme(webScheme);
+    }
+  }
+
+  @Override
   public String getRouterId() {
     NamenodeMembershipRecordProtoOrBuilder proto =
         this.translator.getProtoOrBuilder();
@@ -275,6 +285,16 @@ public class MembershipStatePBImpl extends MembershipState implements PBRecord {
       // Ignore this error
     }
     return ret;
+  }
+
+  @Override
+  public String getWebScheme() {
+    NamenodeMembershipRecordProtoOrBuilder proto =
+            this.translator.getProtoOrBuilder();
+    if (!proto.hasWebScheme()) {
+      return null;
+    }
+    return this.translator.getProtoOrBuilder().getWebScheme();
   }
 
   @Override
