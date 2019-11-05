@@ -166,8 +166,8 @@
     {#Nameservices}
     <tr>
       <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
-      <td><a href="http://{webAddress}">{nameserviceId}</a></td>
-      <td><a href="http://{webAddress}">{namenodeId}</a></td>
+      <td><a href="{webScheme}://{webAddress}">{nameserviceId}</a></td>
+      <td><a href="{webScheme}://{webAddress}">{namenodeId}</a></td>
       <td>{lastHeartbeat}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
@@ -235,7 +235,7 @@
       <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
       <td>{nameserviceId}</td>
       <td>{namenodeId}</td>
-      <td><a href="http://{webAddress}">{webAddress}</a></td>
+      <td><a href="{webScheme}://{webAddress}">{webScheme}://{webAddress}</a></td>
       <td>{lastHeartbeat}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
