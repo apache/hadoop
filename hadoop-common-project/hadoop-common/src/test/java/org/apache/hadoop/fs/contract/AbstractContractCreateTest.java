@@ -24,8 +24,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
+
 import org.junit.Test;
 import org.junit.AssumptionViolatedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -41,6 +45,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
  */
 public abstract class AbstractContractCreateTest extends
     AbstractFSContractTestBase {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContractCreateTest.class);
 
   /**
    * How long to wait for a path to become visible.
@@ -435,5 +442,79 @@ public abstract class AbstractContractCreateTest extends
     FileSystem fs = getFileSystem();
     writeDataset(fs, path, data, data.length, 1024 * 1024,
         true);
+  }
+
+  @Test
+  public void testHSync() throws Throwable {
+    describe("test declared and actual Syncable behaviors");
+    Path path = methodPath();
+    FileSystem fs = getFileSystem();
+    boolean supportsFlush = isSupported(SUPPORTS_HFLUSH);
+    boolean supportsSync = isSupported(SUPPORTS_HSYNC);
+
+    try (FSDataOutputStream out = fs.create(path, true)) {
+
+      boolean doesHFlush = out.hasCapability(
+          StreamCapabilities.StreamCapability.HFLUSH.getValue());
+      if (doesHFlush) {
+        out.hflush();
+      }
+      assertEquals("hflush support", supportsFlush, doesHFlush);
+      boolean doesHSync = out.hasCapability(
+          StreamCapabilities.StreamCapability.HSYNC.getValue());
+      assertEquals("hsync support", supportsSync, doesHSync);
+
+      try {
+        out.hflush();
+        if (!supportsFlush) {
+          // hsync not ignored
+          LOG.warn("FS doesn't support Syncable.hflush(),"
+              + " but doesn't reject it either.");
+        }
+      } catch (UnsupportedOperationException e) {
+        if (supportsFlush) {
+          throw new AssertionError("hflush not supported", e);
+        }
+      }
+      out.write('a');
+      try {
+        out.hsync();
+      } catch (UnsupportedOperationException e) {
+        if (supportsSync) {
+          throw new AssertionError("HSync not supported", e);
+        }
+      }
+
+      if (supportsSync) {
+        // if sync really worked, data is visible here
+
+        try(FSDataInputStream in = fs.open(path)) {
+          assertEquals('a', in.read());
+          assertEquals(-1, in.read());
+        }
+      } else {
+        out.flush();
+        // no sync. let's see what's there
+        try (FSDataInputStream in = fs.open(path)) {
+
+          int c = in.read();
+          if (c == -1) {
+            // nothing was synced; sync and flush really aren't there.
+          } else {
+            LOG.info("sync and flush are declared unsupported"
+                + " - but the stream does offer some sync/flush semantics");
+          }
+        } catch (FileNotFoundException e) {
+          // that's OK if it's an object store, but not if its a real
+          // FS
+          if (!isSupported(IS_BLOBSTORE)) {
+            throw e;
+          }
+        }
+
+      }
+
+    }
+
   }
 }
