@@ -194,7 +194,13 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (!(node instanceof DFSTopologyNodeImpl)) {
       // a node is either DFSTopologyNodeImpl, or a DatanodeDescriptor
-      return ((DatanodeDescriptor)node).hasStorageType(type) ? node : null;
+      // if a node is DatanodeDescriptor and excludedNodes contains it,
+      // return null;
+      if (excludedNodes != null && excludedNodes.contains(node)) {
+        LOG.debug("{} in excludedNodes", node);
+        return null;
+      }
+      return ((DatanodeDescriptor) node).hasStorageType(type) ? node : null;
     }
     DFSTopologyNodeImpl root = (DFSTopologyNodeImpl)node;
     Node excludeRoot = excludedScope == null ? null : getNode(excludedScope);
