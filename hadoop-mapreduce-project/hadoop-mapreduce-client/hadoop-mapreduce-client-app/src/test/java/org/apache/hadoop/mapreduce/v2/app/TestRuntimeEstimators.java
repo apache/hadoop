@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.ExponentiallySmoothedTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
+import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.Speculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
@@ -254,6 +255,13 @@ public class TestRuntimeEstimators {
   public void testExponentialEstimator() throws Exception {
     TaskRuntimeEstimator specificEstimator
         = new ExponentiallySmoothedTaskRuntimeEstimator();
+    coreTestEstimator(specificEstimator, 3);
+  }
+
+  @Test
+  public void testSimpleExponentialEstimator() throws Exception {
+    TaskRuntimeEstimator specificEstimator
+        = new SimpleExponentialTaskRuntimeEstimator();
     coreTestEstimator(specificEstimator, 3);
   }
 
