@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+
 import java.util.Random;
 import java.net.HttpURLConnection;
 
