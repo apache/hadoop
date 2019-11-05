@@ -1110,7 +1110,10 @@ public class AzureBlobFileSystemStore implements Closeable {
             abfsConfiguration.getRawConfiguration());
     }
 
-    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider, abfsPerfTracker);
+    this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+        new ExponentialRetryPolicy(abfsConfiguration), tokenProvider,
+        abfsPerfTracker);
+
   }
 
   private String getOctalNotation(FsPermission fsPermission) {

@@ -130,8 +130,11 @@ public class AbfsRestOperation {
     }
 
     int retryCount = 0;
+    LOG.debug("First execution of REST operation - " + operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
+        LOG.debug("Retrying REST operation " + operationType + ". RetryCount"
+            + "=" + retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();

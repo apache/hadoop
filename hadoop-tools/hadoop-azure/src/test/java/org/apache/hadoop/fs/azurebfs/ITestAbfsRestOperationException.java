@@ -20,11 +20,22 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Verify the AbfsRestOperationException error message format.
@@ -71,5 +82,39 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       Assert.assertTrue(errorFields[5].contains("RequestId")
               && errorFields[5].contains("Time"));
     }
+  }
+
+  @Test
+  public void testRequestRetryConfig() throws Exception {
+    testRetryLogic(0);
+    testRetryLogic(3);
+  }
+
+  public void testRetryLogic(int numOfRetries) throws Exception {
+    AzureBlobFileSystem fs = this.getFileSystem();
+
+    Configuration config = new Configuration(this.getRawConfiguration());
+    String accountName = config.get("fs.azure.abfs.account.name");
+    config.set("fs.azure.account.auth.type." + accountName, "Custom");
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
+    config.set("fs.azure.io.retry.max.retries", Integer.toString(numOfRetries));
+    config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
+        + ".azurebfs.oauth2.RetryTestTokenProvider");
+
+    fs = (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(), config);
+
+    RetryTestTokenProvider.ResetFirstTokenFetchStatus();
+
+    try {
+      fs.getFileStatus(new Path("/"));
+    }
+    catch (Exception ex) {
+      // Expected to fail as the RetryTestTokenProvider is expected to throw
+      // exception
+    }
+
+    // Number of retries done should be as configured
+    Assert.assertTrue(RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 }
