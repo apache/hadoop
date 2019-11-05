@@ -29,6 +29,7 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
@@ -237,10 +238,7 @@ public class FSDataInputStream extends DataInputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    if (in instanceof StreamCapabilities) {
-      return ((StreamCapabilities) in).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(in, capability);
   }
 
   /**

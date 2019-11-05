@@ -47,6 +47,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -285,7 +286,7 @@ public class RawLocalFileSystem extends FileSystem {
    * For create()'s FSOutputStream.
    *********************************************************/
   final class LocalFSFileOutputStream extends OutputStream implements
-      IOStatisticsSource, StreamCapabilities {
+      IOStatisticsSource, StreamCapabilities, Syncable {
     private FileOutputStream fos;
 
     /**
@@ -355,6 +356,17 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     @Override
+    public void hflush() throws IOException {
+      flush();
+    }
+
+    @Override
+    public void hsync() throws IOException {
+      flush();
+      fos.getFD().sync();
+    }
+
+    @Override
     public boolean hasCapability(String capability) {
       // a bit inefficient, but intended to make it easier to add
       // new capabilities.
@@ -362,7 +374,7 @@ public class RawLocalFileSystem extends FileSystem {
       case StreamCapabilities.IOSTATISTICS:
         return true;
       default:
-        return false;
+        return StoreImplementationUtils.isProbeForSyncable(capability);
       }
     }
 

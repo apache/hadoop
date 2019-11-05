@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -563,13 +564,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   @Override
   public boolean hasCapability(String capability) {
-    switch (StringUtils.toLowerCase(capability)) {
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.HFLUSH:
-      return true;
-    default:
-      return false;
-    }
+    return StoreImplementationUtils.isProbeForSyncable(capability);
   }
 
   /**
