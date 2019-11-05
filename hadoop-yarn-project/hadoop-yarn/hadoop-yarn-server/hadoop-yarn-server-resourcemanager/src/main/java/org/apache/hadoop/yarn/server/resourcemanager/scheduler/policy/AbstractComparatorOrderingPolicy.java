@@ -139,7 +139,4 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   @Override
   public abstract String getInfo();
 
-  @Override
-  public abstract String getConfigName();
-
 }

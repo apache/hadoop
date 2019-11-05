@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -54,11 +53,6 @@ public class FifoOrderingPolicyForPendingApps<S extends SchedulableEntity>
   @Override
   public String getInfo() {
     return "FifoOrderingPolicyForPendingApps";
-  }
-
-  @Override
-  public String getConfigName() {
-    return CapacitySchedulerConfiguration.FIFO_FOR_PENDING_APPS;
   }
 
   @Override
