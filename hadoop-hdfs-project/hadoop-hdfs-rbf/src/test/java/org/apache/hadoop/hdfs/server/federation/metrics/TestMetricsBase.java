@@ -250,7 +250,8 @@ public class TestMetricsBase {
     MembershipState record =
         MembershipState.newInstance(routerId, ns, nn, "testcluster",
             "testblock-" + ns, "testrpc-" + ns + nn, "testservice-" + ns + nn,
-            "testlifeline-" + ns + nn, "testweb-" + ns + nn, state, false);
+            "testlifeline-" + ns + nn, "http", "testweb-" + ns + nn,
+            state, false);
     NamenodeHeartbeatRequest request =
         NamenodeHeartbeatRequest.newInstance(record);
     NamenodeHeartbeatResponse response =

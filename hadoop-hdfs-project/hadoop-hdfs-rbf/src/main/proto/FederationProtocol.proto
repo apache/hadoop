@@ -68,6 +68,7 @@ message NamenodeMembershipRecordProto {
   optional bool isSafeMode = 14;
 
   optional NamenodeMembershipStatsRecordProto stats = 15;
+  optional string webScheme = 16;
 }
 
 message FederationNamespaceInfoProto {
