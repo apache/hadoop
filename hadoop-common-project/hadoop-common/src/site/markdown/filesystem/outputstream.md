@@ -97,13 +97,13 @@ FS'.Files(path) == buffer
 ```
 
 Any client reading the data at the path MUST see the new data.
-The two sync operations, `hflush()` and `hsync()` differ in their durability
+The `Syncable` operations differ in their durability
 guarantees, not visibility of data.
 
-### State of Stream and Filesystem after `Filesystem.create()`
+### State of Stream and File System after `Filesystem.create()`
 
 The output stream returned by a `FileSystem.create(path)` or
-`FileSystem.createFile(path).build`
+`FileSystem.createFile(path).build()` within a filesystem `FS`,
 can be modeled as a triple containing an empty array of no data:
 
 ```python
@@ -113,7 +113,7 @@ Stream' = (path, true, [])
 The filesystem `FS'` MUST contain a 0-byte file at the path:
 
 ```python
-data(FS', path) == []
+FS' = FS where data(FS', path) == []
 ```
 
 Thus, the initial state of `Stream'.buffer` is implicitly
@@ -122,10 +122,10 @@ consistent with the data at the filesystem.
 
 *Object Stores*: see caveats in the "Object Stores" section below.
 
-### State of Stream and Filesystem after `Filesystem.append()`
+### State of Stream and File System after `Filesystem.append()`
 
 The output stream returned from a call of
- `FileSystem.append(path, buffersize, progress)`,
+ `FileSystem.append(path, buffersize, progress)` within a filesystem `FS`,
 can be modelled as a stream whose `buffer` is intialized to that of
 the original file:
 
@@ -149,7 +149,7 @@ After a call to `close()`, the stream is closed for all operations other
 than `close()`; they MAY fail with `IOException` or `RuntimeException`.
 
 ```python
-Stream' =  (path, false, [])
+Stream' = (path, false, [])
 ```
 
 The `close()` operation MUST be idempotent with the sole attempt to write the
