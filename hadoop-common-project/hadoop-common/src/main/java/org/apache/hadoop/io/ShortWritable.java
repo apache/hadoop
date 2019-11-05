@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ShortWritable implements WritableComparable<ShortWritable> {
+
   private short value;
 
   public ShortWritable() {
@@ -60,27 +61,27 @@ public class ShortWritable implements WritableComparable<ShortWritable> {
     out.writeShort(value);
   }
 
-  /** Returns true iff <code>o</code> is a ShortWritable with the same value. */
   @Override
-  public boolean equals(Object o) {
-    if (!(o instanceof ShortWritable))
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof ShortWritable)) {
       return false;
-    ShortWritable other = (ShortWritable) o;
-    return this.value == other.value;
+    }
+    ShortWritable other = (ShortWritable) obj;
+    return (value == other.value);
   }
 
-  /** hash code */
   @Override
   public int hashCode() {
-    return value;
+    return Short.hashCode(value);
   }
 
   /** Compares two ShortWritable. */
   @Override
   public int compareTo(ShortWritable o) {
-    short thisValue = this.value;
-    short thatValue = (o).value;
-    return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
+    return Short.compare(value, o.value);
   }
 
   /** Short values in string format */
@@ -95,7 +96,7 @@ public class ShortWritable implements WritableComparable<ShortWritable> {
     public Comparator() {
       super(ShortWritable.class);
     }
-    
+
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       short thisValue = (short) readUnsignedShort(b1, s1);

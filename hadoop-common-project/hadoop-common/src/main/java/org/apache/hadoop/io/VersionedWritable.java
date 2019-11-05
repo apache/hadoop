@@ -25,12 +25,14 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** A base class for Writables that provides version checking.
+/**
+ * A base class for Writables that provides version checking.
  *
- * <p>This is useful when a class may evolve, so that instances written by the
- * old version of the class may still be processed by the new version.  To
- * handle this situation, {@link #readFields(DataInput)}
- * implementations should catch {@link VersionMismatchException}.
+ * <p>
+ * This is useful when a class may evolve, so that instances written by the old
+ * version of the class may still be processed by the new version. To handle
+ * this situation, {@link #readFields(DataInput)} implementations should catch
+ * {@link VersionMismatchException}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -38,20 +40,18 @@ public abstract class VersionedWritable implements Writable {
 
   /** Return the version number of the current implementation. */
   public abstract byte getVersion();
-    
-  // javadoc from Writable
+
   @Override
   public void write(DataOutput out) throws IOException {
-    out.writeByte(getVersion());                  // store version
+    out.writeByte(getVersion());
   }
 
-  // javadoc from Writable
   @Override
   public void readFields(DataInput in) throws IOException {
-    byte version = in.readByte();                 // read version
-    if (version != getVersion())
+    byte version = in.readByte();
+    if (version != getVersion()) {
       throw new VersionMismatchException(getVersion(), version);
+    }
   }
 
-    
 }

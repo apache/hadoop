@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -29,15 +31,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class ByteWritable implements WritableComparable<ByteWritable> {
   private byte value;
 
-  public ByteWritable() {}
+  public ByteWritable() {
+  }
 
-  public ByteWritable(byte value) { set(value); }
+  public ByteWritable(byte value) {
+    set(value);
+  }
 
   /** Set the value of this ByteWritable. */
-  public void set(byte value) { this.value = value; }
+  public void set(byte value) {
+    this.value = value;
+  }
 
   /** Return the value of this ByteWritable. */
-  public byte get() { return value; }
+  public byte get() {
+    return value;
+  }
 
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -55,21 +64,19 @@ public class ByteWritable implements WritableComparable<ByteWritable> {
     if (!(o instanceof ByteWritable)) {
       return false;
     }
-    ByteWritable other = (ByteWritable)o;
+    ByteWritable other = (ByteWritable) o;
     return this.value == other.value;
   }
 
   @Override
   public int hashCode() {
-    return (int)value;
+    return Byte.hashCode(value);
   }
 
   /** Compares two ByteWritables. */
   @Override
   public int compareTo(ByteWritable o) {
-    int thisValue = this.value;
-    int thatValue = o.value;
-    return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
+    return Byte.compare(value, o.value);
   }
 
   @Override
@@ -77,23 +84,21 @@ public class ByteWritable implements WritableComparable<ByteWritable> {
     return Byte.toString(value);
   }
 
-  /** A Comparator optimized for ByteWritable. */ 
+  /** A Comparator optimized for ByteWritable. */
   public static class Comparator extends WritableComparator {
     public Comparator() {
       super(ByteWritable.class);
     }
 
     @Override
-    public int compare(byte[] b1, int s1, int l1,
-                       byte[] b2, int s2, int l2) {
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       byte thisValue = b1[s1];
       byte thatValue = b2[s2];
-      return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
+      return Byte.compare(thisValue, thatValue);
     }
   }
 
-  static {                                        // register this comparator
+  static { // register this comparator
     WritableComparator.define(ByteWritable.class, new Comparator());
   }
 }
-

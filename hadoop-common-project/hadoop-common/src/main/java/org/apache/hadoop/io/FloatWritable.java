@@ -27,17 +27,25 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FloatWritable implements WritableComparable<FloatWritable> {
+
   private float value;
 
-  public FloatWritable() {}
+  public FloatWritable() {
+  }
 
-  public FloatWritable(float value) { set(value); }
+  public FloatWritable(float value) {
+    set(value);
+  }
 
   /** Set the value of this FloatWritable. */
-  public void set(float value) { this.value = value; }
+  public void set(float value) {
+    this.value = value;
+  }
 
   /** Return the value of this FloatWritable. */
-  public float get() { return value; }
+  public float get() {
+    return value;
+  }
 
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -49,18 +57,24 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
     out.writeFloat(value);
   }
 
-  /** Returns true iff <code>o</code> is a FloatWritable with the same value. */
   @Override
-  public boolean equals(Object o) {
-    if (!(o instanceof FloatWritable))
-      return false;
-    FloatWritable other = (FloatWritable)o;
-    return this.value == other.value;
+  public int hashCode() {
+    return Float.hashCode(value);
   }
 
   @Override
-  public int hashCode() {
-    return Float.floatToIntBits(value);
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof FloatWritable)) {
+      return false;
+    }
+    FloatWritable other = (FloatWritable) obj;
+    if (Float.floatToIntBits(value) != Float.floatToIntBits(other.value)) {
+      return false;
+    }
+    return true;
   }
 
   /** Compares two FloatWritables. */
@@ -74,23 +88,22 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
     return Float.toString(value);
   }
 
-  /** A Comparator optimized for FloatWritable. */ 
+  /** A Comparator optimized for FloatWritable. */
   public static class Comparator extends WritableComparator {
     public Comparator() {
       super(FloatWritable.class);
     }
+
     @Override
-    public int compare(byte[] b1, int s1, int l1,
-                       byte[] b2, int s2, int l2) {
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       float thisValue = readFloat(b1, s1);
       float thatValue = readFloat(b2, s2);
       return Float.compare(thisValue, thatValue);
     }
   }
 
-  static {                                        // register this comparator
+  static { // register this comparator
     WritableComparator.define(FloatWritable.class, new Comparator());
   }
 
 }
-

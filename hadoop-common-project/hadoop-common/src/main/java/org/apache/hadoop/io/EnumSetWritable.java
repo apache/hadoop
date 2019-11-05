@@ -21,9 +21,9 @@ package org.apache.hadoop.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.AbstractCollection;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.AbstractCollection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,21 +34,27 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
-  implements Writable, Configurable  {
+    implements Writable, Configurable {
 
   private EnumSet<E> value;
 
   private transient Class<E> elementType;
 
   private transient Configuration conf;
-  
+
   EnumSetWritable() {
   }
 
   @Override
-  public Iterator<E> iterator() { return value.iterator(); }
+  public Iterator<E> iterator() {
+    return value.iterator();
+  }
+
   @Override
-  public int size() { return value.size(); }
+  public int size() {
+    return value.size();
+  }
+
   @Override
   public boolean add(E e) {
     if (value == null) {
@@ -63,7 +69,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
    * its size is zero, the <tt>elementType</tt> argument must not be null. If
    * the argument <tt>value</tt>'s size is bigger than zero, the argument
    * <tt>elementType</tt> is not be used.
-   * 
+   *
    * @param value
    * @param elementType
    */
@@ -74,7 +80,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   /**
    * Construct a new EnumSetWritable. Argument <tt>value</tt> should not be null
    * or empty.
-   * 
+   *
    * @param value
    */
   public EnumSetWritable(EnumSet<E> value) {
@@ -82,12 +88,12 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   }
 
   /**
-   * reset the EnumSetWritable with specified
-   * <tt>value</tt> and <tt>elementType</tt>. If the <tt>value</tt> argument
-   * is null or its size is zero, the <tt>elementType</tt> argument must not be
-   * null. If the argument <tt>value</tt>'s size is bigger than zero, the
-   * argument <tt>elementType</tt> is not be used.
-   * 
+   * reset the EnumSetWritable with specified <tt>value</tt> and
+   * <tt>elementType</tt>. If the <tt>value</tt> argument is null or its size is
+   * zero, the <tt>elementType</tt> argument must not be null. If the argument
+   * <tt>value</tt>'s size is bigger than zero, the argument
+   * <tt>elementType</tt> is not be used.
+   *
    * @param value
    * @param elementType
    */
@@ -151,29 +157,6 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   }
 
   /**
-   * Returns true if <code>o</code> is an EnumSetWritable with the same value,
-   * or both are null.
-   */
-  @Override
-  public boolean equals(Object o) {
-    if (o == null) {
-      throw new IllegalArgumentException("null argument passed in equal().");
-    }
-
-    if (!(o instanceof EnumSetWritable))
-      return false;
-
-    EnumSetWritable<?> other = (EnumSetWritable<?>) o;
-
-    if (this == o || (this.value == other.value))
-      return true;
-    if (this.value == null) // other.value must not be null if we reach here
-      return false;
-
-    return this.value.equals(other.value);
-  }
-
-  /**
    * Returns the class of all the elements of the underlying EnumSetWriable. It
    * may return null.
    * 
@@ -185,9 +168,26 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
 
   @Override
   public int hashCode() {
-    if (value == null)
-      return 0;
-    return (int) value.hashCode();
+    return (value == null) ? 0 : value.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof EnumSetWritable)) {
+      return false;
+    }
+    EnumSetWritable other = (EnumSetWritable) obj;
+    if (value == null) {
+      if (other.value != null) {
+        return false;
+      }
+    } else if (!value.equals(other.value)) {
+      return false;
+    }
+    return true;
   }
 
   @Override

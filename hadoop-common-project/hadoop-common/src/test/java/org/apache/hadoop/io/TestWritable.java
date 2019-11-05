@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,13 +31,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
-
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 /** Unit tests for Writable. */
 public class TestWritable {
@@ -43,7 +42,7 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
 
   /** Example class used in test cases below. */
   public static class SimpleWritable implements Writable {
-    private static final Random RANDOM = new Random();
+    private static final Random RANDOM = new Random(13L);
 
     int state = RANDOM.nextInt();
 
@@ -111,43 +110,55 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
   }
 
   /** Utility method for testing writables. */
-  public static Writable testWritable(Writable before) 
-  	throws Exception {
-  	return testWritable(before, null);
+  public static Writable testWritable(Writable before) throws Exception {
+    return testWritable(before, null);
   }
-  
+
   /** Utility method for testing writables. */
-  public static Writable testWritable(Writable before
-  		, Configuration conf) throws Exception {
+  public static Writable testWritable(Writable before, Configuration conf)
+      throws Exception {
     DataOutputBuffer dob = new DataOutputBuffer();
     before.write(dob);
 
     DataInputBuffer dib = new DataInputBuffer();
     dib.reset(dob.getData(), dob.getLength());
-    
-    Writable after = (Writable)ReflectionUtils.newInstance(
-    		before.getClass(), conf);
+
+    Writable after =
+        (Writable) ReflectionUtils.newInstance(before.getClass(), conf);
     after.readFields(dib);
 
     assertEquals(before, after);
     return after;
   }
-	
+
   private static class FrobComparator extends WritableComparator {
-    public FrobComparator() { super(Frob.class); }
-    @Override public int compare(byte[] b1, int s1, int l1,
-                                 byte[] b2, int s2, int l2) {
+    public FrobComparator() {
+      super(Frob.class);
+    }
+
+    @Override
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return 0;
     }
   }
 
   private static class Frob implements WritableComparable<Frob> {
-    static {                                     // register default comparator
+    static { // register default comparator
       WritableComparator.define(Frob.class, new FrobComparator());
     }
-    @Override public void write(DataOutput out) throws IOException {}
-    @Override public void readFields(DataInput in) throws IOException {}
-    @Override public int compareTo(Frob o) { return 0; }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+    }
+
+    @Override
+    public int compareTo(Frob o) {
+      return 0;
+    }
   }
 
   /** Test that comparator is defined and configured. */
@@ -189,23 +200,26 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
     ShortWritable writable1 = new ShortWritable((short)256);
     ShortWritable writable2 = new ShortWritable((short) 128);
     ShortWritable writable3 = new ShortWritable((short) 256);
-    
-    final String SHOULD_NOT_MATCH_WITH_RESULT_ONE = "Result should be 1, should not match the writables";
+
+    final String SHOULD_NOT_MATCH_WITH_RESULT_ONE =
+        "Result should be greater, should not match the writables";
     assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE,
-        writable1.compareTo(writable2) == 1);
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE, WritableComparator.get(
-        ShortWritable.class).compare(writable1, writable2) == 1);
+        writable1.compareTo(writable2) > 0);
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE, WritableComparator
+        .get(ShortWritable.class).compare(writable1, writable2) > 0);
 
-    final String SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE = "Result should be -1, should not match the writables";
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, writable2
-        .compareTo(writable1) == -1);
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, WritableComparator.get(
-        ShortWritable.class).compare(writable2, writable1) == -1);
+    final String SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE =
+        "Result should be less than, should not match the writables";
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE,
+        writable2.compareTo(writable1) < 0);
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, WritableComparator
+        .get(ShortWritable.class).compare(writable2, writable1) < 0);
 
-    final String SHOULD_MATCH = "Result should be 0, should match the writables";
-    assertTrue(SHOULD_MATCH, writable1.compareTo(writable1) == 0);
-    assertTrue(SHOULD_MATCH, WritableComparator.get(ShortWritable.class)
-        .compare(writable1, writable3) == 0);
+    final String SHOULD_MATCH =
+        "Result should be 0, should match the writables";
+    assertEquals(SHOULD_MATCH, 0, writable1.compareTo(writable1));
+    assertEquals(SHOULD_MATCH, 0, WritableComparator.get(ShortWritable.class)
+        .compare(writable1, writable3));
   }
 
   /**

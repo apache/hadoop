@@ -30,17 +30,25 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LongWritable implements WritableComparable<LongWritable> {
+
   private long value;
 
-  public LongWritable() {}
+  public LongWritable() {
+  }
 
-  public LongWritable(long value) { set(value); }
+  public LongWritable(long value) {
+    set(value);
+  }
 
   /** Set the value of this LongWritable. */
-  public void set(long value) { this.value = value; }
+  public void set(long value) {
+    this.value = value;
+  }
 
   /** Return the value of this LongWritable. */
-  public long get() { return value; }
+  public long get() {
+    return value;
+  }
 
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -52,26 +60,26 @@ public class LongWritable implements WritableComparable<LongWritable> {
     out.writeLong(value);
   }
 
-  /** Returns true iff <code>o</code> is a LongWritable with the same value. */
   @Override
-  public boolean equals(Object o) {
-    if (!(o instanceof LongWritable))
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof LongWritable)) {
       return false;
-    LongWritable other = (LongWritable)o;
-    return this.value == other.value;
+    }
+    LongWritable other = (LongWritable) obj;
+    return (value == other.value);
   }
 
   @Override
   public int hashCode() {
-    return (int)value;
+    return Long.hashCode(value);
   }
 
-  /** Compares two LongWritables. */
   @Override
   public int compareTo(LongWritable o) {
-    long thisValue = this.value;
-    long thatValue = o.value;
-    return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+    return Long.compare(value, o.value);
   }
 
   @Override
@@ -88,9 +96,9 @@ public class LongWritable implements WritableComparable<LongWritable> {
     @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
-      long thisValue = readLong(b1, s1);
-      long thatValue = readLong(b2, s2);
-      return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+      final long thisValue = readLong(b1, s1);
+      final long thatValue = readLong(b2, s2);
+      return Long.compare(thisValue, thatValue);
     }
   }
 

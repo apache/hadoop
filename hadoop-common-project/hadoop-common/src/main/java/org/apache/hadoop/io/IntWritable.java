@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.io;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,17 +29,25 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class IntWritable implements WritableComparable<IntWritable> {
+
   private int value;
 
-  public IntWritable() {}
+  public IntWritable() {
+  }
 
-  public IntWritable(int value) { set(value); }
+  public IntWritable(int value) {
+    set(value);
+  }
 
   /** Set the value of this IntWritable. */
-  public void set(int value) { this.value = value; }
+  public void set(int value) {
+    this.value = value;
+  }
 
   /** Return the value of this IntWritable. */
-  public int get() { return value; }
+  public int get() {
+    return value;
+  }
 
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -52,12 +59,12 @@ public class IntWritable implements WritableComparable<IntWritable> {
     out.writeInt(value);
   }
 
-  /** Returns true iff <code>o</code> is a IntWritable with the same value. */
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof IntWritable))
+    if (!(o instanceof IntWritable)) {
       return false;
-    IntWritable other = (IntWritable)o;
+    }
+    IntWritable other = (IntWritable) o;
     return this.value == other.value;
   }
 
@@ -69,9 +76,7 @@ public class IntWritable implements WritableComparable<IntWritable> {
   /** Compares two IntWritables. */
   @Override
   public int compareTo(IntWritable o) {
-    int thisValue = this.value;
-    int thatValue = o.value;
-    return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+    return Integer.compare(value, o.value);
   }
 
   @Override
@@ -79,23 +84,21 @@ public class IntWritable implements WritableComparable<IntWritable> {
     return Integer.toString(value);
   }
 
-  /** A Comparator optimized for IntWritable. */ 
+  /** A Comparator optimized for IntWritable. */
   public static class Comparator extends WritableComparator {
     public Comparator() {
       super(IntWritable.class);
     }
-    
+
     @Override
-    public int compare(byte[] b1, int s1, int l1,
-                       byte[] b2, int s2, int l2) {
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       int thisValue = readInt(b1, s1);
       int thatValue = readInt(b2, s2);
-      return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+      return Integer.compare(thisValue, thatValue);
     }
   }
 
-  static {                                        // register this comparator
+  static { // register this comparator
     WritableComparator.define(IntWritable.class, new Comparator());
   }
 }
-

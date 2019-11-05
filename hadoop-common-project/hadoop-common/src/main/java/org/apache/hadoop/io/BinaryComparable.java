@@ -41,22 +41,24 @@ public abstract class BinaryComparable implements Comparable<BinaryComparable> {
 
   /**
    * Compare bytes from {#getBytes()}.
+   *
    * @see org.apache.hadoop.io.WritableComparator#compareBytes(byte[],int,int,byte[],int,int)
    */
   @Override
   public int compareTo(BinaryComparable other) {
-    if (this == other)
+    if (this == other) {
       return 0;
+    }
     return WritableComparator.compareBytes(getBytes(), 0, getLength(),
-             other.getBytes(), 0, other.getLength());
+        other.getBytes(), 0, other.getLength());
   }
 
   /**
    * Compare bytes from {#getBytes()} to those provided.
    */
   public int compareTo(byte[] other, int off, int len) {
-    return WritableComparator.compareBytes(getBytes(), 0, getLength(),
-             other, off, len);
+    return WritableComparator.compareBytes(getBytes(), 0, getLength(), other,
+        off, len);
   }
 
   /**
