@@ -1471,6 +1471,57 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
   }
 
+  @Override
+  public void syncCreateToRemoteStore(String src) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.READ);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.syncCreateToRemoteStore(src, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  @Override
+  public void syncRenameToRemoteStore(String src, String dest) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.READ);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.syncRenameToRemoteStore(src, dest, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  @Override
+  public void syncDeleteToRemoteStore(String src) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.READ);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.syncDeleteToRemoteStore(src, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
   @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)

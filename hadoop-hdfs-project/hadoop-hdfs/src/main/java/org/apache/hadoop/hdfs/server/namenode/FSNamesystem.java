@@ -2397,6 +2397,69 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
+  void syncCreateToRemoteStore(String src, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncCreateToRemoteStore(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  void syncRenameToRemoteStore(String src, String dest, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncRenameToRemoteStore(
+          dir, blockManager, src, dest, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  void syncDeleteToRemoteStore(String src, boolean logRetryCache) throws IOException {
+    final String operationName = "syncNodeToRemoteStore";
+    FileStatus auditStat;
+    //validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot sync node for " + src);
+      auditStat = FSDirSyncNodeToRemoteStoreOp.syncDeleteToRemoteStore(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      readUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
   long getPreferredBlockSize(String src) throws IOException {
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
