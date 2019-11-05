@@ -34,7 +34,8 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
   private static boolean isThisFirstTokenFetch = true;
   public static int reTryCount = 0;
 
-  private static final Logger LOG = LoggerFactory.getLogger(RetryTestTokenProvider.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RetryTestTokenProvider.class);
 
   @Override
   public void initialize(Configuration configuration, String accountName)
@@ -42,8 +43,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   }
 
-  public static void ResetFirstTokenFetchStatus()
-  {
+  public static void ResetStatusToFirstTokenFetch() {
     isThisFirstTokenFetch = true;
     reTryCount = 0;
   }
@@ -52,9 +52,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
   public String getAccessToken() throws IOException {
     if (isThisFirstTokenFetch) {
       isThisFirstTokenFetch = false;
-    }
-    else
-    {
+    } else {
       reTryCount++;
     }
 
