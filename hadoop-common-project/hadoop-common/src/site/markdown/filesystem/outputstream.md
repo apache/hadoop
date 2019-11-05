@@ -152,7 +152,7 @@ than `close()`; they MAY fail with `IOException` or `RuntimeException`.
 Stream' =  (path, false, [])
 ```
 
-The `close()` operation must be idempotent with the sole attempt to write the
+The `close()` operation MUST be idempotent with the sole attempt to write the
 data made in the first invocation.
 
 1. If `close()` succeeds, subsequent calls are no-ops.
@@ -197,8 +197,8 @@ has made such a call on this in the past
 As the HDFS implementation is considered the de-facto specification of
 the FileSystem APIs, the fact that `write()` is thread-safe is significant.
 
-For compatibility, not only must other FS clients be thread-safe,
-but new HDFS featues, such as encryption and Erasure Coding must also
+For compatibility, not only SHOULD other FS clients be thread-safe,
+but new HDFS featues, such as encryption and Erasure Coding SHOULD also
 implement consistent behavior with the core HDFS output stream.
 
 Put differently:
@@ -477,7 +477,7 @@ There is no requirement or guarantee that clients with an existing
 data, nor is there a guarantee that they *will not* in a current or subsequent
 read.
 
-Implementation note: as a correct `hsync()` implementation must also
+Implementation note: as a correct `hsync()` implementation MUST also
 offer all the semantics of an `hflush()` call, implementations of `hflush()`
 may just invoke `hsync()`:
 
@@ -796,7 +796,7 @@ and materialization of the final output.
 This significantly change's their behaviour compared to that of
 POSIX filesystems and that specified in this document.
 
-#### Visibility of newly created files
+#### Visibility of newly created objects
 
 There is no guarantee that any file will be visible at the path of an output
 stream after the output stream is created .
