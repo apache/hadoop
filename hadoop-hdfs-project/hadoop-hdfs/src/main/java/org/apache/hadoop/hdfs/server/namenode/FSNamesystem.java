@@ -1248,6 +1248,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         blockManager.getDatanodeManager().markAllDatanodesStale();
         blockManager.clearQueues();
         blockManager.processAllPendingDNMessages();
+        blockManager.getBlockIdManager().applyImpendingGenerationStamp();
 
         // Only need to re-process the queue, If not in SafeMode.
         if (!isInSafeMode()) {
