@@ -37,6 +37,10 @@ import org.apache.zookeeper.data.Stat;
 
 import java.util.HashSet;
 
+/**
+ * ConfiguredFailoverProxyProvider implemented based on ZooKeeper.
+ * @param <T>
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ZkConfiguredFailoverProxyProvider<T>
@@ -83,19 +87,22 @@ public class ZkConfiguredFailoverProxyProvider<T>
         HashSet<String> rmIdSet = new HashSet<String>(HAUtil.getRMHAIds(conf));
         if (!rmIdSet.contains(rmId)) {
           rmIdSet.add(rmId);
-          String updateRmIds = StringUtils.arrayToString(rmIdSet.toArray(new String[0]));
+          String updateRmIds = StringUtils.arrayToString(
+                  rmIdSet.toArray(new String[0]));
           conf.set(YarnConfiguration.RM_HA_IDS, updateRmIds);
         }
         LOG.info("Update RM config for id: " + rmId);
         conf.set(YarnConfiguration.RM_HA_ID, rmId);
-        // set RM_ADDRESS/RM_ADMIN_ADDRESS/RM_SCHEDULER_ADDRESS/RM_RESOURCE_TRACKER_ADDRESS
+        // set RM_ADDRESS/RM_ADMIN_ADDRESS/RM_SCHEDULER_ADDRESS
+        // /RM_RESOURCE_TRACKER_ADDRESS
         conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, rmId),
             info.getRmAddr());
         conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, rmId),
             info.getRmAdminAddr());
         conf.set(HAUtil.addSuffix(YarnConfiguration.RM_SCHEDULER_ADDRESS, rmId),
             info.getRmSchedulerAddr());
-        conf.set(HAUtil.addSuffix(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, rmId),
+        conf.set(HAUtil.addSuffix(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+                rmId),
             info.getRmResourceTrackerAddr());
         return;
       }
