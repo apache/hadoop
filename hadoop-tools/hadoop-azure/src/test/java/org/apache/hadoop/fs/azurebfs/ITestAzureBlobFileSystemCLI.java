@@ -22,12 +22,11 @@ import java.util.UUID;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
-
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
+import org.apache.hadoop.fs.FsShell;
 
 /**
  * Tests for Azure Blob FileSystem CLI.
@@ -36,8 +35,6 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
 
   public  ITestAzureBlobFileSystemCLI() throws Exception {
     super();
-    final AbfsConfiguration conf = getConfiguration();
-    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
   }
 
   /**
@@ -57,8 +54,14 @@ public class ITestAzureBlobFileSystemCLI extends AbstractAbfsIntegrationTest {
 
     String nonExistentContainer = "nonexistent-" + UUID.randomUUID();
 
+    // Disable creation of new filesystem
+    final AbfsConfiguration conf = getConfiguration();
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+        false);
+
     int result = fsShell.run(new String[] { "-mkdir",
-        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account + "/" });
+        ABFS_SCHEME + "://" + nonExistentContainer + "@" + account +
+            "/testDirOnRoot" });
 
     assertEquals(1, result);
   }
