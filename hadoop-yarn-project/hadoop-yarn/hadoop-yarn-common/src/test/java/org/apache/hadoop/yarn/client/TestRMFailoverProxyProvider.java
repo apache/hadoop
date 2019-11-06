@@ -21,23 +21,29 @@ package org.apache.hadoop.yarn.client;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ActiveRMInfoProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Test class for RMFailoverProxyProvider.
+ */
 public class TestRMFailoverProxyProvider {
   @Test
   public void testConfiguredRMFailoverProxyProvider() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0,rm1");
-    conf.set("yarn.resourcemanager.address.rm0", YarnConfiguration.DEFAULT_RM_ADDRESS);
-    conf.set("yarn.resourcemanager.address.rm1", YarnConfiguration.DEFAULT_RM_ADDRESS);
+    conf.set("yarn.resourcemanager.address.rm0",
+            YarnConfiguration.DEFAULT_RM_ADDRESS);
+    conf.set("yarn.resourcemanager.address.rm1",
+            YarnConfiguration.DEFAULT_RM_ADDRESS);
 
-    ConfiguredRMFailoverProxyProvider provider = new ConfiguredRMFailoverProxyProvider();
-    provider.init(conf, ClientRMProxy.INSTANCE, ApplicationClientProtocol.class);
+    ConfiguredRMFailoverProxyProvider provider =
+            new ConfiguredRMFailoverProxyProvider();
+    provider.init(conf, ClientRMProxy.INSTANCE,
+            ApplicationClientProtocol.class);
     FailoverProxyProvider.ProxyInfo proxy = provider.getProxy();
     Assert.assertEquals("rm0", proxy.proxyInfo);
 
@@ -55,16 +61,19 @@ public class TestRMFailoverProxyProvider {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0,rm1");
-    conf.set("yarn.resourcemanager.address.rm0", YarnConfiguration.DEFAULT_RM_ADDRESS);
-    conf.set("yarn.resourcemanager.address.rm1", YarnConfiguration.DEFAULT_RM_ADDRESS);
+    conf.set("yarn.resourcemanager.address.rm0",
+            YarnConfiguration.DEFAULT_RM_ADDRESS);
+    conf.set("yarn.resourcemanager.address.rm1",
+            YarnConfiguration.DEFAULT_RM_ADDRESS);
 
     ZkConfiguredFailoverProxyProvider provider = new ZkConfiguredFailoverProxyProvider() {
       @Override
       protected ActiveRMInfoProto getActiveRMInfoProto() {
-        return ActiveRMInfoProto.newBuilder().setClusterId("TestRMFailoverProxyProvider")
-            .setRmId("zk")
-            .setRmAddr(YarnConfiguration.DEFAULT_RM_ADDRESS)
-            .build();
+        return ActiveRMInfoProto.newBuilder()
+                .setClusterId("TestRMFailoverProxyProvider")
+                .setRmId("zk")
+                .setRmAddr(YarnConfiguration.DEFAULT_RM_ADDRESS)
+                .build();
       }
     };
 
