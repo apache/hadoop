@@ -1260,7 +1260,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         authMode = conf.getBoolean(METADATASTORE_AUTHORITATIVE, false);
         final long ttl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
             DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
-        println(out, "\t%s: %s=%s milliseconds", METADATASTORE_METADATA_TTL,
+        println(out, "\tMetadata time to live: %s=%s milliseconds",
             METADATASTORE_METADATA_TTL, ttl);
         printStoreDiagnostics(out, store);
       } else {
