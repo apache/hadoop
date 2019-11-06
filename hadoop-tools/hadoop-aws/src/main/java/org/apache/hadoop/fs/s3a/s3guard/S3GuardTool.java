@@ -25,6 +25,7 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,7 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -68,6 +70,8 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -1240,16 +1244,23 @@ public abstract class S3GuardTool extends Configured implements Tool {
             METADATASTORE_AUTHORITATIVE, "false");
         printOption(out, "Authoritative Path",
               AUTHORITATIVE_PATH, "");
+        final Collection<String> authoritativePaths
+            = S3Guard.getAuthoritativePaths(fs);
+        if (!authoritativePaths.isEmpty())
+          println(out, "Qualified Authoritative Paths:");
+        for (String path : authoritativePaths) {
+          println(out, "\t%s", path);
+        }
+        println(out, "");
         authMode = conf.getBoolean(METADATASTORE_AUTHORITATIVE, false);
+        final long ttl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+            DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+        println(out, "\t%s: %s=%s milliseconds", METADATASTORE_METADATA_TTL,
+            METADATASTORE_METADATA_TTL, ttl);
         printStoreDiagnostics(out, store);
       } else {
         println(out, "Filesystem %s is not using S3Guard", fsUri);
       }
-      boolean magic = fs.hasPathCapability(
-          new Path(s3Path),
-          CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER);
-      println(out, "The \"magic\" committer %s supported",
-          magic ? "is" : "is not");
 
       println(out, "%nS3A Client");
       printOption(out, "\tSigning Algorithm", SIGNING_ALGORITHM, "(unset)");
@@ -1265,22 +1276,69 @@ public abstract class S3GuardTool extends Configured implements Tool {
           CHANGE_DETECT_SOURCE_DEFAULT);
       printOption(out, "\tChange Detection Mode", CHANGE_DETECT_MODE,
           CHANGE_DETECT_MODE_DEFAULT);
+      // committers
+      println(out, "%nS3A Committers");
+      boolean magic = fs.hasPathCapability(
+          new Path(s3Path),
+          CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER);
+      println(out, "\tThe \"magic\" committer %s supported in the filesystem",
+          magic ? "is" : "is not");
+
+      printOption(out, "\tS3A Committer factory class",
+          S3A_COMMITTER_FACTORY_KEY, "");
+      String committer = conf.getTrimmed(FS_S3A_COMMITTER_NAME,
+          COMMITTER_NAME_FILE);
+      printOption(out, "\tS3A Committer name",
+          FS_S3A_COMMITTER_NAME, COMMITTER_NAME_FILE);
+      switch (committer) {
+      case COMMITTER_NAME_FILE:
+        println(out, "The original 'file' commmitter is active"
+            + " -this is slow and potentially unsafe");
+        break;
+      case InternalCommitterConstants.COMMITTER_NAME_STAGING:
+        println(out,
+            "The 'staging' committer is used -prefer the 'directory' committer");
+        // fall through
+      case COMMITTER_NAME_DIRECTORY:
+        // fall through
+      case COMMITTER_NAME_PARTITIONED:
+        // print all the staging options.
+        printOption(out, "\tCluster filesystem staging directory",
+            FS_S3A_COMMITTER_STAGING_TMP_PATH, FILESYSTEM_TEMP_PATH);
+        printOption(out, "\tLocal filesystem buffer directory",
+            BUFFER_DIR, "");
+        printOption(out, "\tFile conflict resolution",
+            FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, DEFAULT_CONFLICT_MODE);
+        break;
+      case COMMITTER_NAME_MAGIC:
+        printOption(out, "\tStore magic committer integration",
+            MAGIC_COMMITTER_ENABLED,
+            Boolean.toString(DEFAULT_MAGIC_COMMITTER_ENABLED));
+        if (!magic) {
+          println(out, "Warning: although the magic committer is enabled, "
+              + "the store does not support it");
+        }
+        break;
+      default:
+        println(out, "\tWarning: committer '%s' is unknown", committer);
+      }
 
       // look at delegation token support
+      println(out, "%nSecurity");
       if (fs.getDelegationTokens().isPresent()) {
         // DT is enabled
         S3ADelegationTokens dtIntegration = fs.getDelegationTokens().get();
-        println(out, "Delegation Support enabled: token kind = %s",
+        println(out, "\tDelegation Support enabled: token kind = %s",
             dtIntegration.getTokenKind());
         UserGroupInformation.AuthenticationMethod authenticationMethod
             = UserGroupInformation.getCurrentUser().getAuthenticationMethod();
-        println(out, "Hadoop security mode: %s", authenticationMethod);
+        println(out, "\tHadoop security mode: %s", authenticationMethod);
         if (UserGroupInformation.isSecurityEnabled()) {
           println(out,
-              "Warning: security is disabled; tokens will not be collected");
+              "\tWarning: security is disabled; tokens will not be collected");
         }
       } else {
-        println(out, "Delegation token support is disabled");
+        println(out, "\tDelegation token support is disabled");
       }
 
       if (usingS3Guard) {
