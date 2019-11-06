@@ -4677,7 +4677,9 @@ public class BlockManager implements BlockStatsMXBean {
 
   public BlockInfo addBlockCollection(BlockInfo block,
       BlockCollection bc) {
-    return blocksMap.addBlockCollection(block, bc);
+    BlockInfo blockInfo = blocksMap.addBlockCollection(block, bc);
+    blockIdManager.setGenerationStampIfGreater(block.getGenerationStamp());
+    return blockInfo;
   }
 
   /**
