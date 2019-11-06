@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
@@ -299,6 +300,10 @@ public interface HdfsClientConfigKeys {
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
     String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
     boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
+    String  CACHE_ACTIVE_ENABLED_KEY = PREFIX + "cache-active.enabled";
+    boolean CACHE_ACTIVE_ENABLED_DEFAULT = true;
+    String  CACHE_ACTIVE_DIR_KEY = PREFIX + "cache-active.dir";
+    String  CACHE_ACTIVE_DIR_DEFAULT = FileUtils.getTempDirectoryPath();
   }
 
   /** dfs.client.write configuration properties */

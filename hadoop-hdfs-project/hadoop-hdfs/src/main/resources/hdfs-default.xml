@@ -1638,6 +1638,23 @@
 </property>
 
 <property>
+  <name>dfs.client.failover.cache-active.enabled</name>
+  <value>true</value>
+  <description>
+    Whether caching active namenode index is enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.cache-active.dir</name>
+  <value>${java.io.tmpdir}</value>
+  <description>
+    The directory in which to locate the active namenode index cache file.
+    the value of java.io.tmpdir depends on underlying operating system.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.datanode-restart.timeout</name>
   <value>30s</value>
   <description>

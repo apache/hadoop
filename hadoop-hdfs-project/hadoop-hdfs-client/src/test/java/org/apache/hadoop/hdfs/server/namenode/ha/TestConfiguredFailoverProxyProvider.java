@@ -20,6 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -34,7 +38,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -408,5 +411,72 @@ public class TestConfiguredFailoverProxyProvider {
         }
       }
     };
+  }
+
+  /**
+   * createAnswerException creates an exception Answer for using with the
+   * ClientProtocol mocks.
+   * @param counter counter to increment
+   * @param retVal return value from answer
+   * @param e the Throwable to throw out
+   * @return
+   */
+  private Answer<long[]> createAnswerException(final AtomicInteger counter,
+      final long retVal, final Throwable e) {
+    return new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        counter.incrementAndGet();
+        throw e;
+      }
+    };
+  }
+
+  /**
+   * Test caching active NameNode index.
+   */
+  @Test
+  public void testCachingActiveNNIndex() throws Exception {
+    final AtomicInteger nn1Count = new AtomicInteger(0);
+    final AtomicInteger nn2Count = new AtomicInteger(0);
+    final AtomicInteger nn3Count = new AtomicInteger(0);
+
+    RemoteException e = new RemoteException(StandbyException.class.getName(),
+        "Current NameNode is a Standby NameNode.");
+
+    Map<InetSocketAddress, ClientProtocol> proxyMap = new HashMap<>();
+
+    final ClientProtocol nn1Mock = mock(ClientProtocol.class);
+    when(nn1Mock.getStats()).thenAnswer(createAnswerException(nn1Count, 1, e));
+    proxyMap.put(ns2nn1, nn1Mock);
+
+    final ClientProtocol nn2Mock = mock(ClientProtocol.class);
+    when(nn2Mock.getStats()).thenAnswer(createAnswerException(nn2Count, 2, e));
+    proxyMap.put(ns2nn2, nn2Mock);
+
+    final ClientProtocol nn3Mock = mock(ClientProtocol.class);
+    when(nn3Mock.getStats()).thenAnswer(createAnswer(nn3Count, 3));
+    proxyMap.put(ns2nn3, nn3Mock);
+
+    conf.setBoolean(
+        HdfsClientConfigKeys.Failover.RANDOM_ORDER + "." + ns2,
+        false);
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+      ConfiguredFailoverProxyProvider<ClientProtocol> provider =
+          new ConfiguredFailoverProxyProvider<>(conf, ns2Uri,
+              ClientProtocol.class, createFactory(proxyMap));
+      ClientProtocol proxy = (ClientProtocol)RetryProxy
+          .create(ClientProtocol.class, provider,
+              RetryPolicies.failoverOnNetworkException(
+                  RetryPolicies.TRY_ONCE_THEN_FAIL, 10, 1000, 10000));
+      proxy.getStats();
+    }
+
+    // nn1Count and nn2Count only increment in first RPC call
+    assertTrue(nn1Count.get() == 1);
+    assertTrue(nn2Count.get() == 1);
+
+    // nn3Count increments in all RPC calls
+    assertTrue(nn3Count.get() == NUM_ITERATIONS);
   }
 }
