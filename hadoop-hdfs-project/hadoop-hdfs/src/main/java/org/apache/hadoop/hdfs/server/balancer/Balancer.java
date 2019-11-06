@@ -626,7 +626,6 @@ public class Balancer {
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
       if (bytesLeftToMove == 0) {
-        System.out.println("The cluster is balanced. Exiting...");
         return newResult(ExitStatus.SUCCESS, bytesLeftToMove, 0);
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
@@ -734,6 +733,9 @@ public class Balancer {
             }
           } else {
             LOG.info("Skipping blockpool " + nnc.getBlockpoolID());
+          }
+          if (done) {
+            System.out.println("The cluster is balanced. Exiting...");
           }
         }
         if (!done) {
