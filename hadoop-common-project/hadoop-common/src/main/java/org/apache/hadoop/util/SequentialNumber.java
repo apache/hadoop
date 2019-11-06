@@ -45,6 +45,19 @@ public abstract class SequentialNumber {
     currentValue.set(value);
   }
 
+  public boolean setIfGreater(long value) {
+    while(true) {
+      long local = currentValue.get();
+      if(value <= local) {
+        return false; // swap failed
+      }
+      if(currentValue.compareAndSet(local, value)) {
+        return true;  // swap successful
+      }
+      // keep trying
+    }
+  }
+
   /** Increment and then return the next value. */
   public long nextValue() {
     return currentValue.incrementAndGet();

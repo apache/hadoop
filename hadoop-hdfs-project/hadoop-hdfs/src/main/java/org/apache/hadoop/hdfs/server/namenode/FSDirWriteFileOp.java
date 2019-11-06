@@ -698,7 +698,7 @@ class FSDirWriteFileOp {
    * @param targets target datanodes where replicas of the new block is placed
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  private static void saveAllocatedBlock(
+  static void saveAllocatedBlock(
       FSNamesystem fsn, String src, INodesInPath inodesInPath, Block newBlock,
       DatanodeStorageInfo[] targets)
       throws IOException {
