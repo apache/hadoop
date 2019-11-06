@@ -257,6 +257,13 @@ public class DFSInputStream extends FSInputStream
       }
     }
     locatedBlocks = newInfo;
+    long lastBlkBeingWrittenLength = getLastBlockLength();
+    fileEncryptionInfo = locatedBlocks.getFileEncryptionInfo();
+
+    return lastBlkBeingWrittenLength;
+  }
+
+  private long getLastBlockLength() throws IOException{
     long lastBlockBeingWrittenLength = 0;
     if (!locatedBlocks.isLastBlockComplete()) {
       final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
@@ -274,8 +281,6 @@ public class DFSInputStream extends FSInputStream
         lastBlockBeingWrittenLength = len;
       }
     }
-
-    fileEncryptionInfo = locatedBlocks.getFileEncryptionInfo();
 
     return lastBlockBeingWrittenLength;
   }
@@ -459,7 +464,14 @@ public class DFSInputStream extends FSInputStream
         if (newBlocks == null || newBlocks.locatedBlockCount() == 0) {
           throw new EOFException("Could not find target position " + offset);
         }
-        locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
+        // Update the LastLocatedBlock, if offset is for last block.
+        if (offset >= locatedBlocks.getFileLength()) {
+          locatedBlocks = newBlocks;
+          lastBlockBeingWrittenLength = getLastBlockLength();
+        } else {
+          locatedBlocks.insertRange(targetBlockIdx,
+              newBlocks.getLocatedBlocks());
+        }
       }
       return locatedBlocks.get(targetBlockIdx);
     }
