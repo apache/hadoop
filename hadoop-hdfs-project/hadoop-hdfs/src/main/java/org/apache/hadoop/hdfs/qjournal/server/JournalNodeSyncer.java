@@ -251,7 +251,7 @@ public class JournalNodeSyncer {
       editLogManifest = jnProxy.getEditLogManifestFromJournal(jid,
           nameServiceId, 0, false);
     } catch (IOException e) {
-      LOG.error("Could not sync with Journal at " +
+      LOG.debug("Could not sync with Journal at {}.",
           otherJNProxies.get(journalNodeIndexForSync), e);
       return;
     }
