@@ -181,4 +181,5 @@ public class TestAbfsConfigurationFieldsValidation {
     localAbfsConfiguration = new AbfsConfiguration(configuration, accountName);
     assertEquals(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL, localAbfsConfiguration.getPreferredSSLFactoryOption());
   }
+
 }
