@@ -1826,4 +1826,47 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   void satisfyStoragePolicy(String path) throws IOException;
+
+  /**
+   * synchronize a file or directory creation to a remote store.
+   * @param src Path of an existing file/directory.
+   * @throws AccessControlException If access is denied.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException operation not
+   *           allowed in safemode.
+   */
+  @AtMostOnce
+  void syncCreateToRemoteStore(String src) throws IOException;
+
+  /**
+   * synchronize a file or directory rename to a remote store.
+   * @param src Path of an existing file/directory.
+   * @param dest URI of a destination where to write the url.
+   * @throws AccessControlException If access is denied.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException operation not
+   *           allowed in safemode.
+   */
+  @AtMostOnce
+  void syncRenameToRemoteStore(String src, String dest) throws IOException;
+
+  /**
+   * synchronize a file or directory deletion to a remote store.
+   * @param src Path of an existing file/directory.
+   * @throws AccessControlException If access is denied.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException operation not
+   *           allowed in safemode.
+   */
+  @AtMostOnce
+  void syncDeleteToRemoteStore(String src) throws IOException;
 }
