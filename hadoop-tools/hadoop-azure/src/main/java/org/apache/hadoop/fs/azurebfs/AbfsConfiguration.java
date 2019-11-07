@@ -475,6 +475,9 @@ public class AbfsConfiguration{
     return this.useUpn;
   }
 
+  /**
+   * Whether {@code AbfsClient} should track and send latency info back to storage servers
+   */
   public boolean shouldTrackLatency() {
     return this.trackLatency;
   }

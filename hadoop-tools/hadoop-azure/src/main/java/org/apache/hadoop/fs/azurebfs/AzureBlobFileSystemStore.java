@@ -812,7 +812,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfo = startTracking("setPermission", "setPermission")) {
@@ -835,7 +835,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfoGet = startTracking("modifyAclEntries", "getAclStatus")) {
@@ -874,7 +874,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void removeAclEntries(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfoGet = startTracking("removeAclEntries", "getAclStatus")) {
@@ -913,7 +913,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void removeDefaultAcl(final Path path) throws AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfoGet = startTracking("removeDefaultAcl", "getAclStatus")) {
@@ -953,7 +953,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void removeAcl(final Path path) throws AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfoGet = startTracking("removeAcl", "getAclStatus")){
@@ -990,7 +990,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void setAcl(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfoGet = startTracking("setAcl", "getAclStatus")) {
@@ -1029,7 +1029,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public AclStatus getAclStatus(final Path path) throws IOException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfo = startTracking("getAclStatus", "getAclStatus")) {

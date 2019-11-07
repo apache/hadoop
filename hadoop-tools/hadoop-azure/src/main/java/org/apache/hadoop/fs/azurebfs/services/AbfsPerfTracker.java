@@ -78,28 +78,28 @@ public final class AbfsPerfTracker {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsPerfTracker.class);
 
   // the field names of perf log lines
-  private static final String HostNameKey = "h";
-  private static final String TimestampKey = "t";
-  private static final String StorageAccountNameKey = "a";
-  private static final String ContainerNameKey = "c";
-  private static final String CallerMethodNameKey = "cr";
-  private static final String CalleeMethodNameKey = "ce";
-  private static final String ResultKey = "r";
-  private static final String LatencyKey = "l";
-  private static final String LatencySumKey = "ls";
-  private static final String LatencyCountKey = "lc";
-  private static final String HttpStatusCodeKey = "s";
-  private static final String ErrorCodeKey = "e";
-  private static final String ClientRequestIdKey = "ci";
-  private static final String ServerRequestIdKey = "ri";
-  private static final String ConnectionTimeKey = "ct";
-  private static final String SendingTimeKey = "st";
-  private static final String ReceivingTimeKey = "rt";
-  private static final String BytesSentKey = "bs";
-  private static final String BytesReceivedKey = "br";
-  private static final String HttpMethodKey = "m";
-  private static final String HttpUrlKey = "u";
-  private static final String StringPlaceholder = "%s";
+  private static final String HOST_NAME_KEY = "h";
+  private static final String TIMESTAMP_KEY = "t";
+  private static final String STORAGE_ACCOUNT_NAME_KEY = "a";
+  private static final String CONTAINER_NAME_KEY = "c";
+  private static final String CALLER_METHOD_NAME_KEY = "cr";
+  private static final String CALLEE_METHOD_NAME_KEY = "ce";
+  private static final String RESULT_KEY = "r";
+  private static final String LATENCY_KEY = "l";
+  private static final String LATENCY_SUM_KEY = "ls";
+  private static final String LATENCY_COUNT_KEY = "lc";
+  private static final String HTTP_STATUS_CODE_KEY = "s";
+  private static final String ERROR_CODE_KEY = "e";
+  private static final String CLIENT_REQUEST_ID_KEY = "ci";
+  private static final String SERVER_REQUEST_ID_KEY = "ri";
+  private static final String CONNECTION_TIME_KEY = "ct";
+  private static final String SENDING_TIME_KEY = "st";
+  private static final String RECEIVING_TIME_KEY = "rt";
+  private static final String BYTES_SENT_KEY = "bs";
+  private static final String BYTES_RECEIVED_KEY = "br";
+  private static final String HTTP_METHOD_KEY = "m";
+  private static final String HTTP_URL_KEY = "u";
+  private static final String STRING_PLACEHOLDER = "%s";
 
   // the queue to hold latency information
   private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>();
@@ -133,37 +133,37 @@ public final class AbfsPerfTracker {
       }
 
       String commonReportingFormat = new StringBuilder()
-              .append(HostNameKey)
+              .append(HOST_NAME_KEY)
               .append(AbfsHttpConstants.EQUAL)
               .append(hostName)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(TimestampKey)
+              .append(TIMESTAMP_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(StorageAccountNameKey)
+              .append(STORAGE_ACCOUNT_NAME_KEY)
               .append(AbfsHttpConstants.EQUAL)
               .append(accountName)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(ContainerNameKey)
+              .append(CONTAINER_NAME_KEY)
               .append(AbfsHttpConstants.EQUAL)
               .append(filesystemName)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(CallerMethodNameKey)
+              .append(CALLER_METHOD_NAME_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(CalleeMethodNameKey)
+              .append(CALLEE_METHOD_NAME_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(ResultKey)
+              .append(RESULT_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(LatencyKey)
+              .append(LATENCY_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .toString();
 
       /**
@@ -175,7 +175,7 @@ public final class AbfsPerfTracker {
       */
       singletonLatencyReportingFormat = new StringBuilder()
               .append(commonReportingFormat)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .toString();
 
       /**
@@ -188,14 +188,14 @@ public final class AbfsPerfTracker {
       aggregateLatencyReportingFormat = new StringBuilder()
               .append(commonReportingFormat)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(LatencySumKey)
+              .append(LATENCY_SUM_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
               .append(AbfsHttpConstants.SINGLE_WHITE_SPACE)
-              .append(LatencyCountKey)
+              .append(LATENCY_COUNT_KEY)
               .append(AbfsHttpConstants.EQUAL)
-              .append(StringPlaceholder)
-              .append(StringPlaceholder)
+              .append(STRING_PLACEHOLDER)
+              .append(STRING_PLACEHOLDER)
               .toString();
     }
   }
