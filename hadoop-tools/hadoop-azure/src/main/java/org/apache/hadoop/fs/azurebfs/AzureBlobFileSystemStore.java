@@ -1111,8 +1111,8 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
 
     this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
-        new ExponentialRetryPolicy(abfsConfiguration), tokenProvider,
-        abfsPerfTracker);
+        new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
+        tokenProvider, abfsPerfTracker);
 
   }
 
