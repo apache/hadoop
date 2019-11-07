@@ -151,6 +151,13 @@ public final class OMConfigKeys {
   public static final TimeDuration OZONE_OM_RATIS_MINIMUM_TIMEOUT_DEFAULT
       = TimeDuration.valueOf(1, TimeUnit.SECONDS);
 
+  // Propagate stack trace for System Exceptions to the client.
+  public static final String OZONE_OM_PROPAGATE_SYSTEM_EXCEPTION_STACKTRACE
+      = "ozone.om.exception.stacktrace.propagate";
+  public static final boolean
+      OZONE_OM_PROPAGATE_SYSTEM_EXCEPTION_STACKTRACE_DEFAULT
+      = true;
+
   // OM Ratis client configurations
   public static final String OZONE_OM_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY
       = "ozone.om.ratis.client.request.timeout.duration";
