@@ -784,7 +784,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
-              "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
     try (AbfsPerfInfo perfInfo = startTracking("setOwner", "setOwner")) {
