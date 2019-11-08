@@ -1585,7 +1585,7 @@ public class RouterClientProtocol implements ClientProtocol {
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
     rpcServer.getQuotaModule()
-        .setQuota(path, namespaceQuota, storagespaceQuota, type);
+        .setQuota(path, namespaceQuota, storagespaceQuota, type, true);
   }
 
   @Override

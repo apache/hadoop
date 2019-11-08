@@ -63,6 +63,21 @@ public class RouterQuotaManager {
   }
 
   /**
+   * Is the path a mount entry.
+   *
+   * @param path the path.
+   * @return {@code true} if path is a mount entry; {@code false} otherwise.
+   */
+  boolean isMountEntry(String path) {
+    readLock.lock();
+    try {
+      return this.cache.containsKey(path);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
    * Get the nearest ancestor's quota usage, and meanwhile its quota was set.
    * @param path The path being written.
    * @return RouterQuotaUsage Quota usage.
