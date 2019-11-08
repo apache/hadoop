@@ -345,7 +345,7 @@ public class RouterAdminServer extends AbstractService
         ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
       }
       Quota routerQuota = this.router.getRpcServer().getQuotaModule();
-      routerQuota.setQuota(path, nsQuota, ssQuota, null);
+      routerQuota.setQuota(path, nsQuota, ssQuota, null, false);
     }
   }
 

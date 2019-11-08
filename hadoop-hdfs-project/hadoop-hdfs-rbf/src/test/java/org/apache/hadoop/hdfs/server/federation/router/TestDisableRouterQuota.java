@@ -73,7 +73,7 @@ public class TestDisableRouterQuota {
 
     try {
       Quota quotaModule = router.getRpcServer().getQuotaModule();
-      quotaModule.setQuota("/test", nsQuota, ssQuota, null);
+      quotaModule.setQuota("/test", nsQuota, ssQuota, null, false);
       fail("The setQuota call should fail.");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
