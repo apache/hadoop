@@ -194,6 +194,21 @@ few configurations to your **hdfs-site.xml**:
           <value>1048576</value>
         </property>
 
+*  **dfs.namenode.accesstime.precision** -- whether to enable access
+   time for HDFS file.
+
+   It is **highly recommended** to disable this configuration. If
+   enabled, this will turn a `getBlockLocations` call into a write call,
+   as it needs to hold write lock to update the time for the opened
+   file. Therefore, the request will fail on all Observer NameNodes and fall
+   back to the active eventually. As result, RPC performance will degrade.
+
+        <property>
+          <name>dfs.namenode.accesstime.precision</name>
+          <value>0</value>
+        </property>
+
+
 ### New administrative command
 
 A new HA admin command is introduced to transition a Standby NameNode
