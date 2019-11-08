@@ -1251,12 +1251,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
               AUTHORITATIVE_PATH, "");
         final Collection<String> authoritativePaths
             = S3Guard.getAuthoritativePaths(fs);
-        if (!authoritativePaths.isEmpty())
+        if (!authoritativePaths.isEmpty()) {
           println(out, "Qualified Authoritative Paths:");
-        for (String path : authoritativePaths) {
-          println(out, "\t%s", path);
+          for (String path : authoritativePaths) {
+            println(out, "\t%s", path);
+          }
+          println(out, "");
         }
-        println(out, "");
         authMode = conf.getBoolean(METADATASTORE_AUTHORITATIVE, false);
         final long ttl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
             DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
@@ -1301,8 +1302,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
             + " -this is slow and potentially unsafe");
         break;
       case InternalCommitterConstants.COMMITTER_NAME_STAGING:
-        println(out,
-            "The 'staging' committer is used -prefer the 'directory' committer");
+        println(out, "The 'staging' committer is used "
+            + "-prefer the 'directory' committer");
         // fall through
       case COMMITTER_NAME_DIRECTORY:
         // fall through
