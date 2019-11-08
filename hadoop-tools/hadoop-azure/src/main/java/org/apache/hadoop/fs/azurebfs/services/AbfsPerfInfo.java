@@ -81,8 +81,7 @@ public final class AbfsPerfInfo implements AutoCloseable {
     return this;
   }
 
-  public AbfsPerfInfo finishTracking()
-  {
+  public AbfsPerfInfo finishTracking() {
     if (this.trackingEnd == null) {
       this.trackingEnd = abfsPerfTracker.getLatencyInstant();
     }

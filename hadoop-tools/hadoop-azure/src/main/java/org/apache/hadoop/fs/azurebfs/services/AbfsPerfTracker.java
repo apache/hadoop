@@ -200,8 +200,7 @@ public final class AbfsPerfTracker {
     }
   }
 
-  public void trackInfo(AbfsPerfInfo perfInfo)
-  {
+  public void trackInfo(AbfsPerfInfo perfInfo) {
     if (!enabled) {
       return;
     }
