@@ -17,6 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -25,19 +35,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Test functionalities of {@link ConnectionManager}, which manages a pool
@@ -305,7 +305,9 @@ public class TestConnectionManager {
   @Test
   public void testUnsupportedProtoExceptionMsg() throws IOException {
     exceptionRule.expect(IllegalStateException.class);
-    exceptionRule.expectMessage(UnsupportedProto.class.getName());
+    exceptionRule
+        .expectMessage("Unsupported protocol for connection to NameNode: "
+            + UnsupportedProto.class.getName());
     ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
         UnsupportedProto.class);
   }
