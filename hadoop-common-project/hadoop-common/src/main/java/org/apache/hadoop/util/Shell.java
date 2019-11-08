@@ -1008,9 +1008,9 @@ public abstract class Shell {
         throw new ExitCodeException(exitCode, errMsg.toString());
       }
     } catch (InterruptedException ie) {
-      InterruptedIOException iie = new InterruptedIOException(ie.toString());
-      iie.initCause(ie);
-      throw iie;
+      Thread.currentThread().interrupt();
+      throw (InterruptedIOException) new InterruptedIOException(ie.toString())
+          .initCause(ie);
     } finally {
       if (timeOutTimer != null) {
         timeOutTimer.cancel();
@@ -1038,15 +1038,19 @@ public abstract class Shell {
   }
 
   private static void joinThread(Thread t) {
+    boolean interrupted = false;
     while (t.isAlive()) {
       try {
         t.join();
       } catch (InterruptedException ie) {
-        if (LOG.isWarnEnabled()) {
-          LOG.warn("Interrupted while joining on: " + t, ie);
-        }
+        LOG.warn("Interrupted while joining on: {}", t, ie);
+        interrupted = true;
         t.interrupt(); // propagate interrupt
       }
+    }
+    if (interrupted) {
+      // Restore the interrupt
+      Thread.currentThread().interrupt();
     }
   }
 

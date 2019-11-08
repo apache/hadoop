@@ -387,6 +387,7 @@ public class CallQueueManager<E extends Schedulable>
       try {
         Thread.sleep(CHECKPOINT_INTERVAL_MS);
       } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         return false;
       }
       if (!q.isEmpty()) {

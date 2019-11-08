@@ -3861,7 +3861,7 @@ public abstract class FileSystem extends Configured
             ref.cleanUp();
           } catch (InterruptedException ie) {
             LOGGER.warn("Cleaner thread interrupted, will stop", ie);
-            Thread.currentThread().interrupt();
+            return;
           } catch (Throwable th) {
             LOGGER.warn("Exception in the cleaner thread but it will" +
                 " continue to run", th);

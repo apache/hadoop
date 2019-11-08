@@ -951,7 +951,8 @@ public class Client implements AutoCloseable {
       try {
         Thread.sleep(action.delayMillis);
       } catch (InterruptedException e) {
-        throw (IOException)new InterruptedIOException("Interrupted: action="
+        Thread.currentThread().interrupt();
+        throw (IOException) new InterruptedIOException("Interrupted: action="
             + action + ", retry policy=" + connectionRetryPolicy).initCause(e);
       }
       LOG.info("Retrying connect to server: " + server + ". Already tried "
@@ -1031,7 +1032,9 @@ public class Client implements AutoCloseable {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException e) {}
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
         }
       }
       
@@ -1355,16 +1358,22 @@ public class Client implements AutoCloseable {
       conn.interrupt();
       conn.interruptConnectingThread();
     }
-    
+
     // wait until all connections are closed
+    boolean interrupted = false;
     synchronized (emptyCondition) {
       // synchronized the loop to guarantee wait must be notified.
       while (!connections.isEmpty()) {
         try {
           emptyCondition.wait();
         } catch (InterruptedException e) {
+          interrupted = true;
         }
       }
+    }
+    if (interrupted) {
+      // Restore the interrupted status
+      Thread.currentThread().interrupt();
     }
     clientExcecutorFactory.unrefAndCleanup();
   }
@@ -1451,10 +1460,8 @@ public class Client implements AutoCloseable {
         throw new IOException("connection has been closed", e);
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
-        IOException ioe = new InterruptedIOException(
-            "Interrupted waiting to send RPC request to server");
-        ioe.initCause(ie);
-        throw ioe;
+        throw (InterruptedIOException) new InterruptedIOException(
+            "Interrupted waiting to send RPC request to server").initCause(ie);
       }
     } catch(Exception e) {
       if (isAsynchronousMode()) {
@@ -1544,7 +1551,8 @@ public class Client implements AutoCloseable {
           }
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
-          throw new InterruptedIOException("Call interrupted");
+          throw (IOException) new InterruptedIOException("Call interrupted")
+              .initCause(ie);
         }
       }
 

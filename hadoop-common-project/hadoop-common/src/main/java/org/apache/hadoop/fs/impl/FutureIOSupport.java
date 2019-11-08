@@ -57,6 +57,7 @@ public final class FutureIOSupport {
     try {
       return future.get();
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw (InterruptedIOException)new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
@@ -85,6 +86,7 @@ public final class FutureIOSupport {
     try {
       return future.get(timeout, unit);
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw (InterruptedIOException)new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {

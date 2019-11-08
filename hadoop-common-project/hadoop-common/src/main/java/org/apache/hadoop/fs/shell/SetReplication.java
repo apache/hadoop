@@ -21,11 +21,14 @@ package org.apache.hadoop.fs.shell;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.PathIOException;
+
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * Modifies the replication factor
@@ -134,7 +137,7 @@ class SetReplication extends FsCommand {
         
         out.print(".");
         out.flush();
-        try {Thread.sleep(10000);} catch (InterruptedException e) {}
+        Uninterruptibles.sleepUninterruptibly(10L, TimeUnit.SECONDS);
       }
       out.println(" done");
     }

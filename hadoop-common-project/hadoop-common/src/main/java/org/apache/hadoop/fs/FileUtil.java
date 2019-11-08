@@ -1377,7 +1377,8 @@ public class FileUtil {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {
-          throw new IOException("replaceFile interrupted.");
+          Thread.currentThread().interrupt();
+          throw new IOException("replaceFile interrupted");
         }
       }
       if (!src.renameTo(target)) {

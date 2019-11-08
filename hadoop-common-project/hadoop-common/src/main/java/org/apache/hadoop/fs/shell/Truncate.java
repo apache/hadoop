@@ -22,9 +22,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Truncates a file to a new size
@@ -104,10 +107,12 @@ public class Truncate extends FsCommand {
       out.println("Waiting for " + item + " ...");
       out.flush();
 
-      for(;;) {
+      for (;;) {
         item.refreshStatus();
-        if(item.stat.getLen() == newLength) break;
-        try {Thread.sleep(1000);} catch(InterruptedException ignored) {}
+        if (item.stat.getLen() == newLength) {
+          break;
+        }
+        Uninterruptibles.sleepUninterruptibly(1L, TimeUnit.SECONDS);
       }
 
       out.println("Truncated " + item + " to length: " + newLength);

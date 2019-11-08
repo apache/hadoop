@@ -559,6 +559,7 @@ public abstract class ZKFailoverController {
         }
       });
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new IOException(e);
     }
   }
@@ -614,6 +615,7 @@ public abstract class ZKFailoverController {
         
       });
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new IOException(e);
     }
   }

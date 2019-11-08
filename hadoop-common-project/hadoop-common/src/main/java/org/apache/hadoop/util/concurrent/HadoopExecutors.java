@@ -134,6 +134,7 @@ public final class HadoopExecutors {
     } catch (InterruptedException e) {
       logger.error("Interrupted while attempting to shutdown", e);
       executorService.shutdownNow();
+      Thread.currentThread().interrupt();
     } catch (Exception e) {
       logger.warn("Exception closing executor service {}", e.getMessage());
       logger.debug("Exception closing executor service", e);

@@ -517,6 +517,7 @@ public final class SecurityUtil {
     try {
       return ugi.doAs(action);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException(ie);
     }
   }

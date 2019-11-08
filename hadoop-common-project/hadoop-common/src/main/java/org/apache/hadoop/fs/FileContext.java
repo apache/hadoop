@@ -351,7 +351,8 @@ public class FileContext implements PathCapabilities {
         throw ex;
       }
     } catch (InterruptedException ex) {
-      LOG.error(ex.toString());
+      LOG.debug("Error", ex);
+      Thread.currentThread().interrupt();
       throw new IOException("Failed to get the AbstractFileSystem for path: "
           + uri, ex);
     }

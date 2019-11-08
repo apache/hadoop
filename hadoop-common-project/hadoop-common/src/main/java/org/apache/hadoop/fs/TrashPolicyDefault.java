@@ -278,7 +278,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         try {                                     // sleep for interval
           Thread.sleep(end - now);
         } catch (InterruptedException e) {
-          break;                                  // exit on interrupt
+          break; // exit on interrupt
         }
 
         try {
