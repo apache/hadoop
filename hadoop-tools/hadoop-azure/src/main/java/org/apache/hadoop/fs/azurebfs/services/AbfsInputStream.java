@@ -44,6 +44,7 @@ public class AbfsInputStream extends FSInputStream {
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  private final boolean alwaysReadAhead; // read ahead even if reads are non sequential
 
   private byte[] buffer = null;            // will be initialized on first use
 
@@ -62,7 +63,8 @@ public class AbfsInputStream extends FSInputStream {
       final int bufferSize,
       final int readAheadQueueDepth,
       final boolean tolerateOobAppends,
-      final String eTag) {
+      final String eTag,
+      final boolean alwaysReadAhead) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -72,6 +74,7 @@ public class AbfsInputStream extends FSInputStream {
     this.tolerateOobAppends = tolerateOobAppends;
     this.eTag = eTag;
     this.readAheadEnabled = true;
+    this.alwaysReadAhead = alwaysReadAhead;
   }
 
   public String getPath() {
@@ -144,7 +147,7 @@ public class AbfsInputStream extends FSInputStream {
       }
 
       // Enable readAhead when reading sequentially
-      if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+      if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize || alwaysReadAhead) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
         bytesRead = readInternal(fCursor, buffer, 0, b.length, true);

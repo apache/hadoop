@@ -146,6 +146,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_READ_AHEAD_QUEUE_DEPTH)
   private int readAheadQueueDepth;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_READ_AHEAD,
+      DefaultValue = DEFAULT_FS_AZURE_ALWAYS_READ_AHEAD)
+  private boolean alwaysReadAhead;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_FLUSH,
       DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
@@ -433,6 +437,10 @@ public class AbfsConfiguration{
 
   public int getReadAheadQueueDepth() {
     return this.readAheadQueueDepth;
+  }
+
+  public boolean getAlwaysReadAhead(){
+    return this.alwaysReadAhead;
   }
 
   public boolean isFlushEnabled() {
