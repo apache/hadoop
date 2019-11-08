@@ -123,8 +123,9 @@ public class TestRouterAdminCLI {
     // Mock the quota module since no real namenode is started up.
     Quota quota = Mockito
         .spy(routerContext.getRouter().createRpcServer().getQuotaModule());
-    Mockito.doNothing().when(quota).setQuota(Mockito.anyString(),
-        Mockito.anyLong(), Mockito.anyLong(), Mockito.any());
+    Mockito.doNothing().when(quota)
+        .setQuota(Mockito.anyString(), Mockito.anyLong(), Mockito.anyLong(),
+            Mockito.any(), Mockito.anyBoolean());
     Whitebox.setInternalState(
         routerContext.getRouter().getRpcServer(), "quotaCall", quota);
 

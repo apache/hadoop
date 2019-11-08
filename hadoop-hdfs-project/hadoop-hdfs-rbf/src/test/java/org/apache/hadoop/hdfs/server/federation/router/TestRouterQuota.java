@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -62,7 +63,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
@@ -280,6 +283,56 @@ public class TestRouterQuota {
     byte[] data = new byte[dataLen];
     stream.write(data);
     stream.close();
+  }
+
+  @Test
+  public void testSetQuotaToMountTableEntry() throws Exception {
+    long nsQuota = 10;
+    long ssQuota = 10240;
+    long diskQuota = 1024;
+    final FileSystem nnFs1 = nnContext1.getFileSystem();
+    nnFs1.mkdirs(new Path("/testSetQuotaToFederationPath"));
+    nnFs1.mkdirs(new Path("/testSetQuotaToFederationPath/dir0"));
+
+    // Add one mount table:
+    // /setquota --> ns0---testSetQuotaToFederationPath
+    MountTable mountTable = MountTable.newInstance("/setquota",
+        Collections.singletonMap("ns0", "/testSetQuotaToFederationPath"));
+    addMountTable(mountTable);
+
+    RouterQuotaUpdateService updateService = routerContext.getRouter()
+        .getQuotaCacheUpdateService();
+    // ensure mount table is updated to Router.
+    updateService.periodicInvoke();
+
+    final FileSystem routerFs = routerContext.getFileSystem();
+    // setting quota on a mount point should fail.
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "is not allowed to change quota of",
+        "Expect an AccessControlException.",
+        () -> routerFs.setQuota(new Path("/setquota"), nsQuota, ssQuota));
+    // setting storage quota on a mount point should fail.
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "is not allowed to change quota of",
+        "Expect an AccessControlException.", () -> routerFs
+            .setQuotaByStorageType(new Path("/setquota"), StorageType.DISK,
+                diskQuota));
+    QuotaUsage quota =
+        nnFs1.getQuotaUsage(new Path("/testSetQuotaToFederationPath"));
+    // quota should still be unset.
+    assertEquals(-1, quota.getQuota());
+    assertEquals(-1, quota.getSpaceQuota());
+
+    // setting quota on a non-mount point should succeed.
+    routerFs.setQuota(new Path("/setquota/dir0"), nsQuota, ssQuota);
+    // setting storage quota on a non-mount point should succeed.
+    routerFs.setQuotaByStorageType(new Path("/setquota/dir0"), StorageType.DISK,
+        diskQuota);
+    quota = nnFs1.getQuotaUsage(new Path("/testSetQuotaToFederationPath/dir0"));
+    // quota should be set.
+    assertEquals(nsQuota, quota.getQuota());
+    assertEquals(ssQuota, quota.getSpaceQuota());
+    assertEquals(diskQuota, quota.getTypeQuota(StorageType.DISK));
   }
 
   @Test
