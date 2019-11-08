@@ -614,6 +614,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.metrics.logger.period.seconds";
   public static final int DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =
       600;
+  /**
+   * The maximum number of getBlocks RPCs data movement utilities can make to
+   * a NameNode per second. Values <= 0 disable throttling. This affects
+   * anything that uses a NameNodeConnector, i.e., the Balancer, Mover,
+   * and StoragePolicySatisfier.
+   */
+  public static final String  DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY = "dfs.namenode.get-blocks.max-qps";
+  public static final int     DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT = 20;
 
   public static final String  DFS_BALANCER_MOVEDWINWIDTH_KEY = "dfs.balancer.movedWinWidth";
   public static final long    DFS_BALANCER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;
